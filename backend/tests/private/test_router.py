@@ -1,8 +1,9 @@
+from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.core.config import settings
-from app.models import User
+from app.config import settings
+from app.users.models import User
 
 
 def test_create_user(client: TestClient, db: Session) -> None:
@@ -15,7 +16,7 @@ def test_create_user(client: TestClient, db: Session) -> None:
         },
     )
 
-    assert r.status_code == 200
+    assert r.status_code == status.HTTP_200_OK
 
     data = r.json()
 
