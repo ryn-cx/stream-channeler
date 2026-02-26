@@ -1,11 +1,12 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserPublic, UsersService } from "@/client"
+import { type UserPublic, type UsersPublic, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -16,8 +17,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -28,6 +29,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -53,12 +59,10 @@ type FormData = z.infer<typeof formSchema>
 
 interface EditUserProps {
   user: UserPublic
-  onSuccess: () => void
 }
 
-const EditUser = ({ user, onSuccess }: EditUserProps) => {
+const EditUser = ({ user }: EditUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
@@ -76,15 +80,39 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
       UsersService.updateUser({ userId: user.id, requestBody: data }),
+    // When mutate is called:
+    onMutate: async (newData, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await context.client.cancelQueries({ queryKey: ["users"] })
+
+      // Snapshot the previous value
+      const previousUsers = context.client.getQueryData<UsersPublic>(["users"])
+
+      // Optimistically update to the new value
+      context.client.setQueryData<UsersPublic>(["users"], (old) => ({
+        ...old!,
+        data: old!.data.map((u) =>
+          u.id === user.id ? { ...u, ...newData } : u,
+        ),
+      }))
+
+      // Return a result with the snapshotted value
+      return { previousUsers }
+    },
     onSuccess: () => {
       showSuccessToast("User updated successfully")
       setIsOpen(false)
-      onSuccess()
     },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
+    onError: (error, _newData, onMutateResult, context) => {
+      context.client.setQueryData(["users"], onMutateResult?.previousUsers)
+      handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
+    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+      context.client.invalidateQueries({ queryKey: ["users"] }),
   })
 
   const onSubmit = (data: FormData) => {
@@ -98,13 +126,18 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
-        onSelect={(e) => e.preventDefault()}
-        onClick={() => setIsOpen(true)}
-      >
-        <Pencil />
-        Edit User
-      </DropdownMenuItem>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost">
+              <Pencil />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Edit user</p>
+        </TooltipContent>
+      </Tooltip>
       <DialogContent className="sm:max-w-md">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

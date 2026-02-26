@@ -1,6 +1,6 @@
 import secrets
 import warnings
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from pydantic import (
     AnyUrl,
@@ -12,7 +12,6 @@ from pydantic import (
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 def parse_cors(v: str | list[str] | None) -> list[str] | str:
@@ -117,6 +116,9 @@ class Settings(BaseSettings):
         )
 
         return self
+
+    YOUTUBE_API_KEY: str
+    YOUTUBE_API_IP: str
 
 
 # call-arg - Error from original template.

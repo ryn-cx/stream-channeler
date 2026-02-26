@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -18,7 +18,7 @@ password_hash = PasswordHash(
 
 
 def create_access_token(subject: str | UUID, expires_delta: timedelta) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
+    expire = datetime.now(UTC) + expires_delta
     to_encode = {"exp": expire, "sub": str(subject)}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 

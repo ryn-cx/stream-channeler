@@ -1,17 +1,16 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.utils import tz_datetime
+
 if TYPE_CHECKING:
-    from app.items.models import Item
-
-
-def get_datetime_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    from app.channels.models import Channel
+    from app.media.models import EpisodeWatch
 
 
 # Shared properties
@@ -27,7 +26,14 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
+        default_factory=tz_datetime.now,
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
     )
-    items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
+    channels: list[Channel] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
+    watched_episodes: list[EpisodeWatch] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )

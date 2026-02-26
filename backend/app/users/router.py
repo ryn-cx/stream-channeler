@@ -10,8 +10,9 @@ from app.auth.dependencies import (
 )
 from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
+from app.channels.models import Channel
 from app.config import settings
-from app.items.models import Item
+from app.media.models import EpisodeWatch
 from app.models import Message
 from app.users import service as user_service
 from app.users.models import User
@@ -256,7 +257,9 @@ def delete_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super users are not allowed to delete themselves",
         )
-    statement = delete(Item).where(col(Item.owner_id) == user_id)
+    statement = delete(Channel).where(col(Channel.user_id) == user_id)
+    session.exec(statement)
+    statement = delete(EpisodeWatch).where(col(EpisodeWatch.user_id) == user_id)
     session.exec(statement)
     session.delete(user)
     session.commit()

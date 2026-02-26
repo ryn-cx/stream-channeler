@@ -1,4 +1,14 @@
-import { Briefcase, Home, Users } from "lucide-react"
+// TODO: Validate
+import { Link } from "@tanstack/react-router"
+import {
+  Eye,
+  Home,
+  LayoutDashboard,
+  LogIn,
+  PanelLeftClose,
+  Radio,
+  Users,
+} from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -6,23 +16,42 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import useAuth from "@/hooks/useAuth"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
 const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
-  { icon: Briefcase, title: "Items", path: "/items" },
+  { icon: Home, title: "Home", path: "/" },
+  { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
+  { icon: Radio, title: "Channels", path: "/channels" },
+  { icon: Eye, title: "Watches", path: "/watches" },
+]
+
+const unauthenticatedItems: Item[] = [{ icon: Home, title: "Home", path: "/" }]
+
+const adminItems: Item[] = [
+  ...baseItems,
+  { icon: Users, title: "Admin", path: "/admin" },
 ]
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
+  const { toggleSidebar } = useSidebar()
+  const loggedIn = isLoggedIn()
 
-  const items = currentUser?.is_superuser
-    ? [...baseItems, { icon: Users, title: "Admin", path: "/admin" }]
-    : baseItems
+  const items = !loggedIn
+    ? unauthenticatedItems
+    : currentUser?.is_superuser
+      ? adminItems
+      : baseItems
 
   return (
     <Sidebar collapsible="icon">
@@ -31,10 +60,38 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <Main items={items} />
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Toggle Sidebar"
+                  onClick={toggleSidebar}
+                >
+                  <PanelLeftClose />
+                  <span>Toggle Sidebar</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarAppearance />
-        <User user={currentUser} />
+        {loggedIn ? (
+          <User user={currentUser} />
+        ) : (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Log In">
+                <Link to="/login">
+                  <LogIn />
+                  <span>Log In</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarFooter>
     </Sidebar>
   )

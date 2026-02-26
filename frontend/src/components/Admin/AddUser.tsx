@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserCreate, UsersService } from "@/client"
+import { type UserCreate, type UsersPublic, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -54,7 +54,6 @@ type FormData = z.infer<typeof formSchema>
 
 const AddUser = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
@@ -74,15 +73,39 @@ const AddUser = () => {
   const mutation = useMutation({
     mutationFn: (data: UserCreate) =>
       UsersService.createUser({ requestBody: data }),
+    // When mutate is called:
+    onMutate: async (newUser, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await context.client.cancelQueries({ queryKey: ["users"] })
+
+      // Snapshot the previous value
+      const previousUsers = context.client.getQueryData<UsersPublic>(["users"])
+
+      // Optimistically update to the new value
+      context.client.setQueryData<UsersPublic>(["users"], (old) => ({
+        ...old!,
+        data: [...old!.data, { id: crypto.randomUUID(), ...newUser }],
+        count: old!.count + 1,
+      }))
+
+      // Return a result with the snapshotted value
+      return { previousUsers }
+    },
     onSuccess: () => {
       showSuccessToast("User created successfully")
       form.reset()
       setIsOpen(false)
     },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
+    onError: (error, _newUser, onMutateResult, context) => {
+      context.client.setQueryData(["users"], onMutateResult?.previousUsers)
+      handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
+    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+      context.client.invalidateQueries({ queryKey: ["users"] }),
   })
 
   const onSubmit = (data: FormData) => {

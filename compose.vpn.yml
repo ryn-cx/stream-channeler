@@ -1,0 +1,190 @@
+# TODO: Validate
+services:
+  # Gluetun VPN container
+  gluetun:
+    container_name: gluetun
+    image: qmcgaw/gluetun
+    # container_name: gluetun
+    # line above must be uncommented to allow external containers to connect.
+    # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8888:8888/tcp" # HTTP proxy
+      - "8388:8388/tcp" # Shadowsocks
+      - "8388:8388/udp" # Shadowsocks
+    volumes:
+      - ./gluetun:/gluetun
+    env_file:
+      - .env
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - OPENVPN_USER=${OPENVPN_USER}
+      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+      - SERVER_REGIONS=${SERVER_REGIONS}
+
+      # Common settings:
+      - TZ=America/Los_Angeles
+      - UPDATER_PERIOD=24h
+    restart: unless-stopped
+    networks:
+      - vpn-network
+      - default
+
+  # Update outdated script runner through VPN
+  update-outdated-vpn:
+    container_name: update-outdated-vpn
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    network_mode: "service:gluetun"
+    volumes:
+      - sync-lock:/tmp/sync
+    command: sh -c "sleep 30; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.update_outdated'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOGURU_COLORIZE=YES
+      - LOGLEVEL=INFO
+
+  # Import queue script runner through VPN
+  import-queue-vpn:
+    container_name: import-queue-vpn
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    network_mode: "service:gluetun"
+    volumes:
+      - sync-lock:/tmp/sync
+    command: sh -c "sleep 20; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.import_queue'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOGURU_COLORIZE=YES
+      - LOGLEVEL=INFO
+
+  # Update outdated script runner without VPN
+  update-outdated-no-vpn:
+    container_name: update-outdated-no-vpn
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    networks:
+      - vpn-network
+      - default
+    volumes:
+      - sync-lock:/tmp/sync
+    command: sh -c "sleep 10; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.update_outdated'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOGURU_COLORIZE=YES
+      - LOGLEVEL=INFO
+
+  # Import queue script runner without VPN
+  import-queue-no-vpn:
+    container_name: import-queue-no-vpn
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    networks:
+      - vpn-network
+      - default
+    volumes:
+      - sync-lock:/tmp/sync
+    command: sh -c "sleep 40; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.import_queue'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOGURU_COLORIZE=YES
+      - LOGLEVEL=INFO
+
+volumes:
+  sync-lock:
+
+networks:
+  vpn-network:
+    driver: bridge
