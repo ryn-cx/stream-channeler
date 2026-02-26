@@ -1,9 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { UsersService } from "@/client"
+import { type UserPublic, type UsersPublic, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,20 +13,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface DeleteUserProps {
-  id: string
-  onSuccess: () => void
+  user: UserPublic
 }
 
-const DeleteUser = ({ id, onSuccess }: DeleteUserProps) => {
+const DeleteUser = ({ user }: DeleteUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { handleSubmit } = useForm()
 
@@ -36,31 +39,58 @@ const DeleteUser = ({ id, onSuccess }: DeleteUserProps) => {
 
   const mutation = useMutation({
     mutationFn: deleteUser,
+    // When mutate is called:
+    onMutate: async (_userId, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await context.client.cancelQueries({ queryKey: ["users"] })
+
+      // Snapshot the previous value
+      const previousUsers = context.client.getQueryData<UsersPublic>(["users"])
+
+      // Optimistically update to the new value
+      context.client.setQueryData<UsersPublic>(["users"], (old) => ({
+        ...old!,
+        data: old!.data.filter((u) => u.id !== user.id),
+        count: old!.count - 1,
+      }))
+
+      // Return a result with the snapshotted value
+      return { previousUsers }
+    },
     onSuccess: () => {
       showSuccessToast("The user was deleted successfully")
       setIsOpen(false)
-      onSuccess()
     },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries()
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
+    onError: (error, _userId, onMutateResult, context) => {
+      context.client.setQueryData(["users"], onMutateResult?.previousUsers)
+      handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
+    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+      context.client.invalidateQueries({ queryKey: ["users"] }),
   })
 
   const onSubmit = async () => {
-    mutation.mutate(id)
+    mutation.mutate(user.id)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
-        variant="destructive"
-        onSelect={(e) => e.preventDefault()}
-        onClick={() => setIsOpen(true)}
-      >
-        <Trash2 />
-        Delete User
-      </DropdownMenuItem>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost">
+              <Trash2 className="text-destructive" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Delete user</p>
+        </TooltipContent>
+      </Tooltip>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>

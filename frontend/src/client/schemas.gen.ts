@@ -57,6 +57,631 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const ChannelEpisodesOutputSchema = {
+    properties: {
+        episodes: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeWithExtrasOutput'
+            },
+            type: 'array',
+            title: 'Episodes'
+        },
+        seasons: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SeasonOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Seasons'
+        },
+        shows: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ShowOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Shows'
+        },
+        sources: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SourceOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Sources'
+        },
+        plugins: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/PluginOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Plugins'
+        },
+        channels: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ChannelOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Channels'
+        }
+    },
+    type: 'object',
+    required: ['episodes', 'seasons', 'shows', 'sources', 'plugins', 'channels'],
+    title: 'ChannelEpisodesOutput'
+} as const;
+
+export const ChannelInputSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public',
+            default: false
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'ChannelInput'
+} as const;
+
+export const ChannelNameItemSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'ChannelNameItem'
+} as const;
+
+export const ChannelNamesOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ChannelNameItem'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'ChannelNamesOutput'
+} as const;
+
+export const ChannelOutputSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public',
+            default: false
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'user_id'],
+    title: 'ChannelOutput'
+} as const;
+
+export const ChannelQueueOutputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        status: {
+            '$ref': '#/components/schemas/URLStatus'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['url', 'status', 'id'],
+    title: 'ChannelQueueOutput'
+} as const;
+
+export const ChannelShowsOutputSchema = {
+    properties: {
+        shows: {
+            items: {
+                '$ref': '#/components/schemas/ShowOutput'
+            },
+            type: 'array',
+            title: 'Shows'
+        },
+        sources: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SourceOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Sources'
+        }
+    },
+    type: 'object',
+    title: 'ChannelShowsOutput'
+} as const;
+
+export const EpisodeOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            default: 0
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        release_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Release Date'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'url', 'season_id', 'id'],
+    title: 'EpisodeOutput'
+} as const;
+
+export const EpisodeWatchItemSchema = {
+    properties: {
+        watch_date: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Watch Date'
+        },
+        verified: {
+            type: 'boolean',
+            title: 'Verified'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        }
+    },
+    type: 'object',
+    required: ['watch_date', 'verified', 'id', 'episode_id'],
+    title: 'EpisodeWatchItem'
+} as const;
+
+export const EpisodeWatchPatchInputSchema = {
+    properties: {
+        watch_date: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Watch Date'
+        },
+        verified: {
+            type: 'boolean',
+            title: 'Verified'
+        }
+    },
+    type: 'object',
+    required: ['watch_date', 'verified'],
+    title: 'EpisodeWatchPatchInput'
+} as const;
+
+export const EpisodeWatchPostInputSchema = {
+    properties: {
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
+        watch_date: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Watch Date'
+        },
+        verified: {
+            type: 'boolean',
+            title: 'Verified'
+        }
+    },
+    type: 'object',
+    required: ['episode_id', 'watch_date', 'verified'],
+    title: 'EpisodeWatchPostInput'
+} as const;
+
+export const EpisodeWithExtrasOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            default: 0
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        release_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Release Date'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        watch_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Watch Date'
+        },
+        verified: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Verified'
+        },
+        episode_watch_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Watch Id'
+        },
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'url', 'season_id', 'id', 'channel_id'],
+    title: 'EpisodeWithExtrasOutput'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -71,117 +696,23 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
-export const ItemCreateSchema = {
+export const MessageSchema = {
     properties: {
-        title: {
+        message: {
             type: 'string',
-            maxLength: 255,
-            minLength: 1,
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
+            title: 'Message'
         }
     },
     type: 'object',
-    required: ['title'],
-    title: 'ItemCreate'
+    required: ['message'],
+    title: 'Message'
 } as const;
 
-export const ItemPublicSchema = {
-    properties: {
-        title: {
-            type: 'string',
-            maxLength: 255,
-            minLength: 1,
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        owner_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Owner Id'
-        },
-        created_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Created At'
-        }
-    },
-    type: 'object',
-    required: ['title', 'id', 'owner_id'],
-    title: 'ItemPublic'
-} as const;
-
-export const ItemUpdateSchema = {
-    properties: {
-        title: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        }
-    },
-    type: 'object',
-    title: 'ItemUpdate'
-} as const;
-
-export const ItemsPublicSchema = {
+export const MultipleChannelOutputsSchema = {
     properties: {
         data: {
             items: {
-                '$ref': '#/components/schemas/ItemPublic'
+                '$ref': '#/components/schemas/ChannelOutput'
             },
             type: 'array',
             title: 'Data'
@@ -193,19 +724,45 @@ export const ItemsPublicSchema = {
     },
     type: 'object',
     required: ['data', 'count'],
-    title: 'ItemsPublic'
+    title: 'MultipleChannelOutputs'
 } as const;
 
-export const MessageSchema = {
+export const MultipleChannelQueueOutputsSchema = {
     properties: {
-        message: {
-            type: 'string',
-            title: 'Message'
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ChannelQueueOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
         }
     },
     type: 'object',
-    required: ['message'],
-    title: 'Message'
+    required: ['data', 'count'],
+    title: 'MultipleChannelQueueOutputs'
+} as const;
+
+export const MultipleSortOptionOutputsSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SortOptionOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'MultipleSortOptionOutputs'
 } as const;
 
 export const NewPasswordSchema = {
@@ -224,6 +781,67 @@ export const NewPasswordSchema = {
     type: 'object',
     required: ['token', 'new_password'],
     title: 'NewPassword'
+} as const;
+
+export const PluginOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'name', 'id'],
+    title: 'PluginOutput'
 } as const;
 
 export const PrivateUserCreateSchema = {
@@ -251,6 +869,369 @@ export const PrivateUserCreateSchema = {
     title: 'PrivateUserCreate'
 } as const;
 
+export const SeasonOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        sort_order: {
+            type: 'integer',
+            title: 'Sort Order',
+            default: 0
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'show_id', 'id'],
+    title: 'SeasonOutput'
+} as const;
+
+export const ShowOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        source_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'name', 'source_id', 'id'],
+    title: 'ShowOutput'
+} as const;
+
+export const SingleEpisodeWatchOutputSchema = {
+    properties: {
+        watch_date: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Watch Date'
+        },
+        verified: {
+            type: 'boolean',
+            title: 'Verified',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        episode: {
+            '$ref': '#/components/schemas/EpisodeOutput'
+        },
+        season: {
+            '$ref': '#/components/schemas/SeasonOutput'
+        },
+        show: {
+            '$ref': '#/components/schemas/ShowOutput'
+        },
+        source: {
+            '$ref': '#/components/schemas/SourceOutput'
+        },
+        plugin: {
+            '$ref': '#/components/schemas/PluginOutput'
+        }
+    },
+    type: 'object',
+    required: ['watch_date', 'id', 'episode', 'season', 'show', 'source', 'plugin'],
+    title: 'SingleEpisodeWatchOutput'
+} as const;
+
+export const SortOptionOutputSchema = {
+    properties: {
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        value: {
+            type: 'string',
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['label', 'value'],
+    title: 'SortOptionOutput'
+} as const;
+
+export const SourceOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        plugin_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Plugin Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'name', 'plugin_id', 'id'],
+    title: 'SourceOutput'
+} as const;
+
 export const TokenSchema = {
     properties: {
         access_token: {
@@ -266,6 +1247,12 @@ export const TokenSchema = {
     type: 'object',
     required: ['access_token'],
     title: 'Token'
+} as const;
+
+export const URLStatusSchema = {
+    type: 'string',
+    enum: ['Pending', 'Failed', 'Imported', 'Importing'],
+    title: 'URLStatus'
 } as const;
 
 export const UpdatePasswordSchema = {
@@ -544,16 +1531,299 @@ export const ValidationErrorSchema = {
         type: {
             type: 'string',
             title: 'Error Type'
-        },
-        input: {
-            title: 'Input'
-        },
-        ctx: {
-            type: 'object',
-            title: 'Context'
         }
     },
     type: 'object',
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
+} as const;
+
+export const WatchedEpisodesOutputSchema = {
+    properties: {
+        watches: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeWatchItem'
+            },
+            type: 'array',
+            title: 'Watches'
+        },
+        episodes: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/EpisodeOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Episodes'
+        },
+        seasons: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SeasonOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Seasons'
+        },
+        shows: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ShowOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Shows'
+        },
+        sources: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SourceOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Sources'
+        },
+        plugins: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/PluginOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Plugins'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['watches', 'episodes', 'seasons', 'shows', 'sources', 'plugins', 'count'],
+    title: 'WatchedEpisodesOutput'
+} as const;
+
+export const WhitelistEpisodeInputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        enabled: {
+            type: 'boolean',
+            title: 'Enabled'
+        }
+    },
+    type: 'object',
+    required: ['id', 'enabled'],
+    title: 'WhitelistEpisodeInput'
+} as const;
+
+export const WhitelistSeasonInputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        enabled: {
+            type: 'boolean',
+            title: 'Enabled'
+        },
+        episodes: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEpisodeInput'
+            },
+            type: 'array',
+            title: 'Episodes'
+        }
+    },
+    type: 'object',
+    required: ['id', 'enabled', 'episodes'],
+    title: 'WhitelistSeasonInput'
+} as const;
+
+export const WhitelistShowInputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        whitelist_mode: {
+            type: 'boolean',
+            title: 'Whitelist Mode'
+        },
+        seasons: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistSeasonInput'
+            },
+            type: 'array',
+            title: 'Seasons'
+        }
+    },
+    type: 'object',
+    required: ['id', 'whitelist_mode', 'seasons'],
+    title: 'WhitelistShowInput'
+} as const;
+
+export const WhitelistShowOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        source_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        whitelist_mode: {
+            type: 'boolean',
+            title: 'Whitelist Mode'
+        },
+        enabled_season_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Enabled Season Ids'
+        },
+        enabled_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Enabled Episode Ids'
+        },
+        seasons: {
+            items: {
+                '$ref': '#/components/schemas/SeasonOutput'
+            },
+            type: 'array',
+            title: 'Seasons'
+        },
+        episodes: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeOutput'
+            },
+            type: 'array',
+            title: 'Episodes'
+        }
+    },
+    type: 'object',
+    required: ['key', 'data_timestamp', 'name', 'source_id', 'id', 'whitelist_mode', 'enabled_season_ids', 'enabled_episode_ids', 'seasons', 'episodes'],
+    title: 'WhitelistShowOutput'
+} as const;
+
+export const WhitelistStatusOutputSchema = {
+    properties: {
+        visible: {
+            type: 'boolean',
+            title: 'Visible'
+        }
+    },
+    type: 'object',
+    required: ['visible'],
+    title: 'WhitelistStatusOutput'
 } as const;

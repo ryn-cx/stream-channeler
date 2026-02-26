@@ -3,7 +3,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { UserPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { UserActionsMenu } from "./UserActionsMenu"
+import DeleteUser from "./DeleteUser"
+import EditUser from "./EditUser"
 
 export type UserTableData = UserPublic & {
   isCurrentUser: boolean
@@ -39,7 +40,8 @@ export const columns: ColumnDef<UserTableData>[] = [
     ),
   },
   {
-    accessorKey: "is_superuser",
+    accessorFn: (row) => (row.is_superuser ? "Superuser" : "User"),
+    id: "is_superuser",
     header: "Role",
     cell: ({ row }) => (
       <Badge variant={row.original.is_superuser ? "default" : "secondary"}>
@@ -48,7 +50,8 @@ export const columns: ColumnDef<UserTableData>[] = [
     ),
   },
   {
-    accessorKey: "is_active",
+    accessorFn: (row) => (row.is_active ? "Active" : "Inactive"),
+    id: "is_active",
     header: "Status",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
@@ -69,7 +72,8 @@ export const columns: ColumnDef<UserTableData>[] = [
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <UserActionsMenu user={row.original} />
+        <EditUser user={row.original} />
+        <DeleteUser user={row.original} />
       </div>
     ),
   },

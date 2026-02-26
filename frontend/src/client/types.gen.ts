@@ -9,35 +9,143 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type ChannelEpisodesOutput = {
+    episodes: Array<EpisodeWithExtrasOutput>;
+    seasons: {
+        [key: string]: SeasonOutput;
+    };
+    shows: {
+        [key: string]: ShowOutput;
+    };
+    sources: {
+        [key: string]: SourceOutput;
+    };
+    plugins: {
+        [key: string]: PluginOutput;
+    };
+    channels: {
+        [key: string]: ChannelOutput;
+    };
+};
+
+export type ChannelInput = {
+    name: string;
+    public?: boolean;
+    default_order?: (string | null);
+};
+
+export type ChannelNameItem = {
+    id: string;
+    name: string;
+};
+
+export type ChannelNamesOutput = {
+    data: Array<ChannelNameItem>;
+};
+
+export type ChannelOutput = {
+    name: string;
+    public?: boolean;
+    default_order?: (string | null);
+    id: string;
+    user_id: string;
+};
+
+export type ChannelQueueOutput = {
+    url: string;
+    status: URLStatus;
+    note?: (string | null);
+    id: string;
+};
+
+export type ChannelShowsOutput = {
+    shows?: Array<ShowOutput>;
+    sources?: {
+        [key: string]: SourceOutput;
+    };
+};
+
+export type EpisodeOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    url: string;
+    sort_order?: number;
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    duration?: (number | null);
+    season_id: string;
+    id: string;
+};
+
+export type EpisodeWatchItem = {
+    watch_date: string;
+    verified: boolean;
+    id: string;
+    episode_id: string;
+};
+
+export type EpisodeWatchPatchInput = {
+    watch_date: string;
+    verified: boolean;
+};
+
+export type EpisodeWatchPostInput = {
+    episode_id: string;
+    watch_date: string;
+    verified: boolean;
+};
+
+export type EpisodeWithExtrasOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    url: string;
+    sort_order?: number;
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    duration?: (number | null);
+    season_id: string;
+    id: string;
+    watch_date?: (string | null);
+    verified?: (boolean | null);
+    episode_watch_id?: (string | null);
+    channel_id: string;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
-export type ItemCreate = {
-    title: string;
-    description?: (string | null);
+export type Message = {
+    message: string;
 };
 
-export type ItemPublic = {
-    title: string;
-    description?: (string | null);
-    id: string;
-    owner_id: string;
-    created_at?: (string | null);
-};
-
-export type ItemsPublic = {
-    data: Array<ItemPublic>;
+export type MultipleChannelOutputs = {
+    data: Array<ChannelOutput>;
     count: number;
 };
 
-export type ItemUpdate = {
-    title?: (string | null);
-    description?: (string | null);
+export type MultipleChannelQueueOutputs = {
+    data: Array<ChannelQueueOutput>;
+    count: number;
 };
 
-export type Message = {
-    message: string;
+export type MultipleSortOptionOutputs = {
+    data: Array<SortOptionOutput>;
+    count: number;
 };
 
 export type NewPassword = {
@@ -45,11 +153,80 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type PluginOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name: string;
+    id: string;
+};
+
 export type PrivateUserCreate = {
     email: string;
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type SeasonOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    sort_order?: number;
+    name?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    season_number?: (number | null);
+    show_id: string;
+    id: string;
+};
+
+export type ShowOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name: string;
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    source_id: string;
+    id: string;
+};
+
+export type SingleEpisodeWatchOutput = {
+    watch_date: string;
+    verified?: boolean;
+    id: string;
+    episode: EpisodeOutput;
+    season: SeasonOutput;
+    show: ShowOutput;
+    source: SourceOutput;
+    plugin: PluginOutput;
+};
+
+export type SortOptionOutput = {
+    label: string;
+    value: string;
+};
+
+export type SourceOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name: string;
+    favicon_url?: (string | null);
+    image_url?: (string | null);
+    plugin_id: string;
+    id: string;
 };
 
 export type Token = {
@@ -61,6 +238,8 @@ export type UpdatePassword = {
     current_password: string;
     new_password: string;
 };
+
+export type URLStatus = 'Pending' | 'Failed' | 'Imported' | 'Importing';
 
 export type UserCreate = {
     email: string;
@@ -107,43 +286,229 @@ export type ValidationError = {
     loc: Array<(string | number)>;
     msg: string;
     type: string;
-    input?: unknown;
-    ctx?: {
-        [key: string]: unknown;
-    };
 };
 
-export type ItemsReadItemsData = {
+export type WatchedEpisodesOutput = {
+    watches: Array<EpisodeWatchItem>;
+    episodes: {
+        [key: string]: EpisodeOutput;
+    };
+    seasons: {
+        [key: string]: SeasonOutput;
+    };
+    shows: {
+        [key: string]: ShowOutput;
+    };
+    sources: {
+        [key: string]: SourceOutput;
+    };
+    plugins: {
+        [key: string]: PluginOutput;
+    };
+    count: number;
+};
+
+export type WhitelistEpisodeInput = {
+    id: string;
+    enabled: boolean;
+};
+
+export type WhitelistSeasonInput = {
+    id: string;
+    enabled: boolean;
+    episodes: Array<WhitelistEpisodeInput>;
+};
+
+export type WhitelistShowInput = {
+    id: string;
+    whitelist_mode: boolean;
+    seasons: Array<WhitelistSeasonInput>;
+};
+
+export type WhitelistShowOutput = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name: string;
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    source_id: string;
+    id: string;
+    whitelist_mode: boolean;
+    enabled_season_ids: Array<(string)>;
+    enabled_episode_ids: Array<(string)>;
+    seasons: Array<SeasonOutput>;
+    episodes: Array<EpisodeOutput>;
+};
+
+export type WhitelistStatusOutput = {
+    visible: boolean;
+};
+
+export type ChannelsGetSortOptionsResponse = (MultipleSortOptionOutputs);
+
+export type ChannelsGetChannelsData = {
     limit?: number;
     skip?: number;
 };
 
-export type ItemsReadItemsResponse = (ItemsPublic);
+export type ChannelsGetChannelsResponse = (MultipleChannelOutputs);
 
-export type ItemsCreateItemData = {
-    requestBody: ItemCreate;
+export type ChannelsCreateChannelData = {
+    requestBody: ChannelInput;
 };
 
-export type ItemsCreateItemResponse = (ItemPublic);
+export type ChannelsCreateChannelResponse = (ChannelOutput);
 
-export type ItemsReadItemData = {
-    itemId: string;
+export type ChannelsGetChannelNamesData = {
+    channelIds: Array<(string)>;
 };
 
-export type ItemsReadItemResponse = (ItemPublic);
+export type ChannelsGetChannelNamesResponse = (ChannelNamesOutput);
 
-export type ItemsUpdateItemData = {
-    itemId: string;
-    requestBody: ItemUpdate;
+export type ChannelsGetChannelData = {
+    channelId: string;
 };
 
-export type ItemsUpdateItemResponse = (ItemPublic);
+export type ChannelsGetChannelResponse = (ChannelOutput);
 
-export type ItemsDeleteItemData = {
-    itemId: string;
+export type ChannelsUpdateChannelData = {
+    channelId: string;
+    requestBody: ChannelInput;
 };
 
-export type ItemsDeleteItemResponse = (Message);
+export type ChannelsUpdateChannelResponse = (ChannelOutput);
+
+export type ChannelsDeleteChannelData = {
+    channelId: string;
+};
+
+export type ChannelsDeleteChannelResponse = (Message);
+
+export type ChannelsAddUrlsToChannelImportQueueData = {
+    channelId: string;
+    requestBody: Array<(string)>;
+};
+
+export type ChannelsAddUrlsToChannelImportQueueResponse = (MultipleChannelQueueOutputs);
+
+export type ChannelsGetChannelImportQueueData = {
+    channelId: string;
+    limit?: number;
+    skip?: number;
+};
+
+export type ChannelsGetChannelImportQueueResponse = (MultipleChannelQueueOutputs);
+
+export type ChannelsDeleteUrlFromChannelImportQueueData = {
+    channelId: string;
+    urlId: string;
+};
+
+export type ChannelsDeleteUrlFromChannelImportQueueResponse = (Message);
+
+export type ChannelsClearCompletedChannelImportQueueData = {
+    channelId: string;
+};
+
+export type ChannelsClearCompletedChannelImportQueueResponse = (Message);
+
+export type ChannelsSetChannelShowWhitelistData = {
+    channelId: string;
+    requestBody: WhitelistShowInput;
+    showId: string;
+};
+
+export type ChannelsSetChannelShowWhitelistResponse = (WhitelistShowOutput);
+
+export type ChannelsGetChannelShowWhitelistData = {
+    channelId: string;
+    showId: string;
+};
+
+export type ChannelsGetChannelShowWhitelistResponse = (WhitelistShowOutput);
+
+export type ChannelsSwapEpisodeWhitelistStatusData = {
+    channelId: string;
+    episodeId: string;
+};
+
+export type ChannelsSwapEpisodeWhitelistStatusResponse = (WhitelistStatusOutput);
+
+export type ChannelsGetChannelShowsData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+
+export type ChannelsGetChannelEpisodesData = {
+    additionalChannels?: Array<(string)>;
+    channelId: string;
+    episodeInterleaving?: (string | null);
+    episodeOrdering?: boolean;
+    hideUnwatched?: boolean;
+    hideWatched?: boolean;
+    maximumAirDateAbsolute?: (string | null);
+    maximumAirDateRelative?: (number | null);
+    maximumDuration?: (number | null);
+    maximumReleaseDateAbsolute?: (string | null);
+    maximumReleaseDateRelative?: (number | null);
+    maximumWatchDateAbsolute?: (string | null);
+    maximumWatchDateRelative?: (number | null);
+    minimumAirDateAbsolute?: (string | null);
+    minimumAirDateRelative?: (number | null);
+    minimumDuration?: (number | null);
+    minimumReleaseDateAbsolute?: (string | null);
+    minimumReleaseDateRelative?: (number | null);
+    onlyNewShows?: boolean;
+    onlyStartedShows?: boolean;
+    randomizeOnLastSort?: boolean;
+    rotateShows?: boolean;
+    rotateShowsRandomly?: boolean;
+    sortBy?: Array<(string)>;
+};
+
+export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
+
+export type ChannelsRemoveChannelShowData = {
+    channelId: string;
+    showId: string;
+};
+
+export type ChannelsRemoveChannelShowResponse = (Message);
+
+export type ChannelsUpdateChannelDefaultOrderData = {
+    additionalChannels?: Array<(string)>;
+    channelId: string;
+    episodeInterleaving?: (string | null);
+    episodeOrdering?: boolean;
+    hideUnwatched?: boolean;
+    hideWatched?: boolean;
+    maximumAirDateAbsolute?: (string | null);
+    maximumAirDateRelative?: (number | null);
+    maximumDuration?: (number | null);
+    maximumReleaseDateAbsolute?: (string | null);
+    maximumReleaseDateRelative?: (number | null);
+    maximumWatchDateAbsolute?: (string | null);
+    maximumWatchDateRelative?: (number | null);
+    minimumAirDateAbsolute?: (string | null);
+    minimumAirDateRelative?: (number | null);
+    minimumDuration?: (number | null);
+    minimumReleaseDateAbsolute?: (string | null);
+    minimumReleaseDateRelative?: (number | null);
+    onlyNewShows?: boolean;
+    onlyStartedShows?: boolean;
+    randomizeOnLastSort?: boolean;
+    rotateShows?: boolean;
+    rotateShowsRandomly?: boolean;
+    sortBy?: Array<(string)>;
+};
+
+export type ChannelsUpdateChannelDefaultOrderResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -170,6 +535,32 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type MediaPostWatchedEpisodeData = {
+    requestBody: EpisodeWatchPostInput;
+};
+
+export type MediaPostWatchedEpisodeResponse = (SingleEpisodeWatchOutput);
+
+export type MediaGetWatchedEpisodesData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type MediaGetWatchedEpisodesResponse = (WatchedEpisodesOutput);
+
+export type MediaPatchWatchedEpisodeData = {
+    episodeWatchId: string;
+    requestBody: EpisodeWatchPatchInput;
+};
+
+export type MediaPatchWatchedEpisodeResponse = (SingleEpisodeWatchOutput);
+
+export type MediaDeleteWatchedEpisodeData = {
+    episodeWatchId: string;
+};
+
+export type MediaDeleteWatchedEpisodeResponse = (Message);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

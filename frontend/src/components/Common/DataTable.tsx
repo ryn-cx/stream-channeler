@@ -1,9 +1,20 @@
+// TODO: Validate
 import {
+  type Column,
   type ColumnDef,
+  type ColumnFiltersState,
   flexRender,
   getCoreRowModel,
+  getFacetedMinMaxValues,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
+  type OnChangeFn,
+  type RowData,
   useReactTable,
+  type VisibilityState,
 } from "@tanstack/react-table"
 import {
   ChevronLeft,
@@ -11,6 +22,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react"
+import React from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -29,37 +41,126 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+// From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
+declare module "@tanstack/react-table" {
+  // allows us to define custom properties for our columns
+  // biome-ignore lint/correctness/noUnusedVariables: Type parameters required for module augmentation
+  interface ColumnMeta<TData extends RowData, TValue> {
+    filterVariant?: "text" | "range" | "select"
+  }
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
+  columnVisibility?: VisibilityState
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
+  columnVisibility,
+  onColumnVisibilityChange,
 }: DataTableProps<TData, TValue>) {
+  // From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  )
+
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 50,
+  })
+
+  // Reset page to 0 when filters actually change, since autoResetPageIndex
+  // is disabled to prevent pagination clicks from resetting the page.
+  const handleColumnFiltersChange: React.Dispatch<
+    React.SetStateAction<ColumnFiltersState>
+  > = React.useCallback((updater) => {
+    setColumnFilters((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater
+      if (JSON.stringify(next) !== JSON.stringify(prev)) {
+        setPagination((p) => ({ ...p, pageIndex: 0 }))
+      }
+      return next
+    })
+  }, [])
+
   const table = useReactTable({
     data,
     columns,
+    // From:
+    // https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
+    // https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
+
+    filterFns: {},
+    state: {
+      columnFilters,
+      columnVisibility,
+      pagination,
+    },
+    onColumnVisibilityChange,
+    onColumnFiltersChange: handleColumnFiltersChange,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), //client-side filtering
+    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    getFacetedRowModel: getFacetedRowModel(), // client-side faceting
+    getFacetedUniqueValues: getFacetedUniqueValues(), // generate unique values for select filter/autocomplete
+    getFacetedMinMaxValues: getFacetedMinMaxValues(), // generate min/max values for range filter
+
+    onPaginationChange: setPagination,
+    autoResetPageIndex: false,
   })
 
   return (
     <div className="flex flex-col gap-4">
-      <Table>
+      <Table className="table-fixed w-full">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                  <TableHead key={header.id} className="overflow-hidden">
+                    {/* From: https://tanstack.com/table/latest/docs/framework/react/examples/sorting */}
+                    {header.isPlaceholder ? null : (
+                      <>
+                        <div
+                          className={
+                            header.column.getCanSort()
+                              ? "cursor-pointer select-none"
+                              : ""
+                          }
+                          onClick={header.column.getToggleSortingHandler()}
+                          title={
+                            header.column.getCanSort()
+                              ? header.column.getNextSortingOrder() === "asc"
+                                ? "Sort ascending"
+                                : header.column.getNextSortingOrder() === "desc"
+                                  ? "Sort descending"
+                                  : "Clear sort"
+                              : undefined
+                          }
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          {{
+                            asc: " 🔼",
+                            desc: " 🔽",
+                          }[header.column.getIsSorted() as string] ?? null}
+                        </div>
+                        {header.column.getCanFilter() ? (
+                          <div className="mt-2">
+                            <Filter column={header.column} />
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </TableHead>
                 )
               })}
@@ -71,7 +172,7 @@ export function DataTable<TData, TValue>({
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell key={cell.id} className="overflow-hidden">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -102,10 +203,12 @@ export function DataTable<TData, TValue>({
               {Math.min(
                 (table.getState().pagination.pageIndex + 1) *
                   table.getState().pagination.pageSize,
-                data.length,
+                table.getFilteredRowModel().rows.length,
               )}{" "}
               of{" "}
-              <span className="font-medium text-foreground">{data.length}</span>{" "}
+              <span className="font-medium text-foreground">
+                {table.getFilteredRowModel().rows.length}
+              </span>{" "}
               entries
             </div>
             <div className="flex items-center gap-x-2">
@@ -190,5 +293,144 @@ export function DataTable<TData, TValue>({
         </div>
       )}
     </div>
+  )
+}
+
+// From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
+function Filter({ column }: { column: Column<any, unknown> }) {
+  const { filterVariant } = column.columnDef.meta ?? {}
+
+  const columnFilterValue = column.getFilterValue()
+
+  const sortedUniqueValues = React.useMemo(
+    () =>
+      filterVariant === "range"
+        ? []
+        : Array.from(column.getFacetedUniqueValues().keys())
+            .sort()
+            .slice(0, 5000),
+    [filterVariant, column.getFacetedUniqueValues],
+  )
+
+  if (filterVariant === "range") {
+    return (
+      <div>
+        <div className="flex space-x-2">
+          <DebouncedInput
+            type="number"
+            min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
+            max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
+            value={(columnFilterValue as [number, number])?.[0] ?? ""}
+            onChange={(value) =>
+              column.setFilterValue((old: [number, number]) => [
+                value,
+                old?.[1],
+              ])
+            }
+            placeholder={`Min ${
+              column.getFacetedMinMaxValues()?.[0] !== undefined
+                ? `(${column.getFacetedMinMaxValues()?.[0]})`
+                : ""
+            }`}
+            className="w-24 border shadow rounded"
+          />
+          <DebouncedInput
+            type="number"
+            min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
+            max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
+            value={(columnFilterValue as [number, number])?.[1] ?? ""}
+            onChange={(value) =>
+              column.setFilterValue((old: [number, number]) => [
+                old?.[0],
+                value,
+              ])
+            }
+            placeholder={`Max ${
+              column.getFacetedMinMaxValues()?.[1]
+                ? `(${column.getFacetedMinMaxValues()?.[1]})`
+                : ""
+            }`}
+            className="w-24 border shadow rounded"
+          />
+        </div>
+        <div className="h-1" />
+      </div>
+    )
+  }
+
+  if (
+    filterVariant !== "text" &&
+    (filterVariant === "select" || sortedUniqueValues.length <= 50)
+  ) {
+    return (
+      <select
+        onChange={(e) => column.setFilterValue(e.target.value)}
+        value={columnFilterValue?.toString()}
+      >
+        <option value="">All</option>
+        {sortedUniqueValues.map((value) => (
+          //dynamically generated select options from faceted values feature
+          <option value={value} key={value}>
+            {value}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  return (
+    <>
+      {/* Autocomplete suggestions from faceted values feature */}
+      <datalist id={`${column.id}list`}>
+        {sortedUniqueValues.map((value: any) => (
+          <option value={value} key={value} />
+        ))}
+      </datalist>
+      <DebouncedInput
+        type="text"
+        value={(columnFilterValue ?? "") as string}
+        onChange={(value) => column.setFilterValue(value)}
+        placeholder={`Search... (${column.getFacetedUniqueValues().size})`}
+        className="w-36 border shadow rounded"
+        list={`${column.id}list`}
+      />
+      <div className="h-1" />
+    </>
+  )
+}
+
+// From: https://tanstack.com/table/latest/docs/framework/react/examples/filters
+// Debounce time was decreased to 100ms for better responsiveness
+// A typical debounced input react component
+function DebouncedInput({
+  value: initialValue,
+  onChange,
+  debounce = 100,
+  ...props
+}: {
+  value: string | number
+  onChange: (value: string | number) => void
+  debounce?: number
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange">) {
+  const [value, setValue] = React.useState(initialValue)
+
+  React.useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value)
+    }, debounce)
+
+    return () => clearTimeout(timeout)
+  }, [value, debounce, onChange])
+
+  return (
+    <input
+      {...props}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+    />
   )
 }
