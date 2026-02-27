@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from sqlmodel import Session, col, func, select
 
@@ -18,6 +19,10 @@ from app.media.schemas import (
     SourceOutput,
     WatchedEpisodesOutput,
 )
+from app.plugins.utils.manage_plugins import import_plugins, plugins
+
+if TYPE_CHECKING:
+    from app.plugins.utils.abstract_plugin import AbstractPlugin
 
 
 def _episode_watch_count_statement(session: Session, user_id: uuid.UUID) -> int:
@@ -135,3 +140,24 @@ def save_episode_watch(
         source=SourceOutput.model_validate(episode.season.show.source),
         plugin=PluginOutput.model_validate(episode.season.show.source.plugin),
     )
+
+
+def get_importable_plugins() -> list[type[AbstractPlugin]]:
+    """Return all plugin classes that support watch import."""
+    import_plugins()
+    result: list[type[AbstractPlugin]] = []
+    for plugin_cls in plugins:
+        try:
+            plugin_cls.import_watch_history_info()
+            result.append(plugin_cls)
+        except NotImplementedError:
+            continue
+    return result
+
+
+def get_plugin(plugin_id: str) -> type[AbstractPlugin] | None:
+    """Find an importable plugin class by its plugin_id."""
+    for plugin_cls in get_importable_plugins():
+        if plugin_cls.plugin_id() == plugin_id:
+            return plugin_cls
+    return None

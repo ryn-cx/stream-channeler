@@ -19,8 +19,19 @@ def try_to_import_plugin(plugin_import_path: str) -> None:
         logger.exception(msg)
 
 
+_plugins_loaded = False
+
+
 def import_plugins() -> None:
-    """Import and register all plugins in the plugins folder."""
+    """Import and register all plugins in the plugins folder.
+
+    Safe to call multiple times — only performs the import once.
+    """
+    global _plugins_loaded  # noqa: PLW0603
+    if _plugins_loaded:
+        return
+    _plugins_loaded = True
+
     plugins_dir = Path(__file__).parent.parent
     # plugins can either be a single file or a folder with multiple files so both
     # formats have to be supported.

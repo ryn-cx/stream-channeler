@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelsGetSortOptionsResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelNamesData, ChannelsGetChannelNamesResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsAddUrlsToChannelImportQueueData, ChannelsAddUrlsToChannelImportQueueResponse, ChannelsGetChannelImportQueueData, ChannelsGetChannelImportQueueResponse, ChannelsDeleteUrlFromChannelImportQueueData, ChannelsDeleteUrlFromChannelImportQueueResponse, ChannelsClearCompletedChannelImportQueueData, ChannelsClearCompletedChannelImportQueueResponse, ChannelsSetChannelShowWhitelistData, ChannelsSetChannelShowWhitelistResponse, ChannelsGetChannelShowWhitelistData, ChannelsGetChannelShowWhitelistResponse, ChannelsSwapEpisodeWhitelistStatusData, ChannelsSwapEpisodeWhitelistStatusResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsRemoveChannelShowData, ChannelsRemoveChannelShowResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MediaPostWatchedEpisodeData, MediaPostWatchedEpisodeResponse, MediaGetWatchedEpisodesData, MediaGetWatchedEpisodesResponse, MediaPatchWatchedEpisodeData, MediaPatchWatchedEpisodeResponse, MediaDeleteWatchedEpisodeData, MediaDeleteWatchedEpisodeResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { ChannelsGetSortOptionsResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelNamesData, ChannelsGetChannelNamesResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsAddUrlsToChannelImportQueueData, ChannelsAddUrlsToChannelImportQueueResponse, ChannelsGetChannelImportQueueData, ChannelsGetChannelImportQueueResponse, ChannelsDeleteUrlFromChannelImportQueueData, ChannelsDeleteUrlFromChannelImportQueueResponse, ChannelsClearCompletedChannelImportQueueData, ChannelsClearCompletedChannelImportQueueResponse, ChannelsSetChannelShowWhitelistData, ChannelsSetChannelShowWhitelistResponse, ChannelsGetChannelShowWhitelistData, ChannelsGetChannelShowWhitelistResponse, ChannelsSwapEpisodeWhitelistStatusData, ChannelsSwapEpisodeWhitelistStatusResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsRemoveChannelShowData, ChannelsRemoveChannelShowResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, EpisodesPostWatchedEpisodeData, EpisodesPostWatchedEpisodeResponse, EpisodesGetWatchedEpisodesData, EpisodesGetWatchedEpisodesResponse, EpisodesPatchWatchedEpisodeData, EpisodesPatchWatchedEpisodeResponse, EpisodesDeleteWatchedEpisodeData, EpisodesDeleteWatchedEpisodeResponse, EpisodesListImportablePluginsResponse, EpisodesImportWatchHistoryData, EpisodesImportWatchHistoryResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class ChannelsService {
     /**
@@ -503,6 +503,137 @@ export class ChannelsService {
     }
 }
 
+export class EpisodesService {
+    /**
+     * Post Watched Episode
+     * Create a new episode watch entry.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns SingleEpisodeWatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static postWatchedEpisode(data: EpisodesPostWatchedEpisodeData): CancelablePromise<EpisodesPostWatchedEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/episodes/watches',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Watched Episodes
+     * Get multiple watched episode entries.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns WatchedEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getWatchedEpisodes(data: EpisodesGetWatchedEpisodesData = {}): CancelablePromise<EpisodesGetWatchedEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/watches',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Patch Watched Episode
+     * Update an existing episode watch entry.
+     * @param data The data for the request.
+     * @param data.episodeWatchId
+     * @param data.requestBody
+     * @returns SingleEpisodeWatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static patchWatchedEpisode(data: EpisodesPatchWatchedEpisodeData): CancelablePromise<EpisodesPatchWatchedEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/episodes/watches/{episode_watch_id}',
+            path: {
+                episode_watch_id: data.episodeWatchId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Watched Episode
+     * Delete an existing episode watch entry.
+     * @param data The data for the request.
+     * @param data.episodeWatchId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteWatchedEpisode(data: EpisodesDeleteWatchedEpisodeData): CancelablePromise<EpisodesDeleteWatchedEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episodes/watches/{episode_watch_id}',
+            path: {
+                episode_watch_id: data.episodeWatchId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Importable Plugins
+     * List all plugins that support importing watch history.
+     * @returns WatchImportPluginsOutput Successful Response
+     * @throws ApiError
+     */
+    public static listImportablePlugins(): CancelablePromise<EpisodesListImportablePluginsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/watches/import/plugins'
+        });
+    }
+    
+    /**
+     * Import Watch History
+     * Import watch history from an uploaded file for a specific plugin.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.newOnly
+     * @param data.verified
+     * @param data.formData
+     * @returns WatchImportResult Successful Response
+     * @throws ApiError
+     */
+    public static importWatchHistory(data: EpisodesImportWatchHistoryData): CancelablePromise<EpisodesImportWatchHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/episodes/watches/import',
+            query: {
+                plugin_id: data.pluginId,
+                new_only: data.newOnly,
+                verified: data.verified
+            },
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
 export class LoginService {
     /**
      * Login Access Token
@@ -592,96 +723,6 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
-
-export class MediaService {
-    /**
-     * Post Watched Episode
-     * Create a new episode watch entry.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns SingleEpisodeWatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static postWatchedEpisode(data: MediaPostWatchedEpisodeData): CancelablePromise<MediaPostWatchedEpisodeResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/media/episode-watches',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Watched Episodes
-     * Get multiple watched episode entries.
-     * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns WatchedEpisodesOutput Successful Response
-     * @throws ApiError
-     */
-    public static getWatchedEpisodes(data: MediaGetWatchedEpisodesData = {}): CancelablePromise<MediaGetWatchedEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/media/episode-watches',
-            query: {
-                skip: data.skip,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Patch Watched Episode
-     * Update an existing episode watch entry.
-     * @param data The data for the request.
-     * @param data.episodeWatchId
-     * @param data.requestBody
-     * @returns SingleEpisodeWatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static patchWatchedEpisode(data: MediaPatchWatchedEpisodeData): CancelablePromise<MediaPatchWatchedEpisodeResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/media/episode-watches/{episode_watch_id}',
-            path: {
-                episode_watch_id: data.episodeWatchId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Watched Episode
-     * Delete an existing episode watch entry.
-     * @param data The data for the request.
-     * @param data.episodeWatchId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteWatchedEpisode(data: MediaDeleteWatchedEpisodeData): CancelablePromise<MediaDeleteWatchedEpisodeResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/media/episode-watches/{episode_watch_id}',
-            path: {
-                episode_watch_id: data.episodeWatchId
             },
             errors: {
                 422: 'Validation Error'

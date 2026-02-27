@@ -2,6 +2,7 @@
 import uuid
 from datetime import datetime
 
+from pydantic import BaseModel
 from sqlmodel import Field, Session, SQLModel
 
 from app.constants import MAX_ENTRIES_PER_PAGE
@@ -53,7 +54,6 @@ class MetadataMixinInput[T: BaseMetadataMixin](BaseMetadataMixin):
         return protected_keys
 
 
-# region Media Input Schemas
 # These classes may seem redundant because SQLAlchemy has Session.merge and ORM "upsert"
 # Statements, but these features where inadequate when working with models that have
 # keys that are randomly generated.
@@ -349,3 +349,45 @@ class WatchedEpisodesOutput(SQLModel):
     sources: dict[uuid.UUID, SourceOutput] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
     count: int = Field()
+
+
+class WatchImportFormatInformation(BaseModel):
+    """Information about a supported watch import format."""
+
+    plugin_id: str
+    plugin_name: str
+    file_type: str
+    file_extension: str
+    description: str
+    instructions: str
+
+
+class WatchImportEntry(BaseModel):
+    """A single entry from a watch history import."""
+
+    show: str
+    show_url: str
+    episode: str
+    episode_url: str
+
+
+class WatchImportResult(BaseModel):
+    """Result of a watch history import operation."""
+
+    added: list[WatchImportEntry]
+    existing: list[WatchImportEntry]
+    skipped: list[WatchImportEntry]
+
+
+class WatchImportInput(BaseModel):
+    """Input parameters for a watch history import."""
+
+    plugin_id: str
+    new_only: bool
+    verified: bool
+
+
+class WatchImportPluginsOutput(BaseModel):
+    """Response listing all plugins that support watch history import."""
+
+    plugins: list[WatchImportFormatInformation]

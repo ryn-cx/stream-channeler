@@ -5,6 +5,7 @@ description = ""
 requires-python = ">=3.14,<4.0"
 dependencies = [
   "alembic<2.0.0,>=1.12.1",
+  "beautifulsoup4>=4.14.3",
   "chirashi",
   "diving-board",
   "email-validator<3.0.0.0,>=2.1.0.post1",

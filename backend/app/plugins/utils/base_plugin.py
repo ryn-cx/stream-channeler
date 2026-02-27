@@ -2,6 +2,7 @@
 import re
 import uuid
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import cache
@@ -11,10 +12,11 @@ from sqlalchemy.orm import joinedload
 from sqlmodel import Session, SQLModel, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.media.models import Episode, File, Plugin, Season, Show, Source
+from app.media.models import Episode, EpisodeWatch, File, Plugin, Season, Show, Source
 from app.media.schemas import PluginInput
 from app.plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from app.plugins.utils.base_files import BaseFile
+from app.users.models import User
 from app.utils import tz_datetime
 
 
@@ -374,6 +376,43 @@ class BasePlugin(AbstractPlugin, ABC, register=False):
         - https://example.com
         """
         return rf"(?:^(?:https?:\/\/)?(?:www\.)?{re.escape(domain)})"
+
+    # endregion
+
+    # region Watch Import Helpers
+
+    def _get_episodes_by_id(self, episode_keys: list[str]) -> dict[str, Episode]:
+        """Load episodes by their keys, scoped to this plugin."""
+        if not episode_keys:
+            return {}
+        statement = (
+            select(Episode)
+            .join(Season)
+            .join(Show)
+            .join(Source)
+            .where(Source.plugin_id == self.plugin.id)
+            .where(col(Episode.key).in_(episode_keys))
+        )
+        return {episode.key: episode for episode in self.db.exec(statement)}
+
+    def _get_watched_episode_dates(
+        self,
+        user: User,
+        episodes_by_key: dict[str, Episode],
+    ) -> dict[str, list[datetime]]:
+        """Load watched dates grouped by episode ID."""
+        if not episodes_by_key:
+            return {}
+        statement = select(EpisodeWatch.episode_id, EpisodeWatch.watch_date).where(
+            EpisodeWatch.user_id == user.id,
+            EpisodeWatch.episode_id.in_(  # type: ignore[union-attr]
+                [episode.id for episode in episodes_by_key.values()],
+            ),
+        )
+        result: dict[str, list[datetime]] = defaultdict(list)
+        for episode_id, watch_date in self.db.exec(statement):
+            result[str(episode_id)].append(watch_date)
+        return result
 
     # endregion
 

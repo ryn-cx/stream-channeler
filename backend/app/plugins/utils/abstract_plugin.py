@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING, Any, override
 from pydantic import BaseModel, Field
 
 from app.media.models import Episode, File, Plugin, Season, Show, Source
+from app.media.schemas import WatchImportFormatInformation, WatchImportResult
 from app.plugins.utils.manage_plugins import register_plugins
 
 if TYPE_CHECKING:
     from sqlmodel import Session
+
+    from app.users.models import User
 
 
 class AbstractPlugin(ABC):
@@ -152,6 +155,42 @@ class AbstractPlugin(ABC):
             source: The source to update.
         """
         msg = "Function is not implemented."
+        raise NotImplementedError(msg)
+
+    @classmethod
+    def import_watch_history_info(cls) -> WatchImportFormatInformation:
+        """Describe the expected input format for watch history import.
+
+        Only needs to be implemented if the plugin supports watch history import.
+
+        Returns:
+            A WatchImportFormatInformation object describing how importing works.
+        """
+        msg = "Watch history import is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    def import_watch_history(
+        self,
+        content: str,
+        user: User,
+        *,
+        new_only: bool,
+        verified: bool,
+    ) -> WatchImportResult:
+        """Import watch history from uploaded content.
+
+        Only needs to be implemented if the plugin supports watch history import.
+
+        Args:
+            content: The raw file content uploaded by the user.
+            user: The user performing the import.
+            new_only: If True, skip episodes the user has already watched.
+            verified: If True, mark imported watches as verified.
+
+        Returns:
+            A WatchImportResult results of the import.
+        """
+        msg = "Watch history import is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # endregion

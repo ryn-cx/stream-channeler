@@ -1,15 +1,16 @@
 // TODO: Validate
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Search } from "lucide-react"
+import { Search, Upload } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import { MediaService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingWatches from "@/components/Pending/PendingWatches"
+import { Button } from "@/components/ui/button"
 import { columns } from "@/components/Watches/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 
@@ -98,6 +99,12 @@ function WatchesTableContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button className="my-4" asChild>
+            <Link to="/watches/import">
+              <Upload className="mr-2" />
+              Import
+            </Link>
+          </Button>
           <ColumnVisibilityButton table={table} />
         </div>
       </div>

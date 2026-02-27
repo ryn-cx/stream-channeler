@@ -1,7 +1,8 @@
 # TODO: Validate
 
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.constants import MAX_ENTRIES_PER_PAGE
@@ -12,15 +13,18 @@ from app.media.schemas import (
     EpisodeWatchPostInput,
     SingleEpisodeWatchOutput,
     WatchedEpisodesOutput,
+    WatchImportInput,
+    WatchImportPluginsOutput,
+    WatchImportResult,
 )
+from app.media.services import get_importable_plugins, get_plugin, save_episode_watch
 from app.media.services import get_watched_episodes as get_watched_episodes_service
-from app.media.services import save_episode_watch
 from app.models import Message
 
-router = APIRouter(prefix="/media", tags=["media"])
+router = APIRouter(prefix="/episodes", tags=["episodes"])
 
 
-@router.post("/episode-watches")
+@router.post("/watches")
 def post_watched_episode(
     session: SessionDep,
     current_user: CurrentUser,
@@ -43,7 +47,7 @@ def post_watched_episode(
 
 
 # FAST003 - Parameter is used by EpisodeWatchDep
-@router.patch("/episode-watches/{episode_watch_id}")  # noqa: FAST003
+@router.patch("/watches/{episode_watch_id}")  # noqa: FAST003
 def patch_watched_episode(
     session: SessionDep,
     episode_watch: ExistingEpisodeWatch,
@@ -59,7 +63,7 @@ def patch_watched_episode(
 
 
 # FAST003 - Parameter is used by EpisodeWatchDep
-@router.delete("/episode-watches/{episode_watch_id}")  # noqa: FAST003
+@router.delete("/watches/{episode_watch_id}")  # noqa: FAST003
 def delete_watched_episode(
     session: SessionDep,
     episode_watch: ExistingEpisodeWatch,
@@ -70,7 +74,7 @@ def delete_watched_episode(
     return Message(message="Episode watch deleted")
 
 
-@router.get("/episode-watches")
+@router.get("/watches")
 def get_watched_episodes(
     session: SessionDep,
     current_user: CurrentUser,
@@ -79,3 +83,39 @@ def get_watched_episodes(
 ) -> WatchedEpisodesOutput:
     """Get multiple watched episode entries."""
     return get_watched_episodes_service(session, current_user.id, skip, limit)
+
+
+@router.get("/watches/import/plugins")
+def list_importable_plugins(_current_user: CurrentUser) -> WatchImportPluginsOutput:
+    """List all plugins that support importing watch history."""
+    return WatchImportPluginsOutput(
+        plugins=[
+            plugin.import_watch_history_info() for plugin in get_importable_plugins()
+        ],
+    )
+
+
+@router.post("/watches/import")
+def import_watch_history(
+    file: UploadFile,
+    params: Annotated[WatchImportInput, Query()],
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> WatchImportResult:
+    """Import watch history from an uploaded file for a specific plugin."""
+    if not (plugin := get_plugin(params.plugin_id)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Plugin '{params.plugin_id}' does not support watch import.",
+        )
+
+    content_bytes = file.file.read()
+    content = content_bytes.decode("utf-8")
+
+    plugin_instance = plugin(db=session)
+    return plugin_instance.import_watch_history(
+        content=content,
+        user=current_user,
+        new_only=params.new_only,
+        verified=params.verified,
+    )

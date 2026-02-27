@@ -20,6 +20,7 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
+import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -76,6 +77,11 @@ const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
   path: '/channels/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
+  id: '/watches_/import',
+  path: '/watches/import',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
   id: '/channels/$channelId',
   path: '/channels/$channelId',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
+  '/watches/import': typeof LayoutWatchesImportRoute
   '/channels': typeof LayoutChannelsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
+  '/watches/import': typeof LayoutWatchesImportRoute
   '/channels': typeof LayoutChannelsIndexRoute
 }
 export interface FileRoutesById {
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
+  '/_layout/watches_/import': typeof LayoutWatchesImportRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
 }
 export interface FileRouteTypes {
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/watches'
     | '/'
     | '/channels/$channelId'
+    | '/watches/import'
     | '/channels'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/watches'
     | '/'
     | '/channels/$channelId'
+    | '/watches/import'
     | '/channels'
   id:
     | '__root__'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/_layout/watches'
     | '/_layout/'
     | '/_layout/channels/$channelId'
+    | '/_layout/watches_/import'
     | '/_layout/channels/'
   fileRoutesById: FileRoutesById
 }
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/watches_/import': {
+      id: '/_layout/watches_/import'
+      path: '/watches/import'
+      fullPath: '/watches/import'
+      preLoaderRoute: typeof LayoutWatchesImportRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/channels/$channelId': {
       id: '/_layout/channels/$channelId'
       path: '/channels/$channelId'
@@ -270,6 +289,7 @@ interface LayoutRouteChildren {
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
+  LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
 }
 
@@ -280,6 +300,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,
+  LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
 }
 
