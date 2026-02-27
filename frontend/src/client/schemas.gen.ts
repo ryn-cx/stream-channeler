@@ -1594,17 +1594,13 @@ export const WatchImportFormatInformationSchema = {
             type: 'string',
             title: 'File Extension'
         },
-        description: {
-            type: 'string',
-            title: 'Description'
-        },
         instructions: {
             type: 'string',
             title: 'Instructions'
         }
     },
     type: 'object',
-    required: ['plugin_id', 'plugin_name', 'file_type', 'file_extension', 'description', 'instructions'],
+    required: ['plugin_id', 'plugin_name', 'file_type', 'file_extension', 'instructions'],
     title: 'WatchImportFormatInformation',
     description: 'Information about a supported watch import format.'
 } as const;

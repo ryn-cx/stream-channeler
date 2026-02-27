@@ -6,7 +6,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Search, Upload } from "lucide-react"
 import { Suspense, useState } from "react"
 
-import { MediaService } from "@/client"
+import { EpisodesService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingWatches from "@/components/Pending/PendingWatches"
@@ -16,7 +16,7 @@ import { isLoggedIn } from "@/hooks/useAuth"
 
 function getWatchesQueryOptions() {
   return {
-    queryFn: () => MediaService.getWatchedEpisodes(),
+    queryFn: () => EpisodesService.getWatchedEpisodes(),
     queryKey: ["watches"],
     refetchOnWindowFocus: false,
     refetchOnMount: false,

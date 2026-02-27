@@ -358,7 +358,6 @@ class WatchImportFormatInformation(BaseModel):
     plugin_name: str
     file_type: str
     file_extension: str
-    description: str
     instructions: str
 
 

@@ -6,9 +6,9 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import {
+  EpisodesService,
   type EpisodeWatchItem,
   type EpisodeWatchPatchInput,
-  MediaService,
   type WatchedEpisodesOutput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -68,7 +68,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: EpisodeWatchPatchInput) =>
-      MediaService.patchWatchedEpisode({
+      EpisodesService.patchWatchedEpisode({
         episodeWatchId: watch.id,
         requestBody: data,
       }),

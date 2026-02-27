@@ -309,7 +309,7 @@ function Filter({ column }: { column: Column<any, unknown> }) {
         : Array.from(column.getFacetedUniqueValues().keys())
             .sort()
             .slice(0, 5000),
-    [filterVariant, column.getFacetedUniqueValues],
+    [filterVariant, column.getFacetedUniqueValues, column],
   )
 
   if (filterVariant === "range") {

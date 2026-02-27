@@ -3,13 +3,14 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Upload } from "lucide-react"
 import { useRef, useState } from "react"
-import type { ApiError } from "@/client"
+import Markdown from "react-markdown"
 import {
+  type ApiError,
+  EpisodesService,
   type WatchImportEntry,
   type WatchImportFormatInformation,
   type WatchImportResult,
-  WatchImportService,
-} from "@/client/watchImportService"
+} from "@/client"
 import {
   Accordion,
   AccordionContent,
@@ -169,18 +170,18 @@ function ImportWatchHistory() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: pluginsData, isLoading: pluginsLoading } = useQuery({
-    queryFn: () => WatchImportService.listImportablePlugins(),
+    queryFn: () => EpisodesService.listImportablePlugins(),
     queryKey: ["watch-import-plugins"],
   })
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!selectedPlugin || !selectedFile) return
-      return WatchImportService.importWatchHistory({
+      return EpisodesService.importWatchHistory({
         pluginId: selectedPlugin,
         newOnly: newOnly,
         verified: verified,
-        file: selectedFile,
+        formData: { file: selectedFile },
       })
     },
     onSuccess: (data) => {
@@ -245,14 +246,19 @@ function ImportWatchHistory() {
           <Card>
             <CardHeader>
               <CardTitle>Instructions</CardTitle>
-              <CardDescription>
-                {selectedPluginInfo.description}
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
+            <CardContent className="text-sm text-muted-foreground">
+              <Markdown
+                components={{
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside space-y-1">
+                      {children}
+                    </ol>
+                  ),
+                }}
+              >
                 {selectedPluginInfo.instructions}
-              </pre>
+              </Markdown>
             </CardContent>
           </Card>
 

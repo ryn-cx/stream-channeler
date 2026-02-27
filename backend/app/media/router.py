@@ -113,9 +113,11 @@ def import_watch_history(
     content = content_bytes.decode("utf-8")
 
     plugin_instance = plugin(db=session)
-    return plugin_instance.import_watch_history(
+    result = plugin_instance.import_watch_history(
         content=content,
         user=current_user,
         new_only=params.new_only,
         verified=params.verified,
     )
+    session.commit()
+    return result

@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { Check } from "lucide-react"
 
-import { MediaService, type WatchedEpisodesOutput } from "@/client"
+import { EpisodesService, type WatchedEpisodesOutput } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -27,7 +27,7 @@ export default function VerifyWatch({
 
   const verifyMutation = useMutation({
     mutationFn: () =>
-      MediaService.patchWatchedEpisode({
+      EpisodesService.patchWatchedEpisode({
         episodeWatchId: id,
         requestBody: {
           watch_date: watch_date,

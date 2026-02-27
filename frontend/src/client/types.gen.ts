@@ -330,7 +330,6 @@ export type WatchImportFormatInformation = {
     plugin_name: string;
     file_type: string;
     file_extension: string;
-    description: string;
     instructions: string;
 };
 

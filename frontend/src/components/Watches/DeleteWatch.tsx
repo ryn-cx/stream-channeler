@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { MediaService, type WatchedEpisodesOutput } from "@/client"
+import { EpisodesService, type WatchedEpisodesOutput } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -37,7 +37,7 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (watchId: string) =>
-      MediaService.deleteWatchedEpisode({ episodeWatchId: watchId }),
+      EpisodesService.deleteWatchedEpisode({ episodeWatchId: watchId }),
     // When mutate is called:
     onMutate: async (deletedId, context) => {
       // Cancel any outgoing refetches

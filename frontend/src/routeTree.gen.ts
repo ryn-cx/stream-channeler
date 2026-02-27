@@ -89,6 +89,7 @@ const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -97,10 +98,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof LayoutDashboardRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
-  '/': typeof LayoutIndexRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/watches/import': typeof LayoutWatchesImportRoute
-  '/channels': typeof LayoutChannelsIndexRoute
+  '/channels/': typeof LayoutChannelsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -135,6 +135,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -143,10 +144,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/watches'
-    | '/'
     | '/channels/$channelId'
     | '/watches/import'
-    | '/channels'
+    | '/channels/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -219,7 +219,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -261,7 +261,7 @@ declare module '@tanstack/react-router' {
     '/_layout/channels/': {
       id: '/_layout/channels/'
       path: '/channels'
-      fullPath: '/channels'
+      fullPath: '/channels/'
       preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }

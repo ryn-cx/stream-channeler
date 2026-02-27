@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
-import { MediaService } from "@/client"
+import { EpisodesService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -9,7 +9,7 @@ export function useMarkEpisodeWatched(channelId: string | undefined) {
 
   return useMutation({
     mutationFn: (episodeId: string) =>
-      MediaService.postWatchedEpisode({
+      EpisodesService.postWatchedEpisode({
         requestBody: {
           episode_id: episodeId,
           watch_date: new Date().toISOString(),

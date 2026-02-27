@@ -140,9 +140,8 @@ class YouTube(FileMixin, register=True):
             plugin_name=cls._plugin_name(),
             file_type="JSON",
             file_extension=".json",
-            description="Google Takeout YouTube watch history JSON file",
             instructions=(
-                "1. Go to https://takeout.google.com\n"
+                "1. Go to [takeout.google.com](https://takeout.google.com)\n"
                 "2. Deselect all products, then select only 'YouTube and YouTube Music'\n"
                 "3. Click 'All YouTube data included', then select only 'history'\n"
                 "4. Choose JSON format (not HTML)\n"
@@ -180,16 +179,10 @@ class YouTube(FileMixin, register=True):
         skipped_watches: list[WatchImportEntry] = []
         existing_watches: list[WatchImportEntry] = []
 
-        imported_urls: set[str] = set()
         for entry, video_id in zip(entries, entry_video_ids, strict=True):
             # Ignore deleted videos
             if "subtitles" not in entry:
                 continue
-
-            if entry["titleUrl"] in imported_urls:
-                continue
-
-            imported_urls.add(entry["titleUrl"])
 
             import_entry = WatchImportEntry(
                 show=entry["subtitles"][0]["name"],
