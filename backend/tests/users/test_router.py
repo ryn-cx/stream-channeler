@@ -128,7 +128,7 @@ def test_get_existing_user_permissions_error(
     client: TestClient,
     normal_user_token_headers: dict[str, str],
 ) -> None:
-    user = create_random_user(db)
+    user = create_random_user(db=db)
 
     r = client.get(
         f"{settings.API_V1_STR}/users/{user.id}",

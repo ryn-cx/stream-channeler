@@ -103,30 +103,29 @@ class YouTube(FileMixin, register=True):
     @override
     def update_show(self, show: Show) -> None:
         self._show_id = show.key
-        self.__preload_update_media()
+        self._preload_show_season_episode_files()
         for show_file in self._show_files(show.key):
             show_file.download_if_outdated(show.update_at)
+        self._preload_show(preload_episodes=True)
         self.__upsert_source()
 
     @override
     def update_season(self, season: Season) -> None:
         self._show_id = season.show.key
-        self.__preload_update_media()
+        self._preload_show_season_episode_files()
         for season_file in self._season_files(season.key):
             season_file.download_if_outdated(season.update_at)
+        self._preload_show(preload_episodes=True)
         self.__upsert_source()
 
     @override
     def update_episode(self, episode: Episode) -> None:
         self._show_id = episode.season.show.key
-        self.__preload_update_media()
+        self._preload_show_season_episode_files()
         for episode_file in self._episode_files(episode.key):
             episode_file.download_if_outdated(episode.update_at)
-        self.__upsert_source()
-
-    def __preload_update_media(self) -> None:
         self._preload_show(preload_episodes=True)
-        self._preload_show_season_episode_files()
+        self.__upsert_source()
 
     # endregion Update
 

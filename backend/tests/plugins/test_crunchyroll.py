@@ -109,6 +109,7 @@ class CrunchyRollValidator(PluginValidator):
 
     def _update_show_validator(self, show: Show) -> Validator:
         output = super()._update_show_validator(show)
+
         # All seasons share the show file so it will be updated
         output.incremented(Season, "modified_at")
         output.incremented(Season, "data_timestamp")
@@ -116,6 +117,7 @@ class CrunchyRollValidator(PluginValidator):
 
     def _update_season_validator(self, season: Season) -> Validator:
         output = super()._update_season_validator(season)
+
         # All seasons share the show file so it will be updated
         output.incremented(Season, "modified_at")
         output.incremented(Season, "data_timestamp")
@@ -131,6 +133,7 @@ class CrunchyRollValidator(PluginValidator):
 
     def _update_episode_validator(self, episode: Episode) -> Validator:
         output = super()._update_episode_validator(episode)
+
         # All the episodes for a season share single file so all episodes for the season
         # will update.
         for other_episode in episode.season.episodes:
@@ -215,7 +218,7 @@ class TestSeriesWithMultipleSeasons(CrunchyRollValidator):
 
 class TestSeriesWithSingleSeasons(CrunchyRollValidator):
     # Must be a series with recently aired episodes to properly test update_source.
-    url = "crunchyroll.com/series/GT00365775/wash-it-all-away"
+    url = "crunchyroll.com/series/GT00365604/the-daily-life-of-a-part-time-torturer"
 
 
 class TestSeriesWithNoEpisodes(CrunchyRollValidator):

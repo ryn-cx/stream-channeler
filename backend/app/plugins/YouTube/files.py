@@ -65,7 +65,7 @@ class ChannelById(JSONFile[ChannelModel]):
                 ):
                     raise
 
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> ChannelModel:
@@ -101,7 +101,7 @@ class ChannelByName(JSONFile[ChannelModel]):
                 ):
                     raise
 
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> ChannelModel:
@@ -132,7 +132,7 @@ class ChannelPlaylists(JSONFile[ChannelPlaylistsModel]):
                 if "does not have a playlists tab" not in str(e):
                     raise
 
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> ChannelPlaylistsModel:
@@ -165,7 +165,7 @@ class Playlist(JSONFile[PlaylistModel]):
                 ):
                     raise
 
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> PlaylistModel:

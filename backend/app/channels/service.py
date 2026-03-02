@@ -15,11 +15,6 @@ def create_channel(
     user_id: uuid.UUID,
     channel_in: ChannelInput,
 ) -> Channel:
-    if Channel.get(session, user_id, channel_in.name):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Channel with this name already exists",
-        )
     channel = Channel.model_validate(channel_in, update={"user_id": user_id})
     session.add(channel)
     session.commit()

@@ -26,16 +26,12 @@ from app.media.schemas import (
 from app.utils import tz_datetime
 from tests.utils.media import (
     create_random_heirarchy,
-    get_random_episode_input,
     get_random_plugin,
-    get_random_plugin_input,
     get_random_season,
-    get_random_season_input,
     get_random_show,
-    get_random_show_input,
     get_random_source,
-    get_random_source_input,
 )
+from tests.utils.utils import build_random_model
 
 real_models = Plugin | File | Source | Show | Season | Episode
 input_models = (
@@ -44,16 +40,15 @@ input_models = (
 
 
 media_test_params = (
-    (get_random_plugin_input, None),
-    (get_random_source_input, get_random_plugin),
-    (get_random_show_input, get_random_source),
-    (get_random_season_input, get_random_show),
-    (get_random_episode_input, get_random_season),
+    (PluginInput, None),
+    (SourceInput, get_random_plugin),
+    (ShowInput, get_random_source),
+    (SeasonInput, get_random_show),
+    (EpisodeInput, get_random_season),
 )
 
-input_creator_type = Callable[
-    [],
-    PluginInput | SourceInput | ShowInput | SeasonInput | EpisodeInput,
+input_creator_type = type[
+    PluginInput | SourceInput | ShowInput | SeasonInput | EpisodeInput
 ]
 parent_creator_type = Callable[[Session], Source | Plugin | Show | Season] | None
 
@@ -70,7 +65,12 @@ def upsert_wrapper(
     match model_input:
         case PluginInput():
             assert isinstance(parent, Session)
-            return model_input.upsert(parent, protected_keys=protected_keys)
+            existing_plugin = Plugin.get(parent, model_input.key)
+            return model_input.upsert(
+                parent,
+                existing_plugin,
+                protected_keys=protected_keys,
+            )
         case SourceInput():
             assert isinstance(parent, Plugin)
             existing_plugins = {source.key: source for source in parent.sources}
@@ -122,7 +122,7 @@ class TestUpsert:
     ) -> None:
         """Test inserting a new entry."""
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model = upsert_wrapper(model_input, parent)
         assert model.key == model_input.key
         assert model.data_timestamp == model_input.data_timestamp
@@ -136,7 +136,7 @@ class TestUpsert:
     ) -> None:
         """Test updating a value to a different value."""
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model_input.extra = "Extra"
         model = upsert_wrapper(model_input, parent)
 
@@ -156,7 +156,7 @@ class TestUpsert:
     ) -> None:
         """Test updating a value from None to a different value."""
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model = upsert_wrapper(model_input, parent)
 
         model_input.extra = "Extra"
@@ -175,11 +175,11 @@ class TestUpsert:
     ) -> None:
         """Test updating a value from a value to None."""
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model_input.extra = "Extra"
         model = upsert_wrapper(model_input, parent)
 
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model_input.key = model.key
         model = upsert_wrapper(model_input, parent)
 
@@ -196,7 +196,7 @@ class TestUpsert:
     ) -> None:
         """Test that protected keys are not updated."""
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         model_input.extra = "Extra"
         model = upsert_wrapper(model_input, parent)
 
@@ -211,20 +211,15 @@ class TestUpsert:
     def test_upsert_sets_modified_at(
         self,
         db: Session,
-        input_creator: Callable[
-            [],
-            PluginInput | SourceInput | ShowInput | SeasonInput | EpisodeInput,
-        ],
+        input_creator: input_creator_type,
         parent_creator: parent_creator_type,
     ) -> None:
         """Test that modified_at is automatically updated when model fields change."""
-        # This specifically does not modify any values and just calls upsert with the
-        # same values because under some situations unchanged values can cause
-        # modified_at to not be updated without manually setting it.
         parent = parent_creator(db) if parent_creator else db
-        model_input = input_creator()
+        model_input = build_random_model(input_creator)
         db_entry = upsert_wrapper(model_input, parent)
         timestamp = tz_datetime.now()
+        model_input.name = "updated_name"
         db_entry = upsert_wrapper(model_input, parent)
         assert db_entry.modified_at > timestamp
 
@@ -278,8 +273,8 @@ class TestGet:
         """Test getting a single entry."""
         parent = parent_creator(db) if parent_creator else db
 
-        db_entry_1 = upsert_wrapper(input_creator(), parent)
-        db_entry_2 = upsert_wrapper(input_creator(), parent)
+        db_entry_1 = upsert_wrapper(build_random_model(input_creator), parent)
+        db_entry_2 = upsert_wrapper(build_random_model(input_creator), parent)
 
         assert db_entry_1 == db_entry_1.get_one(*self.get_args(db, db_entry_1))
         assert db_entry_2 == db_entry_2.get_one(*self.get_args(db, db_entry_2))
@@ -295,13 +290,13 @@ class TestGet:
         parent_1 = parent_creator(db) if parent_creator else db
         parent_2 = parent_creator(db) if parent_creator else db
 
-        db_entry_1 = upsert_wrapper(input_creator(), parent_1)
-        db_entry_2 = upsert_wrapper(input_creator(), parent_2)
+        db_entry_1 = upsert_wrapper(build_random_model(input_creator), parent_1)
+        db_entry_2 = upsert_wrapper(build_random_model(input_creator), parent_2)
 
         bad_id = self.get_bad_id(type(db_entry_1), db_entry_2)
 
         args = self.get_args(db, db_entry_1, bad_id)
-        assert db_entry_1.get_one(*args) is None
+        assert db_entry_1.get(*args) is None
 
     @pytest.mark.parametrize(("input_creator", "parent_creator"), media_test_params)
     def test_get_one(
@@ -313,8 +308,8 @@ class TestGet:
         """Test getting a single entry."""
         parent = parent_creator(db) if parent_creator else db
 
-        db_entry_1 = upsert_wrapper(input_creator(), parent)
-        db_entry_2 = upsert_wrapper(input_creator(), parent)
+        db_entry_1 = upsert_wrapper(build_random_model(input_creator), parent)
+        db_entry_2 = upsert_wrapper(build_random_model(input_creator), parent)
 
         assert db_entry_1 == db_entry_1.get_one(*self.get_args(db, db_entry_1))
         assert db_entry_2 == db_entry_2.get_one(*self.get_args(db, db_entry_2))
@@ -330,8 +325,8 @@ class TestGet:
         parent_1 = parent_creator(db) if parent_creator else db
         parent_2 = parent_creator(db) if parent_creator else db
 
-        db_entry_1 = upsert_wrapper(input_creator(), parent_1)
-        db_entry_2 = upsert_wrapper(input_creator(), parent_2)
+        db_entry_1 = upsert_wrapper(build_random_model(input_creator), parent_1)
+        db_entry_2 = upsert_wrapper(build_random_model(input_creator), parent_2)
 
         bad_id = self.get_bad_id(type(db_entry_1), db_entry_2)
 
@@ -400,14 +395,14 @@ class TestDelete:
         timestamp = tz_datetime.now()
         parent = parent_creator(db) if parent_creator else db
 
-        entry1 = upsert_wrapper(input_creator(), parent)
-        entry2 = upsert_wrapper(input_creator(), parent)
+        entry1 = upsert_wrapper(build_random_model(input_creator), parent)
+        entry2 = upsert_wrapper(build_random_model(input_creator), parent)
 
-        entry3_input = input_creator()
+        entry3_input = build_random_model(input_creator)
         entry3_input.deleted_at = timestamp
         entry3 = upsert_wrapper(entry3_input, parent)
 
-        entry4_input = input_creator()
+        entry4_input = build_random_model(input_creator)
         entry4_input.deleted_at = timestamp
         entry4 = upsert_wrapper(entry4_input, parent)
 

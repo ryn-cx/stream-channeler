@@ -10,7 +10,7 @@ from app.utils import tz_datetime
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
-    from app.media.models import EpisodeWatch
+    from app.media.models import EpisodeWatch, Plugin
 
 
 # Shared properties
@@ -36,4 +36,7 @@ class User(UserBase, table=True):
     watched_episodes: list[EpisodeWatch] = Relationship(
         back_populates="user",
         cascade_delete=True,
+    )
+    plugins: list[Plugin] = Relationship(
+        back_populates="user",
     )

@@ -195,7 +195,7 @@ def check_episodes(
 
 
 # def test_get_episodes_whitelist(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user)
 
 #     episodes = get_episodes(
@@ -209,7 +209,7 @@ def check_episodes(
 
 
 # def test_get_episodes_blacklist(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(
@@ -223,7 +223,7 @@ def check_episodes(
 
 # # TODO: test_get_episodes_hide_unwatched
 # def test_get_episodes_hide_watched(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user)
 
 #     episodes = get_episodes(
@@ -242,7 +242,7 @@ def check_episodes(
 
 
 # def test_get_episodes_sorted_by_episode(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(
@@ -259,7 +259,7 @@ def check_episodes(
 
 
 # def test_get_episodes_sorted_by_season(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(
@@ -280,7 +280,7 @@ def check_episodes(
 
 
 # def test_get_episodes_sorted_by_show_name(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(
@@ -308,7 +308,7 @@ def check_episodes(
 #     client: TestClient,
 #     db: Session,
 # ) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(
@@ -326,7 +326,7 @@ def check_episodes(
 
 
 # def test_rotate_shows(client: TestClient, db: Session) -> None:
-#     random_user = create_user_api(client)
+#     random_user = create_user_api(client, db)
 #     lists = generate_test_data(client, db, random_user, whitelist_mode=False)
 
 #     episodes = get_episodes(

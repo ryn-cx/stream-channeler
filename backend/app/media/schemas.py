@@ -1,11 +1,10 @@
 # TODO: Validate
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel
 from sqlmodel import Field, Session, SQLModel
 
-from app.constants import MAX_ENTRIES_PER_PAGE
 from app.media.models import (
     BaseEpisode,
     BaseEpisodeWatch,
@@ -22,6 +21,9 @@ from app.media.models import (
     Show,
     Source,
 )
+from app.utils import tz_datetime
+
+# region Upsert Inputs
 
 
 class MetadataMixinInput[T: BaseMetadataMixin](BaseMetadataMixin):
@@ -40,8 +42,22 @@ class MetadataMixinInput[T: BaseMetadataMixin](BaseMetadataMixin):
         protected_keys.add("update_at")
 
         dumped = self.model_dump(exclude=protected_keys)
+
+        # Only update modified_at if actual content fields changed. Metadata fields
+        # (key, data_timestamp, deleted_at) are excluded from change detection because
+        # they are lifecycle/identity fields, not content.
+        metadata_fields = {"key", "data_timestamp", "deleted_at"}
+        has_changes = any(
+            getattr(existing_entry, k) != v
+            for k, v in dumped.items()
+            if k not in metadata_fields
+        )
+
         existing_entry.sqlmodel_update(dumped)
         existing_entry.set_update_at(self.update_at)
+
+        if has_changes:
+            existing_entry.modified_at = tz_datetime.now()
 
         return existing_entry
 
@@ -78,6 +94,8 @@ class MetadataMixinInput[T: BaseMetadataMixin](BaseMetadataMixin):
 
 class PluginInput(BasePlugin, MetadataMixinInput[Plugin]):
     """Input schema for creating or updating a plugin."""
+
+    user_id: uuid.UUID | None = None
 
     def upsert(
         self,
@@ -274,28 +292,14 @@ class EpisodeInput(BaseEpisode, MetadataMixinInput[Episode]):
         return episode
 
 
-class EpisodeWatchPostInput(SQLModel):
-    episode_id: uuid.UUID
-    watch_date: datetime
-    verified: bool
+# endregion
 
-
-class EpisodeWatchPatchInput(SQLModel):
-    watch_date: datetime
-    verified: bool
-
-
-class EpisodeWatchQueryParams(SQLModel):
-    skip: int = Field(default=0, ge=0)
-    limit: int = Field(default=MAX_ENTRIES_PER_PAGE, ge=1, le=MAX_ENTRIES_PER_PAGE)
-    show_search: str | None = Field(default=None)
-    season_search: str | None = Field(default=None)
-    episode_search: str | None = Field(default=None)
-    source_search: str | None = Field(default=None)
+# region Output
 
 
 class PluginOutput(BasePlugin):
     id: uuid.UUID
+    user_id: uuid.UUID | None = None
 
 
 class SourceOutput(BaseSource):
@@ -316,6 +320,134 @@ class SeasonOutput(BaseSeason):
 class EpisodeOutput(BaseEpisode):
     season_id: uuid.UUID
     id: uuid.UUID
+
+
+# endregion
+
+# region List Output
+
+
+class PluginsListOutput(BaseModel):
+    data: list[PluginOutput]
+    count: int
+
+
+class SourcesListOutput(BaseModel):
+    data: list[SourceOutput]
+    count: int
+
+
+class ShowsListOutput(BaseModel):
+    data: list[ShowOutput]
+    count: int
+
+
+class SeasonsListOutput(BaseModel):
+    data: list[SeasonOutput]
+    count: int
+
+
+class EpisodesListOutput(BaseModel):
+    data: list[EpisodeOutput]
+    count: int
+
+
+# endregion
+
+# region Post
+
+
+class PluginPostInput(SQLModel):
+    name: str | None = None
+    data_timestamp: datetime | None = None
+
+
+class SourcePostInput(BaseSource):
+    key: str = Field(default_factory=lambda: str(uuid.uuid4()))  # pyright: ignore[reportIncompatibleVariableOverride]
+    data_timestamp: datetime | None = None
+    plugin_key: str
+
+
+class ShowPostInput(BaseShow):
+    key: str = Field(default_factory=lambda: str(uuid.uuid4()))  # pyright: ignore[reportIncompatibleVariableOverride]
+    data_timestamp: datetime | None = None
+    source_id: uuid.UUID
+
+
+class SeasonPostInput(BaseSeason):
+    key: str = Field(default_factory=lambda: str(uuid.uuid4()))  # pyright: ignore[reportIncompatibleVariableOverride]
+    data_timestamp: datetime | None = None
+    show_id: uuid.UUID
+
+
+class EpisodePostInput(BaseEpisode):
+    key: str = Field(default_factory=lambda: str(uuid.uuid4()))  # pyright: ignore[reportIncompatibleVariableOverride]
+    data_timestamp: datetime | None = None
+    season_id: uuid.UUID
+
+
+# endregion
+
+# region Patch
+
+
+class PluginPatchInput(SQLModel):
+    name: str | None = None
+    data_timestamp: datetime | None = None
+
+
+class SourcePatchInput(SQLModel):
+    name: str | None = None
+    favicon_url: str | None = None
+    image_url: str | None = None
+    data_timestamp: datetime | None = None
+
+
+class ShowPatchInput(SQLModel):
+    name: str | None = None
+    media_type: str | None = None
+    description: str | None = None
+    url: str | None = None
+    image_url: str | None = None
+    data_timestamp: datetime | None = None
+
+
+class SeasonPatchInput(SQLModel):
+    sort_order: int | None = None
+    name: str | None = None
+    url: str | None = None
+    image_url: str | None = None
+    season_number: int | None = None
+    data_timestamp: datetime | None = None
+
+
+class EpisodePatchInput(SQLModel):
+    url: str | None = None
+    sort_order: int | None = None
+    description: str | None = None
+    image_url: str | None = None
+    episode_number: int | None = None
+    name: str | None = None
+    release_date: date | None = None
+    air_date: date | None = None
+    duration: int | None = Field(ge=0, default=None)
+    data_timestamp: datetime | None = None
+
+
+# endregion
+
+# region Episode Watches
+
+
+class EpisodeWatchPostInput(SQLModel):
+    episode_id: uuid.UUID
+    watch_date: datetime = Field(default_factory=tz_datetime.now)
+    verified: bool = False
+
+
+class EpisodeWatchPatchInput(SQLModel):
+    watch_date: datetime | None = None
+    verified: bool | None = None
 
 
 # TODO: Slim down this schema to just what is needed
@@ -349,6 +481,11 @@ class WatchedEpisodesOutput(SQLModel):
     sources: dict[uuid.UUID, SourceOutput] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
     count: int = Field()
+
+
+# endregion
+
+# region Watch Import
 
 
 class WatchImportFormatInformation(BaseModel):
@@ -390,3 +527,6 @@ class WatchImportPluginsOutput(BaseModel):
     """Response listing all plugins that support watch history import."""
 
     plugins: list[WatchImportFormatInformation]
+
+
+# endregion

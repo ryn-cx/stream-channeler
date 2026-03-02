@@ -14,89 +14,64 @@ from app.media.schemas import (
     SourceInput,
 )
 from app.utils import tz_datetime
-from tests.utils.utils import (
-    random_lower_string,
-)
+from tests.utils.utils import build_random_model
 
 
-def get_random_plugin_input() -> PluginInput:
-    return PluginInput(
-        key=random_lower_string(),
-        name=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
+def get_random_plugin(db: Session, user_id: uuid.UUID | None = None) -> Plugin:
+    plugin_input = build_random_model(PluginInput)
+    if user_id:
+        plugin_input.user_id = user_id
+    plugin = plugin_input.upsert(db, None)
+    db.commit()
+    return plugin
 
 
-def get_random_source_input() -> SourceInput:
-    return SourceInput(
-        key=random_lower_string(),
-        name=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
-
-
-def get_random_file_input() -> FileInput:
-    return FileInput(
-        key=random_lower_string(),
-        content=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
-
-
-def get_random_show_input() -> ShowInput:
-    return ShowInput(
-        key=random_lower_string(),
-        name=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
-
-
-def get_random_season_input() -> SeasonInput:
-    return SeasonInput(
-        key=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
-
-
-def get_random_episode_input() -> EpisodeInput:
-    return EpisodeInput(
-        key=random_lower_string(),
-        url=random_lower_string(),
-        data_timestamp=tz_datetime.now(),
-    )
-
-
-def get_random_plugin(db: Session) -> Plugin:
-    plugin_input = get_random_plugin_input()
-    return plugin_input.upsert(db)
-
-
-def get_random_source(db: Session, plugin: Plugin | None = None) -> Source:
+def get_random_source(
+    db: Session,
+    plugin: Plugin | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Source:
     if plugin is None:
-        plugin = get_random_plugin(db)
-    source_input = get_random_source_input()
-    return source_input.upsert(plugin)
+        plugin = get_random_plugin(db, user_id)
+    source = build_random_model(SourceInput).upsert(plugin, None)
+    db.commit()
+    return source
 
 
-def get_random_show(db: Session, source: Source | None = None) -> Show:
+def get_random_show(
+    db: Session,
+    source: Source | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Show:
     if source is None:
-        source = get_random_source(db)
-    show_input = get_random_show_input()
-    return show_input.upsert(source)
+        source = get_random_source(db, user_id=user_id)
+    show = build_random_model(ShowInput).upsert(source, None)
+    db.commit()
+    return show
 
 
-def get_random_season(db: Session, show: Show | None = None) -> Season:
+def get_random_season(
+    db: Session,
+    show: Show | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Season:
     if show is None:
-        show = get_random_show(db)
-    season_input = get_random_season_input()
-    return season_input.upsert(show)
+        show = get_random_show(db, user_id=user_id)
+    season = build_random_model(SeasonInput).upsert(show, None)
+    db.commit()
+    return season
 
 
-def get_random_episode(db: Session, season: Season | None = None) -> Episode:
+def get_random_episode(
+    db: Session,
+    season: Season | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Episode:
     if season is None:
-        season = get_random_season(db)
-    episode_input = get_random_episode_input()
-    return episode_input.upsert(season)
+        season = get_random_season(db, user_id=user_id)
+    episode = build_random_model(EpisodeInput).upsert(season, None)
+    db.commit()
+    return episode
 
 
 def get_random_episode_watch(
@@ -135,28 +110,22 @@ def create_random_heirarchy(  # noqa: PLR0913
     plugins: list[Plugin] = []
 
     for _ in range(plugin_count or default_count):
-        plugin_input = get_random_plugin_input()
-        plugin = plugin_input.upsert(db, None)
+        plugin = build_random_model(PluginInput).upsert(db, None)
         plugins.append(plugin)
 
         for _ in range(file_count or default_count):
-            file_input = get_random_file_input()
-            file_input.upsert(db, plugin, None)
+            build_random_model(FileInput).upsert(plugin, None)
 
         for _ in range(source_count or default_count):
-            source_input = get_random_source_input()
-            source = source_input.upsert(plugin, None)
+            source = build_random_model(SourceInput).upsert(plugin, None)
 
             for _ in range(show_count or default_count):
-                show_input = get_random_show_input()
-                show = show_input.upsert(source, None)
+                show = build_random_model(ShowInput).upsert(source, None)
 
                 for _ in range(season_count or default_count):
-                    season_input = get_random_season_input()
-                    season = season_input.upsert(show, None)
+                    season = build_random_model(SeasonInput).upsert(show, None)
 
                     for _ in range(episode_count or default_count):
-                        episode_input = get_random_episode_input()
-                        episode_input.upsert(season, None)
+                        build_random_model(EpisodeInput).upsert(season, None)
     db.commit()
     return plugins

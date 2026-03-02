@@ -6,7 +6,7 @@ from sqlalchemy import event
 from sqlmodel import Session, col, select
 
 from app.database import engine, load_models
-from app.media.models import Show
+from app.media.models import Plugin, Show, Source
 from app.plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()
@@ -29,7 +29,15 @@ if __name__ == "__main__":
     with Session(engine) as session:
         event.listen(Session, "do_orm_execute", count_statements)
 
-        statement = select(Show).order_by(col(Show.modified_at))
+        statement = (
+            select(Show)
+            .join(Source)
+            .join(Plugin)
+            .where(
+                col(Plugin.user_id).is_(None),
+            )
+            .order_by(col(Show.modified_at))
+        )
         shows = session.exec(statement).all()
 
         for show in shows:

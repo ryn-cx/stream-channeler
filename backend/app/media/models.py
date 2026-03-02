@@ -55,7 +55,10 @@ class BaseMetadataMixin(SQLModel):
     # file used to obtain this information. This allows tracking the actual date of the
     # data instead of the date it was last modified in the database.
     # call-overload - See created_at for an explanation.
-    data_timestamp: datetime = Field(sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
+    data_timestamp: datetime | None = Field(
+        sa_type=DateTime(timezone=True),
+        default=None,
+    )  # type: ignore[call-overload]
     update_at: datetime | None = Field(sa_type=DateTime(timezone=True), default=None)  # type: ignore[call-overload]
     deleted_at: datetime | None = Field(sa_type=DateTime(timezone=True), default=None)  # type: ignore[call-overload]
 
@@ -76,7 +79,11 @@ class BaseMetadataMixin(SQLModel):
         """
         # If the existing update_at value is newer than the data_timestamp, it has
         # already been used and can be cleared.
-        if self.update_at and self.update_at < self.data_timestamp:
+        if (
+            self.update_at
+            and self.data_timestamp
+            and self.update_at < self.data_timestamp
+        ):
             self.update_at = None
 
         # If update_at is not set nothing else needs to be done.
@@ -85,7 +92,7 @@ class BaseMetadataMixin(SQLModel):
 
         # If the existing data is newer than the new update_at value then the new
         # update_at can be ignored because the data is already up to date.
-        if self.data_timestamp >= update_at:
+        if self.data_timestamp and self.data_timestamp >= update_at:
             return
 
         #  If the new date is before the existing date the existing date should be
@@ -139,7 +146,7 @@ class MetadataMixin(TimestampIdMixin, BaseMetadataMixin, ABC):
 
 
 class BasePlugin(BaseMetadataMixin):
-    name: str = Field()
+    name: str | None = Field(default=None)
 
 
 class Plugin(BasePlugin, MetadataMixin, table=True):
@@ -147,6 +154,15 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
         PrimaryKeyConstraint("key"),
         # Deleted filtering
         Index("Plugin-deleted_at-index", "deleted_at"),
+    )
+
+    user_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        ondelete="CASCADE",
+    )
+    user: User | None = Relationship(
+        back_populates="plugins",
     )
 
     sources: list[Source] = Relationship(
@@ -290,7 +306,7 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
 
 
 class BaseFile(BaseMetadataMixin):
-    content: str = Field()
+    content: str | None = Field(default=None)
 
 
 class File(BaseFile, MetadataMixin, table=True):
@@ -448,8 +464,7 @@ class File(BaseFile, MetadataMixin, table=True):
 
 
 class BaseSource(BaseMetadataMixin):
-    name: str = Field()
-
+    name: str | None = Field(default=None)
     favicon_url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
 
@@ -627,8 +642,7 @@ class Source(BaseSource, MetadataMixin, table=True):
 
 
 class BaseShow(BaseMetadataMixin):
-    name: str = Field()
-
+    name: str | None = Field(default=None)
     media_type: str | None = Field(default=None)
     description: str | None = Field(default=None)
     url: str | None = Field(default=None)
@@ -827,7 +841,7 @@ class Show(BaseShow, MetadataMixin, table=True):
 
 
 class BaseSeason(BaseMetadataMixin):
-    sort_order: int = Field(default=0)
+    sort_order: int | None = Field(default=None)
     name: str | None = Field(default=None)
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
@@ -1020,9 +1034,8 @@ class Season(BaseSeason, MetadataMixin, table=True):
 
 
 class BaseEpisode(BaseMetadataMixin):
-    url: str = Field()
-    sort_order: int = Field(default=0)
-
+    url: str | None = Field(default=None)
+    sort_order: int | None = Field(default=None)
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     episode_number: int | None = Field(default=None)

@@ -37,14 +37,14 @@ class YouTubeValidator(PluginValidator):
     # 3. Check if show exists.
     EXISTING_URL_QUERY_COUNT = 3
 
-    # 1. Get plugin
-    # 2. Get Sources/Shows/Season/Episode
-    # 3. Preload Channel
-    # 4. Preload Playlist
-    # 5. Preload Video
-    UPDATE_SHOW_QUERY_COUNT = 5
-    UPDATE_SEASON_QUERY_COUNT = 5
-    UPDATE_EPISODE_QUERY_COUNT = 5
+    # 1. Get plugin (__preload_plugin)
+    # 2. Get Sources/Shows/Season/Episode (_add_all_to_preload_cache)
+    # 3. Preload Playlist (__preload_playlist_files)
+    # 4. Preload files (_preload_show_season_episode_files)
+    # 5-6. Preload Channel (_preload_show)
+    UPDATE_SHOW_QUERY_COUNT = 6
+    UPDATE_SEASON_QUERY_COUNT = 6
+    UPDATE_EPISODE_QUERY_COUNT = 6
 
     @override
     def _import_url_validator(self) -> Validator:
@@ -70,6 +70,8 @@ class YouTubeValidator(PluginValidator):
         # Season update_at is set based on the distance between the last episode and the
         # current time so it will aways be incremented.
         output.incremented(season.id, "update_at")
+        output.remove(season.id, "update_at")
+        output.changed(season.id, "update_at")
         return output
 
     def _update_episode_validator(self, episode: Episode) -> Validator:

@@ -1,10 +1,16 @@
+# TODO: Validate
 # ruff: noqa: S311 - These are just random strings for testing and nothing needs to be
 # cryptographically secure.
 import random
 import string
-from datetime import datetime
+import uuid
+from collections.abc import Callable
+from datetime import date, datetime
+from types import NoneType
+from typing import Any, get_args
 
 from fastapi.testclient import TestClient
+from sqlmodel import SQLModel
 
 from app.config import settings
 from app.utils import tz_datetime
@@ -79,6 +85,16 @@ def random_optional_future_timestamp() -> datetime | None:
     return None
 
 
+_TYPE_GENERATORS: dict[type, Callable[[], object]] = {
+    str: random_lower_string,
+    int: random_integer,
+    uuid.UUID: uuid.uuid4,
+    datetime: random_past_timestamp,
+    date: lambda: random_past_timestamp().date(),
+    bool: random_bool,
+}
+
+
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     login_data = {
         "username": settings.FIRST_SUPERUSER,
@@ -88,3 +104,50 @@ def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     tokens = r.json()
     a_token = tokens["access_token"]
     return {"Authorization": f"Bearer {a_token}"}
+
+
+def _is_nullable(annotation: type | None) -> tuple[bool, type]:
+    """Return (is_nullable, inner_type) for a type annotation."""
+    args = get_args(annotation)
+    if args and NoneType in args:
+        non_none = [a for a in args if a is not NoneType]
+        if len(non_none) == 1:
+            return True, non_none[0]
+    assert annotation is not None
+    return False, annotation
+
+
+def _random_value(tp: type) -> object:
+    """Generate a random value for a given type."""
+    generator = _TYPE_GENERATORS.get(tp)
+    if generator is None:
+        msg = f"No random generator for type: {tp}"
+        raise ValueError(msg)
+    return generator()
+
+
+def build_random_model[T: SQLModel](
+    model: type[T],
+    **required_kwargs: Any,
+) -> T:
+    """Return a model instance with randomly populated fields."""
+    kwargs: dict[str, Any] = dict(required_kwargs)
+    for field_name, info in model.model_fields.items():
+        nullable, inner_type = _is_nullable(info.annotation)
+        if nullable:
+            if random_bool():
+                kwargs[field_name] = _random_value(inner_type)
+        elif field_name not in kwargs:
+            kwargs[field_name] = _random_value(inner_type)
+    return model(**kwargs)
+
+
+def dump_random_model(
+    model: type[SQLModel],
+    **required_kwargs: Any,
+) -> dict[str, Any]:
+    """Return a JSON-serialized model fields randomly populated with random values."""
+    return build_random_model(model, **required_kwargs).model_dump(
+        mode="json",
+        exclude_unset=True,
+    )

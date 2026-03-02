@@ -28,7 +28,7 @@ from app.plugins.utils.base_files import BaseFile
 from tests.utils.user import (
     CreatedUser,
     authentication_token_from_email,
-    create_random_user,
+    create_random_user_alt,
 )
 from tests.utils.utils import get_superuser_token_headers, random_email
 
@@ -121,7 +121,7 @@ def mock_download() -> Generator[None]:
         # reportPrivateUsage - This is a private method being mocked for testing purposes.
         if self._is_outdated(update_at):  # pyright: ignore[reportPrivateUsage]
             # reportPrivateUsage - This is a private method being mocked for testing purposes.
-            if self._database_entry_:  # pyright: ignore[reportPrivateUsage]
+            if getattr(self, "_database_entry_", None):  # pyright: ignore[reportPrivateUsage]
                 # reportPrivateUsage - This is a private method being mocked for testing purposes.
                 logger.debug(f"Mock Downloading {self._database_entry_.key}")  # pyright: ignore[reportPrivateUsage]
                 if not update_at:
@@ -162,7 +162,7 @@ def random_user_token_headers(client: TestClient, db: Session) -> dict[str, str]
 @pytest.fixture
 def random_user(client: TestClient, db: Session) -> CreatedUser:
     """Create and return a randomly generated user with authentication headers."""
-    return create_random_user(client=client, db=db)
+    return create_random_user_alt(client=client, db=db)
 
 
 @pytest.fixture

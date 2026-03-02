@@ -269,10 +269,8 @@ class TestInvalidMovieUrl(JustWatchMovieValidator):
         db: Session,
         disable_ip_validation: None,
     ) -> None:
-        self._import_files(db)
-        plugin_instance = self.plugin_class(db, url=self.url)
         with pytest.raises(InvalidURLError):
-            plugin_instance.import_url(self.url)
+            super().test_initialize_test_data(db, disable_ip_validation)
 
 
 class TestInvalidTVShowUrl(JustWatchMovieValidator):
@@ -287,10 +285,8 @@ class TestInvalidTVShowUrl(JustWatchMovieValidator):
         db: Session,
         disable_ip_validation: None,
     ) -> None:
-        self._import_files(db)
-        plugin_instance = self.plugin_class(db, url=self.url)
         with pytest.raises(InvalidURLError):
-            plugin_instance.import_url(self.url)
+            super().test_initialize_test_data(db, disable_ip_validation)
 
 
 class TestMovieNotAvailable(JustWatchMovieValidator):
@@ -326,28 +322,28 @@ class TestTVShowNotAvailable(JustWatchTVShowValidator):
 
 
 class TestTVShowImportResponse(JustWatchTVShowValidator):
-    url = "justwatch.com/us/tv-show/flcl"
+    url = "justwatch.com/us/tv-show/total-control"
     skip_update_tests = True
     skip_update_source = True
 
     def test_import_single_source(self, db: Session) -> None:
-        url = "Adult Swimjustwatch.com/us/tv-show/flcl"
+        url = f"AcornTV{self.url}"
         results = self._import_files_and_url(db, url)
         assert len(results) == 1
-        assert results[0].show.source.name == "Adult Swim"
+        assert results[0].show.source.name == "Acorn TV"
         assert not results[0].seasons
         assert not results[0].episodes
 
     def test_import_single_source_with_space(self, db: Session) -> None:
-        url = "Adult Swim justwatch.com/us/tv-show/flcl"
+        url = f"Acorn TV {self.url}"
         results = self._import_files_and_url(db, url)
         assert len(results) == 1
-        assert results[0].show.source.name == "Adult Swim"
+        assert results[0].show.source.name == "Acorn TV"
         assert not results[0].seasons
         assert not results[0].episodes
 
     def test_import_single_source_and_season(self, db: Session) -> None:
-        url = "Adult Swimjustwatch.com/us/tv-show/flcl/season-1"
+        url = f"AcornTV {self.url}/season-3"
         results = self._import_files_and_url(db, url)
         assert len(results) == 1
         assert len(results[0].seasons) == 1
@@ -355,46 +351,53 @@ class TestTVShowImportResponse(JustWatchTVShowValidator):
         assert not results[0].episodes
 
     def test_import_single_season(self, db: Session) -> None:
-        url = "justwatch.com/us/tv-show/flcl/season-1"
+        url = f"{self.url}/season-3"
         results = self._import_files_and_url(db, url)
-        assert len(results) == 5  # noqa: PLR2004
+        assert len(results) == 11  # noqa: PLR2004
         for result in results:
             assert len(result.seasons) == 1
-            assert result.seasons[0].season_number == 1
+            assert result.seasons[0].season_number == 3
             assert not result.episodes
 
     def test_import_everything(self, db: Session) -> None:
         results = self._import_files_and_url(db)
-        assert len(results) == 11  # noqa: PLR2004
+        assert len(results) == 14  # noqa: PLR2004
         for result in results:
             assert not result.seasons
             assert not result.episodes
 
 
 class TestMovieImportResponse(JustWatchMovieValidator):
-    url = "justwatch.com/us/movie/scream-2022"
+    url = "justwatch.com/us/movie/mr-st-nick"
     skip_update_tests = True
     skip_update_source = True
 
     def test_import_single_source(self, db: Session) -> None:
-        url = "Apple TVjustwatch.com/us/movie/scream-2022"
+        url = f"The CW{self.url}"
         results = self._import_files_and_url(db, url)
         assert len(results) == 1
-        assert results[0].show.source.name == "Apple TV Store"
+        assert results[0].show.source.name == "The CW"
         assert not results[0].seasons
         assert not results[0].episodes
 
     def test_import_single_source_with_space(self, db: Session) -> None:
-        url = "Apple TV justwatch.com/us/movie/scream-2022"
+        url = f"The CW {self.url}"
         results = self._import_files_and_url(db, url)
         assert len(results) == 1
-        assert results[0].show.source.name == "Apple TV Store"
+        assert results[0].show.source.name == "The CW"
         assert not results[0].seasons
+        assert not results[0].episodes
+
+    def test_import_single_source_fuzzy_match(self, db: Session) -> None:
+        url = f"TheCW {self.url}"
+        results = self._import_files_and_url(db, url)
+        assert len(results) == 1
+        assert results[0].show.source.name == "The CW"
         assert not results[0].episodes
 
     def test_import_everything(self, db: Session) -> None:
         results = self._import_files_and_url(db)
-        assert len(results) == 15  # noqa: PLR2004
+        assert len(results) == 13  # noqa: PLR2004
         for result in results:
             assert not result.seasons
             assert not result.episodes
@@ -403,19 +406,18 @@ class TestMovieImportResponse(JustWatchMovieValidator):
 class TestTVShowWithMultipleSeasons(JustWatchTVShowValidator):
     # Must be a TV show with recently aired episodes to properly test update_source.
     skip_update_source = True
-    url = "HBO Max https://www.justwatch.com/us/tv-show/schitts-creek"
+    url = "AcornTV justwatch.com/us/tv-show/total-control"
     plugin_class = JustWatch
 
 
-# TODO: Wait until one of these is available on the day it is added.
-# class TestTVShowWithSingleSeasons(JustWatchTVShowValidator):
-#     # Must be a TV show with recently aired episodes to properly test update_source.
-#     skip_update_source = True
-#     url = "Philo https://www.justwatch.com/us/tv-show/people-puzzler/season-1"
-#     plugin_class = JustWatch
+class TestTVShowWithSingleSeasons(JustWatchTVShowValidator):
+    # Must be a TV show with recently aired episodes to properly test update_source.
+    skip_update_source = True
+    url = "Paramount+ Amazon Channel justwatch.com/us/tv-show/marshals/season-1"
+    plugin_class = JustWatch
 
 
 class TestMovie(JustWatchMovieValidator):
     plugin_class = JustWatch
     # This URL must be one that was very recently added to JustWatch.
-    url = "Philo https://www.justwatch.com/us/movie/lust-for-gold"
+    url = "The CW justwatch.com/us/movie/mr-st-nick"

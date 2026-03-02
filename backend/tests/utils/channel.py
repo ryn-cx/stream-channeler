@@ -4,11 +4,11 @@ from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from sqlmodel import Field, SQLModel
 
 from app.channels.models import Channel
 from app.channels.schemas import (
     ChannelEpisodesOutput,
+    ChannelInput,
     ChannelOutput,
     ChannelQueueOutput,
     MultipleChannelOutputs,
@@ -18,13 +18,8 @@ from app.config import settings
 from app.constants import MAX_ENTRIES_PER_PAGE
 from app.media.models import Episode
 from app.models import Message
-from tests.utils.user import CreatedUser, create_user_api
-from tests.utils.utils import random_bool, random_lower_string
-
-
-class RandomChannel(SQLModel):
-    name: str = Field(default_factory=random_lower_string)
-    public: bool = Field(default_factory=random_bool)
+from tests.utils.user import CreatedUser, create_random_user_alt
+from tests.utils.utils import dump_random_model, random_lower_string
 
 
 def get_random_channel(public: bool = False) -> Channel:
@@ -37,7 +32,7 @@ def get_channels_api(
     params: str = "",
     expected_output: list[ChannelOutput] | None = None,
 ) -> MultipleChannelOutputs:
-    user = user or create_user_api(client)
+    user = user or create_random_user_alt(client)
     headers = user.headers
 
     response = client.get(
@@ -77,7 +72,7 @@ def add_urls_to_channel_queue_api(
     expected_output: MultipleChannelQueueOutputs | None = None,
 ) -> MultipleChannelQueueOutputs:
     urls = urls or [random_lower_string()]
-    user = user or create_user_api(client)
+    user = user or create_random_user_alt(client)
     headers = user.headers
 
     response = client.post(
@@ -99,29 +94,18 @@ def add_urls_to_channel_queue_api(
 def create_channel_api(
     client: TestClient,
     user: CreatedUser | None = None,
-    random_channel: RandomChannel | None = None,
-    expected_output: RandomChannel | None = None,
+    data: dict[str, Any] | None = None,
 ) -> ChannelOutput:
-    user = user or create_user_api(client)
-    headers = user.headers
-    random_channel = random_channel or RandomChannel()
+    user = user or create_random_user_alt(client)
+    data = data or dump_random_model(ChannelInput, name=random_lower_string())
 
     response = client.post(
         f"{settings.API_V1_STR}/channels/",
-        headers=headers,
-        json=random_channel.model_dump(),
+        headers=user.headers,
+        json=data,
     )
     assert response.status_code == status.HTTP_200_OK
-    output = ChannelOutput.model_validate(response.json())
-
-    if expected_output:
-        assert output == ChannelOutput(
-            id=output.id,
-            user_id=user.id,
-            **expected_output.model_dump(),
-        )
-
-    return output
+    return ChannelOutput.model_validate(response.json())
 
 
 def get_channel_api(
@@ -129,7 +113,7 @@ def get_channel_api(
     channel_id: uuid.UUID,
     user: CreatedUser | None = None,
 ) -> ChannelOutput:
-    user = user or create_user_api(client)
+    user = user or create_random_user_alt(client)
 
     response = client.get(
         f"{settings.API_V1_STR}/channels/{channel_id}",
@@ -146,7 +130,7 @@ def update_channel_api(
     update_data: dict[str, Any] | None = None,
     expected_output: ChannelOutput | None = None,
 ) -> ChannelOutput:
-    user = user or create_user_api(client)
+    user = user or create_random_user_alt(client)
 
     response = client.put(
         f"{settings.API_V1_STR}/channels/{channel_id}",
@@ -169,7 +153,7 @@ def delete_channel_api(
     channel_id: uuid.UUID,
     user: CreatedUser | None = None,
 ) -> Message:
-    user = user or create_user_api(client)
+    user = user or create_random_user_alt(client)
     headers = user.headers
     response = client.delete(
         f"{settings.API_V1_STR}/channels/{channel_id}",

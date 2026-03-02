@@ -6,9 +6,10 @@ import inspect
 import json
 import time
 import traceback
+import tracemalloc
 import uuid
 from collections.abc import Callable, Generator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, contextmanager, suppress
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Concatenate, Literal, ParamSpec, TypeVar
@@ -110,20 +111,29 @@ def log_execution_time(
     plugin_validator: PluginValidator,
     label: str,
 ) -> Generator[None]:
-    """Log the execution time within the context."""
+    """Log the execution time and memory usage within the context."""
+    tracemalloc.start()
     start_time = time.perf_counter()
     try:
         yield
     finally:
         elapsed_time = time.perf_counter() - start_time
+        current_memory, peak_memory = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
         suffix = f" [{label}]" if label else ""
         logger.info(f"Execution time: {elapsed_time:.4f}s{suffix}")
+        logger.info(
+            f"Memory: current={current_memory / 1024 / 1024:.2f}MB, "
+            f"peak={peak_memory / 1024 / 1024:.2f}MB{suffix}",
+        )
 
         stats_directory_path = plugin_validator.files_directory_path() / "stats"
         stats_directory_path.mkdir(parents=True, exist_ok=True)
-        stats_file_path = stats_directory_path / label / "execution_time.txt"
-        stats_file_path.parent.mkdir(parents=True, exist_ok=True)
-        stats_file_path.write_text(str(elapsed_time))
+        stats_label_path = stats_directory_path / label
+        stats_label_path.mkdir(parents=True, exist_ok=True)
+        (stats_label_path / "execution_time.txt").write_text(str(elapsed_time))
+        (stats_label_path / "peak_memory_bytes.txt").write_text(str(peak_memory))
 
 
 @contextmanager
@@ -358,34 +368,23 @@ class PluginValidatorBase:
         # Make the file names NTFS compatible.
         file_id = file.key.replace(":", " - ")
 
-        # Write metadata after main data because it's assumed that if metadata exists
-        # then the content file also exists. If a content file exists without metadata
-        # there will be no negative consequences.
-        self.__export_database_file_content(file, file_id)
-        self.__export_database_file_metadata(file, file_id)
+        # Export the full file (metadata + content) as YAML for importing.
+        yaml_path = self.files_directory_path() / f"{file_id}.yaml"
+        yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        yaml_path.write_text(
+            yaml.dump(file.model_dump(), width=float("inf")),
+            encoding="utf-8",
+        )
 
-    def __export_database_file_content(self, file: File, file_id: str) -> None:
-        """Export the content of a single file to disk."""
-        file_path = self.files_directory_path() / file_id
-
-        # If the file has a json extension pretty print it.
-        file_content = file.content
-        if file_path.suffix == ".json":
-            try:
-                parsed_json = json.loads(file_content)
-                file_content = json.dumps(parsed_json, indent=2)
-            except json.JSONDecodeError:
-                pass
-
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(file_content, encoding="utf-8")
-
-    def __export_database_file_metadata(self, file: File, file_id: str) -> None:
-        """Export the metadata of a single file to disk."""
-        file_content = file.model_dump(exclude={"content"})
-        file_path = self.files_directory_path() / f"{file_id}.metadata.yaml"
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(yaml.dump(file_content), encoding="utf-8")
+        # Also export the raw content file for easy inspection.
+        if file.content:
+            content_path = self.files_directory_path() / file_id
+            content_path.parent.mkdir(parents=True, exist_ok=True)
+            file_content = file.content
+            if content_path.suffix == ".json":
+                with suppress(json.JSONDecodeError):
+                    file_content = json.dumps(json.loads(file_content), indent=2)
+            content_path.write_text(file_content, encoding="utf-8")
 
     # endregion
 
@@ -416,26 +415,21 @@ class PluginValidatorBase:
             self.plugin_class.plugin_id(),
         )
 
-        # Look for all metadata files because they are exported second, therefore if a
-        # metadata file exists the content file also exists.
-        for metadata_file in self.files_directory_path().rglob("*.metadata.yaml"):
-            self.__import_file(plugin_db_entry, metadata_file)
+        for file_path in self.files_directory_path().rglob("*.yaml"):
+            if file_path.name == "verification.yaml":
+                continue
+            self.__import_file(plugin_db_entry, file_path)
 
         db.commit()
 
-    def __import_file(self, plugin: Plugin, metadata_file: Path) -> None:
+    def __import_file(self, plugin: Plugin, file_path: Path) -> None:
         """Import a single exported file into the database."""
-        metadata_content = metadata_file.read_text(encoding="utf-8")
-        content_path = Path(str(metadata_file).removesuffix(".metadata.yaml"))
-
         # S506 - It is safe and required to import using FullLoader. It is safe because
         # all of the data is written by the test suite, and it is required because that
         # is the only way for the timestamps to be loaded correctly.
-        metadata_parsed = yaml.load(metadata_content, Loader=yaml.Loader)  # noqa: S506
-
-        # Add the content back in so it is a complete dumped File object.
-        metadata_parsed["content"] = content_path.read_text(encoding="utf-8")
-        plugin.files.append(File(**metadata_parsed))
+        file_content = file_path.read_text(encoding="utf-8")
+        file_parsed = yaml.load(file_content, Loader=yaml.Loader)  # noqa: S506
+        plugin.files.append(File(**file_parsed))
 
     # endregion
 
@@ -628,7 +622,9 @@ class PluginValidator(PluginValidatorBase):
         db.commit()
 
         self._validate_plugin(
-            db, original_plugin, self._update_season_validator(season),
+            db,
+            original_plugin,
+            self._update_season_validator(season),
         )
         assert sql_count.value <= self.UPDATE_SEASON_QUERY_COUNT
 
@@ -655,6 +651,8 @@ class PluginValidator(PluginValidatorBase):
         db.commit()
 
         self._validate_plugin(
-            db, original_plugin, self._update_episode_validator(episode),
+            db,
+            original_plugin,
+            self._update_episode_validator(episode),
         )
         assert sql_count.value <= self.UPDATE_EPISODE_QUERY_COUNT

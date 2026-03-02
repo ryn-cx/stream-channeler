@@ -47,7 +47,7 @@ class Series(JSONFile[series_models.Series]):
                 if str(e) != "Unexpected response status code: 404":
                     raise
 
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> series_models.Series:
@@ -260,7 +260,7 @@ class FileMixin(BasePlugin, register=False):
     # region Download
 
     def _download_initial_files(self) -> None:
-        logger.info(f"Downloading All Files For: {self._pretty_show_name()}")
+        logger.info(f"Downloading Initial Files For: {self._pretty_show_name()}")
         self.__download_initial_series()
         self.__download_initial_seasons()
         self.__download_initial_episodes()

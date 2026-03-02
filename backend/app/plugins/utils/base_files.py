@@ -36,7 +36,7 @@ class BaseFile[T](ABC):
         elif file_from_db := File.get(db, plugin, file_key):
             self._database_entry_ = file_from_db
         else:
-            self._download()
+            self.download_if_outdated()
 
         self._cached_parsed: T | None = None
 
@@ -48,7 +48,7 @@ class BaseFile[T](ABC):
         """Set the value of File.extra."""
         self._database_entry_.extra = extra_value
 
-    def _get_file_content(self) -> str:
+    def _get_file_content(self) -> str | None:
         """Return the value of File.content."""
         return self._database_entry_.content
 
@@ -144,7 +144,7 @@ class BaseFile[T](ABC):
 
     # endregion
 
-    def _write(self, content: str) -> None:
+    def _write(self, content: str | None) -> None:
         """Write content to the file and immediately commit to the database."""
         self._database_entry_ = FileInput(
             key=self.__file_key(),
@@ -173,11 +173,8 @@ class BaseFile[T](ABC):
         # If the file is older than the minimum timestamp it is outdated.
         return self._database_entry_.data_timestamp < minimum_timestamp
 
-    def has_file_content(self) -> str:
-        """Return whether the file has content.
-
-        Actually returns a string, but it can be treated as a boolean.
-        """
+    def has_file_content(self) -> str | None:
+        """Return whether the file has content."""
         return self._get_file_content()
 
 
@@ -196,8 +193,8 @@ class JSONFile[T](BaseFile[T], ABC):
         return self._cached_parsed
 
     @override
-    def _write(self, content: str | dict[str, Any] | list[Any]) -> None:
-        if not isinstance(content, str):
+    def _write(self, content: str | dict[str, Any] | list[Any] | None) -> None:
+        if content is not None and not isinstance(content, str):
             content = json.dumps(content, default=str)
         super()._write(content)
 

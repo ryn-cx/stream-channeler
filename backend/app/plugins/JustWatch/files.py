@@ -80,7 +80,7 @@ class UrlTitleDetails(JSONFile[url_title_details_models.UrlTitleDetailsResponse]
                 self._write(content)
             # Occurs when a user puts in an invalid URL.
             except GraphQLError:
-                self._write("")
+                self._write(None)
 
     @override
     def _parse(self, raw: Any) -> url_title_details_models.UrlTitleDetailsResponse:
@@ -305,9 +305,10 @@ class FileMixin(BasePlugin, register=False):
 
     # region Preload
 
-    def _preload_show_season_episode_files(self, show_id: str) -> None:
+    def _preload_show_files(self, show_id: str) -> None:
         self.__preload_url_title_details(show_id)
 
+    def _preload_season_episode_files(self, show_id: str) -> None:
         # Will be true if the user inputs an invalid URL.
         if not self._url_title_details_file(show_id).has_file_content():
             return
@@ -316,6 +317,10 @@ class FileMixin(BasePlugin, register=False):
             self.__preload_custom_season_episodes(season_ids)
             if episode_ids := self.__episode_ids_from_file:
                 self.__preload_custom_buy_box_offers(episode_ids)
+
+    def _preload_show_season_episode_files(self, show_id: str) -> None:
+        self._preload_show_files(show_id)
+        self._preload_season_episode_files(show_id)
 
     def __preload_url_title_details(self, show_id: str) -> None:
         url_title_details_select = (
@@ -429,7 +434,7 @@ class FileMixin(BasePlugin, register=False):
                 continue
             # It appears all of the dates are offset by a day for some reason so always
             # download a day in advance to get the latest files.
-            initial_timestamp = tz_datetime.now() + timedelta(days=1)
+            initial_timestamp = tz_datetime.now()
             browse_file = self._new_titles_file(source_id, initial_timestamp)
             self._latest_browse_files[source_id] = browse_file
 
@@ -452,8 +457,8 @@ class FileMixin(BasePlugin, register=False):
         # download a day in advance to get the latest files.
         current_date = tz_datetime.now().date() + timedelta(days=1)
         while last_download_date < current_date:
-            last_download_date += timedelta(days=1)
             self._new_titles_file(source.key, last_download_date)
+            last_download_date += timedelta(days=1)
 
     def _download_outdated_new_titles_files(self, source: Source) -> None:
         statement = (

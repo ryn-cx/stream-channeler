@@ -1,4 +1,7 @@
+import uuid
+
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.config import settings
@@ -27,6 +30,23 @@ def create_random_user(db: Session) -> User:
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password)
     return user_service.create_user(session=db, user_create=user_in)
+
+
+class CreatedUser(BaseModel):
+    id: uuid.UUID
+    email: str
+    password: str
+    headers: dict[str, str]
+
+
+# TODO: Move this function or rename it or something
+def create_random_user_alt(client: TestClient, db: Session) -> CreatedUser:
+    email = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(email=email, password=password)
+    user = user_service.create_user(session=db, user_create=user_in)
+    headers = user_authentication_headers(client=client, email=email, password=password)
+    return CreatedUser(id=user.id, email=email, password=password, headers=headers)
 
 
 def authentication_token_from_email(

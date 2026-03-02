@@ -186,7 +186,9 @@ function EpisodeCard({
 
   const handleClick = () => {
     watchedMutation.mutate(episode.id)
-    window.open(episode.url, "_blank", "noopener,noreferrer")
+    if (episode.url) {
+      window.open(episode.url, "_blank", "noopener,noreferrer")
+    }
   }
 
   const watched = !!episode.watch_date
@@ -222,7 +224,7 @@ function EpisodeCard({
         <img
           loading="lazy"
           src={imageUrl}
-          alt={`Episode ${episode.episode_number} - ${episode.name}`}
+          alt={`Episode ${episode.episode_number} - ${episode.name ?? ""}`}
           className="object-cover transition-opacity group-hover:opacity-80"
           onLoad={(e) => {
             const img = e.target as HTMLImageElement
@@ -293,7 +295,7 @@ function EpisodeCard({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation()
-                const confirmMsg = `Blacklist episode "${episode.name}"?`
+                const confirmMsg = `Blacklist episode "${episode.name ?? ""}"?`
                 if (window.confirm(confirmMsg)) {
                   whitelistMutation.mutate(episode.id)
                 }
@@ -305,7 +307,9 @@ function EpisodeCard({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation()
-                window.open(episode.url, "_blank", "noopener,noreferrer")
+                if (episode.url) {
+                  window.open(episode.url, "_blank", "noopener,noreferrer")
+                }
               }}
             >
               <ExternalLink className="h-4 w-4" />

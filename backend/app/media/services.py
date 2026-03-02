@@ -4,9 +4,11 @@ import uuid
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from fastapi import HTTPException, status
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, func, select
 
-from app.media.models import Episode, EpisodeWatch, Season, Show, Source
+from app.media.models import Episode, EpisodeWatch, Plugin, Season, Show, Source
 from app.media.schemas import (
     EpisodeOutput,
     EpisodeWatchItem,
@@ -20,9 +22,116 @@ from app.media.schemas import (
     WatchedEpisodesOutput,
 )
 from app.plugins.utils.manage_plugins import import_plugins, plugins
+from app.users.models import User
 
 if TYPE_CHECKING:
     from app.plugins.utils.abstract_plugin import AbstractPlugin
+
+
+def get_user_plugin(
+    session: Session,
+    current_user: User,
+    plugin_key: str,
+) -> Plugin:
+    """Get a plugin owned by the current user or raise 404."""
+    plugin = Plugin.get(session, plugin_key)
+    if not plugin or plugin.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plugin not found",
+        )
+    return plugin
+
+
+def get_user_source(
+    session: Session,
+    current_user: User,
+    source_id: uuid.UUID,
+) -> Source:
+    """Look up a source by its UUID id and verify user ownership."""
+    statement = (
+        select(Source)
+        .where(Source.id == source_id)
+        .options(selectinload(Source.plugin))  # type: ignore[arg-type]
+    )
+    source = session.exec(statement).first()
+    if not source or source.plugin.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Source not found",
+        )
+    return source
+
+
+def get_user_show(
+    session: Session,
+    current_user: User,
+    show_id: uuid.UUID,
+) -> Show:
+    """Look up a show by its UUID id and verify user ownership."""
+    statement = (
+        select(Show)
+        .where(Show.id == show_id)
+        .options(
+            selectinload(Show.source).selectinload(Source.plugin),  # type: ignore[arg-type]
+        )
+    )
+    show = session.exec(statement).first()
+    if not show or show.source.plugin.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Show not found",
+        )
+    return show
+
+
+def get_user_season(
+    session: Session,
+    current_user: User,
+    season_id: uuid.UUID,
+) -> Season:
+    """Look up a season by its UUID id and verify user ownership."""
+    statement = (
+        select(Season)
+        .where(Season.id == season_id)
+        .options(
+            selectinload(Season.show)  # type: ignore[arg-type]
+            .selectinload(Show.source)  # type: ignore[arg-type]
+            .selectinload(Source.plugin),  # type: ignore[arg-type]
+        )
+    )
+    season = session.exec(statement).first()
+    if not season or season.show.source.plugin.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Season not found",
+        )
+    return season
+
+
+def get_user_episode(
+    session: Session,
+    current_user: User,
+    episode_id: uuid.UUID,
+) -> Episode:
+    """Look up an episode by its UUID id and verify user ownership."""
+    statement = (
+        select(Episode)
+        .where(Episode.id == episode_id)
+        .options(
+            selectinload(Episode.season)  # type: ignore[arg-type]
+            .selectinload(Season.show)  # type: ignore[arg-type]
+            .selectinload(Show.source)  # type: ignore[arg-type]
+            .selectinload(Source.plugin),  # type: ignore[arg-type]
+        )
+    )
+    episode = session.exec(statement).first()
+    if not episode or episode.season.show.source.plugin.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Episode not found",
+        )
+    return episode
 
 
 def _episode_watch_count_statement(session: Session, user_id: uuid.UUID) -> int:
@@ -126,8 +235,10 @@ def save_episode_watch(
     episode: Episode,
     watch_input: EpisodeWatchPatchInput | EpisodeWatchPostInput,
 ) -> SingleEpisodeWatchOutput:
-    episode_watch.watch_date = watch_input.watch_date
-    episode_watch.verified = watch_input.verified
+    if watch_input.watch_date is not None:
+        episode_watch.watch_date = watch_input.watch_date
+    if watch_input.verified is not None:
+        episode_watch.verified = watch_input.verified
     session.commit()
 
     return SingleEpisodeWatchOutput(
@@ -155,7 +266,7 @@ def get_importable_plugins() -> list[type[AbstractPlugin]]:
     return result
 
 
-def get_plugin(plugin_id: str) -> type[AbstractPlugin] | None:
+def get_installed_plugin(plugin_id: str) -> type[AbstractPlugin] | None:
     """Find an importable plugin class by its plugin_id."""
     for plugin_cls in get_importable_plugins():
         if plugin_cls.plugin_id() == plugin_id:

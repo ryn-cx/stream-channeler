@@ -37,8 +37,9 @@ class JustWatch(FileMixin, register=True):
         season_id = match.group("season_key")
 
         if not (shows := self._preload_shows()):
-            self._preload_show_season_episode_files(self._show_id)
+            self._preload_show_files(self._show_id)
             self.__validate_show_id(url)
+            self._preload_season_episode_files(self._show_id)
             self._preload_all_latest_new_titles_files()
             self._download_initial_files()
             shows = self.__upsert_sources()

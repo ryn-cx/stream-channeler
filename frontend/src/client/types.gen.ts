@@ -71,12 +71,12 @@ export type ChannelShowsOutput = {
 
 export type EpisodeOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    url: string;
-    sort_order?: number;
+    url?: (string | null);
+    sort_order?: (number | null);
     description?: (string | null);
     image_url?: (string | null);
     episode_number?: (number | null);
@@ -88,6 +88,42 @@ export type EpisodeOutput = {
     id: string;
 };
 
+export type EpisodePatchInput = {
+    url?: (string | null);
+    sort_order?: (number | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    duration?: (number | null);
+    data_timestamp?: (string | null);
+};
+
+export type EpisodePostInput = {
+    key?: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    url?: (string | null);
+    sort_order?: (number | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    duration?: (number | null);
+    season_id: string;
+};
+
+export type EpisodesListOutput = {
+    data: Array<EpisodeOutput>;
+    count: number;
+};
+
 export type EpisodeWatchItem = {
     watch_date: string;
     verified: boolean;
@@ -96,24 +132,24 @@ export type EpisodeWatchItem = {
 };
 
 export type EpisodeWatchPatchInput = {
-    watch_date: string;
-    verified: boolean;
+    watch_date?: (string | null);
+    verified?: (boolean | null);
 };
 
 export type EpisodeWatchPostInput = {
     episode_id: string;
-    watch_date: string;
-    verified: boolean;
+    watch_date?: string;
+    verified?: boolean;
 };
 
 export type EpisodeWithExtrasOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    url: string;
-    sort_order?: number;
+    url?: (string | null);
+    sort_order?: (number | null);
     description?: (string | null);
     image_url?: (string | null);
     episode_number?: (number | null);
@@ -159,12 +195,28 @@ export type NewPassword = {
 
 export type PluginOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    name: string;
+    name?: (string | null);
     id: string;
+    user_id?: (string | null);
+};
+
+export type PluginPatchInput = {
+    name?: (string | null);
+    data_timestamp?: (string | null);
+};
+
+export type PluginPostInput = {
+    name?: (string | null);
+    data_timestamp?: (string | null);
+};
+
+export type PluginsListOutput = {
+    data: Array<PluginOutput>;
+    count: number;
 };
 
 export type PrivateUserCreate = {
@@ -176,11 +228,11 @@ export type PrivateUserCreate = {
 
 export type SeasonOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: number;
+    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
@@ -189,19 +241,75 @@ export type SeasonOutput = {
     id: string;
 };
 
-export type ShowOutput = {
-    key: string;
-    data_timestamp: string;
+export type SeasonPatchInput = {
+    sort_order?: (number | null);
+    name?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    season_number?: (number | null);
+    data_timestamp?: (string | null);
+};
+
+export type SeasonPostInput = {
+    key?: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    name: string;
+    sort_order?: (number | null);
+    name?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    season_number?: (number | null);
+    show_id: string;
+};
+
+export type SeasonsListOutput = {
+    data: Array<SeasonOutput>;
+    count: number;
+};
+
+export type ShowOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
     source_id: string;
     id: string;
+};
+
+export type ShowPatchInput = {
+    name?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    data_timestamp?: (string | null);
+};
+
+export type ShowPostInput = {
+    key?: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    source_id: string;
+};
+
+export type ShowsListOutput = {
+    data: Array<ShowOutput>;
+    count: number;
 };
 
 export type SingleEpisodeWatchOutput = {
@@ -222,15 +330,39 @@ export type SortOptionOutput = {
 
 export type SourceOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    name: string;
+    name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
     plugin_id: string;
     id: string;
+};
+
+export type SourcePatchInput = {
+    name?: (string | null);
+    favicon_url?: (string | null);
+    image_url?: (string | null);
+    data_timestamp?: (string | null);
+};
+
+export type SourcePostInput = {
+    key?: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    name?: (string | null);
+    favicon_url?: (string | null);
+    image_url?: (string | null);
+    plugin_key: string;
+};
+
+export type SourcesListOutput = {
+    data: Array<SourceOutput>;
+    count: number;
 };
 
 export type Token = {
@@ -368,11 +500,11 @@ export type WhitelistShowInput = {
 
 export type WhitelistShowOutput = {
     key: string;
-    data_timestamp: string;
+    data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    name: string;
+    name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
     url?: (string | null);
@@ -551,6 +683,27 @@ export type ChannelsUpdateChannelDefaultOrderData = {
 
 export type ChannelsUpdateChannelDefaultOrderResponse = (Message);
 
+export type EpisodesCreateEpisodeData = {
+    requestBody: EpisodePostInput;
+};
+
+export type EpisodesCreateEpisodeResponse = (EpisodeOutput);
+
+export type EpisodesUpdateEpisodeData = {
+    episodeId: string;
+    requestBody: EpisodePatchInput;
+};
+
+export type EpisodesUpdateEpisodeResponse = (EpisodeOutput);
+
+export type EpisodesDeleteEpisodeData = {
+    episodeId: string;
+};
+
+export type EpisodesDeleteEpisodeResponse = ({
+    [key: string]: (string);
+});
+
 export type EpisodesPostWatchedEpisodeData = {
     requestBody: EpisodeWatchPostInput;
 };
@@ -614,11 +767,121 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
+export type PluginsGetPluginsFromUserResponse = (PluginsListOutput);
+
+export type PluginsCreatePluginData = {
+    requestBody: PluginPostInput;
+};
+
+export type PluginsCreatePluginResponse = (PluginOutput);
+
+export type PluginsGetSourcesFromPluginData = {
+    pluginKey: string;
+};
+
+export type PluginsGetSourcesFromPluginResponse = (SourcesListOutput);
+
+export type PluginsUpdatePluginData = {
+    pluginKey: string;
+    requestBody: PluginPatchInput;
+};
+
+export type PluginsUpdatePluginResponse = (PluginOutput);
+
+export type PluginsDeleteUserPluginData = {
+    pluginKey: string;
+};
+
+export type PluginsDeleteUserPluginResponse = ({
+    [key: string]: (string);
+});
+
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
+
+export type SeasonsGetEpisodesFromSeasonData = {
+    seasonId: string;
+};
+
+export type SeasonsGetEpisodesFromSeasonResponse = (EpisodesListOutput);
+
+export type SeasonsCreateSeasonData = {
+    requestBody: SeasonPostInput;
+};
+
+export type SeasonsCreateSeasonResponse = (SeasonOutput);
+
+export type SeasonsUpdateSeasonData = {
+    requestBody: SeasonPatchInput;
+    seasonId: string;
+};
+
+export type SeasonsUpdateSeasonResponse = (SeasonOutput);
+
+export type SeasonsDeleteSeasonData = {
+    seasonId: string;
+};
+
+export type SeasonsDeleteSeasonResponse = ({
+    [key: string]: (string);
+});
+
+export type ShowsGetSeasonsFromShowData = {
+    showId: string;
+};
+
+export type ShowsGetSeasonsFromShowResponse = (SeasonsListOutput);
+
+export type ShowsCreateShowData = {
+    requestBody: ShowPostInput;
+};
+
+export type ShowsCreateShowResponse = (ShowOutput);
+
+export type ShowsUpdateShowData = {
+    requestBody: ShowPatchInput;
+    showId: string;
+};
+
+export type ShowsUpdateShowResponse = (ShowOutput);
+
+export type ShowsDeleteShowData = {
+    showId: string;
+};
+
+export type ShowsDeleteShowResponse = ({
+    [key: string]: (string);
+});
+
+export type SourcesGetShowsFromSourceData = {
+    sourceId: string;
+};
+
+export type SourcesGetShowsFromSourceResponse = (ShowsListOutput);
+
+export type SourcesCreateSourceData = {
+    requestBody: SourcePostInput;
+};
+
+export type SourcesCreateSourceResponse = (SourceOutput);
+
+export type SourcesUpdateSourceData = {
+    requestBody: SourcePatchInput;
+    sourceId: string;
+};
+
+export type SourcesUpdateSourceResponse = (SourceOutput);
+
+export type SourcesDeleteSourceData = {
+    sourceId: string;
+};
+
+export type SourcesDeleteSourceResponse = ({
+    [key: string]: (string);
+});
 
 export type UsersReadUsersData = {
     limit?: number;
