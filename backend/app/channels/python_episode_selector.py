@@ -18,8 +18,12 @@ from app.channels.models import (
     ChannelShow,
 )
 from app.channels.schemas import ChannelMediaFilter
-from app.media.models import Episode, EpisodeWatch, Season, Show, Source
+from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
 from app.utils import tz_datetime
+from app.watches.models import EpisodeWatch
 
 MAX_EPISODES_RETURNED = 1000
 
@@ -724,7 +728,9 @@ class PythonEpisodeQueryBuilder:
         if media_type == "show-episodes":
             return self._is_valid_show_episodes_sort_key(category, field_name)
         return self._is_valid_non_show_episodes_sort_key(
-            category, media_type, field_name,
+            category,
+            media_type,
+            field_name,
         )
 
     def _is_valid_show_episodes_sort_key(

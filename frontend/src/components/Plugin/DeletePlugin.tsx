@@ -43,13 +43,13 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
   const { handleSubmit } = useForm()
 
   const mutation = useMutation({
-    mutationFn: (pluginKey: string) =>
+    mutationFn: (pluginId: string) =>
       request(OpenAPI, {
         method: "DELETE",
-        url: "/api/v1/plugins/{plugin_key}",
-        path: { plugin_key: pluginKey },
+        url: "/api/v1/plugins/{plugin_id}",
+        path: { plugin_id: pluginId },
       }),
-    onMutate: async (_pluginKey, context) => {
+    onMutate: async (_pluginId, context) => {
       await context.client.cancelQueries({ queryKey: ["plugins"] })
       const previous = context.client.getQueryData<PluginsListOutput>([
         "plugins",
@@ -57,7 +57,7 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
 
       context.client.setQueryData<PluginsListOutput>(["plugins"], (old) => ({
         ...old!,
-        data: old!.data.filter((p) => p.key !== plugin.key),
+        data: old!.data.filter((p) => p.id !== plugin.id),
         count: old!.count - 1,
       }))
 
@@ -67,7 +67,7 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
       showSuccessToast("Plugin deleted successfully")
       setIsOpen(false)
     },
-    onError: (error, _pluginKey, onMutateResult, context) => {
+    onError: (error, _pluginId, onMutateResult, context) => {
       context.client.setQueryData(["plugins"], onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
@@ -76,7 +76,7 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
   })
 
   const onSubmit = () => {
-    mutation.mutate(plugin.key)
+    mutation.mutate(plugin.id)
   }
 
   return (

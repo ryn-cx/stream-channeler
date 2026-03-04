@@ -19,11 +19,11 @@ export const columns: ColumnDef<PluginTableData>[] = [
     header: "Name",
     cell: ({ row }) => (
       <Link
-        to="/plugin/$pluginKey"
-        params={{ pluginKey: row.original.key }}
+        to="/plugin/$pluginId"
+        params={{ pluginId: row.original.id }}
         className="font-medium text-primary hover:underline"
       >
-        {row.original.name || row.original.id}
+        {row.original.name || `No Name (${row.original.id.split("-")[0]})`}
       </Link>
     ),
   },

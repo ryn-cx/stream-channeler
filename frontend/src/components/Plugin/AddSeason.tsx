@@ -79,8 +79,8 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "POST",
-        url: "/api/v1/seasons/",
-        body: { ...data, show_id: showKey },
+        url: `/api/v1/shows/${showKey}/seasons`,
+        body: data,
         mediaType: "application/json",
       }),
     onMutate: async (newSeason, context) => {

@@ -40,6 +40,7 @@ interface PluginsListOutput {
 }
 
 const formSchema = z.object({
+  key: z.string().optional().or(z.literal("")),
   name: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
 })
@@ -55,6 +56,7 @@ const AddPlugin = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      key: "",
       name: "",
       data_timestamp: "",
     },
@@ -64,7 +66,7 @@ const AddPlugin = () => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "POST",
-        url: "/api/v1/plugins/",
+        url: "/api/v1/plugins",
         body: data,
         mediaType: "application/json",
       }),
@@ -79,7 +81,7 @@ const AddPlugin = () => {
         data: [
           ...old!.data,
           {
-            key: crypto.randomUUID(),
+            key: newPlugin.key ?? "",
             name: newPlugin.name,
             id: crypto.randomUUID(),
             user_id: null,
@@ -106,6 +108,7 @@ const AddPlugin = () => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
+      key: data.key || undefined,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
     })
@@ -150,6 +153,23 @@ const AddPlugin = () => {
                     <FormLabel>Data Timestamp</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Auto-generated if empty"
+                        type="text"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

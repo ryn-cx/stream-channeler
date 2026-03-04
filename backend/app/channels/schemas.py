@@ -14,13 +14,11 @@ from app.channels.models import (
     ChannelQueue,
     ChannelShow,
 )
-from app.media.schemas import (
-    EpisodeOutput,
-    PluginOutput,
-    SeasonOutput,
-    ShowOutput,
-    SourceOutput,
-)
+from app.episodes.schemas import EpisodeOutput
+from app.plugins.schemas import PluginOutput
+from app.seasons.schemas import SeasonOutput
+from app.shows.schemas import ShowOutput
+from app.sources.schemas import SourceOutput
 from app.utils import tz_datetime
 
 

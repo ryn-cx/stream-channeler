@@ -42,15 +42,17 @@ from app.channels.schemas import (
     WhitelistStatusOutput,
 )
 from app.constants import MAX_ENTRIES_PER_PAGE
-from app.media.models import Episode, Plugin, Season, Show, Source
-from app.media.schemas import (
-    EpisodeOutput,
-    PluginOutput,
-    SeasonOutput,
-    ShowOutput,
-    SourceOutput,
-)
+from app.episodes.models import Episode
+from app.episodes.schemas import EpisodeOutput
 from app.models import Message
+from app.plugins.models import Plugin
+from app.plugins.schemas import PluginOutput
+from app.seasons.models import Season
+from app.seasons.schemas import SeasonOutput
+from app.shows.models import Show
+from app.shows.schemas import ShowOutput
+from app.sources.models import Source
+from app.sources.schemas import SourceOutput
 from app.users.dependencies import OptionalUser
 
 router = APIRouter(prefix="/channels", tags=["channels"])

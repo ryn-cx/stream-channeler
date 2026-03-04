@@ -87,8 +87,8 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "POST",
-        url: "/api/v1/episodes/",
-        body: { ...data, season_id: seasonKey },
+        url: `/api/v1/seasons/${seasonKey}/episodes`,
+        body: data,
         mediaType: "application/json",
       }),
     onMutate: async (newEpisode, context) => {

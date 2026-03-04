@@ -26,7 +26,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Name",
     cell: ({ row }) => (
       <span className="font-medium">
-        {row.original.name || row.original.id}
+        {row.original.name || `No Name (${row.original.id.split("-")[0]})`}
       </span>
     ),
   },

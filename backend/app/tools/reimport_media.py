@@ -6,8 +6,10 @@ from sqlalchemy import event
 from sqlmodel import Session, col, select
 
 from app.database import engine, load_models
-from app.media.models import Plugin, Show, Source
-from app.plugins.utils.manage_plugins import import_plugins, plugins
+from app.plugins.models import Plugin
+from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
+from app.shows.models import Show
+from app.sources.models import Source
 
 import_plugins()
 load_models()

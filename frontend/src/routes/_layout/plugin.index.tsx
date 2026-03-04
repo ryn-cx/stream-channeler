@@ -24,7 +24,7 @@ function getPluginsQueryOptions() {
     queryFn: () =>
       request(OpenAPI, {
         method: "GET",
-        url: "/api/v1/plugins/",
+        url: "/api/v1/plugins",
       }) as Promise<PluginsListOutput>,
     queryKey: ["plugins"],
   }

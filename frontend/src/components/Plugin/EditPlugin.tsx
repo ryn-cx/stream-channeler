@@ -74,8 +74,8 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "PATCH",
-        url: "/api/v1/plugins/{plugin_key}",
-        path: { plugin_key: plugin.key },
+        url: "/api/v1/plugins/{plugin_id}",
+        path: { plugin_id: plugin.id },
         body: data,
         mediaType: "application/json",
       }),
@@ -86,7 +86,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       context.client.setQueryData<PluginsListOutput>(queryKey, (old) => ({
         ...old!,
         data: old!.data.map((p) =>
-          p.key === plugin.key ? { ...p, ...newData } : p,
+          p.id === plugin.id ? { ...p, ...newData } : p,
         ),
       }))
 

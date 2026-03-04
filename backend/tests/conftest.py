@@ -18,19 +18,19 @@ from sqlmodel import Session, SQLModel, create_engine, text
 # reportUnusedImport/F401 - This loads variables into the environment even if it looks
 # like it does nothing. It's easier to do this on import than import it then have a
 # function call in the middle of all of the imports.
-import tests.load_test_env  # pyright: ignore[reportUnusedImport] # noqa: F401
+import tests.old_tests.utils.load_test_env  # pyright: ignore[reportUnusedImport] # noqa: F401
 from app.auth.dependencies import get_db
 from app.config import settings
 from app.database import init_db, load_models
 from app.main import app
-from app.media.models import Plugin
-from app.plugins.utils.base_files import BaseFile
-from tests.utils.user import (
+from app.plugins.models import Plugin
+from app.plugins.plugins.utils.base_files import BaseFile
+from tests.old_tests.utils.user import (
     CreatedUser,
     authentication_token_from_email,
     create_random_user_alt,
 )
-from tests.utils.utils import get_superuser_token_headers, random_email
+from tests.old_tests.utils.utils import get_superuser_token_headers, random_email
 
 # Remove the uncolorized logger and replace it with a colorized one that captures debug
 # logs.
@@ -103,8 +103,8 @@ def client() -> Generator[TestClient]:
 @pytest.fixture(autouse=True)
 def disable_ip_validation() -> Generator[None]:
     """Disable IP validation checks when downloading files for all tests."""
-    with patch("app.plugins.YouTube.files.check_ip_matches"):
-        with patch("app.plugins.YouTube.files.check_ip_not_matches"):
+    with patch("app.plugins.plugins.YouTube.files.check_ip_matches"):
+        with patch("app.plugins.plugins.YouTube.files.check_ip_not_matches"):
             yield
 
 

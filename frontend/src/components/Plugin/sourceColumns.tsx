@@ -25,7 +25,7 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
         params={{ sourceKey: row.original.id }}
         className="font-medium text-primary hover:underline"
       >
-        {row.original.name || row.original.id}
+        {row.original.name || `No Name (${row.original.id.split("-")[0]})`}
       </Link>
     ),
   },

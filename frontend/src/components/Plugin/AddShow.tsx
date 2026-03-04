@@ -79,8 +79,8 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "POST",
-        url: "/api/v1/shows/",
-        body: { ...data, source_id: sourceKey },
+        url: `/api/v1/sources/${sourceKey}/shows`,
+        body: data,
         mediaType: "application/json",
       }),
     onMutate: async (newShow, context) => {

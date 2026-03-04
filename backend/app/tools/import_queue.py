@@ -14,9 +14,9 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelShowInput
 from app.database import engine, load_models
-from app.plugins.utils.abstract_plugin import URLImportResult
-from app.plugins.utils.ip_validator import IPValidationError
-from app.plugins.utils.manage_plugins import import_plugins, plugins
+from app.plugins.plugins.utils.abstract_plugin import URLImportResult
+from app.plugins.plugins.utils.ip_validator import IPValidationError
+from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()
 load_models()

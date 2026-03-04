@@ -25,7 +25,7 @@ import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watche
 import { Route as LayoutSourceSourceKeyRouteImport } from './routes/_layout/source.$sourceKey'
 import { Route as LayoutShowShowKeyRouteImport } from './routes/_layout/show.$showKey'
 import { Route as LayoutSeasonSeasonKeyRouteImport } from './routes/_layout/season.$seasonKey'
-import { Route as LayoutPluginPluginKeyRouteImport } from './routes/_layout/plugin.$pluginKey'
+import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugin.$pluginId'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -107,9 +107,9 @@ const LayoutSeasonSeasonKeyRoute = LayoutSeasonSeasonKeyRouteImport.update({
   path: '/season/$seasonKey',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutPluginPluginKeyRoute = LayoutPluginPluginKeyRouteImport.update({
-  id: '/plugin/$pluginKey',
-  path: '/plugin/$pluginKey',
+const LayoutPluginPluginIdRoute = LayoutPluginPluginIdRouteImport.update({
+  id: '/plugin/$pluginId',
+  path: '/plugin/$pluginId',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
@@ -129,7 +129,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
-  '/plugin/$pluginKey': typeof LayoutPluginPluginKeyRoute
+  '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
@@ -148,7 +148,7 @@ export interface FileRoutesByTo {
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
-  '/plugin/$pluginKey': typeof LayoutPluginPluginKeyRoute
+  '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
@@ -169,7 +169,7 @@ export interface FileRoutesById {
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
-  '/_layout/plugin/$pluginKey': typeof LayoutPluginPluginKeyRoute
+  '/_layout/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/_layout/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/_layout/show/$showKey': typeof LayoutShowShowKeyRoute
   '/_layout/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
@@ -190,7 +190,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/watches'
     | '/channels/$channelId'
-    | '/plugin/$pluginKey'
+    | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
     | '/source/$sourceKey'
@@ -209,7 +209,7 @@ export interface FileRouteTypes {
     | '/watches'
     | '/'
     | '/channels/$channelId'
-    | '/plugin/$pluginKey'
+    | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
     | '/source/$sourceKey'
@@ -229,7 +229,7 @@ export interface FileRouteTypes {
     | '/_layout/watches'
     | '/_layout/'
     | '/_layout/channels/$channelId'
-    | '/_layout/plugin/$pluginKey'
+    | '/_layout/plugin/$pluginId'
     | '/_layout/season/$seasonKey'
     | '/_layout/show/$showKey'
     | '/_layout/source/$sourceKey'
@@ -360,11 +360,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSeasonSeasonKeyRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/plugin/$pluginKey': {
-      id: '/_layout/plugin/$pluginKey'
-      path: '/plugin/$pluginKey'
-      fullPath: '/plugin/$pluginKey'
-      preLoaderRoute: typeof LayoutPluginPluginKeyRouteImport
+    '/_layout/plugin/$pluginId': {
+      id: '/_layout/plugin/$pluginId'
+      path: '/plugin/$pluginId'
+      fullPath: '/plugin/$pluginId'
+      preLoaderRoute: typeof LayoutPluginPluginIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/channels/$channelId': {
@@ -384,7 +384,7 @@ interface LayoutRouteChildren {
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
-  LayoutPluginPluginKeyRoute: typeof LayoutPluginPluginKeyRoute
+  LayoutPluginPluginIdRoute: typeof LayoutPluginPluginIdRoute
   LayoutSeasonSeasonKeyRoute: typeof LayoutSeasonSeasonKeyRoute
   LayoutShowShowKeyRoute: typeof LayoutShowShowKeyRoute
   LayoutSourceSourceKeyRoute: typeof LayoutSourceSourceKeyRoute
@@ -400,7 +400,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,
-  LayoutPluginPluginKeyRoute: LayoutPluginPluginKeyRoute,
+  LayoutPluginPluginIdRoute: LayoutPluginPluginIdRoute,
   LayoutSeasonSeasonKeyRoute: LayoutSeasonSeasonKeyRoute,
   LayoutShowShowKeyRoute: LayoutShowShowKeyRoute,
   LayoutSourceSourceKeyRoute: LayoutSourceSourceKeyRoute,

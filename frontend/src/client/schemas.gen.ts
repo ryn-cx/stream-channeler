@@ -406,6 +406,18 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Name'
         },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
         release_date: {
             anyOf: [
                 {
@@ -430,23 +442,6 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
-        duration: {
-            anyOf: [
-                {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
-        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -454,12 +449,70 @@ export const EpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'season_id', 'id'],
+    required: ['key', 'id'],
     title: 'EpisodeOutput'
 } as const;
 
 export const EpisodePatchInputSchema = {
     properties: {
+        key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
         url: {
             anyOf: [
                 {
@@ -526,6 +579,18 @@ export const EpisodePatchInputSchema = {
             ],
             title: 'Name'
         },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
         release_date: {
             anyOf: [
                 {
@@ -549,30 +614,6 @@ export const EpisodePatchInputSchema = {
                 }
             ],
             title: 'Air Date'
-        },
-        duration: {
-            anyOf: [
-                {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
         }
     },
     type: 'object',
@@ -698,6 +739,18 @@ export const EpisodePostInputSchema = {
             ],
             title: 'Name'
         },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
         release_date: {
             anyOf: [
                 {
@@ -721,27 +774,9 @@ export const EpisodePostInputSchema = {
                 }
             ],
             title: 'Air Date'
-        },
-        duration: {
-            anyOf: [
-                {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
         }
     },
     type: 'object',
-    required: ['season_id'],
     title: 'EpisodePostInput'
 } as const;
 
@@ -944,6 +979,18 @@ export const EpisodeWithExtrasOutputSchema = {
             ],
             title: 'Name'
         },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
         release_date: {
             anyOf: [
                 {
@@ -967,23 +1014,6 @@ export const EpisodeWithExtrasOutputSchema = {
                 }
             ],
             title: 'Air Date'
-        },
-        duration: {
-            anyOf: [
-                {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
         },
         id: {
             type: 'string',
@@ -1032,7 +1062,7 @@ export const EpisodeWithExtrasOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'season_id', 'id', 'channel_id'],
+    required: ['key', 'id', 'channel_id'],
     title: 'EpisodeWithExtrasOutput'
 } as const;
 
@@ -1245,7 +1275,7 @@ export const PluginOutputSchema = {
 
 export const PluginPatchInputSchema = {
     properties: {
-        name: {
+        key: {
             anyOf: [
                 {
                     type: 'string'
@@ -1254,7 +1284,7 @@ export const PluginPatchInputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Name'
+            title: 'Key'
         },
         data_timestamp: {
             anyOf: [
@@ -1267,6 +1297,52 @@ export const PluginPatchInputSchema = {
                 }
             ],
             title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
         }
     },
     type: 'object',
@@ -1275,16 +1351,9 @@ export const PluginPatchInputSchema = {
 
 export const PluginPostInputSchema = {
     properties: {
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
+        key: {
+            type: 'string',
+            title: 'Key'
         },
         data_timestamp: {
             anyOf: [
@@ -1297,6 +1366,52 @@ export const PluginPostInputSchema = {
                 }
             ],
             title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
         }
     },
     type: 'object',
@@ -1473,6 +1588,64 @@ export const SeasonOutputSchema = {
 
 export const SeasonPatchInputSchema = {
     properties: {
+        key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
         sort_order: {
             anyOf: [
                 {
@@ -1527,18 +1700,6 @@ export const SeasonPatchInputSchema = {
                 }
             ],
             title: 'Season Number'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
         }
     },
     type: 'object',
@@ -1652,15 +1813,9 @@ export const SeasonPostInputSchema = {
                 }
             ],
             title: 'Season Number'
-        },
-        show_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Show Id'
         }
     },
     type: 'object',
-    required: ['show_id'],
     title: 'SeasonPostInput'
 } as const;
 
@@ -1809,6 +1964,64 @@ export const ShowOutputSchema = {
 
 export const ShowPatchInputSchema = {
     properties: {
+        key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
         name: {
             anyOf: [
                 {
@@ -1863,18 +2076,6 @@ export const ShowPatchInputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
         }
     },
     type: 'object',
@@ -1988,15 +2189,9 @@ export const ShowPostInputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        source_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Source Id'
         }
     },
     type: 'object',
-    required: ['source_id'],
     title: 'ShowPostInput'
 } as const;
 
@@ -2177,6 +2372,64 @@ export const SourceOutputSchema = {
 
 export const SourcePatchInputSchema = {
     properties: {
+        key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        },
         name: {
             anyOf: [
                 {
@@ -2209,18 +2462,6 @@ export const SourcePatchInputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
         }
     },
     type: 'object',
@@ -2312,14 +2553,9 @@ export const SourcePostInputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        plugin_key: {
-            type: 'string',
-            title: 'Plugin Key'
         }
     },
     type: 'object',
-    required: ['plugin_key'],
     title: 'SourcePostInput'
 } as const;
 

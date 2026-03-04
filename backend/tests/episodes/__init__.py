@@ -1,1 +1,1 @@
-"""Episode tests."""
+"""Episodes tests."""

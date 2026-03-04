@@ -1,1 +1,1 @@
-"""Show tests."""
+"""Shows tests."""

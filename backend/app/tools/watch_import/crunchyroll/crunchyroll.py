@@ -10,9 +10,14 @@ from sqlmodel import Session, select
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 from app.database import engine, load_models
-from app.media.models import Episode, EpisodeWatch, Plugin, Season, Show, Source
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
+from app.watches.models import EpisodeWatch
 
 load_models()
 

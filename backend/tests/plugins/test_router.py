@@ -1,275 +1,181 @@
-from fastapi import status
+import uuid
+
 from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.config import settings
-from app.media.models import Plugin
-from app.media.schemas import (
+from app.plugins.models import Plugin
+from app.plugins.schemas import (
+    PluginInput,
     PluginOutput,
     PluginPatchInput,
     PluginPostInput,
-    PluginsListOutput,
 )
-from tests.utils.media import (
-    get_random_plugin,
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.users.models import User
+from tests.old_tests.utils.media import create_random_plugin
+from tests.old_tests.utils.test_assertions import assert_saved_to_db, assert_success
+from tests.old_tests.utils.user import create_random_user_alt
+from tests.old_tests.utils.utils import (
+    build_random_model,
+    dump_random_model,
+    random_lower_string,
 )
-from tests.utils.test_assertions import (
-    assert_delete,
-    assert_not_authenticated,
-    assert_not_found,
-    assert_saved_to_db,
-    assert_success,
+from tests.utils.media_router import (
+    BaseCreateTests,
+    BaseDeleteTests,
+    BaseGetTests,
+    BaseTests,
+    BaseUpdateTests,
 )
-from tests.utils.user import create_random_user_alt
-from tests.utils.utils import dump_random_model, random_lower_string
 
 
-class TestCreatePlugin:
-    def test_create_plugin(self, client: TestClient, db: Session) -> None:
-        user = create_random_user_alt(client, db)
-        data = dump_random_model(PluginPostInput)
-        content = assert_success(
-            client=client,
-            method="post",
-            url=f"{settings.API_V1_STR}/plugins/",
-            output_model=PluginOutput,
-            headers=user.headers,
-            parameters=data,
-        )
-        assert_saved_to_db(db, Plugin, content.id, data)
+class PluginTestMixin(BaseTests):
+    has_parent = False
+    database_model = Plugin
+    input_schema = PluginPostInput
+    output_model = PluginOutput
+    patch_model = PluginPatchInput
+    endpoint_name = "plugins"
+    model_name = "Plugin"
 
-    def test_create_plugin_not_authenticated(
+    def create_record(
         self,
-        client: TestClient,
         db: Session,
-    ) -> None:
-        key = random_lower_string()
-
-        assert_not_authenticated(
-            client=client,
-            method="post",
-            url=f"{settings.API_V1_STR}/plugins/",
-            parameters=dump_random_model(PluginPostInput, key=key),
-        )
-        assert not db.exec(select(Plugin).where(Plugin.key == key)).first()
+        user_id: uuid.UUID | None = None,
+        parent: Plugin | Source | Show | Season | User | None = None,
+    ) -> Plugin:
+        return create_random_plugin(db, user_id=user_id)
 
 
-class TestListPlugins:
-    def test_list_plugins(self, client: TestClient, db: Session) -> None:
-        user = create_random_user_alt(client, db)
-        get_random_plugin(db, user.id)
-        get_random_plugin(db, user.id)
-
-        response = client.get(
-            f"{settings.API_V1_STR}/plugins/",
-            headers=user.headers,
-        )
-        assert response.status_code == status.HTTP_200_OK
-        content = PluginsListOutput.model_validate(response.json())
-        assert content.count == 2
-
-    def test_list_plugins_empty(self, client: TestClient, db: Session) -> None:
-        user = create_random_user_alt(client, db)
-        response = client.get(
-            f"{settings.API_V1_STR}/plugins/",
-            headers=user.headers,
-        )
-        assert response.status_code == status.HTTP_200_OK
-        content = PluginsListOutput.model_validate(response.json())
-        assert content.count == 0
-
-    def test_list_plugins_user_isolation(
+class TestCreatePlugin(PluginTestMixin, BaseCreateTests):
+    def test_create_shared_key_different_user(
         self,
         client: TestClient,
         db: Session,
     ) -> None:
         user_1 = create_random_user_alt(client, db)
         user_2 = create_random_user_alt(client, db)
-        get_random_plugin(db, user_1.id)
+        existing = create_random_plugin(db, user_id=user_1.id)
+        original = existing.model_dump(mode="json")
 
-        response = client.get(
-            f"{settings.API_V1_STR}/plugins/",
-            headers=user_2.headers,
-        )
-        assert response.status_code == status.HTTP_200_OK
-        content = PluginsListOutput.model_validate(response.json())
-        assert content.count == 0
-
-    def test_list_plugins_not_authenticated(self, client: TestClient) -> None:
-        assert_not_authenticated(
+        parameters = dump_random_model(self.input_schema, key=existing.key)
+        created = assert_success(
             client=client,
-            method="get",
-            url=f"{settings.API_V1_STR}/plugins/",
+            method="post",
+            url=f"{settings.API_V1_STR}/{self.endpoint_name}",
+            output_model=self.output_model,
+            headers=user_2.headers,
+            parameters=parameters,
         )
+        assert_saved_to_db(db, self.database_model, created.id, parameters)
+        assert_saved_to_db(db, self.database_model, existing.id, original)
 
-
-class TestUpdatePlugin:
-    def test_update_plugin(self, client: TestClient, db: Session) -> None:
+    def test_create_shared_key_unowned(
+        self,
+        client: TestClient,
+        db: Session,
+    ) -> None:
         user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user.id)
-        data = dump_random_model(PluginPatchInput)
+        existing = create_random_plugin(db)
+        original = existing.model_dump(mode="json")
 
+        parameters = dump_random_model(self.input_schema, key=existing.key)
+        created = assert_success(
+            client=client,
+            method="post",
+            url=f"{settings.API_V1_STR}/{self.endpoint_name}",
+            output_model=self.output_model,
+            headers=user.headers,
+            parameters=parameters,
+        )
+        assert_saved_to_db(db, self.database_model, created.id, parameters)
+        assert_saved_to_db(db, self.database_model, existing.id, original)
+
+
+class TestUpdatePlugin(PluginTestMixin, BaseUpdateTests):
+    def test_update_shared_key_different_user(
+        self,
+        client: TestClient,
+        db: Session,
+    ) -> None:
+        user_1 = create_random_user_alt(client, db)
+        user_2 = create_random_user_alt(client, db)
+        shared_key = random_lower_string()
+
+        plugin_input_1 = build_random_model(PluginInput, key=shared_key)
+        plugin_input_1.user_id = user_1.id
+        plugin_1 = plugin_input_1.upsert(db, None)
+
+        plugin_input_2 = build_random_model(PluginInput, key=shared_key)
+        plugin_input_2.user_id = user_2.id
+        plugin_2 = plugin_input_2.upsert(db, None)
+        db.commit()
+
+        original_1 = plugin_1.model_dump(mode="json")
+        original_2 = plugin_2.model_dump(mode="json")
+
+        update_data = dump_random_model(self.patch_model)
         assert_success(
             client=client,
             method="patch",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            output_model=PluginOutput,
-            headers=user.headers,
-            parameters=data,
+            url=f"{settings.API_V1_STR}/{self.endpoint_name}/{plugin_1.id}",
+            output_model=self.output_model,
+            headers=user_1.headers,
+            parameters=update_data,
         )
         assert_saved_to_db(
             db,
-            Plugin,
-            plugin.id,
-            plugin.model_dump(mode="json") | data,
+            self.database_model,
+            plugin_1.id,
+            original_1 | update_data,
             updated=True,
         )
+        assert_saved_to_db(db, self.database_model, plugin_2.id, original_2)
 
-    def test_update_plugin_not_found(self, client: TestClient, db: Session) -> None:
+    def test_update_shared_key_unowned(
+        self,
+        client: TestClient,
+        db: Session,
+    ) -> None:
         user = create_random_user_alt(client, db)
-        random_key = random_lower_string()
+        shared_key = random_lower_string()
 
-        assert_not_found(
+        unowned_input = build_random_model(PluginInput, key=shared_key, user_id=None)
+        unowned = unowned_input.upsert(db, None)
+
+        owned_input = build_random_model(PluginInput, key=shared_key)
+        owned_input.user_id = user.id
+        owned = owned_input.upsert(db, None)
+        db.commit()
+
+        original_owned = owned.model_dump(mode="json")
+        original_unowned = unowned.model_dump(mode="json")
+
+        update_data = dump_random_model(self.patch_model)
+        assert_success(
             client=client,
             method="patch",
-            url=f"{settings.API_V1_STR}/plugins/{random_key}",
-            detail="Plugin not found",
+            url=f"{settings.API_V1_STR}/{self.endpoint_name}/{owned.id}",
+            output_model=self.output_model,
             headers=user.headers,
-            parameters=dump_random_model(PluginPatchInput),
+            parameters=update_data,
         )
-        assert not db.exec(select(Plugin).where(Plugin.key == random_key)).first()
-
-    def test_update_plugin_wrong_user(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user_1 = create_random_user_alt(client, db)
-        user_2 = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user_1.id)
-        original_plugin = plugin.model_dump(mode="json")
-
-        assert_not_found(
-            client=client,
-            method="patch",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            detail="Plugin not found",
-            headers=user_2.headers,
-            parameters=dump_random_model(PluginPatchInput),
+        assert_saved_to_db(
+            db,
+            self.database_model,
+            owned.id,
+            original_owned | update_data,
+            updated=True,
         )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
-
-    def test_update_plugin_unowned(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db)
-        original_plugin = plugin.model_dump(mode="json")
-
-        assert_not_found(
-            client=client,
-            method="patch",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            detail="Plugin not found",
-            headers=user.headers,
-            parameters=dump_random_model(PluginPatchInput),
-        )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
-
-    def test_update_plugin_not_authenticated(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user.id)
-        original_plugin = plugin.model_dump(mode="json")
-
-        assert_not_authenticated(
-            client=client,
-            method="patch",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            parameters=dump_random_model(PluginPatchInput),
-        )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
+        assert_saved_to_db(db, self.database_model, unowned.id, original_unowned)
 
 
-class TestDeletePlugin:
-    def test_delete_plugin(self, client: TestClient, db: Session) -> None:
-        user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user.id)
+class TestGetPlugin(PluginTestMixin, BaseGetTests):
+    pass
 
-        assert_delete(
-            client=client,
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            message="Plugin deleted successfully",
-            headers=user.headers,
-        )
-        assert not db.exec(select(Plugin).where(Plugin.id == plugin.id)).first()
 
-    def test_delete_plugin_not_found(self, client: TestClient, db: Session) -> None:
-        user = create_random_user_alt(client, db)
-        random_key = random_lower_string()
-
-        assert_not_found(
-            client=client,
-            method="delete",
-            url=f"{settings.API_V1_STR}/plugins/{random_key}",
-            detail="Plugin not found",
-            headers=user.headers,
-        )
-        assert not db.exec(select(Plugin).where(Plugin.key == random_key)).first()
-
-    def test_delete_plugin_wrong_user(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user_1 = create_random_user_alt(client, db)
-        user_2 = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user_1.id)
-        original_plugin = plugin.model_dump(mode="json")
-
-        assert_not_found(
-            client=client,
-            method="delete",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            detail="Plugin not found",
-            headers=user_2.headers,
-        )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
-
-    def test_delete_plugin_unowned(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db)
-        original_plugin = plugin.model_dump(mode="json")
-
-        assert_not_found(
-            client=client,
-            method="delete",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-            detail="Plugin not found",
-            headers=user.headers,
-        )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
-
-    def test_delete_plugin_not_authenticated(
-        self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        user = create_random_user_alt(client, db)
-        plugin = get_random_plugin(db, user.id)
-        original_plugin = plugin.model_dump(mode="json")
-        assert_not_authenticated(
-            client=client,
-            method="delete",
-            url=f"{settings.API_V1_STR}/plugins/{plugin.key}",
-        )
-        assert_saved_to_db(db, Plugin, plugin.id, original_plugin)
+class TestDeletePlugin(PluginTestMixin, BaseDeleteTests):
+    pass

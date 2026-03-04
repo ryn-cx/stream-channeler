@@ -50,10 +50,10 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 interface AddSourceProps {
-  pluginKey: string
+  pluginId: string
 }
 
-const AddSource = ({ pluginKey }: AddSourceProps) => {
+const AddSource = ({ pluginId }: AddSourceProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
@@ -74,12 +74,12 @@ const AddSource = ({ pluginKey }: AddSourceProps) => {
     mutationFn: (data: FormData) =>
       request(OpenAPI, {
         method: "POST",
-        url: "/api/v1/sources/",
-        body: { ...data, plugin_key: pluginKey },
+        url: `/api/v1/plugins/${pluginId}/sources`,
+        body: data,
         mediaType: "application/json",
       }),
     onMutate: async (newSource, context) => {
-      const queryKey = ["plugins", pluginKey, "sources"]
+      const queryKey = ["plugins", pluginId, "sources"]
       await context.client.cancelQueries({ queryKey })
       const previous = context.client.getQueryData<SourcesListOutput>(queryKey)
 
@@ -91,7 +91,7 @@ const AddSource = ({ pluginKey }: AddSourceProps) => {
             key: crypto.randomUUID(),
             name: newSource.name,
             id: crypto.randomUUID(),
-            plugin_id: pluginKey,
+            plugin_id: pluginId,
           },
         ],
         count: old!.count + 1,
@@ -106,14 +106,14 @@ const AddSource = ({ pluginKey }: AddSourceProps) => {
     },
     onError: (error, _variables, onMutateResult, context) => {
       context.client.setQueryData(
-        ["plugins", pluginKey, "sources"],
+        ["plugins", pluginId, "sources"],
         onMutateResult?.previous,
       )
       handleError.call(showErrorToast, error as any)
     },
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
-        queryKey: ["plugins", pluginKey, "sources"],
+        queryKey: ["plugins", pluginId, "sources"],
       }),
   })
 
