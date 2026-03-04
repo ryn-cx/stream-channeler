@@ -10,8 +10,8 @@ from app.config import settings
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate
-from tests.old_tests.utils.user import create_random_user
-from tests.old_tests.utils.utils import random_email, random_lower_string
+from tests.users.utils import create_random_user
+from tests.utils.utils import random_email, random_lower_string
 
 
 def test_get_users_superuser_me(

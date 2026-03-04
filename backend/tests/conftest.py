@@ -25,12 +25,12 @@ from app.database import init_db, load_models
 from app.main import app
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.base_files import BaseFile
-from tests.old_tests.utils.user import (
+from tests.users.utils import (
     CreatedUser,
     authentication_token_from_email,
     create_random_user_alt,
 )
-from tests.old_tests.utils.utils import get_superuser_token_headers, random_email
+from tests.utils.utils import get_superuser_token_headers, random_email
 
 # Remove the uncolorized logger and replace it with a colorized one that captures debug
 # logs.

@@ -7,9 +7,9 @@ from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelShow
 from app.channels.schemas import ChannelMediaFilter
 from app.episodes.models import Episode
-from tests.old_tests.utils.media import create_random_heirarchy
-from tests.old_tests.utils.user import create_random_user
-from tests.old_tests.utils.utils import random_lower_string
+from tests.users.utils import create_random_user
+from tests.utils.media import create_random_heirarchy
+from tests.utils.utils import random_lower_string
 
 
 def test_episode_query_builder_rotate_shows_sort_and_order(db: Session) -> None:

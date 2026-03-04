@@ -14,10 +14,8 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
-from tests.old_tests.utils.media import (
-    create_random_episode,
-    create_random_season,
-)
+from tests.episodes.utils import create_random_episode
+from tests.seasons.utils import create_random_season
 from tests.utils.media_router import (
     BaseCreateTests,
     BaseDeleteTests,

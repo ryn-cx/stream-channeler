@@ -18,14 +18,12 @@ from app.shows.schemas import ShowInput
 from app.sources.models import Source
 from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
-from tests.old_tests.utils.media import (
-    create_random_heirarchy,
-    create_random_plugin,
-    create_random_season,
-    create_random_show,
-    create_random_source,
-)
-from tests.old_tests.utils.utils import build_random_model
+from tests.plugins.utils import create_random_plugin
+from tests.seasons.utils import create_random_season
+from tests.shows.utils import create_random_show
+from tests.sources.utils import create_random_source
+from tests.utils.media import create_random_heirarchy
+from tests.utils.utils import build_random_model
 
 real_models = Plugin | File | Source | Show | Season | Episode
 input_models = (

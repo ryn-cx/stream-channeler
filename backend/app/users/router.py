@@ -25,7 +25,7 @@ from app.users.schemas import (
     UserUpdateMe,
 )
 from app.utils import service as email_service
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -260,7 +260,7 @@ def delete_user(
         )
     statement = delete(Channel).where(col(Channel.user_id) == user_id)
     session.exec(statement)
-    statement = delete(EpisodeWatch).where(col(EpisodeWatch.user_id) == user_id)
+    statement = delete(Watch).where(col(Watch.user_id) == user_id)
     session.exec(statement)
     statement = delete(Plugin).where(col(Plugin.user_id) == user_id)
     session.exec(statement)

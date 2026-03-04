@@ -5,92 +5,65 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.constants import MAX_ENTRIES_PER_PAGE
+from app.media.service import delete_record, update_record
 from app.models import Message
-from app.watches.dependencies import ExistingEpisode, ExistingEpisodeWatch
-from app.watches.models import EpisodeWatch
+from app.watches.dependencies import UserWatch
+from app.watches.models import Watch
 from app.watches.schemas import (
-    EpisodeWatchPatchInput,
-    EpisodeWatchPostInput,
-    SingleEpisodeWatchOutput,
-    WatchedEpisodesOutput,
+    WatchesListOutput,
     WatchImportInput,
     WatchImportPluginsOutput,
     WatchImportResult,
+    WatchOutput,
+    WatchPatchInput,
 )
 from app.watches.services import (
     get_importable_plugins,
     get_installed_plugin,
-    save_episode_watch,
 )
-from app.watches.services import (
-    get_watched_episodes as get_watched_episodes_service,
-)
+from app.watches.services import get_watched_episodes as get_watched_episodes_service
 
-router = APIRouter(prefix="/episodes", tags=["episodes"])
+router = APIRouter(prefix="/watches", tags=["watches"])
 
 
-@router.post("/watches")
-def post_watched_episode(
-    session: SessionDep,
-    current_user: CurrentUser,
-    watch_input: EpisodeWatchPostInput,
-    episode: ExistingEpisode,
-) -> SingleEpisodeWatchOutput:
-    """Create a new episode watch entry."""
-    episode_watch = EpisodeWatch(
-        user_id=current_user.id,
-        episode_id=watch_input.episode_id,
-    )
-    session.add(episode_watch)
-
-    return save_episode_watch(
-        session,
-        episode_watch,
-        episode,
-        watch_input,
-    )
+# FAST003 - Parameter is used by UserWatch.
+@router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003
+def get_user_watch(watch: UserWatch) -> Watch:
+    """Get a watch owned by the current user by its id."""
+    return watch
 
 
-# FAST003 - Parameter is used by EpisodeWatchDep
-@router.patch("/watches/{episode_watch_id}")  # noqa: FAST003
-def patch_watched_episode(
-    session: SessionDep,
-    episode_watch: ExistingEpisodeWatch,
-    watch_input: EpisodeWatchPatchInput,
-) -> SingleEpisodeWatchOutput:
-    """Update an existing episode watch entry."""
-    return save_episode_watch(
-        session,
-        episode_watch,
-        episode_watch.episode,
-        watch_input,
-    )
-
-
-# FAST003 - Parameter is used by EpisodeWatchDep
-@router.delete("/watches/{episode_watch_id}")  # noqa: FAST003
-def delete_watched_episode(
-    session: SessionDep,
-    episode_watch: ExistingEpisodeWatch,
-) -> Message:
-    """Delete an existing episode watch entry."""
-    session.delete(episode_watch)
-    session.commit()
-    return Message(message="Episode watch deleted")
-
-
-@router.get("/watches")
-def get_watched_episodes(
+@router.get("")
+def get_user_watches(
     session: SessionDep,
     current_user: CurrentUser,
     skip: int = 0,
     limit: int = MAX_ENTRIES_PER_PAGE,
-) -> WatchedEpisodesOutput:
+) -> WatchesListOutput:
     """Get multiple watched episode entries."""
     return get_watched_episodes_service(session, current_user.id, skip, limit)
 
 
-@router.get("/watches/import/plugins")
+# FAST003 - Parameter is used by UserWatch.
+@router.patch("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003
+def update_user_watch(
+    session: SessionDep,
+    watch: UserWatch,
+    watch_input: WatchPatchInput,
+) -> Watch:
+    """Update a watch by its id."""
+    return update_record(session=session, entry=watch, body=watch_input)
+
+
+# FAST003 - Parameter is used by UserWatch.
+@router.delete("/{watch_id}")  # noqa: FAST003
+def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
+    """Delete a watch by its id."""
+    return delete_record(session=session, entry=watch, model_name="Watch")
+
+
+# TODO: Add tests
+@router.get("/import/plugins")
 def list_importable_plugins(_current_user: CurrentUser) -> WatchImportPluginsOutput:
     """List all plugins that support importing watch history."""
     return WatchImportPluginsOutput(
@@ -100,9 +73,11 @@ def list_importable_plugins(_current_user: CurrentUser) -> WatchImportPluginsOut
     )
 
 
-@router.post("/watches/import")
+# TODO: Add tests
+@router.post("/import")
 def import_watch_history(
     file: UploadFile,
+    # Parameters have to come from the query because the request body is the file.
     params: Annotated[WatchImportInput, Query()],
     session: SessionDep,
     current_user: CurrentUser,

@@ -16,11 +16,11 @@ from app.channels.schemas import ChannelOutput
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 from tests.old_tests.utils.channel import create_channel_api
-from tests.old_tests.utils.media import create_random_heirarchy
-from tests.old_tests.utils.user import CreatedUser
-from tests.old_tests.utils.utils import random_bool
+from tests.users.utils import CreatedUser
+from tests.utils.media import create_random_heirarchy
+from tests.utils.utils import random_bool
 
 
 class Whitelists(BaseModel):
@@ -117,7 +117,7 @@ def create_random_watch_entries(
                 for season in show.seasons:
                     for episode in season.episodes:
                         if random_bool():
-                            watch_entry = EpisodeWatch(
+                            watch_entry = Watch(
                                 user_id=user.id,
                                 episode_id=episode.id,
                                 verified=True,

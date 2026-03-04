@@ -15,20 +15,20 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
-from tests.old_tests.utils.media import create_random_plugin
 from tests.old_tests.utils.test_assertions import assert_saved_to_db, assert_success
-from tests.old_tests.utils.user import create_random_user_alt
-from tests.old_tests.utils.utils import (
-    build_random_model,
-    dump_random_model,
-    random_lower_string,
-)
+from tests.plugins.utils import create_random_plugin
+from tests.users.utils import create_random_user_alt
 from tests.utils.media_router import (
     BaseCreateTests,
     BaseDeleteTests,
     BaseGetTests,
     BaseTests,
     BaseUpdateTests,
+)
+from tests.utils.utils import (
+    build_random_model,
+    dump_random_model,
+    random_lower_string,
 )
 
 

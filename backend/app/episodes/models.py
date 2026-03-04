@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.selectable import ForUpdateParameter
 
     from app.channels.models import ChannelEpisodeWhiteList
-    from app.watches.models import EpisodeWatch
+    from app.watches.models import Watch
 
 
 class BaseEpisode(BaseMediaMixin):
@@ -64,7 +64,7 @@ class Episode(BaseEpisode, MetadataMixin, table=True):
         back_populates="episode",
         cascade_delete=True,
     )
-    watches: list[EpisodeWatch] = Relationship(
+    watches: list[Watch] = Relationship(
         back_populates="episode",
         cascade_delete=True,
     )

@@ -1,5 +1,4 @@
 import uuid
-from collections.abc import Callable
 
 import pytest
 from fastapi import status
@@ -14,7 +13,7 @@ from app.episodes.schemas import (
     EpisodePostInput,
     EpisodesListOutput,
 )
-from app.models import MetadataMixin
+from app.models import MetadataMixin, TimestampIdMixin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginOutput,
@@ -44,6 +43,13 @@ from app.sources.schemas import (
     SourcesListOutput,
 )
 from app.users.models import User
+from app.watches.models import Watch
+from app.watches.schemas import (
+    WatchesListOutput,
+    WatchOutput,
+    WatchPatchInput,
+    WatchPostInput,
+)
 from tests.old_tests.utils.test_assertions import (
     assert_conflict,
     assert_delete,
@@ -53,26 +59,28 @@ from tests.old_tests.utils.test_assertions import (
     assert_saved_to_db,
     assert_success,
 )
-from tests.old_tests.utils.user import create_random_user_alt
-from tests.old_tests.utils.utils import (
-    dump_random_full_model,
-    dump_random_minimal_model,
-    dump_random_model,
-)
+from tests.users.utils import create_random_user_alt
+from tests.utils.utils import dump_random_model
 
 
 class BaseTests:
     has_parent: bool
-    database_model: type[Episode | Season | Show | Source | Plugin]
+    database_model: type[Episode | Season | Show | Source | Plugin | Watch]
     input_schema: type[
         EpisodePostInput
         | SeasonPostInput
         | ShowPostInput
         | SourcePostInput
         | PluginPostInput
+        | WatchPostInput
     ]
     output_model: type[
-        EpisodeOutput | SeasonOutput | ShowOutput | SourceOutput | PluginOutput
+        EpisodeOutput
+        | SeasonOutput
+        | ShowOutput
+        | SourceOutput
+        | PluginOutput
+        | WatchOutput
     ]
     patch_model: type[
         EpisodePatchInput
@@ -80,6 +88,7 @@ class BaseTests:
         | ShowPatchInput
         | SourcePatchInput
         | PluginPatchInput
+        | WatchPatchInput
     ]
     list_output_model: type[
         EpisodesListOutput
@@ -87,6 +96,7 @@ class BaseTests:
         | ShowsListOutput
         | SourcesListOutput
         | PluginsListOutput
+        | WatchesListOutput
     ]
     endpoint_name: str
     parent_endpoint_name: str
@@ -98,7 +108,7 @@ class BaseTests:
         self,
         db: Session,
         user_id: uuid.UUID | None = None,
-    ) -> Plugin | Source | Show | Season | User:
+    ) -> Plugin | Source | Show | Season | User | Episode:
         """Create a parent record."""
         raise NotImplementedError
 
@@ -106,8 +116,8 @@ class BaseTests:
         self,
         db: Session,
         user_id: uuid.UUID | None = None,
-        parent: Plugin | Source | Show | Season | User | None = None,
-    ) -> MetadataMixin:
+        parent: Plugin | Source | Show | Season | Episode | User | Watch | None = None,
+    ) -> MetadataMixin | TimestampIdMixin:
         """Create a record."""
         raise NotImplementedError
 
@@ -125,22 +135,19 @@ class BaseTests:
 
 
 class BaseCreateTests(BaseTests):
-    @pytest.mark.parametrize(
-        "dump_model",
-        [dump_random_full_model, dump_random_minimal_model],
-    )
+    @pytest.mark.parametrize("mode", ["full", "minimal"])
     def test_create(
         self,
         client: TestClient,
         db: Session,
-        dump_model: Callable[..., dict[str, object]],
+        mode: str,
     ) -> None:
         user = create_random_user_alt(client, db)
         parent_id = None
         if self.has_parent:
             parent = self.create_parent(db, user_id=user.id)
             parent_id = parent.id
-        parameters = dump_model(self.input_schema)
+        parameters = dump_random_model(self.input_schema, mode=mode)
 
         content = assert_success(
             client=client,
@@ -157,6 +164,8 @@ class BaseCreateTests(BaseTests):
         client: TestClient,
         db: Session,
     ) -> None:
+        assert issubclass(self.database_model, MetadataMixin)  # Type narrowing
+
         user = create_random_user_alt(client, db)
         parent_id = None
         if self.has_parent:
@@ -203,6 +212,7 @@ class BaseCreateTests(BaseTests):
 
         user = create_random_user_alt(client, db)
         record = self.create_record(db, user_id=user.id)
+        assert isinstance(record, MetadataMixin)  # Type narrowing
         original_record = record.model_dump(mode="json")
 
         parent_id = getattr(record, self.parent_key_name)
@@ -310,6 +320,25 @@ class BaseListFromParentTests(BaseTests):
         assert response.status_code == status.HTTP_200_OK
         self.list_output_model.model_validate(response.json())
         assert response.json()["count"] == 0
+
+    def test_list_from_parent_filters_by_parent(
+        self,
+        client: TestClient,
+        db: Session,
+    ) -> None:
+        user = create_random_user_alt(client, db)
+        parent = self.create_parent(db, user_id=user.id)
+        other_parent = self.create_parent(db, user_id=user.id)
+        self.create_record(db, parent=parent)
+        self.create_record(db, parent=other_parent)
+
+        response = client.get(
+            self._parent_url(parent.id),
+            headers=user.headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        self.list_output_model.model_validate(response.json())
+        assert response.json()["count"] == 1
 
     def test_list_from_parent_multiple(
         self,
@@ -452,20 +481,20 @@ class BaseGetTests(BaseTests):
 
 class BaseUpdateTests(BaseTests):
     @pytest.mark.parametrize(
-        ("create_dump", "update_dump"),
+        ("create_mode", "update_mode"),
         [
-            (dump_random_minimal_model, dump_random_minimal_model),
-            (dump_random_minimal_model, dump_random_full_model),
-            (dump_random_full_model, dump_random_minimal_model),
-            (dump_random_full_model, dump_random_full_model),
+            ("minimal", "minimal"),
+            ("minimal", "full"),
+            ("full", "minimal"),
+            ("full", "full"),
         ],
     )
     def test_update(
         self,
         client: TestClient,
         db: Session,
-        create_dump: Callable[..., dict[str, object]],
-        update_dump: Callable[..., dict[str, object]],
+        create_mode: str,
+        update_mode: str,
     ) -> None:
         user = create_random_user_alt(client, db)
         parent_id = None
@@ -473,7 +502,7 @@ class BaseUpdateTests(BaseTests):
             parent = self.create_parent(db, user_id=user.id)
             parent_id = parent.id
 
-        create_data = create_dump(self.input_schema)
+        create_data = dump_random_model(self.input_schema, mode=create_mode)
         created = assert_success(
             client=client,
             method="post",
@@ -483,7 +512,7 @@ class BaseUpdateTests(BaseTests):
             parameters=create_data,
         )
 
-        update_data = update_dump(self.patch_model)
+        update_data = dump_random_model(self.patch_model, mode=update_mode)
         assert_success(
             client=client,
             method="patch",

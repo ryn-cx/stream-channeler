@@ -15,13 +15,10 @@ from app.shows.models import Show
 from app.shows.schemas import ShowOutput
 from app.sources.models import Source
 from app.sources.schemas import SourceOutput
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 from app.watches.schemas import (
-    EpisodeWatchItem,
-    EpisodeWatchPatchInput,
-    EpisodeWatchPostInput,
-    SingleEpisodeWatchOutput,
-    WatchedEpisodesOutput,
+    WatchesListOutput,
+    WatchItem,
 )
 
 if TYPE_CHECKING:
@@ -32,13 +29,13 @@ def _episode_watch_count_statement(session: Session, user_id: uuid.UUID) -> int:
     # TODO: Consider changing this to joinedload if performance changes
     statement = (
         select(func.count())
-        .select_from(EpisodeWatch)
+        .select_from(Watch)
         .join(Episode)
         .join(Season)
         .join(Show)
         .join(Source)
     )
-    statement = statement.where(EpisodeWatch.user_id == user_id)
+    statement = statement.where(Watch.user_id == user_id)
     return session.exec(statement).one()
 
 
@@ -47,19 +44,19 @@ def _episode_watch_select_statement(
     user_id: uuid.UUID,
     skip: int,
     limit: int,
-) -> Sequence[EpisodeWatch]:
+) -> Sequence[Watch]:
     # TODO: Consider changing this to joinedload if performance changes
     statement = (
-        select(EpisodeWatch)
+        select(Watch)
         .join(Episode)
         .join(Season)
         .join(Show)
         .join(Source)
-        .order_by(col(EpisodeWatch.verified).asc(), col(EpisodeWatch.watch_date).desc())
+        .order_by(col(Watch.verified).asc(), col(Watch.watch_date).desc())
         .offset(skip)
         .limit(limit)
     )
-    statement = statement.where(EpisodeWatch.user_id == user_id)
+    statement = statement.where(Watch.user_id == user_id)
     return session.exec(statement).all()
 
 
@@ -68,22 +65,22 @@ def get_watched_episodes(
     user_id: uuid.UUID,
     skip: int,
     limit: int,
-) -> WatchedEpisodesOutput:
+) -> WatchesListOutput:
     count = _episode_watch_count_statement(session, user_id)
     episode_watches = _episode_watch_select_statement(session, user_id, skip, limit)
     return _format_watched_episodes_data(episode_watches, count)
 
 
 def _format_watched_episodes_data(
-    episode_watches: Sequence[EpisodeWatch],
+    episode_watches: Sequence[Watch],
     count: int,
-) -> WatchedEpisodesOutput:
+) -> WatchesListOutput:
     episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
     shows_dict: dict[uuid.UUID, ShowOutput] = {}
     sources_dict: dict[uuid.UUID, SourceOutput] = {}
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
-    watches: list[EpisodeWatchItem] = []
+    watches: list[WatchItem] = []
 
     for episode_watch in episode_watches:
         episode = episode_watch.episode
@@ -104,7 +101,7 @@ def _format_watched_episodes_data(
             plugins_dict[plugin.id] = PluginOutput.model_validate(plugin)
 
         watches.append(
-            EpisodeWatchItem(
+            WatchItem(
                 id=episode_watch.id,
                 episode_id=episode.id,
                 watch_date=episode_watch.watch_date,
@@ -112,7 +109,7 @@ def _format_watched_episodes_data(
             ),
         )
 
-    return WatchedEpisodesOutput(
+    return WatchesListOutput(
         watches=watches,
         episodes=episodes_dict,
         seasons=seasons_dict,
@@ -120,30 +117,6 @@ def _format_watched_episodes_data(
         sources=sources_dict,
         plugins=plugins_dict,
         count=count,
-    )
-
-
-def save_episode_watch(
-    session: Session,
-    episode_watch: EpisodeWatch,
-    episode: Episode,
-    watch_input: EpisodeWatchPatchInput | EpisodeWatchPostInput,
-) -> SingleEpisodeWatchOutput:
-    if watch_input.watch_date is not None:
-        episode_watch.watch_date = watch_input.watch_date
-    if watch_input.verified is not None:
-        episode_watch.verified = watch_input.verified
-    session.commit()
-
-    return SingleEpisodeWatchOutput(
-        id=episode_watch.id,
-        watch_date=episode_watch.watch_date,
-        verified=episode_watch.verified,
-        episode=EpisodeOutput.model_validate(episode),
-        season=SeasonOutput.model_validate(episode.season),
-        show=ShowOutput.model_validate(episode.season.show),
-        source=SourceOutput.model_validate(episode.season.show.source),
-        plugin=PluginOutput.model_validate(episode.season.show.source.plugin),
     )
 
 

@@ -10,7 +10,7 @@ import type {
   SourceOutput,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
-import { useMarkEpisodeWatched } from "@/hooks/useMarkEpisodeWatched"
+import { useMarkWatched } from "@/hooks/useMarkWatched"
 import { cn } from "@/lib/utils"
 
 export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
@@ -22,7 +22,7 @@ export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
 
 function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
   const { channelId } = useParams({ strict: false })
-  const mutation = useMarkEpisodeWatched(channelId)
+  const mutation = useMarkWatched(channelId)
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()

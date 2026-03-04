@@ -3,11 +3,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
   EpisodeOutput,
-  EpisodeWatchItem,
   PluginOutput,
   SeasonOutput,
   ShowOutput,
   SourceOutput,
+  WatchItem,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ import DeleteWatch from "./DeleteWatch"
 import EditWatch from "./EditWatch"
 import VerifyWatch from "./VerifyWatch"
 
-interface WatchWithDetails extends EpisodeWatchItem {
+interface WatchWithDetails extends WatchItem {
   episode: EpisodeOutput
   season: SeasonOutput
   show: ShowOutput

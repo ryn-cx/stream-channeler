@@ -17,7 +17,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 
 load_models()
 
@@ -55,7 +55,7 @@ def import_watches(session: Session, user: User) -> None:
 
     # Load existing watches for this user to avoid duplicates
     existing_watches: set[tuple[str, datetime]] = set()
-    watch_statement = select(EpisodeWatch).where(EpisodeWatch.user_id == user.id)
+    watch_statement = select(Watch).where(Watch.user_id == user.id)
     for watch in session.exec(watch_statement):
         existing_watches.add((str(watch.episode_id), watch.watch_date))
 
@@ -76,7 +76,7 @@ def import_watches(session: Session, user: User) -> None:
             skipped_already_watched += 1
             continue
 
-        episode_watch = EpisodeWatch(
+        episode_watch = Watch(
             user_id=user.id,
             episode_id=episode.id,
             watch_date=watch_date,

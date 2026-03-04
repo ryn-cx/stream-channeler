@@ -5,51 +5,64 @@ from datetime import datetime
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
+from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
 from app.sources.schemas import SourceOutput
 from app.utils import tz_datetime
-from app.watches.models import BaseEpisodeWatch
+from app.watches.models import BaseWatch, Watch
 
 
-class EpisodeWatchPostInput(SQLModel):
-    episode_id: uuid.UUID
+class WatchInput(BaseWatch):
+    user_id: uuid.UUID
+
+    def upsert(
+        self,
+        episode: Episode,
+        _existing: Watch | None,
+    ) -> Watch:
+        watch = Watch.model_validate(self, update={"episode_id": episode.id})
+        episode.watches.append(watch)
+        return watch
+
+
+class WatchPostInput(SQLModel):
     watch_date: datetime = Field(default_factory=tz_datetime.now)
     verified: bool = False
 
 
-class EpisodeWatchPatchInput(SQLModel):
+class WatchCreateInput(WatchPostInput):
+    user_id: uuid.UUID
+
+
+class WatchPatchInput(SQLModel):
     watch_date: datetime | None = None
     verified: bool | None = None
 
 
-# TODO: Slim down this schema to just what is needed
-class SingleEpisodeWatchOutput(BaseEpisodeWatch):
-    id: uuid.UUID
-    episode: EpisodeOutput
-    season: SeasonOutput
-    show: ShowOutput
-    source: SourceOutput
-    plugin: PluginOutput
-    # reportGeneralTypeIssues - This field has a default value in the model, but no
-    # default in the schema. This is acceptable because the input to the schema will
-    # always be that model so it will always have a value.
-    watch_date: datetime  # pyright: ignore[reportGeneralTypeIssues]
-
-
-class EpisodeWatchItem(BaseEpisodeWatch):
+class WatchOutput(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID
-    # Fields with default values are marked as optional, but the value will always be
-    # present so they need to be overridden.
+    user_id: uuid.UUID
+    # reportGeneralTypeIssues - Fields with default values are marked as optional, but
+    # the value will always be present so they need to be overridden.
     watch_date: datetime  # pyright: ignore[reportGeneralTypeIssues]
     verified: bool  # pyright: ignore[reportGeneralTypeIssues]
 
 
-class WatchedEpisodesOutput(SQLModel):
-    watches: list[EpisodeWatchItem] = Field()
+class WatchItem(BaseWatch):
+    id: uuid.UUID
+    episode_id: uuid.UUID
+    # reportGeneralTypeIssues - Fields with default values are marked as optional, but
+    # the value will always be present so they need to be overridden.
+    watch_date: datetime  # pyright: ignore[reportGeneralTypeIssues]
+    verified: bool  # pyright: ignore[reportGeneralTypeIssues]
+
+
+class WatchesListOutput(SQLModel):
+    watches: list[WatchItem] = Field()
     episodes: dict[uuid.UUID, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
     shows: dict[uuid.UUID, ShowOutput] = Field()
@@ -59,8 +72,6 @@ class WatchedEpisodesOutput(SQLModel):
 
 
 class WatchImportFormatInformation(BaseModel):
-    """Information about a supported watch import format."""
-
     plugin_id: str
     plugin_name: str
     file_type: str
@@ -69,8 +80,6 @@ class WatchImportFormatInformation(BaseModel):
 
 
 class WatchImportEntry(BaseModel):
-    """A single entry from a watch history import."""
-
     show: str
     show_url: str
     episode: str
@@ -78,22 +87,16 @@ class WatchImportEntry(BaseModel):
 
 
 class WatchImportResult(BaseModel):
-    """Result of a watch history import operation."""
-
     added: list[WatchImportEntry]
     existing: list[WatchImportEntry]
     skipped: list[WatchImportEntry]
 
 
 class WatchImportInput(BaseModel):
-    """Input parameters for a watch history import."""
-
     plugin_id: str
     new_only: bool
     verified: bool
 
 
 class WatchImportPluginsOutput(BaseModel):
-    """Response listing all plugins that support watch history import."""
-
     plugins: list[WatchImportFormatInformation]

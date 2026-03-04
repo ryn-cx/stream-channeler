@@ -12,7 +12,7 @@ from app.episodes.schemas import (
     EpisodePostInput,
     EpisodesListOutput,
 )
-from app.models import Message, MetadataMixin
+from app.models import Message, TimestampIdMixin
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginInput, PluginPatchInput, PluginPostInput
 from app.seasons.models import Season
@@ -32,9 +32,11 @@ from app.sources.schemas import (
     SourcesListOutput,
 )
 from app.users.models import User
+from app.watches.models import Watch
+from app.watches.schemas import WatchCreateInput, WatchInput, WatchPatchInput
 
 
-def get_first_or_error[T: Episode | Season | Show | Source | Plugin](
+def get_first_or_error[T: Episode | Season | Show | Source | Plugin | Watch](
     session: Session,
     statement: SelectOfScalar[T],
     current_user_id: uuid.UUID,
@@ -104,21 +106,32 @@ def create_record(
 ) -> Plugin: ...
 
 
+@overload
 def create_record(
     session: Session,
-    parent: Season | Show | Source | Plugin | User,
+    parent: Episode,
+    post_input: WatchCreateInput,
+    input_schema: type[WatchInput],
+    existing: Watch | None = ...,
+) -> Watch: ...
+
+
+def create_record(
+    session: Session,
+    parent: Season | Show | Source | Plugin | User | Episode,
     post_input: (
         EpisodePostInput
         | SeasonPostInput
         | ShowPostInput
         | SourcePostInput
         | PluginPostInput
+        | WatchCreateInput
     ),
     input_schema: type[
-        EpisodeInput | SeasonInput | ShowInput | SourceInput | PluginInput
+        EpisodeInput | SeasonInput | ShowInput | SourceInput | PluginInput | WatchInput
     ],
-    existing: Episode | Season | Show | Source | Plugin | None = None,
-) -> Episode | Season | Show | Source | Plugin:
+    existing: Episode | Season | Show | Source | Plugin | Watch | None = None,
+) -> Episode | Season | Show | Source | Plugin | Watch:
     """Generic create for a child entry under a parent."""
     if existing:
         raise HTTPException(
@@ -126,12 +139,13 @@ def create_record(
             detail=f"{existing.__class__.__name__} with this key already exists",
         )
     dumped = post_input.model_dump()
+    # arg-type - As long as overloads are used correctly this is safe
     entry = input_schema(**dumped).upsert(parent, None)  # type: ignore[arg-type]
     session.commit()
     return entry
 
 
-def update_record[T: MetadataMixin](
+def update_record[T: TimestampIdMixin](
     session: Session,
     entry: T,
     body: (
@@ -140,6 +154,7 @@ def update_record[T: MetadataMixin](
         | ShowPatchInput
         | SourcePatchInput
         | PluginPatchInput
+        | WatchPatchInput
     ),
 ) -> T:
     """Generic update: apply patch, commit, refresh, and return."""
@@ -206,7 +221,7 @@ def list_records(
 
 def delete_record(
     session: Session,
-    entry: Episode | Season | Show | Source | Plugin,
+    entry: Episode | Season | Show | Source | Plugin | Watch,
     model_name: str,
 ) -> Message:
     """Generic delete: remove entry, commit, and return a success message."""

@@ -30,9 +30,6 @@ from tests.old_tests.utils.channel import (
     get_channel_queue_api,
     get_channels_api,
 )
-from tests.old_tests.utils.media import (
-    create_random_heirarchy,
-)
 from tests.old_tests.utils.test_assertions import (
     assert_conflict,
     assert_delete,
@@ -42,8 +39,9 @@ from tests.old_tests.utils.test_assertions import (
     assert_saved_to_db,
     assert_success,
 )
-from tests.old_tests.utils.user import CreatedUser, create_random_user_alt
-from tests.old_tests.utils.utils import (
+from tests.users.utils import CreatedUser, create_random_user_alt
+from tests.utils.media import create_random_heirarchy
+from tests.utils.utils import (
     dump_random_model,
     random_bool,
     random_lower_string,

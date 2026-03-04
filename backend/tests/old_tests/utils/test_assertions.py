@@ -7,7 +7,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 
-from tests.old_tests.utils.user import CreatedUser
+from tests.users.utils import CreatedUser
 
 type Method = Literal["get", "post", "put", "patch", "delete"]
 

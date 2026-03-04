@@ -28,7 +28,7 @@ export default function VerifyWatch({
   const verifyMutation = useMutation({
     mutationFn: () =>
       EpisodesService.patchWatchedEpisode({
-        episodeWatchId: id,
+        WatchId: id,
         requestBody: {
           watch_date: watch_date,
           verified: true,

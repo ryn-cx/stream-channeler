@@ -10,9 +10,6 @@ from app.plugins.schemas import (
     PluginPostInput,
     PluginsListOutput,
 )
-from tests.old_tests.utils.media import (
-    create_random_plugin,
-)
 from tests.old_tests.utils.test_assertions import (
     assert_delete,
     assert_not_authenticated,
@@ -20,8 +17,9 @@ from tests.old_tests.utils.test_assertions import (
     assert_saved_to_db,
     assert_success,
 )
-from tests.old_tests.utils.user import create_random_user_alt
-from tests.old_tests.utils.utils import dump_random_model, random_lower_string
+from tests.plugins.utils import create_random_plugin
+from tests.users.utils import create_random_user_alt
+from tests.utils.utils import dump_random_model, random_lower_string
 
 
 class TestCreatePlugin:

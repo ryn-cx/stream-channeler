@@ -18,8 +18,8 @@ from app.config import settings
 from app.constants import MAX_ENTRIES_PER_PAGE
 from app.episodes.models import Episode
 from app.models import Message
-from tests.old_tests.utils.user import CreatedUser, create_random_user_alt
-from tests.old_tests.utils.utils import dump_random_model, random_lower_string
+from tests.users.utils import CreatedUser, create_random_user_alt
+from tests.utils.utils import dump_random_model, random_lower_string
 
 
 def get_random_channel(public: bool = False) -> Channel:

@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useMarkEpisodeWatched } from "@/hooks/useMarkEpisodeWatched"
+import { useMarkWatched } from "@/hooks/useMarkWatched"
 import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
 import { handleError } from "@/utils"
 import type { EpisodeWithDetails } from "./columns"
@@ -128,7 +128,7 @@ function EpisodeCard({
 }) {
   const [_cardRendered, setCardRendered] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const watchedMutation = useMarkEpisodeWatched(channelId)
+  const watchedMutation = useMarkWatched(channelId)
   const whitelistMutation = useToggleEpisodeWhitelist(
     episode.channel_id,
     channelId,
@@ -138,7 +138,7 @@ function EpisodeCard({
   const verifyMutation = useMutation({
     mutationFn: () =>
       EpisodesService.patchWatchedEpisode({
-        episodeWatchId: episode.episode_watch_id!,
+        WatchId: episode.episode_watch_id!,
         requestBody: {
           watch_date: episode.watch_date!,
           verified: true,

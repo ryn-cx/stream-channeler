@@ -7,12 +7,24 @@ import uuid
 from collections.abc import Callable
 from datetime import date, datetime
 from types import NoneType
-from typing import Any, get_args
+from typing import Any, Literal, get_args
 
 from fastapi.testclient import TestClient
 
+from app.channels.schemas import ChannelInput
 from app.config import settings
+from app.episodes.schemas import EpisodeInput, EpisodePatchInput, EpisodePostInput
+from app.plugins.schemas import (
+    FileInput,
+    PluginInput,
+    PluginPatchInput,
+    PluginPostInput,
+)
+from app.seasons.schemas import SeasonInput, SeasonPatchInput, SeasonPostInput
+from app.shows.schemas import ShowInput, ShowPatchInput, ShowPostInput
+from app.sources.schemas import SourceInput, SourcePatchInput, SourcePostInput
 from app.utils import tz_datetime
+from app.watches.schemas import WatchInput, WatchPatchInput, WatchPostInput
 
 
 def random_lower_string() -> str:
@@ -94,17 +106,6 @@ _TYPE_GENERATORS: dict[type, Callable[[], object]] = {
 }
 
 
-def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
-    login_data = {
-        "username": settings.FIRST_SUPERUSER,
-        "password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    tokens = r.json()
-    a_token = tokens["access_token"]
-    return {"Authorization": f"Bearer {a_token}"}
-
-
 def _is_nullable(annotation: type | None) -> tuple[bool, type]:
     """Return (is_nullable, inner_type) for a type annotation."""
     args = get_args(annotation)
@@ -125,59 +126,77 @@ def _random_value(tp: type) -> object:
     return generator()
 
 
-def build_random_model(
-    model: type[Any],
-    **required_kwargs: Any,
-) -> Any:
-    """Return a model instance with randomly populated fields."""
-    kwargs: dict[str, Any] = dict(required_kwargs)
+type _InputModel = (
+    ChannelInput
+    | EpisodeInput
+    | EpisodePatchInput
+    | EpisodePostInput
+    | FileInput
+    | PluginInput
+    | PluginPatchInput
+    | PluginPostInput
+    | SeasonInput
+    | SeasonPatchInput
+    | SeasonPostInput
+    | ShowInput
+    | ShowPatchInput
+    | ShowPostInput
+    | SourceInput
+    | SourcePatchInput
+    | SourcePostInput
+    | WatchInput
+    | WatchPatchInput
+    | WatchPostInput
+)
+
+
+def build_random_model[T: _InputModel](
+    model: type[T],
+    *,
+    mode: Literal["random", "full", "minimal"] = "random",
+    **required_kwargs: object,
+) -> T:
+    """Return a model instance with randomly populated fields.
+
+    Args:
+        mode: "full" populates all fields including optionals, "minimal" only populates
+            required fields, "random" (default) randomly includes optionals.
+    """
+    kwargs: dict[str, object] = dict(required_kwargs)
     for field_name, info in model.model_fields.items():
         if field_name in kwargs:
             continue
+        if mode == "minimal" and not info.is_required():
+            continue
         nullable, inner_type = _is_nullable(info.annotation)
-        if nullable:
+        if mode != "full" and nullable:
             if random_bool():
                 kwargs[field_name] = _random_value(inner_type)
         else:
             kwargs[field_name] = _random_value(inner_type)
-    return model(**kwargs)
+    return model(**kwargs)  # type: ignore[return-value]
 
 
 def dump_random_model(
-    model: type[Any],
-    **required_kwargs: Any,
+    model: type[_InputModel],
+    *,
+    mode: Literal["random", "full", "minimal"] = "random",
+    **required_kwargs: object,
 ) -> dict[str, Any]:
-    """Return a JSON-serialized model fields randomly populated with random values."""
-    return build_random_model(model, **required_kwargs).model_dump(
-        mode="json",
-        exclude_unset=True,
-    )
+    """Return a JSON-serialized model with randomly populated fields."""
+    return build_random_model(
+        model,
+        mode=mode,
+        **required_kwargs,
+    ).model_dump(mode="json", exclude_unset=True)
 
 
-def dump_random_full_model(
-    model: type[Any],
-    **required_kwargs: Any,
-) -> dict[str, Any]:
-    """Return a JSON-serialized model with all fields populated, including optionals."""
-    kwargs: dict[str, Any] = dict(required_kwargs)
-    for field_name, info in model.model_fields.items():
-        if field_name in kwargs:
-            continue
-        _, inner_type = _is_nullable(info.annotation)
-        kwargs[field_name] = _random_value(inner_type)
-    return model(**kwargs).model_dump(mode="json", exclude_unset=True)
-
-
-def dump_random_minimal_model(
-    model: type[Any],
-    **required_kwargs: Any,
-) -> dict[str, Any]:
-    """Return a JSON-serialized model with only required fields populated."""
-    kwargs: dict[str, Any] = dict(required_kwargs)
-    for field_name, info in model.model_fields.items():
-        if field_name in kwargs:
-            continue
-        nullable, inner_type = _is_nullable(info.annotation)
-        if not nullable:
-            kwargs[field_name] = _random_value(inner_type)
-    return model(**kwargs).model_dump(mode="json", exclude_unset=True)
+def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
+    login_data = {
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD,
+    }
+    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    tokens = r.json()
+    a_token = tokens["access_token"]
+    return {"Authorization": f"Bearer {a_token}"}

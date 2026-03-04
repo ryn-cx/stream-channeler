@@ -13,10 +13,8 @@ from app.shows.schemas import (
 )
 from app.sources.models import Source
 from app.users.models import User
-from tests.old_tests.utils.media import (
-    create_random_show,
-    create_random_source,
-)
+from tests.shows.utils import create_random_show
+from tests.sources.utils import create_random_source
 from tests.utils.media_router import (
     BaseCreateTests,
     BaseDeleteTests,

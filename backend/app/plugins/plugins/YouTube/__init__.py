@@ -25,7 +25,7 @@ from app.sources.models import Source
 from app.sources.schemas import SourceInput
 from app.users.models import User
 from app.utils import tz_datetime
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 from app.watches.schemas import (
     WatchImportEntry,
     WatchImportFormatInformation,
@@ -215,7 +215,7 @@ class YouTube(FileMixin, register=True):
                 continue
 
             self.db.add(
-                EpisodeWatch(
+                Watch(
                     user_id=user.id,
                     episode_id=episode.id,
                     watch_date=watch_date,

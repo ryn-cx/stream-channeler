@@ -22,7 +22,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
-from app.watches.models import EpisodeWatch
+from app.watches.models import Watch
 
 
 class BasePlugin(AbstractPlugin, ABC, register=False):
@@ -408,9 +408,9 @@ class BasePlugin(AbstractPlugin, ABC, register=False):
         """Load watched dates grouped by episode ID."""
         if not episodes_by_key:
             return {}
-        statement = select(EpisodeWatch.episode_id, EpisodeWatch.watch_date).where(
-            EpisodeWatch.user_id == user.id,
-            EpisodeWatch.episode_id.in_(  # type: ignore[union-attr]
+        statement = select(Watch.episode_id, Watch.watch_date).where(
+            Watch.user_id == user.id,
+            Watch.episode_id.in_(  # type: ignore[union-attr]
                 [episode.id for episode in episodes_by_key.values()],
             ),
         )

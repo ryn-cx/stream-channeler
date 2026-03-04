@@ -7,6 +7,7 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
+    Session,
     SQLModel,
     UniqueConstraint,
 )
@@ -17,7 +18,7 @@ from app.users.models import User
 from app.utils import tz_datetime
 
 
-class BaseEpisodeWatch(SQLModel):
+class BaseWatch(SQLModel):
     # call-overload - See TimestampIdMixin for an explanation.
     watch_date: datetime = Field(
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
@@ -27,14 +28,14 @@ class BaseEpisodeWatch(SQLModel):
     verified: bool = Field(default=False)
 
 
-class EpisodeWatch(TimestampIdMixin, BaseEpisodeWatch, table=True):
+class Watch(TimestampIdMixin, BaseWatch, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "episode_id", "watch_date"),
         UniqueConstraint("id"),
         # Filtering options.
-        Index("EpisodeWatch-user_id-episode_id-index", "user_id", "episode_id"),
-        Index("EpisodeWatch-user_id-verified-index", "user_id", "verified"),
-        Index("EpisodeWatch-watch_date-index", "watch_date"),
+        Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),
+        Index("Watch-user_id-verified-index", "user_id", "verified"),
+        Index("Watch-watch_date-index", "watch_date"),
     )
 
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
@@ -42,3 +43,6 @@ class EpisodeWatch(TimestampIdMixin, BaseEpisodeWatch, table=True):
 
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
     episode: Episode = Relationship(back_populates="watches")
+
+    def get_user_id(self, _session: Session) -> uuid.UUID:
+        return self.user_id

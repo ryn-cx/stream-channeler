@@ -7,7 +7,7 @@ from app.auth.security import verify_password
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate, UserUpdate
-from tests.old_tests.utils.utils import random_email, random_lower_string
+from tests.utils.utils import random_email, random_lower_string
 
 
 def test_create_user(db: Session) -> None:
