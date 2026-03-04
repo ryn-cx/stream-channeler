@@ -53,7 +53,6 @@ declare module "@tanstack/react-table" {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
 }
@@ -61,7 +60,6 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
   columnVisibility,
   onColumnVisibilityChange,
 }: DataTableProps<TData, TValue>) {

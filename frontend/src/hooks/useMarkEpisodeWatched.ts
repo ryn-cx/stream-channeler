@@ -4,7 +4,7 @@ import { EpisodesService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-export function useMarkEpisodeWatched(channelId: string | undefined) {
+export function useMarkWatched(channelId: string | undefined) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   return useMutation({

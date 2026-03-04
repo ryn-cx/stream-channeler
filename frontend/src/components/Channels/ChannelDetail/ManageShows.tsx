@@ -31,14 +31,14 @@ import { WhitelistManager } from "./WhitelistManager"
 
 interface Show {
   id: string
-  name: string
+  name: string | null
   source_id: string
   url?: string | null
 }
 
 interface Source {
   favicon_url?: string | null
-  name: string
+  name: string | null
 }
 
 interface ManageShowsProps {
@@ -155,7 +155,7 @@ export function ManageShows({
   }
 
   const showsList = Object.values(shows).sort((a, b) =>
-    a.name.localeCompare(b.name),
+    (a.name ?? "").localeCompare(b.name ?? ""),
   )
 
   return (
@@ -217,7 +217,7 @@ export function ManageShows({
                                   className="size-4"
                                 />
                               )}
-                              <span>{show.name}</span>
+                              <span>{show.name ?? ""}</span>
                             </div>
                           </TableCell>
                           <TableCell>

@@ -10,7 +10,7 @@ import type {
   SourceOutput,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
-import { useMarkEpisodeWatched } from "@/hooks/useMarkEpisodeWatched"
+import { useMarkWatched } from "@/hooks/useMarkWatched"
 import { cn } from "@/lib/utils"
 
 export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
@@ -22,12 +22,20 @@ export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
 
 function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
   const { channelId } = useParams({ strict: false })
-  const mutation = useMarkEpisodeWatched(channelId)
+  const mutation = useMarkWatched(channelId)
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     mutation.mutate(episode.id)
-    window.open(episode.url, "_blank", "noopener,noreferrer")
+    if (episode.url) {
+      window.open(episode.url, "_blank", "noopener,noreferrer")
+    }
+  }
+
+  const label = `${episode.episode_number !== null ? `${episode.episode_number}. ` : ""}${episode.name ?? ""}`
+
+  if (!episode.url) {
+    return <span>{label}</span>
   }
 
   return (
@@ -39,8 +47,7 @@ function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
       // noopener/noreferrer - Don't let the source know the origin of the link
       rel="noopener noreferrer"
     >
-      {episode.episode_number !== null ? `${episode.episode_number}. ` : ""}
-      {episode.name}
+      {label}
     </a>
   )
 }
@@ -75,7 +82,7 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name}</span>
+          <span className="text-muted-foreground">{source.name ?? ""}</span>
         </div>
       )
     },

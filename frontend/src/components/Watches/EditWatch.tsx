@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import {
   EpisodesService,
-  type EpisodeWatchItem,
-  type EpisodeWatchPatchInput,
   type WatchedEpisodesOutput,
+  type WatchItem,
+  type WatchPatchInput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -49,7 +49,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 interface EditWatchProps {
-  watch: EpisodeWatchItem
+  watch: WatchItem
 }
 
 const EditWatch = ({ watch }: EditWatchProps) => {
@@ -67,9 +67,9 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: EpisodeWatchPatchInput) =>
+    mutationFn: (data: WatchPatchInput) =>
       EpisodesService.patchWatchedEpisode({
-        episodeWatchId: watch.id,
+        WatchId: watch.id,
         requestBody: data,
       }),
     // When mutate is called:
@@ -112,7 +112,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   })
 
   const onSubmit = (data: FormData) => {
-    const payload: EpisodeWatchPatchInput = {
+    const payload: WatchPatchInput = {
       watch_date: data.watch_date,
       verified: data.verified,
     }

@@ -3,11 +3,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
   EpisodeOutput,
-  EpisodeWatchItem,
   PluginOutput,
   SeasonOutput,
   ShowOutput,
   SourceOutput,
+  WatchItem,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ import DeleteWatch from "./DeleteWatch"
 import EditWatch from "./EditWatch"
 import VerifyWatch from "./VerifyWatch"
 
-interface WatchWithDetails extends EpisodeWatchItem {
+interface WatchWithDetails extends WatchItem {
   episode: EpisodeOutput
   season: SeasonOutput
   show: ShowOutput
@@ -35,7 +35,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     id: "plugin",
     header: "Plugin",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.plugin.name}</span>
+      <span className="font-medium">{row.original.plugin.name ?? ""}</span>
     ),
   },
 
@@ -56,7 +56,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name}</span>
+          <span className="text-muted-foreground">{source.name ?? ""}</span>
         </div>
       )
     },
@@ -67,26 +67,27 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     id: "show",
     header: "Show",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.show.name}</span>
+      <span className="font-medium">{row.original.show.name ?? ""}</span>
     ),
   },
   {
-    accessorFn: (row) => `${row.season.season_number} ${row.season.name}`,
+    accessorFn: (row) => `${row.season.season_number} ${row.season.name ?? ""}`,
     id: "season",
     header: "Season",
     cell: ({ row }) => (
       <span>
-        {row.original.season.season_number} {row.original.season.name}
+        {row.original.season.season_number} {row.original.season.name ?? ""}
       </span>
     ),
   },
   {
-    accessorFn: (row) => `${row.episode.episode_number} ${row.episode.name}`,
+    accessorFn: (row) =>
+      `${row.episode.episode_number} ${row.episode.name ?? ""}`,
     id: "episode",
     header: "Episode",
     cell: ({ row }) => (
       <span>
-        {row.original.episode.episode_number} {row.original.episode.name}
+        {row.original.episode.episode_number} {row.original.episode.name ?? ""}
       </span>
     ),
   },

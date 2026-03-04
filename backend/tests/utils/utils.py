@@ -1,13 +1,30 @@
+# TODO: Validate
 # ruff: noqa: S311 - These are just random strings for testing and nothing needs to be
 # cryptographically secure.
 import random
 import string
-from datetime import datetime
+import uuid
+from collections.abc import Callable
+from datetime import date, datetime
+from types import NoneType
+from typing import Any, Literal, get_args
 
 from fastapi.testclient import TestClient
 
+from app.channels.schemas import ChannelInput
 from app.config import settings
+from app.episodes.schemas import EpisodeInput, EpisodePatchInput, EpisodePostInput
+from app.plugins.schemas import (
+    FileInput,
+    PluginInput,
+    PluginPatchInput,
+    PluginPostInput,
+)
+from app.seasons.schemas import SeasonInput, SeasonPatchInput, SeasonPostInput
+from app.shows.schemas import ShowInput, ShowPatchInput, ShowPostInput
+from app.sources.schemas import SourceInput, SourcePatchInput, SourcePostInput
 from app.utils import tz_datetime
+from app.watches.schemas import WatchInput, WatchPatchInput, WatchPostInput
 
 
 def random_lower_string() -> str:
@@ -77,6 +94,101 @@ def random_optional_future_timestamp() -> datetime | None:
     if random_bool():
         return random_future_timestamp()
     return None
+
+
+_TYPE_GENERATORS: dict[type, Callable[[], object]] = {
+    str: random_lower_string,
+    int: random_integer,
+    uuid.UUID: uuid.uuid4,
+    datetime: random_past_timestamp,
+    date: lambda: random_past_timestamp().date(),
+    bool: random_bool,
+}
+
+
+def _is_nullable(annotation: type | None) -> tuple[bool, type]:
+    """Return (is_nullable, inner_type) for a type annotation."""
+    args = get_args(annotation)
+    if args and NoneType in args:
+        non_none = [a for a in args if a is not NoneType]
+        if len(non_none) == 1:
+            return True, non_none[0]
+    assert annotation is not None
+    return False, annotation
+
+
+def _random_value(tp: type) -> object:
+    """Generate a random value for a given type."""
+    generator = _TYPE_GENERATORS.get(tp)
+    if generator is None:
+        msg = f"No random generator for type: {tp}"
+        raise ValueError(msg)
+    return generator()
+
+
+type _InputModel = (
+    ChannelInput
+    | EpisodeInput
+    | EpisodePatchInput
+    | EpisodePostInput
+    | FileInput
+    | PluginInput
+    | PluginPatchInput
+    | PluginPostInput
+    | SeasonInput
+    | SeasonPatchInput
+    | SeasonPostInput
+    | ShowInput
+    | ShowPatchInput
+    | ShowPostInput
+    | SourceInput
+    | SourcePatchInput
+    | SourcePostInput
+    | WatchInput
+    | WatchPatchInput
+    | WatchPostInput
+)
+
+
+def build_random_model[T: _InputModel](
+    model: type[T],
+    *,
+    mode: Literal["random", "full", "minimal"] = "random",
+    **required_kwargs: object,
+) -> T:
+    """Return a model instance with randomly populated fields.
+
+    Args:
+        mode: "full" populates all fields including optionals, "minimal" only populates
+            required fields, "random" (default) randomly includes optionals.
+    """
+    kwargs: dict[str, object] = dict(required_kwargs)
+    for field_name, info in model.model_fields.items():
+        if field_name in kwargs:
+            continue
+        if mode == "minimal" and not info.is_required():
+            continue
+        nullable, inner_type = _is_nullable(info.annotation)
+        if mode != "full" and nullable:
+            if random_bool():
+                kwargs[field_name] = _random_value(inner_type)
+        else:
+            kwargs[field_name] = _random_value(inner_type)
+    return model(**kwargs)  # type: ignore[return-value]
+
+
+def dump_random_model(
+    model: type[_InputModel],
+    *,
+    mode: Literal["random", "full", "minimal"] = "random",
+    **required_kwargs: object,
+) -> dict[str, Any]:
+    """Return a JSON-serialized model with randomly populated fields."""
+    return build_random_model(
+        model,
+        mode=mode,
+        **required_kwargs,
+    ).model_dump(mode="json", exclude_unset=True)
 
 
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:

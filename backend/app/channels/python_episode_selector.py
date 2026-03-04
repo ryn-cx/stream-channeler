@@ -18,8 +18,12 @@ from app.channels.models import (
     ChannelShow,
 )
 from app.channels.schemas import ChannelMediaFilter
-from app.media.models import Episode, EpisodeWatch, Season, Show, Source
+from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
 from app.utils import tz_datetime
+from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
 
@@ -39,7 +43,7 @@ class PythonEpisodeQueryBuilder:
         self._media_filter = self._sanitize_media_filter(media_filter)
         self._channel_ids: list[UUID] = []
         self._compile_channel_ids(channel)
-        self._episode_watches: dict[UUID, EpisodeWatch] = {}
+        self._episode_watches: dict[UUID, Watch] = {}
         self._show_last_watched: dict[UUID, datetime] = {}
 
     def _sanitize_media_filter(
@@ -164,10 +168,10 @@ class PythonEpisodeQueryBuilder:
 
         # Load episode watches
         watches = self._session.exec(
-            select(EpisodeWatch).where(
+            select(Watch).where(
                 and_(
-                    col(EpisodeWatch.episode_id).in_(episode_ids),
-                    EpisodeWatch.user_id == self._user.id,
+                    col(Watch.episode_id).in_(episode_ids),
+                    Watch.user_id == self._user.id,
                 ),
             ),
         ).all()
@@ -177,13 +181,13 @@ class PythonEpisodeQueryBuilder:
         # Load show last watched dates
         show_ids = list({ep.season.show_id for ep in episodes})
         show_watches = self._session.exec(
-            select(Season.show_id, func.max(EpisodeWatch.watch_date))
+            select(Season.show_id, func.max(Watch.watch_date))
             .join(Episode, Episode.season_id == Season.id)
-            .join(EpisodeWatch, EpisodeWatch.episode_id == Episode.id)
+            .join(Watch, Watch.episode_id == Episode.id)
             .where(
                 and_(
                     col(Season.show_id).in_(show_ids),
-                    EpisodeWatch.user_id == self._user.id,
+                    Watch.user_id == self._user.id,
                     col(Episode.deleted_at).is_(None),
                 ),
             )
@@ -312,11 +316,11 @@ class PythonEpisodeQueryBuilder:
                 select(Show.id)
                 .join(Season, Season.show_id == Show.id)
                 .join(Episode, Episode.season_id == Season.id)
-                .join(EpisodeWatch, EpisodeWatch.episode_id == Episode.id)
+                .join(Watch, Watch.episode_id == Episode.id)
                 .where(
                     and_(
-                        EpisodeWatch.user_id == self._user.id,
-                        col(EpisodeWatch.verified).is_(True),
+                        Watch.user_id == self._user.id,
+                        col(Watch.verified).is_(True),
                     ),
                 )
                 .distinct(),
@@ -665,7 +669,7 @@ class PythonEpisodeQueryBuilder:
     def get_episode_latest_watch_date(
         self,
         episodes: Sequence[Episode],
-    ) -> dict[UUID, EpisodeWatch]:
+    ) -> dict[UUID, Watch]:
         """Get the latest watch for each episode.
 
         Args:
@@ -679,31 +683,31 @@ class PythonEpisodeQueryBuilder:
 
         max_dates = (
             select(
-                EpisodeWatch.episode_id,
-                func.max(EpisodeWatch.watch_date).label("max_date"),
+                Watch.episode_id,
+                func.max(Watch.watch_date).label("max_date"),
             )
             .where(
                 and_(
-                    col(EpisodeWatch.episode_id).in_(
+                    col(Watch.episode_id).in_(
                         [episode.id for episode in episodes],
                     ),
-                    EpisodeWatch.user_id == self._user.id,
+                    Watch.user_id == self._user.id,
                 ),
             )
-            .group_by(col(EpisodeWatch.episode_id))
+            .group_by(col(Watch.episode_id))
             .subquery()
         )
 
         watches = self._session.exec(
-            select(EpisodeWatch)
+            select(Watch)
             .join(
                 max_dates,
                 and_(
-                    EpisodeWatch.episode_id == max_dates.c.episode_id,
-                    EpisodeWatch.watch_date == max_dates.c.max_date,
+                    Watch.episode_id == max_dates.c.episode_id,
+                    Watch.watch_date == max_dates.c.max_date,
                 ),
             )
-            .where(EpisodeWatch.user_id == self._user.id),
+            .where(Watch.user_id == self._user.id),
         ).all()
 
         return {watch.episode_id: watch for watch in watches}
@@ -724,7 +728,9 @@ class PythonEpisodeQueryBuilder:
         if media_type == "show-episodes":
             return self._is_valid_show_episodes_sort_key(category, field_name)
         return self._is_valid_non_show_episodes_sort_key(
-            category, media_type, field_name,
+            category,
+            media_type,
+            field_name,
         )
 
     def _is_valid_show_episodes_sort_key(

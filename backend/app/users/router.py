@@ -12,8 +12,8 @@ from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.channels.models import Channel
 from app.config import settings
-from app.media.models import EpisodeWatch
 from app.models import Message
+from app.plugins.models import Plugin
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import (
@@ -25,6 +25,7 @@ from app.users.schemas import (
     UserUpdateMe,
 )
 from app.utils import service as email_service
+from app.watches.models import Watch
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -259,7 +260,9 @@ def delete_user(
         )
     statement = delete(Channel).where(col(Channel.user_id) == user_id)
     session.exec(statement)
-    statement = delete(EpisodeWatch).where(col(EpisodeWatch.user_id) == user_id)
+    statement = delete(Watch).where(col(Watch.user_id) == user_id)
+    session.exec(statement)
+    statement = delete(Plugin).where(col(Plugin.user_id) == user_id)
     session.exec(statement)
     session.delete(user)
     session.commit()

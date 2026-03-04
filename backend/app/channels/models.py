@@ -15,8 +15,10 @@ from sqlmodel import (
     select,
 )
 
-from app.media.models import Episode, Season, Show
+from app.episodes.models import Episode
 from app.models import TimestampIdMixin
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.users.models import User
 
 
@@ -252,9 +254,7 @@ class ChannelEpisodeWhiteList(
     channel_show: ChannelShow = Relationship(
         back_populates="episode_white_list",
     )
-    episode: Episode = Relationship(
-        back_populates="channel_white_list",
-    )
+    episode: Episode = Relationship(back_populates="white_lists")
 
 
 class URLStatus(Enum):

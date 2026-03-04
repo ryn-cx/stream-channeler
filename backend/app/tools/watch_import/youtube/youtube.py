@@ -23,8 +23,13 @@ from sqlmodel import Session, select
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 from app.database import engine, load_models
-from app.media.models import Episode, EpisodeWatch, Plugin, Season, Show, Source
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
 from app.users.models import User
+from app.watches.models import Watch
 
 load_models()
 
@@ -73,8 +78,8 @@ def import_watches(session: Session, user: User) -> None:
 
     # Load episode IDs that already have any watch record for this user
     existing_watched_episodes: set[str] = set()
-    watch_statement = select(EpisodeWatch.episode_id).where(
-        EpisodeWatch.user_id == user.id,
+    watch_statement = select(Watch.episode_id).where(
+        Watch.user_id == user.id,
     )
     for episode_id in session.exec(watch_statement):
         existing_watched_episodes.add(str(episode_id))
@@ -95,7 +100,7 @@ def import_watches(session: Session, user: User) -> None:
             continue
 
         watch_date = dateutil_parser.parse(date_string, tzinfos=TZINFOS)
-        episode_watch = EpisodeWatch(
+        episode_watch = Watch(
             user_id=user.id,
             episode_id=episode.id,
             watch_date=watch_date,

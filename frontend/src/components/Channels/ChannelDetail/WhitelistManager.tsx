@@ -147,7 +147,7 @@ export function WhitelistManager({
 
   const getEpisodeLabel = (episode: EpisodeOutput) => {
     const episodeName = episode.name ? ` - ${episode.name}` : ""
-    return `Episode ${episode.sort_order}${episodeName}`
+    return `Episode ${episode.sort_order ?? "?"}${episodeName}`
   }
 
   const getStatusLabel = (enabled: boolean) => {

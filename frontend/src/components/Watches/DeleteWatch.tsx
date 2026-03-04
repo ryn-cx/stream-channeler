@@ -37,7 +37,7 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (watchId: string) =>
-      EpisodesService.deleteWatchedEpisode({ episodeWatchId: watchId }),
+      EpisodesService.deleteWatchedEpisode({ WatchId: watchId }),
     // When mutate is called:
     onMutate: async (deletedId, context) => {
       // Cancel any outgoing refetches

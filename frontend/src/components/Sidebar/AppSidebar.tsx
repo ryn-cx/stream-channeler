@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogIn,
   PanelLeftClose,
+  Plug,
   Radio,
   Users,
 } from "lucide-react"
@@ -33,6 +34,7 @@ const baseItems: Item[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "Channels", path: "/channels" },
   { icon: Eye, title: "Watches", path: "/watches" },
+  { icon: Plug, title: "Custom Media", path: "/plugin" },
 ]
 
 const unauthenticatedItems: Item[] = [{ icon: Home, title: "Home", path: "/" }]
