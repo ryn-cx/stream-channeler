@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { EpisodesService, type WatchedEpisodesOutput } from "@/client"
+import { type WatchesListOutput, WatchesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -37,7 +37,7 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (watchId: string) =>
-      EpisodesService.deleteWatchedEpisode({ WatchId: watchId }),
+      WatchesService.deleteUserWatch({ watchId }),
     // When mutate is called:
     onMutate: async (deletedId, context) => {
       // Cancel any outgoing refetches
@@ -45,18 +45,16 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
       await context.client.cancelQueries({ queryKey: ["watches"] })
 
       // Snapshot the previous value
-      const previousWatches =
-        context.client.getQueryData<WatchedEpisodesOutput>(["watches"])
+      const previousWatches = context.client.getQueryData<WatchesListOutput>([
+        "watches",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<WatchedEpisodesOutput>(
-        ["watches"],
-        (old) => ({
-          ...old!,
-          watches: old!.watches.filter((w) => w.id !== deletedId),
-          count: old!.count - 1,
-        }),
-      )
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
+        ...old!,
+        watches: old!.watches.filter((w) => w.id !== deletedId),
+        count: old!.count - 1,
+      }))
 
       // Return a result with the snapshotted value
       return { previousWatches }

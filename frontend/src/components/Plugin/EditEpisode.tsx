@@ -72,7 +72,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
   const queryKey = ["seasons", seasonKey, "episodes"]
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
@@ -106,7 +106,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       context.client.setQueryData<EpisodesListOutput>(queryKey, (old) => ({
         ...old!,
         data: old!.data.map((e) =>
-          e.id === episode.id ? { ...e, ...newData } : e,
+          e.id === episode.id ? ({ ...e, ...newData } as EpisodeTableData) : e,
         ),
       }))
 

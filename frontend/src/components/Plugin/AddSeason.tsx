@@ -61,7 +61,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
   const queryKey = ["shows", showKey, "seasons"]
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
@@ -93,10 +93,14 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
           ...old!.data,
           {
             key: crypto.randomUUID(),
-            name: newSeason.name,
+            name: newSeason.name ?? null,
             id: crypto.randomUUID(),
             show_id: showKey,
             season_number: null,
+            url: null,
+            image_url: null,
+            sort_order: null,
+            data_timestamp: null,
           },
         ],
         count: old!.count + 1,

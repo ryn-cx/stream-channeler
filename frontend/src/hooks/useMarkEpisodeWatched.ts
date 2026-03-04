@@ -9,9 +9,9 @@ export function useMarkWatched(channelId: string | undefined) {
 
   return useMutation({
     mutationFn: (episodeId: string) =>
-      EpisodesService.postWatchedEpisode({
+      EpisodesService.createWatch({
+        episodeId,
         requestBody: {
-          episode_id: episodeId,
           watch_date: new Date().toISOString(),
           verified: false,
         },

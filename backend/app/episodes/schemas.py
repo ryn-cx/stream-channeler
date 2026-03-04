@@ -42,6 +42,7 @@ class EpisodeInput(BaseEpisode, BaseInputMixin[Episode]):
 
 class EpisodeOutput(BaseEpisode):
     id: uuid.UUID
+    season_id: uuid.UUID
 
 
 class EpisodesListOutput(BaseModel):

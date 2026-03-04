@@ -6,8 +6,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import {
-  EpisodesService,
-  type WatchedEpisodesOutput,
+  type WatchesListOutput,
+  WatchesService,
   type WatchItem,
   type WatchPatchInput,
 } from "@/client"
@@ -68,8 +68,8 @@ const EditWatch = ({ watch }: EditWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: WatchPatchInput) =>
-      EpisodesService.patchWatchedEpisode({
-        WatchId: watch.id,
+      WatchesService.updateUserWatch({
+        watchId: watch.id,
         requestBody: data,
       }),
     // When mutate is called:
@@ -79,19 +79,17 @@ const EditWatch = ({ watch }: EditWatchProps) => {
       await context.client.cancelQueries({ queryKey: ["watches"] })
 
       // Snapshot the previous value
-      const previousWatches =
-        context.client.getQueryData<WatchedEpisodesOutput>(["watches"])
+      const previousWatches = context.client.getQueryData<WatchesListOutput>([
+        "watches",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<WatchedEpisodesOutput>(
-        ["watches"],
-        (old) => ({
-          ...old!,
-          watches: old!.watches.map((w) =>
-            w.id === watch.id ? { ...w, ...data } : w,
-          ),
-        }),
-      )
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
+        ...old!,
+        watches: old!.watches.map((w) =>
+          w.id === watch.id ? ({ ...w, ...data } as WatchItem) : w,
+        ),
+      }))
 
       // Return a result with the snapshotted value
       return { previousWatches }

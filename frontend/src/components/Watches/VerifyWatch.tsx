@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { Check } from "lucide-react"
 
-import { EpisodesService, type WatchedEpisodesOutput } from "@/client"
+import { type WatchesListOutput, WatchesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -27,8 +27,8 @@ export default function VerifyWatch({
 
   const verifyMutation = useMutation({
     mutationFn: () =>
-      EpisodesService.patchWatchedEpisode({
-        WatchId: id,
+      WatchesService.updateUserWatch({
+        watchId: id,
         requestBody: {
           watch_date: watch_date,
           verified: true,
@@ -41,19 +41,17 @@ export default function VerifyWatch({
       await context.client.cancelQueries({ queryKey: ["watches"] })
 
       // Snapshot the previous value
-      const previousWatches =
-        context.client.getQueryData<WatchedEpisodesOutput>(["watches"])
+      const previousWatches = context.client.getQueryData<WatchesListOutput>([
+        "watches",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<WatchedEpisodesOutput>(
-        ["watches"],
-        (old) => ({
-          ...old!,
-          watches: old!.watches.map((w) =>
-            w.id === id ? { ...w, verified: true } : w,
-          ),
-        }),
-      )
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
+        ...old!,
+        watches: old!.watches.map((w) =>
+          w.id === id ? { ...w, verified: true } : w,
+        ),
+      }))
 
       // Return a result with the snapshotted value
       return { previousWatches }

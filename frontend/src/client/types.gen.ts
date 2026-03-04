@@ -85,6 +85,7 @@ export type EpisodeOutput = {
     release_date?: (string | null);
     air_date?: (string | null);
     id: string;
+    season_id: string;
 };
 
 export type EpisodePatchInput = {
@@ -142,6 +143,7 @@ export type EpisodeWithExtrasOutput = {
     release_date?: (string | null);
     air_date?: (string | null);
     id: string;
+    season_id: string;
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);

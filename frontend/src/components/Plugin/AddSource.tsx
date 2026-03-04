@@ -89,9 +89,12 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
           ...old!.data,
           {
             key: crypto.randomUUID(),
-            name: newSource.name,
+            name: newSource.name ?? null,
             id: crypto.randomUUID(),
             plugin_id: pluginId,
+            favicon_url: null,
+            image_url: null,
+            data_timestamp: null,
           },
         ],
         count: old!.count + 1,

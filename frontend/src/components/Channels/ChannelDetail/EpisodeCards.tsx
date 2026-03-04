@@ -9,7 +9,7 @@ import {
   SkipForward,
 } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
-import { EpisodesService } from "@/client"
+import { WatchesService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useMarkWatched } from "@/hooks/useMarkWatched"
+import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
 import { handleError } from "@/utils"
 import type { EpisodeWithDetails } from "./columns"
@@ -137,8 +137,8 @@ function EpisodeCard({
   const queryClient = useQueryClient()
   const verifyMutation = useMutation({
     mutationFn: () =>
-      EpisodesService.patchWatchedEpisode({
-        WatchId: episode.episode_watch_id!,
+      WatchesService.updateUserWatch({
+        watchId: episode.episode_watch_id!,
         requestBody: {
           watch_date: episode.watch_date!,
           verified: true,

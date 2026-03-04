@@ -82,9 +82,10 @@ const AddPlugin = () => {
           ...old!.data,
           {
             key: newPlugin.key ?? "",
-            name: newPlugin.name,
+            name: newPlugin.name ?? null,
             id: crypto.randomUUID(),
             user_id: null,
+            data_timestamp: null,
           },
         ],
         count: old!.count + 1,

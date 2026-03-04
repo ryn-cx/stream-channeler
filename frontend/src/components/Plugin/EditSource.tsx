@@ -60,10 +60,10 @@ interface EditSourceProps {
 }
 
 const EditSource = ({ source }: EditSourceProps) => {
-  const { pluginKey } = useParams({ strict: false })
+  const { pluginId } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["plugins", pluginKey, "sources"]
+  const queryKey = ["plugins", pluginId, "sources"]
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

@@ -21,7 +21,7 @@ export default function TVShowCardOverlay({
           {episode.source.favicon_url && (
             <img
               src={episode.source.favicon_url}
-              alt={episode.source.name}
+              alt={episode.source.name ?? undefined}
               className="size-6"
             />
           )}

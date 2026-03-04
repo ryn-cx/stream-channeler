@@ -446,10 +446,15 @@ export const EpisodeOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
         }
     },
     type: 'object',
-    required: ['key', 'id'],
+    required: ['key', 'id', 'season_id'],
     title: 'EpisodeOutput'
 } as const;
 
@@ -940,6 +945,11 @@ export const EpisodeWithExtrasOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
         watch_date: {
             anyOf: [
                 {
@@ -982,7 +992,7 @@ export const EpisodeWithExtrasOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'channel_id'],
+    required: ['key', 'id', 'season_id', 'channel_id'],
     title: 'EpisodeWithExtrasOutput'
 } as const;
 

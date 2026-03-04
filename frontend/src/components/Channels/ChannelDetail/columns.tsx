@@ -10,7 +10,7 @@ import type {
   SourceOutput,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
-import { useMarkWatched } from "@/hooks/useMarkWatched"
+import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { cn } from "@/lib/utils"
 
 export type EpisodeWithDetails = EpisodeWithExtrasOutput & {

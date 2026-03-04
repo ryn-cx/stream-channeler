@@ -39,7 +39,7 @@ interface DeleteSourceProps {
 }
 
 const DeleteSource = ({ source }: DeleteSourceProps) => {
-  const { pluginKey } = useParams({ strict: false })
+  const { pluginId } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { handleSubmit } = useForm()
@@ -52,7 +52,7 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
         path: { source_id: sourceId },
       }),
     onMutate: async (_sourceKey, context) => {
-      const queryKey = ["plugins", pluginKey, "sources"]
+      const queryKey = ["plugins", pluginId, "sources"]
       await context.client.cancelQueries({ queryKey })
       const previous = context.client.getQueryData<SourcesListOutput>(queryKey)
 
@@ -70,14 +70,14 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
     },
     onError: (error, _sourceKey, onMutateResult, context) => {
       context.client.setQueryData(
-        ["plugins", pluginKey, "sources"],
+        ["plugins", pluginId, "sources"],
         onMutateResult?.previous,
       )
       handleError.call(showErrorToast, error as any)
     },
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
-        queryKey: ["plugins", pluginKey, "sources"],
+        queryKey: ["plugins", pluginId, "sources"],
       }),
   })
 

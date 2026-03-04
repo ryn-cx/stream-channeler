@@ -6,7 +6,7 @@ import { useRef, useState } from "react"
 import Markdown from "react-markdown"
 import {
   type ApiError,
-  EpisodesService,
+  WatchesService,
   type WatchImportEntry,
   type WatchImportFormatInformation,
   type WatchImportResult,
@@ -170,14 +170,14 @@ function ImportWatchHistory() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: pluginsData, isLoading: pluginsLoading } = useQuery({
-    queryFn: () => EpisodesService.listImportablePlugins(),
+    queryFn: () => WatchesService.listImportablePlugins(),
     queryKey: ["watch-import-plugins"],
   })
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!selectedPlugin || !selectedFile) return
-      return EpisodesService.importWatchHistory({
+      return WatchesService.importWatchHistory({
         pluginId: selectedPlugin,
         newOnly: newOnly,
         verified: verified,
