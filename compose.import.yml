@@ -1,4 +1,5 @@
 # TODO: Validate
+name: stream-channeler-import
 services:
   # Gluetun VPN container
   gluetun:
