@@ -16,7 +16,9 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('plugin', sa.Column('public', sa.Boolean(), nullable=False))
+    op.add_column('plugin', sa.Column('public', sa.Boolean(), nullable=True))
+    op.execute("UPDATE plugin SET public = false WHERE public IS NULL")
+    op.alter_column('plugin', 'public', nullable=False)
 
 
 def downgrade():
