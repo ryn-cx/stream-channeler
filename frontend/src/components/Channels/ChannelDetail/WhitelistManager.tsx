@@ -47,7 +47,7 @@ export function WhitelistManager({
   const { data: whitelistData, isLoading } = useQuery({
     queryKey: ["channelShowWhitelist", channelId, showId],
     queryFn: () =>
-      ChannelsService.getChannelShowWhitelist({ channelId, showId }),
+      ChannelsService.getUserChannelWhitelist({ channelId, showId }),
     enabled: isOpen,
   })
 
@@ -61,7 +61,7 @@ export function WhitelistManager({
 
   const saveMutation = useMutation({
     mutationFn: (input: WhitelistShowInput) =>
-      ChannelsService.setChannelShowWhitelist({
+      ChannelsService.updateUserChannelWhitelist({
         channelId,
         showId,
         requestBody: input,

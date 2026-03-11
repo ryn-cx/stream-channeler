@@ -75,7 +75,7 @@ export function ManageShows({
 
   const removeShowMutation = useMutation({
     mutationFn: (showId: string) =>
-      ChannelsService.removeChannelShow({ channelId, showId }),
+      ChannelsService.deleteChannelShow({ channelId, showId }),
     // When mutate is called:
     onMutate: async (showId, context) => {
       // Cancel any outgoing refetches

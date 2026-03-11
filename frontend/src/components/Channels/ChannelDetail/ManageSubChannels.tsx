@@ -58,7 +58,7 @@ export function ManageAdditionalChannels({
   // Channels that are owned by the user
   const { data: channelsData, isLoading: isLoadingChannels } = useQuery({
     queryKey: ["channels"],
-    queryFn: () => ChannelsService.getChannels(),
+    queryFn: () => ChannelsService.getUserChannels(),
     enabled: isOpen && isLoggedIn,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -67,7 +67,7 @@ export function ManageAdditionalChannels({
 
   const channelNames = channels.reduce(
     (acc, channel) => {
-      acc[channel.id] = channel.name
+      acc[channel.id] = channel.name ?? ""
       return acc
     },
     {} as Record<string, string>,

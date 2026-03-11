@@ -58,14 +58,14 @@ export function AddUrlsToQueueButton({
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
     queryKey: ["channelQueue", channelId],
-    queryFn: () => ChannelsService.getChannelImportQueue({ channelId }),
+    queryFn: () => ChannelsService.getUserChannelQueue({ channelId }),
   })
 
   const queueEntries = queueData?.data || []
 
   const addUrlsMutation = useMutation({
     mutationFn: (urls: string[]) =>
-      ChannelsService.addUrlsToChannelImportQueue({
+      ChannelsService.createUserChannelQueueUrls({
         channelId,
         requestBody: urls,
       }),
@@ -127,7 +127,7 @@ export function AddUrlsToQueueButton({
 
   const deleteUrlMutation = useMutation({
     mutationFn: (urlId: string) =>
-      ChannelsService.deleteUrlFromChannelImportQueue({
+      ChannelsService.deleteUserChannelQueueUrl({
         channelId,
         urlId,
       }),
@@ -179,7 +179,7 @@ export function AddUrlsToQueueButton({
 
   const clearQueueMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.clearCompletedChannelImportQueue({
+      ChannelsService.clearUserChannelCompletedQueue({
         channelId,
       }),
     // When mutate is called:

@@ -53,7 +53,6 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
       context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
         ...old!,
         watches: old!.watches.filter((w) => w.id !== deletedId),
-        count: old!.count - 1,
       }))
 
       // Return a result with the snapshotted value

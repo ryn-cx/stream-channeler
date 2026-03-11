@@ -23,7 +23,7 @@ export function SaveDefaultButton({
 
   const saveDefaultsMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.updateChannelDefaultOrder({
+      ChannelsService.updateUserChannelDefaultOrder({
         channelId,
         requestBody: searchParams,
       }),

@@ -86,7 +86,6 @@ const AddUser = () => {
       context.client.setQueryData<UsersPublic>(["users"], (old) => ({
         ...old!,
         data: [...old!.data, { id: crypto.randomUUID(), ...newUser }],
-        count: old!.count + 1,
       }))
 
       // Return a result with the snapshotted value

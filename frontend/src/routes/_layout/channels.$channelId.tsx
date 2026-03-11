@@ -33,7 +33,7 @@ import useAuth from "@/hooks/useAuth"
 
 function getChannelQueryOptions(channelId: string) {
   return {
-    queryFn: () => ChannelsService.getChannel({ channelId }),
+    queryFn: () => ChannelsService.getUserChannel({ channelId }),
     queryKey: ["channels", channelId],
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
   beforeLoad: async ({ params }) => {
     // Check if the user can access this channel
     try {
-      await ChannelsService.getChannel({ channelId: params.channelId })
+      await ChannelsService.getUserChannel({ channelId: params.channelId })
     } catch (error: any) {
       // If 401 or 403, user doesn't have access to this channel
       if (error?.status === 401 || error?.status === 403) {

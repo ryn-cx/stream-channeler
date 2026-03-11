@@ -8,8 +8,8 @@ import { z } from "zod"
 
 import {
   type ChannelPostInput,
+  type ChannelsListOutput,
   ChannelsService,
-  type MultipleChannelOutputs,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -62,7 +62,7 @@ const AddChannel = () => {
 
   const mutation = useMutation({
     mutationFn: (data: ChannelPostInput) =>
-      ChannelsService.createChannel({ requestBody: data }),
+      ChannelsService.createUserChannel({ requestBody: data }),
     // When mutate is called:
     onMutate: async (newChannel, context) => {
       // Cancel any outgoing refetches
@@ -70,25 +70,22 @@ const AddChannel = () => {
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels =
-        context.client.getQueryData<MultipleChannelOutputs>(["channels"])
+      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
+        "channels",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<MultipleChannelOutputs>(
-        ["channels"],
-        (old) => ({
-          ...old!,
-          data: [
-            ...old!.data,
-            {
-              ...newChannel,
-              id: crypto.randomUUID(),
-              user_id: "placeholder_user_id",
-            },
-          ],
-          count: old!.count + 1,
-        }),
-      )
+      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => ({
+        ...old!,
+        data: [
+          ...old!.data,
+          {
+            ...newChannel,
+            id: crypto.randomUUID(),
+            user_id: "placeholder_user_id",
+          },
+        ],
+      }))
 
       // Return a result with the snapshotted value
       return { previousChannels }

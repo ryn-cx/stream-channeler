@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { ChannelsService, type MultipleChannelOutputs } from "@/client"
+import { type ChannelsListOutput, ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -37,7 +37,7 @@ const DeleteChannel = ({ id, onSuccess = () => {} }: DeleteChannelProps) => {
 
   const mutation = useMutation({
     mutationFn: (channelId: string) =>
-      ChannelsService.deleteChannel({ channelId }),
+      ChannelsService.deleteUserChannel({ channelId }),
     // When mutate is called:
     onMutate: async (_channelId, context) => {
       // Cancel any outgoing refetches
@@ -45,18 +45,15 @@ const DeleteChannel = ({ id, onSuccess = () => {} }: DeleteChannelProps) => {
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels =
-        context.client.getQueryData<MultipleChannelOutputs>(["channels"])
+      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
+        "channels",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<MultipleChannelOutputs>(
-        ["channels"],
-        (old) => ({
-          ...old!,
-          data: old!.data.filter((c) => c.id !== id),
-          count: old!.count - 1,
-        }),
-      )
+      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => ({
+        ...old!,
+        data: old!.data.filter((c: { id: string }) => c.id !== id),
+      }))
 
       // Return a result with the snapshotted value
       return { previousChannels }

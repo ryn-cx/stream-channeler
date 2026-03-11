@@ -9,8 +9,8 @@ import { z } from "zod"
 import {
   type ChannelOutput,
   type ChannelPatchInput,
+  type ChannelsListOutput,
   ChannelsService,
-  type MultipleChannelOutputs,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -64,7 +64,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      name: channel.name,
+      name: channel.name ?? "",
       public: channel.public ?? false,
       // TODO: This will be made to always be a string in the future so the extra check
       // can be removed eventually.
@@ -74,7 +74,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: ChannelPatchInput) =>
-      ChannelsService.updateChannel({
+      ChannelsService.updateUserChannel({
         channelId: channel.id,
         requestBody: data,
       }),
@@ -85,19 +85,20 @@ const EditChannel = ({ channel }: EditChannelProps) => {
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels =
-        context.client.getQueryData<MultipleChannelOutputs>(["channels"])
+      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
+        "channels",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<MultipleChannelOutputs>(
-        ["channels"],
-        (old) => ({
-          ...old!,
-          data: old!.data.map((c) =>
+      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((c) =>
             c.id === channel.id ? { ...c, ...newData } : c,
           ),
-        }),
-      )
+        }
+      })
 
       // Return a result with the snapshotted value
       return { previousChannels }

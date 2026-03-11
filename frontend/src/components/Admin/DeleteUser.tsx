@@ -52,7 +52,6 @@ const DeleteUser = ({ user }: DeleteUserProps) => {
       context.client.setQueryData<UsersPublic>(["users"], (old) => ({
         ...old!,
         data: old!.data.filter((u) => u.id !== user.id),
-        count: old!.count - 1,
       }))
 
       // Return a result with the snapshotted value

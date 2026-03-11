@@ -73,7 +73,7 @@ function WatchesTableContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
-  if (watches.count === 0) {
+  if (watches.watches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-12">
         <div className="rounded-full bg-muted p-4 mb-4">

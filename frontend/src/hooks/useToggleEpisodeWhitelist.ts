@@ -16,7 +16,7 @@ export function useToggleEpisodeWhitelist(
 
   return useMutation({
     mutationFn: ({ episodeId, showId }: ToggleEpisodeParams) =>
-      ChannelsService.setChannelShowWhitelist({
+      ChannelsService.updateUserChannelWhitelist({
         channelId,
         showId,
         requestBody: {

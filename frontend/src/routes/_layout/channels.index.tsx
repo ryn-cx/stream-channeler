@@ -15,7 +15,7 @@ import { isLoggedIn } from "@/hooks/useAuth"
 
 function getChannelsQueryOptions() {
   return {
-    queryFn: () => ChannelsService.getChannels(),
+    queryFn: () => ChannelsService.getUserChannels(),
     queryKey: ["channels"],
     refetchOnWindowFocus: false,
     refetchOnMount: false,
