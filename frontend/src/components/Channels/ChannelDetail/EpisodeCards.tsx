@@ -297,7 +297,10 @@ function EpisodeCard({
                 e.stopPropagation()
                 const confirmMsg = `Blacklist episode "${episode.name ?? ""}"?`
                 if (window.confirm(confirmMsg)) {
-                  whitelistMutation.mutate(episode.id)
+                  whitelistMutation.mutate({
+                    episodeId: episode.id,
+                    showId: episode.show.id,
+                  })
                 }
               }}
             >

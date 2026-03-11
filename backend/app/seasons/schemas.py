@@ -47,7 +47,6 @@ class SeasonOutput(BaseSeason):
 
 class SeasonsListOutput(BaseModel):
     data: list[SeasonOutput]
-    count: int
 
 
 class SeasonPostInput(BaseSeason):

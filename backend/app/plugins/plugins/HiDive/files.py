@@ -1,7 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime, timedelta
-from functools import cached_property
 from typing import Any, override
 
 from diving_board import DivingBoard
@@ -16,8 +15,7 @@ from sqlmodel import Session, col, select
 from app.config import settings
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
-from app.plugins.plugins.utils.base_files import JSONFile
-from app.plugins.plugins.utils.base_plugin import BasePlugin
+from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
 from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -31,21 +29,21 @@ class VodJSON(JSONFile[VodModel]):
         self,
         db: Session,
         plugin: Plugin,
-        vod_id: int,
+        vod_key: int,
     ) -> None:
-        self._vod_id = vod_id
+        self._vod_key = vod_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return str(self._vod_id)
+        return str(self._vod_key)
 
     @override
     def _download(self) -> None:
-        with self._log_download(str(self._vod_id)):
+        with self._log_download(str(self._vod_key)):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             vod = client.vod
-            response = vod.get(self._vod_id)
+            response = vod.get(self._vod_key)
             content = vod.dump_response(response)
             self._write(content)
 
@@ -59,21 +57,21 @@ class SeasonJSON(JSONFile[SeasonModel]):
         self,
         db: Session,
         plugin: Plugin,
-        season_id: int,
+        season_key: int,
     ) -> None:
-        self._series_id = season_id
+        self._series_key = season_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return str(self._series_id)
+        return str(self._series_key)
 
     @override
     def _download(self) -> None:
-        with self._log_download(str(self._series_id)):
+        with self._log_download(str(self._series_key)):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             season = client.season
-            response = season.get(self._series_id)
+            response = season.get(self._series_key)
             content = season.dump_response(response)
             self._write(content)
 
@@ -87,21 +85,21 @@ class PlaylistJSON(JSONFile[PlaylistModel]):
         self,
         db: Session,
         plugin: Plugin,
-        season_id: int,
+        season_key: int,
     ) -> None:
-        self._series_id = season_id
+        self._series_key = season_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return str(self._series_id)
+        return str(self._series_key)
 
     @override
     def _download(self) -> None:
-        with self._log_download(str(self._series_id)):
+        with self._log_download(str(self._series_key)):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             playlist = client.playlist
-            response = playlist.get(self._series_id)
+            response = playlist.get(self._series_key)
             content = playlist.dump_response(response)
             self._write(content)
 
@@ -115,23 +113,23 @@ class AdjacentSeriesJSON(JSONFile[AdjacentSeriesModel]):
         self,
         db: Session,
         plugin: Plugin,
-        series_id: int,
-        season_id: int,
+        series_key: int,
+        season_key: int,
     ) -> None:
-        self._series_id = series_id
-        self._season_id = season_id
+        self._series_key = series_key
+        self._season_key = season_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return str(self._series_id)
+        return str(self._series_key)
 
     @override
     def _download(self) -> None:
-        with self._log_download(str(self._series_id)):
+        with self._log_download(str(self._series_key)):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             adjacent_series = client.adjacent_series
-            response = adjacent_series.get(self._series_id, self._season_id)
+            response = adjacent_series.get(self._series_key, self._season_key)
             content = adjacent_series.dump_response(response)
             self._write(content)
 
@@ -187,6 +185,9 @@ class FileMixin(BasePlugin, register=False):
         self._schedule_json_cache: dict[str, ScheduleJSON] = {}
         self._vod_json_cache: dict[int, VodJSON] = {}
         self._playlist_json_cache: dict[int, PlaylistJSON] = {}
+        self.__first_season_key_cache: dict[str, int] = {}
+        self.__tv_show_key_cache: dict[str, int] = {}
+        self.__season_keys_cache: dict[str, list[int]] = {}
         super().__init__(
             db,
             url=url,
@@ -198,31 +199,31 @@ class FileMixin(BasePlugin, register=False):
 
     def _playlist_json(
         self,
-        season_id: int | str,
+        season_key: int | str,
     ) -> PlaylistJSON:
-        season_id = int(season_id)
+        season_key = int(season_key)
         return self._get_cached_file(
             self._playlist_json_cache,
-            season_id,
+            season_key,
             lambda: PlaylistJSON(
                 self.db,
                 self.plugin,
-                season_id,
+                season_key,
             ),
         )
 
     def _vod_json(
         self,
-        vod_id: int | str,
+        vod_key: int | str,
     ) -> VodJSON:
-        vod_id = int(vod_id)
+        vod_key = int(vod_key)
         return self._get_cached_file(
             self._vod_json_cache,
-            vod_id,
+            vod_key,
             lambda: VodJSON(
                 self.db,
                 self.plugin,
-                vod_id,
+                vod_key,
             ),
         )
 
@@ -243,136 +244,139 @@ class FileMixin(BasePlugin, register=False):
 
     def _season_json(
         self,
-        season_id: int | str,
+        season_key: int | str,
     ) -> SeasonJSON:
-        season_id = int(season_id)
+        season_key = int(season_key)
         return self._get_cached_file(
             self._seasons_json_cache,
-            season_id,
+            season_key,
             lambda: SeasonJSON(
                 self.db,
                 self.plugin,
-                season_id,
+                season_key,
             ),
         )
 
     def _adjacent_series_json(
         self,
-        series_id: int | str,
-        season_id: int | str,
+        series_key: int | str,
+        season_key: int | str,
     ) -> AdjacentSeriesJSON:
-        series_id = int(series_id)
-        season_id = int(season_id)
+        series_key = int(series_key)
+        season_key = int(season_key)
         return self._get_cached_file(
             self._adjacent_series_json_cache,
-            season_id,
+            season_key,
             lambda: AdjacentSeriesJSON(
                 self.db,
                 self.plugin,
-                series_id,
-                season_id,
+                series_key,
+                season_key,
             ),
         )
 
-    def _get_first_season_id(self, season_id: int | str) -> int:
-        initial_season_file = self._season_json(season_id)
-        show_id = initial_season_file.parsed().metadata.series.series_id
-        other_seasons_file = self._adjacent_series_json(show_id, season_id)
+    def _get_first_season_key(self, season_key: int | str) -> int:
+        initial_season_file = self._season_json(season_key)
+        show_key = initial_season_file.parsed().metadata.series.series_id
+        other_seasons_file = self._adjacent_series_json(show_key, season_key)
         for other_season in other_seasons_file.parsed().preceding_seasons:
             return other_season.id
 
-        return int(season_id)
+        return int(season_key)
 
     # region File Groups
 
     def _tv_show_show_files(
         self,
-        first_season_id: int,
-        show_id: int,
+        first_season_key: int,
+        show_key: int,
     ) -> Sequence[SeasonJSON | AdjacentSeriesJSON]:
         return [
             # Required to detect changes to the show information.
-            self._season_json(first_season_id),
+            self._season_json(first_season_key),
             # Required to detect new seasons.
-            self._adjacent_series_json(show_id, first_season_id),
+            self._adjacent_series_json(show_key, first_season_key),
         ]
 
-    def _movie_show_files(self, movie_id: int | str) -> Sequence[PlaylistJSON]:
+    def _movie_show_files(self, movie_key: int | str) -> Sequence[PlaylistJSON]:
         return [
             # This file has all of the information for movie shows.
-            self._playlist_json(movie_id),
+            self._playlist_json(movie_key),
         ]
 
     def _tv_show_season_files(
         self,
-        season_id: int,
-        show_id: int,
+        season_key: int,
+        show_key: int,
     ) -> Sequence[SeasonJSON | AdjacentSeriesJSON]:
         return [
             # Required to detect changes in the season.
-            self._season_json(season_id),
+            self._season_json(season_key),
             # Required to detect changes in later seasons.
-            self._adjacent_series_json(show_id, season_id),
+            self._adjacent_series_json(show_key, season_key),
         ]
 
-    def _movie_season_files(self, movie_id: int | str) -> Sequence[PlaylistJSON]:
+    def _movie_season_files(self, movie_key: int | str) -> Sequence[PlaylistJSON]:
         return [
             # This file has all of the information for movie seasons.
-            self._playlist_json(movie_id),
+            self._playlist_json(movie_key),
         ]
 
     def _tv_show_episode_files(
         self,
-        season_id: int,
-        episode_id: int,
+        season_key: int,
+        episode_key: int,
     ) -> Sequence[SeasonJSON | VodJSON]:
         return [
             # Required to detect new episodes.
-            self._season_json(season_id),
+            self._season_json(season_key),
             # Required to detect changes to the episode information.
-            self._vod_json(episode_id),
+            self._vod_json(episode_key),
         ]
 
     def _movie_episode_files(
         self,
-        movie_id: int | str,
-        episode_id: int,
+        movie_key: int | str,
+        episode_key: int,
     ) -> Sequence[PlaylistJSON | VodJSON]:
         return [
             # Required for most episode information.
-            self._playlist_json(movie_id),
+            self._playlist_json(movie_key),
             # Required for episode duration.
-            self._vod_json(episode_id),
+            self._vod_json(episode_key),
         ]
 
     @override
-    def _show_files(self) -> Sequence[SeasonJSON | AdjacentSeriesJSON | PlaylistJSON]:
+    def _show_files(
+        self,
+        show_key: str,
+    ) -> Sequence[SeasonJSON | AdjacentSeriesJSON | PlaylistJSON]:
         if self._media_type == "TV Show":
             return self._tv_show_show_files(
-                self._first_season_id_from_file,
-                self._tv_show_id_from_file,
+                self._first_season_key_from_file(show_key),
+                self._tv_show_key_from_file(show_key),
             )
-        return self._movie_show_files(self._show_id)
+        return self._movie_show_files(show_key)
 
     @override
     def _season_files(
         self,
-        season_id: int | str,
+        season_key: int | str,
     ) -> Sequence[SeasonJSON | AdjacentSeriesJSON | PlaylistJSON]:
         if self._media_type == "TV Show":
-            show_id = self._season_json(season_id).parsed().metadata.series.series_id
-            return self._tv_show_season_files(int(season_id), show_id)
-        return self._movie_season_files(self._show_id)
+            show_key = self._season_json(season_key).parsed().metadata.series.series_id
+            return self._tv_show_season_files(int(season_key), show_key)
+        return self._movie_season_files(season_key)
 
     @override
     def _episode_files(
         self,
-        season_id: int | str,
-        episode_id: int,
+        season_key: int | str,
+        episode_key: int,
     ) -> Sequence[SeasonJSON | VodJSON | PlaylistJSON]:
         if self._media_type == "TV Show":
-            return self._tv_show_episode_files(int(season_id), episode_id)
-        return self._movie_episode_files(self._show_id, episode_id)
+            return self._tv_show_episode_files(int(season_key), episode_key)
+        return self._movie_episode_files(season_key, episode_key)
 
     # endregion File Groups
 
@@ -381,78 +385,90 @@ class FileMixin(BasePlugin, register=False):
     def _show_timestamp(self) -> datetime:
         return super()._show_timestamp()
 
-    def _season_timestamp(self, season_id: int | str) -> datetime:
-        return super()._season_timestamp(season_id)
+    def _season_timestamp(self, season_key: int | str) -> datetime:
+        return super()._season_timestamp(season_key)
 
     def _episode_timestamp(
         self,
-        season_id: int | str,
-        episode_id: int,
+        season_key: int | str,
+        episode_key: int,
     ) -> datetime:
-        return super()._episode_timestamp(season_id, episode_id)
+        return super()._episode_timestamp(season_key, episode_key)
 
     # endregion Timestamps
 
     # region Cached File Values
 
-    @cached_property
-    def _first_season_id_from_file(self) -> int:
-        return self._get_first_season_id(self._show_id)
+    def _first_season_key_from_file(self, show_key: str) -> int:
+        if show_key not in self.__first_season_key_cache:
+            self.__first_season_key_cache[show_key] = self._get_first_season_key(
+                show_key,
+            )
+        return self.__first_season_key_cache[show_key]
 
-    @cached_property
-    def _tv_show_id_from_file(self) -> int:
-        first_season_file = self._season_json(self._first_season_id_from_file)
-        return first_season_file.parsed().metadata.series.series_id
+    def _tv_show_key_from_file(self, show_key: str) -> int:
+        if show_key not in self.__tv_show_key_cache:
+            first_season_file = self._season_json(
+                self._first_season_key_from_file(show_key),
+            )
+            self.__tv_show_key_cache[show_key] = (
+                first_season_file.parsed().metadata.series.series_id
+            )
+        return self.__tv_show_key_cache[show_key]
 
-    def _season_ids(self, season_id: int | str) -> list[int]:
-        first_season_id = self._get_first_season_id(season_id)
-        first_season_file = self._season_json(first_season_id)
-        show_id = first_season_file.parsed().metadata.series.series_id
-        other_seasons_file = self._adjacent_series_json(show_id, first_season_id)
+    def _season_keys(self, season_key: int | str) -> list[int]:
+        first_season_key = self._get_first_season_key(season_key)
+        first_season_file = self._season_json(first_season_key)
+        show_key = first_season_file.parsed().metadata.series.series_id
+        other_seasons_file = self._adjacent_series_json(show_key, first_season_key)
 
-        output = [int(season_id)]
+        output = [int(season_key)]
         output.extend(x.id for x in other_seasons_file.parsed().following_seasons)
         return output
 
-    @cached_property
-    def _season_ids_from_json(self) -> list[int]:
-        return self._season_ids(self._show_id)
+    def _season_keys_from_json(self, show_key: str) -> list[int]:
+        if show_key not in self.__season_keys_cache:
+            self.__season_keys_cache[show_key] = self._season_keys(show_key)
+        return self.__season_keys_cache[show_key]
 
     # endregion Cached File Values
 
     # region Download
 
-    def _download_initial_files(self) -> None:
-        logger.info(f"Downloading All Files For: {self._pretty_show_name()}")
+    def _download_initial_files(self, show_key: str) -> None:
+        logger.info(f"Downloading All Files For: {self._pretty_show_name(show_key)}")
         if self._media_type == "TV Show":
-            self.__download_initial_tv_show()
+            self.__download_initial_tv_show(show_key)
         else:
-            self.__download_initial_movie()
+            self.__download_initial_movie(show_key)
 
-    def __download_initial_tv_show(self) -> None:
+    def __download_initial_tv_show(self, show_key: str) -> None:
         # Download show-level files (season + adjacent series for first season)
-        self._season_json(self._show_id)
-        self._season_json(self._first_season_id_from_file)
+        self._season_json(show_key)
+        self._season_json(self._first_season_key_from_file(show_key))
         self._adjacent_series_json(
-            self._tv_show_id_from_file,
-            self._first_season_id_from_file,
+            self._tv_show_key_from_file(show_key),
+            self._first_season_key_from_file(show_key),
         )
         # Download season-level files
-        for season_id in self._season_ids_from_json:
-            self._season_json(season_id)
-            self._adjacent_series_json(self._tv_show_id_from_file, season_id)
+        for season_key in self._season_keys_from_json(show_key):
+            self._season_json(season_key)
+            self._adjacent_series_json(
+                self._tv_show_key_from_file(show_key),
+                season_key,
+            )
         # Download episode-level files
-        for season_id in self._season_ids_from_json:
-            season_json = self._season_json(season_id).parsed()
+        for season_key in self._season_keys_from_json(show_key):
+            season_json = self._season_json(season_key).parsed()
             season_bucket = self.client.season.extract_bucket(season_json, "season")
             for episode_data in season_bucket.items:
                 self._vod_json(episode_data.id)
 
-    def __download_initial_movie(self) -> None:
+    def __download_initial_movie(self, show_key: str) -> None:
         # Download show/season-level files
-        self._playlist_json(self._show_id)
+        self._playlist_json(show_key)
         # Download episode-level files
-        playlist_json = self._playlist_json(self._show_id).parsed()
+        playlist_json = self._playlist_json(show_key).parsed()
         playlist_bucket = self.client.playlist.extract_bucket(
             playlist_json,
             "playlist",
@@ -464,20 +480,20 @@ class FileMixin(BasePlugin, register=False):
 
     # region Preload
 
-    def _preload_show_season_episode_files(self) -> None:
+    def _preload_show_season_episode_files(self, show_key: str) -> None:
         if self._media_type == "TV Show":
-            self.__preload_tv_show_files()
+            self.__preload_tv_show_files(show_key)
         else:
-            self.__preload_movie_files()
+            self.__preload_movie_files(show_key)
 
-    def __preload_tv_show_files(self) -> None:
+    def __preload_tv_show_files(self, show_key: str) -> None:
         all_file_keys: list[str] = []
-        for season_id in self._season_ids_from_json:
-            all_file_keys.append(SeasonJSON.file_key(str(season_id)))
-            season_json = self._season_json(season_id)
-            if season_json.has_file_content():
-                show_id = season_json.parsed().metadata.series.series_id
-                all_file_keys.append(AdjacentSeriesJSON.file_key(str(show_id)))
+        for season_key in self._season_keys_from_json(show_key):
+            all_file_keys.append(SeasonJSON.file_key(str(season_key)))
+            season_json = self._season_json(season_key)
+            if season_json.get_content():
+                tv_show_key = season_json.parsed().metadata.series.series_id
+                all_file_keys.append(AdjacentSeriesJSON.file_key(str(tv_show_key)))
                 season_data = season_json.parsed()
                 season_bucket = self.client.season.extract_bucket(
                     season_data,
@@ -494,13 +510,13 @@ class FileMixin(BasePlugin, register=False):
                 .where(File.plugin == self.plugin)
                 .where(col(File.key).in_(all_file_keys))
             )
-            self._add_all_to_preload_cache(file_select)
+            self.db.exec(file_select).all()
 
-    def __preload_movie_files(self) -> None:
-        all_file_keys: list[str] = [PlaylistJSON.file_key(self._show_id)]
+    def __preload_movie_files(self, show_key: str) -> None:
+        all_file_keys: list[str] = [PlaylistJSON.file_key(show_key)]
 
-        playlist_file = self._playlist_json(self._show_id)
-        if playlist_file.has_file_content():
+        playlist_file = self._playlist_json(show_key)
+        if playlist_file.get_content():
             playlist_json = playlist_file.parsed()
             playlist_bucket = self.client.playlist.extract_bucket(
                 playlist_json,
@@ -515,6 +531,6 @@ class FileMixin(BasePlugin, register=False):
             .where(File.plugin == self.plugin)
             .where(col(File.key).in_(all_file_keys))
         )
-        self._add_all_to_preload_cache(file_select)
+        self.db.exec(file_select).all()
 
     # endregion Preload

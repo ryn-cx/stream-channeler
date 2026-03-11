@@ -33,35 +33,37 @@ from app.utils import strict_re, tz_datetime
 
 
 class JustWatch(FileMixin, register=True):
+    _VERSION = "0.0.1"
+
     # region Import URL
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         match = strict_re.strict_match(self._url_regex(), url)
         source_name = match.group("source_name")
-        self._show_id = match.group("show_key")
+        show_key = match.group("show_key")
         _locale = match.group("locale")  # TODO: Support multiple locales from JustWatch
-        season_id = match.group("season_key")
+        season_key = match.group("season_key")
 
-        if not (shows := self._preload_shows()):
-            self._preload_show_files(self._show_id)
-            self.__validate_show_id(url)
-            self._preload_season_episode_files(self._show_id)
-            self._preload_all_latest_new_titles_files()
-            self._download_initial_files()
-            shows = self.__upsert_sources()
+        if not (shows := self._preload_show(show_key=show_key).all()):
+            self._preload_show_files(show_key)
+            self.__validate_show_key(show_key, url)
+            self._preload_season_episode_files(show_key)
+            self._preload_all_latest_new_titles_files(show_key)
+            self._download_initial_files(show_key)
+            shows = self.__upsert_sources(show_key)
 
-        return self.__create_url_import_results(shows, source_name, season_id)
+        return self.__create_url_import_results(shows, source_name, season_key)
 
-    def __validate_show_id(self, url: str) -> None:
-        series_json = self._url_title_details_file(self._show_id)
-        self._is_valid_url(series_json, url)
+    def __validate_show_key(self, show_key: str, url: str) -> None:
+        series_json = self._url_title_details_file(show_key)
+        self.raise_if_no_content(series_json, url)
 
     def __create_url_import_results(
         self,
         shows: Sequence[Show],
         source_name: str | None,
-        season_id: str | None,
+        season_key: str | None,
     ) -> list[URLImportResult]:
         output: list[URLImportResult] = []
         # If the user specified a source name get the show for that source only,
@@ -70,12 +72,12 @@ class JustWatch(FileMixin, register=True):
 
         # If the URL that the user used was for a specific season only return that
         # season.
-        if season_id:
+        if season_key:
             # The season.id value in the database is the internal one used by JustWatch,
             # but the user's input will be the external one used by JustWatch so the
             # easiest way to match a season is by using the actual season number. This
             # is probably reliable.
-            season_number = int(season_id.split("-")[-1])
+            season_number = int(season_key.split("-")[-1])
             for show in filtered_shows:
                 season = next(
                     (
@@ -137,7 +139,7 @@ class JustWatch(FileMixin, register=True):
         self.__process_new_titles_files(source)
 
         latest_browse_file = self._latest_browse_files[source.key]
-        last_update_timestamp = latest_browse_file.get_file_data_timestamp()
+        last_update_timestamp = latest_browse_file.get_data_timestamp()
         source.data_timestamp = last_update_timestamp
 
         # You can't just run update_source without a show so it is easier to manually
@@ -151,7 +153,7 @@ class JustWatch(FileMixin, register=True):
 
         for file in self.__new_titles_files_to_import(source):
             new_titles_file = self._db_file_to_new_titles_file(file)
-            source_key = new_titles_file.source_id
+            source_key = new_titles_file.source_key
             parsed_date = tz_datetime.combine(
                 new_titles_file.date,
                 datetime.min.time(),
@@ -176,11 +178,11 @@ class JustWatch(FileMixin, register=True):
                     show.seasons  # noqa: B018
                     # If the season was found only the season needs to be updated.
                     if season := Season.get_from_memory(self.db, show, season_key):
-                        season.set_update_at(get_new_titles.get_file_data_timestamp())
+                        season.set_update_at(get_new_titles.get_data_timestamp())
                     # If no season was found this contains a new episode so the show
                     # needs to be updated.
                     else:
-                        show.set_update_at(get_new_titles.get_file_data_timestamp())
+                        show.set_update_at(get_new_titles.get_data_timestamp())
 
             # Only mark a file as imported if the file definitely includes all of the
             # information for that date.
@@ -193,38 +195,42 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def update_show(self, show: Show) -> None:
-        self._show_id = show.key
-        self.__preload_update_media(show)
-        for show_file in self._show_files(show.key):
+        show_key = show.key
+        self.__preload_update_media(show_key)
+        for show_file in self._show_files(show_key):
             show_file.download_if_outdated(show.update_at)
-        self.__upsert_sources()
+        self.__upsert_sources(show_key)
 
     @override
     def update_season(self, season: Season) -> None:
-        self._show_id = season.show.key
-        self.__preload_update_media(season.show)
-        for season_file in self._season_files(season.show.key, season.key):
+        show_key = season.show.key
+        self.__preload_update_media(show_key)
+        for season_file in self._season_files(show_key, season.key):
             season_file.download_if_outdated(season.update_at)
-        self.__upsert_sources()
+        self.__upsert_sources(show_key)
 
     @override
     def update_episode(self, episode: Episode) -> None:
-        self._show_id = episode.season.show.key
-        self.__preload_update_media(episode.season.show)
-        for episode_file in self._episode_files(episode.season.key, episode.key):
+        show_key = episode.season.show.key
+        self.__preload_update_media(show_key)
+        for episode_file in self._episode_files(
+            episode.season.key,
+            episode.key,
+            show_key=show_key,
+        ):
             episode_file.download_if_outdated(episode.update_at)
-        self.__upsert_sources()
+        self.__upsert_sources(show_key)
 
     # endregion
 
     # region Preload
 
-    def __preload_update_media(self, show: Show) -> None:
-        self._preload_shows()
-        self._preload_show_season_episode_files(show.key)
+    def __preload_update_media(self, show_key: str) -> None:
+        self._preload_show(show_key=show_key)
+        self._preload_show_season_episode_files(show_key)
         # This must be run after _preload_show_season_episode_files because it relies
         # on those files to determine what sources are used.
-        self._preload_all_latest_new_titles_files()
+        self._preload_all_latest_new_titles_files(show_key)
 
     # endregion
 
@@ -278,64 +284,66 @@ class JustWatch(FileMixin, register=True):
 
     # region Upsert
 
-    def __upsert_sources(self) -> list[Show]:
+    def __upsert_sources(self, show_key: str) -> list[Show]:
         """Upsert all sources and their shows from the URL title details JSON."""
-        logger.info(f"Upserting: {self._pretty_show_name()} ({self._media_type})")
+        logger.info(
+            f"Upserting: {self._pretty_show_name(show_key)} ({self._media_type(show_key)})",
+        )
         source_dict_lookup = {source.key: source for source in self.plugin.sources}
         shows: list[Show] = []
-        for source_id, offer in self._sources_with_offers:
-            latest_browse_file = self._latest_browse_files[source_id]
+        for source_key, offer in self._sources_with_offers(show_key):
+            latest_browse_file = self._latest_browse_files[source_key]
             source = SourceInput(
-                key=source_id,
+                key=source_key,
                 name=offer.package.clear_name,
                 favicon_url=self._clean_favicon_image_url(offer.package.icon),
-                update_at=latest_browse_file.get_file_data_timestamp()
-                + timedelta(days=1),
-                data_timestamp=latest_browse_file.get_file_data_timestamp(),
-            ).upsert(self.plugin, source_dict_lookup.get(source_id))
-            shows.append(self.__upsert_show(source, offer))
+                update_at=latest_browse_file.get_data_timestamp() + timedelta(days=1),
+                data_timestamp=latest_browse_file.get_data_timestamp(),
+            ).upsert(self.plugin, source_dict_lookup.get(source_key))
+            shows.append(self.__upsert_show(source, offer, show_key))
         return shows
 
     def __upsert_show(
         self,
         source: Source,
         offer: url_title_details_models.Offer,
+        show_key: str,
     ) -> Show:
         # Soft delete everything then re-import everything to manage deletions.
-        if existing_show := Show.get_from_memory(self.db, source, self._show_id):
+        if existing_show := Show.get_from_memory(self.db, source, show_key):
             existing_show.soft_delete()
 
-        json_file = self._url_title_details_file(self._show_id)
+        json_file = self._url_title_details_file(show_key)
         parsed_json = json_file.parsed()
 
         show = ShowInput(
-            key=self._show_id,
+            key=show_key,
             name=parsed_json.data.url_v2.node.content.title,
-            media_type=self._media_type,
+            media_type=self._media_type(show_key),
             description=parsed_json.data.url_v2.node.content.short_description,
             url=self._clean_external_url(offer.standard_web_url),
             image_url=self._images_base_url()
             + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
-            data_timestamp=self._show_timestamp(self._show_id),
+            data_timestamp=self._show_timestamp(show_key),
         ).upsert(source, existing_show)
-        self.__upsert_seasons(show)
+        self.__upsert_seasons(show, show_key)
         return show
 
-    def __upsert_seasons(self, show: Show) -> None:
-        if self._media_type == "TV Show":
-            self.__upsert_show_seasons(show)
+    def __upsert_seasons(self, show: Show, show_key: str) -> None:
+        if self._media_type(show_key) == "TV Show":
+            self.__upsert_show_seasons(show, show_key)
         else:
-            self.__upsert_movie_season(show)
+            self.__upsert_movie_season(show, show_key)
 
-    def __upsert_show_seasons(self, show: Show) -> None:
+    def __upsert_show_seasons(self, show: Show, show_key: str) -> None:
         # TODO: Upstream in JustScrape, add the ability to parse specific types so there
         # is less need for checking for None.
-        json_file = self._url_title_details_file(self._show_id)
+        json_file = self._url_title_details_file(show_key)
         parsed_json = json_file.parsed()
         seasons_data = parsed_json.data.url_v2.node.seasons
         # TODO: Eventually this should be able to be removed once JustScrape is updated.
         if seasons_data is None:
-            msg = f"No seasons found for show: {self._show_id}"
+            msg = f"No seasons found for show: {show_key}"
             raise ValueError(msg)
         for season_data in seasons_data:
             existing_season = Season.get_from_memory(
@@ -352,14 +360,14 @@ class JustWatch(FileMixin, register=True):
                 sort_order=season_data.content.season_number,
                 season_number=season_data.content.season_number,
                 data_timestamp=self._season_timestamp(
-                    self._show_id,
+                    show_key,
                     season_data.id,
                 ),
             ).upsert(show, existing_season)
-            self.__upsert_season_episodes(show, season, season_data)
+            self.__upsert_season_episodes(show, season, season_data, show_key)
 
-    def __upsert_movie_season(self, show: Show) -> None:
-        file_content = self._url_title_details_file(self._show_id)
+    def __upsert_movie_season(self, show: Show, show_key: str) -> None:
+        file_content = self._url_title_details_file(show_key)
         parsed_json = file_content.parsed()
         node_id = parsed_json.data.url_v2.node.id
         existing_season = Season.get_from_memory(self.db, show, node_id)
@@ -367,15 +375,16 @@ class JustWatch(FileMixin, register=True):
             key=node_id,
             name="Movie",
             sort_order=0,
-            data_timestamp=self._season_timestamp(self._show_id, node_id),
+            data_timestamp=self._season_timestamp(show_key, node_id),
         ).upsert(show, existing_season)
-        self.__upsert_movie_episode(show, season)
+        self.__upsert_movie_episode(show, season, show_key)
 
     def __upsert_season_episodes(
         self,
         show: Show,
         season: Season,
         season_data: url_title_details_models.Season,
+        show_key: str,
     ) -> None:
         source_key = show.source.key
         custom_season_episodes_file = self._custom_season_episodes_file(
@@ -394,7 +403,7 @@ class JustWatch(FileMixin, register=True):
             # For a little bit of variety in the images, rotate through the backdrop
             # images so every episode doesn't have the same image.
             backdrops = (
-                self._url_title_details_file(self._show_id)
+                self._url_title_details_file(show_key)
                 .parsed()
                 .data.url_v2.node.content.full_backdrops
             )
@@ -420,16 +429,16 @@ class JustWatch(FileMixin, register=True):
                 air_date=season_episode.content.original_release_date,
             ).upsert(season, existing_episode)
 
-    def __upsert_movie_episode(self, show: Show, season: Season) -> None:
+    def __upsert_movie_episode(self, show: Show, season: Season, show_key: str) -> None:
         source_key = show.source.key
         episode_info = self._find_matching_episode(
             source_key,
-            self._url_title_details_file(self._show_id).parsed().data.url_v2.node,
+            self._url_title_details_file(show_key).parsed().data.url_v2.node,
         )
         if not episode_info:
             return
 
-        url_title_details_file = self._url_title_details_file(self._show_id)
+        url_title_details_file = self._url_title_details_file(show_key)
         url_title_details_data = url_title_details_file.parsed()
 
         existing_episode = Episode.get_from_memory(
@@ -489,7 +498,7 @@ class JustWatch(FileMixin, register=True):
     # TODO: What are FastItem entries?
     def _find_matching_episode(
         self,
-        source_id: str,
+        source_key: str,
         custom_buy_box_offers: custom_buy_box_offers_models.Node,  # | url_title_details_models.Node,
     ) -> (
         custom_buy_box_offers_models.FlatrateItem
@@ -527,7 +536,7 @@ class JustWatch(FileMixin, register=True):
             if not offer.package:
                 msg = "Offer package is None, which shouldn't happen."
                 raise ValueError(msg)
-            if offer.package.short_name == source_id:
+            if offer.package.short_name == source_key:
                 return offer
 
         return None

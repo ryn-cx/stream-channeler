@@ -1,8 +1,12 @@
-// TODO: Validate
 import { useMutation } from "@tanstack/react-query"
 import { ChannelsService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+
+interface ToggleEpisodeParams {
+  episodeId: string
+  showId: string
+}
 
 export function useToggleEpisodeWhitelist(
   channelId: string,
@@ -11,13 +15,16 @@ export function useToggleEpisodeWhitelist(
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   return useMutation({
-    mutationFn: (episodeId: string) =>
-      ChannelsService.swapEpisodeWhitelistStatus({
-        channelId: channelId,
-        episodeId,
+    mutationFn: ({ episodeId, showId }: ToggleEpisodeParams) =>
+      ChannelsService.setChannelShowWhitelist({
+        channelId,
+        showId,
+        requestBody: {
+          episodes: [{ id: episodeId, enabled: true }],
+        },
       }),
     // When mutate is called:
-    onMutate: async (episodeId, context) => {
+    onMutate: async ({ episodeId }, context) => {
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({
@@ -47,7 +54,7 @@ export function useToggleEpisodeWhitelist(
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
-    onError: (error, _episodeId, onMutateResult, context) => {
+    onError: (error, _variables, onMutateResult, context) => {
       context.client.setQueryData(
         ["episodes", queryChannelId],
         onMutateResult?.previousData,

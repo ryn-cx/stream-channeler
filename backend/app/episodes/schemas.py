@@ -47,7 +47,6 @@ class EpisodeOutput(BaseEpisode):
 
 class EpisodesListOutput(BaseModel):
     data: list[EpisodeOutput]
-    count: int
 
 
 class EpisodePostInput(BaseEpisode):

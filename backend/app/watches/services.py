@@ -3,10 +3,11 @@ import uuid
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, or_, select
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
+from app.plugins.models import Plugin
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.plugins.schemas import PluginOutput
 from app.seasons.models import Season
@@ -25,25 +26,9 @@ if TYPE_CHECKING:
     from app.plugins.plugins.utils.abstract_plugin import AbstractPlugin
 
 
-def _episode_watch_count_statement(session: Session, user_id: uuid.UUID) -> int:
-    # TODO: Consider changing this to joinedload if performance changes
-    statement = (
-        select(func.count())
-        .select_from(Watch)
-        .join(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-    )
-    statement = statement.where(Watch.user_id == user_id)
-    return session.exec(statement).one()
-
-
 def _episode_watch_select_statement(
     session: Session,
     user_id: uuid.UUID,
-    skip: int,
-    limit: int,
 ) -> Sequence[Watch]:
     # TODO: Consider changing this to joinedload if performance changes
     statement = (
@@ -52,28 +37,26 @@ def _episode_watch_select_statement(
         .join(Season)
         .join(Show)
         .join(Source)
+        .join(Plugin)
         .order_by(col(Watch.verified).asc(), col(Watch.watch_date).desc())
-        .offset(skip)
-        .limit(limit)
     )
     statement = statement.where(Watch.user_id == user_id)
+    statement = statement.where(
+        or_(col(Plugin.public).is_(True), col(Plugin.user_id) == user_id),
+    )
     return session.exec(statement).all()
 
 
 def get_watched_episodes(
     session: Session,
     user_id: uuid.UUID,
-    skip: int,
-    limit: int,
 ) -> WatchesListOutput:
-    count = _episode_watch_count_statement(session, user_id)
-    episode_watches = _episode_watch_select_statement(session, user_id, skip, limit)
-    return _format_watched_episodes_data(episode_watches, count)
+    episode_watches = _episode_watch_select_statement(session, user_id)
+    return _format_watched_episodes_data(episode_watches)
 
 
 def _format_watched_episodes_data(
     episode_watches: Sequence[Watch],
-    count: int,
 ) -> WatchesListOutput:
     episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
@@ -116,7 +99,6 @@ def _format_watched_episodes_data(
         shows=shows_dict,
         sources=sources_dict,
         plugins=plugins_dict,
-        count=count,
     )
 
 

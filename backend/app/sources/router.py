@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
-from app.media.service import create_record, delete_record, list_records, update_record
+from app.media.service import create_child, delete_record, list_children, update_record
 from app.models import Message
 from app.shows.models import Show
-from app.shows.schemas import ShowInput, ShowOutput, ShowPostInput, ShowsListOutput
-from app.sources.dependencies import UserSource
+from app.shows.schemas import ShowOutput, ShowPostInput, ShowsListOutput
+from app.sources.dependencies import ReadableSource, UserSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceOutput,
@@ -15,26 +15,27 @@ from app.sources.schemas import (
 router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-# FAST003 - Parameter is used by UserSource.
+# FAST003 - Parameter is used by ReadableSource.
 @router.get("/{source_id}", response_model=SourceOutput)  # noqa: FAST003
-def get_user_source(source: UserSource) -> Source:
-    """Get a source owned by the current user by its id."""
+def get_user_source(source: ReadableSource) -> Source:
+    """Get a source by its id if its plugin is public or owned by the current user."""
     return source
 
 
-# FAST003 - Parameter is used by UserSource.
+# FAST003 - Parameter is used by ReadableSource.
 @router.get("/{source_id}/shows", response_model=ShowsListOutput)  # noqa: FAST003
 def get_user_source_shows(
     session: SessionDep,
-    source: UserSource,
+    source: ReadableSource,
 ) -> ShowsListOutput:
-    """List all shows for a source."""
-    return list_records(
-        session=session,
-        parent=source,
-        child_model=Show,
-        parent_key="source_id",
-        list_output=ShowsListOutput,
+    """List all shows for a source if its plugin is public or owned by the current user."""
+    return list_children(
+        session,
+        Show,
+        "source_id",
+        source.id,
+        ShowOutput,
+        ShowsListOutput,
     )
 
 
@@ -46,13 +47,7 @@ def create_user_show(
     show_input: ShowPostInput,
 ) -> Show:
     """Create a show for a source."""
-    return create_record(
-        session=session,
-        parent=source,
-        post_input=show_input,
-        input_schema=ShowInput,
-        existing=Show.get(session, source, show_input.key),
-    )
+    return create_child(session, Show, source, show_input, "source_id")
 
 
 # FAST003 - Parameter is used by UserSource.
@@ -63,19 +58,11 @@ def update_user_source(
     source_input: SourcePatchInput,
 ) -> Source:
     """Update a source by its id."""
-    return update_record(
-        session=session,
-        entry=source,
-        body=source_input,
-    )
+    return update_record(session, source, source_input)
 
 
 # FAST003 - Parameter is used by UserSource.
 @router.delete("/{source_id}")  # noqa: FAST003
 def delete_user_source(session: SessionDep, source: UserSource) -> Message:
     """Delete a source by its id."""
-    return delete_record(
-        session=session,
-        entry=source,
-        model_name="Source",
-    )
+    return delete_record(session, source, "Source")

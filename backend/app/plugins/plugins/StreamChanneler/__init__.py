@@ -20,6 +20,8 @@ from app.sources.models import Source
 
 
 class StreamChanneler(BasePlugin, register=True):
+    _VERSION = "0.0.1"
+
     @classmethod
     @cache
     @override

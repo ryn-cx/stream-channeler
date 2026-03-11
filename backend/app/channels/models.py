@@ -16,27 +16,25 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import TimestampIdMixin
+from app.models import TimestampAndIdMixin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
 
 
 class BaseChannel(SQLModel):
-    name: str = Field()
+    name: str | None = Field(default=None)
     public: bool = Field(default=False)
     # Default value is required to be able to create a channel without a default order.
     # TODO: Make this always a str
     default_order: str | None = Field(default=None)
 
 
-class Channel(BaseChannel, TimestampIdMixin, table=True):
-    __table_args__ = (PrimaryKeyConstraint("user_id", "name"),)
+class Channel(BaseChannel, TimestampAndIdMixin, table=True):
+    __table_args__ = (PrimaryKeyConstraint("id"),)
 
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
-    user: User = Relationship(
-        back_populates="channels",
-    )
+    user: User = Relationship(back_populates="channels")
 
     shows: list[ChannelShow] = Relationship(
         back_populates="channel",
@@ -46,6 +44,12 @@ class Channel(BaseChannel, TimestampIdMixin, table=True):
         back_populates="channel",
         cascade_delete=True,
     )
+
+    def get_user_id(self, _session: Session) -> uuid.UUID:
+        return self.user_id
+
+    def is_public(self, _session: Session) -> bool:
+        return self.public
 
     @classmethod
     def get(
@@ -115,7 +119,7 @@ class BaseChannelShow(SQLModel):
     white_list_mode: bool = Field()
 
 
-class ChannelShow(BaseChannelShow, TimestampIdMixin, table=True):
+class ChannelShow(BaseChannelShow, TimestampAndIdMixin, table=True):
     """Many-to-many relationship between Channels and Shows."""
 
     __table_args__ = (
@@ -207,7 +211,11 @@ class BaseChannelSeasonWhiteList(SQLModel):
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
 
 
-class ChannelSeasonWhiteList(BaseChannelSeasonWhiteList, TimestampIdMixin, table=True):
+class ChannelSeasonWhiteList(
+    BaseChannelSeasonWhiteList,
+    TimestampAndIdMixin,
+    table=True,
+):
     """Many-to-many relationship between Channel Shows and Seasons.
 
     Allows the user to specify which seasons of a show to include in the channel.
@@ -235,7 +243,7 @@ class BaseChannelEpisodeWhiteList(SQLModel):
 
 class ChannelEpisodeWhiteList(
     BaseChannelEpisodeWhiteList,
-    TimestampIdMixin,
+    TimestampAndIdMixin,
     table=True,
 ):
     """Many-to-many relationship between Channel Shows and Episodes.
@@ -270,7 +278,7 @@ class BaseChannelQueue(SQLModel):
     note: str | None = Field(default=None)
 
 
-class ChannelQueue(BaseChannelQueue, TimestampIdMixin, table=True):
+class ChannelQueue(BaseChannelQueue, TimestampAndIdMixin, table=True):
     __table_args__ = (PrimaryKeyConstraint("channel_id", "url"),)
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")

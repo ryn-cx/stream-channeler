@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -31,21 +31,15 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
-def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> UsersPublic:
+def read_users(session: SessionDep) -> UsersPublic:
     """
     Retrieve users.
     """
-
-    count_statement = select(func.count()).select_from(User)
-    count = session.exec(count_statement).one()
-
-    statement = (
-        select(User).order_by(col(User.created_at).desc()).offset(skip).limit(limit)
-    )
+    statement = select(User).order_by(col(User.created_at).desc())
     users = session.exec(statement).all()
 
-    # reportArgumentType - Arguements are automatically converted.
-    return UsersPublic(data=users, count=count)  # pyright: ignore[reportArgumentType]
+    # reportArgumentType - Arguments are automatically converted.
+    return UsersPublic(data=users)  # pyright: ignore[reportArgumentType]
 
 
 @router.post(

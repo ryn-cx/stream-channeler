@@ -13,7 +13,7 @@ from sqlmodel import and_, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.channels.dependencies import safe_get_readable_channels
+from app.channels.dependencies import get_readable_channels
 from app.channels.models import (
     Channel,
     ChannelEpisodeWhiteList,
@@ -22,6 +22,7 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelMediaFilter
 from app.episodes.models import Episode
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -65,7 +66,7 @@ class EpisodeQueryBuilder:
 
     def _compile_channel_ids(self, main_channel: Channel) -> None:
         """Compile a list of channels that the user has access to."""
-        additional_channels = safe_get_readable_channels(
+        additional_channels = get_readable_channels(
             self._session,
             self._user,
             self._media_filter.additional_channels,
@@ -89,6 +90,7 @@ class EpisodeQueryBuilder:
         query = self._join_show_last_watched(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
+        query = self._filter_by_plugin_visibility(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
         query = self._filter_new_shows(query)
@@ -258,6 +260,23 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
         return query.where(col(Episode.deleted_at).is_(None))
+
+    def _filter_by_plugin_visibility(
+        self,
+        query: Select[tuple[Episode, Any]],
+    ) -> Select[tuple[Episode, Any]]:
+        """Filter out episodes from private plugins the viewer doesn't own."""
+        conditions = [col(Plugin.public).is_(True)]
+        if self._user:
+            conditions.append(col(Plugin.user_id) == self._user.id)
+        return (
+            query.join(Source, col(Show.source_id) == Source.id)
+            .join(
+                Plugin,
+                col(Source.plugin_id) == Plugin.id,
+            )
+            .where(or_(*conditions))
+        )
 
     def _filter_episodes_by_channels[
         T: Select[tuple[Episode, Any]] | Select[tuple[UUID, UUID]],

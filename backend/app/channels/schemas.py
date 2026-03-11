@@ -19,11 +19,32 @@ from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
 from app.sources.schemas import SourceOutput
+from app.users.models import User
 from app.utils import tz_datetime
 
 
 class ChannelInput(BaseChannel):
+    def upsert(
+        self,
+        user: User,
+        existing_channel: Channel | None,
+    ) -> Channel:
+        if existing_channel:
+            existing_channel.sqlmodel_update(self.model_dump())
+            return existing_channel
+        channel = Channel.model_validate(self, update={"user_id": user.id})
+        user.channels.append(channel)
+        return channel
+
+
+class ChannelPostInput(BaseChannel):
     pass
+
+
+class ChannelPatchInput(SQLModel):
+    name: str | None = Field(default=None)
+    public: bool = Field(default=False)
+    default_order: str | None = Field(default=None)
 
 
 class ChannelOutput(BaseChannel):
@@ -34,9 +55,8 @@ class ChannelOutput(BaseChannel):
     user_id: uuid.UUID
 
 
-class MultipleChannelOutputs(SQLModel):
+class ChannelsListOutput(SQLModel):
     data: list[ChannelOutput]
-    count: int
 
 
 # This schema is just used for inserting data into the database. It is not used for
@@ -81,9 +101,8 @@ class ChannelQueueOutput(BaseChannelQueue):
     id: uuid.UUID
 
 
-class MultipleChannelQueueOutputs(SQLModel):
+class ChannelQueuesListOutput(SQLModel):
     data: list[ChannelQueueOutput]
-    count: int
 
 
 class ChannelShowInput(BaseChannelShow):
@@ -269,21 +288,15 @@ class ChannelShowsOutput(SQLModel):
     sources: dict[uuid.UUID, SourceOutput] = Field(default_factory=dict)
 
 
-class WhitelistEpisodeInput(SQLModel):
+class WhitelistEntryInput(SQLModel):
     id: uuid.UUID
     enabled: bool
-
-
-class WhitelistSeasonInput(SQLModel):
-    id: uuid.UUID
-    enabled: bool
-    episodes: list[WhitelistEpisodeInput]
 
 
 class WhitelistShowInput(SQLModel):
-    id: uuid.UUID
-    whitelist_mode: bool
-    seasons: list[WhitelistSeasonInput]
+    whitelist_mode: bool | None = None
+    seasons: list[WhitelistEntryInput] = []
+    episodes: list[WhitelistEntryInput] = []
 
 
 class WhitelistShowOutput(ShowOutput):
@@ -301,17 +314,3 @@ class SortOptionOutput(BaseModel):
 
 class MultipleSortOptionOutputs(BaseModel):
     data: list[SortOptionOutput]
-    count: int
-
-
-class WhitelistStatusOutput(BaseModel):
-    visible: bool
-
-
-class ChannelNameItem(BaseModel):
-    id: str
-    name: str
-
-
-class ChannelNamesOutput(BaseModel):
-    data: list[ChannelNameItem]

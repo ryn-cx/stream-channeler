@@ -78,8 +78,6 @@ class AbstractPlugin(ABC):
         This function will be called when a show has an update_at value that is in the
         past and is after the data_timestamp value.
 
-        Must be implemented because the user can set update_at value on the Show model.
-
         Args:
             show: The show to update.
         """
@@ -91,9 +89,6 @@ class AbstractPlugin(ABC):
         This function will be called when a season has an update_at value that is in the
         past and is after the data_timestamp value.
 
-        Must be implemented because the user can set update_at value on the Season
-        model.
-
         Args:
             season: The season to update.
         """
@@ -104,9 +99,6 @@ class AbstractPlugin(ABC):
 
         This function will be called when an episode has an update_at value that is in
         the past and is after the data_timestamp value.
-
-        Must be implemented because the user can set update_at value on the Episode
-        model.
 
         Args:
             episode: The episode to update.

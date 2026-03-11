@@ -47,7 +47,6 @@ class ShowOutput(BaseShow):
 
 class ShowsListOutput(BaseModel):
     data: list[ShowOutput]
-    count: int
 
 
 class ShowPostInput(BaseShow):

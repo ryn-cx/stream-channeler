@@ -26,8 +26,17 @@ class Message(SQLModel):
     message: str
 
 
-class TimestampIdMixin(SQLModel):
-    """Mixin to add created_at, modified_at, and id fields to the model."""
+class IdMixin(SQLModel):
+    """Mixin to add a UUID id field to the model."""
+
+    id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+
+class TimestampMixin(SQLModel):
+    """Mixin to add created_at and modified_at fields to the model."""
 
     # This is basically the same as the "official" example of how to implement a
     # created_at timestamp as seen here:
@@ -44,7 +53,9 @@ class TimestampIdMixin(SQLModel):
         default_factory=tz_datetime.now,
     )
 
-    id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
+
+class TimestampAndIdMixin(IdMixin, TimestampMixin):
+    pass
 
 
 class BaseMediaMixin(SQLModel):
@@ -96,7 +107,7 @@ class BaseMediaMixin(SQLModel):
             self.update_at = update_at
 
 
-class MetadataMixin(TimestampIdMixin, BaseMediaMixin, ABC):
+class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
     def children(self) -> list[Source] | list[Show] | list[Season] | list[Episode]:
         """Return the direct children of the entry.
 
@@ -126,6 +137,15 @@ class MetadataMixin(TimestampIdMixin, BaseMediaMixin, ABC):
         if recursive:
             for child in self.children():
                 child.soft_delete(timestamp)
+
+    def soft_delete_missing_children(self, valid_keys: list[str] | set[str]) -> None:
+        """Soft-delete children whose key is not in valid_keys, including descendants."""
+        if isinstance(valid_keys, list):
+            valid_keys = set(valid_keys)
+
+        for child in self.children():
+            if child.key not in valid_keys and child.deleted_at is None:
+                child.soft_delete()
 
     def soft_undelete(self, *, recursive: bool = True) -> None:
         """Undelete the entry by setting the deleted_at value to None."""

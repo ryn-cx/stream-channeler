@@ -14,7 +14,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MetadataMixin
+from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -42,7 +42,7 @@ class BaseEpisode(BaseMediaMixin):
     air_date: date | None = Field(default=None)
 
 
-class Episode(BaseEpisode, MetadataMixin, table=True):
+class Episode(BaseEpisode, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
@@ -78,6 +78,18 @@ class Episode(BaseEpisode, MetadataMixin, table=True):
             .join(Plugin)
             .where(Season.id == self.season_id),
         ).first()
+
+    def is_public(self, session: Session) -> bool:
+        return bool(
+            session.exec(
+                select(Plugin.public)
+                .select_from(Season)
+                .join(Show)
+                .join(Source)
+                .join(Plugin)
+                .where(Season.id == self.season_id),
+            ).first(),
+        )
 
     def parent(self) -> Season:
         return self.season

@@ -6,7 +6,6 @@ from collections.abc import Callable
 from typing import Any
 
 from loguru import logger
-from pyinstrument import Profiler
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
@@ -57,13 +56,9 @@ def _process_outdated_items(
     updated_count = 0
 
     for item_id, plugin_id, item_name in item_infos:
-        profiler = Profiler()
-
         logger.info(
             f"Updating {media_type_name}: {item_name} (plugin: {plugin_id})",
         )
-
-        profiler.start()
 
         with Session(engine) as item_session:
             item = item_session.exec(
@@ -71,7 +66,6 @@ def _process_outdated_items(
             ).first()
 
             if not item:
-                profiler.stop()
                 logger.warning(
                     f"Item no longer exists: {item_name} ({item_id})",
                 )
@@ -99,12 +93,6 @@ def _process_outdated_items(
                 logger.error(
                     f"No matching plugin found for {media_type_name}: {item_name} (plugin_id: {plugin_id})",
                 )
-
-        profiler.stop()
-
-        logger.info(
-            f"Profile for {media_type_name} {item_name}:\n{profiler.output_text(unicode=True, color=True)}",
-        )
 
     logger.info(
         f"Updated {updated_count} out of {len(item_infos)} outdated {media_type_name}",

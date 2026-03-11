@@ -1,49 +1,17 @@
 # TODO: Validate
-import uuid
 from collections.abc import Sequence
 
-from fastapi import HTTPException, status
 from sqlmodel import Session
 
-from app.auth.dependencies import CurrentUser
-from app.channels.models import Channel, ChannelQueue, URLStatus
-from app.channels.schemas import ChannelInput, ChannelQueueInput
-
-
-def create_channel(
-    session: Session,
-    user_id: uuid.UUID,
-    channel_in: ChannelInput,
-) -> Channel:
-    channel = Channel.model_validate(channel_in, update={"user_id": user_id})
-    session.add(channel)
-    session.commit()
-    session.refresh(channel)
-    return channel
-
-
-def update_channel(
-    session: Session,
-    current_user: CurrentUser,
-    channel_in: ChannelInput,
-    channel: Channel,
-) -> Channel:
-    for existing_channel in current_user.channels:
-        if (
-            existing_channel.name == channel_in.name
-            and existing_channel.id != channel.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Channel with this name already exists",
-            )
-
-    update_dict = channel_in.model_dump(exclude_unset=True)
-    channel.sqlmodel_update(update_dict)
-    session.add(channel)
-    session.commit()
-    session.refresh(channel)
-    return channel
+from app.channels.models import (
+    Channel,
+    ChannelEpisodeWhiteList,
+    ChannelQueue,
+    ChannelSeasonWhiteList,
+    ChannelShow,
+    URLStatus,
+)
+from app.channels.schemas import ChannelQueueInput, WhitelistShowInput
 
 
 def add_urls_to_channel_import_queue(
@@ -71,3 +39,77 @@ def add_urls_to_channel_import_queue(
 
     session.commit()
     return output
+
+
+def update_whitelist(
+    session: Session,
+    channel_show: ChannelShow,
+    config: WhitelistShowInput,
+) -> None:
+    """Update whitelist entries for a channel show, only modifying provided values."""
+    if config.whitelist_mode is not None:
+        channel_show.white_list_mode = config.whitelist_mode
+
+    existing_seasons = {s.season_id for s in channel_show.season_white_list}
+    existing_episodes = {e.episode_id for e in channel_show.episode_white_list}
+
+    for season in config.seasons:
+        _toggle_season(
+            session,
+            channel_show,
+            season.id,
+            season.enabled,
+            existing_seasons,
+        )
+    for episode in config.episodes:
+        _toggle_episode(
+            session,
+            channel_show,
+            episode.id,
+            episode.enabled,
+            existing_episodes,
+        )
+
+    session.commit()
+
+
+def _toggle_season(
+    session: Session,
+    channel_show: ChannelShow,
+    season_id: object,
+    enabled: bool,
+    existing: set[object],
+) -> None:
+    if enabled and season_id not in existing:
+        channel_show.season_white_list.append(
+            ChannelSeasonWhiteList(
+                channel_show_id=channel_show.id,
+                season_id=season_id,
+            ),
+        )
+    elif not enabled and season_id in existing:
+        for entry in channel_show.season_white_list:
+            if entry.season_id == season_id:
+                session.delete(entry)
+                break
+
+
+def _toggle_episode(
+    session: Session,
+    channel_show: ChannelShow,
+    episode_id: object,
+    enabled: bool,
+    existing: set[object],
+) -> None:
+    if enabled and episode_id not in existing:
+        channel_show.episode_white_list.append(
+            ChannelEpisodeWhiteList(
+                channel_show_id=channel_show.id,
+                episode_id=episode_id,
+            ),
+        )
+    elif not enabled and episode_id in existing:
+        for entry in channel_show.episode_white_list:
+            if entry.episode_id == episode_id:
+                session.delete(entry)
+                break

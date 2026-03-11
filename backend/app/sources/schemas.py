@@ -47,7 +47,6 @@ class SourceOutput(BaseSource):
 
 class SourcesListOutput(BaseModel):
     data: list[SourceOutput]
-    count: int
 
 
 class SourcePostInput(BaseSource):

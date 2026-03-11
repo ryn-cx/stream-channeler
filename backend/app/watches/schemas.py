@@ -5,27 +5,13 @@ from datetime import datetime
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
-from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
 from app.sources.schemas import SourceOutput
 from app.utils import tz_datetime
-from app.watches.models import BaseWatch, Watch
-
-
-class WatchInput(BaseWatch):
-    user_id: uuid.UUID
-
-    def upsert(
-        self,
-        episode: Episode,
-        _existing: Watch | None,
-    ) -> Watch:
-        watch = Watch.model_validate(self, update={"episode_id": episode.id})
-        episode.watches.append(watch)
-        return watch
+from app.watches.models import BaseWatch
 
 
 class WatchPostInput(SQLModel):
@@ -55,12 +41,17 @@ class WatchOutput(BaseWatch):
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
     # the value will always be present so they need to be overridden.
     watch_date: datetime  # pyright: ignore[reportGeneralTypeIssues]
     verified: bool  # pyright: ignore[reportGeneralTypeIssues]
 
 
+# TODO: This includes a lot of unused data.
 class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
     episodes: dict[uuid.UUID, EpisodeOutput] = Field()
@@ -68,7 +59,6 @@ class WatchesListOutput(SQLModel):
     shows: dict[uuid.UUID, ShowOutput] = Field()
     sources: dict[uuid.UUID, SourceOutput] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
-    count: int = Field()
 
 
 class WatchImportFormatInformation(BaseModel):

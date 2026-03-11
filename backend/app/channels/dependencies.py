@@ -1,21 +1,33 @@
 import uuid
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Path, Query, status
 from sqlmodel import select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channels.models import Channel, ChannelShow
+from app.media.service import get_user_resource
 from app.users.dependencies import OptionalUser
 
 
-def get_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel:
+def require_user_channel(
+    session: SessionDep,
+    current_user: CurrentUser,
+    channel_id: Annotated[uuid.UUID, Path()],
+) -> Channel:
+    return get_user_resource(session, Channel, channel_id, current_user.id)
+
+
+UserChannel = Annotated[Channel, Depends(require_user_channel)]
+
+
+def require_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel:
     """Get a channel if it exists.
 
     Raises:
         HTTPException: If the channel does not exist.
     """
-    if channel := safe_get_channel(session, channel_id):
+    if channel := get_channel(session, channel_id):
         return channel
 
     raise HTTPException(
@@ -24,7 +36,7 @@ def get_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel:
     )
 
 
-def safe_get_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel | None:
+def get_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel | None:
     """Get a channel if it exists, without raising an exception.
 
     Returns:
@@ -33,7 +45,7 @@ def safe_get_channel(session: SessionDep, channel_id: uuid.UUID) -> Channel | No
     return session.exec(select(Channel).where(Channel.id == channel_id)).first()
 
 
-def get_readable_channel(
+def require_readable_channel(
     session: SessionDep,
     optional_user: OptionalUser,
     channel_id: uuid.UUID,
@@ -48,7 +60,7 @@ def get_readable_channel(
     Raises:
         HTTPException: If the user does not have permission to read the channel.
     """
-    channel = get_channel(session, channel_id)
+    channel = require_channel(session, channel_id)
 
     if _can_read_channel(channel, optional_user):
         return channel
@@ -62,14 +74,14 @@ def get_readable_channel(
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Not enough permissions",
+        detail="Not authorized to access this Channel",
     )
 
 
-ReadableChannel = Annotated[Channel, Depends(get_readable_channel)]
+ReadableChannel = Annotated[Channel, Depends(require_readable_channel)]
 
 
-def safe_get_readable_channels(
+def get_readable_channels(
     session: SessionDep,
     optional_user: OptionalUser,
     channel_ids: Annotated[list[uuid.UUID], Query()],
@@ -91,47 +103,19 @@ def safe_get_readable_channels(
     return [ch for ch in channels if _can_read_channel(ch, optional_user)]
 
 
-SafeReadableChannels = Annotated[list[Channel], Depends(safe_get_readable_channels)]
+ReadableChannels = Annotated[list[Channel], Depends(get_readable_channels)]
 
 
-def get_editable_channel(
+def require_user_channel_show(
     session: SessionDep,
-    current_user: CurrentUser,
-    channel_id: uuid.UUID,
-) -> Channel:
-    """Retrieve a channel by ID if it can be edited by the current user.
-
-    A channel is editable if any of the following conditions are met:
-    - The channel belongs to the current user.
-    - The current user is a superuser.
-
-    Raises:
-        HTTPException: If the user does not have permission to edit the channel.
-    """
-    channel = get_channel(session, channel_id)
-
-    if not _can_edit_channel(channel, current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions",
-        )
-
-    return channel
-
-
-EditableChannel = Annotated[Channel, Depends(get_editable_channel)]
-
-
-def get_editable_channel_show(
-    session: SessionDep,
-    channel: EditableChannel,
+    channel: UserChannel,
     show_id: uuid.UUID,
 ) -> ChannelShow:
-    """Retrieve a channel show if it can be edited by the current user.
+    """Retrieve a channel show if it belongs to the current user.
 
     Raises:
         HTTPException: 404 if the show is not found on the channel.
-            Permission to edit the channel is checked by the EditableChannel dependency.
+            Ownership is checked by the UserChannel dependency.
     """
     if not (channel_show := ChannelShow.get(session, channel, show_id)):
         raise HTTPException(
@@ -142,12 +126,7 @@ def get_editable_channel_show(
     return channel_show
 
 
-EditableChannelShow = Annotated[ChannelShow, Depends(get_editable_channel_show)]
-
-
-def _can_edit_channel(channel: Channel, user: CurrentUser) -> bool:
-    """Check if a user has edit access to a channel."""
-    return user.is_superuser or channel.user_id == user.id
+UserChannelShow = Annotated[ChannelShow, Depends(require_user_channel_show)]
 
 
 def _can_read_channel(channel: Channel, user: OptionalUser) -> bool:

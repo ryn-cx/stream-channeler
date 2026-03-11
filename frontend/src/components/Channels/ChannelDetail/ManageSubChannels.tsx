@@ -64,32 +64,14 @@ export function ManageAdditionalChannels({
     refetchOnMount: false,
   })
   const channels = channelsData?.data || []
-  const ownedChannelIds = channels.map((channel) => channel.id)
 
-  const channelIds = Array.from(
-    new Set([
-      ...currentChannelIds,
-      ...ownedChannelIds,
-      ...localAdditionalChannelIds,
-    ]),
+  const channelNames = channels.reduce(
+    (acc, channel) => {
+      acc[channel.id] = channel.name
+      return acc
+    },
+    {} as Record<string, string>,
   )
-
-  const { data: channelNamesData } = useQuery({
-    queryKey: ["channelNames", channelIds],
-    queryFn: () => ChannelsService.getChannelNames({ channelIds: channelIds }),
-    enabled: isOpen && channelIds.length > 0,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  })
-
-  const channelNames =
-    channelNamesData?.data?.reduce(
-      (acc, item) => {
-        acc[item.id] = item.name
-        return acc
-      },
-      {} as Record<string, string>,
-    ) || {}
 
   // Channels that the user owns that are not already in the chosen additional channels
   const selectableChannels = channels.filter(

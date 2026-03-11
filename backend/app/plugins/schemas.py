@@ -85,7 +85,6 @@ class PluginOutput(BasePlugin):
 
 class PluginsListOutput(BaseModel):
     data: list[PluginOutput]
-    count: int
 
 
 class PluginPostInput(BasePlugin):

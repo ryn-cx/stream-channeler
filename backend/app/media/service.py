@@ -1,42 +1,90 @@
 import uuid
-from typing import Any, overload
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+if TYPE_CHECKING:
+    from app.users.models import User
+
+from app.channels.models import Channel
+from app.channels.schemas import ChannelOutput, ChannelPatchInput, ChannelsListOutput
 from app.episodes.models import Episode
 from app.episodes.schemas import (
-    EpisodeInput,
+    EpisodeOutput,
     EpisodePatchInput,
     EpisodePostInput,
     EpisodesListOutput,
 )
-from app.models import Message, TimestampIdMixin
+from app.models import MediaMixin, Message
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginInput, PluginPatchInput, PluginPostInput
+from app.plugins.schemas import PluginOutput, PluginPatchInput, PluginsListOutput
 from app.seasons.models import Season
 from app.seasons.schemas import (
-    SeasonInput,
+    SeasonOutput,
     SeasonPatchInput,
     SeasonPostInput,
     SeasonsListOutput,
 )
 from app.shows.models import Show
-from app.shows.schemas import ShowInput, ShowPatchInput, ShowPostInput, ShowsListOutput
+from app.shows.schemas import ShowOutput, ShowPatchInput, ShowPostInput, ShowsListOutput
 from app.sources.models import Source
 from app.sources.schemas import (
-    SourceInput,
+    SourceOutput,
     SourcePatchInput,
     SourcePostInput,
     SourcesListOutput,
 )
-from app.users.models import User
 from app.watches.models import Watch
-from app.watches.schemas import WatchCreateInput, WatchInput, WatchPatchInput
+from app.watches.schemas import WatchPatchInput
+
+type MediaModel = Channel | Episode | Season | Show | Source | Plugin | Watch
+type ListOutput = (
+    ChannelsListOutput
+    | PluginsListOutput
+    | SourcesListOutput
+    | ShowsListOutput
+    | SeasonsListOutput
+    | EpisodesListOutput
+)
+type Output = (
+    ChannelOutput
+    | PluginOutput
+    | SourceOutput
+    | ShowOutput
+    | SeasonOutput
+    | EpisodeOutput
+)
+type PatchInput = (
+    ChannelPatchInput
+    | EpisodePatchInput
+    | SeasonPatchInput
+    | ShowPatchInput
+    | SourcePatchInput
+    | PluginPatchInput
+    | WatchPatchInput
+)
 
 
-def get_first_or_error[T: Episode | Season | Show | Source | Plugin | Watch](
+def list_children[T: ListOutput](  # noqa: PLR0913
+    session: Session,
+    model: type[Channel | Plugin | Source | Show | Season | Episode],
+    parent_key_field: str,
+    parent_id: uuid.UUID,
+    output_schema: type[Output],
+    list_schema: type[T],
+) -> T:
+    """Generic list: query children by FK, validate, and return list output."""
+    records = session.exec(
+        select(model).where(getattr(model, parent_key_field) == parent_id),
+    ).all()
+    data = [output_schema.model_validate(record) for record in records]
+    # Automatic Pydantic casting.
+    return list_schema(data=data)  # type: ignore[arg-type]
+
+
+def get_first_or_error[T: MediaModel](
     session: Session,
     statement: SelectOfScalar[T],
     current_user_id: uuid.UUID,
@@ -56,172 +104,120 @@ def get_first_or_error[T: Episode | Season | Show | Source | Plugin | Watch](
     )
 
 
-@overload
-def create_record(
+def get_first_readable_or_error[T: MediaModel](
     session: Session,
-    parent: Season,
-    post_input: EpisodePostInput,
-    input_schema: type[EpisodeInput],
-    existing: Episode | None = ...,
-) -> Episode: ...
+    statement: SelectOfScalar[T],
+    current_user_id: uuid.UUID | None,
+    name: str,
+) -> T:
+    """Execute query, allowing access if public, owned, or superuser."""
+    if result := session.exec(statement).first():
+        if result.is_public(session):
+            return result
+        if current_user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+            )
+        if result.get_user_id(session) != current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not authorized to access this {name}",
+            )
+        return result
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"{name} not found",
+    )
 
 
-@overload
-def create_record(
+def get_user_resource[T: MediaModel](
     session: Session,
-    parent: Show,
-    post_input: SeasonPostInput,
-    input_schema: type[SeasonInput],
-    existing: Season | None = ...,
-) -> Season: ...
+    model: type[T],
+    resource_id: uuid.UUID,
+    current_user_id: uuid.UUID,
+) -> T:
+    """Look up a resource by ID and verify user ownership."""
+    statement = select(model).where(model.id == resource_id)
+    return get_first_or_error(session, statement, current_user_id, model.__name__)
 
 
-@overload
-def create_record(
+def get_readable_resource[T: MediaModel](
     session: Session,
-    parent: Source,
-    post_input: ShowPostInput,
-    input_schema: type[ShowInput],
-    existing: Show | None = ...,
-) -> Show: ...
+    model: type[T],
+    resource_id: uuid.UUID,
+    user: User | None,
+) -> T:
+    """Get a resource by ID if it is public or owned by the current user."""
+    statement = select(model).where(model.id == resource_id)
+    user_id = user.id if user else None
+    return get_first_readable_or_error(session, statement, user_id, model.__name__)
 
 
-@overload
-def create_record(
-    session: Session,
-    parent: Plugin,
-    post_input: SourcePostInput,
-    input_schema: type[SourceInput],
-    existing: Source | None = ...,
-) -> Source: ...
-
-
-@overload
-def create_record(
-    session: Session,
-    parent: User,
-    post_input: PluginPostInput,
-    input_schema: type[PluginInput],
-    existing: Plugin | None = ...,
-) -> Plugin: ...
-
-
-@overload
-def create_record(
-    session: Session,
-    parent: Episode,
-    post_input: WatchCreateInput,
-    input_schema: type[WatchInput],
-    existing: Watch | None = ...,
-) -> Watch: ...
-
-
-def create_record(
-    session: Session,
-    parent: Season | Show | Source | Plugin | User | Episode,
-    post_input: (
-        EpisodePostInput
-        | SeasonPostInput
-        | ShowPostInput
-        | SourcePostInput
-        | PluginPostInput
-        | WatchCreateInput
-    ),
-    input_schema: type[
-        EpisodeInput | SeasonInput | ShowInput | SourceInput | PluginInput | WatchInput
-    ],
-    existing: Episode | Season | Show | Source | Plugin | Watch | None = None,
-) -> Episode | Season | Show | Source | Plugin | Watch:
-    """Generic create for a child entry under a parent."""
+def raise_if_exists(
+    existing: MediaModel | None,
+) -> None:
+    """Raise 409 Conflict if a record already exists."""
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"{existing.__class__.__name__} with this key already exists",
         )
-    dumped = post_input.model_dump()
-    # arg-type - As long as overloads are used correctly this is safe
-    entry = input_schema(**dumped).upsert(parent, None)  # type: ignore[arg-type]
+
+
+def create_child[T: Source | Show | Season | Episode](
+    session: Session,
+    model: type[T],
+    parent: Plugin | Source | Show | Season,
+    body: SourcePostInput | ShowPostInput | SeasonPostInput | EpisodePostInput,
+    parent_key: str,
+) -> T:
+    """Generic create: check for existing, validate, add, commit, and return."""
+    # There is no good way to type hint the relationship between the parent and child
+    # models.
+    raise_if_exists(model.get(session, parent, body.key))  # type: ignore[attr-defined, arg-type]
+    child = model.model_validate(body, update={parent_key: parent.id})
+    session.add(child)
     session.commit()
-    return entry
+    session.refresh(child)
+    return child  # type: ignore[return-value]
 
 
-def update_record[T: TimestampIdMixin](
+def _check_duplicate_key(
+    session: Session,
+    entry: MediaModel,
+    body: PatchInput,
+) -> None:
+    """Raise 409 if updating key would conflict with a sibling record."""
+    if not isinstance(entry, MediaMixin):
+        return
+    new_key = getattr(body, "key", None)
+    if new_key is None or new_key == entry.key:
+        return
+    if isinstance(entry, Plugin):
+        existing = Plugin.get(session, new_key, user_id=entry.user_id)
+    else:
+        model = type(entry)
+        existing = model.get(session, entry.parent(), new_key)  # type: ignore[arg-type]
+    raise_if_exists(existing)
+
+
+def update_record[T: MediaModel](
     session: Session,
     entry: T,
-    body: (
-        EpisodePatchInput
-        | SeasonPatchInput
-        | ShowPatchInput
-        | SourcePatchInput
-        | PluginPatchInput
-        | WatchPatchInput
-    ),
+    body: PatchInput,
 ) -> T:
     """Generic update: apply patch, commit, refresh, and return."""
+    _check_duplicate_key(session, entry, body)
     entry.sqlmodel_update(body.model_dump(exclude_unset=True))
     session.commit()
     session.refresh(entry)
     return entry
 
 
-@overload
-def list_records(
-    session: Session,
-    parent: Season,
-    child_model: type[Episode],
-    parent_key: str,
-    list_output: type[EpisodesListOutput],
-) -> EpisodesListOutput: ...
-
-
-@overload
-def list_records(
-    session: Session,
-    parent: Show,
-    child_model: type[Season],
-    parent_key: str,
-    list_output: type[SeasonsListOutput],
-) -> SeasonsListOutput: ...
-
-
-@overload
-def list_records(
-    session: Session,
-    parent: Source,
-    child_model: type[Show],
-    parent_key: str,
-    list_output: type[ShowsListOutput],
-) -> ShowsListOutput: ...
-
-
-@overload
-def list_records(
-    session: Session,
-    parent: Plugin,
-    child_model: type[Source],
-    parent_key: str,
-    list_output: type[SourcesListOutput],
-) -> SourcesListOutput: ...
-
-
-def list_records(
-    session: Session,
-    parent: Season | Show | Source | Plugin,
-    child_model: type[Episode | Season | Show | Source],
-    parent_key: str,
-    list_output: type[
-        EpisodesListOutput | SeasonsListOutput | ShowsListOutput | SourcesListOutput
-    ],
-) -> EpisodesListOutput | SeasonsListOutput | ShowsListOutput | SourcesListOutput:
-    """Generic list: query children of a parent and return a list output."""
-    column = getattr(child_model, parent_key)
-    records: Any = session.exec(select(child_model).where(column == parent.id)).all()
-    return list_output(data=list(records), count=len(records))
-
-
 def delete_record(
     session: Session,
-    entry: Episode | Season | Show | Source | Plugin | Watch,
+    entry: MediaModel,
     model_name: str,
 ) -> Message:
     """Generic delete: remove entry, commit, and return a success message."""

@@ -1,16 +1,15 @@
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
-from app.media.service import create_record, delete_record, list_records, update_record
+from app.media.service import create_child, delete_record, list_children, update_record
 from app.models import Message
 from app.seasons.models import Season
 from app.seasons.schemas import (
-    SeasonInput,
     SeasonOutput,
     SeasonPostInput,
     SeasonsListOutput,
 )
-from app.shows.dependencies import UserShow
+from app.shows.dependencies import ReadableShow, UserShow
 from app.shows.models import Show
 from app.shows.schemas import (
     ShowOutput,
@@ -20,26 +19,27 @@ from app.shows.schemas import (
 router = APIRouter(prefix="/shows", tags=["shows"])
 
 
-# FAST003 - Parameter is used by UserShow.
+# FAST003 - Parameter is used by ReadableShow.
 @router.get("/{show_id}", response_model=ShowOutput)  # noqa: FAST003
-def get_user_show(show: UserShow) -> Show:
-    """Get a show owned by the current user by its id."""
+def get_user_show(show: ReadableShow) -> Show:
+    """Get a show by its id if its plugin is public or owned by the current user."""
     return show
 
 
-# FAST003 - Parameter is used by UserShow.
+# FAST003 - Parameter is used by ReadableShow.
 @router.get("/{show_id}/seasons", response_model=SeasonsListOutput)  # noqa: FAST003
 def get_user_show_seasons(
     session: SessionDep,
-    show: UserShow,
+    show: ReadableShow,
 ) -> SeasonsListOutput:
-    """List all seasons for a show."""
-    return list_records(
-        session=session,
-        parent=show,
-        child_model=Season,
-        parent_key="show_id",
-        list_output=SeasonsListOutput,
+    """List all seasons for a show if its plugin is public or owned by the current user."""
+    return list_children(
+        session,
+        Season,
+        "show_id",
+        show.id,
+        SeasonOutput,
+        SeasonsListOutput,
     )
 
 
@@ -51,13 +51,7 @@ def create_user_season(
     season_input: SeasonPostInput,
 ) -> Season:
     """Create a season for a show."""
-    return create_record(
-        session=session,
-        parent=show,
-        post_input=season_input,
-        input_schema=SeasonInput,
-        existing=Season.get(session, show, season_input.key),
-    )
+    return create_child(session, Season, show, season_input, "show_id")
 
 
 # FAST003 - Parameter is used by UserShow.
@@ -68,19 +62,11 @@ def update_user_show(
     show_input: ShowPatchInput,
 ) -> Show:
     """Update a show by its id."""
-    return update_record(
-        session=session,
-        entry=show,
-        body=show_input,
-    )
+    return update_record(session, show, show_input)
 
 
 # FAST003 - Parameter is used by UserShow.
 @router.delete("/{show_id}")  # noqa: FAST003
 def delete_user_show(session: SessionDep, show: UserShow) -> Message:
     """Delete a show by its id."""
-    return delete_record(
-        session=session,
-        entry=show,
-        model_name="Show",
-    )
+    return delete_record(session, show, "Show")

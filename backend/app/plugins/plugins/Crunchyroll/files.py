@@ -1,7 +1,7 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
-from functools import cache, cached_property
+from functools import cache
 from typing import Any, override
 
 from chirashi import Chirashi
@@ -10,18 +10,17 @@ from chirashi.episodes import models as episodes_models
 from chirashi.exceptions import HTTPError
 from chirashi.seasons import models as seasons_models
 from chirashi.series import models as series_models
-from loguru import logger
 from sqlmodel import Session, col, select
 
 from app.config import settings
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
-from app.plugins.plugins.utils.base_files import JSONFile
-from app.plugins.plugins.utils.base_plugin import BasePlugin
+from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
 from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils import tz_datetime
 
 
 @cache
@@ -30,20 +29,20 @@ def chirashi_client() -> Chirashi:
 
 
 class Series(JSONFile[series_models.Series]):
-    def __init__(self, db: Session, plugin: Plugin, show_id: str) -> None:
-        self.__show_id = show_id
+    def __init__(self, db: Session, plugin: Plugin, show_key: str) -> None:
+        self.__show_key = show_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return self.__show_id
+        return self.__show_key
 
     def _download(self) -> None:
-        with self._log_download(self.__show_id):
+        with self._log_download(self.__show_key):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             series = chirashi_client().series
             try:
-                response = series.get(self.__show_id)
+                response = series.get(self.__show_key)
                 content = series.dump_response(response)
                 self._write(content)
             # Occurs when a user puts in an invalid URL.
@@ -63,20 +62,20 @@ class Seasons(JSONFile[seasons_models.Seasons]):
         self,
         db: Session,
         plugin: Plugin,
-        show_id: str,
+        show_key: str,
     ) -> None:
-        self.__show_id = show_id
+        self.__show_key = show_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return self.__show_id
+        return self.__show_key
 
     def _download(self) -> None:
-        with self._log_download(self.__show_id):
+        with self._log_download(self.__show_key):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             seasons = chirashi_client().seasons
-            response = seasons.get(self.__show_id)
+            response = seasons.get(self.__show_key)
             content = seasons.dump_response(response)
             self._write(content)
 
@@ -90,20 +89,20 @@ class Episodes(JSONFile[episodes_models.Episodes]):
         self,
         db: Session,
         plugin: Plugin,
-        season_id: str,
+        season_key: str,
     ) -> None:
-        self.__season_id = season_id
+        self.__season_key = season_key
         super().__init__(db, plugin)
 
     @override
     def unique_identifier(self) -> str:
-        return self.__season_id
+        return self.__season_key
 
     def _download(self) -> None:
-        with self._log_download(self.__season_id):
+        with self._log_download(self.__season_key):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             episodes = chirashi_client().episodes
-            response = episodes.get(self.__season_id)
+            response = episodes.get(self.__season_key)
             content = episodes.dump_response(response)
             self._write(content)
 
@@ -156,10 +155,8 @@ class FileMixin(BasePlugin, register=False):
         season: Season | None = None,
         episode: Episode | None = None,
     ) -> None:
-        self.__series_file: dict[str, Series] = {}
-        self.__seasons_file: dict[str, Seasons] = {}
-        self.__episodes_file: dict[str, Episodes] = {}
-        self.__browse_file: dict[datetime, Browse] = {}
+        self.__series_cache: dict[str, Series] = {}
+        self.__seasons_cache: dict[str, Seasons] = {}
         super().__init__(
             db,
             url=url,
@@ -169,168 +166,132 @@ class FileMixin(BasePlugin, register=False):
             episode=episode,
         )
 
-    # region File Cache
+    # region File Wrappers
 
-    def _series_file(self, show_id: str) -> Series:
+    def _series_file(self, show_key: str) -> Series:
         return self._get_cached_file(
-            self.__series_file,
-            show_id,
-            lambda: Series(self.db, self.plugin, show_id),
+            self.__series_cache,
+            show_key,
+            lambda: Series(self.db, self.plugin, show_key),
         )
 
-    def _seasons_file(self, show_id: str) -> Seasons:
+    def _seasons_file(self, show_key: str) -> Seasons:
         return self._get_cached_file(
-            self.__seasons_file,
-            show_id,
-            lambda: Seasons(self.db, self.plugin, show_id),
+            self.__seasons_cache,
+            show_key,
+            lambda: Seasons(self.db, self.plugin, show_key),
         )
 
-    def _episodes_file(self, season_id: str) -> Episodes:
-        return self._get_cached_file(
-            self.__episodes_file,
-            season_id,
-            lambda: Episodes(self.db, self.plugin, season_id),
-        )
+    def _episodes_file(self, season_key: str) -> Episodes:
+        return Episodes(self.db, self.plugin, season_key)
 
-    def _browse_file(self, last_update_datetime: datetime) -> Browse:
-        return self._get_cached_file(
-            self.__browse_file,
-            last_update_datetime,
-            lambda: Browse(self.db, self.plugin, last_update_datetime),
-        )
+    def _browse_file(self, key: datetime | str) -> Browse:
+        if isinstance(key, str):
+            identifier = Browse.file_key_to_unique_identifier(key)
+            key = tz_datetime.fromisotimestamp(identifier)
+        return Browse(self.db, self.plugin, key)
 
-    # endregion File Cache
+    # endregion File Wrappers
 
     # region File Groups
 
-    def _show_files(self, show_id: str) -> Sequence[Series | Seasons]:
+    @override
+    def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
         return [
             # Required to detect changes to the show.
-            self._series_file(show_id),
+            self._series_file(show_key),
             # Required to detect new seasons.
-            self._seasons_file(show_id),
+            self._seasons_file(show_key),
         ]
 
-    def _season_files(
-        self,
-        show_id: str,
-        season_id: str,
-    ) -> Sequence[Seasons | Episodes]:
+    @override
+    def _season_files(self, season_key: str) -> Sequence[Seasons | Episodes]:
         return [
-            # Required to detect changes to the season.
-            self._seasons_file(show_id),
             # Required to detect new episodes.
-            self._episodes_file(season_id),
+            self._episodes_file(season_key),
         ]
 
-    def _episode_files(self, season_id: str) -> Sequence[Episodes]:
+    @override
+    def _episode_files(self, season_key: str) -> Sequence[Episodes]:
         # Required to detect changes to the episode.
-        return [self._episodes_file(season_id)]
+        return [self._episodes_file(season_key)]
 
     # endregion File Groups
 
     # region Timestamps
 
-    def _show_timestamp(self, show_id: str) -> datetime:
-        return super()._show_timestamp(show_id)
+    def _show_timestamp(self, show_key: str) -> datetime:
+        return super()._show_timestamp(show_key)
 
-    def _season_timestamp(self, show_id: str, season_id: str) -> datetime:
-        return super()._season_timestamp(show_id, season_id)
+    def _season_timestamp(self, season_key: str) -> datetime:
+        return super()._season_timestamp(season_key)
 
-    def _episode_timestamp(self, season_id: str) -> datetime:
-        return super()._episode_timestamp(season_id)
+    def _episode_timestamp(self, season_key: str) -> datetime:
+        return super()._episode_timestamp(season_key)
 
     # endregion Timestamps
 
-    # region Cached File Values
+    # region File Data
 
-    @cached_property
-    def _season_ids_from_file(self) -> list[str]:
+    @override
+    def _season_keys_from_file(self, show_key: str) -> list[str]:
         return [
-            season_data.id
-            for season_data in self._seasons_file(self._show_id).parsed().data
+            season_data.id for season_data in self._seasons_file(show_key).parsed().data
         ]
 
-    @cached_property
-    def _episode_ids_from_file(self) -> list[str]:
-        return [
-            episode_data.id
-            for season_id in self._season_ids_from_file
-            for episode_data in self._episodes_file(season_id).parsed().data
-        ]
+    @override
+    def _video_keys_from_file(
+        self,
+        season_keys: str | list[str],
+    ) -> list[str]:
+        # Crunchyroll episode files are keyed by season, so episode-level IDs
+        # are season IDs for the purposes of the download chain.
+        if isinstance(season_keys, str):
+            return [season_keys]
+        return list(season_keys)
 
-    # endregion Cached File Values
-
-    # region Download
-
-    def _download_initial_files(self) -> None:
-        logger.info(f"Downloading Initial Files For: {self._pretty_show_name()}")
-        self.__download_initial_series()
-        self.__download_initial_seasons()
-        self.__download_initial_episodes()
-
-    def __download_initial_series(self) -> None:
-        self._series_file(self._show_id)
-
-    def __download_initial_seasons(self) -> None:
-        self._seasons_file(self._show_id)
-
-    def __download_initial_episodes(self) -> None:
-        for season_id in self._season_ids_from_file:
-            self._episodes_file(season_id)
-
-    # endregion Download
+    # endregion File Data
 
     # region Preload
 
-    def _preload_show_season_episode_files(self) -> None:
-        self.__preload_show_files()
-        self.__preload_season_files()
-        self.__preload_episode_files()
-
-    def __preload_show_files(self) -> None:
-        show_file_select = (
+    @override
+    def _preload_show_files(self, show_key: str) -> Sequence[File]:
+        statement = (
             select(File)
             .where(File.plugin == self.plugin)
             .where(
                 col(File.key).in_(
                     [
-                        Series.file_key(self._show_id),
-                        Seasons.file_key(self._show_id),
+                        Series.file_key(show_key),
+                        Seasons.file_key(show_key),
                     ],
                 ),
             )
         )
-        self._add_all_to_preload_cache(show_file_select)
+        return self.db.exec(statement).all()
 
-    def __preload_season_files(self) -> None:
-        season_file_select = (
+    @override
+    def _preload_season_files(self, season_keys: list[str]) -> Sequence[File]:
+        keys = [Episodes.file_key(sid) for sid in season_keys]
+        statement = (
             select(File)
             .where(File.plugin == self.plugin)
-            .where(
-                col(File.key).in_(
-                    [
-                        Seasons.file_key(self._show_id),
-                    ],
-                ),
-            )
+            .where(col(File.key).in_(keys))
         )
-        self._add_all_to_preload_cache(season_file_select)
+        return self.db.exec(statement).all()
 
-    def __preload_episode_files(self) -> None:
-        episode_file_select = (
+    @override
+    def _preload_episode_files(self, episode_keys: list[str]) -> Sequence[File]:
+        keys = [Episodes.file_key(eid) for eid in episode_keys]
+        statement = (
             select(File)
             .where(File.plugin == self.plugin)
-            .where(
-                col(File.key).in_(
-                    [
-                        Episodes.file_key(season_id)
-                        for season_id in self._season_ids_from_file
-                    ],
-                ),
-            )
+            .where(col(File.key).in_(keys))
         )
-        self._add_all_to_preload_cache(episode_file_select)
+        return self.db.exec(statement).all()
+
+    def _preload_show_season_episode_files(self, show_key: str) -> None:
+        self._preload_show_files(show_key)
 
     def _preload_latest_browse_file(self) -> File | None:
         statement = (
@@ -341,6 +302,6 @@ class FileMixin(BasePlugin, register=False):
             )
             .order_by(col(File.data_timestamp).desc())
         )
-        return self._add_first_to_preload_cache(statement)
+        return self.db.exec(statement).first()
 
     # endregion Preload

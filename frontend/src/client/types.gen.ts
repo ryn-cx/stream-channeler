@@ -32,27 +32,50 @@ export type ChannelEpisodesOutput = {
     };
 };
 
-export type ChannelInput = {
-    name: string;
-    public?: boolean;
-    default_order?: (string | null);
-};
-
-export type ChannelNameItem = {
-    id: string;
-    name: string;
-};
-
-export type ChannelNamesOutput = {
-    data: Array<ChannelNameItem>;
+export type ChannelMediaFilter = {
+    sortBy?: Array<(string)>;
+    episodeOrdering?: boolean;
+    episodeInterleaving?: (string | null);
+    additionalChannels?: Array<(string)>;
+    rotateShows?: boolean;
+    rotateShowsRandomly?: boolean;
+    randomizeOnLastSort?: boolean;
+    hideWatched?: boolean;
+    hideUnwatched?: boolean;
+    maximumWatchDateAbsolute?: (string | null);
+    minimumAirDateAbsolute?: (string | null);
+    maximumAirDateAbsolute?: (string | null);
+    minimumReleaseDateAbsolute?: (string | null);
+    maximumReleaseDateAbsolute?: (string | null);
+    maximumWatchDateRelative?: (number | null);
+    minimumAirDateRelative?: (number | null);
+    maximumAirDateRelative?: (number | null);
+    minimumReleaseDateRelative?: (number | null);
+    maximumReleaseDateRelative?: (number | null);
+    onlyStartedShows?: boolean;
+    onlyNewShows?: boolean;
+    minimumDuration?: (number | null);
+    maximumDuration?: (number | null);
 };
 
 export type ChannelOutput = {
-    name: string;
+    name?: (string | null);
     public?: boolean;
     default_order?: (string | null);
     id: string;
     user_id: string;
+};
+
+export type ChannelPatchInput = {
+    name?: (string | null);
+    public?: boolean;
+    default_order?: (string | null);
+};
+
+export type ChannelPostInput = {
+    name?: (string | null);
+    public?: boolean;
+    default_order?: (string | null);
 };
 
 export type ChannelQueueOutput = {
@@ -62,11 +85,19 @@ export type ChannelQueueOutput = {
     id: string;
 };
 
+export type ChannelQueuesListOutput = {
+    data: Array<ChannelQueueOutput>;
+};
+
 export type ChannelShowsOutput = {
     shows?: Array<ShowOutput>;
     sources?: {
         [key: string]: SourceOutput;
     };
+};
+
+export type ChannelsListOutput = {
+    data: Array<ChannelOutput>;
 };
 
 export type EpisodeOutput = {
@@ -124,7 +155,6 @@ export type EpisodePostInput = {
 
 export type EpisodesListOutput = {
     data: Array<EpisodeOutput>;
-    count: number;
 };
 
 export type EpisodeWithExtrasOutput = {
@@ -158,19 +188,8 @@ export type Message = {
     message: string;
 };
 
-export type MultipleChannelOutputs = {
-    data: Array<ChannelOutput>;
-    count: number;
-};
-
-export type MultipleChannelQueueOutputs = {
-    data: Array<ChannelQueueOutput>;
-    count: number;
-};
-
 export type MultipleSortOptionOutputs = {
     data: Array<SortOptionOutput>;
-    count: number;
 };
 
 export type NewPassword = {
@@ -185,6 +204,8 @@ export type PluginOutput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     name?: (string | null);
+    version?: (string | null);
+    public: boolean;
     id: string;
     user_id?: (string | null);
 };
@@ -196,6 +217,8 @@ export type PluginPatchInput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     name?: (string | null);
+    version?: (string | null);
+    public: boolean;
 };
 
 export type PluginPostInput = {
@@ -205,11 +228,12 @@ export type PluginPostInput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     name?: (string | null);
+    version?: (string | null);
+    public: boolean;
 };
 
 export type PluginsListOutput = {
     data: Array<PluginOutput>;
-    count: number;
 };
 
 export type PrivateUserCreate = {
@@ -262,7 +286,6 @@ export type SeasonPostInput = {
 
 export type SeasonsListOutput = {
     data: Array<SeasonOutput>;
-    count: number;
 };
 
 export type ShowOutput = {
@@ -308,7 +331,6 @@ export type ShowPostInput = {
 
 export type ShowsListOutput = {
     data: Array<ShowOutput>;
-    count: number;
 };
 
 export type SortOptionOutput = {
@@ -353,7 +375,6 @@ export type SourcePostInput = {
 
 export type SourcesListOutput = {
     data: Array<SourceOutput>;
-    count: number;
 };
 
 export type Token = {
@@ -393,7 +414,6 @@ export type UserRegister = {
 
 export type UsersPublic = {
     data: Array<UserPublic>;
-    count: number;
 };
 
 export type UserUpdate = {
@@ -432,7 +452,6 @@ export type WatchesListOutput = {
     plugins: {
         [key: string]: PluginOutput;
     };
-    count: number;
 };
 
 export type WatchImportEntry = {
@@ -485,21 +504,15 @@ export type WatchPostInput = {
     verified?: boolean;
 };
 
-export type WhitelistEpisodeInput = {
+export type WhitelistEntryInput = {
     id: string;
     enabled: boolean;
-};
-
-export type WhitelistSeasonInput = {
-    id: string;
-    enabled: boolean;
-    episodes: Array<WhitelistEpisodeInput>;
 };
 
 export type WhitelistShowInput = {
-    id: string;
-    whitelist_mode: boolean;
-    seasons: Array<WhitelistSeasonInput>;
+    whitelist_mode?: (boolean | null);
+    seasons?: Array<WhitelistEntryInput>;
+    episodes?: Array<WhitelistEntryInput>;
 };
 
 export type WhitelistShowOutput = {
@@ -522,105 +535,34 @@ export type WhitelistShowOutput = {
     episodes: Array<EpisodeOutput>;
 };
 
-export type WhitelistStatusOutput = {
-    visible: boolean;
+export type ChannelsGetUserChannelsResponse = (ChannelsListOutput);
+
+export type ChannelsCreateUserChannelData = {
+    requestBody: ChannelPostInput;
 };
+
+export type ChannelsCreateUserChannelResponse = (ChannelOutput);
 
 export type ChannelsGetSortOptionsResponse = (MultipleSortOptionOutputs);
 
-export type ChannelsGetChannelsData = {
-    limit?: number;
-    skip?: number;
-};
-
-export type ChannelsGetChannelsResponse = (MultipleChannelOutputs);
-
-export type ChannelsCreateChannelData = {
-    requestBody: ChannelInput;
-};
-
-export type ChannelsCreateChannelResponse = (ChannelOutput);
-
-export type ChannelsGetChannelNamesData = {
-    channelIds: Array<(string)>;
-};
-
-export type ChannelsGetChannelNamesResponse = (ChannelNamesOutput);
-
-export type ChannelsGetChannelData = {
+export type ChannelsGetUserChannelData = {
     channelId: string;
 };
 
-export type ChannelsGetChannelResponse = (ChannelOutput);
+export type ChannelsGetUserChannelResponse = (ChannelOutput);
 
-export type ChannelsUpdateChannelData = {
+export type ChannelsUpdateUserChannelData = {
     channelId: string;
-    requestBody: ChannelInput;
+    requestBody: ChannelPatchInput;
 };
 
-export type ChannelsUpdateChannelResponse = (ChannelOutput);
+export type ChannelsUpdateUserChannelResponse = (ChannelOutput);
 
-export type ChannelsDeleteChannelData = {
-    channelId: string;
-};
-
-export type ChannelsDeleteChannelResponse = (Message);
-
-export type ChannelsAddUrlsToChannelImportQueueData = {
-    channelId: string;
-    requestBody: Array<(string)>;
-};
-
-export type ChannelsAddUrlsToChannelImportQueueResponse = (MultipleChannelQueueOutputs);
-
-export type ChannelsGetChannelImportQueueData = {
-    channelId: string;
-    limit?: number;
-    skip?: number;
-};
-
-export type ChannelsGetChannelImportQueueResponse = (MultipleChannelQueueOutputs);
-
-export type ChannelsDeleteUrlFromChannelImportQueueData = {
-    channelId: string;
-    urlId: string;
-};
-
-export type ChannelsDeleteUrlFromChannelImportQueueResponse = (Message);
-
-export type ChannelsClearCompletedChannelImportQueueData = {
+export type ChannelsDeleteUserChannelData = {
     channelId: string;
 };
 
-export type ChannelsClearCompletedChannelImportQueueResponse = (Message);
-
-export type ChannelsSetChannelShowWhitelistData = {
-    channelId: string;
-    requestBody: WhitelistShowInput;
-    showId: string;
-};
-
-export type ChannelsSetChannelShowWhitelistResponse = (WhitelistShowOutput);
-
-export type ChannelsGetChannelShowWhitelistData = {
-    channelId: string;
-    showId: string;
-};
-
-export type ChannelsGetChannelShowWhitelistResponse = (WhitelistShowOutput);
-
-export type ChannelsSwapEpisodeWhitelistStatusData = {
-    channelId: string;
-    episodeId: string;
-};
-
-export type ChannelsSwapEpisodeWhitelistStatusResponse = (WhitelistStatusOutput);
-
-export type ChannelsGetChannelShowsData = {
-    channelId: string;
-};
-
-export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+export type ChannelsDeleteUserChannelResponse = (Message);
 
 export type ChannelsGetChannelEpisodesData = {
     additionalChannels?: Array<(string)>;
@@ -651,41 +593,66 @@ export type ChannelsGetChannelEpisodesData = {
 
 export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
 
-export type ChannelsRemoveChannelShowData = {
+export type ChannelsGetChannelShowsData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+
+export type ChannelsGetUserChannelWhitelistData = {
     channelId: string;
     showId: string;
 };
 
-export type ChannelsRemoveChannelShowResponse = (Message);
+export type ChannelsGetUserChannelWhitelistResponse = (WhitelistShowOutput);
 
-export type ChannelsUpdateChannelDefaultOrderData = {
-    additionalChannels?: Array<(string)>;
+export type ChannelsUpdateUserChannelWhitelistData = {
     channelId: string;
-    episodeInterleaving?: (string | null);
-    episodeOrdering?: boolean;
-    hideUnwatched?: boolean;
-    hideWatched?: boolean;
-    maximumAirDateAbsolute?: (string | null);
-    maximumAirDateRelative?: (number | null);
-    maximumDuration?: (number | null);
-    maximumReleaseDateAbsolute?: (string | null);
-    maximumReleaseDateRelative?: (number | null);
-    maximumWatchDateAbsolute?: (string | null);
-    maximumWatchDateRelative?: (number | null);
-    minimumAirDateAbsolute?: (string | null);
-    minimumAirDateRelative?: (number | null);
-    minimumDuration?: (number | null);
-    minimumReleaseDateAbsolute?: (string | null);
-    minimumReleaseDateRelative?: (number | null);
-    onlyNewShows?: boolean;
-    onlyStartedShows?: boolean;
-    randomizeOnLastSort?: boolean;
-    rotateShows?: boolean;
-    rotateShowsRandomly?: boolean;
-    sortBy?: Array<(string)>;
+    requestBody: WhitelistShowInput;
+    showId: string;
 };
 
-export type ChannelsUpdateChannelDefaultOrderResponse = (Message);
+export type ChannelsUpdateUserChannelWhitelistResponse = (WhitelistShowOutput);
+
+export type ChannelsUpdateUserChannelDefaultOrderData = {
+    channelId: string;
+    requestBody: ChannelMediaFilter;
+};
+
+export type ChannelsUpdateUserChannelDefaultOrderResponse = (ChannelOutput);
+
+export type ChannelsDeleteChannelShowData = {
+    channelId: string;
+    showId: string;
+};
+
+export type ChannelsDeleteChannelShowResponse = (Message);
+
+export type ChannelsGetUserChannelQueueData = {
+    channelId: string;
+};
+
+export type ChannelsGetUserChannelQueueResponse = (ChannelQueuesListOutput);
+
+export type ChannelsCreateUserChannelQueueUrlsData = {
+    channelId: string;
+    requestBody: Array<(string)>;
+};
+
+export type ChannelsCreateUserChannelQueueUrlsResponse = (ChannelQueuesListOutput);
+
+export type ChannelsDeleteUserChannelQueueUrlData = {
+    channelId: string;
+    urlId: string;
+};
+
+export type ChannelsDeleteUserChannelQueueUrlResponse = (Message);
+
+export type ChannelsClearUserChannelCompletedQueueData = {
+    channelId: string;
+};
+
+export type ChannelsClearUserChannelCompletedQueueResponse = (Message);
 
 export type EpisodesCreateWatchData = {
     episodeId: string;
@@ -881,11 +848,6 @@ export type SourcesCreateUserShowData = {
 
 export type SourcesCreateUserShowResponse = (ShowOutput);
 
-export type UsersReadUsersData = {
-    limit?: number;
-    skip?: number;
-};
-
 export type UsersReadUsersResponse = (UsersPublic);
 
 export type UsersCreateUserData = {
@@ -961,11 +923,6 @@ export type WatchesDeleteUserWatchData = {
 };
 
 export type WatchesDeleteUserWatchResponse = (Message);
-
-export type WatchesGetUserWatchesData = {
-    limit?: number;
-    skip?: number;
-};
 
 export type WatchesGetUserWatchesResponse = (WatchesListOutput);
 

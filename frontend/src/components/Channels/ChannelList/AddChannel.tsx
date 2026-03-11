@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import {
-  type ChannelInput,
+  type ChannelPostInput,
   ChannelsService,
   type MultipleChannelOutputs,
 } from "@/client"
@@ -61,7 +61,7 @@ const AddChannel = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: ChannelInput) =>
+    mutationFn: (data: ChannelPostInput) =>
       ChannelsService.createChannel({ requestBody: data }),
     // When mutate is called:
     onMutate: async (newChannel, context) => {

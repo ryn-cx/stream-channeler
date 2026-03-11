@@ -13,7 +13,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MetadataMixin
+from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
@@ -35,7 +35,7 @@ class BaseSeason(BaseMediaMixin):
     season_number: int | None = Field(default=None)
 
 
-class Season(BaseSeason, MetadataMixin, table=True):
+class Season(BaseSeason, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
@@ -64,6 +64,17 @@ class Season(BaseSeason, MetadataMixin, table=True):
             .join(Plugin)
             .where(Show.id == self.show_id),
         ).first()
+
+    def is_public(self, session: Session) -> bool:
+        return bool(
+            session.exec(
+                select(Plugin.public)
+                .select_from(Show)
+                .join(Source)
+                .join(Plugin)
+                .where(Show.id == self.show_id),
+            ).first(),
+        )
 
     @override
     def parent(self) -> Show:

@@ -116,24 +116,15 @@ export function WhitelistManager({
   const handleSave = () => {
     if (!whitelistData) return
 
-    const episodesBySeason = new Map<string, typeof whitelistData.episodes>()
-    whitelistData.episodes.forEach((episode) => {
-      const seasonEpisodes = episodesBySeason.get(episode.season_id) || []
-      seasonEpisodes.push(episode)
-      episodesBySeason.set(episode.season_id, seasonEpisodes)
-    })
-
     const input: WhitelistShowInput = {
-      id: showId,
       whitelist_mode: whitelistMode,
       seasons: whitelistData.seasons.map((season) => ({
         id: season.id,
         enabled: enabledSeasonIds.has(season.id),
-        episodes:
-          episodesBySeason.get(season.id)?.map((episode) => ({
-            id: episode.id,
-            enabled: enabledEpisodeIds.has(episode.id),
-          })) || [],
+      })),
+      episodes: whitelistData.episodes.map((episode) => ({
+        id: episode.id,
+        enabled: enabledEpisodeIds.has(episode.id),
       })),
     }
     saveMutation.mutate(input)

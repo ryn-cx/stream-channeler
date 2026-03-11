@@ -13,7 +13,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MetadataMixin
+from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 from app.sources.models import Source
 
@@ -37,7 +37,7 @@ class BaseShow(BaseMediaMixin):
 # The name "Show" was used instead of "Series" because it has a distinct singular and
 # plural form and some people may use "Series" to refer to a "Season" so the word "Show"
 # is less ambiguous and more flexible.
-class Show(BaseShow, MetadataMixin, table=True):
+class Show(BaseShow, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
@@ -58,6 +58,16 @@ class Show(BaseShow, MetadataMixin, table=True):
             .join(Plugin)
             .where(Source.id == self.source_id),
         ).first()
+
+    def is_public(self, session: Session) -> bool:
+        return bool(
+            session.exec(
+                select(Plugin.public)
+                .select_from(Source)
+                .join(Plugin)
+                .where(Source.id == self.source_id),
+            ).first(),
+        )
 
     def parent(self) -> Source:
         return self.source

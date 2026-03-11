@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Sequence
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import util
@@ -13,7 +14,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MetadataMixin
+from app.models import SA_TYPE, BaseMediaMixin, MediaMixin
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -26,9 +27,11 @@ if TYPE_CHECKING:
 
 class BasePlugin(BaseMediaMixin):
     name: str | None = Field(default=None)
+    version: str | None = Field(default=None)
+    public: bool
 
 
-class Plugin(BasePlugin, MetadataMixin, table=True):
+class Plugin(BasePlugin, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id"),
         UniqueConstraint("user_id", "key", postgresql_nulls_not_distinct=True),
@@ -49,9 +52,20 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
     def get_user_id(self, _session: Session) -> uuid.UUID | None:
         return self.user_id
 
+    def is_public(self, _session: Session) -> bool:
+        return self.public
+
     @override
     def children(self) -> list[Source]:
         return self.sources
+
+    def __str__(self) -> str:
+        base_plugin = "Plugin:"
+        if self.key:
+            base_plugin += f" {self.key}"
+        if self.id:
+            base_plugin += f" ({self.id})"
+        return base_plugin
 
     @classmethod
     def get(
@@ -60,6 +74,7 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
         plugin_key: str,
         *,
         user_id: uuid.UUID | None = None,
+        options: Sequence[ORMOption] | None = None,
     ) -> Plugin | None:
         """Look up a Plugin by its unique key.
 
@@ -67,6 +82,8 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
             db: Database session.
             plugin_key: Unique key of the plugin.
             user_id: Optional user ID to scope the lookup.
+            options: SQLAlchemy ORM options (e.g. joinedload).
+            populate_existing: Refresh attributes of existing identity map objects.
 
         Returns:
             Plugin instance if found, None otherwise.
@@ -75,6 +92,8 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
         statement = select(Plugin).where(Plugin.key == plugin_key)
         if user_id is not None:
             statement = statement.where(Plugin.user_id == user_id)
+        if options:
+            statement = statement.options(*options)
         return db.exec(statement).first()
 
     @classmethod
@@ -84,6 +103,7 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
         plugin_key: str,
         *,
         user_id: uuid.UUID | None = None,
+        options: Sequence[ORMOption] | None = None,
     ) -> Plugin:
         """Look up a Plugin by its unique key.
 
@@ -93,6 +113,7 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
             db: Database session.
             plugin_key: Unique key of the plugin.
             user_id: Optional user ID to scope the lookup.
+            options: SQLAlchemy ORM options (e.g. joinedload).
 
         Returns:
             Plugin instance.
@@ -104,14 +125,17 @@ class Plugin(BasePlugin, MetadataMixin, table=True):
         statement = select(Plugin).where(Plugin.key == plugin_key)
         if user_id is not None:
             statement = statement.where(Plugin.user_id == user_id)
-        return db.exec(statement).one()
+        if options:
+            statement = statement.options(*options)
+        return db.exec(statement).unique().one()
 
 
 class BaseFile(BaseMediaMixin):
+    data_timestamp: datetime = Field(sa_type=SA_TYPE)  # type: ignore[call-overload]
     content: str | None = Field(default=None)
 
 
-class File(BaseFile, MetadataMixin, table=True):
+class File(BaseFile, MediaMixin, table=True):
     __table_args__ = (PrimaryKeyConstraint("plugin_id", "key"),)
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")

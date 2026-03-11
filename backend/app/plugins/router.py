@@ -1,13 +1,17 @@
 from fastapi import APIRouter
-from sqlmodel import select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import create_record, delete_record, list_records, update_record
+from app.media.service import (
+    create_child,
+    delete_record,
+    list_children,
+    raise_if_exists,
+    update_record,
+)
 from app.models import Message
-from app.plugins.dependencies import UserPlugin
+from app.plugins.dependencies import ReadablePlugin, UserPlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
-    PluginInput,
     PluginOutput,
     PluginPatchInput,
     PluginPostInput,
@@ -15,7 +19,6 @@ from app.plugins.schemas import (
 )
 from app.sources.models import Source
 from app.sources.schemas import (
-    SourceInput,
     SourceOutput,
     SourcePostInput,
     SourcesListOutput,
@@ -30,32 +33,37 @@ def get_user_plugins(
     current_user: CurrentUser,
 ) -> PluginsListOutput:
     """List all plugins owned by the current user."""
-    statement = select(Plugin).where(Plugin.user_id == current_user.id)
-    plugins = session.exec(statement).all()
-    data = [PluginOutput.model_validate(plugin) for plugin in plugins]
-    return PluginsListOutput(data=data, count=len(data))
+    return list_children(
+        session,
+        Plugin,
+        "user_id",
+        current_user.id,
+        PluginOutput,
+        PluginsListOutput,
+    )
 
 
-# FAST003 - Parameter is used by UserPlugin.
+# FAST003 - Parameter is used by ReadablePlugin.
 @router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003
-def get_user_plugin(plugin: UserPlugin) -> Plugin:
-    """Get a plugin owned by the current user by its id."""
+def get_user_plugin(plugin: ReadablePlugin) -> Plugin:
+    """Get a plugin by its id if it is public or owned by the current user."""
     return plugin
 
 
-# FAST003 - Parameter is used by UserPlugin.
+# FAST003 - Parameter is used by ReadablePlugin.
 @router.get("/{plugin_id}/sources")  # noqa: FAST003
 def get_user_plugin_sources(
     session: SessionDep,
-    plugin: UserPlugin,
+    plugin: ReadablePlugin,
 ) -> SourcesListOutput:
-    """List all sources for a plugin owned by the current user."""
-    return list_records(
-        session=session,
-        parent=plugin,
-        child_model=Source,
-        parent_key="plugin_id",
-        list_output=SourcesListOutput,
+    """List all sources for a plugin if it is public or owned by the current user."""
+    return list_children(
+        session,
+        Source,
+        "plugin_id",
+        plugin.id,
+        SourceOutput,
+        SourcesListOutput,
     )
 
 
@@ -67,13 +75,7 @@ def create_user_source(
     source_input: SourcePostInput,
 ) -> Source:
     """Create a source for a plugin."""
-    return create_record(
-        session=session,
-        parent=plugin,
-        post_input=source_input,
-        input_schema=SourceInput,
-        existing=Source.get(session, plugin, source_input.key),
-    )
+    return create_child(session, Source, plugin, source_input, "plugin_id")
 
 
 @router.post("", response_model=PluginOutput)
@@ -83,13 +85,11 @@ def create_user_plugin(
     plugin_input: PluginPostInput,
 ) -> Plugin:
     """Create a plugin owned by the current user."""
-    return create_record(
-        session=session,
-        parent=current_user,
-        post_input=plugin_input,
-        input_schema=PluginInput,
-        existing=Plugin.get(session, plugin_input.key, user_id=current_user.id),
-    )
+    raise_if_exists(Plugin.get(session, plugin_input.key, user_id=current_user.id))
+    plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
+    session.add(plugin)
+    session.commit()
+    return plugin
 
 
 # FAST003 - Parameter is used by UserPlugin.
@@ -100,19 +100,11 @@ def update_user_plugin(
     plugin_input: PluginPatchInput,
 ) -> Plugin:
     """Update a plugin owned by the current user."""
-    return update_record(
-        session=session,
-        entry=plugin,
-        body=plugin_input,
-    )
+    return update_record(session, plugin, plugin_input)
 
 
 # FAST003 - Parameter is used by UserPlugin.
 @router.delete("/{plugin_id}")  # noqa: FAST003
 def delete_user_plugin(session: SessionDep, plugin: UserPlugin) -> Message:
     """Delete a plugin owned by the current user."""
-    return delete_record(
-        session=session,
-        entry=plugin,
-        model_name="Plugin",
-    )
+    return delete_record(session, plugin, "Plugin")

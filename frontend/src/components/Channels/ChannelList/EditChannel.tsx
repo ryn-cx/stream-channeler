@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import {
-  type ChannelInput,
   type ChannelOutput,
+  type ChannelPatchInput,
   ChannelsService,
   type MultipleChannelOutputs,
 } from "@/client"
@@ -73,7 +73,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: ChannelInput) =>
+    mutationFn: (data: ChannelPatchInput) =>
       ChannelsService.updateChannel({
         channelId: channel.id,
         requestBody: data,
@@ -121,7 +121,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
   })
 
   const onSubmit = (data: FormData) => {
-    const payload: ChannelInput = {
+    const payload: ChannelPatchInput = {
       name: data.name,
       public: data.public,
       default_order: data.default_order || null,

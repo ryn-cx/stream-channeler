@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.constants import MAX_ENTRIES_PER_PAGE
 from app.media.service import delete_record, update_record
 from app.models import Message
 from app.watches.dependencies import UserWatch
@@ -37,11 +36,9 @@ def get_user_watch(watch: UserWatch) -> Watch:
 def get_user_watches(
     session: SessionDep,
     current_user: CurrentUser,
-    skip: int = 0,
-    limit: int = MAX_ENTRIES_PER_PAGE,
 ) -> WatchesListOutput:
     """Get multiple watched episode entries."""
-    return get_watched_episodes_service(session, current_user.id, skip, limit)
+    return get_watched_episodes_service(session, current_user.id)
 
 
 # FAST003 - Parameter is used by UserWatch.
@@ -52,14 +49,14 @@ def update_user_watch(
     watch_input: WatchPatchInput,
 ) -> Watch:
     """Update a watch by its id."""
-    return update_record(session=session, entry=watch, body=watch_input)
+    return update_record(session, watch, watch_input)
 
 
 # FAST003 - Parameter is used by UserWatch.
 @router.delete("/{watch_id}")  # noqa: FAST003
 def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
     """Delete a watch by its id."""
-    return delete_record(session=session, entry=watch, model_name="Watch")
+    return delete_record(session, watch, "Watch")
 
 
 # TODO: Add tests
@@ -89,8 +86,7 @@ def import_watch_history(
             detail=f"Plugin '{params.plugin_id}' does not support watch import.",
         )
 
-    content_bytes = file.file.read()
-    content = content_bytes.decode("utf-8")
+    content = file.file.read().decode("utf-8")
 
     plugin_instance = plugin(db=session)
     result = plugin_instance.import_watch_history(

@@ -2,21 +2,30 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, Path
-from sqlmodel import select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import get_first_or_error
+from app.media.service import get_readable_resource, get_user_resource
 from app.sources.models import Source
+from app.users.dependencies import OptionalUser
 
 
-def get_user_source(
+def require_user_source(
     session: SessionDep,
     current_user: CurrentUser,
     source_id: Annotated[uuid.UUID, Path()],
 ) -> Source:
-    """Look up a source by its UUID id and verify user ownership."""
-    statement = select(Source).where(Source.id == source_id)
-    return get_first_or_error(session, statement, current_user.id, "Source")
+    return get_user_resource(session, Source, source_id, current_user.id)
 
 
-UserSource = Annotated[Source, Depends(get_user_source)]
+UserSource = Annotated[Source, Depends(require_user_source)]
+
+
+def require_readable_source(
+    session: SessionDep,
+    optional_user: OptionalUser,
+    source_id: Annotated[uuid.UUID, Path()],
+) -> Source:
+    return get_readable_resource(session, Source, source_id, optional_user)
+
+
+ReadableSource = Annotated[Source, Depends(require_readable_source)]

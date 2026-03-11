@@ -10,7 +10,7 @@ from sqlalchemy import and_, or_
 from sqlmodel import and_, col, func, select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.channels.dependencies import safe_get_readable_channels
+from app.channels.dependencies import get_readable_channels
 from app.channels.models import (
     Channel,
     ChannelEpisodeWhiteList,
@@ -59,7 +59,7 @@ class PythonEpisodeQueryBuilder:
 
     def _compile_channel_ids(self, main_channel: Channel) -> None:
         """Compile a list of channels that the user has access to."""
-        additional_channels = safe_get_readable_channels(
+        additional_channels = get_readable_channels(
             self._session,
             self._user,
             self._media_filter.additional_channels,

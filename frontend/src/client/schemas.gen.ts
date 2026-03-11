@@ -135,18 +135,22 @@ export const ChannelEpisodesOutputSchema = {
     title: 'ChannelEpisodesOutput'
 } as const;
 
-export const ChannelInputSchema = {
+export const ChannelMediaFilterSchema = {
     properties: {
-        name: {
-            type: 'string',
-            title: 'Name'
+        sortBy: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Sortby',
+            default: []
         },
-        public: {
+        episodeOrdering: {
             type: 'boolean',
-            title: 'Public',
+            title: 'Episodeordering',
             default: false
         },
-        default_order: {
+        episodeInterleaving: {
             anyOf: [
                 {
                     type: 'string'
@@ -155,49 +159,205 @@ export const ChannelInputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Default Order'
-        }
-    },
-    type: 'object',
-    required: ['name'],
-    title: 'ChannelInput'
-} as const;
-
-export const ChannelNameItemSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
+            title: 'Episodeinterleaving'
         },
-        name: {
-            type: 'string',
-            title: 'Name'
-        }
-    },
-    type: 'object',
-    required: ['id', 'name'],
-    title: 'ChannelNameItem'
-} as const;
-
-export const ChannelNamesOutputSchema = {
-    properties: {
-        data: {
+        additionalChannels: {
             items: {
-                '$ref': '#/components/schemas/ChannelNameItem'
+                type: 'string',
+                format: 'uuid'
             },
             type: 'array',
-            title: 'Data'
+            title: 'Additionalchannels',
+            default: []
+        },
+        rotateShows: {
+            type: 'boolean',
+            title: 'Rotateshows',
+            default: false
+        },
+        rotateShowsRandomly: {
+            type: 'boolean',
+            title: 'Rotateshowsrandomly',
+            default: false
+        },
+        randomizeOnLastSort: {
+            type: 'boolean',
+            title: 'Randomizeonlastsort',
+            default: false
+        },
+        hideWatched: {
+            type: 'boolean',
+            title: 'Hidewatched',
+            default: false
+        },
+        hideUnwatched: {
+            type: 'boolean',
+            title: 'Hideunwatched',
+            default: false
+        },
+        maximumWatchDateAbsolute: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumwatchdateabsolute'
+        },
+        minimumAirDateAbsolute: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumairdateabsolute'
+        },
+        maximumAirDateAbsolute: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumairdateabsolute'
+        },
+        minimumReleaseDateAbsolute: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumreleasedateabsolute'
+        },
+        maximumReleaseDateAbsolute: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumreleasedateabsolute'
+        },
+        maximumWatchDateRelative: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumwatchdaterelative'
+        },
+        minimumAirDateRelative: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumairdaterelative'
+        },
+        maximumAirDateRelative: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumairdaterelative'
+        },
+        minimumReleaseDateRelative: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumreleasedaterelative'
+        },
+        maximumReleaseDateRelative: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumreleasedaterelative'
+        },
+        onlyStartedShows: {
+            type: 'boolean',
+            title: 'Onlystartedshows',
+            default: false
+        },
+        onlyNewShows: {
+            type: 'boolean',
+            title: 'Onlynewshows',
+            default: false
+        },
+        minimumDuration: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumduration'
+        },
+        maximumDuration: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumduration'
         }
     },
     type: 'object',
-    required: ['data'],
-    title: 'ChannelNamesOutput'
+    title: 'ChannelMediaFilter'
 } as const;
 
 export const ChannelOutputSchema = {
     properties: {
         name: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Name'
         },
         public: {
@@ -228,8 +388,76 @@ export const ChannelOutputSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id', 'user_id'],
+    required: ['id', 'user_id'],
     title: 'ChannelOutput'
+} as const;
+
+export const ChannelPatchInputSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public',
+            default: false
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        }
+    },
+    type: 'object',
+    title: 'ChannelPatchInput'
+} as const;
+
+export const ChannelPostInputSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public',
+            default: false
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        }
+    },
+    type: 'object',
+    title: 'ChannelPostInput'
 } as const;
 
 export const ChannelQueueOutputSchema = {
@@ -263,6 +491,21 @@ export const ChannelQueueOutputSchema = {
     title: 'ChannelQueueOutput'
 } as const;
 
+export const ChannelQueuesListOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ChannelQueueOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'ChannelQueuesListOutput'
+} as const;
+
 export const ChannelShowsOutputSchema = {
     properties: {
         shows: {
@@ -285,6 +528,21 @@ export const ChannelShowsOutputSchema = {
     },
     type: 'object',
     title: 'ChannelShowsOutput'
+} as const;
+
+export const ChannelsListOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ChannelOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'ChannelsListOutput'
 } as const;
 
 export const EpisodeOutputSchema = {
@@ -1004,14 +1262,10 @@ export const EpisodesListOutputSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'EpisodesListOutput'
 } as const;
 
@@ -1041,44 +1295,6 @@ export const MessageSchema = {
     title: 'Message'
 } as const;
 
-export const MultipleChannelOutputsSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ChannelOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'MultipleChannelOutputs'
-} as const;
-
-export const MultipleChannelQueueOutputsSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ChannelQueueOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'MultipleChannelQueueOutputs'
-} as const;
-
 export const MultipleSortOptionOutputsSchema = {
     properties: {
         data: {
@@ -1087,14 +1303,10 @@ export const MultipleSortOptionOutputsSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'MultipleSortOptionOutputs'
 } as const;
 
@@ -1180,6 +1392,21 @@ export const PluginOutputSchema = {
             ],
             title: 'Name'
         },
+        version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -1199,7 +1426,7 @@ export const PluginOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id'],
+    required: ['key', 'public', 'id'],
     title: 'PluginOutput'
 } as const;
 
@@ -1273,9 +1500,25 @@ export const PluginPatchInputSchema = {
                 }
             ],
             title: 'Name'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public'
         }
     },
     type: 'object',
+    required: ['public'],
     title: 'PluginPatchInput'
 } as const;
 
@@ -1342,9 +1585,25 @@ export const PluginPostInputSchema = {
                 }
             ],
             title: 'Name'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        public: {
+            type: 'boolean',
+            title: 'Public'
         }
     },
     type: 'object',
+    required: ['public'],
     title: 'PluginPostInput'
 } as const;
 
@@ -1356,14 +1615,10 @@ export const PluginsListOutputSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'PluginsListOutput'
 } as const;
 
@@ -1757,14 +2012,10 @@ export const SeasonsListOutputSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'SeasonsListOutput'
 } as const;
 
@@ -2133,14 +2384,10 @@ export const ShowsListOutputSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'ShowsListOutput'
 } as const;
 
@@ -2459,14 +2706,10 @@ export const SourcesListOutputSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'SourcesListOutput'
 } as const;
 
@@ -2735,14 +2978,10 @@ export const UsersPublicSchema = {
             },
             type: 'array',
             title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data'],
     title: 'UsersPublic'
 } as const;
 
@@ -3036,18 +3275,14 @@ export const WatchesListOutputSchema = {
             },
             type: 'object',
             title: 'Plugins'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
         }
     },
     type: 'object',
-    required: ['watches', 'episodes', 'seasons', 'shows', 'sources', 'plugins', 'count'],
+    required: ['watches', 'episodes', 'seasons', 'shows', 'sources', 'plugins'],
     title: 'WatchesListOutput'
 } as const;
 
-export const WhitelistEpisodeInputSchema = {
+export const WhitelistEntryInputSchema = {
     properties: {
         id: {
             type: 'string',
@@ -3061,54 +3296,40 @@ export const WhitelistEpisodeInputSchema = {
     },
     type: 'object',
     required: ['id', 'enabled'],
-    title: 'WhitelistEpisodeInput'
-} as const;
-
-export const WhitelistSeasonInputSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        enabled: {
-            type: 'boolean',
-            title: 'Enabled'
-        },
-        episodes: {
-            items: {
-                '$ref': '#/components/schemas/WhitelistEpisodeInput'
-            },
-            type: 'array',
-            title: 'Episodes'
-        }
-    },
-    type: 'object',
-    required: ['id', 'enabled', 'episodes'],
-    title: 'WhitelistSeasonInput'
+    title: 'WhitelistEntryInput'
 } as const;
 
 export const WhitelistShowInputSchema = {
     properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
         whitelist_mode: {
-            type: 'boolean',
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Whitelist Mode'
         },
         seasons: {
             items: {
-                '$ref': '#/components/schemas/WhitelistSeasonInput'
+                '$ref': '#/components/schemas/WhitelistEntryInput'
             },
             type: 'array',
-            title: 'Seasons'
+            title: 'Seasons',
+            default: []
+        },
+        episodes: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEntryInput'
+            },
+            type: 'array',
+            title: 'Episodes',
+            default: []
         }
     },
     type: 'object',
-    required: ['id', 'whitelist_mode', 'seasons'],
     title: 'WhitelistShowInput'
 } as const;
 
@@ -3268,16 +3489,4 @@ export const WhitelistShowOutputSchema = {
     type: 'object',
     required: ['key', 'source_id', 'id', 'whitelist_mode', 'enabled_season_ids', 'enabled_episode_ids', 'seasons', 'episodes'],
     title: 'WhitelistShowOutput'
-} as const;
-
-export const WhitelistStatusOutputSchema = {
-    properties: {
-        visible: {
-            type: 'boolean',
-            title: 'Visible'
-        }
-    },
-    type: 'object',
-    required: ['visible'],
-    title: 'WhitelistStatusOutput'
 } as const;

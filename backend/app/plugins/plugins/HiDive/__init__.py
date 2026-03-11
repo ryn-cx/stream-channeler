@@ -1,16 +1,17 @@
 # TODO: Validate
 import re
 from datetime import date, datetime, timedelta
-from functools import cache, cached_property
+from functools import cache
 from typing import Any, override
 
 from diving_board.exceptions import HTTPError
 from diving_board.season.models import SeasonModel
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeInput
+from app.plugins.models import File
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonInput
@@ -29,6 +30,8 @@ from .files import (
 
 
 class HiDivePlugin(FileMixin, register=True):
+    _VERSION = "0.0.1"
+
     # region Initialization
 
     @override
@@ -76,20 +79,20 @@ class HiDivePlugin(FileMixin, register=True):
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         if match := re.match(self._tv_series_url_regex(), url):
-            self._show_id = match.group("season_id")
+            show_key = match.group("season_key")
             self._media_type = "TV Show"
-            self._validate_show_id(self._show_id)
+            self._validate_show_key(show_key)
         elif match := re.match(self._movie_url_regex(), url):
-            self._show_id = match.group("movie_id")
+            show_key = match.group("movie_key")
             self._media_type = "Movie"
-            self._validate_movie_id(self._show_id)
+            self._validate_movie_key(show_key)
         else:
             msg = f"URL is not a valid {self._plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        self._preload_show_season_episode_files()
-        self._download_initial_files()
-        show = self.__upsert_source()
+        self._preload_show_season_episode_files(show_key)
+        self._download_initial_files(show_key)
+        show = self.__upsert_source(show_key)
         return [URLImportResult(show=show, whitelist_mode=False)]
 
     # endregion
@@ -150,48 +153,66 @@ class HiDivePlugin(FileMixin, register=True):
 
     @override
     def update_show(self, show: Show) -> None:
-        self._show_id = show.active_seasons()[0].key
+        show_key = show.active_seasons()[0].key
         self._media_type = show.media_type
-        self.__preload_update_media()
-        for show_file in self._show_files():
+        self.__preload_update_media(show_key)
+        for show_file in self._show_files(show_key):
             show_file.download_if_outdated(show.update_at)
-        self.__upsert_source()
+        self.__upsert_source(show_key)
 
     @override
     def update_season(self, season: Season) -> None:
-        self._show_id = season.show.active_seasons()[0].key
+        show_key = season.show.active_seasons()[0].key
         self._media_type = season.show.media_type
-        self.__preload_update_media()
+        self.__preload_update_media(show_key)
         for season_file in self._season_files(int(season.key)):
             season_file.download_if_outdated(season.update_at)
-        self.__upsert_source()
+        self.__upsert_source(show_key)
 
     @override
     def update_episode(self, episode: Episode) -> None:
-        self._show_id = episode.season.show.active_seasons()[0].key
+        show_key = episode.season.show.active_seasons()[0].key
         self._media_type = episode.season.show.media_type
-        self.__preload_update_media()
+        self.__preload_update_media(show_key)
         for episode_file in self._episode_files(
             int(episode.season.key),
             int(episode.key),
         ):
             episode_file.download_if_outdated(episode.update_at)
-        self.__upsert_source()
+        self.__upsert_source(show_key)
 
-    def __preload_update_media(self) -> None:
-        self.__bootstrap_preload()
-        self._preload_show_season_episode_files()
+    def __preload_update_media(self, show_key: str) -> None:
+        self.__bootstrap_preload(show_key)
+        self._preload_show_season_episode_files(show_key)
 
-    def __bootstrap_preload(self) -> None:
-        """Preload initial files needed for _season_ids_from_json computation."""
+    def __bootstrap_preload(self, show_key: str) -> None:
+        """Preload initial files needed for _season_keys_from_json computation."""
         if self._media_type == "TV Show":
-            self.preload_files([SeasonJSON.file_key(self._show_id)])
-            season_json = self._season_json(self._show_id)
-            if season_json.has_file_content():
-                show_id = str(season_json.parsed().metadata.series.series_id)
-                self.preload_files([AdjacentSeriesJSON.file_key(show_id)])
+            file_keys = [SeasonJSON.file_key(show_key)]
+            file_select = (
+                select(File)
+                .where(File.plugin == self.plugin)
+                .where(col(File.key).in_(file_keys))
+            )
+            self.db.exec(file_select).all()
+            season_json = self._season_json(show_key)
+            if season_json.get_content():
+                tv_show_key = str(season_json.parsed().metadata.series.series_id)
+                adj_keys = [AdjacentSeriesJSON.file_key(tv_show_key)]
+                adj_select = (
+                    select(File)
+                    .where(File.plugin == self.plugin)
+                    .where(col(File.key).in_(adj_keys))
+                )
+                self.db.exec(adj_select).all()
         else:
-            self.preload_files([PlaylistJSON.file_key(self._show_id)])
+            file_keys = [PlaylistJSON.file_key(show_key)]
+            file_select = (
+                select(File)
+                .where(File.plugin == self.plugin)
+                .where(col(File.key).in_(file_keys))
+            )
+            self.db.exec(file_select).all()
 
     # endregion
 
@@ -208,7 +229,7 @@ class HiDivePlugin(FileMixin, register=True):
         domain_regex = cls._domain_regex()
         # Example URLs:
         # https://www.hidive.com/series/1189
-        regex_string = r"\/season\/(?P<season_id>\d+)"
+        regex_string = r"\/season\/(?P<season_key>\d+)"
         return domain_regex + regex_string
 
     @classmethod
@@ -217,7 +238,7 @@ class HiDivePlugin(FileMixin, register=True):
         domain_regex = cls._domain_regex()
         # Example URLs:
         # https://www.hidive.com/playlist/20431
-        regex_string = r"\/playlist\/(?P<movie_id>\d+)"
+        regex_string = r"\/playlist\/(?P<movie_key>\d+)"
         return domain_regex + regex_string
 
     # endregion
@@ -231,19 +252,19 @@ class HiDivePlugin(FileMixin, register=True):
 
     @classmethod
     @cache
-    def _tv_show_url(cls, show_id: str | int) -> str:
+    def _tv_show_url(cls, show_key: str | int) -> str:
         # This will redirect to a season page
-        return f"{cls._base_url()}series/{show_id}"
+        return f"{cls._base_url()}series/{show_key}"
 
     @classmethod
     @cache
-    def _movie_url(cls, movie_id: str | int) -> str:
-        return f"{cls._base_url()}playlist/{movie_id}"
+    def _movie_url(cls, movie_key: str | int) -> str:
+        return f"{cls._base_url()}playlist/{movie_key}"
 
     @classmethod
     @cache
-    def _episode_url(cls, episode_id: str | int) -> str:
-        return f"{cls._base_url()}video/{episode_id}"
+    def _episode_url(cls, episode_key: str | int) -> str:
+        return f"{cls._base_url()}video/{episode_key}"
 
     # endregion
 
@@ -267,29 +288,26 @@ class HiDivePlugin(FileMixin, register=True):
 
     # region Cached Properties
 
-    @cached_property
-    def _show_from_db(self) -> Show | None:
+    def _show_from_db(self, show_key: str) -> Show | None:
         existing_source = Source.get_from_memory(
             self.db,
             self.plugin,
             self._plugin_name(),
         )
         if existing_source:
-            show_key = self._get_show_key_for_lookup()
-            return Show.get_from_memory(self.db, existing_source, show_key)
+            db_show_key = self._get_show_key_for_lookup(show_key)
+            return Show.get_from_memory(self.db, existing_source, db_show_key)
         return None
 
-    @cached_property
-    def _seasons_dict_from_db(self) -> dict[str, Season]:
+    def _seasons_dict_from_db(self, show_key: str) -> dict[str, Season]:
         """Returns a dictionary of seasons keyed by season key."""
-        if show := self._show_from_db:
+        if show := self._show_from_db(show_key):
             return {season.key: season for season in show.seasons}
         return {}
 
-    @cached_property
-    def _episodes_dict_from_db(self) -> dict[str, Episode]:
+    def _episodes_dict_from_db(self, show_key: str) -> dict[str, Episode]:
         """Returns a dictionary of episodes keyed by episode key."""
-        if show := self._show_from_db:
+        if show := self._show_from_db(show_key):
             return {
                 episode.key: episode
                 for season in show.seasons
@@ -297,33 +315,35 @@ class HiDivePlugin(FileMixin, register=True):
             }
         return {}
 
-    @cached_property
-    def _season_episodes_dict_from_db(self) -> dict[str, dict[str, Episode]]:
+    def _season_episodes_dict_from_db(
+        self,
+        show_key: str,
+    ) -> dict[str, dict[str, Episode]]:
         """Returns a nested dictionary of episodes keyed by season key and episode key."""
-        if show := self._show_from_db:
+        if show := self._show_from_db(show_key):
             return {
                 season.key: {episode.key: episode for episode in season.episodes}
                 for season in show.seasons
             }
         return {}
 
-    def _get_show_key_for_lookup(self) -> str:
+    def _get_show_key_for_lookup(self, show_key: str) -> str:
         """Get the show key based on media type."""
         if self._media_type == "TV Show":
-            return self._get_show_id_from_season_id(self._show_id)
-        return self._show_id
+            return self._get_show_key_from_season_key(show_key)
+        return show_key
 
-    def _get_show_id_from_season_id(self, season_id: str) -> str:
-        first_season_id = self._get_first_season_id(season_id)
-        first_season_file = self._season_json(first_season_id).parsed()
+    def _get_show_key_from_season_key(self, season_key: str) -> str:
+        first_season_key = self._get_first_season_key(season_key)
+        first_season_file = self._season_json(first_season_key).parsed()
         return str(first_season_file.metadata.series.series_id)
 
     # endregion
 
     # region Upsert
 
-    def __upsert_source(self) -> Show:
-        logger.info(f"Upserting show: {self._pretty_show_name()}")
+    def __upsert_source(self, show_key: str) -> Show:
+        logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
         existing_source = Source.get_from_memory(
             self.db,
             self.plugin,
@@ -339,23 +359,23 @@ class HiDivePlugin(FileMixin, register=True):
             if existing_source
             else tz_datetime.now(),
         ).upsert(self.plugin, existing_source)
-        return self.__upsert_show(source)
+        return self.__upsert_show(source, show_key)
 
-    def __upsert_show(self, source: Source) -> Show:
-        if existing_show := self._show_from_db:
+    def __upsert_show(self, source: Source, show_key: str) -> Show:
+        if existing_show := self._show_from_db(show_key):
             existing_show.soft_delete()
 
         if self._media_type == "TV Show":
-            show = self.__upsert_tv_show_show(source)
+            show = self.__upsert_tv_show_show(source, show_key)
         else:
-            show = self.__upsert_movie_show(source)
+            show = self.__upsert_movie_show(source, show_key)
 
-        self.__upsert_seasons(show)
+        self.__upsert_seasons(show, show_key)
         return show
 
-    def __upsert_tv_show_show(self, source: Source) -> Show:
+    def __upsert_tv_show_show(self, source: Source, show_key: str) -> Show:
         first_season_file = self._season_json(
-            self._first_season_id_from_file,
+            self._first_season_key_from_file(show_key),
         ).parsed()
 
         return ShowInput(
@@ -364,10 +384,10 @@ class HiDivePlugin(FileMixin, register=True):
             media_type="TV Show",
             url=self._tv_show_url(first_season_file.metadata.series.series_id),
             data_timestamp=self._show_timestamp(),
-        ).upsert(source, self._show_from_db)
+        ).upsert(source, self._show_from_db(show_key))
 
-    def __upsert_movie_show(self, source: Source) -> Show:
-        playlist_json = self._playlist_json(self._show_id).parsed()
+    def __upsert_movie_show(self, source: Source, show_key: str) -> Show:
+        playlist_json = self._playlist_json(show_key).parsed()
         playlist_bucket = self.client.playlist.extract_bucket(
             playlist_json,
             "playlist",
@@ -375,93 +395,100 @@ class HiDivePlugin(FileMixin, register=True):
         movie_data = playlist_bucket.items[0]
 
         return ShowInput(
-            key=self._show_id,
+            key=show_key,
             data_timestamp=self._show_timestamp(),
             name=movie_data.title,
             media_type="Movie",
             description=movie_data.description,
             url=self._movie_url(playlist_bucket.id),
             image_url=movie_data.thumbnail_url,
-        ).upsert(source, self._show_from_db)
+        ).upsert(source, self._show_from_db(show_key))
 
-    def __upsert_seasons(self, show: Show) -> None:
+    def __upsert_seasons(self, show: Show, show_key: str) -> None:
         seasons: list[Season] = []
         if self._media_type == "TV Show":
             seasons.extend(
-                self.__upsert_tv_show_season(show, season_id)
-                for season_id in self._season_ids_from_json
+                self.__upsert_tv_show_season(show, season_key, show_key)
+                for season_key in self._season_keys_from_json(show_key)
             )
         else:
-            seasons.append(self.__upsert_movie_season(show))
-        self.__upsert_episodes(seasons)
+            seasons.append(self.__upsert_movie_season(show, show_key))
+        self.__upsert_episodes(seasons, show_key)
 
-    def __upsert_tv_show_season(self, show: Show, season_id: int) -> Season:
-        season_json = self._season_json(season_id).parsed()
+    def __upsert_tv_show_season(
+        self,
+        show: Show,
+        season_key: int,
+        show_key: str,
+    ) -> Season:
+        season_json = self._season_json(season_key).parsed()
 
         series_data = self.client.season.extract_series(season_json)
         series_hero = self.client.season.extract_hero(season_json)
         season_data = series_data.attributes.seasons.items[0]
 
-        sort_order = self._season_ids_from_json.index(season_id)
+        sort_order = self._season_keys_from_json(show_key).index(season_key)
 
+        seasons_dict = self._seasons_dict_from_db(show_key)
         season = SeasonInput(
-            key=str(season_id),
-            data_timestamp=self._season_timestamp(season_id),
+            key=str(season_key),
+            data_timestamp=self._season_timestamp(season_key),
             sort_order=sort_order,
             name=season_data.title,
-            url=self._tv_show_url(season_id),
+            url=self._tv_show_url(season_key),
             image_url=series_hero.attributes.image.attributes.source,
             season_number=season_data.season_number,
-        ).upsert(show, self._seasons_dict_from_db.get(str(season_id)))
+        ).upsert(show, seasons_dict.get(str(season_key)))
 
-        self.__add_season_to_cache(season)
         return season
 
-    def __upsert_movie_season(self, show: Show) -> Season:
-        playlist_json = self._playlist_json(self._show_id).parsed()
+    def __upsert_movie_season(self, show: Show, show_key: str) -> Season:
+        playlist_json = self._playlist_json(show_key).parsed()
         playlist_bucket = self.client.playlist.extract_bucket(
             playlist_json,
             "playlist",
         )
         movie_data = playlist_bucket.items[0]
 
+        seasons_dict = self._seasons_dict_from_db(show_key)
         season = SeasonInput(
-            key=self._show_id,
+            key=show_key,
             data_timestamp=self._show_timestamp(),
             sort_order=0,
             name=movie_data.title,
             season_number=0,
             url=self._movie_url(playlist_bucket.id),
             image_url=movie_data.thumbnail_url,
-        ).upsert(show, self._seasons_dict_from_db.get(self._show_id))
+        ).upsert(show, seasons_dict.get(show_key))
 
-        self.__add_season_to_cache(season)
         return season
 
-    def __upsert_episodes(self, seasons: list[Season]) -> None:
+    def __upsert_episodes(self, seasons: list[Season], show_key: str) -> None:
         if self._media_type == "TV Show":
             for season in seasons:
                 season_json = self._season_json(int(season.key)).parsed()
-                self.__upsert_tv_show_season_episodes(season, season_json)
+                self.__upsert_tv_show_season_episodes(season, season_json, show_key)
                 self.__set_season_update_at_using_episode_release_date(season)
         else:
             for season in seasons:
-                self.__upsert_movie_episode(season)
+                self.__upsert_movie_episode(season, show_key)
 
     def __upsert_tv_show_season_episodes(
         self,
         season: Season,
         season_json: SeasonModel,
+        show_key: str,
     ) -> None:
         season_bucket = self.client.season.extract_bucket(season_json, "season")
         for index, episode_data in enumerate(season_bucket.items):
-            self.__upsert_tv_show_episode(season, episode_data, index)
+            self.__upsert_tv_show_episode(season, episode_data, index, show_key)
 
     def __upsert_tv_show_episode(
         self,
         season: Season,
         episode_data: Any,  # noqa: ANN401
         sort_order: int,
+        show_key: str,
     ) -> Episode:
         vod_data = self._vod_json(episode_data.id).parsed()
         # TODO: extract_vod_original_premiere was removed from diving_board.
@@ -475,6 +502,7 @@ class HiDivePlugin(FileMixin, register=True):
         if match := re.match(r"^E(\d+)", episode_data.title):
             episode_number = int(match.group(1))
 
+        season_episodes = self._season_episodes_dict_from_db(show_key)
         episode = EpisodeInput(
             key=str(episode_data.id),
             data_timestamp=self._episode_timestamp(
@@ -492,16 +520,13 @@ class HiDivePlugin(FileMixin, register=True):
             duration=episode_data.duration,
         ).upsert(
             season,
-            self._season_episodes_dict_from_db.get(season.key, {}).get(
-                str(episode_data.id),
-            ),
+            season_episodes.get(season.key, {}).get(str(episode_data.id)),
         )
 
-        self.__add_episode_to_cache(season, episode)
         return episode
 
-    def __upsert_movie_episode(self, season: Season) -> Episode:
-        playlist_json = self._playlist_json(self._show_id).parsed()
+    def __upsert_movie_episode(self, season: Season, show_key: str) -> Episode:
+        playlist_json = self._playlist_json(show_key).parsed()
         playlist_bucket = self.client.playlist.extract_bucket(
             playlist_json,
             "playlist",
@@ -514,9 +539,10 @@ class HiDivePlugin(FileMixin, register=True):
         parsed_date = self.client.vod.extract_text_block(vod_data)
         episode_date = parsed_date.date() if parsed_date else None
 
+        season_episodes = self._season_episodes_dict_from_db(show_key)
         episode = EpisodeInput(
             key=str(movie_data.id),
-            data_timestamp=self._episode_timestamp(self._show_id, int(movie_data.id)),
+            data_timestamp=self._episode_timestamp(show_key, int(movie_data.id)),
             url=self._episode_url(movie_data.id),
             sort_order=0,
             description=movie_data.description,
@@ -528,44 +554,30 @@ class HiDivePlugin(FileMixin, register=True):
             duration=int(movie_data.duration),
         ).upsert(
             season,
-            self._season_episodes_dict_from_db.get(season.key, {}).get(
-                str(movie_data.id),
-            ),
+            season_episodes.get(season.key, {}).get(str(movie_data.id)),
         )
 
-        self.__add_episode_to_cache(season, episode)
         return episode
 
     # endregion
 
     # region Validation
 
-    def _validate_show_id(self, show_id: str) -> None:
+    def _validate_show_key(self, show_key: str) -> None:
         try:
-            self._season_json(show_id)
+            self._season_json(show_key)
         except HTTPError as e:
             raise InvalidURLError(e)
 
-    def _validate_movie_id(self, movie_id: str) -> None:
+    def _validate_movie_key(self, show_key: str) -> None:
         try:
-            self._playlist_json(movie_id)
+            self._playlist_json(show_key)
         except HTTPError as e:
             raise InvalidURLError(e)
 
     # endregion
 
-    # region Cache Helpers
-
-    def __add_season_to_cache(self, season: Season) -> None:
-        """Add a season to the seasons cache."""
-        self._seasons_dict_from_db[season.key] = season
-
-    def __add_episode_to_cache(self, season: Season, episode: Episode) -> None:
-        """Add an episode to the episodes cache."""
-        self._episodes_dict_from_db[episode.key] = episode
-        if season.key not in self._season_episodes_dict_from_db:
-            self._season_episodes_dict_from_db[season.key] = {}
-        self._season_episodes_dict_from_db[season.key][episode.key] = episode
+    # region Other
 
     def __set_season_update_at_using_episode_release_date(
         self,

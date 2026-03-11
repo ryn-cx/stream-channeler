@@ -13,7 +13,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MetadataMixin
+from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class BaseSource(BaseMediaMixin):
     image_url: str | None = Field(default=None)
 
 
-class Source(BaseSource, MetadataMixin, table=True):
+class Source(BaseSource, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("plugin_id", "key"),
         UniqueConstraint("id"),
@@ -48,6 +48,13 @@ class Source(BaseSource, MetadataMixin, table=True):
         return session.exec(
             select(Plugin.user_id).where(Plugin.id == self.plugin_id),
         ).first()
+
+    def is_public(self, session: Session) -> bool:
+        return bool(
+            session.exec(
+                select(Plugin.public).where(Plugin.id == self.plugin_id),
+            ).first(),
+        )
 
     @override
     def parent(self) -> Plugin:

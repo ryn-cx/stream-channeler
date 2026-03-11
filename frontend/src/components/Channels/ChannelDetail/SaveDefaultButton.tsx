@@ -25,7 +25,7 @@ export function SaveDefaultButton({
     mutationFn: () =>
       ChannelsService.updateChannelDefaultOrder({
         channelId,
-        ...searchParams,
+        requestBody: searchParams,
       }),
     onSuccess: () => {
       showSuccessToast("Default order saved successfully")

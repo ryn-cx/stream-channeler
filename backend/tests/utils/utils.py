@@ -6,25 +6,15 @@ import string
 import uuid
 from collections.abc import Callable
 from datetime import date, datetime
+from enum import Enum
 from types import NoneType
 from typing import Any, Literal, get_args
 
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
-from app.channels.schemas import ChannelInput
 from app.config import settings
-from app.episodes.schemas import EpisodeInput, EpisodePatchInput, EpisodePostInput
-from app.plugins.schemas import (
-    FileInput,
-    PluginInput,
-    PluginPatchInput,
-    PluginPostInput,
-)
-from app.seasons.schemas import SeasonInput, SeasonPatchInput, SeasonPostInput
-from app.shows.schemas import ShowInput, ShowPatchInput, ShowPostInput
-from app.sources.schemas import SourceInput, SourcePatchInput, SourcePostInput
 from app.utils import tz_datetime
-from app.watches.schemas import WatchInput, WatchPatchInput, WatchPostInput
 
 
 def random_lower_string() -> str:
@@ -117,54 +107,32 @@ def _is_nullable(annotation: type | None) -> tuple[bool, type]:
     return False, annotation
 
 
-def _random_value(tp: type) -> object:
+def _random_value(object_type: type) -> object:
     """Generate a random value for a given type."""
-    generator = _TYPE_GENERATORS.get(tp)
-    if generator is None:
-        msg = f"No random generator for type: {tp}"
-        raise ValueError(msg)
-    return generator()
+    generator = _TYPE_GENERATORS.get(object_type)
+    if generator is not None:
+        return generator()
+    if issubclass(object_type, Enum):
+        return random.choice(list(object_type))
+    msg = f"No random generator for type: {object_type}"
+    raise ValueError(msg)
 
 
-type _InputModel = (
-    ChannelInput
-    | EpisodeInput
-    | EpisodePatchInput
-    | EpisodePostInput
-    | FileInput
-    | PluginInput
-    | PluginPatchInput
-    | PluginPostInput
-    | SeasonInput
-    | SeasonPatchInput
-    | SeasonPostInput
-    | ShowInput
-    | ShowPatchInput
-    | ShowPostInput
-    | SourceInput
-    | SourcePatchInput
-    | SourcePostInput
-    | WatchInput
-    | WatchPatchInput
-    | WatchPostInput
-)
-
-
-def build_random_model[T: _InputModel](
+def build_random_model[T: BaseModel](
     model: type[T],
-    *,
     mode: Literal["random", "full", "minimal"] = "random",
+    /,
     **required_kwargs: object,
 ) -> T:
     """Return a model instance with randomly populated fields.
 
     Args:
-        mode: "full" populates all fields including optionals, "minimal" only populates
+        _mode: "full" populates all fields including optionals, "minimal" only populates
             required fields, "random" (default) randomly includes optionals.
     """
     kwargs: dict[str, object] = dict(required_kwargs)
     for field_name, info in model.model_fields.items():
-        if field_name in kwargs:
+        if field_name in (*kwargs.keys(), "created_at", "modified_at"):
             continue
         if mode == "minimal" and not info.is_required():
             continue
@@ -178,15 +146,15 @@ def build_random_model[T: _InputModel](
 
 
 def dump_random_model(
-    model: type[_InputModel],
-    *,
+    model: type[BaseModel],
     mode: Literal["random", "full", "minimal"] = "random",
+    /,
     **required_kwargs: object,
 ) -> dict[str, Any]:
     """Return a JSON-serialized model with randomly populated fields."""
     return build_random_model(
         model,
-        mode=mode,
+        mode,
         **required_kwargs,
     ).model_dump(mode="json", exclude_unset=True)
 

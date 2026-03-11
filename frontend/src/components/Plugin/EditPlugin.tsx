@@ -9,6 +9,7 @@ import { z } from "zod"
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogClose,
@@ -46,7 +47,9 @@ interface PluginsListOutput {
 
 const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
+  version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  public: z.boolean(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -66,7 +69,9 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     criteriaMode: "all",
     defaultValues: {
       name: plugin.name ?? "",
+      version: plugin.version ?? "",
       data_timestamp: plugin.data_timestamp?.slice(0, 16) ?? "",
+      public: plugin.public ?? false,
     },
   })
 
@@ -108,6 +113,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     mutation.mutate({
       ...data,
       name: data.name || undefined,
+      version: data.version || undefined,
       data_timestamp: data.data_timestamp || undefined,
     })
   }
@@ -151,6 +157,19 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
               />
               <FormField
                 control={form.control}
+                name="version"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Version</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Version" type="text" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="data_timestamp"
                 render={({ field }) => (
                   <FormItem>
@@ -159,6 +178,21 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
                       <Input type="datetime-local" {...field} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="public"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal">Is public?</FormLabel>
                   </FormItem>
                 )}
               />
