@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
     networks:
       - vpn-network
-      - default
+      - main-network
 
   # Update outdated script runner through VPN
   update-outdated-vpn:
@@ -60,7 +60,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
@@ -96,7 +96,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
@@ -116,7 +116,7 @@ services:
       dockerfile: backend/Dockerfile
     networks:
       - vpn-network
-      - default
+      - main-network
     volumes:
       - sync-lock:/tmp/sync
     command: sh -c "sleep 10; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.update_outdated'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
@@ -134,7 +134,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
@@ -154,7 +154,7 @@ services:
       dockerfile: backend/Dockerfile
     networks:
       - vpn-network
-      - default
+      - main-network
     volumes:
       - sync-lock:/tmp/sync
     command: sh -c "sleep 40; while true; do flock -x /tmp/sync/lock.file -c 'python -m app.tools.import_queue'; echo 'Sleeping for 60 seconds...'; sleep 60; done"
@@ -172,7 +172,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
-      - POSTGRES_SERVER=db
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
@@ -189,3 +189,6 @@ volumes:
 networks:
   vpn-network:
     driver: bridge
+  main-network:
+    name: stream-channeler_default
+    external: true
