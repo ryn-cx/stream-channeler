@@ -1,3 +1,4 @@
+// TODO: Validate
 import { FaGithub } from "react-icons/fa"
 
 const socialLinks = [

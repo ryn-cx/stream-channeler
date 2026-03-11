@@ -1,3 +1,4 @@
+// TODO: Validate
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { UserPublic } from "@/client"

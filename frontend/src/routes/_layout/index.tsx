@@ -1,3 +1,4 @@
+// TODO: Validate
 import { createFileRoute } from "@tanstack/react-router"
 
 import { InfoPage } from "@/components/Home/InfoPage"
