@@ -52,7 +52,7 @@ class UpsertMixin(FileMixin, register=False):
         *,
         show_key: str = "",
         force_reimport: bool = False,
-    ) -> Show:
+    ) -> None:
         channel_json_by_id = self._channel_by_id_file(show_key)
         channel_parsed = channel_json_by_id.parsed()
 
@@ -70,7 +70,6 @@ class UpsertMixin(FileMixin, register=False):
             ).upsert(source, show)
 
         self._upsert_seasons(show, show_key=show_key, force_reimport=force_reimport)
-        return show
 
     def _upsert_seasons(
         self,
@@ -82,13 +81,8 @@ class UpsertMixin(FileMixin, register=False):
         season_keys = self._season_keys_from_file(show_key)
         show.soft_delete_missing_children(season_keys)
 
-        seasons = [
+        for season_key in season_keys:
             self._upsert_season(show, season_key, force_reimport=force_reimport)
-            for season_key in season_keys
-        ]
-
-        for season in seasons:
-            self._upsert_episodes(season, force_reimport=force_reimport)
 
     @override
     def _upsert_season(
@@ -97,56 +91,58 @@ class UpsertMixin(FileMixin, register=False):
         season_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Season:
+    ) -> None:
         season = Season.get_from_memory(self.db, show, season_key)
         season_timestamp = self._season_timestamp(season_key)
-        if not force_reimport and season and season.data_timestamp == season_timestamp:
-            return season
+        if force_reimport or not season or season.data_timestamp != season_timestamp:
+            playlist_videos_file = self._playlist_videos_file(season_key)
 
-        playlist_videos_file = self._playlist_videos_file(season_key)
+            # Handle playlists/channels without videos.
+            if not playlist_videos_file.get_content():
+                # Channels without uploads will have blank Playlist and PlaylistVideos
+                # files.
+                if season_key == self._get_channel_uploads_playlist_key(show.key):
+                    season = SeasonInput(
+                        key=self._get_channel_uploads_playlist_key(show.key),
+                        name=f"Uploads from {show.name}",
+                        url=self._playlist_url(season_key),
+                        data_timestamp=season_timestamp,
+                    ).upsert(show, season)
+                else:
+                    # TODO: Can the name be gotten for playlists without videos as well?
+                    # TODO: Find an empty playlist to test this properly
+                    playlist_file = self._playlist_file(season_key)
+                    parsed_playlist = playlist_file.parsed()
+                    assert False
 
-        # Handle playlists/channels without videos.
-        if not playlist_videos_file.get_content():
-            # Channels without uploads will have blank Playlist and PlaylistVideos
-            # files.
-            if season_key == self._get_channel_uploads_playlist_key(show.key):
-                return SeasonInput(
-                    key=self._get_channel_uploads_playlist_key(show.key),
-                    name=f"Uploads from {show.name}",
-                    url=self._playlist_url(season_key),
+                    season = SeasonInput(
+                        key=season_key,
+                        data_timestamp=season_timestamp,
+                    ).upsert(show, season)
+            else:
+                playlist_videos_data = playlist_videos_file.parsed()
+                modified_date_str = playlist_videos_data.modified_date
+                modified_datetime = tz_datetime.strptime(modified_date_str, "%Y%m%d")
+                # Take the difference between the file's data_timestamp and the current
+                # time to determine when to next update the season. This will make it so
+                # frequently updated playlists are checked more often than rarely updated
+                # playlists.
+                playlist_datetime = playlist_videos_file.get_data_timestamp()
+                update_delay = playlist_datetime - modified_datetime
+                # Update at most once per day.
+                minimum_update_at = tz_datetime.now() + timedelta(days=1)
+                update_at = max(tz_datetime.now() + update_delay, minimum_update_at)
+
+                season = SeasonInput(
+                    key=playlist_videos_data.id,
+                    name=playlist_videos_data.title,
+                    url=playlist_videos_data.webpage_url,
+                    image_url=playlist_videos_data.thumbnails[0].url,
                     data_timestamp=season_timestamp,
+                    update_at=update_at,
                 ).upsert(show, season)
-            # TODO: Can the name be gotten for playlists without videos as well?
-            # TODO: Find an empty playlist to test this properly
-            playlist_file = self._playlist_file(season_key)
-            parsed_playlist = playlist_file.parsed()
-            assert False
 
-            return SeasonInput(
-                key=season_key,
-                data_timestamp=season_timestamp,
-            ).upsert(show, season)
-
-        playlist_videos_data = playlist_videos_file.parsed()
-        modified_date_str = playlist_videos_data.modified_date
-        modified_datetime = tz_datetime.strptime(modified_date_str, "%Y%m%d")
-        # Take the difference between the file's data_timestamp and the current time
-        # to determine when to next update the season. This will make it so frequently
-        # updated playlists are checked more often than rarely updated playlists.
-        playlist_datetime = playlist_videos_file.get_data_timestamp()
-        update_delay = playlist_datetime - modified_datetime
-        # Update at most once per day.
-        minimum_update_at = tz_datetime.now() + timedelta(days=1)
-        update_at = max(tz_datetime.now() + update_delay, minimum_update_at)
-
-        return SeasonInput(
-            key=playlist_videos_data.id,
-            name=playlist_videos_data.title,
-            url=playlist_videos_data.webpage_url,
-            image_url=playlist_videos_data.thumbnails[0].url,
-            data_timestamp=season_timestamp,
-            update_at=update_at,
-        ).upsert(show, season)
+        self._upsert_episodes(season, force_reimport=force_reimport)
 
     def _upsert_episodes(self, season: Season, *, force_reimport: bool = False) -> None:
         sort_order_map = self._video_sort_order(season.key)
@@ -163,21 +159,21 @@ class UpsertMixin(FileMixin, register=False):
         episode_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Episode:
+    ) -> None:
         existing_episode = Episode.get_from_memory(self.db, season, episode_key)
         if (
             not force_reimport
             and existing_episode
             and existing_episode.data_timestamp == self._episode_timestamp(episode_key)
         ):
-            return existing_episode
+            return
 
         video_file = self._video_file(episode_key)
         video_data = video_file.parsed()
         video_item = video_data.items[0]
         video_snippet = video_item.snippet
 
-        return EpisodeInput(
+        EpisodeInput(
             key=video_item.id,
             name=video_snippet.title,
             url=f"{self._base_url()}watch?v={video_item.id}",

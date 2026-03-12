@@ -104,7 +104,7 @@ class BasePlugin(
             preload_episodes=True,
             preload_show=True,
         ).one()
-        _cache = (self._download_season_files(season.key, season.update_at),)
+        _cache = self._download_season_files(season.key, season.update_at)
         self._upsert_season(season.show, season.key)
 
     @override
@@ -124,7 +124,7 @@ class BasePlugin(
         *,
         show_key: str = "",
         force_reimport: bool = False,
-    ) -> Show: ...
+    ) -> None: ...
 
     @abstractmethod
     def _upsert_season(
@@ -133,7 +133,7 @@ class BasePlugin(
         season_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Season: ...
+    ) -> None: ...
 
     @abstractmethod
     def _upsert_episode(
@@ -142,7 +142,7 @@ class BasePlugin(
         episode_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Episode: ...
+    ) -> None: ...
 
     # endregion
 

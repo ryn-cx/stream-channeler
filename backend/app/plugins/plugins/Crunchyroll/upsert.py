@@ -4,7 +4,6 @@ from typing import override
 
 from loguru import logger
 
-from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeInput
 from app.plugins.plugins.Crunchyroll.files import FileMixin
 from app.seasons.models import Season
@@ -41,7 +40,7 @@ class UpsertMixin(FileMixin, register=False):
         *,
         show_key: str = "",
         force_reimport: bool = False,
-    ) -> Show:
+    ) -> None:
         # Soft delete everything then re-import everything to manage deleted entries.
         if existing_show := Show.get_from_memory(self.db, source, show_key):
             existing_show.soft_delete()
@@ -62,7 +61,6 @@ class UpsertMixin(FileMixin, register=False):
         ).upsert(source, existing_show)
         self.__upsert_seasons(show, show_key=show_key)
         self.__set_season_update_at_using_episode_release_date(show)
-        return show
 
     def __upsert_seasons(self, show: Show, *, show_key: str) -> None:
         seasons_file = self._seasons_file(show_key)
@@ -92,7 +90,7 @@ class UpsertMixin(FileMixin, register=False):
         season_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Season:
+    ) -> None:
         seasons_file = self._seasons_file(show.key)
         seasons_data = seasons_file.parsed().data
         season_data_dict = {sd.id: sd for sd in seasons_data}
@@ -107,7 +105,6 @@ class UpsertMixin(FileMixin, register=False):
             data_timestamp=self._season_timestamp(season_key),
         ).upsert(show, existing)
         self.__upsert_episodes([season])
-        return season
 
     def __upsert_episodes(self, seasons: list[Season]) -> None:
         for season in seasons:
@@ -140,12 +137,12 @@ class UpsertMixin(FileMixin, register=False):
         episode_key: str,
         *,
         force_reimport: bool = False,
-    ) -> Episode:
+    ) -> None:
         episodes_data = self._episodes_file(season.key).parsed()
         episode_dict_lookup = {episode.key: episode for episode in season.episodes}
         for i, episode_data in enumerate(episodes_data.data):
             if episode_data.id == episode_key:
-                return EpisodeInput(
+                EpisodeInput(
                     key=episode_data.id,
                     url=self._episode_url(episode_data.id),
                     sort_order=i,
@@ -162,6 +159,7 @@ class UpsertMixin(FileMixin, register=False):
                     duration=episode_data.duration_ms // 1000,
                     data_timestamp=self._episode_timestamp(season.key),
                 ).upsert(season, episode_dict_lookup.get(episode_data.id))
+                return
 
         msg = f"Episode {episode_key} not found in season {season.key}"
         raise ValueError(msg)
