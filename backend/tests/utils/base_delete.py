@@ -35,14 +35,14 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_delete_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
         authenticated = user_type != "anonymous"
@@ -50,7 +50,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             authenticated=authenticated,
             public=public,
         )
@@ -59,7 +59,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             db,
             client,
             authenticated=authenticated,
-            model_type=model_type,
+            is_owner=is_owner,
             method="delete",
             url=self.entry_url(setup.record.id),
             detail=f"Not authorized to access this {self.model_name}",

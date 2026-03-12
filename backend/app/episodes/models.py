@@ -234,6 +234,9 @@ class Episode(BaseEpisode, MediaMixin, table=True):
             bind_arguments=bind_arguments,
         )
 
+    def get_sibling(self, db: Session, key: str) -> Episode | None:
+        return Episode.get(db, self.season, key)
+
     def __str__(self) -> str:
         base_episode = "Episode: "
         if self.episode_number:

@@ -1,7 +1,6 @@
 # TODO: Validate
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from functools import cache
 from typing import Any, override
 
 from sqlalchemy.orm import joinedload
@@ -20,6 +19,7 @@ from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 
 
@@ -49,63 +49,43 @@ class BasePlugin(
         episode: Episode | None = None,
     ) -> None:
         self.db = db
-        self.__plugin_value: Plugin | None = None
-        self.__preload_plugin()
         self.__upsert_plugin()
 
-    def __preload_plugin(self) -> None:
-        # assignment - The setter is designed to handle a Plugin or None value.
-        self.plugin = Plugin.get(  # type: ignore[assignment]
+    def __upsert_plugin(self) -> None:
+        plugin_user = get_or_create_plugin_user(session=self.db)
+        existing = Plugin.get(
             self.db,
             self.plugin_id(),
-            # arg-type - joinedload always has type errors.
+            plugin_user,
             options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
         )
 
-    def __upsert_plugin(self) -> None:
-        if self._has_plugin():
-            if self.plugin.version != self._VERSION:
-                msg = (
-                    f"Plugin {self.plugin_id()!r} requires version {self._VERSION!r} "
-                    f"but the database has version {self.plugin.version!r}. "
-                    f"The database entry needs to be migrated."
-                )
-                raise RuntimeError(msg)
-
-            if self.plugin.name != self._plugin_name():
-                self.plugin.name = self._plugin_name()
-                self.plugin.data_timestamp = tz_datetime.now()
+        if existing is None:
+            self.plugin = PluginInput(
+                key=self.plugin_id(),
+                name=self._plugin_name(),
+                version=self._VERSION,
+                public=True,
+                user_id=plugin_user.id,
+                data_timestamp=tz_datetime.now(),
+            ).upsert(plugin_user, None)
             return
 
-        self.plugin = PluginInput(
-            key=self.plugin_id(),
-            name=self._plugin_name(),
-            version=self._VERSION,
-            public=True,
-            data_timestamp=tz_datetime.now(),
-        ).upsert(self.db, None)
+        if existing.version != self._VERSION:
+            msg = (
+                f"Plugin {self.plugin_id()!r} requires version {self._VERSION!r} "
+                f"but the database has version {existing.version!r}. "
+                f"The database entry needs to be migrated."
+            )
+            raise RuntimeError(msg)
 
-    # endregion
-
-    # region Properties
-
-    @property
-    def plugin(self) -> Plugin:
-        if not self.__plugin_value:
-            msg = "Plugin has not been set yet."
-            raise AttributeError(msg)
-
-        return self.__plugin_value
-
-    @plugin.setter
-    def plugin(self, plugin: Plugin | None) -> None:
-        if self.__plugin_value and not plugin:
-            msg = "Plugin has already been set and cannot be set to None."
-            raise AttributeError(msg)
-        self.__plugin_value = plugin
-
-    def _has_plugin(self) -> Plugin | None:
-        return self.__plugin_value
+        if existing.name != self._plugin_name():
+            existing.name = self._plugin_name()
+            existing.data_timestamp = tz_datetime.now()
+        if existing.user_id != plugin_user.id:
+            existing.user_id = plugin_user.id
+            existing.data_timestamp = tz_datetime.now()
+        self.plugin = existing
 
     # endregion
 
@@ -144,7 +124,7 @@ class BasePlugin(
         *,
         show_key: str = "",
         force_reimport: bool = False,
-    ) -> None: ...
+    ) -> Show: ...
 
     @abstractmethod
     def _upsert_season(
@@ -162,21 +142,19 @@ class BasePlugin(
         episode_key: str,
         *,
         force_reimport: bool = False,
-    ) -> None: ...
+    ) -> Episode: ...
 
     # endregion
 
     # region Other
 
     @classmethod
-    @cache
     @override
     def plugin_id(cls) -> str:
         # TODO: Update name to ryn.cx to StreamChanneler.
-        return f"ryn.cx-{cls._plugin_name()}"
+        return f"{cls._plugin_name()}"
 
     @classmethod
-    @cache
     def _plugin_name(cls) -> str:
         """Returns the name of the plugin."""
         return cls.__name__

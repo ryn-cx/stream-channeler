@@ -13,6 +13,7 @@ from tests.users.utils import create_random_user_alt
 from tests.utils.base import (
     INPUT_SCHEMAS,
     MODELS_WITH_KEY,
+    MODELS_WITH_PARENT,
     OUTPUT_MODELS,
     OUTPUT_MODELS_WITH_KEY,
     SUPPORTED_MODELS,
@@ -44,7 +45,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_id: uuid.UUID,
     ) -> tuple[uuid.UUID | None, Any]:
         """Create and return a parent record if possible."""
-        if not self.has_parent:
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
             return None, None
         parent = self.create_parent_function(db, user_id=user_id)
         return parent.id, parent
@@ -121,17 +122,17 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_create_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
-        if not self.has_parent:
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
             pytest.skip("Model has no parent")
 
         authenticated = user_type != "anonymous"
@@ -139,19 +140,19 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             authenticated=authenticated,
             public=public,
         )
 
-        parent = getattr(setup.record, self.parent_key_name.removesuffix("_id"))
+        parent = self.get_parent(db, setup.record)
         parameters_model = build_random_model(self.input_schema)
 
         if self.assert_write_permission(
             db,
             client,
             authenticated=authenticated,
-            model_type=model_type,
+            is_owner=is_owner,
             method="post",
             url=self.create_url(parent.id),
             detail=f"Not authorized to access this {self.parent_name}",
@@ -173,18 +174,18 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         db: Session,
         mode: Literal["full", "minimal"],
     ) -> None:
-        if not self.has_parent:
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
             pytest.skip("Model has no parent")
 
         setup = self.create_test_data(
             client,
             db,
-            relationship="owner",
+            is_owner=True,
             authenticated=True,
             public=False,
         )
 
-        parent = getattr(setup.record, self.parent_key_name.removesuffix("_id"))
+        parent = self.get_parent(db, setup.record)
         parameters_model = build_random_model(self.input_schema, mode)
 
         self.assert_create_success(
@@ -202,18 +203,18 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         db: Session,
         existing_records: int,
     ) -> None:
-        if not self.has_parent:
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
             pytest.skip("Model has no parent")
 
         setup = self.create_test_data(
             client,
             db,
-            relationship="owner",
+            is_owner=True,
             authenticated=True,
             public=False,
         )
 
-        parent = getattr(setup.record, self.parent_key_name.removesuffix("_id"))
+        parent = self.get_parent(db, setup.record)
         self.create_records(db, existing_records, setup.user.id, parent)
 
         parameters_model = build_random_model(self.input_schema)
@@ -228,18 +229,21 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     def test_create_shared_key(self, client: TestClient, db: Session) -> None:
         """Test creating a record when another user has a record with the same key."""
-        if not self.has_parent or not hasattr(self.database_model, "key"):
+        if not issubclass(self.database_model, MODELS_WITH_PARENT) or not hasattr(
+            self.database_model,
+            "key",
+        ):
             pytest.skip("Model has no key field")
 
         setup = self.create_test_data(
             client,
             db,
-            relationship="owner",
+            is_owner=True,
             authenticated=True,
             public=False,
         )
 
-        parent = getattr(setup.record, self.parent_key_name.removesuffix("_id"))
+        parent = self.get_parent(db, setup.record)
         extra_kwargs = self.get_shared_key_kwargs(client, db)
         parameters_model = build_random_model(self.input_schema, **extra_kwargs)
 
@@ -256,7 +260,10 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         client: TestClient,
         db: Session,
     ) -> None:
-        if not self.has_parent or not hasattr(self.database_model, "key"):
+        if not issubclass(self.database_model, MODELS_WITH_PARENT) or not hasattr(
+            self.database_model,
+            "key",
+        ):
             pytest.skip()
 
         user = create_random_user_alt(client, db)
@@ -275,7 +282,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             )
 
     def test_create_parent_not_found(self, client: TestClient, db: Session) -> None:
-        if not self.has_parent:
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
             pytest.skip("Model has no parent")
 
         user = create_random_user_alt(client, db)

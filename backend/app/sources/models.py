@@ -204,6 +204,9 @@ class Source(BaseSource, MediaMixin, table=True):
         """
         return db.identity_map[(Source, (plugin.id, source_key), None)]
 
+    def get_sibling(self, db: Session, key: str) -> Source | None:
+        return Source.get(db, self.plugin, key)
+
     def __str__(self) -> str:
         base_source = "Source: "
         if self.name:

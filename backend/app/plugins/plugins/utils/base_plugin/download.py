@@ -53,35 +53,6 @@ class DownloadMixin(FileGettersMixin):
             all_files.extend(self._download_all_episode_files(show_key))
         return all_files
 
-    def _download_all_season_files(self, show_key: str) -> list[File]:
-        season_keys = self._season_keys_from_file(show_key)
-        season_cache = self._preload_season_files(season_keys)
-        all_files: list[File] = []
-        for season_key in season_keys:
-            all_files.extend(
-                self._download_season_files(
-                    season_key,
-                    preloaded_season_files=season_cache,
-                    skip_episodes=True,
-                ),
-            )
-        return all_files
-
-    def _download_all_episode_files(self, show_key: str) -> list[File]:
-        all_video_keys = self._video_keys_from_file(
-            self._season_keys_from_file(show_key),
-        )
-        episode_cache = self._preload_episode_files(all_video_keys)
-        all_files: list[File] = []
-        for video_key in all_video_keys:
-            all_files.extend(
-                self._download_episode_files(
-                    video_key,
-                    preloaded_episode_files=episode_cache,
-                ),
-            )
-        return all_files
-
     def _download_season_files(
         self,
         season_key: str,
@@ -125,6 +96,27 @@ class DownloadMixin(FileGettersMixin):
         for episode_file in episode_files:
             episode_file.download_if_outdated(update_at)
         return [file.database_entry for file in episode_files]
+
+    def _download_all_season_files(self, show_key: str) -> list[File]:
+        season_keys = self._season_keys_from_file(show_key)
+        season_cache = self._preload_season_files(season_keys)
+        all_files: list[File] = []
+        for season_key in season_keys:
+            all_files.extend(
+                self._download_season_files(
+                    season_key,
+                    preloaded_season_files=season_cache,
+                    skip_episodes=True,
+                ),
+            )
+        return all_files
+
+    def _download_all_episode_files(self, show_key: str) -> list[File]:
+        season_keys = self._season_keys_from_file(show_key)
+        all_files: list[File] = []
+        for season_key in season_keys:
+            all_files.extend(self._download_season_episode_files(season_key))
+        return all_files
 
     @abstractmethod
     def _preload_show_files(self, show_key: str) -> Sequence[File]: ...

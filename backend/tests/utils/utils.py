@@ -8,7 +8,7 @@ from collections.abc import Callable
 from datetime import date, datetime
 from enum import Enum
 from types import NoneType
-from typing import Any, Literal, get_args
+from typing import Any, Literal, get_args, get_origin
 
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
@@ -112,6 +112,11 @@ def _random_value(object_type: type) -> object:
     generator = _TYPE_GENERATORS.get(object_type)
     if generator is not None:
         return generator()
+    origin = get_origin(object_type)
+    if origin is list:
+        inner_args = get_args(object_type)
+        inner_type = inner_args[0] if inner_args else str
+        return [_random_value(inner_type) for _ in range(random.randint(1, 3))]
     if issubclass(object_type, Enum):
         return random.choice(list(object_type))
     msg = f"No random generator for type: {object_type}"

@@ -135,7 +135,7 @@ class TestDeleteChannelShow:
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_remove_show_permissions(
         self,
         client: TestClient,
@@ -143,7 +143,7 @@ class TestDeleteChannelShow:
         *,
         public: bool,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
     ) -> None:
         owner = create_random_user_alt(client, db)
         channel = create_random_channel(db, user_id=owner.id, public=public)
@@ -158,7 +158,7 @@ class TestDeleteChannelShow:
             )
             return
 
-        if model_type == "owner":
+        if is_owner:
             headers = owner.headers
             assert_delete(
                 client=client,

@@ -207,7 +207,6 @@ export type PluginOutput = {
     version?: (string | null);
     public: boolean;
     id: string;
-    user_id?: (string | null);
 };
 
 export type PluginPatchInput = {

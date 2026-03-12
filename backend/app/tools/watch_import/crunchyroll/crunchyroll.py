@@ -22,7 +22,7 @@ from app.watches.models import Watch
 load_models()
 
 INPUTS_DIR = Path(__file__).parent / "inputs"
-PLUGIN_KEY = "ryn.cx-Crunchyroll"
+PLUGIN_KEY = "Crunchyroll"
 
 
 def load_watch_history() -> list[dict[str, object]]:

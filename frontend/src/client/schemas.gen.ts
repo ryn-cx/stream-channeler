@@ -1411,18 +1411,6 @@ export const PluginOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
-        },
-        user_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'User Id'
         }
     },
     type: 'object',

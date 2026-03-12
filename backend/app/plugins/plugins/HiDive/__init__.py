@@ -59,7 +59,7 @@
 #     @cache
 #     @override
 #     def plugin_id(cls) -> str:
-#         return "ryn.cx-HiDive"
+#         return "HiDive"
 
 #     @classmethod
 #     @cache

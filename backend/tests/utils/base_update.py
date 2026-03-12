@@ -105,14 +105,14 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_update_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
         authenticated = user_type != "anonymous"
@@ -120,7 +120,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             authenticated=authenticated,
             public=public,
         )
@@ -132,7 +132,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             db,
             client,
             authenticated=authenticated,
-            model_type=model_type,
+            is_owner=is_owner,
             method="patch",
             url=self.entry_url(setup.record.id),
             detail=f"Not authorized to access this {self.model_name}",
@@ -159,7 +159,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            "owner",
+            is_owner=True,
             authenticated=True,
             public=False,
         )
@@ -197,7 +197,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            "owner",
+            is_owner=True,
             authenticated=True,
             public=False,
         )
@@ -217,8 +217,9 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         user = create_random_user_alt(client, db)
         record = self.create_record_function(db, user_id=user.id)
-        if isinstance(record, MODELS_WITH_PARENT):
-            sibling = self.create_record_function(db, record.parent())
+        if issubclass(self.database_model, MODELS_WITH_PARENT):
+            parent = self.get_parent(db, record)
+            sibling = self.create_record_function(db, parent)
         else:
             sibling = self.create_record_function(db, user_id=user.id)
         sibling_output = self.output_model.model_validate(sibling)

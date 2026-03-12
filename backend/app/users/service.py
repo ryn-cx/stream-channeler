@@ -1,8 +1,26 @@
+import secrets
+
 from sqlmodel import Session, func, select
 
 from app.auth.security import get_password_hash
+from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.users.schemas import UserCreate, UserUpdate
+
+
+def get_or_create_plugin_user(*, session: Session) -> User:
+    """Get or create the system user that owns official plugins."""
+    user = get_user_by_email(session=session, email=PLUGIN_USER_EMAIL)
+    if not user:
+        user = create_user(
+            session=session,
+            user_create=UserCreate(
+                email=PLUGIN_USER_EMAIL,
+                password=secrets.token_urlsafe(32),
+                is_superuser=False,
+            ),
+        )
+    return user
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:

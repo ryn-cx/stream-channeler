@@ -1,6 +1,7 @@
 # TODO: Validate
 from collections.abc import Generator
 from contextlib import ExitStack, contextmanager
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -21,11 +22,12 @@ def _all_subclasses(cls: type) -> list[type]:
 
 @contextmanager
 def disable_ip_validation() -> Generator[None]:
-    """Disable IP validation checks when downloading files."""
-    with (
-        patch("app.plugins.plugins.utils.ip_validator.check_ip_matches"),
-        patch("app.plugins.plugins.utils.ip_validator.check_ip_not_matches"),
-    ):
+    """Disable IP validation checks in all modules that define _download."""
+    modules = {subclass.__module__ for subclass in _all_subclasses(BaseFile)}
+    with ExitStack() as stack:
+        for module_name in modules:
+            for func in ("check_ip_matches", "check_ip_not_matches"):
+                stack.enter_context(patch(f"{module_name}.{func}", create=True))
         yield
 
 
@@ -40,11 +42,15 @@ def _patch_download(replacement: object) -> Generator[None]:
 
 
 @contextmanager
-def mock_update() -> Generator[None]:
-    """Mock _download to only update the timestamp instead of actually downloading."""
+def mock_update(files_directory: Path) -> Generator[None]:
+    """Mock _download to load content from saved files instead of actually downloading."""
 
     def _mock(self: BaseFile[Any]) -> None:
-        logger.debug(f"Mock Updating {self.database_entry.key}")
+        key = self.database_entry.key
+        logger.debug(f"Mock Updating {key}")
+        file_id = key.replace(":", " - ")
+        content_path = files_directory / file_id
+        self.database_entry.content = content_path.read_text(encoding="utf-8")
         self.database_entry.data_timestamp = tz_datetime.now()
 
     with _patch_download(_mock):
@@ -69,9 +75,15 @@ def track_downloads() -> Generator[list[str]]:
 
     Yields a list of files that were downloaded.
     """
+    originals: dict[type, Any] = {}
+    for subclass in _all_subclasses(BaseFile):
+        if "_download" in subclass.__dict__:
+            originals[subclass] = subclass.__dict__["_download"]
+
     downloaded: list[str] = []
 
     def _track_downloads(self: BaseFile[Any]) -> None:
+        originals[type(self)](self)
         downloaded.append(self.database_entry.key)
 
     with _patch_download(_track_downloads):

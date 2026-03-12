@@ -1,7 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
-from functools import cache
 from typing import Any, override
 
 from just_scrape import JustScrape
@@ -28,7 +27,6 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 
 
-@cache
 def just_scrape_client() -> JustScrape:
     return JustScrape()
 

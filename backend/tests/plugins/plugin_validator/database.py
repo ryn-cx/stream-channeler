@@ -18,11 +18,12 @@ from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
 from tests.conftest import (
+    create_test_engine,
     init_db,
-    reset_test_tables,
+    reset_tables,
     savepoint_session,
-    test_engine,
 )
 from tests.plugins.plugin_validator.mocks import disable_ip_validation
 from tests.plugins.plugin_validator.serialization import SerializationMixin
@@ -120,14 +121,13 @@ class DatabaseMixin(SerializationMixin):
         )
 
         # Also export the raw content file for easy inspection.
-        if file.content:
-            content_path = self.files_directory_path() / file_id
-            content_path.parent.mkdir(parents=True, exist_ok=True)
-            file_content = file.content
-            if content_path.suffix == ".json":
-                with suppress(json.JSONDecodeError):
-                    file_content = json.dumps(json.loads(file_content), indent=2)
-            content_path.write_text(file_content, encoding="utf-8")
+        content_path = self.files_directory_path() / file_id
+        content_path.parent.mkdir(parents=True, exist_ok=True)
+        file_content = file.content
+        if content_path.suffix == ".json":
+            with suppress(json.JSONDecodeError):
+                file_content = json.dumps(json.loads(file_content or ""), indent=2)
+        content_path.write_text(file_content or "", encoding="utf-8")
 
     # endregion Export
 
@@ -154,7 +154,8 @@ class DatabaseMixin(SerializationMixin):
         # Initialize class to make sure plugin exists before trying to import files.
         self.plugin_class(db, url=self.url)
 
-        plugin_db_entry = Plugin.get_one(db, self.plugin_class.plugin_id())
+        plugin_user = get_or_create_plugin_user(session=db)
+        plugin_db_entry = Plugin.get_one(db, self.plugin_class.plugin_id(), plugin_user)
 
         if self.combined_files_path().exists():
             combined_content = self.combined_files_path().read_text(encoding="utf-8")
@@ -183,14 +184,16 @@ class DatabaseMixin(SerializationMixin):
 
     @pytest.fixture(scope="class")
     def _db_with_files_connection(self) -> Generator[Connection]:
-        """Class-scoped connection with files pre-imported."""
-        reset_test_tables()
-        connection = test_engine.connect()
+        """Class-scoped connection with files pre-imported on its own database."""
+        engine = create_test_engine("files")
+        reset_tables(engine)
+        connection = engine.connect()
         with Session(bind=connection) as session:
             init_db(session)
             self._import_files(session)
         yield connection
         connection.close()
+        engine.dispose()
 
     @pytest.fixture(autouse=True)
     def db_with_files(
@@ -202,16 +205,18 @@ class DatabaseMixin(SerializationMixin):
 
     @pytest.fixture(scope="class")
     def _db_with_url_connection(self) -> Generator[Connection]:
-        """Class-scoped connection with files and URL pre-imported."""
+        """Class-scoped connection with files and URL pre-imported on its own database."""
         if self.invalid_url:
             pytest.skip("invalid_url is set")
-        reset_test_tables()
-        connection = test_engine.connect()
+        engine = create_test_engine("url")
+        reset_tables(engine)
+        connection = engine.connect()
         with Session(bind=connection) as session:
             init_db(session)
             self._import_url(session)
         yield connection
         connection.close()
+        engine.dispose()
 
     @pytest.fixture
     def db_with_url(self, _db_with_url_connection: Connection) -> Generator[Session]:

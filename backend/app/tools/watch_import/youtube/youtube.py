@@ -34,7 +34,7 @@ from app.watches.models import Watch
 load_models()
 
 INPUTS_DIR = Path(__file__).parent / "inputs"
-PLUGIN_KEY = "ryn.cx-YouTube"
+PLUGIN_KEY = "YouTube"
 
 WATCH_ENTRY_RE = re.compile(
     r'Watched\s*<a href="[^"]*watch\?v=([a-zA-Z0-9_-]+)">[^<]*</a>'

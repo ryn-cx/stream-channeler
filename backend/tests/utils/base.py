@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
     from tests.utils.route_assertions import Method
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 
@@ -85,8 +84,7 @@ OUTPUT_MODELS_WITH_KEY = (
     EpisodeOutput | PluginOutput | SeasonOutput | ShowOutput | SourceOutput
 )
 MODELS_WITH_KEY = Episode | Plugin | Season | Show | Source
-MODELS_WITH_PARENT = Episode | Season | Show | Source
-MODELS_REQUIRING_USER = Channel
+MODELS_WITH_PARENT = Episode | Season | Show | Source | Watch
 
 
 def _pluralize(name: str) -> str:
@@ -119,11 +117,6 @@ class BaseTests[T: SUPPORTED_MODELS]:
     patch_model: type[PATCH_MODELS]
     create_parent_function: Callable[..., Plugin | Source | Show | Season | Episode]
     create_record_function: Callable[..., T]
-    supports_unowned_records: bool = True
-
-    @property
-    def has_parent(self) -> bool:
-        return len(_get_foreign_keys(self.database_model)) > 0
 
     @property
     def parent_key_name(self) -> str:
@@ -151,6 +144,14 @@ class BaseTests[T: SUPPORTED_MODELS]:
     @property
     def parent_endpoint_name(self) -> str:
         return _pluralize(self.parent_name.lower())
+
+    def get_parent(self, db: Session, record: T) -> SUPPORTED_MODELS:
+        """Look up the parent record from the database."""
+
+        statement = select(record.__class__).where(record.__class__.id == record.id)
+        record_from_db = db.exec(statement).one()
+        assert isinstance(record_from_db, MODELS_WITH_PARENT)
+        return record_from_db.parent()
 
     def entry_url(self, record_id: uuid.UUID | str) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{record_id}"
@@ -227,31 +228,23 @@ class BaseTests[T: SUPPORTED_MODELS]:
         self,
         client: TestClient,
         db: Session,
-        relationship: str,
         *,
+        is_owner: bool = True,
         authenticated: bool = True,
         public: bool = True,
     ) -> CreatedTestData[T]:
         """Create a user and record with the given ownership and visibility."""
-        if relationship == "unowned" and not self.supports_unowned_records:
-            pytest.skip("Model does not support unowned records")
-
         user = create_random_user_alt(client, db)
         other = create_random_user_alt(client, db)
 
-        match relationship:
-            case "owner":
-                record = self.create_record_function(db, user_id=user.id)
-            case "other_owner":
-                record = self.create_record_function(db, user_id=other.id)
-            case _:
-                record = self.create_record_function(db)
+        if is_owner:
+            record = self.create_record_function(db, user_id=user.id)
+        else:
+            record = self.create_record_function(db, user_id=other.id)
 
         # Populate with random dummy data to make sure filtering works correctly.
         self.create_record_function(db, user_id=user.id)
         self.create_record_function(db, user_id=other.id)
-        if not isinstance(record, MODELS_REQUIRING_USER):
-            self.create_record_function(db)
 
         self.set_visibility(db, record, public=public)
         headers = user.headers if authenticated else {}
@@ -263,7 +256,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
         client: TestClient,
         *,
         authenticated: bool,
-        model_type: str,
+        is_owner: bool,
         method: Method,
         url: str,
         detail: str,
@@ -280,7 +273,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
                     parameters=parameters,
                 )
             return False
-        if model_type != "owner":
+        if not is_owner:
             with self.assert_no_db_change(db):
                 assert_forbidden(
                     client=client,
@@ -298,7 +291,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
         client: TestClient,
         *,
         authenticated: bool,
-        model_type: str,
+        is_owner: bool,
         public: bool,
         method: Method,
         url: str,
@@ -309,7 +302,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
         if not authenticated and not public:
             assert_not_authenticated(client=client, method=method, url=url)
             return False
-        if not authenticated or model_type == "owner" or public:
+        if not authenticated or is_owner or public:
             return True
         assert_forbidden(
             client=client,

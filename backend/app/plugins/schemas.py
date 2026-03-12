@@ -12,7 +12,7 @@ from app.users.models import User
 class PluginInput(BasePlugin, BaseInputMixin[Plugin]):
     """Input schema for creating or updating a plugin."""
 
-    user_id: uuid.UUID | None = None
+    user_id: uuid.UUID
 
     def upsert(
         self,
@@ -81,7 +81,6 @@ class FileInput(BaseFile, BaseInputMixin[File]):
 
 class PluginOutput(BasePlugin):
     id: uuid.UUID
-    user_id: uuid.UUID | None = None
 
 
 class PluginsListOutput(BaseModel):

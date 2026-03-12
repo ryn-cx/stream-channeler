@@ -35,22 +35,24 @@ class BasePlugin(BaseMediaMixin):
 class Plugin(BasePlugin, MediaMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id"),
-        UniqueConstraint("user_id", "key", postgresql_nulls_not_distinct=True),
+        UniqueConstraint("user_id", "key"),
         # Deleted filtering.
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
-    user_id: uuid.UUID | None = Field(
-        default=None,
+    user_id: uuid.UUID = Field(
         foreign_key="user.id",
         ondelete="CASCADE",
     )
-    user: User | None = Relationship(back_populates="plugins")
+    user: User = Relationship(back_populates="plugins")
 
     sources: list[Source] = Relationship(back_populates="plugin", cascade_delete=True)
     files: list[File] = Relationship(back_populates="plugin", cascade_delete=True)
 
-    def get_user_id(self, _session: Session) -> uuid.UUID | None:
+    def parent(self) -> User:
+        return self.user
+
+    def get_user_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
 
     def is_public(self, _session: Session) -> bool:
@@ -59,6 +61,9 @@ class Plugin(BasePlugin, MediaMixin, table=True):
     @override
     def children(self) -> list[Source]:
         return self.sources
+
+    def get_sibling(self, db: Session, key: str) -> Plugin | None:
+        return Plugin.get(db, key, self.user)
 
     def __str__(self) -> str:
         base_plugin = "Plugin:"
@@ -73,8 +78,8 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         cls,
         db: Session,
         plugin_key: str,
+        user: User,
         *,
-        user_id: uuid.UUID | None = None,
         options: Sequence[ORMOption] | None = None,
     ) -> Plugin | None:
         """Look up a Plugin by its unique key.
@@ -82,17 +87,17 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         Args:
             db: Database session.
             plugin_key: Unique key of the plugin.
-            user_id: Optional user ID to scope the lookup.
+            user: User to scope the lookup.
             options: SQLAlchemy ORM options (e.g. joinedload).
-            populate_existing: Refresh attributes of existing identity map objects.
 
         Returns:
             Plugin instance if found, None otherwise.
 
         """
-        statement = select(Plugin).where(Plugin.key == plugin_key)
-        if user_id is not None:
-            statement = statement.where(Plugin.user_id == user_id)
+        statement = select(Plugin).where(
+            Plugin.key == plugin_key,
+            Plugin.user_id == user.id,
+        )
         if options:
             statement = statement.options(*options)
         return db.exec(statement).first()
@@ -102,8 +107,8 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         cls,
         db: Session,
         plugin_key: str,
+        user: User,
         *,
-        user_id: uuid.UUID | None = None,
         options: Sequence[ORMOption] | None = None,
     ) -> Plugin:
         """Look up a Plugin by its unique key.
@@ -113,7 +118,7 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         Args:
             db: Database session.
             plugin_key: Unique key of the plugin.
-            user_id: Optional user ID to scope the lookup.
+            user: User to scope the lookup.
             options: SQLAlchemy ORM options (e.g. joinedload).
 
         Returns:
@@ -123,9 +128,10 @@ class Plugin(BasePlugin, MediaMixin, table=True):
             NoResultFound: If no plugin with the given key exists.
 
         """
-        statement = select(Plugin).where(Plugin.key == plugin_key)
-        if user_id is not None:
-            statement = statement.where(Plugin.user_id == user_id)
+        statement = select(Plugin).where(
+            Plugin.key == plugin_key,
+            Plugin.user_id == user.id,
+        )
         if options:
             statement = statement.options(*options)
         return db.exec(statement).unique().one()

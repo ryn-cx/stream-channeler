@@ -45,6 +45,9 @@ class Watch(TimestampAndIdMixin, BaseWatch, table=True):
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
     episode: Episode = Relationship(back_populates="watches")
 
+    def parent(self) -> Episode:
+        return self.episode
+
     def get_user_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
 

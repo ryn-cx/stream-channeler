@@ -1,7 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
-from functools import cache
 from typing import Any, override
 
 from chirashi import Chirashi
@@ -23,7 +22,6 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 
 
-@cache
 def chirashi_client() -> Chirashi:
     return Chirashi()
 

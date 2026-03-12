@@ -226,6 +226,9 @@ class Show(BaseShow, MediaMixin, table=True):
         """
         return db.identity_map[(Show, (source.id, show_key), None)]
 
+    def get_sibling(self, session: Session, key: str) -> Show | None:
+        return Show.get(session, self.source, key)
+
     def __str__(self) -> str:
         base_show = "Show: "
         if self.name:

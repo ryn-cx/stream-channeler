@@ -51,20 +51,17 @@ class WatchTestMixin(BaseTests[Watch]):
         client: TestClient,
         db: Session,
         *,
-        relationship: str,
+        is_owner: bool,
         public: bool,
     ) -> tuple[Watch, CreatedUser]:
         """Create a watch and configure plugin visibility directly."""
         user = create_random_user_alt(client, db)
         watch = create_random_watch(db, user_id=user.id)
         plugin = watch.episode.season.show.source.plugin
-        match relationship:
-            case "owner":
-                plugin.user_id = user.id
-            case "other_owner":
-                plugin.user_id = create_random_user_alt(client, db).id
-            case _:
-                plugin.user_id = None
+        if is_owner:
+            plugin.user_id = user.id
+        else:
+            plugin.user_id = create_random_user_alt(client, db).id
         plugin.public = public
         db.flush()
         return watch, user
@@ -73,14 +70,14 @@ class WatchTestMixin(BaseTests[Watch]):
 class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_create_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
         """Watches can be created on public plugins by non-owners."""
@@ -88,7 +85,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         watch, user = self.setup_watch_visibility(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             public=public,
         )
         episode = watch.episode
@@ -103,7 +100,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                     url=self.create_url(episode.id),
                     parameters=parameters,
                 )
-        elif model_type == "owner" or public:
+        elif is_owner or public:
             self.assert_create_success(
                 client,
                 db,
@@ -131,7 +128,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         watch, user = self.setup_watch_visibility(
             client,
             db,
-            relationship="owner",
+            is_owner=True,
             public=False,
         )
         episode = watch.episode
@@ -167,23 +164,22 @@ class TestGetWatch(WatchTestMixin):
         )
 
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_get_visibility(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
     ) -> None:
         authenticated = user_type != "anonymous"
         user = create_random_user_alt(client, db)
-        match model_type:
-            case "owner":
-                watch = create_random_watch(db, user_id=user.id)
-            case _:
-                other = create_random_user_alt(client, db)
-                watch = create_random_watch(db, user_id=other.id)
+        if is_owner:
+            watch = create_random_watch(db, user_id=user.id)
+        else:
+            other = create_random_user_alt(client, db)
+            watch = create_random_watch(db, user_id=other.id)
 
         if not authenticated:
             assert_not_authenticated(
@@ -191,7 +187,7 @@ class TestGetWatch(WatchTestMixin):
                 method="get",
                 url=self.entry_url(watch.id),
             )
-        elif model_type == "owner":
+        elif is_owner:
             content = assert_success(
                 client=client,
                 method="get",
@@ -275,7 +271,7 @@ class TestListWatches(WatchTestMixin):
         watch, user = self.setup_watch_visibility(
             client,
             db,
-            relationship="owner",
+            is_owner=True,
             public=public,
         )
 

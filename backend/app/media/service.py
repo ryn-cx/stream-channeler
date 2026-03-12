@@ -18,7 +18,7 @@ from app.episodes.schemas import (
     EpisodePostInput,
     EpisodesListOutput,
 )
-from app.models import MediaMixin, Message
+from app.models import Message
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput, PluginPatchInput, PluginsListOutput
 from app.seasons.models import Season
@@ -190,17 +190,16 @@ def _check_duplicate_key(
     body: PatchInput,
 ) -> None:
     """Raise 409 if updating key would conflict with a sibling record."""
-    if not isinstance(entry, MediaMixin):
+    # Channel and Watch do not have user editable unique keys.
+    if isinstance(entry, (Channel, Watch)):
         return
-    new_key = getattr(body, "key", None)
-    if new_key is None or new_key == entry.key:
+    if isinstance(body, (ChannelPatchInput, WatchPatchInput)):
         return
-    if isinstance(entry, Plugin):
-        existing = Plugin.get(session, new_key, user_id=entry.user_id)
-    else:
-        model = type(entry)
-        existing = model.get(session, entry.parent(), new_key)  # type: ignore[arg-type]
-    raise_if_exists(existing)
+
+    # If the key is not changing no checks needs to be done.
+    if body.key is None or body.key == entry.key:
+        return
+    raise_if_exists(entry.get_sibling(session, body.key))
 
 
 def update_record[T: MediaModel](

@@ -35,14 +35,14 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     # duplicates the thing that was tested here.
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_get_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
         authenticated = user_type != "anonymous"
@@ -50,7 +50,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         setup = self.create_test_data(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             authenticated=authenticated,
             public=public,
         )
@@ -58,7 +58,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         if self.assert_read_permission(
             client,
             authenticated=authenticated,
-            model_type=model_type,
+            is_owner=is_owner,
             public=public,
             method="get",
             url=self.entry_url(setup.record.id),

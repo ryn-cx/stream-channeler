@@ -24,7 +24,6 @@ class ChannelTestMixin(BaseTests[Channel]):
     output_model = ChannelOutput
     patch_model = ChannelPatchInput
 
-    supports_unowned_records = False
     create_record_function = staticmethod(create_random_channel)
 
 
@@ -38,14 +37,14 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("model_type", ["owner", "other_owner", "unowned"])
+    @pytest.mark.parametrize("is_owner", [True, False])
     def test_permissions(
         self,
         client: TestClient,
         db: Session,
         *,
         user_type: str,
-        model_type: str,
+        is_owner: bool,
         public: bool,
     ) -> None:
         authenticated = user_type != "anonymous"
@@ -53,7 +52,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
         setup = self.create_test_data(
             client,
             db,
-            relationship=model_type,
+            is_owner=is_owner,
             authenticated=authenticated,
             public=public,
         )
@@ -62,7 +61,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
             db,
             client,
             authenticated=authenticated,
-            model_type=model_type,
+            is_owner=is_owner,
             method=self.sub_http_method,
             url=self.sub_url(setup.record.id),
             detail=f"Not authorized to access this {self.model_name}",

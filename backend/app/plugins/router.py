@@ -86,7 +86,7 @@ def create_user_plugin(
     plugin_input: PluginPostInput,
 ) -> Plugin:
     """Create a plugin owned by the current user."""
-    raise_if_exists(Plugin.get(session, plugin_input.key, user_id=current_user.id))
+    raise_if_exists(Plugin.get(session, plugin_input.key, current_user))
     plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
     session.add(plugin)
     session.commit()

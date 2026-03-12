@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from functools import cache
 from typing import TYPE_CHECKING, Any, override
 
 from pydantic import BaseModel, Field
@@ -28,7 +27,6 @@ class AbstractPlugin(ABC):
 
     @classmethod
     @abstractmethod
-    @cache
     def plugin_id(cls) -> str:
         """The unique identifier for the plugin.
 
@@ -40,7 +38,6 @@ class AbstractPlugin(ABC):
 
     @classmethod
     @abstractmethod
-    @cache
     def is_valid_url_format(cls, url: str) -> bool:
         """Check if the given URL is supported by the plugin.
 

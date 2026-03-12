@@ -21,6 +21,7 @@ from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
     block_downloads,
+    disable_ip_validation,
     mock_update,
     track_downloads,
 )
@@ -61,9 +62,12 @@ class PluginValidator(DatabaseMixin):
         """Validate that the current database state matches the original plugin."""
         config.validate(original_plugin, self._get_detached_plugin(db))
 
+    def _base_validator(self) -> Validator:
+        return Validator().changed(Plugin, "user_id")
+
     def _import_url_validator(self) -> Validator:
         return (
-            Validator()
+            self._base_validator()
             # These will always change because they are based on when the import occurs.
             .incremented_all("created_at", "modified_at")
             .incremented(Plugin, "data_timestamp")
@@ -153,7 +157,7 @@ class PluginValidator(DatabaseMixin):
             pytest.skip()
         files_already_cached = self.combined_files_path().exists()
         try:
-            with track_downloads() as downloaded:
+            with disable_ip_validation(), track_downloads() as downloaded:
                 self._import_url(db_with_files)
             self._export_all_files(db_with_files)
         # If importing fails the downloaded files can still be dumped for analysis, but
@@ -288,7 +292,7 @@ class PluginValidator(DatabaseMixin):
                 def update() -> None:
                     self.plugin_class(db, episode=episode).update_episode(episode)
 
-        with mock_update(), log_stats(self):
+        with mock_update(self.files_directory_path()), log_stats(self):
             update()
             db.flush()
 

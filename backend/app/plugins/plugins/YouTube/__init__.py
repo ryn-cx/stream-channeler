@@ -1,6 +1,5 @@
 # TODO: Validate
 import re
-from functools import cache
 from typing import Literal, override
 
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult

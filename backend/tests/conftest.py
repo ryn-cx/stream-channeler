@@ -9,13 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 from loguru import logger
 from pydantic_core import MultiHostUrl
-from sqlalchemy import Connection
+from sqlalchemy import Connection, Engine
 from sqlmodel import Session, SQLModel, create_engine, text
 
 # reportUnusedImport/F401 - This loads variables into the environment even if it looks
 # like it does nothing. It's easier to do this on import than import it then have a
 # function call in the middle of all of the imports.
-import tests.old_tests.utils.load_test_env  # pyright: ignore[reportUnusedImport] # noqa: F401
 from app.auth.dependencies import get_db
 from app.config import settings
 from app.database import init_db, load_models
@@ -33,42 +32,48 @@ logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
 
 
-TEST_POSTGRES_DB = settings.POSTGRES_DB + "_test"
+def create_test_engine(db_suffix: str) -> Engine:
+    """Create a test database with the given suffix and return its engine."""
+    db_name = f"{settings.POSTGRES_DB}_test_{db_suffix}"
 
-TEST_DATABASE_URI = MultiHostUrl.build(
-    scheme="postgresql+psycopg",
-    username=settings.POSTGRES_USER,
-    password=settings.POSTGRES_PASSWORD,
-    host=settings.POSTGRES_SERVER,
-    port=settings.POSTGRES_PORT,
-    path=TEST_POSTGRES_DB,
-)
-
-test_engine = create_engine(str(TEST_DATABASE_URI))
-
-
-def reset_test_tables() -> None:
-    """Drop and recreate all tables in the test database."""
-    SQLModel.metadata.drop_all(test_engine)
-    SQLModel.metadata.create_all(test_engine)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def create_test_database() -> None:
-    """Ensure the test database exists, load models, and create all tables."""
     postgres_engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
     with postgres_engine.connect().execution_options(
         isolation_level="AUTOCOMMIT",
     ) as conn:
         exists = conn.execute(
             text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
-            {"db_name": TEST_POSTGRES_DB},
+            {"db_name": db_name},
         ).scalar()
         if not exists:
-            conn.execute(text(f'CREATE DATABASE "{TEST_POSTGRES_DB}"'))
+            conn.execute(text(f'CREATE DATABASE "{db_name}"'))
     postgres_engine.dispose()
+
+    uri = MultiHostUrl.build(
+        scheme="postgresql+psycopg",
+        username=settings.POSTGRES_USER,
+        password=settings.POSTGRES_PASSWORD,
+        host=settings.POSTGRES_SERVER,
+        port=settings.POSTGRES_PORT,
+        path=db_name,
+    )
+    return create_engine(str(uri))
+
+
+def reset_tables(engine: Engine) -> None:
+    """Drop and recreate all tables on the given engine."""
+    SQLModel.metadata.drop_all(engine)
+    SQLModel.metadata.create_all(engine)
+
+
+test_engine = create_test_engine("default")
+
+
+# For every test sessuib create a single database
+@pytest.fixture(scope="session", autouse=True)
+def create_test_database() -> None:
+    """Load models and create all tables in the default test database."""
     load_models()
-    reset_test_tables()
+    reset_tables(test_engine)
 
 
 def savepoint_session(connection: Connection) -> Generator[Session]:

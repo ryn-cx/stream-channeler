@@ -224,6 +224,9 @@ class Season(BaseSeason, MediaMixin, table=True):
         """
         return db.identity_map[(Season, (show.id, season_key), None)]
 
+    def get_sibling(self, db: Session, key: str) -> Season | None:
+        return Season.get(db, self.show, key)
+
     def __str__(self) -> str:
         base_season = "Season: "
         if self.season_number:

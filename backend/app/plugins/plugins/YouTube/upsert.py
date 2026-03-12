@@ -52,7 +52,7 @@ class UpsertMixin(FileMixin, register=False):
         *,
         show_key: str = "",
         force_reimport: bool = False,
-    ) -> None:
+    ) -> Show:
         channel_json_by_id = self._channel_by_id_file(show_key)
         channel_parsed = channel_json_by_id.parsed()
 
@@ -70,6 +70,7 @@ class UpsertMixin(FileMixin, register=False):
             ).upsert(source, show)
 
         self._upsert_seasons(show, show_key=show_key, force_reimport=force_reimport)
+        return show
 
     def _upsert_seasons(
         self,
@@ -116,6 +117,7 @@ class UpsertMixin(FileMixin, register=False):
                     data_timestamp=season_timestamp,
                 ).upsert(show, season)
             # TODO: Can the name be gotten for playlists without videos as well?
+            # TODO: Find an empty playlist to test this properly
             playlist_file = self._playlist_file(season_key)
             parsed_playlist = playlist_file.parsed()
             assert False
@@ -161,21 +163,21 @@ class UpsertMixin(FileMixin, register=False):
         episode_key: str,
         *,
         force_reimport: bool = False,
-    ) -> None:
+    ) -> Episode:
         existing_episode = Episode.get_from_memory(self.db, season, episode_key)
         if (
             not force_reimport
             and existing_episode
             and existing_episode.data_timestamp == self._episode_timestamp(episode_key)
         ):
-            return
+            return existing_episode
 
         video_file = self._video_file(episode_key)
         video_data = video_file.parsed()
         video_item = video_data.items[0]
         video_snippet = video_item.snippet
 
-        EpisodeInput(
+        return EpisodeInput(
             key=video_item.id,
             name=video_snippet.title,
             url=f"{self._base_url()}watch?v={video_item.id}",

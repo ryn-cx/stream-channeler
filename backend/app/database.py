@@ -1,4 +1,3 @@
-# TODO: Validate
 from importlib import import_module
 
 from sqlmodel import Session, create_engine, select
@@ -12,27 +11,18 @@ from app.users.schemas import UserCreate
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
-# make sure all SQLModel models are imported before initializing DB otherwise, SQLModel
-# might fail to initialize relationships properly
-# for more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
-
-
 def load_models() -> None:
+    """Dynamically load all of the database models."""
     for model_file in APP_PATH.glob("*/models.py"):
         import_module(f"app.{model_file.parent.name}.models")
 
 
 def init_db(session: Session) -> None:
-    # Tables should be created with Alembic migrations
-    # But if you don't want to use migrations, create
-    # the tables un-commenting the next lines
-    # # ERA001 - Error from original template.
-    # from sqlmodel import SQLModel # noqa: ERA001
-
-    # This works because the models are already imported and registered from app.models
-    # # ERA001 - Error from original template.
-    # SQLModel.metadata.create_all(engine) # noqa: ERA001
+    # make sure all SQLModel models are imported before initializing DB otherwise,
+    # SQLModel might fail to initialize relationships properly for more details:
+    # https://github.com/fastapi/full-stack-fastapi-template/issues/28
     load_models()
+
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER),
     ).first()
@@ -43,3 +33,5 @@ def init_db(session: Session) -> None:
             is_superuser=True,
         )
         user = user_service.create_user(session=session, user_create=user_in)
+
+    user_service.get_or_create_plugin_user(session=session)

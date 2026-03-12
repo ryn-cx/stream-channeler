@@ -17,6 +17,8 @@ from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.constants import PLUGIN_USER_EMAIL
+from app.users.models import User
 from app.utils import tz_datetime
 
 logger.remove()
@@ -103,9 +105,8 @@ def update_outdated_sources() -> None:
     def join_and_load(statement: Any) -> Any:
         return (
             statement.join(Plugin)
-            .where(
-                col(Plugin.user_id).is_(None),
-            )
+            .join(User, Plugin.user_id == User.id)
+            .where(User.email == PLUGIN_USER_EMAIL)
             .options(selectinload(Source.plugin))
         )
 
@@ -123,9 +124,8 @@ def update_outdated_shows() -> None:
         return (
             statement.join(Source)
             .join(Plugin)
-            .where(
-                col(Plugin.user_id).is_(None),
-            )
+            .join(User, Plugin.user_id == User.id)
+            .where(User.email == PLUGIN_USER_EMAIL)
             .options(selectinload(Show.source).selectinload(Source.plugin))
         )
 
@@ -144,9 +144,8 @@ def update_outdated_seasons() -> None:
             statement.join(Show)
             .join(Source)
             .join(Plugin)
-            .where(
-                col(Plugin.user_id).is_(None),
-            )
+            .join(User, Plugin.user_id == User.id)
+            .where(User.email == PLUGIN_USER_EMAIL)
             .options(
                 selectinload(Season.show)
                 .selectinload(Show.source)
@@ -170,9 +169,8 @@ def update_outdated_episodes() -> None:
             .join(Show)
             .join(Source)
             .join(Plugin)
-            .where(
-                col(Plugin.user_id).is_(None),
-            )
+            .join(User, Plugin.user_id == User.id)
+            .where(User.email == PLUGIN_USER_EMAIL)
             .options(
                 selectinload(Episode.season)
                 .selectinload(Season.show)

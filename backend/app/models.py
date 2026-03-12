@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import DateTime, Field, SQLModel
 
+from app.users.models import User
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
@@ -154,7 +155,7 @@ class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
             for child in self.children():
                 child.soft_undelete()
 
-    def parent(self) -> Plugin | Source | Show | Season | None:
+    def parent(self) -> Plugin | Source | Show | Season | User | None:
         """Return the parent of the entry."""
         # Default to having no parent and let subclasses override this method.
         return None
