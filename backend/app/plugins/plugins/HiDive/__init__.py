@@ -196,7 +196,7 @@
 #             )
 #             self.db.exec(file_select).all()
 #             season_json = self._season_json(show_key)
-#             if season_json.get_content():
+#             if season_json.database_entry.content:
 #                 tv_show_key = str(season_json.parsed().metadata.series.series_id)
 #                 adj_keys = [AdjacentSeriesJSON.file_key(tv_show_key)]
 #                 adj_select = (

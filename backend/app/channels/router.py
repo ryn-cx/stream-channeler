@@ -338,7 +338,7 @@ def update_user_channel_default_order(
 @router.delete("/{channel_id}")  # noqa: FAST003
 def delete_user_channel(session: SessionDep, channel: UserChannel) -> Message:
     """Delete a channel owned by the current user."""
-    return delete_record(session, channel, "Channel")
+    return delete_record(session, channel)
 
 
 # FAST003 - Parameter is used by UserChannel.

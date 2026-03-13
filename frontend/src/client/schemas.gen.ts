@@ -1501,12 +1501,18 @@ export const PluginPatchInputSchema = {
             title: 'Version'
         },
         public: {
-            type: 'boolean',
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Public'
         }
     },
     type: 'object',
-    required: ['public'],
     title: 'PluginPatchInput'
 } as const;
 
@@ -3003,39 +3009,11 @@ export const ValidationErrorSchema = {
     title: 'ValidationError'
 } as const;
 
-export const WatchImportEntrySchema = {
-    properties: {
-        show: {
-            type: 'string',
-            title: 'Show'
-        },
-        show_url: {
-            type: 'string',
-            title: 'Show Url'
-        },
-        episode: {
-            type: 'string',
-            title: 'Episode'
-        },
-        episode_url: {
-            type: 'string',
-            title: 'Episode Url'
-        }
-    },
-    type: 'object',
-    required: ['show', 'show_url', 'episode', 'episode_url'],
-    title: 'WatchImportEntry'
-} as const;
-
 export const WatchImportFormatInformationSchema = {
     properties: {
-        plugin_id: {
+        plugin_key: {
             type: 'string',
-            title: 'Plugin Id'
-        },
-        plugin_name: {
-            type: 'string',
-            title: 'Plugin Name'
+            title: 'Plugin Key'
         },
         file_type: {
             type: 'string',
@@ -3051,7 +3029,7 @@ export const WatchImportFormatInformationSchema = {
         }
     },
     type: 'object',
-    required: ['plugin_id', 'plugin_name', 'file_type', 'file_extension', 'instructions'],
+    required: ['plugin_key', 'file_type', 'file_extension', 'instructions'],
     title: 'WatchImportFormatInformation'
 } as const;
 
@@ -3072,23 +3050,47 @@ export const WatchImportPluginsOutputSchema = {
 
 export const WatchImportResultSchema = {
     properties: {
+        show: {
+            type: 'string',
+            title: 'Show'
+        },
+        show_url: {
+            type: 'string',
+            title: 'Show Url'
+        },
+        episode: {
+            type: 'string',
+            title: 'Episode'
+        },
+        episode_url: {
+            type: 'string',
+            title: 'Episode Url'
+        }
+    },
+    type: 'object',
+    required: ['show', 'show_url', 'episode', 'episode_url'],
+    title: 'WatchImportResult'
+} as const;
+
+export const WatchImportResultsSchema = {
+    properties: {
         added: {
             items: {
-                '$ref': '#/components/schemas/WatchImportEntry'
+                '$ref': '#/components/schemas/WatchImportResult'
             },
             type: 'array',
             title: 'Added'
         },
         existing: {
             items: {
-                '$ref': '#/components/schemas/WatchImportEntry'
+                '$ref': '#/components/schemas/WatchImportResult'
             },
             type: 'array',
             title: 'Existing'
         },
         skipped: {
             items: {
-                '$ref': '#/components/schemas/WatchImportEntry'
+                '$ref': '#/components/schemas/WatchImportResult'
             },
             type: 'array',
             title: 'Skipped'
@@ -3096,7 +3098,7 @@ export const WatchImportResultSchema = {
     },
     type: 'object',
     required: ['added', 'existing', 'skipped'],
-    title: 'WatchImportResult'
+    title: 'WatchImportResults'
 } as const;
 
 export const WatchItemSchema = {

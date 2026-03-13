@@ -1,4 +1,3 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
@@ -70,4 +69,4 @@ def update_user_show(
 @router.delete("/{show_id}")  # noqa: FAST003
 def delete_user_show(session: SessionDep, show: UserShow) -> Message:
     """Delete a show by its id."""
-    return delete_record(session, show, "Show")
+    return delete_record(session, show)

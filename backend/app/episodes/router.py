@@ -60,4 +60,4 @@ def update_user_episode(
 @router.delete("/{episode_id}")  # noqa: FAST003
 def delete_user_episode(session: SessionDep, episode: UserEpisode) -> Message:
     """Delete an episode by its id."""
-    return delete_record(session, episode, "Episode")
+    return delete_record(session, episode)

@@ -217,7 +217,7 @@ export type PluginPatchInput = {
     extra?: (string | null);
     name?: (string | null);
     version?: (string | null);
-    public: boolean;
+    public?: (boolean | null);
 };
 
 export type PluginPostInput = {
@@ -453,16 +453,8 @@ export type WatchesListOutput = {
     };
 };
 
-export type WatchImportEntry = {
-    show: string;
-    show_url: string;
-    episode: string;
-    episode_url: string;
-};
-
 export type WatchImportFormatInformation = {
-    plugin_id: string;
-    plugin_name: string;
+    plugin_key: string;
     file_type: string;
     file_extension: string;
     instructions: string;
@@ -473,9 +465,16 @@ export type WatchImportPluginsOutput = {
 };
 
 export type WatchImportResult = {
-    added: Array<WatchImportEntry>;
-    existing: Array<WatchImportEntry>;
-    skipped: Array<WatchImportEntry>;
+    show: string;
+    show_url: string;
+    episode: string;
+    episode_url: string;
+};
+
+export type WatchImportResults = {
+    added: Array<WatchImportResult>;
+    existing: Array<WatchImportResult>;
+    skipped: Array<WatchImportResult>;
 };
 
 export type WatchItem = {
@@ -930,8 +929,8 @@ export type WatchesListImportablePluginsResponse = (WatchImportPluginsOutput);
 export type WatchesImportWatchHistoryData = {
     formData: Body_watches_import_watch_history;
     newOnly: boolean;
-    pluginId: string;
+    pluginKey: string;
     verified: boolean;
 };
 
-export type WatchesImportWatchHistoryResponse = (WatchImportResult);
+export type WatchesImportWatchHistoryResponse = (WatchImportResults);

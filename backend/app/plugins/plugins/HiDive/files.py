@@ -16,6 +16,7 @@ from app.config import settings
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
 from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
+from app.plugins.plugins.utils.base_plugin.files import GAPIJSON
 from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -24,88 +25,40 @@ from app.sources.models import Source
 client = DivingBoard()
 
 
-class VodJSON(JSONFile[VodModel]):
-    def __init__(
-        self,
-        db: Session,
-        plugin: Plugin,
-        vod_key: int,
-    ) -> None:
-        self._vod_key = vod_key
+class VodJSON(GAPIJSON[VodModel]):
+    api_endpoint = client.vod
+
+    def __init__(self, db: Session, plugin: Plugin, vod_key: int) -> None:
+        self.unique_identifier = str(vod_key)
         super().__init__(db, plugin)
 
     @override
-    def unique_identifier(self) -> str:
-        return str(self._vod_key)
-
-    @override
-    def _download(self) -> None:
-        with self._log_download(str(self._vod_key)):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
-            vod = client.vod
-            response = vod.get(self._vod_key)
-            content = vod.dump_response(response)
-            self._write(content)
-
-    @override
-    def _parse(self, raw: Any) -> VodModel:
-        return client.vod.parse(raw)
+    def _get(self) -> VodModel:
+        return self.api_endpoint.get(int(self.unique_identifier))  # type: ignore[attr-defined]
 
 
-class SeasonJSON(JSONFile[SeasonModel]):
-    def __init__(
-        self,
-        db: Session,
-        plugin: Plugin,
-        season_key: int,
-    ) -> None:
-        self._series_key = season_key
+class SeasonJSON(GAPIJSON[SeasonModel]):
+    api_endpoint = client.season
+
+    def __init__(self, db: Session, plugin: Plugin, season_key: int) -> None:
+        self.unique_identifier = str(season_key)
         super().__init__(db, plugin)
 
     @override
-    def unique_identifier(self) -> str:
-        return str(self._series_key)
-
-    @override
-    def _download(self) -> None:
-        with self._log_download(str(self._series_key)):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
-            season = client.season
-            response = season.get(self._series_key)
-            content = season.dump_response(response)
-            self._write(content)
-
-    @override
-    def _parse(self, raw: Any) -> SeasonModel:
-        return client.season.parse(raw)
+    def _get(self) -> SeasonModel:
+        return self.api_endpoint.get(int(self.unique_identifier))  # type: ignore[attr-defined]
 
 
-class PlaylistJSON(JSONFile[PlaylistModel]):
-    def __init__(
-        self,
-        db: Session,
-        plugin: Plugin,
-        season_key: int,
-    ) -> None:
-        self._series_key = season_key
+class PlaylistJSON(GAPIJSON[PlaylistModel]):
+    api_endpoint = client.playlist
+
+    def __init__(self, db: Session, plugin: Plugin, season_key: int) -> None:
+        self.unique_identifier = str(season_key)
         super().__init__(db, plugin)
 
     @override
-    def unique_identifier(self) -> str:
-        return str(self._series_key)
-
-    @override
-    def _download(self) -> None:
-        with self._log_download(str(self._series_key)):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
-            playlist = client.playlist
-            response = playlist.get(self._series_key)
-            content = playlist.dump_response(response)
-            self._write(content)
-
-    @override
-    def _parse(self, raw: Any) -> PlaylistModel:
-        return client.playlist.parse(raw)
+    def _get(self) -> PlaylistModel:
+        return self.api_endpoint.get(int(self.unique_identifier))  # type: ignore[attr-defined]
 
 
 class AdjacentSeriesJSON(JSONFile[AdjacentSeriesModel]):
@@ -118,11 +71,8 @@ class AdjacentSeriesJSON(JSONFile[AdjacentSeriesModel]):
     ) -> None:
         self._series_key = series_key
         self._season_key = season_key
+        self.unique_identifier = str(series_key)
         super().__init__(db, plugin)
-
-    @override
-    def unique_identifier(self) -> str:
-        return str(self._series_key)
 
     @override
     def _download(self) -> None:
@@ -146,11 +96,8 @@ class ScheduleJSON(JSONFile[ScheduleModel]):
         input_date: datetime,
     ) -> None:
         self._input_date = input_date
+        self.unique_identifier = str(input_date)
         super().__init__(db, plugin)
-
-    @override
-    def unique_identifier(self) -> str:
-        return str(self._input_date)
 
     @override
     def _download(self) -> None:
@@ -180,11 +127,6 @@ class FileMixin(BasePlugin, register=False):
         season: Season | None = None,
         episode: Episode | None = None,
     ) -> None:
-        self._seasons_json_cache: dict[int, SeasonJSON] = {}
-        self._adjacent_series_json_cache: dict[int, AdjacentSeriesJSON] = {}
-        self._schedule_json_cache: dict[str, ScheduleJSON] = {}
-        self._vod_json_cache: dict[int, VodJSON] = {}
-        self._playlist_json_cache: dict[int, PlaylistJSON] = {}
         self.__first_season_key_cache: dict[str, int] = {}
         self.__tv_show_key_cache: dict[str, int] = {}
         self.__season_keys_cache: dict[str, list[int]] = {}
@@ -202,8 +144,8 @@ class FileMixin(BasePlugin, register=False):
         season_key: int | str,
     ) -> PlaylistJSON:
         season_key = int(season_key)
-        return self._get_cached_file(
-            self._playlist_json_cache,
+        return self._get_weakref_cached_file(
+            PlaylistJSON,
             season_key,
             lambda: PlaylistJSON(
                 self.db,
@@ -217,8 +159,8 @@ class FileMixin(BasePlugin, register=False):
         vod_key: int | str,
     ) -> VodJSON:
         vod_key = int(vod_key)
-        return self._get_cached_file(
-            self._vod_json_cache,
+        return self._get_weakref_cached_file(
+            VodJSON,
             vod_key,
             lambda: VodJSON(
                 self.db,
@@ -232,8 +174,8 @@ class FileMixin(BasePlugin, register=False):
         input_date: datetime,
     ) -> ScheduleJSON:
         cache_key = str(input_date)
-        return self._get_cached_file(
-            self._schedule_json_cache,
+        return self._get_weakref_cached_file(
+            ScheduleJSON,
             cache_key,
             lambda: ScheduleJSON(
                 self.db,
@@ -247,8 +189,8 @@ class FileMixin(BasePlugin, register=False):
         season_key: int | str,
     ) -> SeasonJSON:
         season_key = int(season_key)
-        return self._get_cached_file(
-            self._seasons_json_cache,
+        return self._get_weakref_cached_file(
+            SeasonJSON,
             season_key,
             lambda: SeasonJSON(
                 self.db,
@@ -264,8 +206,8 @@ class FileMixin(BasePlugin, register=False):
     ) -> AdjacentSeriesJSON:
         series_key = int(series_key)
         season_key = int(season_key)
-        return self._get_cached_file(
-            self._adjacent_series_json_cache,
+        return self._get_weakref_cached_file(
+            AdjacentSeriesJSON,
             season_key,
             lambda: AdjacentSeriesJSON(
                 self.db,
@@ -380,23 +322,6 @@ class FileMixin(BasePlugin, register=False):
 
     # endregion File Groups
 
-    # region Timestamps
-
-    def _show_timestamp(self) -> datetime:
-        return super()._show_timestamp()
-
-    def _season_timestamp(self, season_key: int | str) -> datetime:
-        return super()._season_timestamp(season_key)
-
-    def _episode_timestamp(
-        self,
-        season_key: int | str,
-        episode_key: int,
-    ) -> datetime:
-        return super()._episode_timestamp(season_key, episode_key)
-
-    # endregion Timestamps
-
     # region Cached File Values
 
     def _first_season_key_from_file(self, show_key: str) -> int:
@@ -435,7 +360,7 @@ class FileMixin(BasePlugin, register=False):
 
     # region Download
 
-    def _download_initial_files(self, show_key: str) -> None:
+    def _download_show_files(self, show_key: str) -> None:
         logger.info(f"Downloading All Files For: {self._pretty_show_name(show_key)}")
         if self._media_type == "TV Show":
             self.__download_initial_tv_show(show_key)
@@ -489,18 +414,20 @@ class FileMixin(BasePlugin, register=False):
     def __preload_tv_show_files(self, show_key: str) -> None:
         all_file_keys: list[str] = []
         for season_key in self._season_keys_from_json(show_key):
-            all_file_keys.append(SeasonJSON.file_key(str(season_key)))
             season_json = self._season_json(season_key)
-            if season_json.get_content():
+            all_file_keys.append(season_json.file_key())
+            if season_json.database_entry.content:
                 tv_show_key = season_json.parsed().metadata.series.series_id
-                all_file_keys.append(AdjacentSeriesJSON.file_key(str(tv_show_key)))
+                all_file_keys.append(
+                    self._adjacent_series_json(tv_show_key, season_key).file_key(),
+                )
                 season_data = season_json.parsed()
                 season_bucket = self.client.season.extract_bucket(
                     season_data,
                     "season",
                 )
                 all_file_keys.extend(
-                    VodJSON.file_key(str(episode_data.id))
+                    self._vod_json(episode_data.id).file_key()
                     for episode_data in season_bucket.items
                 )
 
@@ -513,17 +440,17 @@ class FileMixin(BasePlugin, register=False):
             self.db.exec(file_select).all()
 
     def __preload_movie_files(self, show_key: str) -> None:
-        all_file_keys: list[str] = [PlaylistJSON.file_key(show_key)]
-
         playlist_file = self._playlist_json(show_key)
-        if playlist_file.get_content():
+        all_file_keys: list[str] = [playlist_file.file_key()]
+
+        if playlist_file.database_entry.content:
             playlist_json = playlist_file.parsed()
             playlist_bucket = self.client.playlist.extract_bucket(
                 playlist_json,
                 "playlist",
             )
             all_file_keys.extend(
-                VodJSON.file_key(str(item.id)) for item in playlist_bucket.items
+                self._vod_json(item.id).file_key() for item in playlist_bucket.items
             )
 
         file_select = (

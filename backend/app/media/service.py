@@ -162,7 +162,7 @@ def raise_if_exists(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"{existing.__class__.__name__} with this key already exists",
+            detail=f"{type(existing).__name__} with this key already exists",
         )
 
 
@@ -218,9 +218,8 @@ def update_record[T: MediaModel](
 def delete_record(
     session: Session,
     entry: MediaModel,
-    model_name: str,
 ) -> Message:
     """Generic delete: remove entry, commit, and return a success message."""
     session.delete(entry)
     session.commit()
-    return Message(message=f"{model_name} deleted successfully")
+    return Message(message=f"{type(entry).__name__} deleted successfully")

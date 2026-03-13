@@ -148,7 +148,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
     def get_parent(self, db: Session, record: T) -> SUPPORTED_MODELS:
         """Look up the parent record from the database."""
 
-        statement = select(record.__class__).where(record.__class__.id == record.id)
+        statement = select(type(record)).where(type(record).id == record.id)
         record_from_db = db.exec(statement).one()
         assert isinstance(record_from_db, MODELS_WITH_PARENT)
         return record_from_db.parent()

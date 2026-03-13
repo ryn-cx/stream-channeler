@@ -7,21 +7,18 @@ from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchImportEntry,
     WatchImportFormatInformation,
     WatchImportResult,
+    WatchImportResults,
 )
 
 
 class WatchMixin(UpsertMixin, register=False):
-    # region Watch Import
-
     @classmethod
     @override
     def import_watch_history_info(cls) -> WatchImportFormatInformation:
         return WatchImportFormatInformation(
-            plugin_id=cls.plugin_id(),
-            plugin_name=cls._plugin_name(),
+            plugin_key=cls.plugin_key(),
             file_type="JSON",
             file_extension=".json",
             instructions=(
@@ -39,27 +36,26 @@ class WatchMixin(UpsertMixin, register=False):
         *,
         new_only: bool,
         verified: bool,
-    ) -> WatchImportResult:
-        """Import Crunchyroll watch history from Itamae JSON export."""
+    ) -> WatchImportResults:
         entries = json.loads(content)
 
-        entry_episode_keys: list[str] = [entry["id"] for entry in entries]
+        watched_episode_keys: list[str] = [entry["id"] for entry in entries]
 
-        episodes_on_database = self._get_episodes_by_key(entry_episode_keys)
+        episodes_on_database = self._get_episodes_by_key(watched_episode_keys)
         watched_episode_dates = self._get_watched_episode_dates(
             user,
             episodes_on_database,
         )
 
-        added_watches: list[WatchImportEntry] = []
-        skipped_watches: list[WatchImportEntry] = []
-        existing_watches: list[WatchImportEntry] = []
+        added_watches: list[WatchImportResult] = []
+        skipped_watches: list[WatchImportResult] = []
+        existing_watches: list[WatchImportResult] = []
 
-        for entry, episode_key in zip(entries, entry_episode_keys, strict=True):
+        for entry, episode_key in zip(entries, watched_episode_keys, strict=True):
             panel = entry["panel"]
             episode_metadata = panel["episode_metadata"]
 
-            import_entry = WatchImportEntry(
+            import_entry = WatchImportResult(
                 show=episode_metadata["series_title"],
                 show_url=self._show_url(episode_metadata["series_id"]),
                 episode=panel["title"],
@@ -92,10 +88,8 @@ class WatchMixin(UpsertMixin, register=False):
             watched_dates.append(watch_date)
             added_watches.append(import_entry)
 
-        return WatchImportResult(
+        return WatchImportResults(
             added=added_watches,
             existing=existing_watches,
             skipped=skipped_watches,
         )
-
-    # endregion Watch Import

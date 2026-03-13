@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from datetime import datetime
 
@@ -20,7 +19,7 @@ from app.utils import tz_datetime
 
 
 class BaseWatch(SQLModel):
-    # call-overload - See TimestampMixin for an explanation.
+    # call-overload - See TimestampAndIdMixin for an explanation.
     watch_date: datetime = Field(
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
         default_factory=tz_datetime.now,

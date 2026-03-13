@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 import uuid
@@ -27,17 +26,10 @@ class Message(SQLModel):
     message: str
 
 
-class IdMixin(SQLModel):
-    """Mixin to add a UUID id field to the model."""
+class TimestampAndIdMixin(SQLModel):
+    """Mixin to add created_at, modified_at and id fields to the model."""
 
     id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-
-class TimestampMixin(SQLModel):
-    """Mixin to add created_at and modified_at fields to the model."""
 
     # This is basically the same as the "official" example of how to implement a
     # created_at timestamp as seen here:
@@ -54,9 +46,8 @@ class TimestampMixin(SQLModel):
         default_factory=tz_datetime.now,
     )
 
-
-class TimestampAndIdMixin(IdMixin, TimestampMixin):
-    pass
+    def __hash__(self) -> int:
+        return hash(self.id)
 
 
 class BaseMediaMixin(SQLModel):
@@ -70,7 +61,7 @@ class BaseMediaMixin(SQLModel):
     deleted_at: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
 
     # This is an optional field that can store anything that does not fit in the other
-    # available fields. It will only ever be used by plugins, and allows plugins to
+    # available fields. It will only ever be used by custom plugins, and allows them to
     # store extra information without needing to modify the database schema.
     extra: str | None = Field(default=None)
 
@@ -80,9 +71,6 @@ class BaseMediaMixin(SQLModel):
         Validation will make sure that the update_at field is never incremented because
         updates should occur as soon as possible and there is almost never a reason to
         delay an update further into the future.
-
-        Even if datetime is None this will still set update_at to None is the
-        data_timestamp is newer than the existing update_at value.
         """
         # If the existing update_at value is newer than the data_timestamp, it has
         # already been used and can be cleared.
@@ -102,6 +90,15 @@ class BaseMediaMixin(SQLModel):
         if self.data_timestamp and self.data_timestamp >= update_at:
             return
 
+        # If the existing data is newer than the existing update_at value that update_at
+        # value is no longer useful and can be cleared.
+        if (
+            self.update_at
+            and self.data_timestamp
+            and self.update_at < self.data_timestamp
+        ):
+            self.update_at = None
+
         #  If the new date is before the existing date the existing date should be
         #  updated so the update happens as soon as possible.
         if self.update_at is None or update_at < self.update_at:
@@ -109,6 +106,8 @@ class BaseMediaMixin(SQLModel):
 
 
 class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
+    """Main mixin for media models (Plugin/Source/Show/Season/Episode)."""
+
     def children(self) -> list[Source] | list[Show] | list[Season] | list[Episode]:
         """Return the direct children of the entry.
 
@@ -140,7 +139,7 @@ class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
                 child.soft_delete(timestamp)
 
     def soft_delete_missing_children(self, valid_keys: list[str] | set[str]) -> None:
-        """Soft-delete children whose key is not in valid_keys, including descendants."""
+        """Soft-delete children if their key is not in valid_keys."""
         if isinstance(valid_keys, list):
             valid_keys = set(valid_keys)
 
@@ -149,7 +148,7 @@ class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
                 child.soft_delete()
 
     def soft_undelete(self, *, recursive: bool = True) -> None:
-        """Undelete the entry by setting the deleted_at value to None."""
+        """Soft undelete the entry."""
         self.deleted_at = None
         if recursive:
             for child in self.children():
@@ -177,23 +176,8 @@ class BaseInputMixin[T: BaseMediaMixin](BaseMediaMixin):
         protected_keys.add("update_at")
 
         dumped = self.model_dump(exclude=protected_keys)
-
-        # Only update modified_at if actual content fields changed. Metadata fields
-        # (key, data_timestamp, deleted_at) are excluded from change detection because
-        # they are lifecycle/identity fields, not content.
-        metadata_fields = {"key", "data_timestamp", "deleted_at"}
-        has_changes = any(
-            getattr(existing_entry, k) != v
-            for k, v in dumped.items()
-            if k not in metadata_fields
-        )
-
         existing_entry.sqlmodel_update(dumped)
         existing_entry.set_update_at(self.update_at)
-
-        if has_changes:
-            existing_entry.modified_at = tz_datetime.now()
-
         return existing_entry
 
     def clean_protected_keys(

@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -12,7 +11,7 @@ from app.plugins.plugins.utils.manage_plugins import register_plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.watches.schemas import WatchImportFormatInformation, WatchImportResult
+from app.watches.schemas import WatchImportFormatInformation, WatchImportResults
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -27,7 +26,7 @@ class AbstractPlugin(ABC):
 
     @classmethod
     @abstractmethod
-    def plugin_id(cls) -> str:
+    def plugin_key(cls) -> str:
         """The unique identifier for the plugin.
 
         This is used to match Plugin entries in the database with the actual plugins.
@@ -132,7 +131,7 @@ class AbstractPlugin(ABC):
         Args:
             file: The file to update.
         """
-        msg = "Function is not implemented."
+        msg = "update_file is not implemented."
         raise NotImplementedError(msg)
 
     def update_source(self, source: Source) -> None:
@@ -147,7 +146,7 @@ class AbstractPlugin(ABC):
         Args:
             source: The source to update.
         """
-        msg = "Function is not implemented."
+        msg = "update_source is not implemented."
         raise NotImplementedError(msg)
 
     @classmethod
@@ -169,7 +168,7 @@ class AbstractPlugin(ABC):
         *,
         new_only: bool,
         verified: bool,
-    ) -> WatchImportResult:
+    ) -> WatchImportResults:
         """Import watch history from uploaded content.
 
         Only needs to be implemented if the plugin supports watch history import.
@@ -206,8 +205,8 @@ class AbstractPlugin(ABC):
     # developers.
     def __init__(  # noqa: PLR0913
         self,
-        *,
         db: Session,
+        *,
         url: str | None = None,
         source: Source | None = None,
         show: Show | None = None,

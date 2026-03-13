@@ -1,6 +1,7 @@
 # TODO: Validate
 import random
 from collections.abc import Callable
+from datetime import timedelta
 
 import pytest
 import yaml
@@ -16,6 +17,7 @@ from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
 from app.shows.schemas import ShowInput
 from app.sources.models import Source
+from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
@@ -36,6 +38,7 @@ class PluginValidator(DatabaseMixin):
     url: str
     skip_update_tests = False
     skip_test_import_url = False
+    # TODO: Rename to skip_update_source_test etc
     skip_test_import_existing_url = False
     skip_test_update_source = False
     skip_test_update_show = False
@@ -83,36 +86,27 @@ class PluginValidator(DatabaseMixin):
         return Validator()
 
     def _update_source_validator(self, source: Source) -> Validator:
-        return (
-            Validator()
-            .incremented(source.id, "modified_at")
-            .incremented(source.id, "data_timestamp")
-        )
+        return Validator().incremented(source.id, "modified_at", "data_timestamp")
 
     def _update_show_validator(self, show: Show) -> Validator:
-        return (
-            Validator()
-            .incremented(show.id, "modified_at")
-            .incremented(show.id, "data_timestamp")
-        )
+        return Validator().incremented(show.id, "modified_at", "data_timestamp")
 
     def _update_season_validator(self, season: Season) -> Validator:
-        return (
-            Validator()
-            .incremented(season.id, "modified_at")
-            .incremented(season.id, "data_timestamp")
-        )
+        return Validator().incremented(season.id, "modified_at", "data_timestamp")
 
     def _update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            Validator()
-            .incremented(episode.id, "modified_at")
-            .incremented(episode.id, "data_timestamp")
-        )
+        return Validator().incremented(episode.id, "modified_at", "data_timestamp")
 
     # endregion Validation
 
     # region Get Random
+
+    @staticmethod
+    def _random_source(results: list[URLImportResult]) -> Source:
+        sources = [result.show.source for result in results]
+        if not sources:
+            pytest.fail("No sources found.")
+        return random.choice(sources)  # noqa: S311
 
     @staticmethod
     def _random_show(results: list[URLImportResult]) -> Show:
@@ -175,12 +169,11 @@ class PluginValidator(DatabaseMixin):
 
         if self.invalid_url:
             with pytest.raises(InvalidURLError):
-                self._import_url(db_with_files)
+                self.plugin_class(db_with_files, url=self.url).import_url(self.url)
             return
 
         with block_downloads(), log_stats(self):
-            self._import_url(db_with_files)
-            db_with_files.flush()
+            self.plugin_class(db_with_files, url=self.url).import_url(self.url)
 
         # This is the only test that compares with the validation file because the goal
         # of this test is to make sure the imported data matches the expected data. The
@@ -210,7 +203,7 @@ class PluginValidator(DatabaseMixin):
         db_with_url: Session,
         *,
         skip: bool,
-        get_random: Callable[[list[URLImportResult]], Show | Season | Episode],
+        get_random: Callable[[list[URLImportResult]], Source | Show | Season | Episode],
     ) -> None:
         """Pick a random entity from the import results and validate updating it."""
         if self.invalid_url or self.skip_update_tests or skip:
@@ -248,14 +241,27 @@ class PluginValidator(DatabaseMixin):
         self,
         db: Session,
         original_plugin: Plugin,
-        entity: Show | Season | Episode,
+        entity: Source | Show | Season | Episode,
         validator: Validator | None = None,
     ) -> None:
         key = entity.key
         data_timestamp = entity.data_timestamp
-        update_at = tz_datetime.now()
+        assert data_timestamp
+        update_at = data_timestamp + timedelta(milliseconds=1)
 
         match entity:
+            case Source() as source:
+                build_random_model(
+                    SourceInput,
+                    key=key,
+                    data_timestamp=data_timestamp,
+                    update_at=update_at,
+                ).upsert(source.plugin, source)
+                validator = validator or self._update_source_validator(source)
+
+                def update() -> None:
+                    self.plugin_class(db, source=source).update_source(source=source)
+
             case Show() as show:
                 build_random_model(
                     ShowInput,

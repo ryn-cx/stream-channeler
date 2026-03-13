@@ -62,28 +62,27 @@ class WatchesListOutput(SQLModel):
 
 
 class WatchImportFormatInformation(BaseModel):
-    plugin_id: str
-    plugin_name: str
+    plugin_key: str
     file_type: str
     file_extension: str
     instructions: str
 
 
-class WatchImportEntry(BaseModel):
+class WatchImportResult(BaseModel):
     show: str
     show_url: str
     episode: str
     episode_url: str
 
 
-class WatchImportResult(BaseModel):
-    added: list[WatchImportEntry]
-    existing: list[WatchImportEntry]
-    skipped: list[WatchImportEntry]
+class WatchImportResults(BaseModel):
+    added: list[WatchImportResult]
+    existing: list[WatchImportResult]
+    skipped: list[WatchImportResult]
 
 
 class WatchImportInput(BaseModel):
-    plugin_id: str
+    plugin_key: str
     new_only: bool
     verified: bool
 

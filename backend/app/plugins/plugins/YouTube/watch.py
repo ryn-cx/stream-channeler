@@ -7,9 +7,9 @@ from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchImportEntry,
     WatchImportFormatInformation,
     WatchImportResult,
+    WatchImportResults,
 )
 
 
@@ -20,8 +20,7 @@ class WatchMixin(UpsertMixin, register=False):
     @override
     def import_watch_history_info(cls) -> WatchImportFormatInformation:
         return WatchImportFormatInformation(
-            plugin_id=cls.plugin_id(),
-            plugin_name=cls._plugin_name(),
+            plugin_key=cls.plugin_key(),
             file_type="JSON",
             file_extension=".json",
             instructions=(
@@ -44,7 +43,7 @@ class WatchMixin(UpsertMixin, register=False):
         *,
         new_only: bool,
         verified: bool,
-    ) -> WatchImportResult:
+    ) -> WatchImportResults:
         """Import YouTube watch history from Google Takeout JSON content."""
         entries = json.loads(content)
 
@@ -59,16 +58,16 @@ class WatchMixin(UpsertMixin, register=False):
             episodes_on_database,
         )
 
-        added_watches: list[WatchImportEntry] = []
-        skipped_watches: list[WatchImportEntry] = []
-        existing_watches: list[WatchImportEntry] = []
+        added_watches: list[WatchImportResult] = []
+        skipped_watches: list[WatchImportResult] = []
+        existing_watches: list[WatchImportResult] = []
 
         for entry, video_key in zip(entries, entry_video_keys, strict=True):
             # Ignore deleted videos
             if "subtitles" not in entry:
                 continue
 
-            import_entry = WatchImportEntry(
+            import_entry = WatchImportResult(
                 show=entry["subtitles"][0]["name"],
                 show_url=entry["titleUrl"],
                 episode=entry["title"].removeprefix("Watched "),
@@ -101,7 +100,7 @@ class WatchMixin(UpsertMixin, register=False):
             watched_dates.append(watch_date)
             added_watches.append(import_entry)
 
-        return WatchImportResult(
+        return WatchImportResults(
             added=added_watches,
             existing=existing_watches,
             skipped=skipped_watches,

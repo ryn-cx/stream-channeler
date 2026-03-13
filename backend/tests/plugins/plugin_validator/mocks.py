@@ -83,7 +83,10 @@ def track_downloads() -> Generator[list[str]]:
     downloaded: list[str] = []
 
     def _track_downloads(self: BaseFile[Any]) -> None:
-        originals[type(self)](self)
+        for cls in type(self).__mro__:
+            if cls in originals:
+                originals[cls](self)
+                break
         downloaded.append(self.database_entry.key)
 
     with _patch_download(_track_downloads):

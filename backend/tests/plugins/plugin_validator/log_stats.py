@@ -13,9 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import pyinstrument
 from loguru import logger
-from sqlalchemy import event
-
-from tests.conftest import test_engine
+from sqlalchemy import Engine, event
 
 if TYPE_CHECKING:
     from tests.plugins.plugin_validator import PluginValidator
@@ -35,18 +33,18 @@ def _log_sql_statement_count(label: str, stats: dict[str, Any]) -> Generator[Non
             f"{frame.filename}:{frame.lineno} in {frame.name}"
             for frame in stack
             if ".venv" not in frame.filename
-            and "plugin_validator" not in frame.filename
+            # and "plugin_validator" not in frame.filename
         ]
         callers_str: str = "\n  ".join(callers)
 
         logger.info(f"SQL #{stats['sql_statements']}")
         logger.trace(f"Stack trace:\n {callers_str}")
 
-    event.listen(test_engine, "before_cursor_execute", count_queries)
-    event.listen(test_engine, "before_cursor_execute", log_queries)
+    event.listen(Engine, "before_cursor_execute", count_queries)
+    event.listen(Engine, "before_cursor_execute", log_queries)
     yield
-    event.remove(test_engine, "before_cursor_execute", count_queries)
-    event.remove(test_engine, "before_cursor_execute", log_queries)
+    event.remove(Engine, "before_cursor_execute", count_queries)
+    event.remove(Engine, "before_cursor_execute", log_queries)
     logger.info(f"SQL statements executed: {stats['sql_statements']} [{label}]")
 
 
@@ -75,11 +73,12 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
     """Generate an HTML flamegraph for the code executed within the context."""
     profiler = pyinstrument.Profiler()
     profiler.start()
-    yield
-    profiler.stop()
-
-    flamegraph_path = stats_directory / "flamegraph.html"
-    flamegraph_path.write_text(profiler.output_html())
+    try:
+        yield
+    finally:
+        profiler.stop()
+        flamegraph_path = stats_directory / "flamegraph.html"
+        flamegraph_path.write_text(profiler.output_html())
 
 
 @contextmanager

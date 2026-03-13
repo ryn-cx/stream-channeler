@@ -94,3 +94,4 @@ class PluginPostInput(BasePlugin):
 class PluginPatchInput(BasePlugin):
     # assignment - Patch input can ignore required values.
     key: str | None = Field(default=None)  # type: ignore[assignment]
+    public: bool | None = Field(default=None)  # type: ignore[assignment]

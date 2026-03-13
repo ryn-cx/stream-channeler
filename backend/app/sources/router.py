@@ -1,4 +1,3 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
@@ -66,4 +65,4 @@ def update_user_source(
 @router.delete("/{source_id}")  # noqa: FAST003
 def delete_user_source(session: SessionDep, source: UserSource) -> Message:
     """Delete a source by its id."""
-    return delete_record(session, source, "Source")
+    return delete_record(session, source)

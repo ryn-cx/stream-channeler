@@ -1,9 +1,9 @@
-# TODO: Validate
 from typing import override
 
 import pytest
 from sqlmodel import Session
 
+from app.episodes.models import Episode
 from app.plugins.plugins.YouTube import YouTube
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -43,6 +43,13 @@ class YouTubeValidator(PluginValidator):
         return output
 
     @override
+    def _update_episode_validator(self, episode: Episode) -> Validator:
+        output = super()._update_episode_validator(episode)
+        # Episodes with the same key will all get updated together.
+        output.incremented(episode.key, "modified_at", "data_timestamp")
+        return output
+
+    @override
     def _update_season_validator(self, season: Season) -> Validator:
         output = super()._update_season_validator(season)
         # Season.update_at is set based on the data_timestamp of the season files.
@@ -54,7 +61,7 @@ class PlaylistValidator(YouTubeValidator):
     @pytest.fixture(
         params=[
             "/playlist?list={key}",
-            # Use dummy values for the video ID.
+            # Dummy values for the video ID.
             "/watch?v=0123456789A&list={key}",
             "/0123456789A?list={key}",
         ],
@@ -179,7 +186,7 @@ class TestNamedChannel(ChannelValidator):
             for episode in season.episodes:
                 if episode.key == "jNQXAC9IVRw":
                     episode_count += 1
-        assert episode_count == 2  # noqa: PLR2004 - There should be 2 matching episodes.
+        assert episode_count == 2  # noqa: PLR2004
 
 
 # A channel with no uploads can be imported because the channel may have playlists with

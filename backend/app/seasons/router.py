@@ -1,4 +1,3 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
@@ -70,4 +69,4 @@ def update_user_season(
 @router.delete("/{season_id}")  # noqa: FAST003
 def delete_user_season(session: SessionDep, season: UserSeason) -> Message:
     """Delete a season by its id."""
-    return delete_record(session, season, "Season")
+    return delete_record(session, season)

@@ -1,4 +1,3 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import CurrentUser, SessionDep
@@ -108,4 +107,4 @@ def update_user_plugin(
 @router.delete("/{plugin_id}")  # noqa: FAST003
 def delete_user_plugin(session: SessionDep, plugin: UserPlugin) -> Message:
     """Delete a plugin owned by the current user."""
-    return delete_record(session, plugin, "Plugin")
+    return delete_record(session, plugin)

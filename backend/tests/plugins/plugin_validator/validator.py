@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -12,7 +11,14 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 
-ValidatorRuleType = Literal["Ignore", "Static", "Incremented", "Decremented", "Changed"]
+ValidatorRuleType = Literal[
+    "Ignore",
+    "Static",
+    "Incremented",
+    "Decremented",
+    "Changed",
+    "Populated",
+]
 ValidatorKey = type[BaseModel] | uuid.UUID | str
 
 _ALL_MODELS = (Plugin, Source, Show, Season, Episode)
@@ -57,6 +63,11 @@ class Validator:
         self._rules[key]["Changed"].extend(field_names)
         return self
 
+    def populated(self, key: ValidatorKey, *field_names: str) -> Self:
+        """Mark fields that must go from None to a non-None value."""
+        self._rules[key]["Populated"].extend(field_names)
+        return self
+
     def ignore_all(self, *field_names: str) -> Self:
         """Mark fields to be ignored for all model types."""
         for model in _ALL_MODELS:
@@ -87,6 +98,12 @@ class Validator:
             self.changed(model, *field_names)
         return self
 
+    def populated_all(self, *field_names: str) -> Self:
+        """Mark fields that must go from None to a non-None value for all model types."""
+        for model in _ALL_MODELS:
+            self.populated(model, *field_names)
+        return self
+
     def remove(self, key: ValidatorKey, *field_names: str) -> Self:
         """Remove validation rules for specific fields."""
         if key not in self._rules:
@@ -112,7 +129,7 @@ class Validator:
 
         Checks in priority order: id, key, class type.
         """
-        for rules_key in (obj.id, obj.key, obj.__class__):
+        for rules_key in (obj.id, obj.key, type(obj)):
             rules = self._rules[rules_key]
             for rule_type in get_args(ValidatorRuleType):
                 if field_name in rules[rule_type]:
@@ -172,15 +189,13 @@ class Validator:
                 sorted(actual.children(), key=lambda x: x.key),
                 strict=True,
             ):
-                # type-var - This seems to be a bug in MyPy. validate_fields defines
-                # the parameters as a plugin, source, show, season, or episode.
-                # Therefore it is impossible for either arguement to ever be a
-                # MetadataMixin. MyPy incorrectly identifies one of the arguements as a
-                # MetadataMixin so the error should be ignored.
-                errors.extend(self._validate_fields(original_child, actual_child))  # type: ignore[type-var]
+                # Help MyPy identify the objects correctly.
+                assert isinstance(original_child, (Source, Show, Season, Episode))
+                assert isinstance(actual_child, (Source, Show, Season, Episode))
+                errors.extend(self._validate_fields(original_child, actual_child))
 
         # Validate each individual field
-        for field_name in original.__class__.model_fields:
+        for field_name in type(original).model_fields:
             original_value = getattr(original, field_name)
             actual_value = getattr(actual, field_name)
 
@@ -194,9 +209,9 @@ class Validator:
 
         return errors
 
-    # PLR0911 - Reducing the number of returns just makes the code more complex and much
-    # harder to comprehend.
-    def _validate_field[T: str | int | datetime](
+    # PLR0911/C901 - Reducing the number of returns or match cases just makes the code
+    # more complex and much harder to comprehend.
+    def _validate_field[T: str | int | datetime](  # noqa: PLR0911, C901
         self,
         original_obj: Plugin | Source | Show | Season | Episode | File,
         field_name: str,
@@ -235,6 +250,21 @@ class Validator:
                         f"{original_obj}\n"
                         f"Key Not Changed: {field_name}\n"
                         f"Value: {original_value}\n"
+                    )
+            case "Populated":
+                if original_value is not None:
+                    return (
+                        f"{original_obj}\n"
+                        f"Key Already Populated: {field_name}\n"
+                        f"Original: {original_value}\n"
+                        f"Updated : {new_value}"
+                    )
+                if new_value is None:
+                    return (
+                        f"{original_obj}\n"
+                        f"Key Not Populated: {field_name}\n"
+                        f"Original: {original_value}\n"
+                        f"Updated : {new_value}"
                     )
             case "Static" | None:
                 if original_value != new_value:

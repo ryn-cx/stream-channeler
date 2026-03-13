@@ -1,4 +1,3 @@
-# TODO: Validate
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
@@ -12,15 +11,15 @@ from app.watches.schemas import (
     WatchesListOutput,
     WatchImportInput,
     WatchImportPluginsOutput,
-    WatchImportResult,
+    WatchImportResults,
     WatchOutput,
     WatchPatchInput,
 )
 from app.watches.services import (
     get_importable_plugins,
     get_installed_plugin,
+    get_watched_episodes,
 )
-from app.watches.services import get_watched_episodes as get_watched_episodes_service
 
 router = APIRouter(prefix="/watches", tags=["watches"])
 
@@ -38,7 +37,7 @@ def get_user_watches(
     current_user: CurrentUser,
 ) -> WatchesListOutput:
     """Get multiple watched episode entries."""
-    return get_watched_episodes_service(session, current_user.id)
+    return get_watched_episodes(session, current_user.id)
 
 
 # FAST003 - Parameter is used by UserWatch.
@@ -56,7 +55,7 @@ def update_user_watch(
 @router.delete("/{watch_id}")  # noqa: FAST003
 def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
     """Delete a watch by its id."""
-    return delete_record(session, watch, "Watch")
+    return delete_record(session, watch)
 
 
 # TODO: Add tests
@@ -78,12 +77,12 @@ def import_watch_history(
     params: Annotated[WatchImportInput, Query()],
     session: SessionDep,
     current_user: CurrentUser,
-) -> WatchImportResult:
+) -> WatchImportResults:
     """Import watch history from an uploaded file for a specific plugin."""
-    if not (plugin := get_installed_plugin(params.plugin_id)):
+    if not (plugin := get_installed_plugin(params.plugin_key)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Plugin '{params.plugin_id}' does not support watch import.",
+            detail=f"Plugin '{params.plugin_key}' does not support watch import.",
         )
 
     content = file.file.read().decode("utf-8")

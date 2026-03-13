@@ -1,11 +1,10 @@
-# TODO: Validate
 import uuid
 from abc import ABC
 from typing import Any
 
 from sqlalchemy.engine.result import ScalarResult
 from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import select
+from sqlmodel import Session, select
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
@@ -14,11 +13,32 @@ from app.shows.models import Show
 from app.sources.models import Source
 
 
-# arg-type (throughout class) - There is no good way to fix type errors caused by
-# joinedload and selectinload.
 class PreloadMixin(ABC):
-    db: Any
+    db: Session
     plugin: Plugin
+
+    def _preload_sources(
+        self,
+        *,
+        preload_shows: bool = False,
+        preload_seasons: bool = False,
+        preload_episodes: bool = False,
+    ) -> ScalarResult[Source]:
+        options: list[Any] = []
+        if preload_episodes:
+            options.append(
+                selectinload(Source.shows)  # type: ignore[arg-type]
+                .selectinload(Show.seasons)  # type: ignore[arg-type]
+                .selectinload(Season.episodes),  # type: ignore[arg-type]
+            )
+        elif preload_seasons:
+            options.append(
+                selectinload(Source.shows).selectinload(Show.seasons),  # type: ignore[arg-type]  # type: ignore[arg-type]
+            )
+        elif preload_shows:
+            options.append(selectinload(Source.shows))  # type: ignore[arg-type]
+        statement = select(Source).where(Source.plugin_id == self.plugin.id)
+        return self.db.exec(statement.options(*options)).unique()
 
     def _preload_show(
         self,

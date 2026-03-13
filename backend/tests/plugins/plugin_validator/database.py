@@ -38,9 +38,7 @@ class DatabaseMixin(SerializationMixin):
 
     def files_directory_path(self) -> Path:
         """Path to the directory where all files for the test class are stored."""
-        return (
-            TEST_FILES_FOLDER / self.plugin_class.plugin_id() / self.__class__.__name__
-        )
+        return TEST_FILES_FOLDER / self.plugin_class.plugin_key() / type(self).__name__
 
     def stats_directory_path(self, label: str) -> Path:
         """Path to the directory where stats for a specific test are stored."""
@@ -62,7 +60,7 @@ class DatabaseMixin(SerializationMixin):
         """Return a plugin with all children selectinloaded."""
         select_statement = (
             select(Plugin)
-            .where(Plugin.key == self.plugin_class.plugin_id())
+            .where(Plugin.key == self.plugin_class.plugin_key())
             .options(
                 selectinload(Plugin.sources)  # type: ignore[arg-type]
                 .selectinload(Source.shows)  # type: ignore[arg-type]
@@ -155,7 +153,11 @@ class DatabaseMixin(SerializationMixin):
         self.plugin_class(db, url=self.url)
 
         plugin_user = get_or_create_plugin_user(session=db)
-        plugin_db_entry = Plugin.get_one(db, self.plugin_class.plugin_id(), plugin_user)
+        plugin_db_entry = Plugin.get_one(
+            db,
+            self.plugin_class.plugin_key(),
+            plugin_user,
+        )
 
         if self.combined_files_path().exists():
             combined_content = self.combined_files_path().read_text(encoding="utf-8")

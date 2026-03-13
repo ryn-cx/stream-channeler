@@ -20,6 +20,7 @@ from app.config import settings
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
 from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
+from app.plugins.plugins.utils.base_plugin.files import GAPIJSON
 from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -41,11 +42,8 @@ class NewTitles(JSONFile[list[new_titles_models.Edge]]):
     ) -> None:
         self.source_key = source_key
         self.date = date
+        self.unique_identifier = f"{source_key}/{date}"
         super().__init__(db, plugin)
-
-    @override
-    def unique_identifier(self) -> str:
-        return f"{self.source_key}/{self.date}"
 
     @override
     def _download(self) -> None:
@@ -67,41 +65,31 @@ class NewTitles(JSONFile[list[new_titles_models.Edge]]):
         return new_titles.extract_edges(parsed_pages)
 
 
-class UrlTitleDetails(JSONFile[url_title_details_models.UrlTitleDetailsResponse]):
+class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
+    api_endpoint = just_scrape_client().url_title_details
+
     def __init__(self, db: Session, plugin: Plugin, show_key: str) -> None:
-        self.__show_key = show_key
+        self.unique_identifier = show_key
         super().__init__(db, plugin)
 
     @override
-    def unique_identifier(self) -> str:
-        return self.__show_key
-
-    @override
     def _download(self) -> None:
-        with self._log_download(self.__show_key):
+        with self._log_download(self.unique_identifier):
             check_ip_not_matches(settings.YOUTUBE_API_IP)
             try:
-                url_title_details = just_scrape_client().url_title_details
-                response = url_title_details.get(self.__show_key)
-                content = url_title_details.dump_response(response)
+                response = self._get()
+                content = self.api_endpoint.dump_response(response)
                 self._write(content)
             # Occurs when a user puts in an invalid URL.
             except GraphQLError:
                 self._write(None)
 
-    @override
-    def _parse(self, raw: Any) -> url_title_details_models.UrlTitleDetailsResponse:
-        return just_scrape_client().url_title_details.parse(raw)
-
 
 class CustomSeasonEpisodes(JSONFile[list[custom_season_episodes_models.Episode]]):
     def __init__(self, db: Session, plugin: Plugin, season_key: str) -> None:
         self.__season_key = season_key
+        self.unique_identifier = season_key
         super().__init__(db, plugin)
-
-    @override
-    def unique_identifier(self) -> str:
-        return self.__season_key
 
     @override
     def _download(self) -> None:
@@ -120,31 +108,13 @@ class CustomSeasonEpisodes(JSONFile[list[custom_season_episodes_models.Episode]]
 
 
 class CustomBuyBoxOffers(
-    JSONFile[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
+    GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
+    api_endpoint = just_scrape_client().custom_buy_box_offers
+
     def __init__(self, db: Session, plugin: Plugin, episode_key: str) -> None:
-        self.__episode_key = episode_key
+        self.unique_identifier = episode_key
         super().__init__(db, plugin)
-
-    @override
-    def unique_identifier(self) -> str:
-        return self.__episode_key
-
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.__episode_key):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
-            custom_buy_box_offers = just_scrape_client().custom_buy_box_offers
-            response = custom_buy_box_offers.get(self.__episode_key)
-            content = custom_buy_box_offers.dump_response(response)
-            self._write(content)
-
-    @override
-    def _parse(
-        self,
-        raw: Any,
-    ) -> custom_buy_box_offers_models.CustomBuyBoxOffersResponse:
-        return just_scrape_client().custom_buy_box_offers.parse(raw)
 
 
 class FileMixin(BasePlugin, register=False):
@@ -159,10 +129,6 @@ class FileMixin(BasePlugin, register=False):
         season: Season | None = None,
         episode: Episode | None = None,
     ) -> None:
-        self.__new_titles_files: dict[str, NewTitles] = {}
-        self.__url_title_details_file: dict[str, UrlTitleDetails] = {}
-        self.__custom_season_episodes_file: dict[str, CustomSeasonEpisodes] = {}
-        self.__custom_buy_box_offers_file: dict[str, CustomBuyBoxOffers] = {}
         self._latest_browse_files: dict[str, NewTitles] = {}
         self.__media_type_cache: dict[str, str] = {}
         self.__sources_with_offers_cache: dict[
@@ -184,15 +150,15 @@ class FileMixin(BasePlugin, register=False):
     # region File Cache
 
     def _custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
-        return self._get_cached_file(
-            self.__custom_buy_box_offers_file,
+        return self._get_weakref_cached_file(
+            CustomBuyBoxOffers,
             episode_key,
             lambda: CustomBuyBoxOffers(self.db, self.plugin, episode_key),
         )
 
     def _url_title_details_file(self, show_key: str) -> UrlTitleDetails:
-        return self._get_cached_file(
-            self.__url_title_details_file,
+        return self._get_weakref_cached_file(
+            UrlTitleDetails,
             show_key,
             lambda: UrlTitleDetails(self.db, self.plugin, show_key),
         )
@@ -202,15 +168,15 @@ class FileMixin(BasePlugin, register=False):
             date = date.date()
 
         cache_key = f"{source_key}_{date}"
-        return self._get_cached_file(
-            self.__new_titles_files,
+        return self._get_weakref_cached_file(
+            NewTitles,
             cache_key,
             lambda: NewTitles(self.db, self.plugin, source_key, date),
         )
 
     def _custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
-        return self._get_cached_file(
-            self.__custom_season_episodes_file,
+        return self._get_weakref_cached_file(
+            CustomSeasonEpisodes,
             season_key,
             lambda: CustomSeasonEpisodes(self.db, self.plugin, season_key),
         )
@@ -339,7 +305,7 @@ class FileMixin(BasePlugin, register=False):
 
     def _preload_season_episode_files(self, show_key: str) -> None:
         # Will be true if the user inputs an invalid URL.
-        if not self._url_title_details_file(show_key).get_content():
+        if not self._url_title_details_file(show_key).database_entry.content:
             return
 
         if season_keys := self._season_keys_from_file(show_key):
@@ -355,7 +321,7 @@ class FileMixin(BasePlugin, register=False):
         url_title_details_select = (
             select(File)
             .where(File.plugin == self.plugin)
-            .where(File.key == UrlTitleDetails.file_key(show_key))
+            .where(File.key == self._url_title_details_file(show_key).file_key())
         )
         self.db.exec(url_title_details_select).all()
 
@@ -366,7 +332,7 @@ class FileMixin(BasePlugin, register=False):
             .where(
                 col(File.key).in_(
                     [
-                        CustomSeasonEpisodes.file_key(season_key)
+                        self._custom_season_episodes_file(season_key).file_key()
                         for season_key in season_keys
                     ],
                 ),
@@ -381,7 +347,7 @@ class FileMixin(BasePlugin, register=False):
             .where(
                 col(File.key).in_(
                     [
-                        CustomBuyBoxOffers.file_key(episode_key)
+                        self._custom_buy_box_offers_file(episode_key).file_key()
                         for episode_key in episode_keys
                     ],
                 ),
@@ -443,7 +409,7 @@ class FileMixin(BasePlugin, register=False):
 
     # region Download
 
-    def _download_initial_files(self, show_key: str) -> None:
+    def _download_show_files(self, show_key: str) -> None:
         logger.info(f"Downloading Initial Files: {self._pretty_show_name(show_key)}")
         # Movies and TV shows both need these files.
         self.__download_initial_new_titles(show_key)

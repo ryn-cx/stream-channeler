@@ -1409,11 +1409,11 @@ export class WatchesService {
      * Import Watch History
      * Import watch history from an uploaded file for a specific plugin.
      * @param data The data for the request.
-     * @param data.pluginId
+     * @param data.pluginKey
      * @param data.newOnly
      * @param data.verified
      * @param data.formData
-     * @returns WatchImportResult Successful Response
+     * @returns WatchImportResults Successful Response
      * @throws ApiError
      */
     public static importWatchHistory(data: WatchesImportWatchHistoryData): CancelablePromise<WatchesImportWatchHistoryResponse> {
@@ -1421,7 +1421,7 @@ export class WatchesService {
             method: 'POST',
             url: '/api/v1/watches/import',
             query: {
-                plugin_id: data.pluginId,
+                plugin_key: data.pluginKey,
                 new_only: data.newOnly,
                 verified: data.verified
             },

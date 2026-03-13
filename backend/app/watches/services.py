@@ -115,9 +115,9 @@ def get_importable_plugins() -> list[type[AbstractPlugin]]:
     return result
 
 
-def get_installed_plugin(plugin_id: str) -> type[AbstractPlugin] | None:
-    """Find an importable plugin class by its plugin_id."""
+def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
+    """Find an importable plugin class by its plugin_key."""
     for plugin_cls in get_importable_plugins():
-        if plugin_cls.plugin_id() == plugin_id:
+        if plugin_cls.plugin_key() == plugin_key:
             return plugin_cls
     return None

@@ -1,32 +1,40 @@
-# TODO: Validate
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 from app.plugins.plugins.utils.base_plugin.files import BaseFile
 
 
 class FileGettersMixin(ABC):
-    # ANN401 - This is a abstractmethod, it's fine to allow Any as the implementation
-    # can choose what the args and kwargs are.
-    def _source_files(self, *_args: Any, **_kwargs: Any) -> Sequence[BaseFile[Any]]:  # noqa: ANN401
-        """Returns the files required to detect changes to a show."""
-        return []
+    def _newest_file_timestamp(self, files: Sequence[BaseFile[Any]]) -> datetime:
+        return max(file.database_entry.data_timestamp for file in files)
 
-    # ANN401 - This is a abstractmethod, it's fine to allow any as the implementation
-    # can choose what the args and kwargs are.
-    def _show_files(self, *_args: Any, **_kwargs: Any) -> Sequence[BaseFile[Any]]:  # noqa: ANN401
-        """Returns the files required to detect changes to a show."""
-        return []
+    # region Files
 
-    # ANN401 - This is a abstractmethod, it's fine to allow any as the implementation
-    # can choose what the args and kwargs are.
-    def _season_files(self, *_args: Any, **_kwargs: Any) -> Sequence[BaseFile[Any]]:  # noqa: ANN401
-        """Returns the files required to detect changes to a season."""
-        return []
+    # The imeplementation of these functions will usually have "type: ignore[override]"
+    # applied to them because the parameters will be narrowed from the abstract
+    # implementation. Without this narrowing the input of the function would have to be
+    # manually checked and if it does not match it would cause a runtime
+    # error, but narrowing the parameters on the function turns the runtime error into a
+    # type error which is easier to work with.
 
-    # ANN401 - This is a abstractmethod, it's fine to allow any as the implementation
-    # can choose what the args and kwargs are.
-    def _episode_files(self, *_args: Any, **_kwargs: Any) -> Sequence[BaseFile[Any]]:  # noqa: ANN401
-        """Returns the files required to detect changes to an episode."""
-        return []
+    @abstractmethod
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]: ...
+
+    @abstractmethod
+    def _season_files(
+        self,
+        season_key: str,
+        show_key: str | None = None,
+    ) -> Sequence[BaseFile[Any]]: ...
+
+    @abstractmethod
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str | None = None,
+        show_key: str | None = None,
+    ) -> Sequence[BaseFile[Any]]: ...
+
+    # endregion Files
