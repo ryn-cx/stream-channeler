@@ -7,9 +7,9 @@ import Markdown from "react-markdown"
 import {
   type ApiError,
   WatchesService,
-  type WatchImportEntry,
   type WatchImportFormatInformation,
   type WatchImportResult,
+  type WatchImportResults,
 } from "@/client"
 import {
   Accordion,
@@ -49,10 +49,10 @@ export const Route = createFileRoute("/_layout/watches_/import")({
   }),
 })
 
-function groupByShow(entries: Array<WatchImportEntry>) {
+function groupByShow(entries: Array<WatchImportResult>) {
   const groups = new Map<
     string,
-    { show_url: string; episodes: Array<WatchImportEntry> }
+    { show_url: string; episodes: Array<WatchImportResult> }
   >()
   for (const entry of entries) {
     const existing = groups.get(entry.show)
@@ -65,7 +65,7 @@ function groupByShow(entries: Array<WatchImportEntry>) {
   return groups
 }
 
-function EntryList({ entries }: { entries: Array<WatchImportEntry> }) {
+function EntryList({ entries }: { entries: Array<WatchImportResult> }) {
   if (entries.length === 0) return null
 
   const groups = [...groupByShow(entries).entries()].sort(
@@ -118,7 +118,7 @@ function EntryList({ entries }: { entries: Array<WatchImportEntry> }) {
   )
 }
 
-function ImportResults({ result }: { result: WatchImportResult }) {
+function ImportResults({ result }: { result: WatchImportResults }) {
   const categories = [
     { title: "Added", entries: result.added },
     { title: "Existing", entries: result.existing },
@@ -164,7 +164,7 @@ function ImportWatchHistory() {
   const [newOnly, setNewOnly] = useState(true)
   const [verified, setVerified] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [importResult, setImportResult] = useState<WatchImportResult | null>(
+  const [importResult, setImportResult] = useState<WatchImportResults | null>(
     null,
   )
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -178,7 +178,7 @@ function ImportWatchHistory() {
     mutationFn: async () => {
       if (!selectedPlugin || !selectedFile) return
       return WatchesService.importWatchHistory({
-        pluginId: selectedPlugin,
+        pluginKey: selectedPlugin,
         newOnly: newOnly,
         verified: verified,
         formData: { file: selectedFile },
@@ -199,7 +199,7 @@ function ImportWatchHistory() {
   })
 
   const selectedPluginInfo: WatchImportFormatInformation | undefined =
-    pluginsData?.plugins.find((p) => p.plugin_id === selectedPlugin)
+    pluginsData?.plugins.find((p) => p.plugin_key === selectedPlugin)
 
   return (
     <div className="flex flex-col gap-6">
@@ -231,8 +231,8 @@ function ImportWatchHistory() {
               </SelectTrigger>
               <SelectContent>
                 {pluginsData?.plugins.map((plugin) => (
-                  <SelectItem key={plugin.plugin_id} value={plugin.plugin_id}>
-                    {plugin.plugin_name} ({plugin.file_type})
+                  <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
+                    {plugin.plugin_key} ({plugin.file_type})
                   </SelectItem>
                 ))}
               </SelectContent>
