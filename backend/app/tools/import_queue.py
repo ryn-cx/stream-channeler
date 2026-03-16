@@ -43,6 +43,7 @@ def import_queue(session: Session) -> None:
                 try:
                     queue_item.status = URLStatus.IMPORTING
                     plugin_instance = plugin(session)
+                    plugin_instance.initialize_plugin()
                     results = plugin_instance.import_url(queue_item.url)
                     add_results_to_channel(session, results, queue_item.channel)
                     queue_item.status = URLStatus.IMPORTED

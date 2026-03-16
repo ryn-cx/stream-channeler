@@ -44,7 +44,6 @@ import {
 // From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
 declare module "@tanstack/react-table" {
   // allows us to define custom properties for our columns
-  // biome-ignore lint/correctness/noUnusedVariables: Type parameters required for module augmentation
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select"
   }
@@ -127,12 +126,21 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder ? null : (
                       <>
                         <div
+                          role={
+                            header.column.getCanSort() ? "button" : undefined
+                          }
+                          tabIndex={header.column.getCanSort() ? 0 : undefined}
                           className={
                             header.column.getCanSort()
                               ? "cursor-pointer select-none"
                               : ""
                           }
                           onClick={header.column.getToggleSortingHandler()}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              header.column.getToggleSortingHandler()?.(event)
+                            }
+                          }}
                           title={
                             header.column.getCanSort()
                               ? header.column.getNextSortingOrder() === "asc"

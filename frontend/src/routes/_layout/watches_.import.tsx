@@ -290,10 +290,14 @@ function ImportWatchHistory() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">
+                <label
+                  htmlFor="file-upload"
+                  className="text-sm font-medium mb-2 block"
+                >
                   Upload File ({selectedPluginInfo.file_extension})
                 </label>
                 <input
+                  id="file-upload"
                   ref={fileInputRef}
                   type="file"
                   accept={selectedPluginInfo.file_extension}

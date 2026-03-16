@@ -124,11 +124,23 @@ class DownloadMixin(FileGettersMixin, AbstractPlugin, register=False):
                 ),
             )
         if not skip_episodes:
+            all_episode_file_keys = [
+                file.file_key()
+                for season_key in season_keys
+                for episode_key in self._episode_keys_from_file(season_key)
+                for file in self._episode_files(
+                    episode_key=episode_key,
+                    season_key=season_key,
+                    show_key=show_key,
+                )
+            ]
+            episode_cache = self._get_files_by_keys(all_episode_file_keys)
             for season_key in season_keys:
                 all_files.extend(
                     self._download_all_episode_files(
                         season_key,
                         show_key=show_key,
+                        preloaded_episode_files=episode_cache,
                     ),
                 )
         return all_files
@@ -138,19 +150,21 @@ class DownloadMixin(FileGettersMixin, AbstractPlugin, register=False):
         season_key: str,
         *,
         show_key: str | None = None,
+        preloaded_episode_files: Sequence[File] | None = None,
     ) -> list[File]:
         video_keys = self._episode_keys_from_file(season_key)
-        episode_cache = self._preload_episode_files(
-            video_keys,
-            season_key=season_key,
-            show_key=show_key,
-        )
+        if not preloaded_episode_files:
+            preloaded_episode_files = self._preload_episode_files(
+                video_keys,
+                season_key=season_key,
+                show_key=show_key,
+            )
         all_files: list[File] = []
         for episode_key in video_keys:
             all_files.extend(
                 self._download_episode_files(
                     episode_key,
-                    preloaded_episode_files=episode_cache,
+                    preloaded_episode_files=preloaded_episode_files,
                     season_key=season_key,
                     show_key=show_key,
                 ),

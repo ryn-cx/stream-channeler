@@ -19,7 +19,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
-from app.utils import tz_datetime
 
 
 class BasePlugin(
@@ -51,9 +50,11 @@ class BasePlugin(
         self._weakref_file_cache: WeakValueDictionary[tuple[type, object], Any] = (
             WeakValueDictionary()
         )
-        self.__upsert_plugin()
+        self._pre_initialize_plugin()
+        self._validate_plugin_version()
 
-    def __upsert_plugin(self) -> None:
+    def _pre_initialize_plugin(self) -> None:
+        """"""
         plugin_user = get_or_create_plugin_user(session=self.db)
         existing = Plugin.get(
             self.db,
@@ -62,29 +63,24 @@ class BasePlugin(
             options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
         )
 
-        if existing is None:
+        if not existing:
             self.plugin = PluginInput(
                 key=self.plugin_key(),
                 name=self.plugin_key(),
                 version=self._VERSION,
                 public=True,
-                user_id=plugin_user.id,
-                data_timestamp=tz_datetime.now(),
-            ).upsert(plugin_user, None)
-            return
+            ).upsert(plugin_user, existing)
+        else:
+            self.plugin = existing
 
-        if existing.version != self._VERSION:
+    def _validate_plugin_version(self) -> None:
+        if self.plugin.version != self._VERSION:
             msg = (
                 f"Plugin {self.plugin_key()!r} requires version {self._VERSION!r} "
-                f"but the database has version {existing.version!r}. "
+                f"but the database has version {self.plugin.version!r}. "
                 f"The database entry needs to be migrated."
             )
             raise RuntimeError(msg)
-
-        if existing.user_id != plugin_user.id:
-            existing.user_id = plugin_user.id
-            existing.data_timestamp = tz_datetime.now()
-        self.plugin = existing
 
     # endregion
 
@@ -92,7 +88,11 @@ class BasePlugin(
 
     @override
     def update_show(self, show: Show) -> None:
-        show = self._preload_show(show_key=show.key, preload_episodes=True).one()
+        show = self._preload_show(
+            show_key=show.key,
+            source_key=show.source.key,
+            preload_episodes=True,
+        ).one()
         _cache = self._download_show_files(show.key, show.update_at)
         self._upsert_show(show.source, show.key)
 
@@ -118,6 +118,7 @@ class BasePlugin(
             episode.key,
             episode.update_at,
             season_key=episode.season.key,
+            show_key=episode.season.show.key,
         )
         _cache = self._download_show_files(episode.season.show.key)
         self._upsert_show(episode.season.show.source, episode.season.show.key)

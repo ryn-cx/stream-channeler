@@ -1,7 +1,9 @@
 # TODO: Validate
 import random
 from collections.abc import Callable
+from contextlib import nullcontext
 from datetime import timedelta
+from typing import Any
 
 import pytest
 import yaml
@@ -12,13 +14,13 @@ from app.episodes.schemas import EpisodeInput
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.plugins.plugins.utils.base_plugin import BasePlugin
+from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
 from app.shows.schemas import ShowInput
 from app.sources.models import Source
 from app.sources.schemas import SourceInput
-from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
@@ -65,15 +67,12 @@ class PluginValidator(DatabaseMixin):
         """Validate that the current database state matches the original plugin."""
         config.validate(original_plugin, self._get_detached_plugin(db))
 
-    def _base_validator(self) -> Validator:
-        return Validator().changed(Plugin, "user_id")
-
     def _import_url_validator(self) -> Validator:
         return (
-            self._base_validator()
+            Validator()
+            .changed(Plugin, "user_id")
             # These will always change because they are based on when the import occurs.
             .incremented_all("created_at", "modified_at")
-            .incremented(Plugin, "data_timestamp")
             # These will all change because ids are randomly generated.
             .changed_all("id")
             .changed(Source, "plugin_id")
@@ -84,6 +83,9 @@ class PluginValidator(DatabaseMixin):
 
     def _existing_url_validator(self) -> Validator:
         return Validator()
+
+    def _update_plugin_validator(self, db: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
+        return Validator().incremented(plugin.id, "modified_at", "data_timestamp")
 
     def _update_source_validator(self, source: Source) -> Validator:
         return Validator().incremented(source.id, "modified_at", "data_timestamp")
@@ -147,13 +149,17 @@ class PluginValidator(DatabaseMixin):
         On first run this will download files and export them. Subsequent runs
         verify that all files are served from cache (no downloads occur).
         """
-        if self.invalid_url:
-            pytest.skip()
         files_already_cached = self.combined_files_path().exists()
         try:
             with disable_ip_validation(), track_downloads() as downloaded:
-                self._import_url(db_with_files)
-            self._export_all_files(db_with_files)
+                if self.invalid_url:
+                    with pytest.raises(InvalidURLError):
+                        self._import_url(db_with_files)
+                else:
+                    self._import_url(db_with_files)
+            self._export_database_files(db_with_files)
+            if not self.invalid_url:
+                self._export_verification_file(db_with_files)
         # If importing fails the downloaded files can still be dumped for analysis, but
         # the verification file should not be dumped because it is not valid.
         except Exception:
@@ -237,68 +243,75 @@ class PluginValidator(DatabaseMixin):
             get_random=self._random_episode,
         )
 
-    def _update_and_validate(
+    def _update_and_validate(  # noqa: C901, PLR0913
         self,
         db: Session,
         original_plugin: Plugin,
-        entity: Source | Show | Season | Episode,
+        entity: Plugin | Source | Show | Season | Episode,
         validator: Validator | None = None,
+        *,
+        use_mock_update: bool = True,
+        static_keys: list[str] | None = None,
     ) -> None:
-        key = entity.key
         data_timestamp = entity.data_timestamp
         assert data_timestamp
         update_at = data_timestamp + timedelta(milliseconds=1)
 
+        defaults: dict[str, Any] = {
+            "key": entity.key,
+            "data_timestamp": data_timestamp,
+            "update_at": update_at,
+        }
+        for k in static_keys or []:
+            if k not in defaults:
+                defaults[k] = getattr(entity, k)
+        kwargs = defaults
+
         match entity:
+            case Plugin() as plugin:
+                build_random_model(PluginInput, **kwargs).upsert(plugin.user, plugin)
+                validator = validator or self._update_plugin_validator(db, plugin)
+
+                def update() -> None:
+                    self.plugin_class(db).update_plugin(plugin=plugin)
+
             case Source() as source:
-                build_random_model(
-                    SourceInput,
-                    key=key,
-                    data_timestamp=data_timestamp,
-                    update_at=update_at,
-                ).upsert(source.plugin, source)
+                build_random_model(SourceInput, **kwargs).upsert(source.plugin, source)
                 validator = validator or self._update_source_validator(source)
 
                 def update() -> None:
                     self.plugin_class(db, source=source).update_source(source=source)
 
             case Show() as show:
-                build_random_model(
-                    ShowInput,
-                    key=key,
-                    data_timestamp=data_timestamp,
-                    update_at=update_at,
-                ).upsert(show.source, show)
+                build_random_model(ShowInput, **kwargs).upsert(show.source, show)
                 validator = validator or self._update_show_validator(show)
 
                 def update() -> None:
                     self.plugin_class(db, show=show).update_show(show=show)
 
             case Season() as season:
-                build_random_model(
-                    SeasonInput,
-                    key=key,
-                    data_timestamp=data_timestamp,
-                    update_at=update_at,
-                ).upsert(season.show, season)
+                build_random_model(SeasonInput, **kwargs).upsert(season.show, season)
                 validator = validator or self._update_season_validator(season)
 
                 def update() -> None:
                     self.plugin_class(db, season=season).update_season(season)
 
             case Episode() as episode:
-                build_random_model(
-                    EpisodeInput,
-                    key=key,
-                    data_timestamp=data_timestamp,
-                    update_at=update_at,
-                ).upsert(episode.season, episode)
+                build_random_model(EpisodeInput, **kwargs).upsert(
+                    episode.season,
+                    episode,
+                )
                 validator = validator or self._update_episode_validator(episode)
 
                 def update() -> None:
                     self.plugin_class(db, episode=episode).update_episode(episode)
 
-        with mock_update(self.files_directory_path()), log_stats(self):
+        maybe_mock_wrapper = (
+            mock_update(self.files_directory_path())
+            if use_mock_update
+            else nullcontext()
+        )
+        with maybe_mock_wrapper, log_stats(self):
             update()
             db.flush()
 

@@ -120,6 +120,71 @@ class Validator:
             self.remove(model, *field_names)
         return self
 
+    def seasons_share_show_file(self, entity: Show | Season) -> Self:
+        """Mark overlapping entities as updated when shows and seasons share a file.
+
+        - Show: marks all seasons as updated.
+        - Season: marks the parent show as updated.
+        """
+        match entity:
+            case Show() as show:
+                for season in show.seasons:
+                    self.incremented(season.id, "modified_at", "data_timestamp")
+            case Season() as season:
+                self.incremented(season.show.id, "modified_at", "data_timestamp")
+        return self
+
+    def episodes_share_season_file(self, entity: Season | Episode) -> Self:
+        """Mark overlapping entities as updated when seasons and episodes share a file.
+
+        - Season: marks all episodes as updated.
+        - Episode: marks the parent season and all sibling episodes as updated.
+        """
+        match entity:
+            case Season() as season:
+                for episode in season.episodes:
+                    self.incremented(episode.id, "modified_at", "data_timestamp")
+            case Episode() as episode:
+                self.incremented(
+                    episode.season.id,
+                    "modified_at",
+                    "data_timestamp",
+                )
+                for sibling in episode.season.episodes:
+                    self.incremented(sibling.id, "modified_at", "data_timestamp")
+        return self
+
+    def episodes_share_show_file(self, entity: Show | Episode) -> Self:
+        """Mark overlapping entities as updated when shows and episodes share a file.
+
+        - Show: marks all episodes as updated.
+        - Episode: marks the parent show as updated.
+        """
+        match entity:
+            case Show() as show:
+                for season in show.seasons:
+                    for episode in season.episodes:
+                        self.incremented(episode.id, "modified_at", "data_timestamp")
+            case Episode() as episode:
+                self.incremented(
+                    episode.season.show.id,
+                    "modified_at",
+                    "data_timestamp",
+                )
+        return self
+
+    def seasons_share_file(self, season: Season) -> Self:
+        """Mark all sibling seasons as updated when they share a file."""
+        for sibling in season.show.seasons:
+            self.incremented(sibling.id, "modified_at", "data_timestamp")
+        return self
+
+    def episodes_share_file(self, episode: Episode) -> Self:
+        """Mark all sibling episodes as updated when they share a file."""
+        for sibling in episode.season.episodes:
+            self.incremented(sibling.id, "modified_at", "data_timestamp")
+        return self
+
     def get_rule(
         self,
         obj: Plugin | Source | Show | Season | Episode | File,

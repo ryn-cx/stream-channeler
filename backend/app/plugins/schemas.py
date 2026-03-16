@@ -12,8 +12,6 @@ from app.users.models import User
 class PluginInput(BasePlugin, BaseInputMixin[Plugin]):
     """Input schema for creating or updating a plugin."""
 
-    user_id: uuid.UUID
-
     def upsert(
         self,
         db_or_user: User | Session,

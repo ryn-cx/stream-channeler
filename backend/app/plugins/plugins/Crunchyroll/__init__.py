@@ -91,28 +91,28 @@ class Crunchyroll(WatchMixin, register=True):
         """Import existing browse files that have not been imported yet."""
         _cache = self._preload_sources(preload_seasons=True)
 
-        for browse_json in self._get_new_browse_files_from_db():
-            for page in browse_json.parsed():
-                for release in page.data:
-                    if show := Show.get_from_memory(self.db, source, release.id):
-                        # last_public appears to represent the last time a public change
-                        # was made to the show's data. There is no way to detect what
-                        # season the update is for so both show and season need to be set
-                        # to be updated because the season will detect new episodes for
-                        # existing seasons and the shows will detect episodes for new
-                        # seasons.
-                        show.set_update_at(release.last_public)
-                        for season in show.seasons:
-                            season.set_update_at(release.last_public)
-            browse_json.database_entry.extra = "Imported"
+        for browse_json in self._get_new_browse_files_from_db(source):
+            for release in browse_json.datums():
+                if show := Show.get_from_memory(self.db, source, release.id):
+                    # last_public appears to represent the last time a public change
+                    # was made to the show's data. There is no way to detect what
+                    # season the update is for so both show and season need to be set
+                    # to be updated because the season will detect new episodes for
+                    # existing seasons and the shows will detect episodes for new
+                    # seasons.
+                    show.set_update_at(release.last_public)
+                    for season in show.seasons:
+                        season.set_update_at(release.last_public)
 
-    def _get_new_browse_files_from_db(self) -> list[Browse]:
+    def _get_new_browse_files_from_db(self, source: Source) -> list[Browse]:
         statement = (
             select(File)
             .where(
                 File.plugin == self.plugin,
                 col(File.key).startswith(f"{Browse.__name__}/"),
-                col(File.extra).is_(None),
+                col(File.data_timestamp) > source.data_timestamp
+                if source.data_timestamp
+                else True,
             )
             .order_by(col(File.data_timestamp).asc())
         )

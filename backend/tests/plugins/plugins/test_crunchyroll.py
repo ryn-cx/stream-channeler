@@ -25,41 +25,6 @@ class CrunchyrollValidator(PluginValidator):
     def domain(self, request: pytest.FixtureRequest) -> str:
         return request.param
 
-    @override
-    def _update_show_validator(self, show: Show) -> Validator:
-        validator = super()._update_show_validator(show)
-        # Show shares a file with the seasons.
-        validator.incremented(Season, "data_timestamp", "modified_at")
-
-        return validator
-
-    @override
-    def _update_season_validator(self, season: Season) -> Validator:
-        output = super()._update_season_validator(season)
-        # Show shares a file with the seasons.
-        output.incremented(Show, "data_timestamp", "modified_at")
-
-        # All seasons share a file.
-        output.incremented(Season, "data_timestamp", "modified_at")
-
-        # Seasons share a file with the episode.
-        for episode in season.episodes:
-            output.incremented(episode.id, "data_timestamp", "modified_at")
-
-        return output
-
-    @override
-    def _update_episode_validator(self, episode: Episode) -> Validator:
-        output = super()._update_episode_validator(episode)
-        # Seasons share a file with the episode.
-        output.incremented(episode.season.id, "data_timestamp", "modified_at")
-
-        # All episodes for a season share a file
-        for sibling_episode in episode.season.episodes:
-            output.incremented(sibling_episode.id, "data_timestamp", "modified_at")
-
-        return output
-
     @pytest.fixture(
         params=[
             "/series/{key}/{slug}",
@@ -69,6 +34,28 @@ class CrunchyrollValidator(PluginValidator):
     )
     def series_path(self, request: pytest.FixtureRequest) -> str:
         return request.param.format(key=self.show_key, slug=self.show_slug)
+
+    @override
+    def _update_show_validator(self, show: Show) -> Validator:
+        return super()._update_show_validator(show).seasons_share_show_file(show)
+
+    @override
+    def _update_season_validator(self, season: Season) -> Validator:
+        return (
+            super()
+            ._update_season_validator(season)
+            .seasons_share_show_file(season)
+            .seasons_share_file(season)
+            .episodes_share_season_file(season)
+        )
+
+    @override
+    def _update_episode_validator(self, episode: Episode) -> Validator:
+        return (
+            super()
+            ._update_episode_validator(episode)
+            .episodes_share_season_file(episode)
+        )
 
     def test_import_response(
         self,

@@ -104,6 +104,16 @@ class AbstractPlugin(ABC):
 
     # region Optional methods
 
+    # B027 - This function does not need to be implemented so it does not need the
+    # @abstractmethod decorator.
+    def initialize_plugin(self) -> None:  # noqa: B027
+        """Run plugin-specific initialization.
+
+        Called before import_url to allow plugins to set up any state that depends on
+        existing files in the database (e.g. downloading provider metadata, initial
+        browse files).
+        """
+
     def update_plugin(self, plugin: Plugin) -> None:
         """Update an existing plugin in the database.
 

@@ -19,6 +19,7 @@ class PreloadMixin(ABC):
 
     def _preload_sources(
         self,
+        source_key: str | list[str] | None = None,
         *,
         preload_shows: bool = False,
         preload_seasons: bool = False,
@@ -38,12 +39,17 @@ class PreloadMixin(ABC):
         elif preload_shows:
             options.append(selectinload(Source.shows))  # type: ignore[arg-type]
         statement = select(Source).where(Source.plugin_id == self.plugin.id)
+        if isinstance(source_key, list):
+            statement = statement.where(Source.key.in_(source_key))
+        elif source_key is not None:
+            statement = statement.where(Source.key == source_key)
         return self.db.exec(statement.options(*options)).unique()
 
-    def _preload_show(
+    def _preload_show(  # noqa: PLR0913
         self,
         show_key: str | None = None,
         show_id: uuid.UUID | None = None,
+        source_key: str | None = None,
         *,
         preload_source: bool = False,
         preload_seasons: bool = False,
@@ -64,6 +70,8 @@ class PreloadMixin(ABC):
                 .join(Source)
                 .where(Source.plugin_id == self.plugin.id, Show.key == show_key)
             )
+            if source_key is not None:
+                statement = statement.where(Source.key == source_key)
         else:
             msg = "Either show_key or show_id must be provided"
             raise ValueError(msg)

@@ -25,7 +25,7 @@ from tests.conftest import (
     reset_tables,
     savepoint_session,
 )
-from tests.plugins.plugin_validator.mocks import disable_ip_validation
+from tests.plugins.plugin_validator.mocks import block_downloads, disable_ip_validation
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
@@ -141,6 +141,7 @@ class DatabaseMixin(SerializationMixin):
         url = url or self.url
         with disable_ip_validation():
             plugin_instance = self.plugin_class(db, url=url)
+            plugin_instance.initialize_plugin()
             output = plugin_instance.import_url(url)
 
         db.commit()  # Set the rollback point.
@@ -150,7 +151,7 @@ class DatabaseMixin(SerializationMixin):
     def _import_files(self, db: Session) -> None:
         """Import all exported files into the database."""
         # Initialize class to make sure plugin exists before trying to import files.
-        self.plugin_class(db, url=self.url)
+        plugin = self.plugin_class(db, url=self.url)
 
         plugin_user = get_or_create_plugin_user(session=db)
         plugin_db_entry = Plugin.get_one(
@@ -177,6 +178,11 @@ class DatabaseMixin(SerializationMixin):
         for file_data in all_files:
             if file_data["key"] not in existing_keys:
                 plugin_db_entry.files.append(File(**file_data))
+
+        # Files imported from JSON have raw Python types. Expiring forces SQLAlchemy to
+        # re-read from the DB with proper type coercion.
+        db.expire_all()
+        plugin.initialize_plugin()
 
         db.commit()  # Set the rollback point.
 
@@ -215,7 +221,8 @@ class DatabaseMixin(SerializationMixin):
         connection = engine.connect()
         with Session(bind=connection) as session:
             init_db(session)
-            self._import_url(session)
+            with block_downloads():
+                self._import_url(session)
         yield connection
         connection.close()
         engine.dispose()

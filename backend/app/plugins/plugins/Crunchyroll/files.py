@@ -46,6 +46,10 @@ class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
             end_datetime=tz_datetime.fromisotimestamp(self.unique_identifier),
         )
 
+    def datums(self) -> list[browse_series_models.Datum]:
+        """Flatten all pages into a single list of datum entries."""
+        return chirashi_client().browse_series.extract_entries(self.parsed())
+
 
 class FileMixin(BasePlugin, register=False):
     # region File Wrappers
