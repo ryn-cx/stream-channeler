@@ -120,6 +120,12 @@ def get_sort_options() -> MultipleSortOptionOutputs:
     )
     data.append(
         SortOptionOutput(
+            label="Show - Started",
+            value="value.show.started",
+        ),
+    )
+    data.append(
+        SortOptionOutput(
             label="Show - Recently Aired (Last Month)",
             value="value.show.recently_aired_month",
         ),
@@ -178,6 +184,8 @@ def get_channel_episodes(
 
     builder = EpisodeQueryBuilder(session, channel, media_filter, user)
     episodes = builder.get_episodes()
+    if media_filter.limit is not None:
+        episodes = episodes[: media_filter.limit]
     logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
     episode_channels = builder.get_episode_channels(episodes)
     logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)

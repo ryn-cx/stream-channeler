@@ -504,6 +504,8 @@ class EpisodeQueryBuilder:
             return self._recently_airing_sort_expression(7)
         if media_type == "show" and field_name == "recently_aired_month":
             return self._recently_airing_sort_expression(30)
+        if media_type == "show" and field_name == "started":
+            return self._started_show_sort_expression()
 
         model = _MEDIA_MODEL_MAP.get(media_type)
         if model is None:
@@ -531,6 +533,25 @@ class EpisodeQueryBuilder:
         )
 
         return case((recent_episode_query.exists(), 1), else_=0)
+
+    def _started_show_sort_expression(self) -> ColumnElement[Any]:
+        if not self._user:
+            return literal_column("0")
+        started_query = (
+            select(Watch.id)
+            .join(Episode, Watch.episode_id == Episode.id)
+            .join(Season, Episode.season_id == Season.id)
+            .where(
+                and_(
+                    col(Season.show_id) == col(Show.id),
+                    Watch.user_id == self._user.id,
+                    col(Watch.verified).is_(True),
+                ),
+            )
+            .correlate(Show)
+            .limit(1)
+        )
+        return case((started_query.exists(), 1), else_=0)
 
     def _sql_sort_by_show_episodes_expression(
         self,
@@ -658,6 +679,7 @@ class EpisodeQueryBuilder:
         if media_type == "show" and field_name in (
             "recently_aired_week",
             "recently_aired_month",
+            "started",
         ):
             return True
 
