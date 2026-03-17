@@ -32,13 +32,7 @@ def _episode_watch_select_statement(
 ) -> Sequence[Watch]:
     # TODO: Consider changing this to joinedload if performance changes
     statement = (
-        select(Watch)
-        .join(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-        .join(Plugin)
-        .order_by(col(Watch.verified).asc(), col(Watch.watch_date).desc())
+        select(Watch).join(Episode).join(Season).join(Show).join(Source).join(Plugin)
     )
     statement = statement.where(Watch.user_id == user_id)
     statement = statement.where(
