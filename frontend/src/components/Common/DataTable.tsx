@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   type OnChangeFn,
   type RowData,
+  type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
@@ -54,6 +55,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  sortingStorageKey?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -61,10 +63,32 @@ export function DataTable<TData, TValue>({
   data,
   columnVisibility,
   onColumnVisibilityChange,
+  sortingStorageKey,
 }: DataTableProps<TData, TValue>) {
   // From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
+  )
+
+  const [sorting, setSorting] = React.useState<SortingState>(() => {
+    if (sortingStorageKey) {
+      const stored = localStorage.getItem(sortingStorageKey)
+      if (stored) return JSON.parse(stored)
+    }
+    return []
+  })
+
+  const handleSortingChange: OnChangeFn<SortingState> = React.useCallback(
+    (updater) => {
+      setSorting((previous) => {
+        const next = typeof updater === "function" ? updater(previous) : updater
+        if (sortingStorageKey) {
+          localStorage.setItem(sortingStorageKey, JSON.stringify(next))
+        }
+        return next
+      })
+    },
+    [sortingStorageKey],
   )
 
   const [pagination, setPagination] = React.useState({
@@ -98,9 +122,11 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       pagination,
+      sorting,
     },
     onColumnVisibilityChange,
     onColumnFiltersChange: handleColumnFiltersChange,
+    onSortingChange: handleSortingChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(), //client-side filtering
     getSortedRowModel: getSortedRowModel(),

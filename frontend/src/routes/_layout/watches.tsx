@@ -113,10 +113,6 @@ function WatchesTableContent() {
         data={watchesWithDetails}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
-        initialSorting={[
-          { id: "verified", desc: false },
-          { id: "watch_date", desc: true },
-        ]}
         sortingStorageKey="watches-sorting"
       />
     </div>
