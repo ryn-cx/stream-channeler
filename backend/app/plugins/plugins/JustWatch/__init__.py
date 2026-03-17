@@ -31,7 +31,7 @@ class JustWatch(UpsertMixin, register=True):
 
         if not (shows := self._preload_show(show_key=show_key).all()):
             self._validate_show_key(show_key, url)
-            _cache = self._download_show_files(show_key)
+            _cache = (self._download_show_files(show_key), self._preload_sources())
             shows = self._upsert_shows(show_key)
 
         return self._create_url_import_results(shows, source_name, season_key)
