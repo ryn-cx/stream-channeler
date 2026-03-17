@@ -12,8 +12,6 @@ if TYPE_CHECKING:
 def try_to_import_plugin(plugin_import_path: str) -> None:
     try:
         importlib.import_module(plugin_import_path)
-        msg = f"Successfully imported plugin: {plugin_import_path}."
-        logger.info(msg)
     except ImportError:
         msg = f"Failed to import plugin: {plugin_import_path}."
         logger.exception(msg)
