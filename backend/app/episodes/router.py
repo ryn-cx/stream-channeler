@@ -1,5 +1,6 @@
 # TODO: Validate
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
+from sqlmodel import col, select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.dependencies import ReadableEpisode, UserEpisode
@@ -29,6 +30,18 @@ def create_watch(
     watch_input: WatchPostInput,
 ) -> Watch:
     """Create a new episode watch entry."""
+    existing_unverified = session.exec(
+        select(Watch).where(
+            Watch.user_id == current_user.id,
+            Watch.episode_id == episode.id,
+            col(Watch.verified).is_(False),
+        ),
+    ).first()
+    if existing_unverified:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An unverified watch already exists for this episode.",
+        )
     # Can't use create_child because WatchCreateInput.key does not exist.
     create_input = WatchCreateInput(user_id=current_user.id, **watch_input.model_dump())
     watch = Watch.model_validate(create_input, update={"episode_id": episode.id})
