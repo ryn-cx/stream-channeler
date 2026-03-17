@@ -66,30 +66,70 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     accessorFn: (row) => row.show.name,
     id: "show",
     header: "Show",
-    cell: ({ row }) => (
-      <span className="font-medium">{row.original.show.name ?? ""}</span>
-    ),
-  },
-  {
-    accessorFn: (row) => `${row.season.season_number} ${row.season.name ?? ""}`,
-    id: "season",
-    header: "Season",
-    cell: ({ row }) => (
-      <span>
-        {row.original.season.season_number} {row.original.season.name ?? ""}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const { show } = row.original
+      const name = show.name ?? ""
+      if (show.url) {
+        return (
+          <a
+            href={show.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            {name}
+          </a>
+        )
+      }
+      return <span className="font-medium">{name}</span>
+    },
   },
   {
     accessorFn: (row) =>
-      `${row.episode.episode_number} ${row.episode.name ?? ""}`,
+      `${row.season.season_number ?? ""} ${row.season.name ?? ""}`.trim(),
+    id: "season",
+    header: "Season",
+    cell: ({ row }) => {
+      const { season } = row.original
+      const label = `${season.season_number ?? ""} ${season.name ?? ""}`.trim()
+      if (season.url) {
+        return (
+          <a
+            href={season.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {label}
+          </a>
+        )
+      }
+      return <span>{label}</span>
+    },
+  },
+  {
+    accessorFn: (row) =>
+      `${row.episode.episode_number ?? ""} ${row.episode.name ?? ""}`.trim(),
     id: "episode",
     header: "Episode",
-    cell: ({ row }) => (
-      <span>
-        {row.original.episode.episode_number} {row.original.episode.name ?? ""}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const { episode } = row.original
+      const label =
+        `${episode.episode_number ?? ""} ${episode.name ?? ""}`.trim()
+      if (episode.url) {
+        return (
+          <a
+            href={episode.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {label}
+          </a>
+        )
+      }
+      return <span>{label}</span>
+    },
   },
   {
     accessorKey: "watch_date",
