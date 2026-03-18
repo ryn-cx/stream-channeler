@@ -23,14 +23,14 @@ class UpsertMixin(FileMixin, register=False):
 
     # region Upsert
 
-    def _upsert_source(self) -> None:
+    def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.db, self.plugin, self.plugin_key())
 
         data_timestamp = tz_datetime.now()
         if source and source.data_timestamp:
             data_timestamp = source.data_timestamp
 
-        source = SourceInput(
+        return SourceInput(
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL

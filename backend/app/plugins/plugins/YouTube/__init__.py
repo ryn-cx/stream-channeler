@@ -6,7 +6,6 @@ from app.plugins.plugins.YouTube.files import ChannelById, ChannelByName, Playli
 from app.plugins.plugins.YouTube.watch import WatchMixin
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.sources.models import Source
 from app.utils import tz_datetime
 
 URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
@@ -65,8 +64,8 @@ class YouTube(WatchMixin, register=True):
         show = self._preload_show(show_key=show_key, preload_seasons=True).one_or_none()
         if not show:
             _cache = self._download_show_files(show_key)
-            self._upsert_source(show_key)
-            return self._preload_show(show_key=show_key, preload_seasons=True).one()
+            source = self._upsert_source()
+            return self._upsert_show(source, show_key)
 
         # Handle the edge case where a user adds a playlist that belongs to a channel
         # that is already in the database, but that specific playlist is not in the
@@ -75,9 +74,8 @@ class YouTube(WatchMixin, register=True):
             for show_file in self._show_files(show.key):
                 show_file.download_if_outdated(tz_datetime.now())
             self._download_show_files(show_key)
-            self._upsert_source(show_key)
-            source = Source.get_one(self.db, self.plugin, self.plugin_key())
-            return Show.get_one(self.db, source, show_key)
+            source = self._upsert_source()
+            return self._upsert_show(source, show_key)
 
         return show
 
