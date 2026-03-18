@@ -3,7 +3,6 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import delete_record, update_record
 from app.models import Message
 from app.watches.dependencies import UserWatch
 from app.watches.models import Watch
@@ -16,9 +15,12 @@ from app.watches.schemas import (
     WatchPatchInput,
 )
 from app.watches.services import (
+    delete_watches,
     get_importable_plugins,
     get_installed_plugin,
     get_watched_episodes,
+    sync_episode_watches,
+    update_watches,
 )
 
 router = APIRouter(prefix="/watches", tags=["watches"])
@@ -40,22 +42,31 @@ def get_user_watches(
     return get_watched_episodes(session, current_user.id)
 
 
+@router.post("/sync")
+def sync_watches(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Message:
+    """Sync watches across episodes with the same key within the same plugin."""
+    return sync_episode_watches(session, current_user.id)
+
+
 # FAST003 - Parameter is used by UserWatch.
-@router.patch("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003
+@router.patch("/{watch_id}")  # noqa: FAST003
 def update_user_watch(
     session: SessionDep,
     watch: UserWatch,
     watch_input: WatchPatchInput,
-) -> Watch:
-    """Update a watch by its id."""
-    return update_record(session, watch, watch_input)
+) -> list[WatchOutput]:
+    """Update a watch and all matching sibling watches."""
+    return update_watches(session, watch, watch_input)
 
 
 # FAST003 - Parameter is used by UserWatch.
 @router.delete("/{watch_id}")  # noqa: FAST003
 def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
-    """Delete a watch by its id."""
-    return delete_record(session, watch)
+    """Delete a watch and all sibling watches by its id."""
+    return delete_watches(session, watch)
 
 
 # TODO: Add tests

@@ -49,17 +49,35 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
         "watches",
       ])
 
-      // Optimistically update to the new value
-      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
-        ...old!,
-        watches: old!.watches.filter((w) => w.id !== deletedId),
-      }))
+      // Optimistically delete the watch and all siblings with the same
+      // plugin, episode key, and watch date.
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
+        if (!old) return old
+        const deletedWatch = old.watches.find((w) => w.id === deletedId)
+        if (!deletedWatch) return old
+        const deletedEpisode = old.episodes[deletedWatch.episode_id]
+        const deletedSeason = old.seasons[deletedEpisode.season_id]
+        const deletedShow = old.shows[deletedSeason.show_id]
+        const deletedSource = old.sources[deletedShow.source_id]
+        return {
+          ...old,
+          watches: old.watches.filter((watch) => {
+            if (watch.watch_date !== deletedWatch.watch_date) return true
+            const episode = old.episodes[watch.episode_id]
+            if (episode.key !== deletedEpisode.key) return true
+            const season = old.seasons[episode.season_id]
+            const show = old.shows[season.show_id]
+            const source = old.sources[show.source_id]
+            return source.plugin_id !== deletedSource.plugin_id
+          }),
+        }
+      })
 
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: () => {
-      showSuccessToast("The watch entry was deleted successfully")
+    onSuccess: (result) => {
+      showSuccessToast(result.message)
       setIsOpen(false)
       onSuccess()
     },

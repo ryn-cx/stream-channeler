@@ -10,22 +10,20 @@ from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
 from app.sources.schemas import SourceOutput
-from app.utils import tz_datetime
 from app.watches.models import BaseWatch
 
 
-class WatchPostInput(SQLModel):
-    watch_date: datetime = Field(default_factory=tz_datetime.now)
-    verified: bool = False
+class WatchPostInput(BaseWatch):
+    pass
 
 
 class WatchCreateInput(WatchPostInput):
     user_id: uuid.UUID
 
 
-class WatchPatchInput(SQLModel):
-    watch_date: datetime | None = None
-    verified: bool | None = None
+class WatchPatchInput(BaseWatch):
+    watch_date: datetime | None = None  # type: ignore[assignment]
+    verified: bool | None = None  # type: ignore[assignment]
 
 
 class WatchOutput(BaseWatch):

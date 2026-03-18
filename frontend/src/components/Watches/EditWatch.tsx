@@ -83,19 +83,40 @@ const EditWatch = ({ watch }: EditWatchProps) => {
         "watches",
       ])
 
-      // Optimistically update to the new value
-      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
-        ...old!,
-        watches: old!.watches.map((w) =>
-          w.id === watch.id ? ({ ...w, ...data } as WatchItem) : w,
-        ),
-      }))
+      // Optimistically update the watch and all siblings with the same
+      // plugin, episode key, and watch date.
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
+        if (!old) return old
+        const editedWatch = old.watches.find((w) => w.id === watch.id)
+        if (!editedWatch) return old
+        const editedEpisode = old.episodes[editedWatch.episode_id]
+        const editedSeason = old.seasons[editedEpisode.season_id]
+        const editedShow = old.shows[editedSeason.show_id]
+        const editedSource = old.sources[editedShow.source_id]
+        return {
+          ...old,
+          watches: old.watches.map((w) => {
+            if (w.watch_date !== editedWatch.watch_date) return w
+            const episode = old.episodes[w.episode_id]
+            if (episode.key !== editedEpisode.key) return w
+            const season = old.seasons[episode.season_id]
+            const show = old.shows[season.show_id]
+            const source = old.sources[show.source_id]
+            if (source.plugin_id !== editedSource.plugin_id) return w
+            return { ...w, ...data } as WatchItem
+          }),
+        }
+      })
 
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: () => {
-      showSuccessToast("Watch updated successfully")
+    onSuccess: (result) => {
+      const message =
+        result.length > 1
+          ? `${result.length} watches updated successfully`
+          : "Watch updated successfully"
+      showSuccessToast(message)
       setIsOpen(false)
     },
     // If the mutation fails,

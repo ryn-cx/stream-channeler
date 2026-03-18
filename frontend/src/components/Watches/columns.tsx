@@ -169,11 +169,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <VerifyWatch
-          id={row.original.id}
-          verified={row.original.verified}
-          watch_date={row.original.watch_date}
-        />
+        <VerifyWatch id={row.original.id} verified={row.original.verified} />
         <EditWatch watch={row.original} />
         <DeleteWatch id={row.original.id} />
       </div>

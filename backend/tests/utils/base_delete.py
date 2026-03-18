@@ -26,8 +26,8 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         assert_delete(
             client=client,
             url=self.entry_url(record.id),
-            message=f"{self.model_name} deleted successfully",
             headers=headers,
+            message=f"{self.model_name} deleted successfully",
         )
         assert not db.exec(
             select(self.database_model).where(self.database_model.id == record.id),

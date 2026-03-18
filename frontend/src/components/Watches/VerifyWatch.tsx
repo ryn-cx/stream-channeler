@@ -15,24 +15,16 @@ import { handleError } from "@/utils"
 interface VerifyWatchProps {
   id: string
   verified: boolean
-  watch_date: string
 }
 
-export default function VerifyWatch({
-  id,
-  verified,
-  watch_date,
-}: VerifyWatchProps) {
+export default function VerifyWatch({ id, verified }: VerifyWatchProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const verifyMutation = useMutation({
     mutationFn: () =>
       WatchesService.updateUserWatch({
         watchId: id,
-        requestBody: {
-          watch_date: watch_date,
-          verified: true,
-        },
+        requestBody: { verified: true },
       }),
     // When mutate is called:
     onMutate: async (_variables, context) => {
@@ -46,18 +38,38 @@ export default function VerifyWatch({
       ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => ({
-        ...old!,
-        watches: old!.watches.map((w) =>
-          w.id === id ? { ...w, verified: true } : w,
-        ),
-      }))
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
+        if (!old) return old
+        const verifiedWatch = old.watches.find((w) => w.id === id)
+        if (!verifiedWatch) return old
+        const verifiedEpisode = old.episodes[verifiedWatch.episode_id]
+        const verifiedSeason = old.seasons[verifiedEpisode.season_id]
+        const verifiedShow = old.shows[verifiedSeason.show_id]
+        const verifiedSource = old.sources[verifiedShow.source_id]
+        return {
+          ...old,
+          watches: old.watches.map((w) => {
+            if (w.watch_date !== verifiedWatch.watch_date) return w
+            const episode = old.episodes[w.episode_id]
+            if (episode.key !== verifiedEpisode.key) return w
+            const season = old.seasons[episode.season_id]
+            const show = old.shows[season.show_id]
+            const source = old.sources[show.source_id]
+            if (source.plugin_id !== verifiedSource.plugin_id) return w
+            return { ...w, verified: true }
+          }),
+        }
+      })
 
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: () => {
-      showSuccessToast("Watch verified successfully")
+    onSuccess: (result) => {
+      const message =
+        result.length > 1
+          ? `${result.length} watches verified successfully`
+          : "Watch verified successfully"
+      showSuccessToast(message)
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back

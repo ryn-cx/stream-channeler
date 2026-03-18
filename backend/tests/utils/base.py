@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from tests.utils.route_assertions import Method
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel, col, select
 
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOutput, ChannelPatchInput, ChannelPostInput
@@ -117,6 +117,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
     patch_model: type[PATCH_MODELS]
     create_parent_function: Callable[..., Plugin | Source | Show | Season | Episode]
     create_record_function: Callable[..., T]
+    returns_list: bool = False
 
     @property
     def parent_key_name(self) -> str:
@@ -164,37 +165,48 @@ class BaseTests[T: SUPPORTED_MODELS]:
         records_after = db.exec(select(self.database_model)).all()
         assert records_before == records_after
 
-    def assert_only_record_changed(
+    def assert_only_records_changed(
         self,
         db: Session,
-        record_id: uuid.UUID,
+        updated_record_ids: Sequence[uuid.UUID],
         records_before: Sequence[T],
     ) -> None:
-        """Assert only the given record changed; all others are identical."""
-        updated_record = db.exec(
-            select(self.database_model).where(self.database_model.id == record_id),
-        ).one()
-        expected = sorted(
-            [r if r.id != record_id else updated_record for r in records_before],
-            key=lambda r: r.id,
+        """Assert only the given records changed; all others are identical."""
+        all_records_after = db.exec(select(self.database_model)).all()
+        unmodified_before = sorted(
+            [
+                record
+                for record in records_before
+                if record.id not in updated_record_ids
+            ],
+            key=lambda record: record.id,
         )
-        actual = sorted(
-            db.exec(select(self.database_model)).all(),
-            key=lambda r: r.id,
+        unmodified_after = sorted(
+            [
+                record
+                for record in all_records_after
+                if record.id not in updated_record_ids
+            ],
+            key=lambda record: record.id,
         )
-        assert expected == actual
+        assert unmodified_before == unmodified_after
 
-    def assert_only_record_added(
+    def assert_only_records_added(
         self,
         db: Session,
-        record_id: uuid.UUID,
+        new_record_ids: Sequence[uuid.UUID],
         records_before: Sequence[T],
     ) -> None:
-        """Assert one record was added and all existing records are unchanged."""
-        new_record = db.exec(
-            select(self.database_model).where(self.database_model.id == record_id),
-        ).one()
-        expected = sorted([*records_before, new_record], key=lambda r: r.id)
+        """Assert only the given records were added and all existing records are unchanged."""
+        new_records = list(
+            db.exec(
+                select(self.database_model).where(
+                    col(self.database_model.id).in_(new_record_ids),
+                ),
+            ).all(),
+        )
+
+        expected = sorted([*records_before, *new_records], key=lambda r: r.id)
         actual = sorted(
             db.exec(select(self.database_model)).all(),
             key=lambda r: r.id,
@@ -257,6 +269,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
         *,
         authenticated: bool,
         is_owner: bool,
+        public: bool = False,
         method: Method,
         url: str,
         detail: str,
@@ -264,17 +277,17 @@ class BaseTests[T: SUPPORTED_MODELS]:
         parameters: dict[str, Any] | list[Any] | None = None,
     ) -> bool:
         """Assert permission denied for write operations. Returns True for success."""
-        if not authenticated:
-            with self.assert_no_db_change(db):
+        if authenticated and is_owner:
+            return True
+        with self.assert_no_db_change(db):
+            if not authenticated:
                 assert_not_authenticated(
                     client=client,
                     method=method,
                     url=url,
                     parameters=parameters,
                 )
-            return False
-        if not is_owner:
-            with self.assert_no_db_change(db):
+            else:
                 assert_forbidden(
                     client=client,
                     method=method,
@@ -283,8 +296,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
                     headers=headers,
                     parameters=parameters,
                 )
-            return False
-        return True
+        return False
 
     def assert_read_permission(  # noqa: PLR0913
         self,

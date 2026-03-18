@@ -87,7 +87,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         records_before = db.exec(select(self.database_model)).all()
 
-        content = assert_success(
+        response = assert_success(
             client=client,
             method="post",
             url=self.create_url(parent_id),
@@ -95,19 +95,26 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=headers,
             parameters=parameters,
         )
+        if self.returns_list:
+            assert isinstance(response, list)
+            assert len(response) == 1
+            result = response[0]
+        else:
+            assert not isinstance(response, list)
+            result = response
 
         # Check the response from the API matches the input values.
         for key, value in parameters_model.model_dump().items():
-            assert getattr(content, key) == value, (
-                f"Expected {key!r} to be {value!r}, got {getattr(content, key)!r}"
+            assert getattr(result, key) == value, (
+                f"Expected {key!r} to be {value!r}, got {getattr(result, key)!r}"
             )
 
         # Check that the API response matches the database record.
-        assert isinstance(content, HasID)
-        self.assert_saved_to_db(db, content.id, content)
+        assert isinstance(result, HasID)
+        self.assert_saved_to_db(db, result.id, result)
 
-        # Check that existing records were not changed.
-        self.assert_only_record_added(db, content.id, records_before)
+        # Check that only the new record was added.
+        self.assert_only_records_added(db, [result.id], records_before)
 
     def assert_saved_to_db(
         self,
@@ -153,6 +160,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             client,
             authenticated=authenticated,
             is_owner=is_owner,
+            public=public,
             method="post",
             url=self.create_url(parent.id),
             detail=f"Not authorized to access this {self.parent_name}",
@@ -196,7 +204,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             parameters_model,
         )
 
-    @pytest.mark.parametrize("existing_records", [1, 2])
+    @pytest.mark.parametrize("existing_records", [0, 1, 2])
     def test_create_with_existing_records(
         self,
         client: TestClient,
@@ -229,10 +237,9 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     def test_create_shared_key(self, client: TestClient, db: Session) -> None:
         """Test creating a record when another user has a record with the same key."""
-        if not issubclass(self.database_model, MODELS_WITH_PARENT) or not hasattr(
-            self.database_model,
-            "key",
-        ):
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+            pytest.skip("Model has no parent")
+        if not issubclass(self.database_model, MODELS_WITH_KEY):
             pytest.skip("Model has no key field")
 
         setup = self.create_test_data(
@@ -260,11 +267,10 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         client: TestClient,
         db: Session,
     ) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT) or not hasattr(
-            self.database_model,
-            "key",
-        ):
-            pytest.skip()
+        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+            pytest.skip("Model has no parent")
+        if not issubclass(self.database_model, MODELS_WITH_KEY):
+            pytest.skip("Model has no key field")
 
         user = create_random_user_alt(client, db)
         record = self.create_record_function(db, user_id=user.id)
@@ -287,14 +293,16 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         user = create_random_user_alt(client, db)
         parameters = dump_random_model(self.input_schema)
-        assert_not_found(
-            client=client,
-            method="post",
-            url=self.create_url(str(uuid.uuid4())),
-            detail=f"{self.parent_name} not found",
-            headers=user.headers,
-            parameters=parameters,
-        )
+
+        with self.assert_no_db_change(db):
+            assert_not_found(
+                client=client,
+                method="post",
+                url=self.create_url(str(uuid.uuid4())),
+                detail=f"{self.parent_name} not found",
+                headers=user.headers,
+                parameters=parameters,
+            )
 
     def test_create_generates_key(self, client: TestClient, db: Session) -> None:
         """Ensure a key is automatically generated when not provided."""
@@ -306,7 +314,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         parameters = dump_random_model(self.input_schema, "minimal")
 
-        content = assert_success(
+        response = assert_success(
             client=client,
             method="post",
             url=self.create_url(parent_id),
@@ -314,10 +322,10 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=user.headers,
             parameters=parameters,
         )
-        assert isinstance(content, HasID)
-        assert isinstance(content, OUTPUT_MODELS_WITH_KEY)
-        assert content.key
-        self.assert_saved_to_db(db, content.id, content)
+        assert isinstance(response, HasID)
+        assert isinstance(response, OUTPUT_MODELS_WITH_KEY)
+        assert response.key
+        self.assert_saved_to_db(db, response.id, response)
 
     def test_create_ignores_injected_id(
         self,
@@ -328,10 +336,14 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user = create_random_user_alt(client, db)
         parent_id, _ = self.create_parent(db, user.id)
 
-        parameters = dump_random_model(self.input_schema)
-        parameters["id"] = str(uuid.uuid4())
+        # Create an existing record whose id will be injected into the next create.
+        existing = self.create_record_function(db, user_id=user.id)
+        existing_before = self.output_model.model_validate(existing)
 
-        content = assert_success(
+        parameters = dump_random_model(self.input_schema)
+        parameters["id"] = str(existing.id)
+
+        response = assert_success(
             client=client,
             method="post",
             url=self.create_url(parent_id),
@@ -339,5 +351,23 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=user.headers,
             parameters=parameters,
         )
+        if self.returns_list:
+            assert isinstance(response, list)
+            assert len(response) == 1
+            data = response[0]
+        else:
+            assert not isinstance(response, list)
+            data = response
 
-        assert content.id != parameters["id"]
+        assert isinstance(data, HasID)
+        assert data.id != existing.id
+
+        # Confirm the existing record was not modified.
+        existing_after = self.output_model.model_validate(
+            db.exec(
+                select(self.database_model).where(
+                    self.database_model.id == existing.id,
+                ),
+            ).one(),
+        )
+        assert existing_before == existing_after

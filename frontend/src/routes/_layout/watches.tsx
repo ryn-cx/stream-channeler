@@ -1,9 +1,13 @@
 // TODO: Validate
-import { useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Search, Upload } from "lucide-react"
+import { RefreshCw, Search, Upload } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import { WatchesService } from "@/client"
@@ -11,8 +15,11 @@ import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButt
 import { DataTable } from "@/components/Common/DataTable"
 import PendingWatches from "@/components/Pending/PendingWatches"
 import { Button } from "@/components/ui/button"
+import { LoadingButton } from "@/components/ui/loading-button"
 import { columns } from "@/components/Watches/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 
 function getWatchesQueryOptions() {
   return {
@@ -38,6 +45,33 @@ export const Route = createFileRoute("/_layout/watches")({
     ],
   }),
 })
+
+function SyncEpisodeWatchesButton() {
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const syncMutation = useMutation({
+    mutationFn: () => WatchesService.syncWatches(),
+    onSuccess: (result) => {
+      showSuccessToast(result.message)
+      queryClient.invalidateQueries({ queryKey: ["watches"] })
+    },
+    onError: (error) => {
+      handleError.call(showErrorToast, error as any)
+    },
+  })
+
+  return (
+    <LoadingButton
+      className="my-4"
+      loading={syncMutation.isPending}
+      onClick={() => syncMutation.mutate()}
+    >
+      <RefreshCw className="mr-2" />
+      Sync Episode Watches
+    </LoadingButton>
+  )
+}
 
 function WatchesTableContent() {
   const { data: watches } = useSuspenseQuery(getWatchesQueryOptions())
@@ -99,6 +133,7 @@ function WatchesTableContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <SyncEpisodeWatchesButton />
           <Button className="my-4" asChild>
             <Link to="/watches/import">
               <Upload className="mr-2" />

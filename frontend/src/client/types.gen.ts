@@ -657,7 +657,7 @@ export type EpisodesCreateWatchData = {
     requestBody: WatchPostInput;
 };
 
-export type EpisodesCreateWatchResponse = (WatchOutput);
+export type EpisodesCreateWatchResponse = (Array<WatchOutput>);
 
 export type EpisodesGetUserEpisodeData = {
     episodeId: string;
@@ -914,7 +914,7 @@ export type WatchesUpdateUserWatchData = {
     watchId: string;
 };
 
-export type WatchesUpdateUserWatchResponse = (WatchOutput);
+export type WatchesUpdateUserWatchResponse = (Array<WatchOutput>);
 
 export type WatchesDeleteUserWatchData = {
     watchId: string;
@@ -923,6 +923,8 @@ export type WatchesDeleteUserWatchData = {
 export type WatchesDeleteUserWatchResponse = (Message);
 
 export type WatchesGetUserWatchesResponse = (WatchesListOutput);
+
+export type WatchesSyncWatchesResponse = (Message);
 
 export type WatchesListImportablePluginsResponse = (WatchImportPluginsOutput);
 

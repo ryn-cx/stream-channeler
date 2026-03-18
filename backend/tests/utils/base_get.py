@@ -22,14 +22,14 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         record: SUPPORTED_MODELS | OUTPUT_MODELS,
         headers: dict[str, str],
     ) -> None:
-        content = assert_success(
+        response = assert_success(
             client=client,
             method="get",
             url=self.entry_url(record.id),
             output_model=self.output_model,
             headers=headers,
         )
-        assert type(content).model_validate(record) == content
+        assert type(response).model_validate(record) == response
 
     # test_get_data is just combineed into this test because seperating it just
     # duplicates the thing that was tested here.

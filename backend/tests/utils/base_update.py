@@ -64,14 +64,16 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def assert_db_updated(
         self,
         db: Session,
-        record: SUPPORTED_MODELS | OUTPUT_MODELS,
+        results: Sequence[SUPPORTED_MODELS | OUTPUT_MODELS],
         update_model: PATCH_MODELS,
         modified_at_before: datetime,
         records_before: Sequence[T],
     ) -> None:
-        self.assert_modified_at_updated(db, record.id, modified_at_before)
-        self.assert_db_matches_expected(db, record, update_model)
-        self.assert_only_record_changed(db, record.id, records_before)
+        for result in results:
+            self.assert_modified_at_updated(db, result.id, modified_at_before)
+            self.assert_db_matches_expected(db, result, update_model)
+        updated_record_ids = [record.id for record in results]
+        self.assert_only_records_changed(db, updated_record_ids, records_before)
 
     def assert_update_data(
         self,
@@ -80,11 +82,11 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         record: SUPPORTED_MODELS | OUTPUT_MODELS,
         headers: dict[str, str],
         update_model: PATCH_MODELS,
-    ) -> OUTPUT_MODELS:
+    ) -> list[OUTPUT_MODELS]:
         modified_at_before = self.get_record_from_db(db, record.id).modified_at
         records_before = db.exec(select(self.database_model)).all()
 
-        content = assert_success(
+        response = assert_success(
             client=client,
             method="patch",
             url=self.entry_url(record.id),
@@ -93,15 +95,23 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             parameters=update_model.model_dump(mode="json", exclude_unset=True),
         )
 
+        if self.returns_list:
+            assert isinstance(response, list)
+            assert len(response) == 1
+            results = response
+        else:
+            assert not isinstance(response, list)
+            results = [response]
+
         self.assert_db_updated(
             db,
-            record,
+            results,
             update_model,
             modified_at_before,
             records_before,
         )
 
-        return content
+        return results
 
     @pytest.mark.parametrize("public", [True, False])
     @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
@@ -165,16 +175,17 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
         initial_model = build_random_model(self.patch_model, create_mode)
-        created = self.assert_update_data(
+        setup.record.sqlmodel_update(initial_model.model_dump(exclude_unset=True))
+        db.flush()
+
+        update_model = build_random_model(self.patch_model, update_mode)
+        self.assert_update_data(
             client,
             db,
             setup.record,
             setup.headers,
-            initial_model,
+            update_model,
         )
-
-        update_model = build_random_model(self.patch_model, update_mode)
-        self.assert_update_data(client, db, created, setup.headers, update_model)
 
     def test_update_not_found(self, client: TestClient, db: Session) -> None:
         user = create_random_user_alt(client, db)
@@ -240,12 +251,13 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         """Ensure injecting an id in the PATCH body does not change the record's id."""
         user = create_random_user_alt(client, db)
         record = self.create_record_function(db, user_id=user.id)
+        records_before = db.exec(select(self.database_model)).all()
 
         update_model = build_random_model(self.patch_model)
         parameters = update_model.model_dump(mode="json", exclude_unset=True)
         parameters["id"] = str(uuid.uuid4())
 
-        content = assert_success(
+        response = assert_success(
             client=client,
             method="patch",
             url=self.entry_url(record.id),
@@ -253,5 +265,16 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=user.headers,
             parameters=parameters,
         )
-        assert content.id == record.id
-        assert self.get_record_from_db(db, record.id).id == record.id
+
+        if self.returns_list:
+            assert isinstance(response, list)
+            assert len(response) == 1
+            results = response
+        else:
+            assert not isinstance(response, list)
+            results = [response]
+        injected_id = uuid.UUID(parameters["id"])
+        for result in results:
+            assert result.id != injected_id
+        record_ids = [record.id for record in results]
+        self.assert_only_records_changed(db, record_ids, records_before)

@@ -1,6 +1,5 @@
 # TODO: Validate
-from fastapi import APIRouter, HTTPException, status
-from sqlmodel import col, select
+from fastapi import APIRouter
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.dependencies import ReadableEpisode, UserEpisode
@@ -11,44 +10,25 @@ from app.episodes.schemas import (
 )
 from app.media.service import delete_record, update_record
 from app.models import Message
-from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchCreateInput,
     WatchOutput,
     WatchPostInput,
 )
+from app.watches.services import create_watches
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
 
 # FAST003 - Parameter is used by ReadableEpisode.
-@router.post("/{episode_id}/watches", response_model=WatchOutput)  # noqa: FAST003
+@router.post("/{episode_id}/watches")  # noqa: FAST003
 def create_watch(
     session: SessionDep,
     current_user: CurrentUser,
     episode: ReadableEpisode,
     watch_input: WatchPostInput,
-) -> Watch:
-    """Create a new episode watch entry."""
-    existing_unverified = session.exec(
-        select(Watch).where(
-            Watch.user_id == current_user.id,
-            Watch.episode_id == episode.id,
-            col(Watch.verified).is_(False),
-        ),
-    ).first()
-    if existing_unverified:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An unverified watch already exists for this episode.",
-        )
-    # Can't use create_child because WatchCreateInput.key does not exist.
-    create_input = WatchCreateInput(user_id=current_user.id, **watch_input.model_dump())
-    watch = Watch.model_validate(create_input, update={"episode_id": episode.id})
-    session.add(watch)
-    session.commit()
-    session.refresh(watch)
-    return watch
+) -> list[WatchOutput]:
+    """Create watch entries for an episode and all matching siblings."""
+    return create_watches(session, current_user.id, episode, watch_input)
 
 
 # FAST003 - Parameter is used by ReadableEpisode.

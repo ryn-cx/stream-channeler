@@ -115,7 +115,10 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     output_model: type[T],
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
-) -> T:
+) -> T | list[T]:
     response = _request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_200_OK
-    return output_model.model_validate(response.json())
+    response_json = response.json()
+    if isinstance(response_json, list):
+        return [output_model.model_validate(item) for item in response_json]
+    return output_model.model_validate(response_json)

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse, WatchesGetUserWatchesResponse, WatchesListImportablePluginsResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
+import type { ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesListImportablePluginsResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
 
 export class ChannelsService {
     /**
@@ -397,7 +397,7 @@ export class ChannelsService {
 export class EpisodesService {
     /**
      * Create Watch
-     * Create a new episode watch entry.
+     * Create watch entries for an episode and all matching siblings.
      * @param data The data for the request.
      * @param data.episodeId
      * @param data.requestBody
@@ -1336,7 +1336,7 @@ export class WatchesService {
     
     /**
      * Update User Watch
-     * Update a watch by its id.
+     * Update a watch and all matching sibling watches.
      * @param data The data for the request.
      * @param data.watchId
      * @param data.requestBody
@@ -1360,7 +1360,7 @@ export class WatchesService {
     
     /**
      * Delete User Watch
-     * Delete a watch by its id.
+     * Delete a watch and all sibling watches by its id.
      * @param data The data for the request.
      * @param data.watchId
      * @returns Message Successful Response
@@ -1389,6 +1389,19 @@ export class WatchesService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/watches'
+        });
+    }
+    
+    /**
+     * Sync Watches
+     * Sync watches across episodes with the same key within the same plugin.
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static syncWatches(): CancelablePromise<WatchesSyncWatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/watches/sync'
         });
     }
     
