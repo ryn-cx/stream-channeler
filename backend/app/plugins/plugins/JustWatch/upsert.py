@@ -1,5 +1,5 @@
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from functools import cache
 from typing import override
 from urllib.parse import parse_qs, urlparse
@@ -23,6 +23,7 @@ from app.shows.models import Show
 from app.shows.schemas import ShowInput
 from app.sources.models import Source
 from app.sources.schemas import SourceInput
+from app.utils import tz_datetime
 
 
 class UpsertMixin(FileMixin, register=False):
@@ -110,18 +111,18 @@ class UpsertMixin(FileMixin, register=False):
     def _get_best_episode_date(
         self,
         episode_data: UrlTitleDetails,
-    ) -> date | None:
+    ) -> datetime | None:
         """Get the best available date for the episode."""
         if (
             release_date
             := episode_data.parsed().data.url_v2.node.content.original_release_date
         ):
-            return release_date
+            return datetime.combine(release_date, datetime.min.time())
 
         # When the year is not known a value of 0 is returned for shows, this is
         # PROBABLY also true for movies. If the value is 0 None is returned.
         if year := episode_data.parsed().data.url_v2.node.content.original_release_year:
-            return date(year, 1, 1)
+            return tz_datetime(year, 1, 1)
         return None
 
     # endregion Other
@@ -282,6 +283,12 @@ class UpsertMixin(FileMixin, register=False):
             force_reimport=force_reimport,
         )
 
+    @staticmethod
+    def _date_to_datetime(value: date | None) -> datetime | None:
+        if value is None:
+            return None
+        return datetime.combine(value, datetime.min.time())
+
     def _upsert_season_episodes(
         self,
         show: Show,
@@ -349,8 +356,12 @@ class UpsertMixin(FileMixin, register=False):
                 episode_number=season_episode.content.episode_number,
                 data_timestamp=episode_timestamp,
                 image_url=self._images_base_url() + backdrop_image,
-                release_date=season_episode.content.original_release_date,
-                air_date=season_episode.content.original_release_date,
+                release_date=self._date_to_datetime(
+                    season_episode.content.original_release_date,
+                ),
+                air_date=self._date_to_datetime(
+                    season_episode.content.original_release_date,
+                ),
             ).upsert(season, existing_episode)
 
     def _upsert_movie_episode(
@@ -396,8 +407,8 @@ class UpsertMixin(FileMixin, register=False):
             sort_order=0,
             episode_number=0,
             data_timestamp=episode_timestamp,
-            release_date=node.content.original_release_date,
-            air_date=node.content.original_release_date,
+            release_date=self._date_to_datetime(node.content.original_release_date),
+            air_date=self._date_to_datetime(node.content.original_release_date),
         ).upsert(season, existing_episode)
 
     # endregion Upsert

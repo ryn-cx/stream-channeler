@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import override
 
 from loguru import logger
@@ -95,18 +95,20 @@ class UpsertMixin(FileMixin, register=False):
         The date will be set to 7 days after the latest episode's release date if that
         date is newer than the current data_timestamp.
         """
-        time_delta: timedelta = timedelta(days=7)
+        time_delta = timedelta(days=7)
         for season in show.seasons:
             latest_episode = max(
                 season.episodes,
-                key=lambda ep: ep.release_date or date.min,
+                # return-value - This should return an error if the value is not
+                # defined.
+                key=lambda ep: ep.release_date,  # type: ignore[return-value, arg-type]
             )
 
             if latest_episode and latest_episode.release_date:
                 season.set_update_at(
                     tz_datetime.combine(
                         latest_episode.release_date + time_delta,
-                        datetime.min.time(),
+                        datetime.max.time(),
                     ),
                 )
 
@@ -174,12 +176,8 @@ class UpsertMixin(FileMixin, register=False):
                 image_url=episode_data.images.thumbnail[0][-1].source,
                 episode_number=episode_data.episode_number,
                 name=episode_data.title,
-                release_date=episode_data.premium_available_date.date()
-                if episode_data.premium_available_date
-                else None,
-                air_date=episode_data.episode_air_date.date()
-                if episode_data.episode_air_date
-                else None,
+                release_date=episode_data.premium_available_date,
+                air_date=episode_data.episode_air_date,
                 duration=episode_data.duration_ms // 1000,
                 data_timestamp=episode_timestamp,
             ).upsert(season, episode)

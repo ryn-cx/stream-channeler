@@ -1,7 +1,7 @@
 # TODO: Validate
 import uuid
 from collections.abc import Sequence
-from datetime import date
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import util
@@ -38,9 +38,8 @@ class BaseEpisode(BaseMediaMixin):
     episode_number: int | None = Field(default=None)
     name: str | None = Field(default=None)
     duration: int | None = Field(ge=0, default=None)
-    # TODO: Test to see if these can be converted to datetimes instead of date.
-    release_date: date | None = Field(default=None)
-    air_date: date | None = Field(default=None)
+    release_date: datetime | None = Field(default=None)
+    air_date: datetime | None = Field(default=None)
 
 
 class Episode(BaseEpisode, MediaMixin, table=True):
