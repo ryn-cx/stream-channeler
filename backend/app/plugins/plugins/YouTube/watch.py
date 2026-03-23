@@ -46,6 +46,8 @@ class WatchMixin(UpsertMixin, register=False):
     ) -> WatchImportResults:
         """Import YouTube watch history from Google Takeout JSON content."""
         entries = json.loads(content)
+        # TODO: Why do some entries have no titleUrl?
+        entries = [entry for entry in entries if "titleUrl" in entry]
 
         entry_video_keys: list[str] = []
         for entry in entries:
