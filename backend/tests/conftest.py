@@ -68,7 +68,7 @@ def reset_tables(engine: Engine) -> None:
 test_engine = create_test_engine("default")
 
 
-# For every test sessuib create a single database
+# For every test session create a single database
 @pytest.fixture(scope="session", autouse=True)
 def create_test_database() -> None:
     """Load models and create all tables in the default test database."""
@@ -85,8 +85,8 @@ def savepoint_session(connection: Connection) -> Generator[Session]:
     transaction.rollback()
 
 
-@pytest.fixture
-def db_connection() -> Generator[Connection]:
+def _init_connection() -> Generator[Connection]:
+    """Create a connection and initialize the database."""
     connection = test_engine.connect()
     with Session(bind=connection) as session:
         init_db(session)
@@ -95,30 +95,53 @@ def db_connection() -> Generator[Connection]:
 
 
 @pytest.fixture
-def not_db(db_connection: Connection) -> Generator[Session]:
-    """Provide an isolated test database session that rolls back after each test."""
-    yield from savepoint_session(db_connection)
+def function_scoped_connection() -> Generator[Connection]:
+    yield from _init_connection()
+
+
+@pytest.fixture(scope="class")
+def class_scoped_connection() -> Generator[Connection]:
+    yield from _init_connection()
+
+
+@pytest.fixture(scope="module")
+def module_scoped_connection() -> Generator[Connection]:
+    yield from _init_connection()
 
 
 @pytest.fixture(scope="session")
-def db_class_connection() -> Generator[Connection]:
-    connection = test_engine.connect()
-    with Session(bind=connection) as session:
-        init_db(session)
-    yield connection
-    connection.close()
+def session_scoped_connection() -> Generator[Connection]:
+    yield from _init_connection()
 
 
 @pytest.fixture
-def db(db_class_connection: Connection) -> Generator[Session]:
+def function_scoped_db(function_scoped_connection: Connection) -> Generator[Session]:
+    """Function-scoped database with per-test savepoint isolation."""
+    yield from savepoint_session(function_scoped_connection)
+
+
+@pytest.fixture
+def class_scoped_db(class_scoped_connection: Connection) -> Generator[Session]:
     """Class-scoped database with per-test savepoint isolation."""
-    yield from savepoint_session(db_class_connection)
+    yield from savepoint_session(class_scoped_connection)
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient]:
+def module_scoped_db(module_scoped_connection: Connection) -> Generator[Session]:
+    """Module-scoped database with per-test savepoint isolation."""
+    yield from savepoint_session(module_scoped_connection)
+
+
+@pytest.fixture
+def session_scoped_db(session_scoped_connection: Connection) -> Generator[Session]:
+    """Session-scoped database with per-test savepoint isolation."""
+    yield from savepoint_session(session_scoped_connection)
+
+
+@pytest.fixture
+def client(session_scoped_db: Session) -> Generator[TestClient]:
     """Provide a test client that shares the test database session."""
-    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_db] = lambda: session_scoped_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
@@ -132,25 +155,35 @@ def superuser_token_headers(client: TestClient) -> dict[str, str]:
 
 
 @pytest.fixture
-def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+def normal_user_token_headers(
+    client: TestClient,
+    session_scoped_db: Session,
+) -> dict[str, str]:
     """Provide authentication headers for a normal test user."""
     return authentication_token_from_email(
         client=client,
         email=settings.EMAIL_TEST_USER,
-        db=db,
+        db=session_scoped_db,
     )
 
 
 @pytest.fixture
-def random_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+def random_user_token_headers(
+    client: TestClient,
+    session_scoped_db: Session,
+) -> dict[str, str]:
     """Provide authentication headers for a randomly generated user."""
-    return authentication_token_from_email(client=client, email=random_email(), db=db)
+    return authentication_token_from_email(
+        client=client,
+        email=random_email(),
+        db=session_scoped_db,
+    )
 
 
 @pytest.fixture
-def random_user(client: TestClient, db: Session) -> CreatedUser:
+def random_user(client: TestClient, session_scoped_db: Session) -> CreatedUser:
     """Create and return a randomly generated user with authentication headers."""
-    return create_random_user_alt(client=client, db=db)
+    return create_random_user_alt(client=client, db=session_scoped_db)
 
 
 @pytest.fixture

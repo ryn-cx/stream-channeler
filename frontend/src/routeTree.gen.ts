@@ -21,12 +21,17 @@ import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutPluginIndexRouteImport } from './routes/_layout/plugin.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
+import { Route as LayoutAdminMediaIndexRouteImport } from './routes/_layout/admin-media.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutSourceSourceKeyRouteImport } from './routes/_layout/source.$sourceKey'
 import { Route as LayoutShowShowKeyRouteImport } from './routes/_layout/show.$showKey'
 import { Route as LayoutSeasonSeasonKeyRouteImport } from './routes/_layout/season.$seasonKey'
 import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugin.$pluginId'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
+import { Route as LayoutAdminSourceSourceIdRouteImport } from './routes/_layout/admin-source.$sourceId'
+import { Route as LayoutAdminShowShowIdRouteImport } from './routes/_layout/admin-show.$showId'
+import { Route as LayoutAdminSeasonSeasonIdRouteImport } from './routes/_layout/admin-season.$seasonId'
+import { Route as LayoutAdminPluginPluginIdRouteImport } from './routes/_layout/admin-plugin.$pluginId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -87,6 +92,11 @@ const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
   path: '/channels/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminMediaIndexRoute = LayoutAdminMediaIndexRouteImport.update({
+  id: '/admin-media/',
+  path: '/admin-media/',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
   id: '/watches_/import',
   path: '/watches/import',
@@ -117,6 +127,29 @@ const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
   path: '/channels/$channelId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminSourceSourceIdRoute =
+  LayoutAdminSourceSourceIdRouteImport.update({
+    id: '/admin-source/$sourceId',
+    path: '/admin-source/$sourceId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutAdminShowShowIdRoute = LayoutAdminShowShowIdRouteImport.update({
+  id: '/admin-show/$showId',
+  path: '/admin-show/$showId',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminSeasonSeasonIdRoute =
+  LayoutAdminSeasonSeasonIdRouteImport.update({
+    id: '/admin-season/$seasonId',
+    path: '/admin-season/$seasonId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutAdminPluginPluginIdRoute =
+  LayoutAdminPluginPluginIdRouteImport.update({
+    id: '/admin-plugin/$pluginId',
+    path: '/admin-plugin/$pluginId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -128,12 +161,17 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof LayoutDashboardRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
+  '/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
+  '/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
+  '/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
+  '/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/plugin/': typeof LayoutPluginIndexRoute
 }
@@ -147,12 +185,17 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
+  '/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
+  '/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
+  '/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
+  '/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-media': typeof LayoutAdminMediaIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/plugin': typeof LayoutPluginIndexRoute
 }
@@ -168,12 +211,17 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
+  '/_layout/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
+  '/_layout/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
+  '/_layout/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/_layout/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/_layout/show/$showKey': typeof LayoutShowShowKeyRoute
   '/_layout/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
+  '/_layout/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/plugin/': typeof LayoutPluginIndexRoute
 }
@@ -189,12 +237,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/watches'
+    | '/admin-plugin/$pluginId'
+    | '/admin-season/$seasonId'
+    | '/admin-show/$showId'
+    | '/admin-source/$sourceId'
     | '/channels/$channelId'
     | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
     | '/source/$sourceKey'
     | '/watches/import'
+    | '/admin-media/'
     | '/channels/'
     | '/plugin/'
   fileRoutesByTo: FileRoutesByTo
@@ -208,12 +261,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/watches'
     | '/'
+    | '/admin-plugin/$pluginId'
+    | '/admin-season/$seasonId'
+    | '/admin-show/$showId'
+    | '/admin-source/$sourceId'
     | '/channels/$channelId'
     | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
     | '/source/$sourceKey'
     | '/watches/import'
+    | '/admin-media'
     | '/channels'
     | '/plugin'
   id:
@@ -228,12 +286,17 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/watches'
     | '/_layout/'
+    | '/_layout/admin-plugin/$pluginId'
+    | '/_layout/admin-season/$seasonId'
+    | '/_layout/admin-show/$showId'
+    | '/_layout/admin-source/$sourceId'
     | '/_layout/channels/$channelId'
     | '/_layout/plugin/$pluginId'
     | '/_layout/season/$seasonKey'
     | '/_layout/show/$showKey'
     | '/_layout/source/$sourceKey'
     | '/_layout/watches_/import'
+    | '/_layout/admin-media/'
     | '/_layout/channels/'
     | '/_layout/plugin/'
   fileRoutesById: FileRoutesById
@@ -332,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin-media/': {
+      id: '/_layout/admin-media/'
+      path: '/admin-media'
+      fullPath: '/admin-media/'
+      preLoaderRoute: typeof LayoutAdminMediaIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/watches_/import': {
       id: '/_layout/watches_/import'
       path: '/watches/import'
@@ -374,6 +444,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelsChannelIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin-source/$sourceId': {
+      id: '/_layout/admin-source/$sourceId'
+      path: '/admin-source/$sourceId'
+      fullPath: '/admin-source/$sourceId'
+      preLoaderRoute: typeof LayoutAdminSourceSourceIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin-show/$showId': {
+      id: '/_layout/admin-show/$showId'
+      path: '/admin-show/$showId'
+      fullPath: '/admin-show/$showId'
+      preLoaderRoute: typeof LayoutAdminShowShowIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin-season/$seasonId': {
+      id: '/_layout/admin-season/$seasonId'
+      path: '/admin-season/$seasonId'
+      fullPath: '/admin-season/$seasonId'
+      preLoaderRoute: typeof LayoutAdminSeasonSeasonIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin-plugin/$pluginId': {
+      id: '/_layout/admin-plugin/$pluginId'
+      path: '/admin-plugin/$pluginId'
+      fullPath: '/admin-plugin/$pluginId'
+      preLoaderRoute: typeof LayoutAdminPluginPluginIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -383,12 +481,17 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutAdminPluginPluginIdRoute: typeof LayoutAdminPluginPluginIdRoute
+  LayoutAdminSeasonSeasonIdRoute: typeof LayoutAdminSeasonSeasonIdRoute
+  LayoutAdminShowShowIdRoute: typeof LayoutAdminShowShowIdRoute
+  LayoutAdminSourceSourceIdRoute: typeof LayoutAdminSourceSourceIdRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
   LayoutPluginPluginIdRoute: typeof LayoutPluginPluginIdRoute
   LayoutSeasonSeasonKeyRoute: typeof LayoutSeasonSeasonKeyRoute
   LayoutShowShowKeyRoute: typeof LayoutShowShowKeyRoute
   LayoutSourceSourceKeyRoute: typeof LayoutSourceSourceKeyRoute
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
+  LayoutAdminMediaIndexRoute: typeof LayoutAdminMediaIndexRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
   LayoutPluginIndexRoute: typeof LayoutPluginIndexRoute
 }
@@ -399,12 +502,17 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutAdminPluginPluginIdRoute: LayoutAdminPluginPluginIdRoute,
+  LayoutAdminSeasonSeasonIdRoute: LayoutAdminSeasonSeasonIdRoute,
+  LayoutAdminShowShowIdRoute: LayoutAdminShowShowIdRoute,
+  LayoutAdminSourceSourceIdRoute: LayoutAdminSourceSourceIdRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,
   LayoutPluginPluginIdRoute: LayoutPluginPluginIdRoute,
   LayoutSeasonSeasonKeyRoute: LayoutSeasonSeasonKeyRoute,
   LayoutShowShowKeyRoute: LayoutShowShowKeyRoute,
   LayoutSourceSourceKeyRoute: LayoutSourceSourceKeyRoute,
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
+  LayoutAdminMediaIndexRoute: LayoutAdminMediaIndexRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
   LayoutPluginIndexRoute: LayoutPluginIndexRoute,
 }

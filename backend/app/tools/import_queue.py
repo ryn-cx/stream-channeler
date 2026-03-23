@@ -14,7 +14,7 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelShowInput
 from app.database import engine, load_models
-from app.plugins.plugins.utils.abstract_plugin import URLImportResult
+from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.plugins.plugins.utils.ip_validator import IPValidationError
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 
@@ -48,6 +48,15 @@ def import_queue(session: Session) -> None:
                     add_results_to_channel(session, results, queue_item.channel)
                     queue_item.status = URLStatus.IMPORTED
                     break
+                except InvalidURLError:
+                    logger.warning(
+                        f"Invalid URL {plugin.__name__}: {queue_item.url}",
+                    )
+                    queue_item.status = URLStatus.FAILED
+                    queue_item.note = "Invalid URL."
+                    session.rollback()
+                    break
+
                 except IPValidationError:
                     logger.warning(
                         f"IP validation error {plugin.__name__}: {queue_item.url}",

@@ -533,6 +533,62 @@ export type WhitelistShowOutput = {
     episodes: Array<EpisodeOutput>;
 };
 
+export type AdminMediaListAllPluginsResponse = (PluginsListOutput);
+
+export type AdminMediaListPluginSourcesData = {
+    pluginId: string;
+};
+
+export type AdminMediaListPluginSourcesResponse = (SourcesListOutput);
+
+export type AdminMediaListSourceShowsData = {
+    sourceId: string;
+};
+
+export type AdminMediaListSourceShowsResponse = (ShowsListOutput);
+
+export type AdminMediaListShowSeasonsData = {
+    showId: string;
+};
+
+export type AdminMediaListShowSeasonsResponse = (SeasonsListOutput);
+
+export type AdminMediaListSeasonEpisodesData = {
+    seasonId: string;
+};
+
+export type AdminMediaListSeasonEpisodesResponse = (EpisodesListOutput);
+
+export type AdminMediaTriggerPluginUpdateData = {
+    pluginId: string;
+};
+
+export type AdminMediaTriggerPluginUpdateResponse = (Message);
+
+export type AdminMediaTriggerSourceUpdateData = {
+    sourceId: string;
+};
+
+export type AdminMediaTriggerSourceUpdateResponse = (Message);
+
+export type AdminMediaTriggerShowUpdateData = {
+    showId: string;
+};
+
+export type AdminMediaTriggerShowUpdateResponse = (Message);
+
+export type AdminMediaTriggerSeasonUpdateData = {
+    seasonId: string;
+};
+
+export type AdminMediaTriggerSeasonUpdateResponse = (Message);
+
+export type AdminMediaTriggerEpisodeUpdateData = {
+    episodeId: string;
+};
+
+export type AdminMediaTriggerEpisodeUpdateResponse = (Message);
+
 export type ChannelsGetUserChannelsResponse = (ChannelsListOutput);
 
 export type ChannelsCreateUserChannelData = {
@@ -903,6 +959,21 @@ export type UtilsTestEmailResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);
 
+export type WatchesGetUserWatchesResponse = (WatchesListOutput);
+
+export type WatchesSyncWatchesResponse = (Message);
+
+export type WatchesListImportablePluginsResponse = (WatchImportPluginsOutput);
+
+export type WatchesImportWatchHistoryData = {
+    formData: Body_watches_import_watch_history;
+    newOnly: boolean;
+    pluginKey: string;
+    verified: boolean;
+};
+
+export type WatchesImportWatchHistoryResponse = (WatchImportResults);
+
 export type WatchesGetUserWatchData = {
     watchId: string;
 };
@@ -921,18 +992,3 @@ export type WatchesDeleteUserWatchData = {
 };
 
 export type WatchesDeleteUserWatchResponse = (Message);
-
-export type WatchesGetUserWatchesResponse = (WatchesListOutput);
-
-export type WatchesSyncWatchesResponse = (Message);
-
-export type WatchesListImportablePluginsResponse = (WatchImportPluginsOutput);
-
-export type WatchesImportWatchHistoryData = {
-    formData: Body_watches_import_watch_history;
-    newOnly: boolean;
-    pluginKey: string;
-    verified: boolean;
-};
-
-export type WatchesImportWatchHistoryResponse = (WatchImportResults);

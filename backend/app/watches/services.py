@@ -21,6 +21,7 @@ from app.shows.models import Show
 from app.shows.schemas import ShowOutput
 from app.sources.models import Source
 from app.sources.schemas import SourceOutput
+from app.users.service import get_or_create_plugin_user
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreateInput,
@@ -278,11 +279,18 @@ def _get_plugin_episodes_by_key(
     return episodes_by_key
 
 
-def get_importable_plugins() -> list[type[AbstractPlugin]]:
-    """Return all plugin classes that support watch import."""
+def get_importable_plugins(session: Session) -> list[type[AbstractPlugin]]:
+    """Return all plugin classes that support watch import.
+
+    Only includes plugins that are owned by the official plugin user.
+    """
     import_plugins()
+    plugin_user = get_or_create_plugin_user(session=session)
+
     result: list[type[AbstractPlugin]] = []
     for plugin_cls in plugins:
+        if not Plugin.get(session, plugin_cls.plugin_key(), plugin_user):
+            continue
         try:
             plugin_cls.import_watch_history_info()
             result.append(plugin_cls)
@@ -291,9 +299,16 @@ def get_importable_plugins() -> list[type[AbstractPlugin]]:
     return result
 
 
-def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
-    """Find an importable plugin class by its plugin_key."""
-    for plugin_cls in get_importable_plugins():
+def get_installed_plugin(
+    session: Session,
+    plugin_key: str,
+) -> type[AbstractPlugin] | None:
+    """Find an importable plugin class by its plugin_key.
+
+    Only returns the plugin if it exists in the database and is owned by the official
+    plugin user.
+    """
+    for plugin_cls in get_importable_plugins(session):
         if plugin_cls.plugin_key() == plugin_key:
             return plugin_cls
     return None

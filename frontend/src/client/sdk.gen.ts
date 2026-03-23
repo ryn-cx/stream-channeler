@@ -3,7 +3,211 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesListImportablePluginsResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
+import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaTriggerPluginUpdateData, AdminMediaTriggerPluginUpdateResponse, AdminMediaTriggerSourceUpdateData, AdminMediaTriggerSourceUpdateResponse, AdminMediaTriggerShowUpdateData, AdminMediaTriggerShowUpdateResponse, AdminMediaTriggerSeasonUpdateData, AdminMediaTriggerSeasonUpdateResponse, AdminMediaTriggerEpisodeUpdateData, AdminMediaTriggerEpisodeUpdateResponse, ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesListImportablePluginsResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse } from './types.gen';
+
+export class AdminMediaService {
+    /**
+     * List All Plugins
+     * List all plugins across all users.
+     * @returns PluginsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static listAllPlugins(): CancelablePromise<AdminMediaListAllPluginsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin-media/plugins'
+        });
+    }
+    
+    /**
+     * List Plugin Sources
+     * List all sources for a plugin.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns SourcesListOutput Successful Response
+     * @throws ApiError
+     */
+    public static listPluginSources(data: AdminMediaListPluginSourcesData): CancelablePromise<AdminMediaListPluginSourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin-media/plugins/{plugin_id}/sources',
+            path: {
+                plugin_id: data.pluginId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Source Shows
+     * List all shows for a source.
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @returns ShowsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static listSourceShows(data: AdminMediaListSourceShowsData): CancelablePromise<AdminMediaListSourceShowsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin-media/sources/{source_id}/shows',
+            path: {
+                source_id: data.sourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Show Seasons
+     * List all seasons for a show.
+     * @param data The data for the request.
+     * @param data.showId
+     * @returns SeasonsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static listShowSeasons(data: AdminMediaListShowSeasonsData): CancelablePromise<AdminMediaListShowSeasonsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin-media/shows/{show_id}/seasons',
+            path: {
+                show_id: data.showId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Season Episodes
+     * List all episodes for a season.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @returns EpisodesListOutput Successful Response
+     * @throws ApiError
+     */
+    public static listSeasonEpisodes(data: AdminMediaListSeasonEpisodesData): CancelablePromise<AdminMediaListSeasonEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin-media/seasons/{season_id}/episodes',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Plugin Update
+     * Set update_at to now on a plugin.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static triggerPluginUpdate(data: AdminMediaTriggerPluginUpdateData): CancelablePromise<AdminMediaTriggerPluginUpdateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin-media/plugins/{plugin_id}/trigger-update',
+            path: {
+                plugin_id: data.pluginId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Source Update
+     * Set update_at to now on a source.
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static triggerSourceUpdate(data: AdminMediaTriggerSourceUpdateData): CancelablePromise<AdminMediaTriggerSourceUpdateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin-media/sources/{source_id}/trigger-update',
+            path: {
+                source_id: data.sourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Show Update
+     * Set update_at to now on a show.
+     * @param data The data for the request.
+     * @param data.showId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static triggerShowUpdate(data: AdminMediaTriggerShowUpdateData): CancelablePromise<AdminMediaTriggerShowUpdateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin-media/shows/{show_id}/trigger-update',
+            path: {
+                show_id: data.showId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Season Update
+     * Set update_at to now on a season.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static triggerSeasonUpdate(data: AdminMediaTriggerSeasonUpdateData): CancelablePromise<AdminMediaTriggerSeasonUpdateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin-media/seasons/{season_id}/trigger-update',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Trigger Episode Update
+     * Set update_at to now on an episode.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static triggerEpisodeUpdate(data: AdminMediaTriggerEpisodeUpdateData): CancelablePromise<AdminMediaTriggerEpisodeUpdateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin-media/episodes/{episode_id}/trigger-update',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class ChannelsService {
     /**
@@ -1314,72 +1518,6 @@ export class UtilsService {
 
 export class WatchesService {
     /**
-     * Get User Watch
-     * Get a watch owned by the current user by its id.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @returns WatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static getUserWatch(data: WatchesGetUserWatchData): CancelablePromise<WatchesGetUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update User Watch
-     * Update a watch and all matching sibling watches.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @param data.requestBody
-     * @returns WatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateUserWatch(data: WatchesUpdateUserWatchData): CancelablePromise<WatchesUpdateUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete User Watch
-     * Delete a watch and all sibling watches by its id.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteUserWatch(data: WatchesDeleteUserWatchData): CancelablePromise<WatchesDeleteUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Get User Watches
      * Get multiple watched episode entries.
      * @returns WatchesListOutput Successful Response
@@ -1440,6 +1578,72 @@ export class WatchesService {
             },
             formData: data.formData,
             mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get User Watch
+     * Get a watch owned by the current user by its id.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static getUserWatch(data: WatchesGetUserWatchData): CancelablePromise<WatchesGetUserWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update User Watch
+     * Update a watch and all matching sibling watches.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @param data.requestBody
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateUserWatch(data: WatchesUpdateUserWatchData): CancelablePromise<WatchesUpdateUserWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete User Watch
+     * Delete a watch and all sibling watches by its id.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteUserWatch(data: WatchesDeleteUserWatchData): CancelablePromise<WatchesDeleteUserWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
             errors: {
                 422: 'Validation Error'
             }

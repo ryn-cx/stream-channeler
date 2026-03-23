@@ -680,7 +680,7 @@ export const EpisodeOutputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -692,7 +692,7 @@ export const EpisodeOutputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -858,7 +858,7 @@ export const EpisodePatchInputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -870,7 +870,7 @@ export const EpisodePatchInputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -1018,7 +1018,7 @@ export const EpisodePostInputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -1030,7 +1030,7 @@ export const EpisodePostInputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -1178,7 +1178,7 @@ export const EpisodeWithExtrasOutputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'
@@ -1190,7 +1190,7 @@ export const EpisodeWithExtrasOutputSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    format: 'date'
+                    format: 'date-time'
                 },
                 {
                     type: 'null'

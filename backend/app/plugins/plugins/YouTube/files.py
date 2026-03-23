@@ -29,9 +29,6 @@ def yt_dlapi_client() -> YTDLAPI:
 
 @cache
 def not_yt_dlapi_client() -> NotYTDLAPI:
-    if settings.YOUTUBE_API_KEY == "changethis":
-        msg = "YOUTUBE_API_KEY is not set."
-        raise ValueError(msg)
     return NotYTDLAPI(settings.YOUTUBE_API_KEY)
 
 
