@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from difflib import get_close_matches
 from typing import override
 
+from loguru import logger
 from sqlmodel import col, select
 
 from app.plugins.models import File, Plugin
@@ -208,6 +209,7 @@ class JustWatch(UpsertMixin, register=True):
                 # Need to match on show because if this is a new season looking up an
                 # existing season would fail.
                 if show := Show.get_from_memory(self.db, source, show_key):
+                    logger.info("Matched show: {}", show.name or show_key)
                     _cache_seasons = show.seasons
                     # If the season was found only the season needs to be updated.
                     if season := Season.get_from_memory(self.db, show, season_key):

@@ -10,6 +10,7 @@ import re
 from datetime import timedelta
 from typing import override
 
+from loguru import logger
 from sqlmodel import col, select
 
 from app.plugins.models import File
@@ -94,6 +95,7 @@ class Crunchyroll(WatchMixin, register=True):
         for browse_json in self._get_new_browse_files_from_db(source):
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.db, source, release.id):
+                    logger.info("Matched show: {}", show.name or release.id)
                     # last_public appears to represent the last time a public change
                     # was made to the show's data. There is no way to detect what
                     # season the update is for so both show and season need to be set
