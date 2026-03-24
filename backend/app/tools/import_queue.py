@@ -54,7 +54,6 @@ def import_queue(session: Session) -> None:
                     )
                     queue_item.status = URLStatus.FAILED
                     queue_item.note = "Invalid URL."
-                    session.rollback()
                     break
 
                 except IPValidationError:
