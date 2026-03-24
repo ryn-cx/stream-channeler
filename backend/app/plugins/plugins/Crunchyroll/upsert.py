@@ -26,15 +26,15 @@ class UpsertMixin(FileMixin, register=False):
 
     def _upsert_source(self, latest_browse_file: Browse) -> Source:
         source = Source.get_from_memory(self.db, self.plugin, self.plugin_key())
+        timestamp = latest_browse_file.database_entry.data_timestamp
         return SourceInput(
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
             favicon_url=f"{self._base_url()}build/assets/img/favicons/favicon-v2-96x96.png",
             # Check for new data daily.
-            update_at=latest_browse_file.database_entry.data_timestamp
-            + timedelta(days=1),
-            data_timestamp=latest_browse_file.database_entry.data_timestamp,
+            update_at=timestamp + timedelta(days=1),
+            data_timestamp=timestamp,
         ).upsert(self.plugin, source)
 
     # endregion Upsert Source

@@ -32,7 +32,10 @@ class JustWatch(UpsertMixin, register=True):
 
         if not (shows := self._preload_show(show_key=show_key).all()):
             self._validate_show_key(show_key, url)
-            _cache = (self._download_show_files(show_key), self._preload_sources())
+            _cache = (
+                self._download_show_files(show_key),
+                self._preload_sources().all(),
+            )
             shows = self._upsert_shows(show_key)
 
         return self._create_url_import_results(shows, source_name, season_key)
@@ -192,8 +195,9 @@ class JustWatch(UpsertMixin, register=True):
             _cache_sources = self._preload_sources(
                 file.source_key,
                 preload_seasons=True,
-            )
+            ).all()
 
+            logger.info("Processing new titles file: {}", file.database_entry.key)
             for edge in file.parsed_edges():
                 full_path = edge.node.content.full_path
                 match edge.node.field__typename:

@@ -90,9 +90,10 @@ class Crunchyroll(WatchMixin, register=True):
 
     def _process_new_browse_files(self, source: Source) -> None:
         """Import existing browse files that have not been imported yet."""
-        _cache = self._preload_sources(preload_seasons=True)
+        _cache = self._preload_sources(preload_shows=True).all()
 
         for browse_json in self._get_new_browse_files_from_db(source):
+            logger.info("Processing browse file: {}", browse_json.database_entry.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.db, source, release.id):
                     logger.info("Matched show: {}", show.name or release.id)

@@ -142,7 +142,7 @@ class UpsertMixin(FileMixin, register=False):
 
     def _upsert_sources(self, providers_file: ProvidersLocale) -> None:
         """Upsert all providers from the providers locale file as sources."""
-        _cache = self._preload_sources()
+        _cache = self._preload_sources().all()
         for provider in providers_file.parsed():
             source = Source.get_from_memory(
                 self.db,
