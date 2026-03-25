@@ -117,7 +117,7 @@ class UpsertMixin(FileMixin, register=False):
             release_date
             := episode_data.parsed().data.url_v2.node.content.original_release_date
         ):
-            return datetime.combine(release_date, datetime.min.time())
+            return tz_datetime.combine(release_date, datetime.min.time())
 
         # When the year is not known a value of 0 is returned for shows, this is
         # PROBABLY also true for movies. If the value is 0 None is returned.
@@ -173,7 +173,7 @@ class UpsertMixin(FileMixin, register=False):
         force_reimport: bool = False,
     ) -> Show:
         show = Show.get_from_memory(self.db, source, show_key)
-        show_timestamp = self._newest_file_timestamp(self._show_files(show_key))
+        show_timestamp = self._oldest_file_timestamp(self._show_files(show_key))
 
         if force_reimport or not show or show.data_timestamp != show_timestamp:
             logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
@@ -228,7 +228,7 @@ class UpsertMixin(FileMixin, register=False):
             raise ValueError(msg)
         for season_data in seasons_data:
             season = Season.get_from_memory(self.db, show, season_data.id)
-            season_timestamp = self._newest_file_timestamp(
+            season_timestamp = self._oldest_file_timestamp(
                 self._season_files(season_data.id, show_key),
             )
             if (
@@ -265,7 +265,7 @@ class UpsertMixin(FileMixin, register=False):
         parsed_json = self._url_title_details_file(show_key).parsed()
         node_id = parsed_json.data.url_v2.node.id
         season = Season.get_from_memory(self.db, show, node_id)
-        season_timestamp = self._newest_file_timestamp(
+        season_timestamp = self._oldest_file_timestamp(
             self._season_files(node_id, show_key),
         )
         if force_reimport or not season or season.data_timestamp != season_timestamp:
@@ -287,7 +287,7 @@ class UpsertMixin(FileMixin, register=False):
     def _date_to_datetime(value: date | None) -> datetime | None:
         if value is None:
             return None
-        return datetime.combine(value, datetime.min.time())
+        return tz_datetime.combine(value, datetime.min.time())
 
     def _upsert_season_episodes(
         self,
@@ -320,7 +320,7 @@ class UpsertMixin(FileMixin, register=False):
             )
             # Each episode has its own CustomBuyBoxOffers file so the timestamp
             # must be computed per-episode.
-            episode_timestamp = self._newest_file_timestamp(
+            episode_timestamp = self._oldest_file_timestamp(
                 self._episode_files(
                     season_episode.id,
                     season.key,
@@ -381,7 +381,7 @@ class UpsertMixin(FileMixin, register=False):
         if not episode_info:
             return
 
-        episode_timestamp = self._newest_file_timestamp(
+        episode_timestamp = self._oldest_file_timestamp(
             self._episode_files(episode_info.id, season.key, show_key=show_key),
         )
         existing_episode = Episode.get_from_memory(

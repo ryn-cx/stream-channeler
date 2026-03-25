@@ -51,7 +51,7 @@ class UpsertMixin(FileMixin, register=False):
     ) -> Show:
         show = Show.get_from_memory(self.db, source, show_key)
         show_files = self._show_files(show_key=show_key)
-        show_timestamp = self._newest_file_timestamp(show_files)
+        show_timestamp = self._oldest_file_timestamp(show_files)
 
         series_data = self._series_file(show_key).parsed().data[0]
         if force_reimport or not show or show.data_timestamp != show_timestamp:
@@ -128,7 +128,7 @@ class UpsertMixin(FileMixin, register=False):
         for i, season_data in enumerate(seasons_file.parsed().data):
             season = Season.get_from_memory(self.db, show, season_data.id)
             season_files = self._season_files(season_data.id, show.key)
-            season_timestamp = self._newest_file_timestamp(season_files)
+            season_timestamp = self._oldest_file_timestamp(season_files)
             if (
                 force_reimport
                 or not season
@@ -155,7 +155,7 @@ class UpsertMixin(FileMixin, register=False):
         season.soft_delete_missing_children(episode_keys)
 
         episode_files = self._episode_files(season.key)
-        episode_timestamp = self._newest_file_timestamp(episode_files)
+        episode_timestamp = self._oldest_file_timestamp(episode_files)
 
         episodes_data = self._episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):

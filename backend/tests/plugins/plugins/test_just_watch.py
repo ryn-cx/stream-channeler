@@ -114,16 +114,11 @@ class BaseJustWatch(PluginValidator):
             super()
             ._update_season_validator(season)
             .seasons_share_show_file(season)
-            .episodes_share_season_file(season)
             .seasons_share_file(season)
         )
 
     def _update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            ._update_episode_validator(episode)
-            .episodes_share_season_file(episode)
-        )
+        return super()._update_episode_validator(episode).episodes_share_file(episode)
 
     def test_update_source(self, db_with_url: Session) -> None:
         """Update a random source and validate the data."""
@@ -169,9 +164,21 @@ class TestJustWatchMovie(BaseJustWatch):
         return super()._update_show_validator(show).episodes_share_show_file(show)
 
     @override
+    def _update_season_validator(self, season: Season) -> Validator:
+        return (
+            super()
+            ._update_season_validator(season)
+            .seasons_share_show_file(season)
+            .episodes_share_season_file(season)
+        )
+
+    @override
     def _update_episode_validator(self, episode: Episode) -> Validator:
         return (
-            super()._update_episode_validator(episode).episodes_share_show_file(episode)
+            super()
+            ._update_episode_validator(episode)
+            .episodes_share_show_file(episode)
+            .episodes_share_season_file(episode)
         )
 
     def test_import_single_source(self, db_with_files: Session) -> None:

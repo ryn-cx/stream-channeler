@@ -68,34 +68,45 @@ class BaseMediaMixin(SQLModel):
     def set_update_at(self, update_at: datetime | None) -> None:
         """Validate and set the update_at field.
 
-        If the existing value is in the future, only allow decrementing. This will make
-        updates occur as soon as possible. If the existing value is in the past, only
-        allow incrementing. This will make sure an older update_at value does not cause
-        updates to skip by overwriting a newer value.
-        For example
-        - Current date is January 4th
-        - data_timestamp is January 2nd
-        - update_at is January 3rd
-        - new update_at is set to January 1st
-        The data from January 3rd will be lost in this situation.
+        Before applying the new value, any existing update_at that is older than
+        data_timestamp is cleared because it has already been fulfilled.
 
-        , and if it is in
-        the past, only allow incrementing. Only decrementing makes it so files are
-        updated as soon as possible, and only incrementing makes it so files don't
-        accidently use old data.
+        The new value is ignored if data_timestamp is already newer than it,
+        since the data is already up to date.
+
+        Otherwise the new value is only accepted if it would decrement update_at.
+        This ensures updates are never pushed further into the future.
         """
+        # If the existing update_at value is newer than the data_timestamp, it has
+        # already been used and can be cleared.
+        if (
+            self.update_at
+            and self.data_timestamp
+            and self.update_at < self.data_timestamp
+        ):
+            self.update_at = None
+
+        # If update_at is not set nothing else needs to be done.
         if not update_at:
             return
 
-        if self.update_at is None:
-            self.update_at = update_at
+        # If the existing data is newer than the new update_at value then the new
+        # update_at can be ignored because the data is already up to date.
+        if self.data_timestamp and self.data_timestamp >= update_at:
             return
 
-        now = datetime.now(tz=self.update_at.tzinfo)
-
-        if (self.update_at > now and update_at < self.update_at) or (
-            self.update_at <= now and update_at > self.update_at
+        # If the existing data is newer than the existing update_at value that update_at
+        # value is no longer useful and can be cleared.
+        if (
+            self.update_at
+            and self.data_timestamp
+            and self.update_at < self.data_timestamp
         ):
+            self.update_at = None
+
+        #  If the new date is before the existing date the existing date should be
+        #  updated so the update happens as soon as possible.
+        if self.update_at is None or update_at < self.update_at:
             self.update_at = update_at
 
 

@@ -7,8 +7,8 @@ from app.plugins.plugins.utils.base_plugin.files import BaseFile
 
 
 class FileGettersMixin(ABC):
-    def _newest_file_timestamp(self, files: Sequence[BaseFile[Any]]) -> datetime:
-        return max(file.database_entry.data_timestamp for file in files)
+    def _oldest_file_timestamp(self, files: Sequence[BaseFile[Any]]) -> datetime:
+        return min(file.database_entry.data_timestamp for file in files)
 
     # region Files
 

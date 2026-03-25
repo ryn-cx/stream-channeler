@@ -15,7 +15,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MediaMixin
+from app.models import SA_TYPE, BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -38,8 +38,8 @@ class BaseEpisode(BaseMediaMixin):
     episode_number: int | None = Field(default=None)
     name: str | None = Field(default=None)
     duration: int | None = Field(ge=0, default=None)
-    release_date: datetime | None = Field(default=None)
-    air_date: datetime | None = Field(default=None)
+    release_date: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
+    air_date: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
 
 
 class Episode(BaseEpisode, MediaMixin, table=True):

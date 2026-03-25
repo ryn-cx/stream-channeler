@@ -48,7 +48,7 @@ class UpsertMixin(FileMixin, register=False):
     ) -> Show:
         show = Show.get_from_memory(self.db, source, show_key)
         show_files = self._show_files(show_key)
-        show_timestamp = self._newest_file_timestamp(show_files)
+        show_timestamp = self._oldest_file_timestamp(show_files)
 
         channel_json_by_id = self._channel_by_id_file(show_key)
         channel_data = channel_json_by_id.parsed()
@@ -80,7 +80,7 @@ class UpsertMixin(FileMixin, register=False):
 
         for season_key in season_keys:
             season = Season.get_from_memory(self.db, show, season_key)
-            season_timestamp = self._newest_file_timestamp(
+            season_timestamp = self._oldest_file_timestamp(
                 self._season_files(season_key),
             )
             if (
@@ -150,7 +150,7 @@ class UpsertMixin(FileMixin, register=False):
                 not force_reimport
                 and existing
                 and existing.data_timestamp
-                == self._newest_file_timestamp(self._episode_files(episode_key))
+                == self._oldest_file_timestamp(self._episode_files(episode_key))
             ):
                 continue
 
@@ -169,7 +169,7 @@ class UpsertMixin(FileMixin, register=False):
                 duration=int(video_item.content_details.duration.total_seconds()),
                 image_url=self._get_best_image_url(video_snippet),
                 sort_order=sort_order,
-                data_timestamp=self._newest_file_timestamp(
+                data_timestamp=self._oldest_file_timestamp(
                     self._episode_files(episode_key),
                 ),
             ).upsert(season, existing)

@@ -36,26 +36,12 @@ class CrunchyrollValidator(PluginValidator):
         return request.param.format(key=self.show_key, slug=self.show_slug)
 
     @override
-    def _update_show_validator(self, show: Show) -> Validator:
-        return super()._update_show_validator(show).seasons_share_show_file(show)
-
-    @override
     def _update_season_validator(self, season: Season) -> Validator:
-        return (
-            super()
-            ._update_season_validator(season)
-            .seasons_share_show_file(season)
-            .seasons_share_file(season)
-            .episodes_share_season_file(season)
-        )
+        return super()._update_season_validator(season).seasons_share_file(season)
 
     @override
     def _update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            ._update_episode_validator(episode)
-            .episodes_share_season_file(episode)
-        )
+        return super()._update_episode_validator(episode).episodes_share_file(episode)
 
     def test_import_response(
         self,
