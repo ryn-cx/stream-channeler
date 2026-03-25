@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
@@ -134,8 +134,6 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   }, [channel.name])
 
   const search = Route.useSearch()
-  const _navigate = useNavigate({ from: Route.fullPath })
-
   const { data: episodesData, isPlaceholderData } = useQuery(
     getEpisodesQueryOptions(channelId, search),
   )
