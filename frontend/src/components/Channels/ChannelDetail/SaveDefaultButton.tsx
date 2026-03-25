@@ -30,9 +30,7 @@ export function SaveDefaultButton({
     onSuccess: () => {
       showSuccessToast("Default order saved successfully")
     },
-    onError: (error) => {
-      handleError.call(showErrorToast, error as any)
-    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const handleClick = () => {
@@ -58,7 +56,7 @@ export function SaveDefaultButton({
     <Button
       onClick={handleClick}
       disabled={saveDefaultsMutation.isPending}
-      className="my-4"
+      className="mt-2 mb-4"
     >
       <Save className="mr-2" />
       {saveDefaultsMutation.isPending ? "Saving..." : "Save as Default"}

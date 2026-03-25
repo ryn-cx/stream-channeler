@@ -53,6 +53,13 @@ class EpisodeQueryBuilder:
         self._channel_ids: list[UUID] = []
         self._compile_channel_ids(channel)
 
+    @property
+    def _effective_seed(self) -> int:
+        """Return the explicit seed, or a stable per-channel default derived from its ID."""
+        if self._media_filter.random_seed is not None:
+            return self._media_filter.random_seed
+        return int(str(self._channel_ids[0]).replace("-", "")[:8], 16) % (2**31)
+
     def _validate_media_filter(
         self,
         media_filter: ChannelMediaFilter,
@@ -99,6 +106,8 @@ class EpisodeQueryBuilder:
         query = self._filter_by_release_date(query)
         query = self._filter_by_duration(query)
         query = self._sort_episodes(query)
+        if self._media_filter.limit is not None:
+            query = query.limit(self._media_filter.limit)
         output = self._session.exec(query).all()
 
         if self._media_filter.randomize_on_last_sort:
@@ -125,9 +134,9 @@ class EpisodeQueryBuilder:
         output: list[Episode] = []
         show_lists = list(show_episodes.values())
 
+        rng = random.Random(self._effective_seed)  # noqa: S311
         while show_lists:
-            # S311 - This does not need to be a cryptographically secure
-            chosen_list = random.choice(show_lists)  # noqa: S311
+            chosen_list = rng.choice(show_lists)
             output.append(chosen_list.pop(0))
 
             if not chosen_list:
@@ -564,11 +573,11 @@ class EpisodeQueryBuilder:
             return literal_column("show_last_watched.show_last_watch_date")
 
         if field_name == "random":
-            # Hash the show ID with a per-request random salt to produce a uniform,
-            # non-deterministic, per-show value. All episodes in a show get the same
-            # value since the hash only depends on Show.id and the constant salt.
+            # Hash the show ID with a seed (or a per-request random salt if no seed
+            # is provided) to produce a uniform per-show value. All episodes in a show
+            # get the same value since the hash only depends on Show.id and the salt.
             # S311 - This does not need to be cryptographically secure.
-            salt = str(random.randint(0, 2**31))  # noqa: S311
+            salt = str(self._effective_seed)
             episode_field = func.hashtext(
                 func.concat(func.cast(Show.id, String), salt),
             )
@@ -600,7 +609,10 @@ class EpisodeQueryBuilder:
         if media_type == "show-episodes":
             return self._sql_sort_by_show_episodes_expression(category, field_name)
         if field_name == "random":
-            return func.random()
+            # Use a deterministic hash of episode ID + effective seed for stable random order
+            return func.hashtext(
+                func.concat(func.cast(Episode.id, String), str(self._effective_seed)),
+            )
         if category == "value":
             return self._sql_sort_by_value_expression(media_type, field_name)
 

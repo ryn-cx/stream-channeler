@@ -24,6 +24,7 @@ from app.users.models import User
 
 class BaseChannel(SQLModel):
     name: str | None = Field(default=None)
+    channel_number: int | None = Field(default=None)
     public: bool = Field(default=False)
     # Default value is required to be able to create a channel without a default order.
     # TODO: Make this always a str

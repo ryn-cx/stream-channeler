@@ -262,7 +262,7 @@ export function AddUrlsToQueueButton({
               Add Shows
             </DropdownMenuItem>
           ) : (
-            <Button className="my-4">
+            <Button className="mt-2 mb-4">
               <Plus className="mr-2" />
               Add Shows
             </Button>

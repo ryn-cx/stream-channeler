@@ -1,56 +1,51 @@
-// TODO: Validate
-import type { EpisodeWithDetails } from "../../columns"
+import { formatDuration } from "../../EpisodeCards"
+import {
+  CardMetaLines,
+  type CardOverlayProps,
+  CardSourceRow,
+  CardTextArea,
+} from "../components"
 
-interface CardOverlayProps {
-  episode: EpisodeWithDetails
-  formatDuration: (seconds: number) => string
+function formatNumberedLine(
+  label: string,
+  number: number | null | undefined,
+  name: string | null | undefined,
+): { label?: string; value: string | null } {
+  if (number && name) return { label, value: `${number} ∙ ${name}` }
+  if (name) return { label, value: name }
+  if (number) return { value: `${label} ${number}` }
+  return { value: null }
 }
 
-// This is just a copy of the TV Show format for now
-export default function TVShowCardOverlay({
-  episode,
-  formatDuration,
-}: CardOverlayProps) {
+export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
   const releaseDate = episode.air_date || episode.release_date
 
   return (
-    // -mt-6 - Negative margin to reduce the size between the image and the text.
-    <div className="-mt-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-1">
-          {episode.source.favicon_url && (
-            <img
-              src={episode.source.favicon_url}
-              alt={episode.source.name ?? undefined}
-              className="size-6"
-            />
-          )}
-          <span className="font-bold text-sm">{episode.show.name}</span>
-        </div>
-        <div className="flex flex-col items-end gap-0">
-          {releaseDate && (
-            <span className="text-xs text-muted-foreground">
-              {new Date(releaseDate).toLocaleDateString()}
-            </span>
-          )}
-          {episode.duration && (
-            <span className="text-xs text-muted-foreground">
-              {formatDuration(episode.duration)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-0">
-        <span className="text-sm text-muted-foreground truncate">
-          Season {episode.season.season_number}
-          {episode.season.name ? `: ${episode.season.name}` : ""}
-        </span>
-        <span className="text-sm text-muted-foreground truncate">
-          Episode {episode.episode_number}
-          {episode.name ? `: ${episode.name}` : ""}
-        </span>
-      </div>
-    </div>
+    <CardTextArea>
+      <CardSourceRow
+        episode={episode}
+        details={[
+          releaseDate ? new Date(releaseDate).toLocaleDateString() : null,
+          formatDuration(episode.duration),
+        ]}
+      />
+      <CardMetaLines
+        lines={[
+          formatNumberedLine(
+            "Season",
+            episode.season.season_number,
+            episode.season.name,
+          ),
+          {
+            ...formatNumberedLine(
+              "Episode",
+              episode.episode_number,
+              episode.name,
+            ),
+            valueClassName: "font-bold",
+          },
+        ]}
+      />
+    </CardTextArea>
   )
 }

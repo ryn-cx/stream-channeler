@@ -22,7 +22,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Form,
@@ -35,16 +34,12 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
+  channel_number: z.number().int().nullable().optional(),
   default_order: z.string().optional(),
   public: z.boolean(),
 })
@@ -53,10 +48,24 @@ type FormData = z.infer<typeof formSchema>
 
 interface EditChannelProps {
   channel: ChannelOutput
+  externalOpen?: boolean
+  onExternalClose?: () => void
 }
 
-const EditChannel = ({ channel }: EditChannelProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const EditChannel = ({
+  channel,
+  externalOpen,
+  onExternalClose,
+}: EditChannelProps) => {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = externalOpen ?? internalOpen
+  const setIsOpen = (open: boolean) => {
+    if (externalOpen !== undefined) {
+      if (!open) onExternalClose?.()
+    } else {
+      setInternalOpen(open)
+    }
+  }
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
@@ -65,6 +74,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
     criteriaMode: "all",
     defaultValues: {
       name: channel.name ?? "",
+      channel_number: channel.channel_number ?? null,
       public: channel.public ?? false,
       // TODO: This will be made to always be a string in the future so the extra check
       // can be removed eventually.
@@ -124,6 +134,7 @@ const EditChannel = ({ channel }: EditChannelProps) => {
   const onSubmit = (data: FormData) => {
     const payload: ChannelPatchInput = {
       name: data.name,
+      channel_number: data.channel_number ?? null,
       public: data.public,
       default_order: data.default_order || null,
     }
@@ -131,98 +142,130 @@ const EditChannel = ({ channel }: EditChannelProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Pencil className="size-4" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit channel</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit Channel</DialogTitle>
-              <DialogDescription>
-                Update the channel details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Name <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Channel name"
-                        type="text"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <>
+      {externalOpen === undefined && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Edit channel"
+          onClick={() => setIsOpen(true)}
+        >
+          <Pencil className="size-4" />
+        </Button>
+      )}
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="sm:max-w-md">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <DialogHeader>
+                  <DialogTitle>Edit Channel</DialogTitle>
+                  <DialogDescription>
+                    Update the channel details below.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Name <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Channel name"
+                            type="text"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="default_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Default Order</FormLabel>
-                    <FormControl>
-                      <Input type="text" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      It's much easier to set the default order from the channel
-                      page...
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="channel_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Channel Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Optional"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === ""
+                                  ? null
+                                  : Number.parseInt(e.target.value, 10),
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Used for sorting channels in the browse view
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="public"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is public?</FormLabel>
-                  </FormItem>
-                )}
-              />
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="default_order"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Order</FormLabel>
+                        <FormDescription>
+                          It's easier to set this from the channel page
+                        </FormDescription>
+                        <FormControl>
+                          <Input type="text" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+                  <FormField
+                    control={form.control}
+                    name="public"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Is public?
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" disabled={mutation.isPending}>
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <LoadingButton type="submit" loading={mutation.isPending}>
+                    Save
+                  </LoadingButton>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   )
 }
 

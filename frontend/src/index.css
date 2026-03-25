@@ -122,3 +122,8 @@
     cursor: pointer;
   }
 }
+
+/* Hide scrollbar for horizontal scroll rows */
+.scrollbar-hide {
+  scrollbar-width: none;
+}

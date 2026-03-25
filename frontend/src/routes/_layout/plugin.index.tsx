@@ -1,9 +1,9 @@
 // TODO: Validate
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Suspense, useState } from "react"
+import { useState } from "react"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
@@ -27,6 +27,8 @@ function getPluginsQueryOptions() {
         url: "/api/v1/plugins",
       }) as Promise<PluginsListOutput>,
     queryKey: ["plugins"],
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData: any) => previousData,
   }
 }
 
@@ -43,13 +45,15 @@ export const Route = createFileRoute("/_layout/plugin/")({
 })
 
 function PluginsTableContent() {
-  const { data: plugins } = useSuspenseQuery(getPluginsQueryOptions())
+  const { data: plugins, isPlaceholderData } = useQuery(
+    getPluginsQueryOptions(),
+  )
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
   })
 
   const table = useReactTable({
-    data: plugins.data,
+    data: plugins?.data ?? [],
     columns,
     state: {
       columnVisibility,
@@ -58,8 +62,16 @@ function PluginsTableContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  if (!plugins) return <PendingPlugins />
+
   return (
-    <>
+    <div
+      className={
+        isPlaceholderData
+          ? "opacity-60 transition-opacity duration-200"
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Plugins</h1>
@@ -76,16 +88,14 @@ function PluginsTableContent() {
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />
-    </>
+    </div>
   )
 }
 
 function PluginPage() {
   return (
     <div className="flex flex-col gap-6">
-      <Suspense fallback={<PendingPlugins />}>
-        <PluginsTableContent />
-      </Suspense>
+      <PluginsTableContent />
     </div>
   )
 }

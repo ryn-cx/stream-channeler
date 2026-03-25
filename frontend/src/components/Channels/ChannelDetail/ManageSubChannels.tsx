@@ -101,9 +101,7 @@ export function ManageAdditionalChannels({
       navigate({ to: routeFullPath, search: newSearch as any, replace: true })
       showSuccessToast("Channels updated successfully")
     },
-    onError: (error) => {
-      handleError.call(showErrorToast, error as any)
-    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const handleAddChannelFromSelect = (channelIdToAdd: string) => {
@@ -164,7 +162,7 @@ export function ManageAdditionalChannels({
             Additional Channels
           </DropdownMenuItem>
         ) : (
-          <Button className="my-4">
+          <Button className="mt-2 mb-4">
             <TvMinimal className="mr-2" />
             Manage Additional Channels
           </Button>

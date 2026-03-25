@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ChannelsService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -14,6 +14,7 @@ export function useToggleEpisodeWhitelist(
   queryChannelId: string,
 ) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ episodeId, showId }: ToggleEpisodeParams) =>
@@ -24,48 +25,44 @@ export function useToggleEpisodeWhitelist(
           episodes: [{ id: episodeId, enabled: true }],
         },
       }),
-    // When mutate is called:
-    onMutate: async ({ episodeId }, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({
+    onMutate: async ({ episodeId }) => {
+      await queryClient.cancelQueries({
         queryKey: ["episodes", queryChannelId],
       })
 
-      // Snapshot the previous value
-      const previousData = context.client.getQueryData([
-        "episodes",
-        queryChannelId,
-      ])
+      // Snapshot all matching queries (key may include randomSeed as 3rd element)
+      const previousEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", queryChannelId],
+      })
 
-      // Optimistically update to the new value
-      context.client.setQueryData(
-        ["episodes", queryChannelId],
-        (oldData: any) => ({
+      const removeEpisode = (oldData: any) => {
+        if (!oldData) return oldData
+        return {
           ...oldData,
           episodes: oldData.episodes.filter((ep: any) => ep.id !== episodeId),
-        }),
+        }
+      }
+
+      queryClient.setQueriesData(
+        { queryKey: ["episodes", queryChannelId] },
+        removeEpisode,
       )
 
-      // Return a result with the snapshotted value
-      return { previousData }
+      queryClient.setQueriesData(
+        { queryKey: ["episodes-preview", queryChannelId] },
+        removeEpisode,
+      )
+
+      return { previousEntries }
     },
     onSuccess: () => {
       showSuccessToast("Episode whitelist status toggled successfully")
     },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _variables, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["episodes", queryChannelId],
-        onMutateResult?.previousData,
-      )
+    onError: (error, _variables, context) => {
+      for (const [queryKey, data] of context?.previousEntries ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
       handleError.call(showErrorToast, error as any)
     },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({
-        queryKey: ["episodes", queryChannelId],
-      }),
   })
 }

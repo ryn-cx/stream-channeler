@@ -7,9 +7,11 @@ import {
   ListX,
   MoreVertical,
   SkipForward,
+  Trash2,
 } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -28,9 +30,13 @@ import type { EpisodeWithDetails } from "./columns"
 interface EpisodeCardsProps {
   episodes: EpisodeWithDetails[]
   channelId: string
+  hideWatched?: boolean
 }
 
-export function formatDuration(seconds: number): string {
+export function formatDuration(
+  seconds: number | null | undefined,
+): string | null {
+  if (seconds == null) return null
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
@@ -108,25 +114,29 @@ function EpisodeCardOverlay({ episode }: { episode: EpisodeWithDetails }) {
 
   return (
     <Suspense fallback={null}>
-      {OverlayComponent && (
-        <OverlayComponent episode={episode} formatDuration={formatDuration} />
-      )}
+      {OverlayComponent && <OverlayComponent episode={episode} />}
     </Suspense>
   )
 }
 
-function EpisodeCard({
+export function EpisodeCard({
   episode,
   channelId,
   nextEpisodeId,
   onNextEpisode,
+  hideWatched,
 }: {
   episode: EpisodeWithDetails
   channelId: string
-  nextEpisodeId: string | undefined
-  onNextEpisode: (currentEpisodeId: string) => void
+  nextEpisodeId?: string | undefined
+  onNextEpisode?: (currentEpisodeId: string) => void
+  hideWatched?: boolean
 }) {
   const [_cardRendered, setCardRendered] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmBlacklist, setConfirmBlacklist] = useState(false)
+  const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
   const whitelistMutation = useToggleEpisodeWhitelist(
@@ -150,22 +160,36 @@ function EpisodeCard({
       // (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ["episodes", channelId] })
 
-      // Snapshot the previous value
-      const previous = queryClient.getQueryData(["episodes", channelId])
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(["episodes", channelId], (oldData: any) => {
-        if (!oldData) return oldData
-        return {
-          ...oldData,
-          episodes: oldData.episodes.map((ep: any) =>
-            ep.id === episode.id ? { ...ep, verified: true } : ep,
-          ),
-        }
+      // Snapshot all matching queries (key may include randomSeed as 3rd element)
+      const previousEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", channelId],
       })
 
+      // Optimistically update all matching cache entries
+      queryClient.setQueriesData(
+        { queryKey: ["episodes", channelId] },
+        (oldData: any) => {
+          if (!oldData) return oldData
+          if (hideWatched) {
+            // The episode is now verified-watched; remove it from the list.
+            return {
+              ...oldData,
+              episodes: oldData.episodes.filter(
+                (ep: any) => ep.id !== episode.id,
+              ),
+            }
+          }
+          return {
+            ...oldData,
+            episodes: oldData.episodes.map((ep: any) =>
+              ep.id === episode.id ? { ...ep, verified: true } : ep,
+            ),
+          }
+        },
+      )
+
       // Return a result with the snapshotted value
-      return { previous }
+      return { previousEntries }
     },
     onSuccess: () => {
       showSuccessToast("Episode verified successfully")
@@ -175,10 +199,59 @@ function EpisodeCard({
     onError: (
       error: unknown,
       _vars: undefined,
-      context: { previous: unknown } | undefined,
+      context: { previousEntries: [unknown, unknown][] } | undefined,
     ) => {
-      if (context?.previous) {
-        queryClient.setQueryData(["episodes", channelId], context.previous)
+      for (const [queryKey, data] of context?.previousEntries ?? []) {
+        queryClient.setQueryData(queryKey as any, data)
+      }
+      handleError.call(showErrorToast, error as any)
+    },
+  })
+
+  const deleteWatchMutation = useMutation({
+    mutationFn: () =>
+      WatchesService.deleteUserWatch({
+        watchId: episode.episode_watch_id!,
+      }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["episodes", channelId] })
+      const previousEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", channelId],
+      })
+      const clearWatch = (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          episodes: oldData.episodes.map((ep: any) =>
+            ep.id === episode.id
+              ? {
+                  ...ep,
+                  watch_date: null,
+                  verified: null,
+                  episode_watch_id: null,
+                }
+              : ep,
+          ),
+        }
+      }
+      queryClient.setQueriesData(
+        { queryKey: ["episodes", channelId] },
+        clearWatch,
+      )
+      queryClient.setQueriesData(
+        { queryKey: ["episodes-preview", channelId] },
+        clearWatch,
+      )
+      return { previousEntries }
+    },
+    onSuccess: () => showSuccessToast("Watch deleted successfully"),
+    onError: (
+      error: unknown,
+      _vars: undefined,
+      context: { previousEntries: [unknown, unknown][] } | undefined,
+    ) => {
+      for (const [queryKey, data] of context?.previousEntries ?? []) {
+        queryClient.setQueryData(queryKey as any, data)
       }
       handleError.call(showErrorToast, error as any)
     },
@@ -205,132 +278,173 @@ function EpisodeCard({
     ""
 
   return (
-    <Card
-      // overflow-hidden - Hide anything that goes outside the card
-      // cursor-pointer - When hovering over the card make the cursor a pointer so you can
-      // tell it is a link
-      // hover:-translate-y-0.5 hover:shadow-lg - When hovering over a card make it move
-      // a little bit
-      // transition-all - Make movement have a smooth animation
-      // p-0 - No extra padding
-      // bg-card - Give cards a slight background color
-      // flex flex-col - Make height of card flexible
-      className="group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-none"
-      onClick={handleClick}
-    >
-      {/* relative - I have no idea but everything breaks without it */}
-      {/* flex-shrink-0 - Fit images to the card without stretching */}
-      <div className="relative flex-shrink-0">
-        <img
-          loading="lazy"
-          src={imageUrl}
-          alt={`Episode ${episode.episode_number} - ${episode.name ?? ""}`}
-          className="object-cover transition-opacity group-hover:opacity-80"
-          onLoad={(e) => {
-            const img = e.target as HTMLImageElement
-            img.style.objectFit = "cover"
-            setCardRendered(true)
-          }}
-        />
+    <>
+      <Card
+        // overflow-hidden - Hide anything that goes outside the card
+        // cursor-pointer - When hovering over the card make the cursor a pointer so you can
+        // tell it is a link
+        // hover:-translate-y-0.5 hover:shadow-lg - When hovering over a card make it move
+        // a little bit
+        // transition-all - Make movement have a smooth animation
+        // p-0 - No extra padding
+        // bg-card - Give cards a slight background color
+        // flex flex-col - Make height of card flexible
+        className="group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-none"
+        onClick={handleClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* relative - I have no idea but everything breaks without it */}
+        {/* flex-shrink-0 - Fit images to the card without stretching */}
+        <div className="relative flex-shrink-0 aspect-video overflow-hidden">
+          <img
+            loading="lazy"
+            src={imageUrl}
+            alt={`Episode ${episode.episode_number} - ${episode.name ?? ""}`}
+            className="w-full h-full object-cover transition-opacity group-hover:opacity-80"
+            onLoad={() => setCardRendered(true)}
+          />
 
-        {/* TODO: The colors for this badge are bad */}
-        {watched && (
-          <Badge
-            variant={verified ? "default" : "secondary"}
-            className="absolute top-0 left-0 z-10"
-          >
-            {verified
-              ? `Last Watched - ${formattedDate}`
-              : `Last Watched - ${formattedDate} (Not Verified)`}
-          </Badge>
-        )}
+          {/* TODO: The colors for this badge are bad */}
+          {watched && (
+            <Badge
+              variant={verified ? "default" : "secondary"}
+              className="absolute top-0 left-0 z-10"
+            >
+              {verified
+                ? `Last Watched - ${formattedDate}`
+                : `Last Watched - ${formattedDate} (Not Verified)`}
+            </Badge>
+          )}
 
-        {/* Burger menu in top right corner */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                watchedMutation.mutate(episode.id)
-              }}
-            >
-              <Check className="h-4 w-4" />
-              Mark as Watched
-            </DropdownMenuItem>
-            {episode.watch_date &&
-              !episode.verified &&
-              episode.episode_watch_id && (
+          {/* Burger menu in top right corner - only mount when hovered or open to avoid Radix ref loops */}
+          {(hovered || menuOpen) && (
+            <DropdownMenu onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {episode.watch_date &&
+                !episode.verified &&
+                episode.episode_watch_id ? (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      verifyMutation.mutate(undefined)
+                    }}
+                  >
+                    <BadgeCheck className="h-4 w-4" />
+                    Verify Watch
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      watchedMutation.mutate(episode.id)
+                    }}
+                  >
+                    <Check className="h-4 w-4" />
+                    Mark as Watched
+                  </DropdownMenuItem>
+                )}
+                {nextEpisodeId && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onNextEpisode?.(episode.id)
+                    }}
+                  >
+                    <SkipForward className="h-4 w-4" />
+                    Next Episode
+                  </DropdownMenuItem>
+                )}
+                {episode.watch_date && episode.episode_watch_id && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setConfirmDeleteWatch(true)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Last Watch
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    verifyMutation.mutate(undefined)
+                    setConfirmBlacklist(true)
                   }}
                 >
-                  <BadgeCheck className="h-4 w-4" />
-                  Verify Watch
+                  <ListX className="h-4 w-4" />
+                  Blacklist Episode
                 </DropdownMenuItem>
-              )}
-            {nextEpisodeId && (
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onNextEpisode(episode.id)
-                }}
-              >
-                <SkipForward className="h-4 w-4" />
-                Next Episode
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                const confirmMsg = `Blacklist episode "${episode.name ?? ""}"?`
-                if (window.confirm(confirmMsg)) {
-                  whitelistMutation.mutate({
-                    episodeId: episode.id,
-                    showId: episode.show.id,
-                  })
-                }
-              }}
-            >
-              <ListX className="h-4 w-4" />
-              Blacklist Episode
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                if (episode.url) {
-                  window.open(episode.url, "_blank", "noopener,noreferrer")
-                }
-              }}
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open URL
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (episode.url) {
+                      window.open(episode.url, "_blank", "noopener,noreferrer")
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open URL
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
 
-      {/* px-2 pb-2 - Border area around the text to make easier to read */}
-      <div className="px-2 pb-2">
-        <EpisodeCardOverlay episode={episode} />
-      </div>
-    </Card>
+        {/* px-2 pb-2 - Border area around the text to make easier to read */}
+        <div className="px-2 pb-2">
+          <EpisodeCardOverlay episode={episode} />
+        </div>
+      </Card>
+
+      {confirmBlacklist && (
+        <ConfirmDialog
+          open={confirmBlacklist}
+          onOpenChange={setConfirmBlacklist}
+          title="Blacklist Episode"
+          description={`Are you sure you want to blacklist "${episode.name ?? ""}"? This episode will be hidden from this channel.`}
+          confirmLabel="Blacklist"
+          onConfirm={() =>
+            whitelistMutation.mutate({
+              episodeId: episode.id,
+              showId: episode.show.id,
+            })
+          }
+        />
+      )}
+      {confirmDeleteWatch && (
+        <ConfirmDialog
+          open={confirmDeleteWatch}
+          onOpenChange={setConfirmDeleteWatch}
+          title="Delete Last Watch"
+          description={`Are you sure you want to delete the last watch for "${episode.name ?? ""}"? This will mark the episode as unwatched.`}
+          confirmLabel="Delete"
+          onConfirm={() => deleteWatchMutation.mutate(undefined)}
+        />
+      )}
+    </>
   )
 }
 
-export function EpisodeCards({ episodes, channelId }: EpisodeCardsProps) {
+export function EpisodeCards({
+  episodes,
+  channelId,
+  hideWatched,
+}: EpisodeCardsProps) {
   const queryClient = useQueryClient()
 
   // Build a map of episodeId → next episode ID for the same show
@@ -378,6 +492,7 @@ export function EpisodeCards({ episodes, channelId }: EpisodeCardsProps) {
           channelId={channelId}
           nextEpisodeId={nextEpisodeMap.get(episode.id)}
           onNextEpisode={handleNextEpisode}
+          hideWatched={hideWatched}
         />
       ))}
     </div>

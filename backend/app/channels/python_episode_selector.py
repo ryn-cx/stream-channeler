@@ -46,6 +46,13 @@ class PythonEpisodeQueryBuilder:
         self._episode_watches: dict[UUID, Watch] = {}
         self._show_last_watched: dict[UUID, datetime] = {}
 
+    @property
+    def _effective_seed(self) -> int:
+        """Return the explicit seed, or a stable per-channel default derived from its ID."""
+        if self._media_filter.random_seed is not None:
+            return self._media_filter.random_seed
+        return int(str(self._channel_ids[0]).replace("-", "")[:8], 16) % (2**31)
+
     def _sanitize_media_filter(
         self,
         media_filter: ChannelMediaFilter,
@@ -462,7 +469,8 @@ class PythonEpisodeQueryBuilder:
 
         # Handle random sorting
         if field_name == "random":
-            return random.random()
+            # Use a stable hash of episode ID + effective seed for deterministic order
+            return hash((str(episode.id), self._effective_seed))
 
         # Handle special show fields
         if media_type == "show":
@@ -511,8 +519,9 @@ class PythonEpisodeQueryBuilder:
             return watch_date
 
         if field_name == "random":
-            # Use show ID as seed for consistent randomization per show
-            random.seed(str(show.id))
+            # Use show ID + effective seed for consistent randomization per show
+            seed_str = f"{show.id!s}:{self._effective_seed}"
+            random.seed(seed_str)
             value = random.random()
             random.seed()  # Reset seed
             return value
@@ -583,8 +592,9 @@ class PythonEpisodeQueryBuilder:
         output: list[Episode] = []
         show_lists = list(show_episodes.values())
 
+        rng = random.Random(self._effective_seed)  # noqa: S311
         while show_lists:
-            chosen_list = random.choice(show_lists)  # noqa: S311
+            chosen_list = rng.choice(show_lists)
             output.append(chosen_list.pop(0))
 
             if not chosen_list:

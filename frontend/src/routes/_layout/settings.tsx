@@ -35,16 +35,16 @@ function UserSettings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
+    <div className="max-w-3xl mx-auto flex flex-col gap-6 px-4">
+      <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight">User Settings</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Manage your account settings and preferences
         </p>
       </div>
 
       <Tabs defaultValue="my-profile">
-        <TabsList>
+        <TabsList className="w-full justify-center">
           {finalTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.title}

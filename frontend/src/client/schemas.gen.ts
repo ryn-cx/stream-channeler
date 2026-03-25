@@ -185,6 +185,17 @@ export const ChannelMediaFilterSchema = {
             title: 'Randomizeonlastsort',
             default: false
         },
+        randomSeed: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Randomseed'
+        },
         hideWatched: {
             type: 'boolean',
             title: 'Hidewatched',
@@ -341,6 +352,18 @@ export const ChannelMediaFilterSchema = {
                 }
             ],
             title: 'Maximumduration'
+        },
+        limit: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Limit'
         }
     },
     type: 'object',
@@ -359,6 +382,17 @@ export const ChannelOutputSchema = {
                 }
             ],
             title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
         },
         public: {
             type: 'boolean',
@@ -405,6 +439,17 @@ export const ChannelPatchInputSchema = {
             ],
             title: 'Name'
         },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
         public: {
             type: 'boolean',
             title: 'Public',
@@ -438,6 +483,17 @@ export const ChannelPostInputSchema = {
                 }
             ],
             title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
         },
         public: {
             type: 'boolean',

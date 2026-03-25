@@ -39,6 +39,7 @@ import { handleError } from "@/utils"
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
+  channel_number: z.number().int().nullable().optional(),
   default_order: z.string().optional(),
   public: z.boolean(),
 })
@@ -55,6 +56,7 @@ const AddChannel = () => {
     criteriaMode: "all",
     defaultValues: {
       name: "",
+      channel_number: null,
       default_order: "",
       public: false,
     },
@@ -75,17 +77,20 @@ const AddChannel = () => {
       ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => ({
-        ...old!,
-        data: [
-          ...old!.data,
-          {
-            ...newChannel,
-            id: crypto.randomUUID(),
-            user_id: "placeholder_user_id",
-          },
-        ],
-      }))
+      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: [
+            ...old.data,
+            {
+              ...newChannel,
+              id: "Loading...",
+              user_id: "Loading...",
+            },
+          ],
+        }
+      })
 
       // Return a result with the snapshotted value
       return { previousChannels }
@@ -93,7 +98,7 @@ const AddChannel = () => {
     onSuccess: () => {
       showSuccessToast("Channel created successfully")
       form.reset()
-      setIsOpen(false)
+      // setIsOpen(false);
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
@@ -116,7 +121,7 @@ const AddChannel = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="my-4">
+        <Button className="mt-2 mb-4">
           <Plus className="mr-2" />
           New Channel
         </Button>
@@ -154,17 +159,45 @@ const AddChannel = () => {
 
               <FormField
                 control={form.control}
+                name="channel_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Channel Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Optional"
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? null
+                              : Number.parseInt(e.target.value, 10),
+                          )
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Used for sorting channels in the browse view
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="default_order"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Default Order</FormLabel>
+                    <FormDescription>
+                      It's easier to set this from the channel page
+                    </FormDescription>
                     <FormControl>
                       <Input type="text" {...field} />
                     </FormControl>
-                    <FormDescription>
-                      It's much easier to set the default order from the channel
-                      page...
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,59 +1,45 @@
-// TODO: Validate
+import { LayoutGrid, Plus, Table as TableIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 const PendingChannelList = () => (
   <div className="flex flex-col gap-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <Skeleton className="h-8 w-64 mb-2" />
-        <Skeleton className="h-4 w-96" />
-      </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-32" />
-      </div>
+    <div className="flex flex-wrap items-center gap-2 px-[4%] pt-4 pb-2">
+      <h1 className="text-2xl font-bold tracking-tight mr-2">Channels</h1>
+      <ButtonGroup>
+        <Button variant="default" disabled className="opacity-50 mt-2 mb-4">
+          <LayoutGrid />
+          Browse
+        </Button>
+        <Button variant="outline" disabled className="opacity-50 mt-2 mb-4">
+          <TableIcon />
+          Table
+        </Button>
+      </ButtonGroup>
+      <Button disabled className="opacity-50 mt-2 mb-4">
+        <Plus />
+        New Channel
+      </Button>
     </div>
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Visibility</TableHead>
-          <TableHead>Default Order</TableHead>
-          <TableHead>
-            <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <TableRow key={index}>
-            <TableCell>
-              <Skeleton className="h-4" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4" />
-            </TableCell>
-            <TableCell>
-              <div className="flex justify-end">
-                <Skeleton className="size-8 rounded-md" />
-                <Skeleton className="size-8 rounded-md" />
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+
+    {/* Channel row skeletons */}
+    {Array.from({ length: 4 }).map((_, rowIndex) => (
+      <div key={rowIndex} className="flex flex-col gap-2">
+        <div className="flex items-center gap-3 px-[4%]">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="flex gap-2 px-[4%]">
+          {Array.from({ length: 5 }).map((_, cardIndex) => (
+            <Skeleton
+              key={cardIndex}
+              className="flex-shrink-0 w-[280px] md:w-[340px] lg:w-[400px] aspect-video rounded-sm"
+            />
+          ))}
+        </div>
+      </div>
+    ))}
   </div>
 )
 

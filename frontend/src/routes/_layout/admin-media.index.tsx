@@ -1,8 +1,9 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+// TODO: Validate
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Suspense, useState } from "react"
+import { useState } from "react"
 
 import { OpenAPI, UsersService } from "@/client"
 import { request } from "@/client/core/request"
@@ -36,6 +37,8 @@ function getAdminPluginsQueryOptions() {
         url: "/api/v1/admin-media/plugins",
       }) as Promise<AdminPluginsListOutput>,
     queryKey,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData: any) => previousData,
   }
 }
 
@@ -124,21 +127,31 @@ export const Route = createFileRoute("/_layout/admin-media/")({
 })
 
 function AdminPluginsTableContent() {
-  const { data: plugins } = useSuspenseQuery(getAdminPluginsQueryOptions())
+  const { data: plugins, isPlaceholderData } = useQuery(
+    getAdminPluginsQueryOptions(),
+  )
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
   })
 
   const table = useReactTable({
-    data: plugins.data,
+    data: plugins?.data ?? [],
     columns: adminPluginColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   })
 
+  if (!plugins) return <PendingPlugins />
+
   return (
-    <>
+    <div
+      className={
+        isPlaceholderData
+          ? "opacity-60 transition-opacity duration-200"
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Admin Media</h1>
@@ -154,16 +167,14 @@ function AdminPluginsTableContent() {
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />
-    </>
+    </div>
   )
 }
 
 function AdminMediaPage() {
   return (
     <div className="flex flex-col gap-6">
-      <Suspense fallback={<PendingPlugins />}>
-        <AdminPluginsTableContent />
-      </Suspense>
+      <AdminPluginsTableContent />
     </div>
   )
 }

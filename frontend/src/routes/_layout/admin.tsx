@@ -1,9 +1,9 @@
 // TODO: Validate
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Suspense, useState } from "react"
+import { useState } from "react"
 import { type UserPublic, UsersService } from "@/client"
 import AddUser from "@/components/Admin/AddUser"
 import { columns, type UserTableData } from "@/components/Admin/columns"
@@ -16,6 +16,8 @@ function getUsersQueryOptions() {
   return {
     queryFn: () => UsersService.readUsers(),
     queryKey: ["users"],
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData: any) => previousData,
   }
 }
 
@@ -40,16 +42,16 @@ export const Route = createFileRoute("/_layout/admin")({
 
 function UsersTableContent() {
   const { user: currentUser } = useAuth()
-  const { data: users } = useSuspenseQuery(getUsersQueryOptions())
-
+  const { data: users, isPlaceholderData } = useQuery(getUsersQueryOptions())
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
-  const tableData: UserTableData[] = users.data.map((user: UserPublic) => ({
-    ...user,
-    isCurrentUser: currentUser?.id === user.id,
-  }))
+  const tableData: UserTableData[] = (users?.data ?? []).map(
+    (user: UserPublic) => ({
+      ...user,
+      isCurrentUser: currentUser?.id === user.id,
+    }),
+  )
 
-  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
   const table = useReactTable({
     data: tableData,
     columns,
@@ -60,8 +62,16 @@ function UsersTableContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  if (!users) return <PendingUsers />
+
   return (
-    <>
+    <div
+      className={
+        isPlaceholderData
+          ? "opacity-60 transition-opacity duration-200"
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
@@ -80,16 +90,12 @@ function UsersTableContent() {
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />
-    </>
+    </div>
   )
 }
 
 function UsersTable() {
-  return (
-    <Suspense fallback={<PendingUsers />}>
-      <UsersTableContent />
-    </Suspense>
-  )
+  return <UsersTableContent />
 }
 
 function Admin() {

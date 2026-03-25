@@ -15,6 +15,15 @@ export const columns: ColumnDef<ChannelOutput>[] = [
     cell: ({ row }) => <CopyId id={row.original.id} />,
   },
   {
+    accessorKey: "channel_number",
+    header: "Ch#",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground tabular-nums">
+        {row.original.channel_number ?? "—"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => {

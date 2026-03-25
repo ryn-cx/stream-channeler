@@ -39,8 +39,8 @@ export function ColumnVisibilityButton<TData>({
             Columns
           </DropdownMenuItem>
         ) : (
-          <Button className="my-4">
-            <Columns className="mr-2" />
+          <Button className="mt-2 mb-4">
+            <Columns />
             Columns
           </Button>
         )}

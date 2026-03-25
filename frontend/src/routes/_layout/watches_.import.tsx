@@ -5,7 +5,6 @@ import { Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import Markdown from "react-markdown"
 import {
-  type ApiError,
   WatchesService,
   type WatchImportFormatInformation,
   type WatchImportResult,
@@ -193,9 +192,7 @@ function ImportWatchHistory() {
       setSelectedFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ""
     },
-    onError: (error) => {
-      handleError.call(showErrorToast, error as ApiError)
-    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const selectedPluginInfo: WatchImportFormatInformation | undefined =

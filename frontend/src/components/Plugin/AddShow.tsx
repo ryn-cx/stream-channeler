@@ -133,7 +133,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="my-4">
+        <Button className="mt-2 mb-4">
           <Plus className="mr-2" />
           Add Show
         </Button>

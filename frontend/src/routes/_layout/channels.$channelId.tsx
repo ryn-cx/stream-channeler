@@ -1,11 +1,10 @@
 // TODO: Validate
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
-import { Suspense, useState } from "react"
-
+import { Suspense, useEffect, useState } from "react"
 import { ChannelsService } from "@/client"
 import { AddUrlsToQueueButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
+import { HeroBillboard } from "@/components/Channels/ChannelDetail/HeroBillboard"
 import { ManageShows } from "@/components/Channels/ChannelDetail/ManageShows"
 import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
 import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
@@ -29,7 +29,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 function getChannelQueryOptions(channelId: string) {
   return {
@@ -57,6 +59,7 @@ type ChannelSearchParams = {
   minimumDuration?: number
   maximumDuration?: number
   additionalChannels?: string[]
+  randomSeed?: number
 }
 
 export const Route = createFileRoute("/_layout/channels/$channelId")({
@@ -92,6 +95,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
       additionalChannels: search.additionalChannels as string[] | undefined,
+      randomSeed: search.randomSeed as number | undefined,
     }
   },
   head: () => ({
@@ -113,9 +117,8 @@ function getEpisodesQueryOptions(
         channelId,
         ...searchParams,
       }),
-    queryKey: ["episodes", channelId],
+    queryKey: ["episodes", channelId, searchParams.randomSeed],
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     placeholderData: (previousData: any) => previousData,
   }
 }
@@ -125,8 +128,15 @@ type ViewMode = "table" | "cards"
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
   const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
+
+  useEffect(() => {
+    document.title = `${channel.name} - Stream Channeler`
+  }, [channel.name])
+
   const search = Route.useSearch()
-  const { data: episodesData } = useSuspenseQuery(
+  const _navigate = useNavigate({ from: Route.fullPath })
+
+  const { data: episodesData, isPlaceholderData } = useQuery(
     getEpisodesQueryOptions(channelId, search),
   )
   const routeFullPath = Route.fullPath
@@ -135,21 +145,24 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     id: false,
     plugin: false,
   })
-  const [viewMode, setViewMode] = useState<ViewMode>("cards")
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
+    "channel-detail-view",
+    "cards",
+  )
 
   const currentChannelIds = search.additionalChannels
     ? [channelId, ...search.additionalChannels]
     : [channelId]
 
-  const episodesWithDetails: EpisodeWithDetails[] = episodesData.episodes.map(
-    (episode) => {
-      const season = episodesData.seasons[episode.season_id]
-      const show = episodesData.shows[season.show_id]
-      const source = episodesData.sources[show.source_id]
-      const plugin = episodesData.plugins[source.plugin_id]
-      return { ...episode, season, show, source, plugin }
-    },
-  )
+  const episodesWithDetails: EpisodeWithDetails[] = (
+    episodesData?.episodes ?? []
+  ).map((episode) => {
+    const season = episodesData!.seasons[episode.season_id]
+    const show = episodesData!.shows[season.show_id]
+    const source = episodesData!.sources[show.source_id]
+    const plugin = episodesData!.plugins[source.plugin_id]
+    return { ...episode, season, show, source, plugin }
+  })
 
   // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
   const table = useReactTable({
@@ -163,96 +176,121 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   })
 
   const isOwner = user?.id === channel.user_id
+  const showHero = viewMode === "cards" && episodesWithDetails.length > 0
+  const [heroIndex, setHeroIndex] = useState(0)
+
+  const heroEpisode = episodesWithDetails[heroIndex] ?? episodesWithDetails[0]
+  const hasNextHero = heroIndex < episodesWithDetails.length - 1
+  const hasPrevHero = heroIndex > 0
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
+    <div className="flex flex-col">
+      {/* Hero billboard */}
+      {showHero && heroEpisode && (
+        <HeroBillboard
+          episode={heroEpisode}
+          channelId={channelId}
+          onPlay={() => {
+            if (hasNextHero) setHeroIndex(heroIndex + 1)
+          }}
+          onSkip={() => {
+            if (hasNextHero) setHeroIndex(heroIndex + 1)
+          }}
+          onBack={() => {
+            if (hasPrevHero) setHeroIndex(heroIndex - 1)
+          }}
+          hasNext={hasNextHero}
+          hasPrev={hasPrevHero}
+        />
+      )}
 
-          {/* Smaller screens: Use a hamburger menu */}
-          <div className="xl:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <EllipsisVertical className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuItem onClick={() => setViewMode("table")}>
-                  <TableIcon className="mr-2 size-4" />
-                  Table View
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode("cards")}>
-                  <LayoutGrid className="mr-2 size-4" />
-                  Card View
-                </DropdownMenuItem>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 px-[4%] py-4">
+        <h1 className="text-2xl font-bold tracking-tight mr-2">
+          {channel.name}
+        </h1>
 
-                {viewMode === "table" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <ColumnVisibilityButton table={table} variant="menu" />
-                  </>
-                )}
+        {/* Smaller screens: Use a hamburger menu */}
+        <div className="xl:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <EllipsisVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={() => setViewMode("cards")}>
+                <LayoutGrid className="mr-2 size-4" />
+                Card View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("table")}>
+                <TableIcon className="mr-2 size-4" />
+                Table View
+              </DropdownMenuItem>
 
-                {isOwner && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <AddUrlsToQueueButton
-                      channelId={channelId}
-                      variant="menu"
-                    />
-                    <ManageShows channelId={channelId} variant="menu" />
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <ManageAdditionalChannels
+              {viewMode === "table" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <ColumnVisibilityButton table={table} variant="menu" />
+                </>
+              )}
+
+              {isOwner && (
+                <>
+                  <DropdownMenuSeparator />
+                  <AddUrlsToQueueButton channelId={channelId} variant="menu" />
+                  <ManageShows channelId={channelId} variant="menu" />
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <ManageAdditionalChannels
+                channelId={channelId}
+                filterParams={search}
+                routeFullPath={routeFullPath}
+                currentChannelIds={currentChannelIds}
+                isLoggedIn={!!user}
+                variant="menu"
+              />
+
+              <EpisodeFilters
+                filterParams={search}
+                routeFullPath={routeFullPath}
+                channelId={channelId}
+                randomSeed={search.randomSeed}
+                variant="menu"
+              />
+
+              {isOwner && (
+                <SaveDefaultButton
                   channelId={channelId}
-                  filterParams={search}
-                  routeFullPath={routeFullPath}
-                  currentChannelIds={currentChannelIds}
-                  isLoggedIn={!!user}
+                  searchParams={search}
                   variant="menu"
                 />
-
-                <EpisodeFilters
-                  filterParams={search}
-                  routeFullPath={routeFullPath}
-                  channelId={channelId}
-                  variant="menu"
-                />
-
-                {isOwner && (
-                  <SaveDefaultButton
-                    channelId={channelId}
-                    searchParams={search}
-                    variant="menu"
-                  />
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Larger screens: Show all buttons */}
         <div className="hidden xl:flex flex-wrap gap-2">
           <ButtonGroup>
             <Button
-              variant={viewMode === "table" ? "default" : "outline"}
-              size="icon"
-              onClick={() => setViewMode("table")}
-              title="Table view"
-              className="my-4"
-            >
-              <TableIcon className="mr-2" />
-            </Button>
-            <Button
               variant={viewMode === "cards" ? "default" : "outline"}
-              size="icon"
               onClick={() => setViewMode("cards")}
               title="Card view"
-              className="my-4"
+              className="mt-2 mb-4"
             >
-              <LayoutGrid className="mr-2" />
+              <LayoutGrid />
+              Cards
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              onClick={() => setViewMode("table")}
+              title="Table view"
+              className="mt-2 mb-4"
+            >
+              <TableIcon />
+              Table
             </Button>
           </ButtonGroup>
           {isOwner && (
@@ -272,6 +310,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             filterParams={search}
             routeFullPath={routeFullPath}
             channelId={channelId}
+            randomSeed={search.randomSeed}
           />
           {isOwner && (
             <SaveDefaultButton channelId={channelId} searchParams={search} />
@@ -279,22 +318,47 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>
       </div>
-      {viewMode === "table" ? (
-        <DataTable
-          columns={columns}
-          data={episodesWithDetails}
-          columnVisibility={columnVisibility}
-          onColumnVisibilityChange={setColumnVisibility}
-        />
-      ) : (
-        <EpisodeCards episodes={episodesWithDetails} channelId={channelId} />
-      )}
+
+      {/* Content */}
+      <div
+        className={`px-[4%] transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : ""}`}
+      >
+        {!episodesData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Skeleton className="w-full aspect-video rounded-sm" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={episodesWithDetails}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
+        ) : (
+          <EpisodeCards
+            episodes={episodesWithDetails}
+            channelId={channelId}
+            hideWatched={search.hideWatched}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
 function ChannelDetail() {
   const { channelId } = Route.useParams()
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to top when channel changes
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [channelId])
 
   return (
     <Suspense fallback={<PendingChannelDetails />}>

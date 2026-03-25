@@ -1,11 +1,22 @@
 // TODO: Validate
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { EpisodesService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
+function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
+  if (!oldData) return oldData
+  return {
+    ...oldData,
+    episodes: oldData.episodes.map((ep: any) =>
+      ep.id === episodeId ? { ...ep, ...patch } : ep,
+    ),
+  }
+}
+
 export function useMarkWatched(channelId: string | undefined) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (episodeId: string) =>
@@ -17,68 +28,68 @@ export function useMarkWatched(channelId: string | undefined) {
         },
       }),
     // When mutate is called:
-    onMutate: async (episodeId, context) => {
+    onMutate: async (episodeId) => {
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({
+      await queryClient.cancelQueries({
         queryKey: ["episodes", channelId],
       })
 
-      // Snapshot the previous value
-      const previousData = context.client.getQueryData(["episodes", channelId])
+      // Snapshot all matching queries (key may include randomSeed as 3rd element)
+      const previousEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", channelId],
+      })
 
-      // Optimistically update to the new value
-      context.client.setQueryData(["episodes", channelId], (oldData: any) => ({
-        ...oldData,
-        episodes: oldData.episodes.map((ep: any) =>
-          ep.id === episodeId
-            ? {
-                ...ep,
-                // This timestamp will be slightly incorrect but it's close enough
-                // because it should be almost immediately updated from the server's
-                // response.
-                watch_date: new Date().toISOString(),
-                verified: false,
-              }
-            : ep,
-        ),
-      }))
+      const optimisticPatch = {
+        // This timestamp will be slightly incorrect but it's close enough
+        // because it should be almost immediately updated from the server's response.
+        watch_date: new Date().toISOString(),
+        verified: false,
+      }
+
+      // Optimistically update all matching cache entries
+      queryClient.setQueriesData(
+        { queryKey: ["episodes", channelId] },
+        (oldData: any) =>
+          updateEpisodeInData(oldData, episodeId, optimisticPatch),
+      )
+      queryClient.setQueriesData(
+        { queryKey: ["episodes-preview", channelId] },
+        (oldData: any) =>
+          updateEpisodeInData(oldData, episodeId, optimisticPatch),
+      )
 
       // Return a result with the snapshotted value
-      return { previousData }
+      return { previousEntries }
     },
     // Replace the optimistic value with the server's response on success
-    onSuccess: (watchResults, episodeId, _onMutateResult, context) => {
+    onSuccess: (watchResults, episodeId) => {
       const watchData = watchResults.find(
         (watch) => watch.episode_id === episodeId,
       )
       if (watchData) {
-        context.client.setQueryData(
-          ["episodes", channelId],
-          (oldData: any) => ({
-            ...oldData,
-            episodes: oldData.episodes.map((ep: any) =>
-              ep.id === episodeId
-                ? {
-                    ...ep,
-                    watch_date: watchData.watch_date,
-                    verified: watchData.verified,
-                    episode_watch_id: watchData.id,
-                  }
-                : ep,
-            ),
-          }),
+        const patch = {
+          watch_date: watchData.watch_date,
+          verified: watchData.verified,
+          episode_watch_id: watchData.id,
+        }
+        queryClient.setQueriesData(
+          { queryKey: ["episodes", channelId] },
+          (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
+        )
+        queryClient.setQueriesData(
+          { queryKey: ["episodes-preview", channelId] },
+          (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
         )
       }
       showSuccessToast("Episode marked as watched successfully")
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
-    onError: (error, _episodeId, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["episodes", channelId],
-        onMutateResult?.previousData,
-      )
+    onError: (error, _episodeId, context) => {
+      for (const [queryKey, data] of context?.previousEntries ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
       handleError.call(showErrorToast, error as any)
     },
     // Don't invalidate/refetch episodes here — the optimistic update + onSuccess

@@ -334,6 +334,7 @@ export class ChannelsService {
      * @param data.rotateShows
      * @param data.rotateShowsRandomly
      * @param data.randomizeOnLastSort
+     * @param data.randomSeed
      * @param data.hideWatched
      * @param data.hideUnwatched
      * @param data.maximumWatchDateAbsolute
@@ -350,6 +351,7 @@ export class ChannelsService {
      * @param data.onlyNewShows
      * @param data.minimumDuration
      * @param data.maximumDuration
+     * @param data.limit
      * @returns ChannelEpisodesOutput Successful Response
      * @throws ApiError
      */
@@ -368,6 +370,7 @@ export class ChannelsService {
                 rotate_shows: data.rotateShows,
                 rotate_shows_randomly: data.rotateShowsRandomly,
                 randomize_on_last_sort: data.randomizeOnLastSort,
+                random_seed: data.randomSeed,
                 hide_watched: data.hideWatched,
                 hide_unwatched: data.hideUnwatched,
                 maximum_watch_date_absolute: data.maximumWatchDateAbsolute,
@@ -383,7 +386,8 @@ export class ChannelsService {
                 only_started_shows: data.onlyStartedShows,
                 only_new_shows: data.onlyNewShows,
                 minimum_duration: data.minimumDuration,
-                maximum_duration: data.maximumDuration
+                maximum_duration: data.maximumDuration,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'

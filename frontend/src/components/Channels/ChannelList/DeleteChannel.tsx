@@ -14,24 +14,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface DeleteChannelProps {
   id: string
   onSuccess?: () => void
+  externalOpen?: boolean
+  onExternalClose?: () => void
 }
 
-const DeleteChannel = ({ id, onSuccess = () => {} }: DeleteChannelProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const DeleteChannel = ({
+  id,
+  onSuccess = () => {},
+  externalOpen,
+  onExternalClose,
+}: DeleteChannelProps) => {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = externalOpen ?? internalOpen
+  const setIsOpen = (open: boolean) => {
+    if (externalOpen !== undefined) {
+      if (!open) onExternalClose?.()
+    } else {
+      setInternalOpen(open)
+    }
+  }
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { handleSubmit } = useForm()
 
@@ -82,46 +91,48 @@ const DeleteChannel = ({ id, onSuccess = () => {} }: DeleteChannelProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete channel</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Channel</DialogTitle>
-            <DialogDescription>
-              This channel will be permanently deleted. Are you sure? You will
-              not be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      {externalOpen === undefined && (
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Delete channel"
+          onClick={() => setIsOpen(true)}
+        >
+          <Trash2 className="size-4 text-destructive" />
+        </Button>
+      )}
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="sm:max-w-md">
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <DialogHeader>
+                <DialogTitle>Delete Channel</DialogTitle>
+                <DialogDescription>
+                  This channel will be permanently deleted. Are you sure? You
+                  will not be able to undo this action.
+                </DialogDescription>
+              </DialogHeader>
 
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter className="mt-4">
+                <DialogClose asChild>
+                  <Button variant="outline" disabled={mutation.isPending}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <LoadingButton
+                  variant="destructive"
+                  type="submit"
+                  loading={mutation.isPending}
+                >
+                  Delete
+                </LoadingButton>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   )
 }
 

@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  Shuffle,
   X,
 } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -154,6 +155,7 @@ interface EpisodeFiltersProps {
   filterParams: FormValues & { additionalChannels?: string[] }
   routeFullPath: string
   channelId: string
+  randomSeed?: number
   variant?: "button" | "menu"
 }
 
@@ -161,6 +163,7 @@ export function EpisodeFilters({
   filterParams,
   routeFullPath,
   channelId,
+  randomSeed,
   variant = "button",
 }: EpisodeFiltersProps) {
   const queryClient = useQueryClient()
@@ -300,6 +303,9 @@ export function EpisodeFilters({
   const [sortDirections, setSortDirections] =
     useState<Map<string, "ascending" | "descending">>(initialDirections)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [seedInputValue, setSeedInputValue] = useState(
+    randomSeed !== undefined ? String(randomSeed) : "",
+  )
 
   const navigate = useNavigate()
 
@@ -353,9 +359,7 @@ export function EpisodeFilters({
       navigate({ to: routeFullPath, search: newSearch as any, replace: true })
       showSuccessToast("Filters applied successfully")
     },
-    onError: (error) => {
-      handleError.call(showErrorToast, error as any)
-    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const onSubmit = (data: FormValues) => {
@@ -390,8 +394,11 @@ export function EpisodeFilters({
 
     // additionalChannels is managed from a different form so the value needs to be
     // extracted from the current URL then all of the other filters can be applied.
+    const parsedSeed =
+      seedInputValue !== "" ? parseInt(seedInputValue, 10) : undefined
     const newSearch: Record<string, any> = {
       additionalChannels: filterParams.additionalChannels,
+      randomSeed: !Number.isNaN(parsedSeed as number) ? parsedSeed : randomSeed,
       ...cleanFormData({ ...filteredData, sortBy: sortByWithDirections }),
     }
 
@@ -450,7 +457,7 @@ export function EpisodeFilters({
             Filters
           </DropdownMenuItem>
         ) : (
-          <Button className="my-4">
+          <Button className="mt-2 mb-4">
             <Filter className="mr-2" />
             Channel Options
           </Button>
@@ -729,6 +736,31 @@ export function EpisodeFilters({
 
             <div className="space-y-4">
               <h3>Sort Options</h3>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="random-seed">Random Seed</Label>
+                <Input
+                  id="random-seed"
+                  type="number"
+                  min={0}
+                  value={seedInputValue}
+                  onChange={(e) => setSeedInputValue(e.target.value)}
+                  className="w-36 h-8 text-sm"
+                  placeholder="Seed value"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  title="Generate a new random seed"
+                  onClick={() =>
+                    setSeedInputValue(
+                      String(Math.floor(Math.random() * 2 ** 31)),
+                    )
+                  }
+                >
+                  <Shuffle className="size-4" />
+                </Button>
+              </div>
               <div className="flex items-center gap-4">
                 <Label>Sort By</Label>
                 {/* Mostly copied from: https://ui.shadcn.com/docs/components/combobox */}

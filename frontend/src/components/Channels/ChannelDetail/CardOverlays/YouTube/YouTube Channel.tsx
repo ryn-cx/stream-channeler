@@ -1,3 +1,4 @@
+// TODO: Validate
 import { formatDuration } from "../../EpisodeCards"
 import {
   CardMetaLines,
@@ -6,7 +7,7 @@ import {
   CardTextArea,
 } from "../components"
 
-export default function MovieCardOverlay({ episode }: CardOverlayProps) {
+export default function YouTubeCardOverlay({ episode }: CardOverlayProps) {
   const releaseDate = episode.air_date || episode.release_date
 
   return (
@@ -20,8 +21,11 @@ export default function MovieCardOverlay({ episode }: CardOverlayProps) {
       />
       <CardMetaLines
         lines={[
+          { label: "Playlist:", value: episode.season.name },
           {
-            value: "Movie",
+            label: "Video:",
+            value: episode.name,
+            valueClassName: "font-bold",
           },
         ]}
       />

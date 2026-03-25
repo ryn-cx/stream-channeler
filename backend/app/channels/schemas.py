@@ -43,6 +43,7 @@ class ChannelPostInput(BaseChannel):
 
 class ChannelPatchInput(SQLModel):
     name: str | None = Field(default=None)
+    channel_number: int | None = Field(default=None)
     public: bool = Field(default=False)
     default_order: str | None = Field(default=None)
 
@@ -176,6 +177,11 @@ class ChannelMediaFilter(SQLModel):
         validation_alias="randomizeOnLastSort",
         serialization_alias="randomizeOnLastSort",
     )
+    random_seed: int | None = PydanticField(
+        default=None,
+        validation_alias="randomSeed",
+        serialization_alias="randomSeed",
+    )
     hide_watched: bool = PydanticField(
         default=False,
         validation_alias="hideWatched",
@@ -259,6 +265,10 @@ class ChannelMediaFilter(SQLModel):
         default=None,
         validation_alias="maximumDuration",
         serialization_alias="maximumDuration",
+    )
+    limit: int | None = PydanticField(
+        default=None,
+        ge=1,
     )
 
 

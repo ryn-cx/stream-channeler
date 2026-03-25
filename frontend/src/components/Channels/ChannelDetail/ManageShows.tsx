@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { List, Settings, Trash2 } from "lucide-react"
 import { useState } from "react"
 
@@ -54,6 +54,7 @@ export function ManageShows({
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
 
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   const { data: showsData } = useQuery({
     queryKey: ["channel-shows", channelId],
@@ -77,25 +78,24 @@ export function ManageShows({
     mutationFn: (showId: string) =>
       ChannelsService.deleteChannelShow({ channelId, showId }),
     // When mutate is called:
-    onMutate: async (showId, context) => {
+    onMutate: async (showId) => {
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({
+      await queryClient.cancelQueries({
         queryKey: ["channel-shows", channelId],
       })
 
       // Snapshot the previous values
-      const previousEpisodesData = context.client.getQueryData([
-        "episodes",
-        channelId,
-      ])
-      const previousShowsData = context.client.getQueryData([
+      const previousEpisodesEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", channelId],
+      })
+      const previousShowsData = queryClient.getQueryData([
         "channel-shows",
         channelId,
       ])
 
       // Optimistically update to the new value
-      context.client.setQueryData(
+      queryClient.setQueryData(
         ["channel-shows", channelId],
         (oldData: any) => ({
           ...oldData,
@@ -106,31 +106,28 @@ export function ManageShows({
       showSuccessToast("Show removed successfully")
 
       // Return a result with the snapshotted values
-      return { previousEpisodesData, previousShowsData }
+      return { previousEpisodesEntries, previousShowsData }
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
-    onError: (error, _showId, onMutateResult, context) => {
-      if (onMutateResult?.previousEpisodesData) {
-        context.client.setQueryData(
-          ["episodes", channelId],
-          onMutateResult.previousEpisodesData,
-        )
+    onError: (error, _showId, context) => {
+      for (const [queryKey, data] of context?.previousEpisodesEntries ?? []) {
+        queryClient.setQueryData(queryKey as any, data)
       }
-      if (onMutateResult?.previousShowsData) {
-        context.client.setQueryData(
+      if (context?.previousShowsData) {
+        queryClient.setQueryData(
           ["channel-shows", channelId],
-          onMutateResult.previousShowsData,
+          context.previousShowsData,
         )
       }
       handleError.call(showErrorToast, error as any)
     },
     // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) => {
-      context.client.invalidateQueries({
+    onSettled: () => {
+      queryClient.invalidateQueries({
         queryKey: ["channel-shows", channelId],
       })
-      context.client.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ["episodes", channelId],
       })
     },
@@ -172,7 +169,7 @@ export function ManageShows({
               Manage Shows
             </DropdownMenuItem>
           ) : (
-            <Button className="my-4">
+            <Button className="mt-2 mb-4">
               <List className="mr-2" />
               Manage Shows
             </Button>

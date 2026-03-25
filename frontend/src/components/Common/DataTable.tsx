@@ -18,6 +18,8 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table"
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -147,10 +149,11 @@ export function DataTable<TData, TValue>({
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="overflow-hidden">
+                  <TableHead key={header.id} className="overflow-hidden py-2">
                     {/* From: https://tanstack.com/table/latest/docs/framework/react/examples/sorting */}
                     {header.isPlaceholder ? null : (
                       <>
+                        {/* biome-ignore lint/a11y/noStaticElementInteractions: role is conditionally set for sortable columns */}
                         <div
                           role={
                             header.column.getCanSort() ? "button" : undefined
@@ -182,8 +185,8 @@ export function DataTable<TData, TValue>({
                             header.getContext(),
                           )}
                           {{
-                            asc: " 🔼",
-                            desc: " 🔽",
+                            asc: <ArrowUp className="inline size-4 ml-1" />,
+                            desc: <ArrowDown className="inline size-4 ml-1" />,
                           }[header.column.getIsSorted() as string] ?? null}
                         </div>
                         {header.column.getCanFilter() ? (

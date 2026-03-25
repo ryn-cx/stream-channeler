@@ -40,6 +40,7 @@ export type ChannelMediaFilter = {
     rotateShows?: boolean;
     rotateShowsRandomly?: boolean;
     randomizeOnLastSort?: boolean;
+    randomSeed?: (number | null);
     hideWatched?: boolean;
     hideUnwatched?: boolean;
     maximumWatchDateAbsolute?: (string | null);
@@ -56,10 +57,12 @@ export type ChannelMediaFilter = {
     onlyNewShows?: boolean;
     minimumDuration?: (number | null);
     maximumDuration?: (number | null);
+    limit?: (number | null);
 };
 
 export type ChannelOutput = {
     name?: (string | null);
+    channel_number?: (number | null);
     public?: boolean;
     default_order?: (string | null);
     id: string;
@@ -68,12 +71,14 @@ export type ChannelOutput = {
 
 export type ChannelPatchInput = {
     name?: (string | null);
+    channel_number?: (number | null);
     public?: boolean;
     default_order?: (string | null);
 };
 
 export type ChannelPostInput = {
     name?: (string | null);
+    channel_number?: (number | null);
     public?: boolean;
     default_order?: (string | null);
 };
@@ -625,6 +630,7 @@ export type ChannelsGetChannelEpisodesData = {
     episodeOrdering?: boolean;
     hideUnwatched?: boolean;
     hideWatched?: boolean;
+    limit?: (number | null);
     maximumAirDateAbsolute?: (string | null);
     maximumAirDateRelative?: (number | null);
     maximumDuration?: (number | null);
@@ -640,6 +646,7 @@ export type ChannelsGetChannelEpisodesData = {
     onlyNewShows?: boolean;
     onlyStartedShows?: boolean;
     randomizeOnLastSort?: boolean;
+    randomSeed?: (number | null);
     rotateShows?: boolean;
     rotateShowsRandomly?: boolean;
     sortBy?: Array<(string)>;

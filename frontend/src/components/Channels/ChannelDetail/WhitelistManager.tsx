@@ -74,9 +74,7 @@ export function WhitelistManager({
       showSuccessToast("Whitelist settings saved successfully")
       onClose()
     },
-    onError: (error) => {
-      handleError.call(showErrorToast, error as any)
-    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const toggleWhitelistMode = () => {
