@@ -68,17 +68,34 @@ class BaseMediaMixin(SQLModel):
     def set_update_at(self, update_at: datetime | None) -> None:
         """Validate and set the update_at field.
 
-        Validation will make sure that the update_at field is never incremented because
-        updates should occur as soon as possible and there is almost never a reason to
-        delay an update further into the future.
+        If the existing value is in the future, only allow decrementing. This will make
+        updates occur as soon as possible. If the existing value is in the past, only
+        allow incrementing. This will make sure an older update_at value does not cause
+        updates to skip by overwriting a newer value.
+        For example
+        - Current date is January 4th
+        - data_timestamp is January 2nd
+        - update_at is January 3rd
+        - new update_at is set to January 1st
+        The data from January 3rd will be lost in this situation.
+
+        , and if it is in
+        the past, only allow incrementing. Only decrementing makes it so files are
+        updated as soon as possible, and only incrementing makes it so files don't
+        accidently use old data.
         """
-        # If update_at is not set nothing else needs to be done.
         if not update_at:
             return
 
-        # If the new date is before the existing date the existing date should be
-        # updated so the update happens as soon as possible.
-        if self.update_at is None or update_at < self.update_at:
+        if self.update_at is None:
+            self.update_at = update_at
+            return
+
+        now = datetime.now(tz=self.update_at.tzinfo)
+
+        if (self.update_at > now and update_at < self.update_at) or (
+            self.update_at <= now and update_at > self.update_at
+        ):
             self.update_at = update_at
 
 
