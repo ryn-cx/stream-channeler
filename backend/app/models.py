@@ -72,35 +72,12 @@ class BaseMediaMixin(SQLModel):
         updates should occur as soon as possible and there is almost never a reason to
         delay an update further into the future.
         """
-        # If the existing update_at value is newer than the data_timestamp, it has
-        # already been used and can be cleared.
-        if (
-            self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
-        ):
-            self.update_at = None
-
         # If update_at is not set nothing else needs to be done.
         if not update_at:
             return
 
-        # If the existing data is newer than the new update_at value then the new
-        # update_at can be ignored because the data is already up to date.
-        if self.data_timestamp and self.data_timestamp >= update_at:
-            return
-
-        # If the existing data is newer than the existing update_at value that update_at
-        # value is no longer useful and can be cleared.
-        if (
-            self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
-        ):
-            self.update_at = None
-
-        #  If the new date is before the existing date the existing date should be
-        #  updated so the update happens as soon as possible.
+        # If the new date is before the existing date the existing date should be
+        # updated so the update happens as soon as possible.
         if self.update_at is None or update_at < self.update_at:
             self.update_at = update_at
 

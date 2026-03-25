@@ -91,7 +91,7 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
         statement = (
             select(media_class)
             .where(
-                col(media_class.update_at) > col(media_class.data_timestamp),
+                col(media_class.update_at).is_not(None),
                 col(media_class.update_at) < tz_datetime.now(),
                 col(media_class.deleted_at).is_(None),
             )
