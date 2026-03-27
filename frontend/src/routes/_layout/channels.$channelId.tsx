@@ -117,7 +117,7 @@ function getEpisodesQueryOptions(
         channelId,
         ...searchParams,
       }),
-    queryKey: ["episodes", channelId, searchParams.randomSeed],
+    queryKey: ["episodes", channelId, searchParams],
     refetchOnWindowFocus: false,
     placeholderData: (previousData: any) => previousData,
   }
