@@ -1,32 +1,38 @@
-# TODO: Validate
 import uuid
 
 from sqlmodel import Session
 
 from app.episodes.models import Episode
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.sources.models import Source
+from app.users.models import User
 from tests.seasons.utils import create_random_season
+from tests.users.utils import CreatedUser
 from tests.utils.utils import build_random_model
 
 
 def create_random_episode(
     db: Session,
-    season: Season | None = None,
-    *,
-    show: Show | None = None,
-    user_id: uuid.UUID | None = None,
+    parent: Season
+    | Show
+    | Source
+    | Plugin
+    | User
+    | CreatedUser
+    | uuid.UUID
+    | None = None,
     **kwargs: object,
 ) -> Episode:
-    if season is None:
-        season = create_random_season(db, show, user_id=user_id)
+    if not isinstance(parent, Season):
+        parent = create_random_season(db, parent)
     episode = build_random_model(
         Episode,
-        season_id=season.id,
+        season_id=parent.id,
         deleted_at=None,
         **kwargs,
     )
     db.add(episode)
-    # Flush so episode.season and episode.watches can be accessed.
-    db.flush()
+    db.flush()  # Allows episode.season and episode.watches to be accessed.
     return episode

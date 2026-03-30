@@ -1,4 +1,3 @@
-# TODO: Validate
 from app.shows.models import Show
 from app.shows.schemas import (
     ShowOutput,
@@ -12,7 +11,6 @@ from tests.utils.base import BaseTests
 from tests.utils.base_create import BaseCreateTests
 from tests.utils.base_delete import BaseDeleteTests
 from tests.utils.base_get import BaseGetTests
-from tests.utils.base_list import BaseListFromParentTests
 from tests.utils.base_update import BaseUpdateTests
 
 
@@ -31,10 +29,6 @@ class TestCreateShow(ShowTestMixin, BaseCreateTests[Show]):
 
 
 class TestGetShow(ShowTestMixin, BaseGetTests[Show]):
-    pass
-
-
-class TestListShowsFromSource(ShowTestMixin, BaseListFromParentTests[Show]):
     pass
 
 

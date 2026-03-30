@@ -1,4 +1,3 @@
-# TODO: Validate
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceOutput,
@@ -12,7 +11,6 @@ from tests.utils.base import BaseTests
 from tests.utils.base_create import BaseCreateTests
 from tests.utils.base_delete import BaseDeleteTests
 from tests.utils.base_get import BaseGetTests
-from tests.utils.base_list import BaseListFromParentTests
 from tests.utils.base_update import BaseUpdateTests
 
 
@@ -32,10 +30,6 @@ class TestCreateSource(SourceTestMixin, BaseCreateTests[Source]):
 
 
 class TestGetSource(SourceTestMixin, BaseGetTests[Source]):
-    pass
-
-
-class TestListSourcesFromPlugin(SourceTestMixin, BaseListFromParentTests[Source]):
     pass
 
 

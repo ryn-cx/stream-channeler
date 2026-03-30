@@ -1,4 +1,3 @@
-# TODO: Validate
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
@@ -12,7 +11,6 @@ from tests.utils.base import BaseTests
 from tests.utils.base_create import BaseCreateTests
 from tests.utils.base_delete import BaseDeleteTests
 from tests.utils.base_get import BaseGetTests
-from tests.utils.base_list import BaseListFromParentTests
 from tests.utils.base_update import BaseUpdateTests
 
 
@@ -32,10 +30,6 @@ class TestCreateSeason(SeasonTestMixin, BaseCreateTests[Season]):
 
 
 class TestGetSeason(SeasonTestMixin, BaseGetTests[Season]):
-    pass
-
-
-class TestListSeasonsFromShow(SeasonTestMixin, BaseListFromParentTests[Season]):
     pass
 
 

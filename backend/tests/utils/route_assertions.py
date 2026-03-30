@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -48,13 +47,7 @@ def assert_not_enough_permission(
     user: CreatedUser,
     parameters: dict[str, Any] | None = None,
 ) -> None:
-    response = _request(
-        client,
-        method,
-        url,
-        headers=user.headers,
-        parameters=parameters,
-    )
+    response = _request(client, method, url, user.headers, parameters)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -84,17 +77,6 @@ def assert_forbidden(  # noqa: PLR0913
     assert response.json()["detail"] == detail
 
 
-def assert_delete(
-    client: TestClient,
-    url: str,
-    message: str,
-    headers: dict[str, str],
-) -> None:
-    response = _request(client, "delete", url, headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["message"] == message
-
-
 def assert_conflict(  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -108,6 +90,28 @@ def assert_conflict(  # noqa: PLR0913
     assert response.json()["detail"] == detail
 
 
+def assert_delete(
+    client: TestClient,
+    url: str,
+    message: str,
+    headers: dict[str, str],
+) -> None:
+    response = _request(client, "delete", url, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["message"] == message
+
+
+def assert_unprocessable(
+    client: TestClient,
+    method: Method,
+    url: str,
+    headers: dict[str, str],
+    parameters: dict[str, Any] | list[Any] | None = None,
+) -> None:
+    response = _request(client, method, url, headers=headers, parameters=parameters)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
 def assert_success[T: BaseModel](  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -115,10 +119,24 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     output_model: type[T],
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
-) -> T | list[T]:
+) -> T:
     response = _request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_200_OK
-    response_json = response.json()
-    if isinstance(response_json, list):
-        return [output_model.model_validate(item) for item in response_json]
+    response_json: dict[str, object] = response.json()
+    assert not isinstance(response_json, list)
     return output_model.model_validate(response_json)
+
+
+def assert_success_list[T: BaseModel](  # noqa: PLR0913
+    client: TestClient,
+    method: Method,
+    url: str,
+    output_model: type[T],
+    headers: dict[str, str] | None = None,
+    parameters: dict[str, Any] | list[Any] | None = None,
+) -> list[T]:
+    response = _request(client, method, url, headers=headers, parameters=parameters)
+    assert response.status_code == status.HTTP_200_OK
+    response_json: list[dict[str, object]] = response.json()
+    assert isinstance(response_json, list)
+    return [output_model.model_validate(item) for item in response_json]

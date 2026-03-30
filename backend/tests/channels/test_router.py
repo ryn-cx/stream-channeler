@@ -1,0 +1,1575 @@
+# TODO: Validate
+from __future__ import annotations
+
+import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
+from functools import partial
+from typing import Any, Literal
+
+import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+from app.channels.models import Channel, ChannelShow, URLStatus
+from app.channels.schemas import (
+    ChannelEpisodesOutput,
+    ChannelMediaFilter,
+    ChannelOutput,
+    ChannelPatchInput,
+    ChannelPostInput,
+    ChannelQueuesListOutput,
+    ChannelShowsOutput,
+    ChannelsListOutput,
+    EpisodeWithExtrasOutput,
+    MultipleSortOptionOutputs,
+    WhitelistEntryInput,
+    WhitelistShowInput,
+    WhitelistShowOutput,
+)
+from app.channels.service import update_whitelist
+from app.config import settings
+from app.episodes.models import Episode
+from app.episodes.schemas import EpisodeOutput
+from app.models import Message
+from app.plugins.schemas import PluginOutput
+from app.seasons.schemas import SeasonOutput
+from app.shows.schemas import ShowOutput
+from app.sources.schemas import SourceOutput
+from app.users.models import User
+from tests.channels.utils import (
+    create_random_channel,
+    create_random_channel_queue,
+    create_random_channel_show,
+)
+from tests.episodes.utils import create_random_episode
+from tests.plugins.utils import create_random_plugin
+from tests.shows.utils import create_random_show
+from tests.users.utils import authentication_token_from_email, create_random_user
+from tests.utils.base import BaseTests
+from tests.utils.base_create import UserOwnedCreateMixin
+from tests.utils.base_delete import BaseDeleteTests
+from tests.utils.base_get import UserOwnedGetMixin
+from tests.utils.base_update import BaseUpdateTests
+from tests.utils.route_assertions import (
+    Method,
+    assert_delete,
+    assert_forbidden,
+    assert_not_authenticated,
+    assert_not_found,
+    assert_success,
+)
+from tests.utils.utils import dump_random_model, random_lower_string
+
+SKIP_REASON = "Channels use /channels, not /users/{id}/channels"
+SORT_OPTIONS_URL = f"{settings.API_V1_STR}/channels/sort-options"
+
+# region Validated
+
+
+class ChannelTestMixin(BaseTests[Channel]):
+    database_model = Channel
+    input_schema = ChannelPostInput
+    output_model = ChannelOutput
+    patch_model = ChannelPatchInput
+    create_record_function = staticmethod(create_random_channel)
+    list_output_model = ChannelsListOutput
+
+    # Channels do not rely on plugins for visibility and instead have their own public
+    # field.
+    def set_visibility(self, record: Channel, *, record_is_public: bool) -> None:
+        record.public = record_is_public
+
+
+class TestCreateChannel(ChannelTestMixin, UserOwnedCreateMixin[Channel]):
+    pass
+
+
+class TestGetChannel(ChannelTestMixin, UserOwnedGetMixin[Channel]):
+    pass
+
+
+class TestUpdateChannel(ChannelTestMixin, BaseUpdateTests[Channel]):
+    pass
+
+
+class TestDeleteChannel(ChannelTestMixin, BaseDeleteTests[Channel]):
+    pass
+
+
+class TestSortOptions:
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    def test_sort_options(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_is_authenticated: bool,
+    ) -> None:
+        headers = {}
+        if user_is_authenticated:
+            user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=user.email,
+                db=session_scoped_db,
+            )
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=SORT_OPTIONS_URL,
+            output_model=MultipleSortOptionOutputs,
+            headers=headers,
+        )
+        assert len(result.data) > 0
+
+
+# endregion Validated
+
+
+class BaseChannelSubEndpointTests(ChannelTestMixin):
+    sub_http_method: Method
+    sub_assert_response: Callable[..., None]
+    sub_parameters: dict[str, Any] | list[Any] | None = None
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        raise NotImplementedError
+
+    def can_access_sub_endpoint(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,  # noqa: ARG002
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
+
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_get_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=user_is_owner,
+            user_is_authenticated=user_is_authenticated,
+            record_is_public=record_is_public,
+        )
+
+        url = self.sub_url(initial_test_data.record.id)
+        if self.can_access_sub_endpoint(
+            user_is_authenticated=user_is_authenticated,
+            user_is_owner=user_is_owner,
+            record_is_public=record_is_public,
+        ):
+            self.sub_assert_response(
+                client=session_scoped_client,
+                method=self.sub_http_method,
+                url=url,
+                headers=initial_test_data.headers,
+                parameters=self.sub_parameters,
+            )
+        else:
+            self.assert_cannot_access(
+                session_scoped_db,
+                session_scoped_client,
+                user_is_authenticated=user_is_authenticated,
+                method=self.sub_http_method,
+                url=url,
+                model_name=self.model_name,
+                headers=initial_test_data.headers,
+            )
+
+    def test_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        assert_not_found(
+            client=session_scoped_client,
+            method=self.sub_http_method,
+            url=self.sub_url(uuid.uuid4()),
+            detail=f"{self.model_name} not found",
+            headers=initial_test_data.headers,
+            parameters=self.sub_parameters,
+        )
+
+
+class TestUpdateDefaultOrder:
+    @staticmethod
+    def url(channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/channels/{channel_id}/default-order"
+
+    def assert_update(
+        self,
+        session_scoped_client: TestClient,
+        channel_id: uuid.UUID,
+        headers: dict[str, str],
+        mode: Literal["minimal", "full"],
+    ) -> ChannelOutput:
+        response = session_scoped_client.patch(
+            self.url(channel_id),
+            json=dump_random_model(ChannelMediaFilter, mode),
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        return ChannelOutput.model_validate(response.json())
+
+    @pytest.mark.parametrize("initial_mode", ["minimal", "full"])
+    @pytest.mark.parametrize("update_mode", ["minimal", "full"])
+    def test_update_default_order(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        initial_mode: Literal["minimal", "full"],
+        update_mode: Literal["minimal", "full"],
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(session_scoped_db, user=user.id)
+
+        self.assert_update(
+            session_scoped_client,
+            channel.id,
+            user_headers,
+            initial_mode,
+        )
+        self.assert_update(session_scoped_client, channel.id, user_headers, update_mode)
+
+    @pytest.mark.parametrize("user_type", ["normal_user", "anon"])
+    def test_update_default_order_errors(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        user_type: str,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        channel = create_random_channel(session_scoped_db, user=owner.id)
+
+        if user_type == "normal_user":
+            other_user = create_random_user(session_scoped_db)
+            other_headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=other_user.email,
+                db=session_scoped_db,
+            )
+            assert_forbidden(
+                client=session_scoped_client,
+                method="patch",
+                url=self.url(channel.id),
+                detail="Not authorized to access this Channel",
+                headers=other_headers,
+            )
+        else:
+            assert_not_authenticated(
+                client=session_scoped_client,
+                method="patch",
+                url=self.url(channel.id),
+            )
+
+    def test_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        assert_not_found(
+            client=session_scoped_client,
+            method="patch",
+            url=self.url(uuid.uuid4()),
+            detail="Channel not found",
+            headers=user_headers,
+        )
+
+
+class TestChannelEpisodes(BaseChannelSubEndpointTests):
+    sub_http_method = "get"
+    sub_parameters = None
+
+    @staticmethod
+    def sub_assert_response(
+        client: TestClient,
+        method: str,  # noqa: ARG004
+        url: str,
+        headers: dict[str, str] | None = None,
+        parameters: dict[str, object] | list[object] | None = None,  # noqa: ARG004
+    ) -> None:
+        response = client.get(url, headers=headers)
+        assert response.status_code == status.HTTP_200_OK
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/channels/{channel_id}/episodes"
+
+    @pytest.mark.skip(reason="Covered by test_with_episodes and test_no_episodes")
+    def test_get_permissions(self) -> None:  # type: ignore[override]
+        pass
+
+    def generic_record_url(self, record_id: uuid.UUID | str) -> str:
+        return f"{settings.API_V1_STR}/channels/{record_id}/episodes"
+
+    @staticmethod
+    def create_channel_with_episodes(
+        session_scoped_db: Session,
+        user_id: uuid.UUID,
+        *,
+        public: bool,
+    ) -> tuple[Channel, ChannelEpisodesOutput]:
+        channel = create_random_channel(
+            session_scoped_db,
+            user=user_id,
+            public=public,
+        )
+
+        expected = ChannelEpisodesOutput(
+            episodes=[],
+            seasons={},
+            shows={},
+            sources={},
+            plugins={},
+            channels={},
+        )
+        expected.channels[channel.id] = ChannelOutput.model_validate(channel)
+
+        for _ in range(2):
+            plugin = create_random_plugin(session_scoped_db, user_id, public=True)
+            channel_show = create_random_channel_show(
+                session_scoped_db,
+                channel,
+                plugin,
+                white_list_mode=False,
+            )
+            show = channel_show.show
+            create_random_episode(session_scoped_db, show)
+            source = show.source
+            plugin = source.plugin
+            season = show.seasons[0]
+            episode = season.episodes[0]
+
+            expected.episodes.append(
+                EpisodeWithExtrasOutput(**episode.model_dump(), channel_id=channel.id),
+            )
+            expected.seasons[season.id] = SeasonOutput.model_validate(season)
+            expected.shows[show.id] = ShowOutput.model_validate(show)
+            expected.sources[source.id] = SourceOutput.model_validate(source)
+            expected.plugins[plugin.id] = PluginOutput.model_validate(plugin)
+
+        return channel, expected
+
+    @staticmethod
+    def assert_episodes(
+        response_data: ChannelEpisodesOutput,
+        expected: ChannelEpisodesOutput,
+    ) -> None:
+        response_data.episodes.sort(key=lambda e: e.id)
+        expected.episodes.sort(key=lambda e: e.id)
+        assert response_data.episodes == expected.episodes
+        assert response_data.seasons == expected.seasons
+        assert response_data.shows == expected.shows
+        assert response_data.sources == expected.sources
+        assert response_data.plugins == expected.plugins
+        assert response_data.channels == expected.channels
+        assert response_data == expected
+
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_with_episodes(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        record_is_public: bool,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=owner.email,
+            db=session_scoped_db,
+        )
+        channel, expected = self.create_channel_with_episodes(
+            session_scoped_db,
+            owner.id,
+            public=record_is_public,
+        )
+
+        if not user_is_authenticated and not record_is_public:
+            assert_not_authenticated(
+                client=session_scoped_client,
+                method="get",
+                url=self.generic_record_url(channel.id),
+            )
+            return
+        if user_is_authenticated and not user_is_owner and not record_is_public:
+            other_user = create_random_user(session_scoped_db)
+            other_headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=other_user.email,
+                db=session_scoped_db,
+            )
+            assert_forbidden(
+                client=session_scoped_client,
+                method="get",
+                url=self.generic_record_url(channel.id),
+                detail="Not authorized to access this Channel",
+                headers=other_headers,
+            )
+            return
+
+        if user_is_owner:
+            headers = owner_headers
+        elif user_is_authenticated:
+            normal_user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=normal_user.email,
+                db=session_scoped_db,
+            )
+        else:
+            headers = {}
+        response = session_scoped_client.get(
+            self.generic_record_url(channel.id),
+            headers=headers,
+        )
+        response_data = ChannelEpisodesOutput.model_validate(response.json())
+
+        assert response.status_code == status.HTTP_200_OK
+        self.assert_episodes(response_data, expected)
+
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_no_episodes(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        record_is_public: bool,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(
+            session_scoped_db,
+            user=owner.id,
+            public=record_is_public,
+        )
+        expected = ChannelEpisodesOutput(
+            episodes=[],
+            seasons={},
+            shows={},
+            sources={},
+            plugins={},
+            channels={},
+        )
+
+        if not user_is_authenticated and not record_is_public:
+            assert_not_authenticated(
+                client=session_scoped_client,
+                method="get",
+                url=self.generic_record_url(channel.id),
+            )
+            return
+        if user_is_authenticated and not user_is_owner and not record_is_public:
+            other_user = create_random_user(session_scoped_db)
+            other_headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=other_user.email,
+                db=session_scoped_db,
+            )
+            assert_forbidden(
+                client=session_scoped_client,
+                method="get",
+                url=self.generic_record_url(channel.id),
+                detail="Not authorized to access this Channel",
+                headers=other_headers,
+            )
+            return
+
+        if user_is_owner:
+            headers = owner_headers
+        elif user_is_authenticated:
+            normal_user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=normal_user.email,
+                db=session_scoped_db,
+            )
+        else:
+            headers = {}
+        response = session_scoped_client.get(
+            self.generic_record_url(channel.id),
+            headers=headers,
+        )
+        response_data = ChannelEpisodesOutput.model_validate(response.json())
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response_data == expected
+
+    @pytest.mark.parametrize(
+        "user_type",
+        ["owner", "plugin_owner", "normal_user", "anon"],
+    )
+    def test_private_plugin_visibility(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        user_type: str,
+    ) -> None:
+        """Episodes from private plugins should only be visible to the plugin owner."""
+        channel_owner = create_random_user(session_scoped_db)
+        channel_owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=channel_owner.email,
+            db=session_scoped_db,
+        )
+        plugin_owner = create_random_user(session_scoped_db)
+        plugin_owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=plugin_owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(
+            session_scoped_db,
+            user=channel_owner.id,
+            public=True,
+        )
+
+        # Add a show from a private plugin owned by plugin_owner
+        private_plugin = create_random_plugin(
+            session_scoped_db,
+            plugin_owner.id,
+            public=False,
+        )
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            private_plugin,
+            white_list_mode=False,
+        )
+        show = channel_show.show
+        create_random_episode(session_scoped_db, show)
+
+        if user_type == "owner":
+            headers = channel_owner_headers
+        elif user_type == "plugin_owner":
+            headers = plugin_owner_headers
+        elif user_type == "normal_user":
+            normal_user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=normal_user.email,
+                db=session_scoped_db,
+            )
+        else:
+            headers = {}
+
+        response = session_scoped_client.get(
+            self.generic_record_url(channel.id),
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = ChannelEpisodesOutput.model_validate(response.json())
+
+        if user_type == "plugin_owner":
+            assert len(data.episodes) == 1
+            assert len(data.seasons) == 1
+            assert len(data.shows) == 1
+            assert len(data.sources) == 1
+            assert len(data.plugins) == 1
+            assert len(data.channels) == 1
+        else:
+            assert not data.episodes
+            assert not data.seasons
+            assert not data.shows
+            assert not data.sources
+            assert not data.plugins
+            assert not data.channels
+
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_public_plugin_visibility(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+    ) -> None:
+        """Episodes from public plugins should be visible to all users."""
+        channel_owner = create_random_user(session_scoped_db)
+        channel_owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=channel_owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(
+            session_scoped_db,
+            user=channel_owner.id,
+            public=True,
+        )
+
+        public_plugin = create_random_plugin(
+            session_scoped_db,
+            channel_owner.id,
+            public=True,
+        )
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            public_plugin,
+            white_list_mode=False,
+        )
+        show = channel_show.show
+        create_random_episode(session_scoped_db, show)
+
+        if user_is_owner:
+            headers = channel_owner_headers
+        elif user_is_authenticated:
+            normal_user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=normal_user.email,
+                db=session_scoped_db,
+            )
+        else:
+            headers = {}
+
+        response = session_scoped_client.get(
+            self.generic_record_url(channel.id),
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = ChannelEpisodesOutput.model_validate(response.json())
+        assert len(data.episodes) == 1
+
+
+class TestListChannelShows:
+    @staticmethod
+    def url(channel: Channel | ChannelOutput) -> str:
+        return f"{settings.API_V1_STR}/channels/{channel.id}/shows"
+
+    @staticmethod
+    def build_expected(channel: Channel) -> ChannelShowsOutput:
+        expected = ChannelShowsOutput()
+        for channel_show in channel.shows:
+            show = channel_show.show
+            source = show.source
+            expected.shows.append(ShowOutput.model_validate(show))
+            if source.id not in expected.sources:
+                expected.sources[source.id] = SourceOutput.model_validate(source)
+        return expected
+
+    @pytest.mark.parametrize("show_count", [0, 1, 2])
+    def test_list_shows_data(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        show_count: int,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(session_scoped_db, user=owner.id)
+        for _ in range(show_count):
+            create_random_channel_show(session_scoped_db, channel)
+
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=self.url(channel),
+            output_model=ChannelShowsOutput,
+            headers=owner_headers,
+        )
+        expected = self.build_expected(channel)
+        assert result.shows == expected.shows
+        assert result.sources == expected.sources
+
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    @pytest.mark.parametrize("user_type", ["owner", "normal_user", "anonymous"])
+    def test_list_shows_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        record_is_public: bool,
+        user_type: str,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(
+            session_scoped_db,
+            user=owner.id,
+            public=record_is_public,
+        )
+        show = create_random_show(
+            session_scoped_db,
+            owner.id,
+            name=random_lower_string(),
+        )
+        create_random_channel_show(session_scoped_db, channel, show)
+
+        if user_type == "normal_user" and not record_is_public:
+            other_user = create_random_user(session_scoped_db)
+            other_headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=other_user.email,
+                db=session_scoped_db,
+            )
+            assert_forbidden(
+                client=session_scoped_client,
+                method="get",
+                url=self.url(channel),
+                detail="Not authorized to access this Channel",
+                headers=other_headers,
+            )
+            return
+        if user_type == "anonymous" and not record_is_public:
+            assert_not_authenticated(
+                client=session_scoped_client,
+                method="get",
+                url=self.url(channel),
+            )
+            return
+
+        if user_type == "owner":
+            headers = owner_headers
+        elif user_type == "normal_user":
+            normal_user = create_random_user(session_scoped_db)
+            headers = authentication_token_from_email(
+                client=session_scoped_client,
+                email=normal_user.email,
+                db=session_scoped_db,
+            )
+        else:
+            headers = {}
+
+        assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=self.url(channel),
+            output_model=ChannelShowsOutput,
+            headers=headers,
+        )
+
+    def test_list_shows_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        assert_not_found(
+            client=session_scoped_client,
+            method="get",
+            url=f"{settings.API_V1_STR}/channels/{uuid.uuid4()}/shows",
+            detail="Channel not found",
+            headers=user_headers,
+        )
+
+
+class TestDeleteChannelShow:
+    @staticmethod
+    def url(channel: Channel | ChannelOutput, show_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/channels/{channel.id}/remove-show/{show_id}"
+
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_remove_show_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        record_is_public: bool,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+    ) -> None:
+        owner = create_random_user(session_scoped_db)
+        owner_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=owner.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(
+            session_scoped_db,
+            user=owner.id,
+            public=record_is_public,
+        )
+        show = create_random_show(
+            session_scoped_db,
+            owner.id,
+            name=random_lower_string(),
+        )
+        create_random_channel_show(session_scoped_db, channel, show)
+
+        if not user_is_authenticated:
+            assert_not_authenticated(
+                client=session_scoped_client,
+                method="delete",
+                url=self.url(channel, show.id),
+            )
+            return
+
+        if user_is_owner:
+            assert_delete(
+                client=session_scoped_client,
+                url=self.url(channel, show.id),
+                message=f"{show.name} removed from channel successfully",
+                headers=owner_headers,
+            )
+            return
+
+        other_user = create_random_user(session_scoped_db)
+        other_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=other_user.email,
+            db=session_scoped_db,
+        )
+        assert_forbidden(
+            client=session_scoped_client,
+            method="delete",
+            url=self.url(channel, show.id),
+            detail="Not authorized to access this Channel",
+            headers=other_headers,
+        )
+
+    def test_remove_show_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(session_scoped_db, user=user.id)
+
+        assert_not_found(
+            client=session_scoped_client,
+            method="delete",
+            url=self.url(channel, uuid.uuid4()),
+            detail="Show not found",
+            headers=user_headers,
+        )
+
+    def test_remove_show_not_in_channel(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        channel = create_random_channel(session_scoped_db, user=user.id)
+        # Create the show on a different channel.
+        other_channel = create_random_channel(session_scoped_db, user=user.id)
+        other_channel_show = create_random_channel_show(
+            session_scoped_db,
+            other_channel,
+        )
+
+        assert_not_found(
+            client=session_scoped_client,
+            method="delete",
+            url=self.url(channel, other_channel_show.show_id),
+            detail="Show not found in channel",
+            headers=user_headers,
+        )
+
+    def test_remove_show_channel_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        user_headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
+        )
+        assert_not_found(
+            client=session_scoped_client,
+            method="delete",
+            url=f"{settings.API_V1_STR}/channels/{uuid.uuid4()}/remove-show/{uuid.uuid4()}",
+            detail="Channel not found",
+            headers=user_headers,
+        )
+
+
+def assert_queue_list_response(
+    client: TestClient,
+    method: Method,
+    url: str,
+    headers: dict[str, str] | None = None,
+    parameters: dict[str, object] | list[object] | None = None,
+) -> None:
+    assert_success(
+        client=client,
+        method=method,
+        url=url,
+        output_model=ChannelQueuesListOutput,
+        headers=headers,
+        parameters=parameters,
+    )
+
+
+def assert_message_response(
+    client: TestClient,
+    method: Method,
+    url: str,
+    headers: dict[str, str] | None = None,
+    parameters: dict[str, object] | list[object] | None = None,
+) -> None:
+    assert_success(
+        client=client,
+        method=method,
+        url=url,
+        output_model=Message,
+        headers=headers,
+        parameters=parameters,
+    )
+
+
+class BaseChannelQueueTests(BaseChannelSubEndpointTests):
+    def queue_url(self, channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/import-queue"
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return self.queue_url(channel_id)
+
+    def queue_parameters(self) -> list[str] | None:
+        return None
+
+    def assert_queue_contents(
+        self,
+        session_scoped_client: TestClient,
+        channel: Channel,
+        headers: dict[str, str],
+        expected_urls: list[str],
+    ) -> None:
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=self.queue_url(channel.id),
+            output_model=ChannelQueuesListOutput,
+            headers=headers,
+        )
+        assert [entry.url for entry in result.data] == expected_urls
+
+    def test_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        assert_not_found(
+            client=session_scoped_client,
+            method=self.sub_http_method,
+            url=self.queue_url(uuid.uuid4()),
+            detail=f"{self.model_name} not found",
+            headers=initial_test_data.headers,
+            parameters=self.queue_parameters(),
+        )
+
+
+class TestQueueGet(BaseChannelQueueTests):
+    sub_http_method = "get"
+    sub_assert_response = staticmethod(assert_queue_list_response)
+
+    def test_get_queue(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        queue_entry_1 = create_random_channel_queue(
+            session_scoped_db,
+            initial_test_data.record,
+        )
+        queue_entry_2 = create_random_channel_queue(
+            session_scoped_db,
+            initial_test_data.record,
+        )
+
+        self.assert_queue_contents(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            expected_urls=[queue_entry_2.url, queue_entry_1.url],
+        )
+
+    def test_get_queue_empty(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+
+        self.assert_queue_contents(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            expected_urls=[],
+        )
+
+
+class TestQueueAddURL(BaseChannelQueueTests):
+    sub_http_method = "post"
+    sub_assert_response = staticmethod(assert_queue_list_response)
+    sub_parameters = ["placeholder"]
+
+    def queue_parameters(self) -> list[str]:
+        return [random_lower_string()]
+
+    def assert_add_urls(
+        self,
+        session_scoped_client: TestClient,
+        channel: Channel,
+        headers: dict[str, str],
+        urls: list[str],
+        expected_urls: list[str],
+    ) -> None:
+        assert_success(
+            client=session_scoped_client,
+            method="post",
+            url=self.queue_url(channel.id),
+            output_model=ChannelQueuesListOutput,
+            headers=headers,
+            parameters=urls,
+        )
+        self.assert_queue_contents(
+            session_scoped_client,
+            channel,
+            headers,
+            expected_urls,
+        )
+
+    @pytest.mark.parametrize("initial_url_count", [0, 1, 2])
+    @pytest.mark.parametrize("new_url_count", [0, 1, 2])
+    def test_append_urls(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        initial_url_count: int,
+        new_url_count: int,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+
+        initial_urls = [
+            create_random_channel_queue(session_scoped_db, initial_test_data.record).url
+            for _ in range(initial_url_count)
+        ]
+
+        new_urls = [random_lower_string() for _ in range(new_url_count)]
+        self.assert_add_urls(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            urls=new_urls,
+            expected_urls=new_urls[::-1] + initial_urls[::-1],
+        )
+
+    def test_append_existing_url(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        existing = create_random_channel_queue(
+            session_scoped_db,
+            initial_test_data.record,
+        )
+        self.assert_add_urls(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            urls=[existing.url],
+            expected_urls=[existing.url],
+        )
+
+    def test_append_duplicate_urls(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        random_url = random_lower_string()
+        self.assert_add_urls(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            urls=[random_url, random_url],
+            expected_urls=[random_url],
+        )
+
+    def test_append_duplicate_existing_url(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        existing = create_random_channel_queue(
+            session_scoped_db,
+            initial_test_data.record,
+        )
+        self.assert_add_urls(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            urls=[existing.url],
+            expected_urls=[existing.url],
+        )
+
+
+class TestQueueDeleteURL(BaseChannelQueueTests):
+    sub_http_method = "delete"
+    sub_assert_response = staticmethod(
+        partial(assert_not_found, detail="URL not found"),
+    )
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return f"{self.queue_url(channel_id)}/{uuid.uuid4()}"
+
+    def queue_entry_url(self, channel: Channel, entry_id: uuid.UUID) -> str:
+        return f"{self.queue_url(channel.id)}/{entry_id}"
+
+    def test_delete_url(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        queue_entries = [
+            create_random_channel_queue(session_scoped_db, initial_test_data.record)
+            for _ in range(3)
+        ]
+
+        for queue_entry in queue_entries:
+            assert_delete(
+                client=session_scoped_client,
+                url=self.queue_entry_url(initial_test_data.record, queue_entry.id),
+                message=f"{queue_entry.url} removed from import queue successfully",
+                headers=initial_test_data.headers,
+            )
+
+        self.assert_queue_contents(
+            session_scoped_client,
+            initial_test_data.record,
+            initial_test_data.headers,
+            expected_urls=[],
+        )
+
+    def test_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+
+        assert_not_found(
+            client=session_scoped_client,
+            method="delete",
+            url=self.queue_entry_url(initial_test_data.record, uuid.uuid4()),
+            detail="URL not found",
+            headers=initial_test_data.headers,
+        )
+
+
+class TestClearCompletedQueue(BaseChannelSubEndpointTests):
+    sub_http_method = "delete"
+    sub_assert_response = staticmethod(assert_message_response)
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/clear-completed-import-queue"
+
+    @pytest.mark.parametrize(
+        ("initial_statuses", "expected_remaining"),
+        [
+            (
+                [URLStatus.IMPORTED, URLStatus.IMPORTED, URLStatus.PENDING],
+                [URLStatus.PENDING],
+            ),
+            (
+                [URLStatus.PENDING, URLStatus.FAILED],
+                [URLStatus.PENDING, URLStatus.FAILED],
+            ),
+            ([], []),
+        ],
+        ids=["with_completed", "no_completed", "empty"],
+    )
+    def test_clear_completed(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        initial_statuses: list[URLStatus],
+        expected_remaining: list[URLStatus],
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        entries = [
+            create_random_channel_queue(
+                session_scoped_db,
+                initial_test_data.record,
+                status=s,
+            )
+            for s in initial_statuses
+        ]
+
+        response = session_scoped_client.delete(
+            self.sub_url(initial_test_data.record.id),
+            headers=initial_test_data.headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["message"] == "Import queue cleared successfully"
+
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/import-queue",
+            output_model=ChannelQueuesListOutput,
+            headers=initial_test_data.headers,
+        )
+        assert isinstance(result, ChannelQueuesListOutput)  # For type checker
+        remaining_urls = {entry.url for entry in result.data}
+        expected_urls = {
+            e.url
+            for e, s in zip(entries, initial_statuses, strict=True)
+            if s in expected_remaining
+        }
+        assert remaining_urls == expected_urls
+
+
+class TestGetWhitelist(BaseChannelSubEndpointTests):
+    sub_http_method = "get"
+    sub_assert_response = staticmethod(
+        partial(
+            assert_not_found,
+            detail="Show was not found on channel",
+        ),
+    )
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
+
+    def assert_whitelist_success(
+        self,
+        session_scoped_client: TestClient,
+        channel: Channel,
+        channel_show: ChannelShow,
+        episodes: list[Episode],
+        headers: dict[str, str],
+        *,
+        expected_season_ids: list[uuid.UUID] | None = None,
+        expected_episode_ids: list[uuid.UUID] | None = None,
+    ) -> None:
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=f"{settings.API_V1_STR}/channels/{channel.id}/whitelist/{channel_show.show_id}",
+            output_model=WhitelistShowOutput,
+            headers=headers,
+        )
+        assert result.whitelist_mode == channel_show.white_list_mode
+        assert result.enabled_season_ids == (expected_season_ids or [])
+        assert result.enabled_episode_ids == (expected_episode_ids or [])
+        assert result.episodes == [
+            EpisodeOutput.model_validate(episode) for episode in episodes
+        ]
+
+    @pytest.mark.parametrize("episode_count", [0, 1, 2])
+    def test_read_whitelist(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        episode_count: int,
+    ) -> None:
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            initial_test_data.record,
+        )
+        episodes = [
+            create_random_episode(session_scoped_db, channel_show.show)
+            for _ in range(episode_count)
+        ]
+        self.assert_whitelist_success(
+            session_scoped_client,
+            initial_test_data.record,
+            channel_show,
+            episodes,
+            initial_test_data.headers,
+        )
+
+
+@dataclass
+class WhitelistUpdateTestData:
+    user: User
+    user_headers: dict[str, str]
+    channel: Channel
+    channel_show: ChannelShow
+    preserved_marked_episode: Episode
+    preserved_unmarked_episode: Episode
+    target_episode: Episode
+    initial_input: WhitelistShowInput
+
+
+class TestUpdateWhitelist(BaseChannelSubEndpointTests):
+    sub_http_method = "patch"
+    sub_assert_response = staticmethod(
+        partial(
+            assert_not_found,
+            detail="Show was not found on channel",
+        ),
+    )
+    sub_parameters = WhitelistShowInput(whitelist_mode=True).model_dump(mode="json")
+
+    def sub_url(self, channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
+
+    @staticmethod
+    def assert_whitelist_state(
+        result: WhitelistShowOutput,
+        *,
+        expected_mode: bool,
+        expected_episode_ids: set[uuid.UUID],
+        expected_season_ids: set[uuid.UUID],
+    ) -> None:
+        assert result.whitelist_mode is expected_mode
+        assert set(result.enabled_episode_ids) == expected_episode_ids
+        assert set(result.enabled_season_ids) == expected_season_ids
+
+    def assert_update_result(
+        self,
+        session_scoped_client: TestClient,
+        setup: WhitelistUpdateTestData,
+        update_input: WhitelistShowInput,
+        *,
+        expected_mode: bool,
+        expected_episode_ids: set[uuid.UUID],
+        expected_season_ids: set[uuid.UUID],
+    ) -> None:
+        result = assert_success(
+            client=session_scoped_client,
+            method="patch",
+            url=f"{settings.API_V1_STR}/channels/{setup.channel.id}/whitelist/{setup.channel_show.show_id}",
+            output_model=WhitelistShowOutput,
+            headers=setup.user_headers,
+            parameters=update_input.model_dump(mode="json"),
+        )
+        self.assert_whitelist_state(
+            result,
+            expected_mode=expected_mode,
+            expected_episode_ids=expected_episode_ids,
+            expected_season_ids=expected_season_ids,
+        )
+
+    def create_whitelist_test_data(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> WhitelistUpdateTestData:
+
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            initial_test_data.record,
+            white_list_mode=True,
+        )
+        episodes = [
+            create_random_episode(session_scoped_db, channel_show.show)
+            for _ in range(3)
+        ]
+        preserved_marked_episode = episodes[0]
+        preserved_unmarked_episode = episodes[1]
+        target_episode = episodes[2]
+
+        seasons = [
+            WhitelistEntryInput(id=preserved_marked_episode.season.id, enabled=True),
+            WhitelistEntryInput(id=preserved_unmarked_episode.season.id, enabled=False),
+        ]
+        episodes_input = [
+            WhitelistEntryInput(id=preserved_marked_episode.id, enabled=True),
+            WhitelistEntryInput(id=preserved_unmarked_episode.id, enabled=False),
+        ]
+        seasons.append(WhitelistEntryInput(id=target_episode.season.id, enabled=True))
+        episodes_input.append(WhitelistEntryInput(id=target_episode.id, enabled=True))
+        initial_input = WhitelistShowInput(
+            whitelist_mode=True,
+            seasons=seasons,
+            episodes=episodes_input,
+        )
+
+        return WhitelistUpdateTestData(
+            user=initial_test_data.user,
+            user_headers=initial_test_data.headers,
+            channel=initial_test_data.record,
+            channel_show=channel_show,
+            preserved_marked_episode=preserved_marked_episode,
+            preserved_unmarked_episode=preserved_unmarked_episode,
+            target_episode=target_episode,
+            initial_input=initial_input,
+        )
+
+    def test_update_whitelist_data(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        setup = self.create_whitelist_test_data(
+            session_scoped_client,
+            session_scoped_db,
+        )
+        update_whitelist(session_scoped_db, setup.channel_show, setup.initial_input)
+
+        update_input = WhitelistShowInput(
+            whitelist_mode=True,
+            seasons=[
+                WhitelistEntryInput(
+                    id=setup.preserved_unmarked_episode.season.id,
+                    enabled=True,
+                ),
+                WhitelistEntryInput(id=setup.target_episode.season.id, enabled=False),
+            ],
+            episodes=[
+                WhitelistEntryInput(
+                    id=setup.preserved_unmarked_episode.id,
+                    enabled=True,
+                ),
+                WhitelistEntryInput(id=setup.target_episode.id, enabled=False),
+            ],
+        )
+        expected_episode_ids = {
+            setup.preserved_marked_episode.id,
+            setup.preserved_unmarked_episode.id,
+        }
+        expected_season_ids = {
+            setup.preserved_marked_episode.season.id,
+            setup.preserved_unmarked_episode.season.id,
+        }
+        self.assert_update_result(
+            session_scoped_client,
+            setup,
+            update_input,
+            expected_mode=True,
+            expected_episode_ids=expected_episode_ids,
+            expected_season_ids=expected_season_ids,
+        )

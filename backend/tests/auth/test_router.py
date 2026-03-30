@@ -1,4 +1,3 @@
-# TODO: Validate
 from unittest.mock import patch
 
 from fastapi import status
@@ -16,32 +15,36 @@ from tests.users.utils import user_authentication_headers
 from tests.utils.utils import random_email, random_lower_string
 
 
-def test_get_access_token(client: TestClient) -> None:
+def test_get_access_token(session_scoped_client: TestClient) -> None:
     login_data = {
         "username": settings.FIRST_SUPERUSER,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
     }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    r = session_scoped_client.post(
+        f"{settings.API_V1_STR}/login/access-token", data=login_data
+    )
     tokens = r.json()
     assert r.status_code == status.HTTP_200_OK
     assert "access_token" in tokens
     assert tokens["access_token"]
 
 
-def test_get_access_token_incorrect_password(client: TestClient) -> None:
+def test_get_access_token_incorrect_password(session_scoped_client: TestClient) -> None:
     login_data = {
         "username": settings.FIRST_SUPERUSER,
         "password": "incorrect",
     }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    r = session_scoped_client.post(
+        f"{settings.API_V1_STR}/login/access-token", data=login_data
+    )
     assert r.status_code == status.HTTP_400_BAD_REQUEST
 
 
 def test_use_access_token(
-    client: TestClient,
+    session_scoped_client: TestClient,
     superuser_token_headers: dict[str, str],
 ) -> None:
-    r = client.post(
+    r = session_scoped_client.post(
         f"{settings.API_V1_STR}/login/test-token",
         headers=superuser_token_headers,
     )
@@ -51,7 +54,7 @@ def test_use_access_token(
 
 
 def test_recovery_password(
-    client: TestClient,
+    session_scoped_client: TestClient,
     normal_user_token_headers: dict[str, str],
 ) -> None:
     with (
@@ -59,7 +62,7 @@ def test_recovery_password(
         patch("app.config.settings.SMTP_USER", "admin@example.com"),
     ):
         email = "test@example.com"
-        r = client.post(
+        r = session_scoped_client.post(
             f"{settings.API_V1_STR}/password-recovery/{email}",
             headers=normal_user_token_headers,
         )
@@ -70,11 +73,11 @@ def test_recovery_password(
 
 
 def test_recovery_password_user_not_exits(
-    client: TestClient,
+    session_scoped_client: TestClient,
     normal_user_token_headers: dict[str, str],
 ) -> None:
     email = "jVgQr@example.com"
-    r = client.post(
+    r = session_scoped_client.post(
         f"{settings.API_V1_STR}/password-recovery/{email}",
         headers=normal_user_token_headers,
     )
@@ -85,7 +88,9 @@ def test_recovery_password_user_not_exits(
     }
 
 
-def test_reset_password(client: TestClient, db: Session) -> None:
+def test_reset_password(
+    session_scoped_client: TestClient, session_scoped_db: Session
+) -> None:
     email = random_email()
     password = random_lower_string()
     new_password = random_lower_string()
@@ -97,12 +102,14 @@ def test_reset_password(client: TestClient, db: Session) -> None:
         is_active=True,
         is_superuser=False,
     )
-    user = user_service.create_user(session=db, user_create=user_create)
+    user = user_service.create_user(session=session_scoped_db, user_create=user_create)
     token = generate_password_reset_token(email=email)
-    headers = user_authentication_headers(client=client, email=email, password=password)
+    headers = user_authentication_headers(
+        client=session_scoped_client, email=email, password=password
+    )
     data = {"new_password": new_password, "token": token}
 
-    r = client.post(
+    r = session_scoped_client.post(
         f"{settings.API_V1_STR}/reset-password/",
         headers=headers,
         json=data,
@@ -111,17 +118,17 @@ def test_reset_password(client: TestClient, db: Session) -> None:
     assert r.status_code == status.HTTP_200_OK
     assert r.json() == {"message": "Password updated successfully"}
 
-    db.refresh(user)
+    session_scoped_db.refresh(user)
     verified, _ = verify_password(new_password, user.hashed_password)
     assert verified
 
 
 def test_reset_password_invalid_token(
-    client: TestClient,
+    session_scoped_client: TestClient,
     superuser_token_headers: dict[str, str],
 ) -> None:
     data = {"new_password": "changethis", "token": "invalid"}
-    r = client.post(
+    r = session_scoped_client.post(
         f"{settings.API_V1_STR}/reset-password/",
         headers=superuser_token_headers,
         json=data,
@@ -134,8 +141,8 @@ def test_reset_password_invalid_token(
 
 
 def test_login_with_bcrypt_password_upgrades_to_argon2(
-    client: TestClient,
-    db: Session,
+    session_scoped_client: TestClient,
+    session_scoped_db: Session,
 ) -> None:
     """Test that logging in with a bcrypt password hash upgrades it to argon2."""
     email = random_email()
@@ -147,19 +154,21 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     assert bcrypt_hash.startswith("$2")  # bcrypt hashes start with $2
 
     user = User(email=email, hashed_password=bcrypt_hash, is_active=True)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    session_scoped_db.add(user)
+    session_scoped_db.commit()
+    session_scoped_db.refresh(user)
 
     assert user.hashed_password.startswith("$2")
 
     login_data = {"username": email, "password": password}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    r = session_scoped_client.post(
+        f"{settings.API_V1_STR}/login/access-token", data=login_data
+    )
     assert r.status_code == status.HTTP_200_OK
     tokens = r.json()
     assert "access_token" in tokens
 
-    db.refresh(user)
+    session_scoped_db.refresh(user)
 
     # Verify the hash was upgraded to argon2
     assert user.hashed_password.startswith("$argon2")
@@ -170,7 +179,9 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     assert updated_hash is None
 
 
-def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) -> None:
+def test_login_with_argon2_password_keeps_hash(
+    session_scoped_client: TestClient, session_scoped_db: Session
+) -> None:
     """Test that logging in with an argon2 password hash does not update it."""
     email = random_email()
     password = random_lower_string()
@@ -181,19 +192,21 @@ def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) 
 
     # Create user with argon2 hash
     user = User(email=email, hashed_password=argon2_hash, is_active=True)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    session_scoped_db.add(user)
+    session_scoped_db.commit()
+    session_scoped_db.refresh(user)
 
     original_hash = user.hashed_password
 
     login_data = {"username": email, "password": password}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    r = session_scoped_client.post(
+        f"{settings.API_V1_STR}/login/access-token", data=login_data
+    )
     assert r.status_code == status.HTTP_200_OK
     tokens = r.json()
     assert "access_token" in tokens
 
-    db.refresh(user)
+    session_scoped_db.refresh(user)
 
     assert user.hashed_password == original_hash
     assert user.hashed_password.startswith("$argon2")

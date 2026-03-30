@@ -1,21 +1,18 @@
-# TODO: Validate
 from __future__ import annotations
 
 import uuid
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.config import settings
-from tests.users.utils import create_random_user_alt
+from app.users.models import User
+from tests.users.utils import create_random_user
 from tests.utils.base import (
     INPUT_SCHEMAS,
-    MODELS_WITH_KEY,
-    MODELS_WITH_PARENT,
     OUTPUT_MODELS,
-    OUTPUT_MODELS_WITH_KEY,
     SUPPORTED_MODELS,
     BaseTests,
 )
@@ -23,8 +20,10 @@ from tests.utils.route_assertions import (
     assert_conflict,
     assert_not_found,
     assert_success,
+    assert_success_list,
+    assert_unprocessable,
 )
-from tests.utils.utils import build_random_model, dump_random_model
+from tests.utils.utils import build_random_model, dump_random_model, random_bool
 
 
 @runtime_checkable
@@ -33,341 +32,411 @@ class HasID(Protocol):
 
 
 class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
-    def create_url(self, parent_id: uuid.UUID | str | None = None) -> str:
-        """Return the URL used to create entries."""
+    def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:
+        """Return the URL used to create a record."""
         if parent_id:
             return f"{settings.API_V1_STR}/{self.parent_endpoint_name}/{parent_id}/{self.endpoint_name}"
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
     def create_parent(
         self,
-        db: Session,
-        user_id: uuid.UUID,
-    ) -> tuple[uuid.UUID | None, Any]:
+        session_scoped_db: Session,
+        user: User,
+    ) -> SUPPORTED_MODELS | None | User:
         """Create and return a parent record if possible."""
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
-            return None, None
-        parent = self.create_parent_function(db, user_id=user_id)
-        return parent.id, parent
+        if not hasattr(self.database_model, "parent"):
+            return None
+        return self.create_parent_function(session_scoped_db, user)
 
-    def create_records(
+    def can_create_record(
         self,
-        db: Session,
-        count: int,
-        user_id: uuid.UUID,
-        parent: Any,
-    ) -> None:
-        """Create and return records."""
-        for _ in range(count):
-            if parent is not None:
-                self.create_record_function(db, parent)
-            else:
-                self.create_record_function(db, user_id=user_id)
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        # ARG002 - Child implementations may need this value
+        record_is_public: bool,  # noqa: ARG002
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
 
-    def get_shared_key_kwargs(
+    def assert_record_saved_to_db(
         self,
-        client: TestClient,
-        db: Session,
-    ) -> dict[str, Any]:
-        other_user = create_random_user_alt(client, db)
-        existing = self.create_record_function(db, user_id=other_user.id)
-        existing_output = self.output_model.model_validate(existing)
-        assert isinstance(existing_output, OUTPUT_MODELS_WITH_KEY)
-        return {"key": existing_output.key}
-
-    def assert_create_success(
-        self,
-        client: TestClient,
-        db: Session,
-        parent_id: uuid.UUID | None,
-        headers: dict[str, str],
-        parameters_model: INPUT_SCHEMAS,
-    ) -> None:
-        parameters = parameters_model.model_dump(mode="json")
-
-        records_before = db.exec(select(self.database_model)).all()
-
-        response = assert_success(
-            client=client,
-            method="post",
-            url=self.create_url(parent_id),
-            output_model=self.output_model,
-            headers=headers,
-            parameters=parameters,
-        )
-        if self.returns_list:
-            assert isinstance(response, list)
-            assert len(response) == 1
-            result = response[0]
-        else:
-            assert not isinstance(response, list)
-            result = response
-
-        # Check the response from the API matches the input values.
-        for key, value in parameters_model.model_dump().items():
-            assert getattr(result, key) == value, (
-                f"Expected {key!r} to be {value!r}, got {getattr(result, key)!r}"
-            )
-
-        # Check that the API response matches the database record.
-        assert isinstance(result, HasID)
-        self.assert_saved_to_db(db, result.id, result)
-
-        # Check that only the new record was added.
-        self.assert_only_records_added(db, [result.id], records_before)
-
-    def assert_saved_to_db(
-        self,
-        db: Session,
+        session_scoped_db: Session,
         record_id: uuid.UUID,
         expected: OUTPUT_MODELS,
     ) -> None:
-        record = db.exec(
+        record = session_scoped_db.exec(
             select(self.database_model).where(self.database_model.id == record_id),
         ).one()
-        assert type(expected).model_validate(record) == expected
+        expected_dump = expected.model_dump()
+        database_dump = type(expected).model_validate(record).model_dump()
+        assert expected_dump.items() <= database_dump.items()
 
-    @pytest.mark.parametrize("public", [True, False])
-    @pytest.mark.parametrize("user_type", ["logged_in", "anonymous"])
-    @pytest.mark.parametrize("is_owner", [True, False])
-    def test_create_permissions(
+    def assert_create_record_success(
         self,
         client: TestClient,
-        db: Session,
+        session_scoped_db: Session,
+        parent_id: uuid.UUID | None,
+        headers: dict[str, str],
+        parameters_model: INPUT_SCHEMAS,
+    ) -> OUTPUT_MODELS:
+        """Assert that a record was successfully created."""
+        original_records = session_scoped_db.exec(select(self.database_model)).all()
+
+        # Watch return a list
+        if self.returns_list:
+            response = assert_success_list(
+                client=client,
+                method="post",
+                url=self.create_record_url(parent_id),
+                output_model=self.output_model,
+                headers=headers,
+                parameters=parameters_model.model_dump(mode="json"),
+            )
+            assert len(response) == 1
+            result = response[0]
+        else:
+            result = assert_success(
+                client=client,
+                method="post",
+                url=self.create_record_url(parent_id),
+                output_model=self.output_model,
+                headers=headers,
+                parameters=parameters_model.model_dump(mode="json"),
+            )
+
+        # Check the response from the API matches the input values.
+        input_dump = parameters_model.model_dump()
+        result_dump = result.model_dump()
+        assert input_dump.items() <= result_dump.items()
+
+        # Check that fields not provided in the input are null (except id and foreign
+        # keys).
+        extra_keys = (
+            result_dump.keys()
+            - input_dump.keys()
+            - {"id"}
+            - set(self.get_foreign_keys(self.database_model))
+        )
+        for key in extra_keys:
+            assert result_dump[key] is None, (
+                f"Expected {key!r} to be None, got {result_dump[key]!r}"
+            )
+
+        # Check that the API response matches the database record.
+        self.assert_record_saved_to_db(session_scoped_db, result.id, result)
+
+        # Check that only the new record was added.
+        self.assert_only_records_added(session_scoped_db, [result.id], original_records)
+
+        return result
+
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    def test_create_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
         *,
-        user_type: str,
-        is_owner: bool,
-        public: bool,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
     ) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
 
-        authenticated = user_type != "anonymous"
-
-        setup = self.create_test_data(
-            client,
-            db,
-            is_owner=is_owner,
-            authenticated=authenticated,
-            public=public,
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=user_is_owner,
+            user_is_authenticated=user_is_authenticated,
+            record_is_public=record_is_public,
         )
 
-        parent = self.get_parent(db, setup.record)
-        parameters_model = build_random_model(self.input_schema)
+        # Get parent before deleting the initial record.
+        parent = initial_test_data.record.parent()
 
-        if self.assert_write_permission(
-            db,
-            client,
-            authenticated=authenticated,
-            is_owner=is_owner,
-            public=public,
-            method="post",
-            url=self.create_url(parent.id),
-            detail=f"Not authorized to access this {self.parent_name}",
-            headers=setup.headers,
-            parameters=parameters_model.model_dump(mode="json"),
+        # Delete the initial record so this will only test creating for an empty parent,
+        # this is done mostly to support watch better which has extra logic if there are
+        # already existing records.
+        session_scoped_db.delete(initial_test_data.record)
+
+        if self.can_create_record(
+            user_is_authenticated=user_is_authenticated,
+            user_is_owner=user_is_owner,
+            record_is_public=record_is_public,
         ):
-            self.assert_create_success(
-                client,
-                db,
+            self.assert_create_record_success(
+                session_scoped_client,
+                session_scoped_db,
                 parent.id,
-                setup.headers,
-                parameters_model,
+                initial_test_data.headers,
+                build_random_model(self.input_schema),
+            )
+        else:
+            self.assert_cannot_access(
+                session_scoped_db,
+                session_scoped_client,
+                user_is_authenticated=user_is_authenticated,
+                method="post",
+                url=self.create_record_url(parent.id),
+                model_name=self.parent_name,
+                headers=initial_test_data.headers,
+                parameters_model=build_random_model(self.input_schema),
             )
 
     @pytest.mark.parametrize("mode", ["full", "minimal"])
     def test_create_data(
         self,
-        client: TestClient,
-        db: Session,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
         mode: Literal["full", "minimal"],
     ) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
 
-        setup = self.create_test_data(
-            client,
-            db,
-            is_owner=True,
-            authenticated=True,
-            public=False,
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
         )
 
-        parent = self.get_parent(db, setup.record)
+        parent = initial_test_data.record.parent()
+        session_scoped_db.delete(initial_test_data.record)
         parameters_model = build_random_model(self.input_schema, mode)
 
-        self.assert_create_success(
-            client,
-            db,
+        self.assert_create_record_success(
+            session_scoped_client,
+            session_scoped_db,
             parent.id,
-            setup.headers,
+            initial_test_data.headers,
             parameters_model,
         )
 
-    @pytest.mark.parametrize("existing_records", [0, 1, 2])
+    @pytest.mark.parametrize("existing_record_count", [1, 2])
     def test_create_with_existing_records(
         self,
-        client: TestClient,
-        db: Session,
-        existing_records: int,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        existing_record_count: int,
     ) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
 
-        setup = self.create_test_data(
-            client,
-            db,
-            is_owner=True,
-            authenticated=True,
-            public=False,
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
         )
 
-        parent = self.get_parent(db, setup.record)
-        self.create_records(db, existing_records, setup.user.id, parent)
+        parent = initial_test_data.record.parent()
+        for _ in range(existing_record_count - 1):
+            self.create_record_function(session_scoped_db, parent)
 
         parameters_model = build_random_model(self.input_schema)
 
-        self.assert_create_success(
-            client,
-            db,
+        self.assert_create_record_success(
+            session_scoped_client,
+            session_scoped_db,
             parent.id,
-            setup.headers,
+            initial_test_data.headers,
             parameters_model,
         )
 
-    def test_create_shared_key(self, client: TestClient, db: Session) -> None:
+    def test_create_shared_key(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
         """Test creating a record when another user has a record with the same key."""
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
-        if not issubclass(self.database_model, MODELS_WITH_KEY):
+        if not hasattr(self.database_model, "key"):
             pytest.skip("Model has no key field")
 
-        setup = self.create_test_data(
-            client,
-            db,
-            is_owner=True,
-            authenticated=True,
-            public=False,
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=random_bool(),
         )
 
-        parent = self.get_parent(db, setup.record)
-        extra_kwargs = self.get_shared_key_kwargs(client, db)
-        parameters_model = build_random_model(self.input_schema, **extra_kwargs)
+        parent = initial_test_data.record.parent()
+        other_user = create_random_user(session_scoped_db)
+        existing_record = self.create_record_function(session_scoped_db, other_user.id)
+        parameters_model = build_random_model(
+            self.input_schema,
+            # union-attr - hasattr checks already ensure this attribute exists.
+            key=existing_record.key,  # type: ignore[union-attr]
+        )
 
-        self.assert_create_success(
-            client,
-            db,
+        self.assert_create_record_success(
+            session_scoped_client,
+            session_scoped_db,
             parent.id,
-            setup.headers,
+            initial_test_data.headers,
             parameters_model,
         )
 
     def test_create_duplicate_key(
         self,
-        client: TestClient,
-        db: Session,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
     ) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
-        if not issubclass(self.database_model, MODELS_WITH_KEY):
+        if not hasattr(self.database_model, "key"):
             pytest.skip("Model has no key field")
 
-        user = create_random_user_alt(client, db)
-        record = self.create_record_function(db, user_id=user.id)
-        assert isinstance(record, MODELS_WITH_KEY)
-        parent_id = getattr(record, self.parent_key_name)
-        parameters = dump_random_model(self.input_schema, key=record.key)
-        with self.assert_no_db_change(db):
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=random_bool(),
+        )
+        record = initial_test_data.record
+        with self.assert_no_db_change(session_scoped_db):
             assert_conflict(
-                client=client,
+                client=session_scoped_client,
                 method="post",
-                url=self.create_url(parent_id),
+                url=self.create_record_url(getattr(record, self.parent_key_name)),
                 detail=f"{self.model_name} with this key already exists",
-                headers=user.headers,
-                parameters=parameters,
+                headers=initial_test_data.headers,
+                # union-attr - hasattr checks already ensure this attribute exists.
+                parameters=dump_random_model(self.input_schema, key=record.key),  # type: ignore[union-attr]
             )
 
-    def test_create_parent_not_found(self, client: TestClient, db: Session) -> None:
-        if not issubclass(self.database_model, MODELS_WITH_PARENT):
+    def test_create_parent_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
 
-        user = create_random_user_alt(client, db)
-        parameters = dump_random_model(self.input_schema)
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=random_bool(),
+        )
 
-        with self.assert_no_db_change(db):
+        with self.assert_no_db_change(session_scoped_db):
             assert_not_found(
-                client=client,
+                client=session_scoped_client,
                 method="post",
-                url=self.create_url(str(uuid.uuid4())),
+                url=self.create_record_url(str(uuid.uuid4())),
                 detail=f"{self.parent_name} not found",
-                headers=user.headers,
-                parameters=parameters,
+                headers=initial_test_data.headers,
+                parameters=dump_random_model(self.input_schema),
             )
 
-    def test_create_generates_key(self, client: TestClient, db: Session) -> None:
+    def test_create_generates_key(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
         """Ensure a key is automatically generated when not provided."""
         if not hasattr(self.database_model, "key"):
             pytest.skip("Model has no key field")
 
-        user = create_random_user_alt(client, db)
-        parent_id, _ = self.create_parent(db, user.id)
-
-        parameters = dump_random_model(self.input_schema, "minimal")
-
-        response = assert_success(
-            client=client,
-            method="post",
-            url=self.create_url(parent_id),
-            output_model=self.output_model,
-            headers=user.headers,
-            parameters=parameters,
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=random_bool(),
         )
-        assert isinstance(response, HasID)
-        assert isinstance(response, OUTPUT_MODELS_WITH_KEY)
-        assert response.key
-        self.assert_saved_to_db(db, response.id, response)
+        result = self.assert_create_record_success(
+            session_scoped_client,
+            session_scoped_db,
+            initial_test_data.record.parent().id,
+            initial_test_data.headers,
+            build_random_model(self.input_schema, "minimal"),
+        )
+        # union-attr - hasattr checks already ensure this attribute exists.
+        assert result.key  # type: ignore[union-attr]
 
-    def test_create_ignores_injected_id(
+
+class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
+    """Mixin for models where the parent is the authenticated user (channels, plugins)."""
+
+    def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:  # noqa: ARG002
+        return f"{settings.API_V1_STR}/{self.endpoint_name}"
+
+    def create_parent(
         self,
-        client: TestClient,
-        db: Session,
-    ) -> None:
-        """Verify that POST endpoint ignores a client-supplied id field."""
-        user = create_random_user_alt(client, db)
-        parent_id, _ = self.create_parent(db, user.id)
+        session_scoped_db: Session,  # noqa: ARG002
+        user: User,
+    ) -> User:
+        return user
 
-        # Create an existing record whose id will be injected into the next create.
-        existing = self.create_record_function(db, user_id=user.id)
-        existing_before = self.output_model.model_validate(existing)
+    # Creating a record without a user id is the same as creating while not
+    # authenticated because the user id is taken directly from the authenticated user.
+    @pytest.mark.skip
+    def test_create_parent_not_found(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        pass
+
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    # Always true because the user id is taken from the authenticated user so there is
+    # no way to create the record and not be the owner.
+    @pytest.mark.parametrize("user_is_owner", [True])
+    @pytest.mark.parametrize("record_is_public", [True, False])
+    def test_create_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> None:
+        super().test_create_permissions(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_authenticated=user_is_authenticated,
+            user_is_owner=user_is_owner,
+            record_is_public=record_is_public,
+        )
+
+    def test_create_rejects_extra_fields(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        """Verify that POST endpoint rejects extra fields."""
+        if not hasattr(self.database_model, "parent"):
+            pytest.skip("Model has no parent")
+
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+
+        parent = self.create_parent(session_scoped_db, initial_test_data.user)
 
         parameters = dump_random_model(self.input_schema)
-        parameters["id"] = str(existing.id)
+        parameters["id"] = str(uuid.uuid4())
 
-        response = assert_success(
-            client=client,
-            method="post",
-            url=self.create_url(parent_id),
-            output_model=self.output_model,
-            headers=user.headers,
-            parameters=parameters,
-        )
-        if self.returns_list:
-            assert isinstance(response, list)
-            assert len(response) == 1
-            data = response[0]
-        else:
-            assert not isinstance(response, list)
-            data = response
-
-        assert isinstance(data, HasID)
-        assert data.id != existing.id
-
-        # Confirm the existing record was not modified.
-        existing_after = self.output_model.model_validate(
-            db.exec(
-                select(self.database_model).where(
-                    self.database_model.id == existing.id,
-                ),
-            ).one(),
-        )
-        assert existing_before == existing_after
+        with self.assert_no_db_change(session_scoped_db):
+            assert_unprocessable(
+                session_scoped_client,
+                "post",
+                self.create_record_url(parent.id if parent else None),
+                headers=initial_test_data.headers,
+                parameters=parameters,
+            )

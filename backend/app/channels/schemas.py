@@ -38,10 +38,11 @@ class ChannelInput(BaseChannel):
 
 
 class ChannelPostInput(BaseChannel):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 
 class ChannelPatchInput(SQLModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None)
     channel_number: int | None = Field(default=None)
     public: bool = Field(default=False)
@@ -161,16 +162,6 @@ class ChannelMediaFilter(SQLModel):
         default=[],
         validation_alias="additionalChannels",
         serialization_alias="additionalChannels",
-    )
-    rotate_shows: bool = PydanticField(
-        default=False,
-        validation_alias="rotateShows",
-        serialization_alias="rotateShows",
-    )
-    rotate_shows_randomly: bool = PydanticField(
-        default=False,
-        validation_alias="rotateShowsRandomly",
-        serialization_alias="rotateShowsRandomly",
     )
     randomize_on_last_sort: bool = PydanticField(
         default=False,
