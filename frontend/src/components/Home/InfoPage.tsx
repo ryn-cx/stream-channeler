@@ -31,12 +31,30 @@ export function InfoPage() {
             <Button asChild size="lg">
               <Link
                 to="/channels/$channelId"
-                params={{ channelId: "a5524462-bff2-4deb-9e95-fbdd23b851b9" }}
+                params={{ channelId: "3bedcb3a-91f7-4f44-aebe-05d94e28c9e7" }}
                 search={{
                   sortBy: [
                     {
                       model: "episode",
-                      field: "random",
+                      field: "air_date",
+                      direction: "descending",
+                      mode: "normal",
+                    },
+                    {
+                      model: "season",
+                      field: "season_number",
+                      direction: "ascending",
+                      mode: "normal",
+                    },
+                    {
+                      model: "episode",
+                      field: "episode_number",
+                      direction: "ascending",
+                      mode: "normal",
+                    },
+                    {
+                      model: "show",
+                      field: "name",
                       direction: "ascending",
                       mode: "interleave_random",
                     },
@@ -257,6 +275,10 @@ export function InfoPage() {
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
                   <span>Desktop & mobile app</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary shrink-0" />
+                  <span>AI Powered Channel Builder</span>
                   <Badge variant="secondary" className="text-xs">
                     Coming Soon
                   </Badge>

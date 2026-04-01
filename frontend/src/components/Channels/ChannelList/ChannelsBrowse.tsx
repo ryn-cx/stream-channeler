@@ -39,14 +39,12 @@ function ChannelRow({ channel, onEmpty, onEdit, onDelete }: ChannelRowProps) {
   const { data, isLoading } = useQueries({
     queries: [
       {
-        queryKey: ["episodes-preview", channel.id, defaultOrder.randomSeed],
+        queryKey: ["episodes-preview", channel.id, defaultOrder],
         queryFn: () =>
           ChannelsService.getChannelEpisodes({
             channelId: channel.id,
             limit: 20,
-            ...(defaultOrder.randomSeed !== undefined
-              ? { randomSeed: defaultOrder.randomSeed }
-              : {}),
+            ...defaultOrder,
           }),
         refetchOnWindowFocus: false,
         refetchOnMount: false,
