@@ -118,6 +118,7 @@ function getEpisodesQueryOptions(
       ChannelsService.getChannelEpisodes({
         channelId,
         ...searchParams,
+        sortBy: searchParams.sortBy?.map((s) => JSON.stringify(s)),
       }),
     queryKey: ["episodes", channelId, searchParams],
     refetchOnWindowFocus: false,
