@@ -35,10 +35,11 @@ class UpsertMixin(FileMixin, register=False):
         return f"https://images.{cls._domain()}"
 
     @classmethod
-    def _clean_poster_image_url(cls, url: str) -> str:
-        # 332 is the highest resolution normally used on the website it looks like for
-        # season posters.
-        formatted_url = url.replace("{profile}", "s332").replace("{format}", "avif")
+    # 332 is the highest resolution normally used on the website it looks like for
+    # season posters.
+    def _clean_poster_image_url(cls, url: str, resolution: int = 332) -> str:
+        formatted_url = url.replace("{profile}", f"s{resolution}")
+        formatted_url = formatted_url.replace("{format}", "avif")
         return cls._images_base_url() + formatted_url
 
     @classmethod
@@ -153,6 +154,10 @@ class UpsertMixin(FileMixin, register=False):
             source = SourceInput(
                 key=provider["short_name"],
                 name=provider["clear_name"],
+                favicon_url=self._clean_poster_image_url(
+                    provider["icon_url"],
+                    resolution=100,
+                ),
                 data_timestamp=data_timestamp,
             ).upsert(self.plugin, source)
 
