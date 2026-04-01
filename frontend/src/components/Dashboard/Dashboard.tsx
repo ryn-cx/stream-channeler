@@ -438,15 +438,51 @@ export function Dashboard() {
                   channels:
                 </p>
                 <p>
-                  <strong>Natively supported websites</strong> that support URLs
-                  directly from the source website.
-                </p>
-                <p>
                   <strong>JustWatch supported websites</strong> that use URLs
                   from JustWatch.
                 </p>
+                <p>
+                  <strong>Natively supported websites</strong> that support URLs
+                  directly from the source website.
+                </p>
               </div>
               <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="justwatch-services">
+                  <AccordionTrigger>
+                    JustWatch Supported Services
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-sm mb-3">
+                      These services support URLs through JustWatch:
+                    </p>
+
+                    <details className="mt-3">
+                      <summary className="cursor-pointer font-medium text-sm">
+                        View all supported services (
+                        {JUSTWATCH_SUPPORTED_SERVICES.length})
+                      </summary>
+                      <div className="mt-2 max-h-48 overflow-y-auto border rounded p-3">
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
+                          {JUSTWATCH_SUPPORTED_SERVICES.map((service) => (
+                            <li key={service} className="text-muted-foreground">
+                              {service}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                    <p className="text-sm mb-3 mt-4">
+                      For JustWatch URLs, the name of the source should be
+                      included before the URL on the same line as the URL.
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Example:
+                    </p>
+                    <code className="block bg-muted p-2 rounded text-sm mb-3">
+                      Hulu https://www.justwatch.com/us/tv-show/breaking-bad
+                    </code>
+                  </AccordionContent>
+                </AccordionItem>
                 <AccordionItem value="native-websites">
                   <AccordionTrigger>
                     Natively supported websites
@@ -484,43 +520,6 @@ export function Dashboard() {
                         </code>
                       </div>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="justwatch-services">
-                  <AccordionTrigger>
-                    JustWatch Supported Services
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-3">
-                      These services support URLs through JustWatch:
-                    </p>
-
-                    <details className="mt-3">
-                      <summary className="cursor-pointer font-medium text-sm">
-                        View all supported services (
-                        {JUSTWATCH_SUPPORTED_SERVICES.length})
-                      </summary>
-                      <div className="mt-2 max-h-48 overflow-y-auto border rounded p-3">
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
-                          {JUSTWATCH_SUPPORTED_SERVICES.map((service) => (
-                            <li key={service} className="text-muted-foreground">
-                              {service}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </details>
-                    <p className="text-sm mb-3 mt-4">
-                      For JustWatch URLs, the name of the source should be
-                      included before the URL on the same line as the URL.
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Example:
-                    </p>
-                    <code className="block bg-muted p-2 rounded text-sm mb-3">
-                      Hulu https://www.justwatch.com/us/tv-show/breaking-bad
-                    </code>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
