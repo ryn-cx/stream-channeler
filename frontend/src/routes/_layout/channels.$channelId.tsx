@@ -45,10 +45,15 @@ function getChannelQueryOptions(channelId: string) {
 type ChannelSearchParams = {
   hideWatched?: boolean
   hideUnwatched?: boolean
-  rotateShows?: boolean
-  rotateShowsRandomly?: boolean
-  randomizeOnLastSort?: boolean
-  sortBy?: string[]
+
+  sortBy?: Array<{
+    model: string
+    field: string
+    direction?: string
+    mode?: string
+    aggregation?: string
+    days?: number | null
+  }>
   maximumWatchDate?: string
   onlyStartedShows?: boolean
   onlyNewShows?: boolean
@@ -81,10 +86,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
     return {
       hideWatched: search.hideWatched as boolean | undefined,
       hideUnwatched: search.hideUnwatched as boolean | undefined,
-      rotateShows: search.rotateShows as boolean | undefined,
-      rotateShowsRandomly: search.rotateShowsRandomly as boolean | undefined,
-      randomizeOnLastSort: search.randomizeOnLastSort as boolean | undefined,
-      sortBy: search.sortBy as string[] | undefined,
+      sortBy: search.sortBy as ChannelSearchParams["sortBy"],
       maximumWatchDate: search.maximumWatchDate as string | undefined,
       onlyStartedShows: search.onlyStartedShows as boolean | undefined,
       onlyNewShows: search.onlyNewShows as boolean | undefined,

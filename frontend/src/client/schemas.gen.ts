@@ -145,22 +145,6 @@ export const ChannelMediaFilterSchema = {
             title: 'Sortby',
             default: []
         },
-        episodeOrdering: {
-            type: 'boolean',
-            title: 'Episodeordering',
-            default: false
-        },
-        episodeInterleaving: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Episodeinterleaving'
-        },
         additionalChannels: {
             items: {
                 type: 'string',
@@ -170,31 +154,10 @@ export const ChannelMediaFilterSchema = {
             title: 'Additionalchannels',
             default: []
         },
-        rotateShows: {
-            type: 'boolean',
-            title: 'Rotateshows',
-            default: false
-        },
-        rotateShowsRandomly: {
-            type: 'boolean',
-            title: 'Rotateshowsrandomly',
-            default: false
-        },
-        randomizeOnLastSort: {
-            type: 'boolean',
-            title: 'Randomizeonlastsort',
-            default: false
-        },
         randomSeed: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Randomseed'
+            type: 'integer',
+            title: 'Randomseed',
+            default: 42
         },
         hideWatched: {
             type: 'boolean',
@@ -467,6 +430,7 @@ export const ChannelPatchInputSchema = {
             title: 'Default Order'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'ChannelPatchInput'
 } as const;
@@ -512,6 +476,7 @@ export const ChannelPostInputSchema = {
             title: 'Default Order'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'ChannelPostInput'
 } as const;
@@ -935,6 +900,7 @@ export const EpisodePatchInputSchema = {
             title: 'Air Date'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'EpisodePatchInput'
 } as const;
@@ -1095,6 +1061,7 @@ export const EpisodePostInputSchema = {
             title: 'Air Date'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'EpisodePostInput'
 } as const;
@@ -1568,6 +1535,7 @@ export const PluginPatchInputSchema = {
             title: 'Public'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'PluginPatchInput'
 } as const;
@@ -1652,6 +1620,7 @@ export const PluginPostInputSchema = {
             title: 'Public'
         }
     },
+    additionalProperties: false,
     type: 'object',
     required: ['public'],
     title: 'PluginPostInput'
@@ -1937,6 +1906,7 @@ export const SeasonPatchInputSchema = {
             title: 'Season Number'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'SeasonPatchInput'
 } as const;
@@ -2050,6 +2020,7 @@ export const SeasonPostInputSchema = {
             title: 'Season Number'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'SeasonPostInput'
 } as const;
@@ -2309,6 +2280,7 @@ export const ShowPatchInputSchema = {
             title: 'Image Url'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'ShowPatchInput'
 } as const;
@@ -2422,6 +2394,7 @@ export const ShowPostInputSchema = {
             title: 'Image Url'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'ShowPostInput'
 } as const;
@@ -2447,13 +2420,18 @@ export const SortOptionOutputSchema = {
             type: 'string',
             title: 'Label'
         },
-        value: {
+        model: {
             type: 'string',
-            title: 'Value'
+            enum: ['episode', 'season', 'show', 'source', 'plugin'],
+            title: 'Model'
+        },
+        field: {
+            type: 'string',
+            title: 'Field'
         }
     },
     type: 'object',
-    required: ['label', 'value'],
+    required: ['label', 'model', 'field'],
     title: 'SortOptionOutput'
 } as const;
 
@@ -2653,6 +2631,7 @@ export const SourcePatchInputSchema = {
             title: 'Image Url'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'SourcePatchInput'
 } as const;
@@ -2744,6 +2723,7 @@ export const SourcePostInputSchema = {
             title: 'Image Url'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'SourcePostInput'
 } as const;
@@ -3242,6 +3222,7 @@ export const WatchPatchInputSchema = {
             title: 'Verified'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'WatchPatchInput'
 } as const;
@@ -3259,6 +3240,7 @@ export const WatchPostInputSchema = {
             default: false
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'WatchPostInput'
 } as const;

@@ -11,7 +11,7 @@ import {
   Shuffle,
   X,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -50,6 +50,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -57,10 +64,19 @@ import { handleError } from "@/utils"
 const formSchema = z.object({
   hideWatched: z.boolean().optional(),
   hideUnwatched: z.boolean().optional(),
-  rotateShows: z.boolean().optional(),
-  rotateShowsRandomly: z.boolean().optional(),
-  randomizeOnLastSort: z.boolean().optional(),
-  sortBy: z.array(z.string()).optional(),
+
+  sortBy: z
+    .array(
+      z.object({
+        model: z.string(),
+        field: z.string(),
+        direction: z.string().optional(),
+        mode: z.string().optional(),
+        aggregation: z.string().optional(),
+        days: z.number().nullable().optional(),
+      }),
+    )
+    .optional(),
   maximumWatchDateAbsolute: z.string().optional(),
   maximumWatchDateRelative: z.coerce.number().optional(),
   onlyStartedShows: z.boolean().optional(),
@@ -81,23 +97,44 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 type SortOption = {
-  value: string
+  model: string
+  field: string
   label: string
+}
+
+const AGGREGATION_OPTIONS = ["sum", "avg", "count", "max", "min"] as const
+type Aggregation = (typeof AGGREGATION_OPTIONS)[number]
+
+const MODE_OPTIONS = [
+  { value: "normal", label: "Normal" },
+  { value: "interleave_sequential", label: "Interleave (Sequential)" },
+  { value: "interleave_random", label: "Interleave (Random)" },
+  { value: "show_group", label: "Show Group" },
+] as const
+type Mode = (typeof MODE_OPTIONS)[number]["value"]
+
+type RecentlyAiredMode = "relative" | "absolute"
+
+type SortEntry = {
+  model: string
+  field: string
+  direction: "ascending" | "descending"
+  mode: Mode
+  aggregation: Aggregation
+  days: number | null
+  recentlyAiredDate: string | null
+  recentlyAiredMode: RecentlyAiredMode
 }
 
 // Oringally copied from: https://ui.shadcn.com/docs/components/combobox
 function SortOptionsList({
   setOpen,
   sortOptions,
-  selectedSortOptions,
-  setSelectedSortOptions,
-  form,
+  setSortEntries,
 }: {
   setOpen: (open: boolean) => void
   sortOptions: SortOption[]
-  selectedSortOptions: string[]
-  setSelectedSortOptions: (options: string[]) => void
-  form: any
+  setSortEntries: React.Dispatch<React.SetStateAction<SortEntry[]>>
 }) {
   return (
     <Command>
@@ -107,15 +144,23 @@ function SortOptionsList({
         <CommandGroup>
           {sortOptions.map((option) => (
             <CommandItem
-              key={option.value}
+              key={`${option.model}.${option.field}`}
               value={option.label}
-              keywords={[option.value]}
+              keywords={[option.model, option.field]}
               onSelect={() => {
-                if (!selectedSortOptions.includes(option.value)) {
-                  const newOptions = [...selectedSortOptions, option.value]
-                  setSelectedSortOptions(newOptions)
-                  form.setValue("sortBy", newOptions)
-                }
+                setSortEntries((prev) => [
+                  ...prev,
+                  {
+                    model: option.model,
+                    field: option.field,
+                    direction: "ascending",
+                    mode: "normal",
+                    aggregation: "sum",
+                    days: null,
+                    recentlyAiredDate: null,
+                    recentlyAiredMode: "relative",
+                  },
+                ])
                 setOpen(false)
               }}
             >
@@ -272,36 +317,48 @@ export function EpisodeFilters({
     )
   }
 
-  // Parse existing sort options to extract field and direction
-  const parseExistingSortOptions = (sortBy: string[] | undefined) => {
-    if (!sortBy)
+  const parseSortEntries = (
+    sortBy:
+      | Array<
+          | {
+              model: string
+              field: string
+              direction?: string
+              mode?: string
+              aggregation?: string
+              days?: number | null
+              recentlyAiredDate?: string | null
+            }
+          | string
+        >
+      | undefined,
+  ): SortEntry[] => {
+    if (!sortBy) return []
+
+    return sortBy.map((raw) => {
+      const input = typeof raw === "string" ? JSON.parse(raw) : raw
       return {
-        fields: [],
-        directions: new Map<string, "ascending" | "descending">(),
+        model: input.model ?? "episode",
+        field: input.field ?? "",
+        direction: (input.direction === "descending"
+          ? "descending"
+          : "ascending") as SortEntry["direction"],
+        mode: (MODE_OPTIONS.some((o) => o.value === input.mode)
+          ? input.mode
+          : "normal") as Mode,
+        aggregation: (input.aggregation ?? "sum") as Aggregation,
+        days: input.days ?? null,
+        recentlyAiredDate: input.recentlyAiredDate ?? null,
+        recentlyAiredMode: (input.recentlyAiredDate
+          ? "absolute"
+          : "relative") as RecentlyAiredMode,
       }
-
-    const fields: string[] = []
-    const directions = new Map<string, "ascending" | "descending">()
-
-    sortBy.forEach((option) => {
-      const direction = option.endsWith(".ascending")
-        ? "ascending"
-        : "descending"
-      const field = option.replace(/\.(ascending|descending)$/, "")
-      fields.push(field)
-      directions.set(field, direction)
     })
-
-    return { fields, directions }
   }
 
-  const { fields: initialFields, directions: initialDirections } =
-    parseExistingSortOptions(filterParams.sortBy)
-
-  const [selectedSortOptions, setSelectedSortOptions] =
-    useState<string[]>(initialFields)
-  const [sortDirections, setSortDirections] =
-    useState<Map<string, "ascending" | "descending">>(initialDirections)
+  const [sortEntries, setSortEntries] = useState<SortEntry[]>(
+    parseSortEntries(filterParams.sortBy),
+  )
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [seedInputValue, setSeedInputValue] = useState(
     randomSeed !== undefined ? String(randomSeed) : "",
@@ -326,9 +383,6 @@ export function EpisodeFilters({
     defaultValues: {
       hideWatched: filterParams.hideWatched,
       hideUnwatched: filterParams.hideUnwatched,
-      rotateShows: filterParams.rotateShows,
-      rotateShowsRandomly: filterParams.rotateShowsRandomly,
-      randomizeOnLastSort: filterParams.randomizeOnLastSort,
       sortBy: filterParams.sortBy,
       maximumWatchDateAbsolute: filterParams.maximumWatchDateAbsolute,
       maximumWatchDateRelative: filterParams.maximumWatchDateRelative,
@@ -387,10 +441,24 @@ export function EpisodeFilters({
       delete filteredData.maximumReleaseDateAbsolute
     }
 
-    const sortByWithDirections = selectedSortOptions.map((field) => {
-      const direction = sortDirections.get(field) || "ascending"
-      return `${field}.${direction}`
-    })
+    const isRecentlyAired = (entry: SortEntry) =>
+      entry.model === "episode" && entry.field === "recently_aired"
+
+    const sortByEntries = sortEntries.map((entry) => ({
+      model: entry.model,
+      field: entry.field,
+      direction: entry.direction,
+      mode: entry.mode,
+      aggregation: entry.mode === "show_group" ? entry.aggregation : undefined,
+      days:
+        isRecentlyAired(entry) && entry.recentlyAiredMode === "relative"
+          ? entry.days
+          : undefined,
+      recentlyAiredDate:
+        isRecentlyAired(entry) && entry.recentlyAiredMode === "absolute"
+          ? entry.recentlyAiredDate
+          : undefined,
+    }))
 
     // additionalChannels is managed from a different form so the value needs to be
     // extracted from the current URL then all of the other filters can be applied.
@@ -399,50 +467,33 @@ export function EpisodeFilters({
     const newSearch: Record<string, any> = {
       additionalChannels: filterParams.additionalChannels,
       randomSeed: !Number.isNaN(parsedSeed as number) ? parsedSeed : randomSeed,
-      ...cleanFormData({ ...filteredData, sortBy: sortByWithDirections }),
+      ...cleanFormData({ ...filteredData, sortBy: sortByEntries }),
     }
 
     mutation.mutate(newSearch)
   }
 
+  const updateEntry = (index: number, updates: Partial<SortEntry>) => {
+    setSortEntries((prev) =>
+      prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)),
+    )
+  }
+
   const moveSortOption = (index: number, direction: "up" | "down") => {
-    const newSortBy = [...selectedSortOptions]
-    const targetIndex = direction === "up" ? index - 1 : index + 1
-
-    ;[newSortBy[index], newSortBy[targetIndex]] = [
-      newSortBy[targetIndex],
-      newSortBy[index],
-    ]
-    setSelectedSortOptions(newSortBy)
-    form.setValue("sortBy", newSortBy)
-  }
-
-  const removeSortOption = (index: number) => {
-    const newSortBy = selectedSortOptions.filter((_, i) => i !== index)
-    setSelectedSortOptions(newSortBy)
-    form.setValue("sortBy", newSortBy)
-  }
-
-  const toggleSortDirection = (field: string) => {
-    setSortDirections((prev) => {
-      const newMap = new Map(prev)
-      const currentDirection = newMap.get(field) || "ascending"
-      newMap.set(
-        field,
-        currentDirection === "ascending" ? "descending" : "ascending",
-      )
-      return newMap
+    setSortEntries((prev) => {
+      const entries = [...prev]
+      const targetIndex = direction === "up" ? index - 1 : index + 1
+      ;[entries[index], entries[targetIndex]] = [
+        entries[targetIndex],
+        entries[index],
+      ]
+      return entries
     })
   }
 
-  const selectedLabels = useMemo(() => {
-    return selectedSortOptions
-      .map((value) => {
-        const option = sortOptions.find((option) => option.value === value)
-        return option?.label
-      })
-      .filter((label): label is string => label !== undefined)
-  }, [selectedSortOptions, sortOptions])
+  const removeSortOption = (index: number) => {
+    setSortEntries((prev) => prev.filter((_, i) => i !== index))
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -484,81 +535,8 @@ export function EpisodeFilters({
             <div className="grid md:grid-cols-2 gap-4">
               {/* space-y-4 - Space between header and text */}
               <div className="space-y-4">
-                <h3>Rotate Options</h3>
                 <div className="space-y-2">
-                  <FormField
-                    control={form.control}
-                    name="rotateShows"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked)
-                              if (checked) {
-                                form.setValue("rotateShowsRandomly", false)
-                                form.setValue("randomizeOnLastSort", false)
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Rotate Shows
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="rotateShowsRandomly"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked)
-                              if (checked) {
-                                form.setValue("rotateShows", false)
-                                form.setValue("randomizeOnLastSort", false)
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Randomize Shows
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="randomizeOnLastSort"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked)
-                              if (checked) {
-                                form.setValue("rotateShows", false)
-                                form.setValue("rotateShowsRandomly", false)
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Randomize on Last Sort
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-
-                  <h3 className="pt-4">Show Status</h3>
+                  <h3>Show Status Filters</h3>
 
                   <FormField
                     control={form.control}
@@ -600,7 +578,7 @@ export function EpisodeFilters({
 
               {/* space-y-4 - Space between header and text */}
               <div className="space-y-4">
-                <h3>Watch Options</h3>
+                <h3>Watch Filters</h3>
                 <div className="space-y-2">
                   <FormField
                     control={form.control}
@@ -736,6 +714,208 @@ export function EpisodeFilters({
 
             <div className="space-y-4">
               <h3>Sort Options</h3>
+              <div className="flex items-center gap-4">
+                <Label>Sort By</Label>
+                {/* Mostly copied from: https://ui.shadcn.com/docs/components/combobox */}
+                <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="flex-1 justify-start"
+                    >
+                      Select sort option
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[400px] p-0"
+                    align="start"
+                    onWheel={(e) => e.stopPropagation()}
+                  >
+                    <SortOptionsList
+                      setOpen={setFiltersOpen}
+                      sortOptions={sortOptions}
+                      setSortEntries={setSortEntries}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {sortEntries.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Selected Sort Options (in order):
+                  </Label>
+                  {sortEntries.map((entry, index) => {
+                    const sortOption = sortOptions.find(
+                      (option) =>
+                        option.model === entry.model &&
+                        option.field === entry.field,
+                    )
+                    const label = sortOption?.label ?? entry.field
+                    return (
+                      <div key={index}>
+                        <div
+                          className={`flex items-center justify-between p-2 border text-sm ${entry.model === "episode" && entry.field === "recently_aired" ? "rounded-t" : "rounded"}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                updateEntry(index, {
+                                  direction:
+                                    entry.direction === "ascending"
+                                      ? "descending"
+                                      : "ascending",
+                                })
+                              }
+                              className="h-6 w-6 p-0"
+                              title={
+                                entry.direction === "ascending"
+                                  ? "Ascending"
+                                  : "Descending"
+                              }
+                            >
+                              {entry.direction === "ascending" ? (
+                                <ArrowUp className="h-3 w-3" />
+                              ) : (
+                                <ArrowDown className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <span className="text-xs">{label}</span>
+                            <Select
+                              value={entry.mode}
+                              onValueChange={(value) =>
+                                updateEntry(index, { mode: value as Mode })
+                              }
+                            >
+                              <SelectTrigger className="h-6 w-auto text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MODE_OPTIONS.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {entry.mode === "show_group" && (
+                              <Select
+                                value={entry.aggregation}
+                                onValueChange={(value) =>
+                                  updateEntry(index, {
+                                    aggregation: value as Aggregation,
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-6 w-20 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AGGREGATION_OPTIONS.map((agg) => (
+                                    <SelectItem key={agg} value={agg}>
+                                      {agg.charAt(0).toUpperCase() +
+                                        agg.slice(1)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => moveSortOption(index, "up")}
+                              disabled={index === 0}
+                              className="h-6 w-6 p-0"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => moveSortOption(index, "down")}
+                              disabled={index === sortEntries.length - 1}
+                              className="h-6 w-6 p-0"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeSortOption(index)}
+                              className="h-6 w-6 p-0 text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {entry.model === "episode" &&
+                          entry.field === "recently_aired" && (
+                            <div className="flex items-center gap-2 p-2 border-x border-b rounded-b text-xs">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  updateEntry(index, {
+                                    recentlyAiredMode:
+                                      entry.recentlyAiredMode === "relative"
+                                        ? "absolute"
+                                        : "relative",
+                                  })
+                                }
+                                className="h-6 text-xs px-2"
+                              >
+                                {entry.recentlyAiredMode === "relative"
+                                  ? "Days ago"
+                                  : "Since date"}
+                              </Button>
+                              {entry.recentlyAiredMode === "relative" ? (
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  placeholder="7"
+                                  value={entry.days ?? ""}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      days: event.target.value
+                                        ? parseInt(event.target.value, 10)
+                                        : null,
+                                    })
+                                  }
+                                  className="h-6 w-20 text-xs"
+                                />
+                              ) : (
+                                <Input
+                                  type="date"
+                                  value={entry.recentlyAiredDate ?? ""}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      recentlyAiredDate:
+                                        event.target.value || null,
+                                    })
+                                  }
+                                  className="h-6 w-36 text-xs"
+                                />
+                              )}
+                            </div>
+                          )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Label htmlFor="random-seed">Random Seed</Label>
                 <Input
@@ -761,106 +941,6 @@ export function EpisodeFilters({
                   <Shuffle className="size-4" />
                 </Button>
               </div>
-              <div className="flex items-center gap-4">
-                <Label>Sort By</Label>
-                {/* Mostly copied from: https://ui.shadcn.com/docs/components/combobox */}
-                <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="flex-1 justify-start"
-                    >
-                      Select sort option
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[400px] p-0"
-                    align="start"
-                    onWheel={(e) => e.stopPropagation()}
-                  >
-                    <SortOptionsList
-                      setOpen={setFiltersOpen}
-                      sortOptions={sortOptions}
-                      selectedSortOptions={selectedSortOptions}
-                      setSelectedSortOptions={setSelectedSortOptions}
-                      form={form}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* TODO: The styling here could be improved */}
-              {selectedLabels.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Selected Sort Options (in order):
-                  </Label>
-                  {selectedLabels.map((label, index) => {
-                    const field = selectedSortOptions[index]
-                    const direction = sortDirections.get(field) || "ascending"
-                    return (
-                      <div
-                        key={field}
-                        className="flex items-center justify-between p-2 border rounded text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => toggleSortDirection(field)}
-                            className="h-6 w-6 p-0"
-                            title={
-                              direction === "ascending"
-                                ? "Ascending"
-                                : "Descending"
-                            }
-                          >
-                            {direction === "ascending" ? (
-                              <ArrowUp className="h-3 w-3" />
-                            ) : (
-                              <ArrowDown className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <span className="text-xs">{label}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => moveSortOption(index, "up")}
-                            disabled={index === 0}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => moveSortOption(index, "down")}
-                            disabled={index === selectedLabels.length - 1}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeSortOption(index)}
-                            className="h-6 w-6 p-0 text-destructive"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
             </div>
 
             <DialogFooter>

@@ -1,7 +1,7 @@
 # TODO: Validate
 import time
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -77,7 +77,7 @@ def get_sort_options() -> MultipleSortOptionOutputs:
 
     # For simplicity all of the other possible values are dynamically generated from the
     # model fields.
-    skip_fields = ("extra", "id", "description", "data_timestamp")
+    skip_fields = ("extra", "id", "description", "data_timestamp", "version")
     for model in (Episode, Season, Show, Source, Plugin):
         for field in model.model_fields:
             if field.endswith(("key", "url", "_at", "_id")) or field in skip_fields:
@@ -88,67 +88,37 @@ def get_sort_options() -> MultipleSortOptionOutputs:
             data.append(
                 SortOptionOutput(
                     label=label,
-                    value=f"value.{model_name}.{field}",
+                    model=model_name,
+                    field=field,
                 ),
             )
 
-    # Manually created special cases that also have special cases when looking up the
-    # data in the database.
+    # Special sort options that don't map to simple model fields.
+    data.append(SortOptionOutput(label="Show - Started", model="show", field="started"))
     data.append(
         SortOptionOutput(
-            label="Show - Remaining Duration",
-            value="sum.show-episodes.duration",
+            label="Episode - Recently Aired",
+            model="episode",
+            field="recently_aired",
         ),
     )
     data.append(
-        SortOptionOutput(
-            label="Show - Remaining Episodes",
-            value="count.show-episodes.id",
-        ),
+        SortOptionOutput(label="Episode - Random", model="episode", field="random"),
     )
     data.append(
         SortOptionOutput(
             label="Show - Last Watched",
-            value="max.show-episodes.last_watched",
+            model="episode",
+            field="last_watched",
         ),
     )
     data.append(
         SortOptionOutput(
-            label="Show - Latest Episode Date",
-            value="max.show-episodes.air_date",
+            label="Show - Episode Count",
+            model="episode",
+            field="episode_count",
         ),
     )
-    data.append(
-        SortOptionOutput(
-            label="Show - Started",
-            value="value.show.started",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Recently Aired (Last Month)",
-            value="value.show.recently_aired_month",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Recently Aired (Last Week)",
-            value="value.show.recently_aired_week",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Episode - Random",
-            value="value.episode.random",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Random",
-            value="max.show-episodes.random",
-        ),
-    )
-
     # Sort everything by the label
     data.sort(key=lambda x: x.label)
 
@@ -183,47 +153,31 @@ def get_channel_episodes(
     start = time.time()
 
     builder = EpisodeQueryBuilder(session, channel, media_filter, user)
-    episodes = builder.get_episodes()
-    logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
-    episode_channels = builder.get_episode_channels(episodes)
-    logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
-    watches = builder.get_episode_latest_watch_date(episodes)
+    results = builder.get_episodes()
 
-    logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
-    unique_channel_ids = set(episode_channels.values())
+    unique_channel_ids = {result.channel_id for result in results}
     channels = session.exec(
         select(Channel).where(col(Channel.id).in_(unique_channel_ids)),
     ).all()
     for channel_obj in channels:
         output.channels[channel_obj.id] = ChannelOutput.model_validate(channel_obj)
 
-    logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
-    for episode in episodes:
+    for result in results:
+        episode = result.episode
         season = episode.season
         show = season.show
         source = show.source
         plugin = source.plugin
 
-        # Add last watched information and channel_id to the episodes after finding
-        # the episodes because it is much faster for channels with tens of thousands
-        # of episodes.
-        if watches.get(episode.id):
-            output.episodes.append(
-                EpisodeWithExtrasOutput(
-                    **episode.model_dump(),
-                    watch_date=watches[episode.id].watch_date,
-                    verified=watches[episode.id].verified,
-                    episode_watch_id=watches[episode.id].id,
-                    channel_id=episode_channels[episode.id],
-                ),
-            )
-        else:
-            output.episodes.append(
-                EpisodeWithExtrasOutput(
-                    **episode.model_dump(),
-                    channel_id=episode_channels[episode.id],
-                ),
-            )
+        extras: dict[str, Any] = {"channel_id": result.channel_id}
+        if result.latest_watch:
+            extras["watch_date"] = result.latest_watch.watch_date
+            extras["verified"] = result.latest_watch.verified
+            extras["episode_watch_id"] = result.latest_watch.id
+
+        output.episodes.append(
+            EpisodeWithExtrasOutput(**episode.model_dump(), **extras),
+        )
 
         if episode.season_id not in output.seasons:
             output.seasons[episode.season_id] = SeasonOutput.model_validate(season)
@@ -234,7 +188,7 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
-    logger.info("get_channel_episodes completed in %.3f seconds", time.time() - start)
+    logger.info("get_channel_episodes completed in {:.3f} seconds", time.time() - start)
     return output
 
 

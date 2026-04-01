@@ -1,7 +1,5 @@
-# TODO: Validate
-import random
-from collections import defaultdict
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -20,7 +18,7 @@ from app.channels.models import (
     ChannelSeasonWhiteList,
     ChannelShow,
 )
-from app.channels.schemas import ChannelMediaFilter
+from app.channels.schemas import ChannelMediaFilter, SortKeyInput
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -31,12 +29,12 @@ from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
 
-_MEDIA_MODEL_MAP: dict[str, type[Episode | Season | Show | Source]] = {
-    "episode": Episode,
-    "season": Season,
-    "show": Show,
-    "source": Source,
-}
+
+@dataclass
+class EpisodeResult:
+    episode: Episode
+    channel_id: UUID
+    latest_watch: Watch | None = None
 
 
 class EpisodeQueryBuilder:
@@ -49,27 +47,24 @@ class EpisodeQueryBuilder:
     ) -> None:
         self._session = session
         self._user = user
-        self._media_filter = self._validate_media_filter(media_filter)
+        self._media_filter = media_filter
+        self._sort_keys = self._filter_sort_keys(media_filter)
         self._channel_ids: list[UUID] = []
         self._compile_channel_ids(channel)
 
-    @property
-    def _effective_seed(self) -> int:
-        """Return the explicit seed, or a stable per-channel default derived from its ID."""
-        if self._media_filter.random_seed is not None:
-            return self._media_filter.random_seed
-        return int(str(self._channel_ids[0]).replace("-", "")[:8], 16) % (2**31)
-
-    def _validate_media_filter(
+    def _filter_sort_keys(
         self,
         media_filter: ChannelMediaFilter,
-    ) -> ChannelMediaFilter:
-        media_filter.sort_by = [
+    ) -> list[SortKeyInput]:
+        """Filter out sort keys that require a user when none is authenticated.
+
+        This filter intentionally does not raise an error so a user can share a link to
+        a channel without the other user having to make an account."""
+        return [
             sort_key
-            for sort_key in media_filter.sort_by
-            if self._is_valid_sort_key(sort_key)
+            for sort_key in media_filter.parsed_sort_by
+            if sort_key.field != "last_watched" or self._user is not None
         ]
-        return media_filter
 
     def _compile_channel_ids(self, main_channel: Channel) -> None:
         """Compile a list of channels that the user has access to."""
@@ -80,18 +75,8 @@ class EpisodeQueryBuilder:
         )
         self._channel_ids = [main_channel.id, *(x.id for x in additional_channels)]
 
-    def _parse_date_filter(
-        self,
-        absolute_date: datetime | None,
-        relative_days: int | None,
-    ) -> datetime | None:
-        # The frontend should try to stop both date inputs from being set at the same
-        # time so the precedence is arbitrary here.
-        if relative_days:
-            return tz_datetime.now() - timedelta(days=relative_days)
-        return absolute_date
-
-    def get_episodes(self) -> Sequence[Episode]:
+    def get_episodes(self) -> list[EpisodeResult]:
+        """Get filtered, sorted episodes with channel IDs and latest watch data."""
         query = self._base_query()
         query = self._join_whitelist_tables(query)
         query = self._join_show_last_watched(query)
@@ -100,87 +85,34 @@ class EpisodeQueryBuilder:
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
-        query = self._filter_new_shows(query)
-        query = self._filter_started_shows(query)
+        query = self._filter_only_started_shows(query)
+        query = self._filter_only_new_shows(query)
         query = self._filter_by_air_date(query)
         query = self._filter_by_release_date(query)
         query = self._filter_by_duration(query)
         query = self._sort_episodes(query)
-        if self._media_filter.limit is not None:
-            query = query.limit(self._media_filter.limit)
-        output = self._session.exec(query).all()
+        query = self._apply_limit(query)
+        rows = self._session.exec(query).all()
 
-        if self._media_filter.randomize_on_last_sort:
-            return self._interleave_by_last_sort_value(output)
+        episodes = [row[0] for row in rows]
+        channel_map = self._get_episode_channels(episodes)
+        watch_map = self._get_latest_watches(episodes)
 
-        episodes = [row[0] for row in output]
-        if self._media_filter.rotate_shows_randomly:
-            return self._randomly_interleave_episodes(episodes)
+        return [
+            EpisodeResult(
+                episode=episode,
+                channel_id=channel_map[episode.id],
+                latest_watch=watch_map.get(episode.id),
+            )
+            for episode in episodes
+            if episode.id in channel_map
+        ]
 
-        return episodes
-
-    def _randomly_interleave_episodes(self, episodes: list[Episode]) -> list[Episode]:
-        # There isn't a good way to implement this in SQL, but it's not too important
-        # because the input is already limited to 1,000 entries so the performance of
-        # this function is not a major concern.
-
-        # This works by grouping all of the episodes by show then randomly picking a
-        # show to take the next episode from until all episodes are added to the output.
-        show_episodes: dict[UUID, list[Episode]] = defaultdict(list)
-        for episode in episodes:
-            show_id = episode.season.show_id
-            show_episodes[show_id].append(episode)
-
-        output: list[Episode] = []
-        show_lists = list(show_episodes.values())
-
-        rng = random.Random(self._effective_seed)  # noqa: S311
-        while show_lists:
-            chosen_list = rng.choice(show_lists)
-            output.append(chosen_list.pop(0))
-
-            if not chosen_list:
-                show_lists.remove(chosen_list)
-
-        return output
-
-    def _interleave_by_last_sort_value(
+    def _get_episode_channels(
         self,
-        results: Sequence[tuple[Episode, Any]],
-    ) -> list[Episode]:
-        """Interleave episodes based on the last sort value.
-
-        This will group all episodes by the last sort value, and then randomly
-        interleave the episodes without changing the order of the episodes within a
-        show.
-
-        This is useful when you have a boolean-like filter such as
-        value.show.recently_aired_month so you can have a random selection of all of the
-        airing episodes before moving on to the non-airing episodes."""
-        # Group episodes by the last sort value
-        sort_value_groups: dict[str, list[Episode]] = defaultdict(list)
-        for row in results:
-            episode, sort_value = row
-            sort_key = str(sort_value)
-            sort_value_groups[sort_key].append(episode)
-
-        # Interleave episodes from each group
-        output: list[Episode] = []
-        for episodes in sort_value_groups.values():
-            interleaved = self._randomly_interleave_episodes(episodes)
-            output.extend(interleaved)
-
-        return output
-
-    def get_episode_channels(self, episodes: Sequence[Episode]) -> dict[UUID, UUID]:
-        """Get the channel ID for each episode based on the current filter.
-
-        Args:
-            episodes: List of episodes to get channel IDs for.
-
-        Returns:
-            A dictionary mapping episode IDs to channel IDs.
-        """
+        episodes: Sequence[Episode],
+    ) -> dict[UUID, UUID]:
+        """Get the channel ID for each episode."""
         query = (
             select(Episode.id, ChannelShow.channel_id)
             .join(Season)
@@ -194,11 +126,57 @@ class EpisodeQueryBuilder:
         results = self._session.exec(query).all()
         return dict(results)
 
-    def _base_query(self) -> Select[tuple[Episode, Any]]:
-        if not self._media_filter.sort_by:
-            self._media_filter.sort_by.append("value.episode.random.ascending")
+    def _get_latest_watches(
+        self,
+        episodes: Sequence[Episode],
+    ) -> dict[UUID, Watch]:
+        """Get the latest watch for each episode."""
+        if not self._user or not episodes:
+            return {}
 
-        sort_expression = self._get_sorter(self._media_filter.sort_by[-1])
+        max_dates = (
+            select(
+                Watch.episode_id,
+                func.max(Watch.watch_date).label("max_date"),
+            )
+            .where(
+                and_(
+                    col(Watch.episode_id).in_(
+                        [episode.id for episode in episodes],
+                    ),
+                    Watch.user_id == self._user.id,
+                ),
+            )
+            .group_by(col(Watch.episode_id))
+            .subquery()
+        )
+
+        watches = self._session.exec(
+            select(Watch)
+            .join(
+                max_dates,
+                and_(
+                    Watch.episode_id == max_dates.c.episode_id,
+                    Watch.watch_date == max_dates.c.max_date,
+                ),
+            )
+            .where(Watch.user_id == self._user.id),
+        ).all()
+
+        return {watch.episode_id: watch for watch in watches}
+
+    def _base_query(self) -> Select[tuple[Episode, Any]]:
+        if not self._sort_keys:
+            self._sort_keys.append(
+                SortKeyInput(
+                    model="episode",
+                    field="random",
+                    direction="ascending",
+                    mode="normal",
+                ),
+            )
+
+        sort_expression = self._get_sorter(self._sort_keys[-1])
 
         query = (
             select(Episode, sort_expression.label("primary_sort_value"))
@@ -234,10 +212,7 @@ class EpisodeQueryBuilder:
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
-        needs_last_watched = (
-            "max.show-episodes.last_watched.descending" in self._media_filter.sort_by
-            or "max.show-episodes.last_watched.ascending" in self._media_filter.sort_by
-        )
+        needs_last_watched = any(key.field == "last_watched" for key in self._sort_keys)
         if not needs_last_watched or not self._user:
             return query
 
@@ -264,6 +239,15 @@ class EpisodeQueryBuilder:
             col(Show.id) == show_last_watched_subquery.c.show_id,
         )
 
+    @staticmethod
+    def _parse_date_filter(
+        absolute_date: datetime | None,
+        relative_days: int | None,
+    ) -> datetime | None:
+        if relative_days:
+            return tz_datetime.now() - timedelta(days=relative_days)
+        return absolute_date
+
     def _filter_deleted_media(
         self,
         query: Select[tuple[Episode, Any]],
@@ -280,10 +264,7 @@ class EpisodeQueryBuilder:
             conditions.append(col(Plugin.user_id) == self._user.id)
         return (
             query.join(Source, col(Show.source_id) == Source.id)
-            .join(
-                Plugin,
-                col(Source.plugin_id) == Plugin.id,
-            )
+            .join(Plugin, col(Source.plugin_id) == Plugin.id)
             .where(or_(*conditions))
         )
 
@@ -298,7 +279,6 @@ class EpisodeQueryBuilder:
         # return-value - MyPy doesn't understand this but Pylance does.
         return query.where(  # type: ignore[return-value]
             or_(
-                # Whitelist uses or because if either value is True it should be shown
                 and_(
                     col(ChannelShow.white_list_mode).is_(True),
                     or_(
@@ -306,7 +286,6 @@ class EpisodeQueryBuilder:
                         col(ChannelEpisodeWhiteList.episode_id).is_not(None),
                     ),
                 ),
-                # Blacklist uses and because if either value is True it should be hidden
                 and_(
                     col(ChannelShow.white_list_mode).is_(False),
                     col(ChannelSeasonWhiteList.season_id).is_(None),
@@ -348,12 +327,9 @@ class EpisodeQueryBuilder:
     ) -> Select[tuple[Episode, Any]]:
         if not (self._user and self._media_filter.hide_unwatched):
             return query
-
         return query.where(col(Episode.id).in_(self._verified_watches_subquery()))
 
     def _started_shows_subquery(self) -> SelectOfScalar[UUID]:
-        # This should be impossible because the caller should be checking if user is
-        # defined before calling this function.
         if not self._user:
             msg = "Started shows subquery requires a valid user"
             raise ValueError(msg)
@@ -373,22 +349,20 @@ class EpisodeQueryBuilder:
             .distinct()
         )
 
-    def _filter_new_shows(
+    def _filter_only_started_shows(
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
         if not (self._user and self._media_filter.only_started_shows):
             return query
-
         return query.where(col(Show.id).in_(self._started_shows_subquery()))
 
-    def _filter_started_shows(
+    def _filter_only_new_shows(
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
         if not (self._user and self._media_filter.only_new_shows):
             return query
-
         return query.where(col(Show.id).not_in(self._started_shows_subquery()))
 
     def _apply_nullable_range_filter(
@@ -450,98 +424,190 @@ class EpisodeQueryBuilder:
             self._media_filter.maximum_duration,
         )
 
+    def _apply_limit(
+        self,
+        query: Select[tuple[Episode, Any]],
+    ) -> Select[tuple[Episode, Any]]:
+        if self._media_filter.limit is not None:
+            return query.limit(self._media_filter.limit)
+        return query
+
+    @property
+    def _has_interleave(self) -> bool:
+        return any(
+            sort_key.mode in ("interleave_sequential", "interleave_random")
+            for sort_key in self._sort_keys
+        )
+
+    @property
+    def _interleave_is_random(self) -> bool:
+        return any(sort_key.mode == "interleave_random" for sort_key in self._sort_keys)
+
     def _collect_sort_expressions(
         self,
         *,
-        exclude_show_episodes: bool = False,
+        exclude_show_group: bool = False,
     ) -> list[UnaryExpression[Any] | ColumnElement[Any]]:
         """Collect sort expressions from configured sort keys.
 
         Args:
-            exclude_show_episodes: If True, skip show-episodes sort keys (used for
+            exclude_show_group: If True, skip show_group sort keys (used for
                 window function partitioning to avoid nested window functions).
         """
         sort_expressions: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        for sort_key in reversed(self._media_filter.sort_by):
-            if exclude_show_episodes and sort_key.split(".")[1] == "show-episodes":
+        for sort_key in reversed(self._sort_keys):
+            if exclude_show_group and sort_key.mode == "show_group":
                 continue
             sort_expressions.append(self._sql_sort_expression(sort_key))
-
         return sort_expressions
 
     def _sort_episodes(
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
-        # This will interleave shows in a consistent manner, but it does not actually
-        # handle interleaving shows randomly because there is no practical way to
-        # implement this in SQL. Instead an interleaved result is returned so that way
-        # the random interleaving has an even distribution of episodes for every show.
-        # This cannot be implemented in SQL because random interleaving does not
-        # interleave based on episodes but individual shows so that way a show with
-        # hundreds of episodes does not dominate the result if other shows only have a
-        # few episodes. Luckily there is minimal performance concern when interleaving
-        # like this because the input for random interleaving is limited to at most
-        # 1,000 episodes.
-        if (
-            self._media_filter.rotate_shows
-            or self._media_filter.rotate_shows_randomly
-            or self._media_filter.randomize_on_last_sort
-        ):
-            # This gets around SQLAlchemy putting window functions inside of window
-            # definitions when working with a show_series style sort expression and
-            # interleaving episodes.
-            interleave_partition = func.row_number().over(
-                partition_by=col(Show.id),
-                order_by=self._collect_sort_expressions(exclude_show_episodes=True),
+        if not self._has_interleave:
+            return query.order_by(*self._collect_sort_expressions())
+
+        sort_expressions = self._collect_sort_expressions()
+        remaining_sorts = sort_expressions[1:]
+
+        last_sort_key = self._sort_keys[-1]
+        if last_sort_key.mode == "show_group":
+            partition_by = col(Show.id)
+        else:
+            partition_by = self._get_sorter(last_sort_key)
+        interleave_partition = func.row_number().over(
+            partition_by=partition_by,
+            order_by=self._collect_sort_expressions(exclude_show_group=True),
+        )
+
+        if self._interleave_is_random:
+            show_random = func.hashtext(
+                func.concat(
+                    func.cast(Show.id, String),
+                    str(self._media_filter.random_seed),
+                ),
             )
             return query.order_by(
                 interleave_partition,
-                *self._collect_sort_expressions(),
+                show_random,
+                *remaining_sorts,
             )
 
-        return query.order_by(*self._collect_sort_expressions())
+        return query.order_by(interleave_partition, *remaining_sorts)
+
+    def _get_sorter(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
+        """Route a sort key to the appropriate SQL expression builder."""
+        if sort_key.mode == "show_group" and sort_key.model == "episode":
+            return self._sql_sort_by_show_episodes_expression(sort_key)
+        return self._sql_sort_by_value_expression(sort_key)
+
+    def _sql_sort_expression(
+        self,
+        sort_key: SortKeyInput,
+    ) -> UnaryExpression[Any] | ColumnElement[Any]:
+        sorter = self._get_sorter(sort_key)
+
+        if sort_key.direction == "descending":
+            sorter = desc(sorter)
+
+        # Last watched with ascending should have nulls first because never watched
+        # episodes should appear first.
+        if sort_key.field == "last_watched" and sort_key.direction == "ascending":
+            sorter = sorter.nulls_first()
+        else:
+            sorter = sorter.nulls_last()
+
+        return sorter
 
     def _sql_sort_by_value_expression(
         self,
-        media_type: str,
-        field_name: str,
+        sort_key: SortKeyInput,
     ) -> ColumnElement[Any]:
-        """Get field for value-based sorting."""
-        # Some sorts cannot be done using the simple field accessors.
-        if media_type == "show" and field_name == "recently_aired_week":
-            return self._recently_airing_sort_expression(7)
-        if media_type == "show" and field_name == "recently_aired_month":
-            return self._recently_airing_sort_expression(30)
-        if media_type == "show" and field_name == "started":
-            return self._started_show_sort_expression()
-
-        model = _MEDIA_MODEL_MAP.get(media_type)
-        if model is None:
-            msg = f"Unsupported media type '{media_type}' for value category"
-            raise ValueError(msg)
-
-        # no-any-return - This should always be a ColumnElement because the input values
-        # have been validated to be something that returns a ColumnElement.
-        return getattr(model, field_name)  # type: ignore[no-any-return]
-
-    def _recently_airing_sort_expression(self, days: int) -> ColumnElement[Any]:
-        recent_episode_query = (
-            select(Episode.id)
-            .join(Season)
-            .where(
-                and_(
-                    col(Season.show_id) == col(Show.id),
-                    col(Episode.air_date).is_not(None),
-                    col(Episode.air_date) >= tz_datetime.now() - timedelta(days=days),
-                    col(Episode.deleted_at).is_(None),
+        """Get SQL expression for a value-based sort."""
+        if sort_key.field == "random":
+            return func.hashtext(
+                func.concat(
+                    func.cast(Episode.id, String),
+                    str(self._media_filter.random_seed),
                 ),
             )
-            .correlate(Show)
-            .limit(1)
-        )
+        if sort_key.field == "recently_aired":
+            if sort_key.recently_aired_date:
+                return self._recently_airing_sort_expression_absolute(
+                    sort_key.recently_aired_date,
+                )
+            return self._recently_airing_sort_expression(sort_key.days or 7)
+        if sort_key.field == "last_watched":
+            return literal_column("show_last_watched.show_last_watch_date")
+        if sort_key.field == "episode_count":
+            return func.count(Episode.id).over(partition_by=col(Show.id))
+        if sort_key.model == "show" and sort_key.field == "started":
+            return self._started_show_sort_expression()
 
-        return case((recent_episode_query.exists(), 1), else_=0)
+        # no-any-return - Validated to be a ColumnElement.
+        return getattr(sort_key.model_class, sort_key.field)  # type: ignore[no-any-return]
+
+    def _sql_sort_by_show_episodes_expression(
+        self,
+        sort_key: SortKeyInput,
+    ) -> ColumnElement[Any]:
+        """Get aggregate window function for show-grouped episode sorting."""
+        if sort_key.field == "last_watched":
+            return literal_column("show_last_watched.show_last_watch_date")
+
+        if sort_key.field == "random":
+            salt = str(self._media_filter.random_seed)
+            episode_field = func.hashtext(
+                func.concat(func.cast(Show.id, String), salt),
+            )
+        elif sort_key.field == "recently_aired":
+            if sort_key.recently_aired_date:
+                episode_field = self._recently_airing_sort_expression_absolute(
+                    sort_key.recently_aired_date,
+                )
+            else:
+                episode_field = self._recently_airing_sort_expression(
+                    sort_key.days or 7,
+                )
+        elif sort_key.field == "episode_count":
+            episode_field = Episode.id
+        else:
+            episode_field = getattr(Episode, sort_key.field)
+
+        agg_funcs: dict[str, Any] = {
+            "sum": func.sum,
+            "avg": func.avg,
+            "count": func.count,
+            "max": func.max,
+            "min": func.min,
+            "first_value": func.first_value,
+        }
+        agg_func = agg_funcs.get(sort_key.aggregation)
+        if agg_func is None:
+            msg = f"Unsupported aggregation '{sort_key.aggregation}'"
+            raise ValueError(msg)
+
+        return agg_func(episode_field).over(partition_by=col(Show.id))
+
+    def _recently_airing_sort_expression(self, days: int) -> ColumnElement[Any]:
+        cutoff = tz_datetime.now() - timedelta(days=days)
+        return self._recently_airing_sort_expression_absolute(cutoff)
+
+    @staticmethod
+    def _recently_airing_sort_expression_absolute(
+        cutoff: datetime,
+    ) -> ColumnElement[Any]:
+        return case(
+            (
+                and_(
+                    col(Episode.air_date).is_not(None),
+                    col(Episode.air_date) >= cutoff,
+                ),
+                1,
+            ),
+            else_=0,
+        )
 
     def _started_show_sort_expression(self) -> ColumnElement[Any]:
         if not self._user:
@@ -561,188 +627,3 @@ class EpisodeQueryBuilder:
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)
-
-    def _sql_sort_by_show_episodes_expression(
-        self,
-        category: str,
-        field_name: str,
-    ) -> ColumnElement[Any]:
-        """Get aggregate function for show-episodes sorting using window functions."""
-        # Some sorts cannot be done using the simple field accessors.
-        if field_name == "last_watched":
-            return literal_column("show_last_watched.show_last_watch_date")
-
-        if field_name == "random":
-            # Hash the show ID with a seed (or a per-request random salt if no seed
-            # is provided) to produce a uniform per-show value. All episodes in a show
-            # get the same value since the hash only depends on Show.id and the salt.
-            # S311 - This does not need to be cryptographically secure.
-            salt = str(self._effective_seed)
-            episode_field = func.hashtext(
-                func.concat(func.cast(Show.id, String), salt),
-            )
-        else:
-            episode_field = getattr(Episode, field_name)
-        agg_funcs: dict[str, Any] = {
-            "sum": func.sum,
-            "avg": func.avg,
-            "count": func.count,
-            "max": func.max,
-            "min": func.min,
-            "first_value": func.first_value,
-        }
-        agg_func = agg_funcs.get(category)
-        if agg_func is None:
-            msg = f"Unsupported category '{category}' for show-episodes"
-            raise ValueError(msg)
-
-        return agg_func(episode_field).over(partition_by=col(Show.id))
-
-    def _get_sorter(
-        self,
-        sort_key: str,
-    ) -> ColumnElement[Any]:
-        category, media_type, field_name, _direction = sort_key.split(".")
-
-        # Order matters: show-episodes handles its own "random" case internally,
-        # so it must be checked before the generic random handler below.
-        if media_type == "show-episodes":
-            return self._sql_sort_by_show_episodes_expression(category, field_name)
-        if field_name == "random":
-            # Use a deterministic hash of episode ID + effective seed for stable random order
-            return func.hashtext(
-                func.concat(func.cast(Episode.id, String), str(self._effective_seed)),
-            )
-        if category == "value":
-            return self._sql_sort_by_value_expression(media_type, field_name)
-
-        msg = f"Unsupported sort key: {category}.{media_type}.{field_name}"
-        raise ValueError(msg)
-
-    def _sql_sort_expression(
-        self,
-        sort_key: str,
-    ) -> UnaryExpression[Any] | ColumnElement[Any]:
-        sorter = self._get_sorter(sort_key)
-        _category, _media_type, field_name, direction = sort_key.split(".")
-
-        if direction == "descending":
-            sorter = desc(sorter)
-
-        # Last watched with ascending should have nulls first because never watched
-        # episodes should appear first.
-        if field_name == "last_watched" and direction == "ascending":
-            sorter = sorter.nulls_first()
-        # Any other value should just be shoved at the end.
-        else:
-            sorter = sorter.nulls_last()
-
-        return sorter
-
-    def _is_valid_sort_key(self, sort_key: str) -> bool:
-        parts = sort_key.split(".")
-        if len(parts) != 4:  # noqa: PLR2004
-            return False
-
-        category, media_type, field_name, direction = parts
-
-        if media_type not in ("show", "season", "episode", "source", "show-episodes"):
-            return False
-
-        if direction not in ("ascending", "descending"):
-            return False
-
-        if media_type == "show-episodes":
-            return self._is_valid_show_episodes_sort_key(category, field_name)
-        return self._is_valid_non_show_episodes_sort_key(
-            category,
-            media_type,
-            field_name,
-        )
-
-    def _is_valid_show_episodes_sort_key(
-        self,
-        category: str,
-        field_name: str,
-    ) -> bool:
-        if category not in ("sum", "count", "max", "min", "first_value", "avg"):
-            return False
-
-        if field_name == "last_watched":
-            return self._user is not None
-
-        if field_name == "random":
-            return True
-
-        return field_name in Episode.model_fields
-
-    def _is_valid_non_show_episodes_sort_key(
-        self,
-        category: str,
-        media_type: str,
-        field_name: str,
-    ) -> bool:
-        if category != "value":
-            return False
-
-        if field_name == "random":
-            return True
-
-        if media_type == "show" and field_name in (
-            "recently_aired_week",
-            "recently_aired_month",
-            "started",
-        ):
-            return True
-
-        model = _MEDIA_MODEL_MAP.get(media_type)
-        if model is None:
-            return False
-
-        return field_name in model.model_fields
-
-    def get_episode_latest_watch_date(
-        self,
-        episodes: Sequence[Episode],
-    ) -> dict[UUID, Watch]:
-        """Get the latest watch for each episode.
-
-        Args:
-            episodes: List of episodes to get channel IDs for.
-
-        Returns:
-            A dictionary mapping episode IDs to their latest watch.
-        """
-        if not self._user or not episodes:
-            return {}
-
-        max_dates = (
-            select(
-                Watch.episode_id,
-                func.max(Watch.watch_date).label("max_date"),
-            )
-            .where(
-                and_(
-                    col(Watch.episode_id).in_(
-                        [episode.id for episode in episodes],
-                    ),
-                    Watch.user_id == self._user.id,
-                ),
-            )
-            .group_by(col(Watch.episode_id))
-            .subquery()
-        )
-
-        watches = self._session.exec(
-            select(Watch)
-            .join(
-                max_dates,
-                and_(
-                    Watch.episode_id == max_dates.c.episode_id,
-                    Watch.watch_date == max_dates.c.max_date,
-                ),
-            )
-            .where(Watch.user_id == self._user.id),
-        ).all()
-
-        return {watch.episode_id: watch for watch in watches}

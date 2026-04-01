@@ -15,7 +15,8 @@ function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
 }
 
 export function useMarkWatched(channelId: string | undefined) {
-  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast, showWarningToast } =
+    useCustomToast()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -90,7 +91,15 @@ export function useMarkWatched(channelId: string | undefined) {
       for (const [queryKey, data] of context?.previousEntries ?? []) {
         queryClient.setQueryData(queryKey, data)
       }
-      handleError.call(showErrorToast, error as any)
+      const status = (error as any)?.status ?? (error as any)?.response?.status
+      if (status === 409) {
+        const detail =
+          (error as any)?.body?.detail ??
+          "Episode already has an unverified watch."
+        showWarningToast(detail)
+      } else {
+        handleError.call(showErrorToast, error as any)
+      }
     },
     // Don't invalidate/refetch episodes here — the optimistic update + onSuccess
     // already keep the cache correct, and a refetch would reset any client-side

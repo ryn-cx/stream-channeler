@@ -13,7 +13,13 @@ const useCustomToast = () => {
     })
   }
 
-  return { showSuccessToast, showErrorToast }
+  const showWarningToast = (description: string) => {
+    toast.warning("Warning", {
+      description,
+    })
+  }
+
+  return { showSuccessToast, showErrorToast, showWarningToast }
 }
 
 export default useCustomToast

@@ -1,8 +1,9 @@
 # TODO: Validate
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 from pydantic import Field as PydanticField
 from sqlmodel import Field, SQLModel
 
@@ -14,10 +15,15 @@ from app.channels.models import (
     ChannelQueue,
     ChannelShow,
 )
+from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
+from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
+from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
+from app.shows.models import Show
 from app.shows.schemas import ShowOutput
+from app.sources.models import Source
 from app.sources.schemas import SourceOutput
 from app.users.models import User
 from app.utils import tz_datetime
@@ -140,6 +146,55 @@ class ChannelShowInput(BaseChannelShow):
         return entry
 
 
+class SortKeyInput(BaseModel):
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+    _SPECIAL_FIELDS = frozenset(
+        {
+            "random",
+            "recently_aired",
+            "last_watched",
+            "episode_count",
+            "started",
+        },
+    )
+    _MODEL_MAP: dict[str, type[Episode | Season | Show | Source | Plugin]] = {
+        "episode": Episode,
+        "season": Season,
+        "show": Show,
+        "source": Source,
+        "plugin": Plugin,
+    }
+
+    model: Literal["episode", "season", "show", "source", "plugin"]
+    field: str
+    direction: Literal["ascending", "descending"]
+    mode: Literal["normal", "interleave_sequential", "interleave_random", "show_group"]
+    aggregation: Literal["sum", "count", "max", "min", "first_value", "avg"] | None = (
+        None
+    )
+    days: int | None = None
+    recently_aired_date: datetime | None = PydanticField(
+        default=None,
+        validation_alias="recentlyAiredDate",
+        serialization_alias="recentlyAiredDate",
+    )
+
+    @property
+    def model_class(self) -> type[Episode | Season | Show | Source | Plugin]:
+        return self._MODEL_MAP[self.model]
+
+    @model_validator(mode="after")
+    def validate_and_resolve(self) -> SortKeyInput:
+        if self.field in self._SPECIAL_FIELDS:
+            return self
+
+        if self.field not in self.model_class.model_fields:
+            msg = f"Invalid field '{self.field}' for model '{self.model}'"
+            raise ValueError(msg)
+        return self
+
+
 class ChannelMediaFilter(SQLModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
@@ -148,28 +203,43 @@ class ChannelMediaFilter(SQLModel):
         validation_alias="sortBy",
         serialization_alias="sortBy",
     )
-    episode_ordering: bool = PydanticField(
-        default=False,
-        validation_alias="episodeOrdering",
-        serialization_alias="episodeOrdering",
-    )
-    episode_interleaving: str | None = PydanticField(
-        default=None,
-        validation_alias="episodeInterleaving",
-        serialization_alias="episodeInterleaving",
-    )
+
+    @property
+    def parsed_sort_by(self) -> list[SortKeyInput]:
+        """Parse sort_by strings as JSON-encoded SortKeyInput objects."""
+        import json
+
+        result = []
+        for entry in self.sort_by:
+            try:
+                data = json.loads(entry)
+                result.append(SortKeyInput(**data))
+            except json.JSONDecodeError, TypeError:
+                # Legacy "model.field" string format
+                parts = entry.split(".", 1)
+                if len(parts) == 2:  # noqa: PLR2004
+                    try:
+                        result.append(
+                            SortKeyInput(
+                                model=parts[0],
+                                field=parts[1],
+                                direction="ascending",
+                                mode="normal",
+                            ),
+                        )
+                    except ValidationError:
+                        pass
+            except ValidationError:
+                pass
+        return result
+
     additional_channels: list[uuid.UUID] = PydanticField(
         default=[],
         validation_alias="additionalChannels",
         serialization_alias="additionalChannels",
     )
-    randomize_on_last_sort: bool = PydanticField(
-        default=False,
-        validation_alias="randomizeOnLastSort",
-        serialization_alias="randomizeOnLastSort",
-    )
-    random_seed: int | None = PydanticField(
-        default=None,
+    random_seed: int = PydanticField(
+        default=42,
         validation_alias="randomSeed",
         serialization_alias="randomSeed",
     )
@@ -310,7 +380,8 @@ class WhitelistShowOutput(ShowOutput):
 
 class SortOptionOutput(BaseModel):
     label: str
-    value: str
+    model: Literal["episode", "season", "show", "source", "plugin"]
+    field: str
 
 
 class MultipleSortOptionOutputs(BaseModel):
