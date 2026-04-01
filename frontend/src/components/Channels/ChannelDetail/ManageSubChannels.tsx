@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { ChevronDown, ChevronUp, Plus, TvMinimal, X } from "lucide-react"
 import { useState } from "react"
 
+import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -91,7 +92,7 @@ export function ManageAdditionalChannels({
 
   const mutation = useMutation({
     mutationFn: (newSearch: Record<string, any>) =>
-      ChannelsService.getChannelEpisodes({
+      getChannelEpisodes({
         channelId,
         ...newSearch,
       }),

@@ -5,6 +5,7 @@ import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
+import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
 import { AddUrlsToQueueButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import {
@@ -107,7 +108,7 @@ function getEpisodesQueryOptions(
 ) {
   return {
     queryFn: () =>
-      ChannelsService.getChannelEpisodes({
+      getChannelEpisodes({
         channelId,
         ...searchParams,
       }),

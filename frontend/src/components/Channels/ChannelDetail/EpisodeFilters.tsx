@@ -15,6 +15,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -392,7 +393,7 @@ export function EpisodeFilters({
 
   const mutation = useMutation({
     mutationFn: (newSearch: Record<string, any>) =>
-      ChannelsService.getChannelEpisodes({
+      getChannelEpisodes({
         channelId,
         ...newSearch,
       }),

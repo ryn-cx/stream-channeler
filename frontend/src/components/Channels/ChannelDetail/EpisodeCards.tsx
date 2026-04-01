@@ -289,7 +289,7 @@ export function EpisodeCard({
         // p-0 - No extra padding
         // bg-card - Give cards a slight background color
         // flex flex-col - Make height of card flexible
-        className="group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-none"
+        className="group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-lg"
         onClick={handleClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

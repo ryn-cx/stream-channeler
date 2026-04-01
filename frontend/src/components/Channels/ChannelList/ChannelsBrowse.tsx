@@ -5,8 +5,8 @@ import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
+import { getChannelEpisodes } from "@/api/channels"
 import type { ChannelOutput } from "@/client"
-import { ChannelsService } from "@/client"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,7 @@ function ChannelRow({ channel, onEmpty, onEdit, onDelete }: ChannelRowProps) {
       {
         queryKey: ["episodes-preview", channel.id, defaultOrder],
         queryFn: () =>
-          ChannelsService.getChannelEpisodes({
+          getChannelEpisodes({
             channelId: channel.id,
             limit: 20,
             ...defaultOrder,

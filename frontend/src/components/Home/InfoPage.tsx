@@ -41,14 +41,14 @@ export function InfoPage() {
                       mode: "normal",
                     },
                     {
-                      model: "season",
-                      field: "season_number",
+                      model: "episode",
+                      field: "episode_number",
                       direction: "ascending",
                       mode: "normal",
                     },
                     {
-                      model: "episode",
-                      field: "episode_number",
+                      model: "season",
+                      field: "season_number",
                       direction: "ascending",
                       mode: "normal",
                     },

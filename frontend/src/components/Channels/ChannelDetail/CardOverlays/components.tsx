@@ -32,10 +32,10 @@ export function CardSourceRow({
           <img
             src={episode.source.favicon_url}
             alt={episode.source.name ?? undefined}
-            className="size-5"
+            className="size-6"
           />
         )}
-        <span className="font-bold text-sm truncate group-hover:whitespace-normal group-hover:overflow-visible">
+        <span className="font-bold text-base truncate group-hover:whitespace-normal group-hover:overflow-visible">
           {episode.show.name}
         </span>
       </div>
