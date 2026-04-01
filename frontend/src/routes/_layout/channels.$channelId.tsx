@@ -5,7 +5,7 @@ import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
-import { ChannelsService } from "@/client"
+import { ChannelsService, type SortKeyInput } from "@/client"
 import { AddUrlsToQueueButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import {
   columns,
@@ -45,15 +45,7 @@ function getChannelQueryOptions(channelId: string) {
 type ChannelSearchParams = {
   hideWatched?: boolean
   hideUnwatched?: boolean
-
-  sortBy?: Array<{
-    model: string
-    field: string
-    direction?: string
-    mode?: string
-    aggregation?: string
-    days?: number | null
-  }>
+  sortBy?: Array<SortKeyInput>
   maximumWatchDate?: string
   onlyStartedShows?: boolean
   onlyNewShows?: boolean
@@ -118,7 +110,6 @@ function getEpisodesQueryOptions(
       ChannelsService.getChannelEpisodes({
         channelId,
         ...searchParams,
-        sortBy: searchParams.sortBy?.map((s) => JSON.stringify(s)),
       }),
     queryKey: ["episodes", channelId, searchParams],
     refetchOnWindowFocus: false,
