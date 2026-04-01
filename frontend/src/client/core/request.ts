@@ -54,7 +54,7 @@ export const getQueryString = (params: Record<string, unknown>): string => {
 		} else if (Array.isArray(value)) {
 			value.forEach(v => encodePair(key, v));
 		} else if (typeof value === 'object') {
-			Object.entries(value).forEach(([k, v]) => encodePair(`${key}[${k}]`, v));
+			append(key, JSON.stringify(value));
 		} else {
 			append(key, value);
 		}
