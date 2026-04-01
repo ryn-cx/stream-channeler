@@ -5,8 +5,12 @@ import { Check, Play, Tv, Users, X, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import useAuth from "@/hooks/useAuth"
 
 export function InfoPage() {
+  const { user } = useAuth()
+  const getStartedTo = user ? "/dashboard" : "/signup"
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Hero Section */}
@@ -43,7 +47,7 @@ export function InfoPage() {
               </Link>
             </Button>
             <Button asChild size="lg">
-              <Link to="/signup">
+              <Link to={getStartedTo}>
                 <Users className="mr-2" />
                 Get Started
               </Link>
@@ -212,7 +216,7 @@ export function InfoPage() {
                 </li>
               </ul>
               <Button asChild size="lg" variant="outline" className="w-full">
-                <Link to="/signup">Get Started</Link>
+                <Link to={getStartedTo}>Get Started</Link>
               </Button>
             </Card>
 

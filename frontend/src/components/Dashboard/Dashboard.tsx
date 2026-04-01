@@ -458,24 +458,6 @@ export function Dashboard() {
                     </p>
                     <div className="space-y-4">
                       <div>
-                        <p className="text-sm font-medium mb-1">HiDive</p>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Example:
-                        </p>
-                        <code className="block bg-muted p-2 rounded text-xs break-all">
-                          https://www.hidive.com/season/19334
-                        </code>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium mb-1">Crunchyroll</p>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Example:
-                        </p>
-                        <code className="block bg-muted p-2 rounded text-xs break-all">
-                          https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family
-                        </code>
-                      </div>
-                      <div>
                         <p className="text-sm font-medium mb-1">
                           YouTube (Playlists and Channels)
                         </p>
@@ -490,6 +472,15 @@ export function Dashboard() {
                         </p>
                         <code className="block bg-muted p-2 rounded text-xs break-all">
                           https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-1">Crunchyroll</p>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Example:
+                        </p>
+                        <code className="block bg-muted p-2 rounded text-xs break-all">
+                          https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family
                         </code>
                       </div>
                     </div>
@@ -590,7 +581,7 @@ export function Dashboard() {
                   <Link to="/watches" className="text-primary hover:underline">
                     watches page
                   </Link>
-                  before any watch based filters will be applied to it.
+                  {" "}before any watch based filters will be applied to it.
                 </p>
 
                 <p>
