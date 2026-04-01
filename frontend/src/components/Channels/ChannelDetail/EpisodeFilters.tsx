@@ -320,7 +320,9 @@ export function EpisodeFilters({
     )
   }
 
-  const parseSortEntries = (sortBy: SortKeyInput[] | undefined): SortEntry[] => {
+  const parseSortEntries = (
+    sortBy: SortKeyInput[] | undefined,
+  ): SortEntry[] => {
     if (!sortBy) return []
 
     return sortBy.map((input) => {
@@ -370,7 +372,7 @@ export function EpisodeFilters({
     defaultValues: {
       hideWatched: filterParams.hideWatched,
       hideUnwatched: filterParams.hideUnwatched,
-      sortBy: filterParams.sortBy,
+      sortBy: filterParams.sortBy as FormValues["sortBy"],
       maximumWatchDateAbsolute: filterParams.maximumWatchDateAbsolute,
       maximumWatchDateRelative: filterParams.maximumWatchDateRelative,
       onlyStartedShows: filterParams.onlyStartedShows,
