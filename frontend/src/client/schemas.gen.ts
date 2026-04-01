@@ -139,7 +139,7 @@ export const ChannelMediaFilterSchema = {
     properties: {
         sortBy: {
             items: {
-                type: 'string'
+                '$ref': '#/components/schemas/SortKeyInput'
             },
             type: 'array',
             title: 'Sortby',
@@ -2412,6 +2412,68 @@ export const ShowsListOutputSchema = {
     type: 'object',
     required: ['data'],
     title: 'ShowsListOutput'
+} as const;
+
+export const SortKeyInputSchema = {
+    properties: {
+        model: {
+            type: 'string',
+            enum: ['episode', 'season', 'show', 'source', 'plugin'],
+            title: 'Model'
+        },
+        field: {
+            type: 'string',
+            title: 'Field'
+        },
+        direction: {
+            type: 'string',
+            enum: ['ascending', 'descending'],
+            title: 'Direction'
+        },
+        mode: {
+            type: 'string',
+            enum: ['normal', 'interleave_sequential', 'interleave_random', 'show_group'],
+            title: 'Mode'
+        },
+        aggregation: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['sum', 'count', 'max', 'min', 'first_value', 'avg']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Aggregation'
+        },
+        days: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days'
+        },
+        recentlyAiredDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recentlyaireddate'
+        }
+    },
+    type: 'object',
+    required: ['model', 'field', 'direction', 'mode'],
+    title: 'SortKeyInput'
 } as const;
 
 export const SortOptionOutputSchema = {

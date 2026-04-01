@@ -33,7 +33,7 @@ export type ChannelEpisodesOutput = {
 };
 
 export type ChannelMediaFilter = {
-    sortBy?: Array<(string)>;
+    sortBy?: Array<SortKeyInput>;
     additionalChannels?: Array<(string)>;
     randomSeed?: number;
     hideWatched?: boolean;
@@ -332,13 +332,27 @@ export type ShowsListOutput = {
     data: Array<ShowOutput>;
 };
 
+export type SortKeyInput = {
+    model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
+    field: string;
+    direction: 'ascending' | 'descending';
+    mode: 'normal' | 'interleave_sequential' | 'interleave_random' | 'show_group';
+    aggregation?: ('sum' | 'count' | 'max' | 'min' | 'first_value' | 'avg' | null);
+    days?: (number | null);
+    recentlyAiredDate?: (string | null);
+};
+
+export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
+
+export type direction = 'ascending' | 'descending';
+
+export type mode = 'normal' | 'interleave_sequential' | 'interleave_random' | 'show_group';
+
 export type SortOptionOutput = {
     label: string;
     model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
     field: string;
 };
-
-export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
 
 export type SourceOutput = {
     key: string;
@@ -642,7 +656,7 @@ export type ChannelsGetChannelEpisodesData = {
     onlyNewShows?: boolean;
     onlyStartedShows?: boolean;
     randomSeed?: number;
-    sortBy?: Array<(string)>;
+    sortBy?: Array<SortKeyInput>;
 };
 
 export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);

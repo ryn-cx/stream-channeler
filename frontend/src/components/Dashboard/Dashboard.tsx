@@ -580,8 +580,8 @@ export function Dashboard() {
                   as watched and the watch needs to be validated in the{" "}
                   <Link to="/watches" className="text-primary hover:underline">
                     watches page
-                  </Link>
-                  {" "}before any watch based filters will be applied to it.
+                  </Link>{" "}
+                  before any watch based filters will be applied to it.
                 </p>
 
                 <p>

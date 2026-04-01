@@ -62,7 +62,7 @@ class EpisodeQueryBuilder:
         a channel without the other user having to make an account."""
         return [
             sort_key
-            for sort_key in media_filter.parsed_sort_by
+            for sort_key in media_filter.sort_by
             if sort_key.field != "last_watched" or self._user is not None
         ]
 

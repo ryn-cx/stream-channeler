@@ -1,9 +1,10 @@
 # TODO: Validate
+import json
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, model_validator
 from pydantic import Field as PydanticField
 from sqlmodel import Field, SQLModel
 
@@ -195,43 +196,22 @@ class SortKeyInput(BaseModel):
         return self
 
 
+def parse_sort_key_input(v: Any) -> Any:
+    if isinstance(v, str):
+        return json.loads(v)
+    return v
+
+
 class ChannelMediaFilter(SQLModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    sort_by: list[str] = PydanticField(
-        default=[],
-        validation_alias="sortBy",
-        serialization_alias="sortBy",
+    sort_by: list[Annotated[SortKeyInput, BeforeValidator(parse_sort_key_input)]] = (
+        PydanticField(
+            default=[],
+            validation_alias="sortBy",
+            serialization_alias="sortBy",
+        )
     )
-
-    @property
-    def parsed_sort_by(self) -> list[SortKeyInput]:
-        """Parse sort_by strings as JSON-encoded SortKeyInput objects."""
-        import json
-
-        result = []
-        for entry in self.sort_by:
-            try:
-                data = json.loads(entry)
-                result.append(SortKeyInput(**data))
-            except json.JSONDecodeError, TypeError:
-                # Legacy "model.field" string format
-                parts = entry.split(".", 1)
-                if len(parts) == 2:  # noqa: PLR2004
-                    try:
-                        result.append(
-                            SortKeyInput(
-                                model=parts[0],
-                                field=parts[1],
-                                direction="ascending",
-                                mode="normal",
-                            ),
-                        )
-                    except ValidationError:
-                        pass
-            except ValidationError:
-                pass
-        return result
 
     additional_channels: list[uuid.UUID] = PydanticField(
         default=[],
