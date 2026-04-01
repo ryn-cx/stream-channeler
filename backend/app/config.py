@@ -119,7 +119,10 @@ class Settings(BaseSettings):
         return self
 
     YOUTUBE_API_KEY: str
-    YOUTUBE_API_IP: str
+    LOCAL_IP: str
+
+    PROXY_URL: str | None = None
+    PROXY_AUTH_TOKEN: str | None = None
 
 
 # call-arg - Error from original template.

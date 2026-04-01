@@ -34,11 +34,15 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
 @cache
 def just_scrape_client() -> JustScrape:
-    return JustScrape()
+    return JustScrape(
+        proxy_url=settings.PROXY_URL,
+        proxy_auth_token=settings.PROXY_AUTH_TOKEN,
+    )
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     api_endpoint = just_scrape_client().new_titles
+    allow_local_ip = True
 
     def __init__(
         self,
@@ -65,6 +69,7 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
 class NewTitlesBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     api_endpoint = just_scrape_client().new_title_buckets
+    allow_local_ip = True
 
     def __init__(self, db: Session, plugin: Plugin, end_datetime: datetime) -> None:
         self.end_datetime = end_datetime
@@ -102,12 +107,14 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     api_endpoint = just_scrape_client().url_title_details
+    allow_local_ip = True
 
     # TODO: Can this error be handled better?
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
+            if not self.allow_local_ip:
+                check_ip_not_matches(settings.LOCAL_IP)
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)
@@ -121,6 +128,7 @@ class CustomSeasonEpisodes(
     GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
 ):
     api_endpoint = just_scrape_client().custom_season_episodes
+    allow_local_ip = True
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
@@ -138,6 +146,7 @@ class CustomBuyBoxOffers(
     GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
     api_endpoint = just_scrape_client().custom_buy_box_offers
+    allow_local_ip = True
 
 
 class FileMixin(BasePlugin, register=False):

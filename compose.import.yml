@@ -67,7 +67,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
-      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOCAL_IP=${LOCAL_IP?Variable not set}
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_AUTH_TOKEN=${PROXY_AUTH_TOKEN}
       - LOGURU_COLORIZE=YES
       - LOGLEVEL=INFO
 
@@ -103,7 +105,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
-      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOCAL_IP=${LOCAL_IP?Variable not set}
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_AUTH_TOKEN=${PROXY_AUTH_TOKEN}
       - LOGURU_COLORIZE=YES
       - LOGLEVEL=INFO
 
@@ -141,7 +145,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
-      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOCAL_IP=${LOCAL_IP?Variable not set}
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_AUTH_TOKEN=${PROXY_AUTH_TOKEN}
       - LOGURU_COLORIZE=YES
       - LOGLEVEL=INFO
 
@@ -179,7 +185,9 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
-      - YOUTUBE_API_IP=${YOUTUBE_API_IP?Variable not set}
+      - LOCAL_IP=${LOCAL_IP?Variable not set}
+      - PROXY_URL=${PROXY_URL}
+      - PROXY_AUTH_TOKEN=${PROXY_AUTH_TOKEN}
       - LOGURU_COLORIZE=YES
       - LOGLEVEL=INFO
 

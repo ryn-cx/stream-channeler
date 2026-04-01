@@ -813,7 +813,7 @@ wheels = [
 [[package]]
 name = "just-scrape"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#30e21bf5eab5bc9ed489ff4f781572bad37fa7e6" }
+source = { git = "https://github.com/ryn-cx/just-scrape#8497dc15570e225d91e3ed629226008d5e28d3ed" }
 dependencies = [
     { name = "good-ass-pydantic-integrator" },
     { name = "requests" },

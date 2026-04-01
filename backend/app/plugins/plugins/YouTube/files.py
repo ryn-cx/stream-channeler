@@ -116,7 +116,7 @@ class Video(GAPIJSON[VideoModel]):
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            check_ip_matches(settings.YOUTUBE_API_IP)
+            check_ip_matches(settings.LOCAL_IP)
             # yt-dlapi is unable to get video information when run from a server or
             # vpn, so not-yt-dlapi needs to be used instead to get video information.
             response = self._get()

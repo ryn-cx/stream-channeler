@@ -196,6 +196,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
     api_endpoint: ClassVar[Any]
 
     acceptable_error: str | None = None
+    allow_local_ip: bool = False
 
     def __init__(self, db: Session, plugin: Plugin, unique_identifier: str) -> None:
         self.unique_identifier = unique_identifier
@@ -218,7 +219,8 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            check_ip_not_matches(settings.YOUTUBE_API_IP)
+            if not self.allow_local_ip:
+                check_ip_not_matches(settings.LOCAL_IP)
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)
