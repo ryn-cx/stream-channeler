@@ -159,6 +159,11 @@ class UpsertMixin(FileMixin, register=False):
             video_item = video_data.items[0]
             video_snippet = video_item.snippet
 
+            if duration_timedelta := video_item.content_details.duration:
+                duration = int(duration_timedelta.total_seconds())
+            else:
+                duration = None
+
             existing = EpisodeInput(
                 key=video_item.id,
                 name=video_snippet.title,
@@ -166,7 +171,7 @@ class UpsertMixin(FileMixin, register=False):
                 description=video_snippet.description,
                 release_date=video_snippet.published_at,
                 air_date=video_snippet.published_at,
-                duration=int(video_item.content_details.duration.total_seconds()),
+                duration=duration,
                 image_url=self._get_best_image_url(video_snippet),
                 sort_order=sort_order,
                 data_timestamp=self._oldest_file_timestamp(
