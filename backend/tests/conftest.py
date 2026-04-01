@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import sys
-import uuid
 from collections.abc import Generator
 
 import pytest
@@ -20,11 +19,9 @@ from app.config import settings
 from app.database import init_db, load_models
 from app.main import app
 from tests.users.utils import (
-    CreatedUser,
     authentication_token_from_email,
-    create_random_user_alt,
 )
-from tests.utils.utils import get_superuser_token_headers, random_email
+from tests.utils.utils import get_superuser_token_headers
 
 # Remove the uncolorized logger and replace it with a colorized one that captures debug
 # logs.
@@ -138,61 +135,52 @@ def session_scoped_db(session_scoped_connection: Connection) -> Generator[Sessio
     yield from savepoint_session(session_scoped_connection)
 
 
-@pytest.fixture
-def client(session_scoped_db: Session) -> Generator[TestClient]:
-    """Provide a test client that shares the test database session."""
-    app.dependency_overrides[get_db] = lambda: session_scoped_db
+def _create_client(db: Session) -> Generator[TestClient]:
+    """Provide a test client that shares the given database session."""
+    app.dependency_overrides[get_db] = lambda: db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
 
 
-# TODO: Can any of the below be removed?
 @pytest.fixture
-def superuser_token_headers(client: TestClient) -> dict[str, str]:
+def function_scoped_client(function_scoped_db: Session) -> Generator[TestClient]:
+    """Provide a test client using a function-scoped database session."""
+    yield from _create_client(function_scoped_db)
+
+
+@pytest.fixture
+def class_scoped_client(class_scoped_db: Session) -> Generator[TestClient]:
+    """Provide a test client using a class-scoped database session."""
+    yield from _create_client(class_scoped_db)
+
+
+@pytest.fixture
+def module_scoped_client(module_scoped_db: Session) -> Generator[TestClient]:
+    """Provide a test client using a module-scoped database session."""
+    yield from _create_client(module_scoped_db)
+
+
+@pytest.fixture
+def session_scoped_client(session_scoped_db: Session) -> Generator[TestClient]:
+    """Provide a test client using a session-scoped database session."""
+    yield from _create_client(session_scoped_db)
+
+
+@pytest.fixture
+def superuser_token_headers(session_scoped_client: TestClient) -> dict[str, str]:
     """Provide authentication headers for the superuser."""
-    return get_superuser_token_headers(client)
+    return get_superuser_token_headers(session_scoped_client)
 
 
 @pytest.fixture
 def normal_user_token_headers(
-    client: TestClient,
+    session_scoped_client: TestClient,
     session_scoped_db: Session,
 ) -> dict[str, str]:
     """Provide authentication headers for a normal test user."""
     return authentication_token_from_email(
-        client=client,
+        client=session_scoped_client,
         email=settings.EMAIL_TEST_USER,
         db=session_scoped_db,
-    )
-
-
-@pytest.fixture
-def random_user_token_headers(
-    client: TestClient,
-    session_scoped_db: Session,
-) -> dict[str, str]:
-    """Provide authentication headers for a randomly generated user."""
-    return authentication_token_from_email(
-        client=client,
-        email=random_email(),
-        db=session_scoped_db,
-    )
-
-
-@pytest.fixture
-def random_user(client: TestClient, session_scoped_db: Session) -> CreatedUser:
-    """Create and return a randomly generated user with authentication headers."""
-    return create_random_user_alt(client=client, db=session_scoped_db)
-
-
-@pytest.fixture
-def super_user(client: TestClient) -> CreatedUser:
-    """Return the superuser credentials with authentication headers."""
-    return CreatedUser(
-        # This is a fake UUID for simplicity because it is not actually used.
-        id=uuid.uuid4(),
-        email=settings.FIRST_SUPERUSER,
-        password=settings.FIRST_SUPERUSER_PASSWORD,
-        headers=get_superuser_token_headers(client),
     )

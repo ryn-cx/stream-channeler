@@ -1,7 +1,7 @@
 # TODO: Validate
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, Session
 
 from app.models import BaseInputMixin
@@ -86,10 +86,12 @@ class PluginsListOutput(BaseModel):
 
 
 class PluginPostInput(BasePlugin):
+    model_config = ConfigDict(extra="forbid")
     key: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class PluginPatchInput(BasePlugin):
+    model_config = ConfigDict(extra="forbid")
     # assignment - Patch input can ignore required values.
     key: str | None = Field(default=None)  # type: ignore[assignment]
     public: bool | None = Field(default=None)  # type: ignore[assignment]

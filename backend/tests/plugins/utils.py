@@ -1,22 +1,25 @@
-# TODO: Validate
 import uuid
 
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from tests.users.utils import create_random_user
+from app.users.models import User
+from tests.users.utils import CreatedUser, create_random_user
 from tests.utils.utils import build_random_model
+
+PluginParent = User | CreatedUser | uuid.UUID
 
 
 def create_random_plugin(
     db: Session,
-    user_id: uuid.UUID | None = None,
+    parent: User | CreatedUser | uuid.UUID | None = None,
     **kwargs: object,
 ) -> Plugin:
-    if user_id is None:
-        user_id = create_random_user(db).id
-    plugin = build_random_model(Plugin, user_id=user_id, deleted_at=None, **kwargs)
+    if parent is None:
+        parent = create_random_user(db)
+    if isinstance(parent, (User, CreatedUser)):
+        parent = parent.id
+    plugin = build_random_model(Plugin, user_id=parent, deleted_at=None, **kwargs)
     db.add(plugin)
-    # Flush so plugin.sources and plugin.files can be accessed.
-    db.flush()
+    db.flush()  # Allows plugin.user, plugin.sources, and plugin.files to be accessed.
     return plugin

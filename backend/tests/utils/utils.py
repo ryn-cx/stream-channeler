@@ -119,6 +119,8 @@ def _random_value(object_type: type) -> object:
         return [_random_value(inner_type) for _ in range(random.randint(1, 3))]
     if issubclass(object_type, Enum):
         return random.choice(list(object_type))
+    if issubclass(object_type, BaseModel):
+        return build_random_model(object_type)
     msg = f"No random generator for type: {object_type}"
     raise ValueError(msg)
 

@@ -328,12 +328,7 @@ export class ChannelsService {
      * @param data The data for the request.
      * @param data.channelId
      * @param data.sortBy
-     * @param data.episodeOrdering
-     * @param data.episodeInterleaving
      * @param data.additionalChannels
-     * @param data.rotateShows
-     * @param data.rotateShowsRandomly
-     * @param data.randomizeOnLastSort
      * @param data.randomSeed
      * @param data.hideWatched
      * @param data.hideUnwatched
@@ -364,12 +359,7 @@ export class ChannelsService {
             },
             query: {
                 sort_by: data.sortBy,
-                episode_ordering: data.episodeOrdering,
-                episode_interleaving: data.episodeInterleaving,
                 additional_channels: data.additionalChannels,
-                rotate_shows: data.rotateShows,
-                rotate_shows_randomly: data.rotateShowsRandomly,
-                randomize_on_last_sort: data.randomizeOnLastSort,
                 random_seed: data.randomSeed,
                 hide_watched: data.hideWatched,
                 hide_unwatched: data.hideUnwatched,

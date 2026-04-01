@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
 
 from app.episodes.schemas import EpisodeOutput
@@ -14,7 +14,7 @@ from app.watches.models import BaseWatch
 
 
 class WatchPostInput(BaseWatch):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 
 class WatchCreateInput(WatchPostInput):
@@ -22,6 +22,7 @@ class WatchCreateInput(WatchPostInput):
 
 
 class WatchPatchInput(BaseWatch):
+    model_config = ConfigDict(extra="forbid")
     watch_date: datetime | None = None  # type: ignore[assignment]
     verified: bool | None = None  # type: ignore[assignment]
 

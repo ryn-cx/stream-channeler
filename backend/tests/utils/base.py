@@ -8,15 +8,18 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from tests.utils.route_assertions import Method
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, col, select
 
 from app.channels.models import Channel
-from app.channels.schemas import ChannelOutput, ChannelPatchInput, ChannelPostInput
+from app.channels.schemas import (
+    ChannelOutput,
+    ChannelPatchInput,
+    ChannelPostInput,
+    ChannelsListOutput,
+)
 from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import (
@@ -26,7 +29,12 @@ from app.episodes.schemas import (
     EpisodesListOutput,
 )
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginOutput, PluginPatchInput, PluginPostInput
+from app.plugins.schemas import (
+    PluginOutput,
+    PluginPatchInput,
+    PluginPostInput,
+    PluginsListOutput,
+)
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
@@ -43,12 +51,21 @@ from app.sources.schemas import (
     SourcePostInput,
     SourcesListOutput,
 )
+from app.users.models import User
 from app.watches.models import Watch
-from app.watches.schemas import WatchOutput, WatchPatchInput, WatchPostInput
-from tests.users.utils import CreatedUser, create_random_user_alt
+from app.watches.schemas import (
+    WatchOutput,
+    WatchPatchInput,
+    WatchPostInput,
+)
+from tests.users.utils import (
+    authentication_token_from_email,
+    create_random_user,
+)
 from tests.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
 SUPPORTED_MODELS = Channel | Episode | Season | Show | Source | Plugin | Watch
+PARENT_MODELS = SUPPORTED_MODELS | User
 
 INPUT_SCHEMAS = (
     ChannelPostInput
@@ -69,7 +86,12 @@ OUTPUT_MODELS = (
     | WatchOutput
 )
 LIST_OUTPUT_MODELS = (
-    EpisodesListOutput | SeasonsListOutput | ShowsListOutput | SourcesListOutput
+    ChannelsListOutput
+    | EpisodesListOutput
+    | PluginsListOutput
+    | SeasonsListOutput
+    | ShowsListOutput
+    | SourcesListOutput
 )
 PATCH_MODELS = (
     ChannelPatchInput
@@ -80,11 +102,6 @@ PATCH_MODELS = (
     | SourcePatchInput
     | WatchPatchInput
 )
-OUTPUT_MODELS_WITH_KEY = (
-    EpisodeOutput | PluginOutput | SeasonOutput | ShowOutput | SourceOutput
-)
-MODELS_WITH_KEY = Episode | Plugin | Season | Show | Source
-MODELS_WITH_PARENT = Episode | Season | Show | Source | Watch
 
 
 def _pluralize(name: str) -> str:
@@ -93,19 +110,10 @@ def _pluralize(name: str) -> str:
     return name + "s"
 
 
-def _get_foreign_keys(model: type[SQLModel]) -> list[str]:
-    return [
-        field_name
-        for field_name, field_info in model.model_fields.items()
-        if isinstance(getattr(field_info, "foreign_key", None), str)
-        and field_name != "user_id"
-    ]
-
-
 @dataclasses.dataclass
 class CreatedTestData[T]:
     record: T
-    user: CreatedUser
+    user: User
     headers: dict[str, str]
 
 
@@ -119,9 +127,23 @@ class BaseTests[T: SUPPORTED_MODELS]:
     create_record_function: Callable[..., T]
     returns_list: bool = False
 
+    def get_record_from_db(self, session_scoped_db: Session, record_id: uuid.UUID) -> T:
+        """Get the record with the given id from the database."""
+        return session_scoped_db.exec(
+            select(self.database_model).where(self.database_model.id == record_id),
+        ).one()
+
+    @staticmethod
+    def get_foreign_keys(model: type[SQLModel]) -> list[str]:
+        return [
+            field_name
+            for field_name, field_info in model.model_fields.items()
+            if isinstance(getattr(field_info, "foreign_key", None), str)
+        ]
+
     @property
     def parent_key_name(self) -> str:
-        keys = _get_foreign_keys(self.database_model)
+        keys = self.get_foreign_keys(self.database_model)
         if len(keys) == 0:
             msg = f"Model {self.model_name} does not have a parent key"
             raise ValueError(msg)
@@ -146,33 +168,26 @@ class BaseTests[T: SUPPORTED_MODELS]:
     def parent_endpoint_name(self) -> str:
         return _pluralize(self.parent_name.lower())
 
-    def get_parent(self, db: Session, record: T) -> SUPPORTED_MODELS:
-        """Look up the parent record from the database."""
-
-        statement = select(type(record)).where(type(record).id == record.id)
-        record_from_db = db.exec(statement).one()
-        assert isinstance(record_from_db, MODELS_WITH_PARENT)
-        return record_from_db.parent()
-
-    def entry_url(self, record_id: uuid.UUID | str) -> str:
+    def generic_record_url(self, record_id: uuid.UUID | str) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{record_id}"
 
     @contextmanager
-    def assert_no_db_change(self, db: Session) -> Generator[None]:
+    def assert_no_db_change(self, session_scoped_db: Session) -> Generator[None]:
         """Assert that no records were added, removed, or modified."""
-        records_before = db.exec(select(self.database_model)).all()
+        records_before = session_scoped_db.exec(select(self.database_model)).all()
         yield
-        records_after = db.exec(select(self.database_model)).all()
+        records_after = session_scoped_db.exec(select(self.database_model)).all()
         assert records_before == records_after
 
-    def assert_only_records_changed(
+    def assert_other_records_unchanged(
         self,
-        db: Session,
-        updated_record_ids: Sequence[uuid.UUID],
+        session_scoped_db: Session,
+        updated_records: Sequence[OUTPUT_MODELS],
         records_before: Sequence[T],
     ) -> None:
         """Assert only the given records changed; all others are identical."""
-        all_records_after = db.exec(select(self.database_model)).all()
+        updated_record_ids = [record.id for record in updated_records]
+        all_records_after = session_scoped_db.exec(select(self.database_model)).all()
         unmodified_before = sorted(
             [
                 record
@@ -193,13 +208,13 @@ class BaseTests[T: SUPPORTED_MODELS]:
 
     def assert_only_records_added(
         self,
-        db: Session,
+        session_scoped_db: Session,
         new_record_ids: Sequence[uuid.UUID],
         records_before: Sequence[T],
     ) -> None:
         """Assert only the given records were added and all existing records are unchanged."""
         new_records = list(
-            db.exec(
+            session_scoped_db.exec(
                 select(self.database_model).where(
                     col(self.database_model.id).in_(new_record_ids),
                 ),
@@ -208,79 +223,86 @@ class BaseTests[T: SUPPORTED_MODELS]:
 
         expected = sorted([*records_before, *new_records], key=lambda r: r.id)
         actual = sorted(
-            db.exec(select(self.database_model)).all(),
+            session_scoped_db.exec(select(self.database_model)).all(),
             key=lambda r: r.id,
         )
         assert expected == actual
 
     @staticmethod
-    def get_plugin(record: SUPPORTED_MODELS) -> Plugin | None:
-        while not isinstance(record, Plugin):
-            keys = _get_foreign_keys(type(record))
-            if not keys:
-                return None
-            record = getattr(record, keys[0].removesuffix("_id"))
-        return record
+    def get_plugin(record: SUPPORTED_MODELS) -> Plugin:
+        queue: list[SUPPORTED_MODELS] = [record]
+        # haha BFS go brrrrr
+        while queue:
+            current = queue.pop()
+            if isinstance(current, Plugin):
+                return current
+            queue.extend(
+                getattr(current, key.removesuffix("_id"))
+                for key in BaseTests.get_foreign_keys(type(current))
+            )
+        msg = f"No plugin found for {type(record).__name__}"
+        raise ValueError(msg)
 
     def set_visibility(
         self,
-        db: Session,
-        record: SUPPORTED_MODELS,
+        record: T,
         *,
-        public: bool,
+        record_is_public: bool,
     ) -> None:
         plugin = self.get_plugin(record)
-        if plugin is not None:
-            plugin.public = public
-        else:
-            record.public = public  # type: ignore[union-attr]
-        db.flush()
+        plugin.public = record_is_public
 
     def create_test_data(
         self,
         client: TestClient,
         db: Session,
         *,
-        is_owner: bool = True,
-        authenticated: bool = True,
-        public: bool = True,
+        user_is_owner: bool,
+        user_is_authenticated: bool,
+        record_is_public: bool,
     ) -> CreatedTestData[T]:
         """Create a user and record with the given ownership and visibility."""
-        user = create_random_user_alt(client, db)
-        other = create_random_user_alt(client, db)
+        user = create_random_user(db)
+        other = create_random_user(db)
 
-        if is_owner:
-            record = self.create_record_function(db, user_id=user.id)
+        if user_is_owner:
+            record = self.create_record_function(db, user.id)
         else:
-            record = self.create_record_function(db, user_id=other.id)
+            record = self.create_record_function(db, other.id)
 
         # Populate with random dummy data to make sure filtering works correctly.
-        self.create_record_function(db, user_id=user.id)
-        self.create_record_function(db, user_id=other.id)
+        self.create_record_function(db, user.id)
+        self.create_record_function(db, other.id)
 
-        self.set_visibility(db, record, public=public)
-        headers = user.headers if authenticated else {}
+        self.set_visibility(record, record_is_public=record_is_public)
+        headers = (
+            authentication_token_from_email(
+                client=client,
+                email=user.email,
+                db=db,
+            )
+            if user_is_authenticated
+            else {}
+        )
         return CreatedTestData(record=record, user=user, headers=headers)
 
-    def assert_write_permission(  # noqa: PLR0913
+    def assert_cannot_access(  # noqa: PLR0913
         self,
         db: Session,
         client: TestClient,
         *,
-        authenticated: bool,
-        is_owner: bool,
-        public: bool = False,
+        user_is_authenticated: bool,
         method: Method,
         url: str,
-        detail: str,
+        model_name: str,
         headers: dict[str, str],
-        parameters: dict[str, Any] | list[Any] | None = None,
-    ) -> bool:
-        """Assert permission denied for write operations. Returns True for success."""
-        if authenticated and is_owner:
-            return True
+        parameters_model: SQLModel | None = None,
+    ) -> None:
+        parameters = (
+            parameters_model.model_dump(mode="json") if parameters_model else None
+        )
         with self.assert_no_db_change(db):
-            if not authenticated:
+            if not user_is_authenticated:
                 assert_not_authenticated(
                     client=client,
                     method=method,
@@ -292,35 +314,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
                     client=client,
                     method=method,
                     url=url,
-                    detail=detail,
+                    detail=f"Not authorized to access this {model_name}",
                     headers=headers,
                     parameters=parameters,
                 )
-        return False
-
-    def assert_read_permission(  # noqa: PLR0913
-        self,
-        client: TestClient,
-        *,
-        authenticated: bool,
-        is_owner: bool,
-        public: bool,
-        method: Method,
-        url: str,
-        detail: str,
-        headers: dict[str, str],
-    ) -> bool:
-        """Assert permission denied for read operations. Returns True for success."""
-        if not authenticated and not public:
-            assert_not_authenticated(client=client, method=method, url=url)
-            return False
-        if not authenticated or is_owner or public:
-            return True
-        assert_forbidden(
-            client=client,
-            method=method,
-            url=url,
-            detail=detail,
-            headers=headers,
-        )
-        return False

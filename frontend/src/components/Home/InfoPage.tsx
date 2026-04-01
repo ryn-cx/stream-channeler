@@ -29,8 +29,13 @@ export function InfoPage() {
                 to="/channels/$channelId"
                 params={{ channelId: "a5524462-bff2-4deb-9e95-fbdd23b851b9" }}
                 search={{
-                  rotateShowsRandomly: true,
-                  sortBy: ["value.episode.random.ascending"],
+                  sortBy: [
+                    {
+                      model: "episode",
+                      field: "random",
+                      mode: "interleave_random",
+                    },
+                  ],
                 }}
               >
                 <Tv className="mr-2" />

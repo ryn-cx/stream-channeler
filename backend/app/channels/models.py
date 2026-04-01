@@ -46,6 +46,9 @@ class Channel(BaseChannel, TimestampAndIdMixin, table=True):
         cascade_delete=True,
     )
 
+    def parent(self) -> User:
+        return self.user
+
     def get_user_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
 

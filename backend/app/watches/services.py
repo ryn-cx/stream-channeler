@@ -121,13 +121,13 @@ def create_watches(
         select(Watch).where(
             Watch.user_id == user_id,
             col(Watch.episode_id).in_(all_episode_ids),
-            Watch.watch_date == watch_input.watch_date,
+            col(Watch.verified) == False,
         ),
     ).first()
     if existing_unverified:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Watch with this date already exists",
+            detail="Episode already has an unverified watch. Verify or delete it first.",
         )
 
     created: list[Watch] = []
