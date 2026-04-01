@@ -37,6 +37,7 @@ export function InfoPage() {
                     {
                       model: "episode",
                       field: "random",
+                      direction: "ascending",
                       mode: "interleave_random",
                     },
                   ],

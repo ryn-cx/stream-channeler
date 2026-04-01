@@ -15,7 +15,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { ChannelsService } from "@/client"
+import { ChannelsService, type SortKeyInput } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -197,7 +197,10 @@ function cleanFormData(data: FormValues): FormValues {
 // to pass an `onLabelClick` callback.
 
 interface EpisodeFiltersProps {
-  filterParams: FormValues & { additionalChannels?: string[] }
+  filterParams: Omit<FormValues, "sortBy"> & {
+    sortBy?: SortKeyInput[]
+    additionalChannels?: string[]
+  }
   routeFullPath: string
   channelId: string
   randomSeed?: number
@@ -317,26 +320,10 @@ export function EpisodeFilters({
     )
   }
 
-  const parseSortEntries = (
-    sortBy:
-      | Array<
-          | {
-              model: string
-              field: string
-              direction?: string
-              mode?: string
-              aggregation?: string
-              days?: number | null
-              recentlyAiredDate?: string | null
-            }
-          | string
-        >
-      | undefined,
-  ): SortEntry[] => {
+  const parseSortEntries = (sortBy: SortKeyInput[] | undefined): SortEntry[] => {
     if (!sortBy) return []
 
-    return sortBy.map((raw) => {
-      const input = typeof raw === "string" ? JSON.parse(raw) : raw
+    return sortBy.map((input) => {
       return {
         model: input.model ?? "episode",
         field: input.field ?? "",
