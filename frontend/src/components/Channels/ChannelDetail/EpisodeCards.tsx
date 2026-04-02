@@ -1,11 +1,13 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import {
   BadgeCheck,
   Check,
   ExternalLink,
   ListX,
   MoreVertical,
+  Radio,
   SkipForward,
   Trash2,
 } from "lucide-react"
@@ -399,6 +401,16 @@ export function EpisodeCard({
                 >
                   <ExternalLink className="h-4 w-4" />
                   Open URL
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/channels/$channelId"
+                    params={{ channelId: episode.channel_id }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Radio className="h-4 w-4" />
+                    Go to Channel
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
