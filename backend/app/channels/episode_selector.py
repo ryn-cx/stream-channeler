@@ -282,14 +282,32 @@ class EpisodeQueryBuilder:
                 and_(
                     col(ChannelShow.white_list_mode).is_(True),
                     or_(
-                        col(ChannelSeasonWhiteList.season_id).is_not(None),
-                        col(ChannelEpisodeWhiteList.episode_id).is_not(None),
+                        # Season is whitelisted and episode is not individually excluded
+                        and_(
+                            col(ChannelSeasonWhiteList.season_id).is_not(None),
+                            col(ChannelEpisodeWhiteList.episode_id).is_(None),
+                        ),
+                        # Episode is individually whitelisted (no season whitelist)
+                        and_(
+                            col(ChannelSeasonWhiteList.season_id).is_(None),
+                            col(ChannelEpisodeWhiteList.episode_id).is_not(None),
+                        ),
                     ),
                 ),
                 and_(
                     col(ChannelShow.white_list_mode).is_(False),
-                    col(ChannelSeasonWhiteList.season_id).is_(None),
-                    col(ChannelEpisodeWhiteList.episode_id).is_(None),
+                    or_(
+                        # Not blacklisted at all
+                        and_(
+                            col(ChannelSeasonWhiteList.season_id).is_(None),
+                            col(ChannelEpisodeWhiteList.episode_id).is_(None),
+                        ),
+                        # Season is blacklisted but episode is individually un-blacklisted
+                        and_(
+                            col(ChannelSeasonWhiteList.season_id).is_not(None),
+                            col(ChannelEpisodeWhiteList.episode_id).is_not(None),
+                        ),
+                    ),
                 ),
             ),
         )

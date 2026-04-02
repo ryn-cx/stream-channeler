@@ -8,6 +8,7 @@ import pytest
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder, EpisodeResult
+from app.channels.models import ChannelEpisodeWhiteList, ChannelSeasonWhiteList
 from app.channels.schemas import ChannelMediaFilter
 from app.episodes.models import Episode
 from app.utils import tz_datetime
@@ -1235,6 +1236,101 @@ class TestRecentlyAiredShowGroup:
                 f"{show_name} episodes not sorted by duration descending: "
                 f"{show_durations}"
             )
+
+
+class TestWhitelistWithEpisodeExclusion:
+    """When a season is whitelisted and an episode within it is also marked,
+    the episode-level entry should act as an exclusion (blacklist within the
+    whitelist)."""
+
+    def test_whitelisted_season_with_marked_episode_excludes_episode(
+        self,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        channel = create_random_channel(session_scoped_db, user=user.id)
+        plugin = create_random_plugin(session_scoped_db, user, public=True)
+
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            plugin,
+            white_list_mode=True,
+        )
+        show = channel_show.show
+        season = create_random_season(session_scoped_db, show)
+        episode_included = create_random_episode(session_scoped_db, season)
+        episode_excluded = create_random_episode(session_scoped_db, season)
+
+        # Whitelist the season
+        session_scoped_db.add(
+            ChannelSeasonWhiteList(
+                channel_show_id=channel_show.id,
+                season_id=season.id,
+            )
+        )
+        # Also mark the episode — this should exclude it from the whitelisted season
+        session_scoped_db.add(
+            ChannelEpisodeWhiteList(
+                channel_show_id=channel_show.id,
+                episode_id=episode_excluded.id,
+            )
+        )
+        session_scoped_db.flush()
+
+        episodes = _build(
+            {"channel": channel, "user": user, "session": session_scoped_db},
+        )
+        episode_ids = {ep.id for ep in episodes}
+        assert episode_included.id in episode_ids
+        assert episode_excluded.id not in episode_ids
+
+
+class TestBlacklistWithEpisodeInclusion:
+    """When a season is blacklisted and an episode within it is also marked,
+    the episode-level entry should invert it so that episode shows up."""
+
+    def test_blacklisted_season_with_marked_episode_includes_episode(
+        self,
+        session_scoped_db: Session,
+    ) -> None:
+        user = create_random_user(session_scoped_db)
+        channel = create_random_channel(session_scoped_db, user=user.id)
+        plugin = create_random_plugin(session_scoped_db, user, public=True)
+
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            plugin,
+            white_list_mode=False,
+        )
+        show = channel_show.show
+        season = create_random_season(session_scoped_db, show)
+        episode_excluded = create_random_episode(session_scoped_db, season)
+        episode_included = create_random_episode(session_scoped_db, season)
+
+        # Blacklist the season
+        session_scoped_db.add(
+            ChannelSeasonWhiteList(
+                channel_show_id=channel_show.id,
+                season_id=season.id,
+            )
+        )
+        # Also mark the episode — this should include it despite the season blacklist
+        session_scoped_db.add(
+            ChannelEpisodeWhiteList(
+                channel_show_id=channel_show.id,
+                episode_id=episode_included.id,
+            )
+        )
+        session_scoped_db.flush()
+
+        episodes = _build(
+            {"channel": channel, "user": user, "session": session_scoped_db},
+        )
+        episode_ids = {ep.id for ep in episodes}
+        assert episode_included.id in episode_ids
+        assert episode_excluded.id not in episode_ids
 
 
 class TestEpisodeResult:

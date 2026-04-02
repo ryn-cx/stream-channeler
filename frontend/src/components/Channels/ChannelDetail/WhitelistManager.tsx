@@ -139,18 +139,26 @@ export function WhitelistManager({
     return `Episode ${episode.sort_order ?? "?"}${episodeName}`
   }
 
-  const getStatusLabel = (enabled: boolean) => {
-    if (whitelistMode) {
-      return enabled ? "Whitelisted" : "Not Whitelisted"
-    }
-    return enabled ? "Blacklisted" : "Not Blacklisted"
-  }
-
-  const getStatusButtonText = (enabled: boolean) => {
+  const getSeasonActionLabel = (enabled: boolean) => {
     if (whitelistMode) {
       return enabled ? "Remove from Whitelist" : "Add to Whitelist"
     }
     return enabled ? "Remove from Blacklist" : "Add to Blacklist"
+  }
+
+  const getEpisodeActionLabel = (
+    episodeEnabled: boolean,
+    seasonEnabled: boolean,
+  ) => {
+    // When a season is whitelisted, its episodes are included by default.
+    // Toggling an individual episode removes/adds it from the whitelist.
+    if (whitelistMode && seasonEnabled) {
+      return episodeEnabled ? "Add to Whitelist" : "Remove from Whitelist"
+    }
+    if (whitelistMode) {
+      return episodeEnabled ? "Remove from Whitelist" : "Add to Whitelist"
+    }
+    return episodeEnabled ? "Remove from Blacklist" : "Add to Blacklist"
   }
 
   // Group episodes by season for rendering
@@ -170,7 +178,9 @@ export function WhitelistManager({
         <DialogHeader>
           <DialogTitle>Manage Whitelist - {showName}</DialogTitle>
           <DialogDescription>
-            Configure which episodes are included or excluded from the channel
+            {whitelistMode
+              ? "Only selected seasons and episodes will appear. New episodes are not automatically added."
+              : "All episodes are shown by default. New episodes are automatically added."}
           </DialogDescription>
         </DialogHeader>
 
@@ -225,15 +235,12 @@ export function WhitelistManager({
                             <span className="flex-1 font-medium">
                               {getSeasonLabel(season)}
                             </span>
-                            <span className="text-sm text-muted-foreground mr-2">
-                              {getStatusLabel(seasonEnabled)}
-                            </span>
                             <Button
                               variant={seasonEnabled ? "default" : "outline"}
                               size="sm"
                               onClick={() => toggleSeasonEnabled(season.id)}
                             >
-                              {getStatusButtonText(seasonEnabled)}
+                              {getSeasonActionLabel(seasonEnabled)}
                             </Button>
                           </div>
 
@@ -258,12 +265,9 @@ export function WhitelistManager({
                                         <span className="flex-1 text-sm ml-8">
                                           {getEpisodeLabel(episode)}
                                         </span>
-                                        <span className="text-xs text-muted-foreground mr-2">
-                                          {getStatusLabel(episodeEnabled)}
-                                        </span>
                                         <Button
                                           variant={
-                                            episodeEnabled
+                                            episodeEnabled !== seasonEnabled
                                               ? "default"
                                               : "outline"
                                           }
@@ -272,7 +276,10 @@ export function WhitelistManager({
                                             toggleEpisodeEnabled(episode.id)
                                           }
                                         >
-                                          {getStatusButtonText(episodeEnabled)}
+                                          {getEpisodeActionLabel(
+                                            episodeEnabled,
+                                            seasonEnabled,
+                                          )}
                                         </Button>
                                       </div>
                                     )

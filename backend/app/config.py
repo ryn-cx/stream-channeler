@@ -121,8 +121,8 @@ class Settings(BaseSettings):
     YOUTUBE_API_KEY: str
     LOCAL_IP: str
 
-    PROXY_URL: str | None = None
-    PROXY_AUTH_TOKEN: str | None = None
+    PROXY_URL: str
+    PROXY_AUTH_TOKEN: str
 
 
 # call-arg - Error from original template.
