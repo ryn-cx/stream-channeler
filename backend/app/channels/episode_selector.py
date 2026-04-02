@@ -447,16 +447,21 @@ class EpisodeQueryBuilder:
         self,
         *,
         exclude_show_group: bool = False,
+        only_show_group: bool = False,
     ) -> list[UnaryExpression[Any] | ColumnElement[Any]]:
         """Collect sort expressions from configured sort keys.
 
         Args:
             exclude_show_group: If True, skip show_group sort keys (used for
                 window function partitioning to avoid nested window functions).
+            only_show_group: If True, only include show_group sort keys.
         """
         sort_expressions: list[UnaryExpression[Any] | ColumnElement[Any]] = []
         for sort_key in reversed(self._sort_keys):
-            if exclude_show_group and sort_key.mode == "show_group":
+            is_show_group = sort_key.mode == "show_group"
+            if exclude_show_group and is_show_group:
+                continue
+            if only_show_group and not is_show_group:
                 continue
             sort_expressions.append(self._sql_sort_expression(sort_key))
         return sort_expressions
@@ -468,8 +473,11 @@ class EpisodeQueryBuilder:
         if not self._has_interleave:
             return query.order_by(*self._collect_sort_expressions())
 
-        sort_expressions = self._collect_sort_expressions()
-        remaining_sorts = sort_expressions[1:]
+        # show_group sorts act as tiers above interleaving — episodes are first
+        # grouped by these expressions, then interleaved within each tier.
+        show_group_sorts = self._collect_sort_expressions(only_show_group=True)
+        non_group_sorts = self._collect_sort_expressions(exclude_show_group=True)
+        remaining_sorts = non_group_sorts[1:]
 
         last_sort_key = self._sort_keys[-1]
         if last_sort_key.mode == "show_group":
@@ -489,12 +497,17 @@ class EpisodeQueryBuilder:
                 ),
             )
             return query.order_by(
+                *show_group_sorts,
                 interleave_partition,
                 show_random,
                 *remaining_sorts,
             )
 
-        return query.order_by(interleave_partition, *remaining_sorts)
+        return query.order_by(
+            *show_group_sorts,
+            interleave_partition,
+            *remaining_sorts,
+        )
 
     def _get_sorter(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         """Route a sort key to the appropriate SQL expression builder."""

@@ -1112,6 +1112,131 @@ class TestAdditionalChannels:
         assert len(episodes) == 5
 
 
+class TestRecentlyAiredShowGroup:
+    """Test show_group + recently_aired sorting.
+
+    Shows that have at least one episode aired in the past 30 days should
+    appear before shows that have no recently aired episodes.
+    """
+
+    def test_interleave_sequential_with_show_group_and_duration(
+        self,
+        session_scoped_db: Session,
+    ) -> None:
+        """Interleaving by show with show_group recently_aired sort should:
+        1. Group shows by recently aired status (not-recent first when ascending)
+        2. Interleave episodes across shows within each group
+        3. Sort by duration descending within each show's episodes
+        """
+        user = create_random_user(session_scoped_db)
+        channel = create_random_channel(session_scoped_db, user=user.id)
+        plugin = create_random_plugin(session_scoped_db, user, public=True)
+
+        recent_date = tz_datetime.now() - timedelta(days=30)
+        old_date = tz_datetime.now() - timedelta(days=400)
+
+        # Recent Show 1: has a recently aired episode (within 365 days)
+        recent_show_1 = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            plugin,
+            white_list_mode=False,
+        )
+        recent_show_1.show.name = "Recent 1"
+        season_r1 = create_random_season(session_scoped_db, recent_show_1.show)
+        for duration in (3600, 2400, 1200):
+            create_random_episode(
+                session_scoped_db,
+                season_r1,
+                air_date=recent_date,
+                duration=duration,
+            )
+
+        # Recent Show 2: also recently aired
+        recent_show_2 = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            plugin,
+            white_list_mode=False,
+        )
+        recent_show_2.show.name = "Recent 2"
+        season_r2 = create_random_season(session_scoped_db, recent_show_2.show)
+        for duration in (3000, 2000, 1000):
+            create_random_episode(
+                session_scoped_db,
+                season_r2,
+                air_date=recent_date,
+                duration=duration,
+            )
+
+        # Old Show: no episodes in the past 365 days
+        old_show = create_random_channel_show(
+            session_scoped_db,
+            channel,
+            plugin,
+            white_list_mode=False,
+        )
+        old_show.show.name = "Old Show"
+        season_old = create_random_season(session_scoped_db, old_show.show)
+        for duration in (5000, 4000, 3000):
+            create_random_episode(
+                session_scoped_db,
+                season_old,
+                air_date=old_date,
+                duration=duration,
+            )
+
+        session_scoped_db.flush()
+        setup = {"channel": channel, "user": user, "session": session_scoped_db}
+
+        episodes = _build(
+            setup,
+            sort_by=[
+                _sort_key("episode.duration", "descending"),
+                _sort_key("show.name", "ascending", mode="interleave_sequential"),
+                _sort_key(
+                    "episode.recently_aired",
+                    "ascending",
+                    mode="show_group",
+                    aggregation="max",
+                    days=365,
+                ),
+            ],
+            random_seed=1118678984,
+        )
+
+        assert len(episodes) == 9
+
+        # The show_group sort with ascending recently_aired should separate
+        # shows into two tiers:
+        #   - Tier 1 (recently_aired=0): Old Show (not aired in 365 days)
+        #   - Tier 2 (recently_aired=1): Recent 1, Recent 2
+        # Old Show episodes should all appear before any Recent show episodes.
+        show_names = [episode.season.show.name for episode in episodes]
+        last_old_show_position = max(
+            index for index, name in enumerate(show_names) if name == "Old Show"
+        )
+        first_recent_position = min(
+            index for index, name in enumerate(show_names) if name.startswith("Recent")
+        )
+        assert last_old_show_position < first_recent_position, (
+            f"Old Show episodes should all appear before Recent show episodes "
+            f"but got order: {show_names}"
+        )
+
+        # Within each show, episodes should be sorted by duration descending
+        for show_name in ("Recent 1", "Recent 2", "Old Show"):
+            show_durations = [
+                episode.duration
+                for episode in episodes
+                if episode.season.show.name == show_name
+            ]
+            assert show_durations == sorted(show_durations, reverse=True), (
+                f"{show_name} episodes not sorted by duration descending: "
+                f"{show_durations}"
+            )
+
+
 class TestEpisodeResult:
     def test_results_include_channel_id(self, episode_setup: dict) -> None:
         results = _build_results(episode_setup)
