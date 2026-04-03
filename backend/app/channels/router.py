@@ -392,3 +392,32 @@ def clear_user_channel_completed_queue(
 
     session.commit()
     return Message(message="Import queue cleared successfully")
+
+
+@router.post("/bulk-import-queue")
+def bulk_import_queue_urls(
+    session: SessionDep,
+    current_user: CurrentUser,
+    entries: dict[uuid.UUID, list[str]],
+) -> Message:
+    """Add URLs to multiple channels' import queues at once."""
+    total_urls = 0
+    for channel_id, urls in entries.items():
+        channel = session.exec(
+            select(Channel).where(
+                Channel.id == channel_id,
+                Channel.user_id == current_user.id,
+            ),
+        ).first()
+        if not channel:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Channel {channel_id} not found",
+            )
+        service.add_urls_to_channel_import_queue(
+            session=session,
+            urls=urls,
+            channel=channel,
+        )
+        total_urls += len(urls)
+    return Message(message=f"{total_urls} URLs added across {len(entries)} channels")

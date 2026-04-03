@@ -7,6 +7,7 @@ import { LayoutGrid, Table as TableIcon } from "lucide-react"
 import { useState } from "react"
 import { ChannelsService } from "@/client"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
+import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
 import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
 import { columns } from "@/components/Channels/ChannelList/columns"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -102,6 +103,7 @@ function ChannelsContent() {
           </Button>
         </ButtonGroup>
         <AddChannel />
+        <BulkImport />
         {viewMode === "table" && <ColumnVisibilityButton table={table} />}
       </div>
 

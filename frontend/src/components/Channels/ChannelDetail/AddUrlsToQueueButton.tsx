@@ -24,8 +24,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { JustWatchSearch } from "./JustWatchSearch"
 
 interface AddUrlsToQueueButtonProps {
   channelId: string
@@ -275,121 +277,111 @@ export function AddUrlsToQueueButton({
           <DialogHeader className="px-8">
             <DialogTitle>Add Shows</DialogTitle>
             <DialogDescription>
-              Add URLs to the channel's import queue. Each URL should be on a
-              separate line.
+              Search for shows or paste URLs to add to the import queue.
             </DialogDescription>
           </DialogHeader>
 
-          {/* gap-4 py-4 - From other templates */}
-          {/* Make sure content stays inside the popup */}
-          <div className="overflow-y-auto gap-4 py-4 px-8">
-            {/* space-y-4 - Space between header and text */}
-            <div className="space-y-4">
-              <h3>Add URLs (one per line)</h3>
-              <textarea
-                value={urlsInput}
-                onChange={(e) => setUrlsInput(e.target.value)}
-                placeholder="https://example.com"
-                rows={8}
-                // w-full - Full width of the popup
-                // rounded-md - Rounded corners
-                // px-3 py-2 - Internal text padding
-                // text-sm - Small text to fit more on screen at once
-                // outline-none - Remove the ugly outline when the box is selected
-                className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
-                disabled={addUrlsMutation.isPending}
-              />
+          <Tabs defaultValue="search" className="flex-1 min-h-0 px-8">
+            <TabsList>
+              <TabsTrigger value="search">Search</TabsTrigger>
+              <TabsTrigger value="urls">Manual URLs</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="search" className="overflow-y-auto py-4">
+              <JustWatchSearch channelId={channelId} />
+            </TabsContent>
+
+            <TabsContent value="urls" className="overflow-y-auto py-4">
+              <div className="space-y-4">
+                <h3>Add URLs (one per line)</h3>
+                <textarea
+                  value={urlsInput}
+                  onChange={(e) => setUrlsInput(e.target.value)}
+                  placeholder="https://example.com"
+                  rows={8}
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
+                  disabled={addUrlsMutation.isPending}
+                />
+                <Button
+                  onClick={handleSubmit}
+                  disabled={addUrlsMutation.isPending}
+                >
+                  <Plus className="mr-2" />
+                  {addUrlsMutation.isPending ? "Adding URLs..." : "Add URLs"}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="overflow-y-auto px-8 py-4 space-y-4">
+            <div className="flex justify-between">
+              <h3>Queue ({queueEntries.length} items)</h3>
               <Button
-                onClick={handleSubmit}
-                disabled={addUrlsMutation.isPending}
+                variant="outline"
+                size="sm"
+                onClick={() => clearQueueMutation.mutate()}
+                disabled={
+                  clearQueueMutation.isPending || queueEntries.length === 0
+                }
               >
-                <Plus className="mr-2" />
-                {addUrlsMutation.isPending ? "Adding URLs..." : "Add URLs"}
+                {clearQueueMutation.isPending
+                  ? "Clearing Completed Entries..."
+                  : "Clear Completed Entries"}
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {/* flex - Put queue string and clear button the same line */}
-              {/* justify-between - Put text on far left, button on far right */}
-              <div className="flex justify-between">
-                <h3>Queue ({queueEntries.length} items)</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => clearQueueMutation.mutate()}
-                  disabled={
-                    clearQueueMutation.isPending || queueEntries.length === 0
-                  }
-                >
-                  {clearQueueMutation.isPending
-                    ? "Clearing Completed Entries..."
-                    : "Clear Completed Entries"}
-                </Button>
-              </div>
-
-              {isLoadingQueue ? (
-                <p className="text-sm text-muted-foreground">
-                  Loading queue...
-                </p>
-              ) : queueEntries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No items in queue
-                </p>
-              ) : (
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>URL</TableHead>
-                        <TableHead className="w-[100px]">Status</TableHead>
-                        <TableHead className="w-[100px] text-center">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {queueEntries.map((entry: ChannelQueueOutput) => (
-                        <TableRow key={entry.id}>
-                          <TableCell className="truncate">
-                            {entry.url}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={getStatusBadgeVariant(entry.status)}
+            {isLoadingQueue ? (
+              <p className="text-sm text-muted-foreground">Loading queue...</p>
+            ) : queueEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No items in queue</p>
+            ) : (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>URL</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="w-[100px] text-center">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {queueEntries.map((entry: ChannelQueueOutput) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="truncate">{entry.url}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(entry.status)}>
+                            {entry.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => showNote(entry.note)}
+                              title="Show note"
                             >
-                              {entry.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => showNote(entry.note)}
-                                title="Show note"
-                              >
-                                <Info className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() =>
-                                  deleteUrlMutation.mutate(entry.id)
-                                }
-                                disabled={deleteUrlMutation.isPending}
-                                title="Delete URL"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
+                              <Info className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => deleteUrlMutation.mutate(entry.id)}
+                              disabled={deleteUrlMutation.isPending}
+                              title="Delete URL"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="px-8">

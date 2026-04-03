@@ -722,6 +722,14 @@ export type ChannelsClearUserChannelCompletedQueueData = {
 
 export type ChannelsClearUserChannelCompletedQueueResponse = (Message);
 
+export type ChannelsBulkImportQueueUrlsData = {
+    requestBody: {
+        [key: string]: Array<(string)>;
+    };
+};
+
+export type ChannelsBulkImportQueueUrlsResponse = (Message);
+
 export type EpisodesCreateWatchData = {
     episodeId: string;
     requestBody: WatchPostInput;
