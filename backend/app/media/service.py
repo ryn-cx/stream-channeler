@@ -68,6 +68,8 @@ type PatchInput = (
 )
 
 
+# TODO: Consider adding the output_schema and other paramters to the models themselves
+# to reduce the number of parameters here.
 def list_children[T: ListOutput](  # noqa: PLR0913
     session: Session,
     model: type[Channel | Plugin | Source | Show | Season | Episode],

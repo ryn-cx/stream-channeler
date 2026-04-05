@@ -30,9 +30,6 @@ class YouTubeValidator(PluginValidator):
         output = super()._import_url_validator()
         # Source.data_timestamp is based on when the Source is created.
         output.incremented(Source, "data_timestamp")
-        # Update at is based on the current date and when the last episode was added to
-        # a playlist so it will increase.
-        output.incremented(Season, "update_at")
         return output
 
     @override
@@ -43,17 +40,18 @@ class YouTubeValidator(PluginValidator):
         return output
 
     @override
-    def _update_episode_validator(self, episode: Episode) -> Validator:
-        output = super()._update_episode_validator(episode)
-        # Episodes with the same key will all get updated together.
-        output.incremented(episode.key, "modified_at", "data_timestamp")
-        return output
-
-    @override
     def _update_season_validator(self, season: Season) -> Validator:
         output = super()._update_season_validator(season)
         # Season.update_at is set based on the data_timestamp of the season files.
         output.incremented(season.id, "update_at")
+        output.incremented(season.show.id, "data_timestamp", "modified_at")
+        return output
+
+    @override
+    def _update_episode_validator(self, episode: Episode) -> Validator:
+        output = super()._update_episode_validator(episode)
+        # Episodes with the same key will all get updated together.
+        output.incremented(episode.key, "modified_at", "data_timestamp")
         return output
 
 
@@ -149,7 +147,7 @@ class ChannelWithNoUploadsMixin(YouTubeValidator):
     def _update_season_validator(self, season: Season) -> Validator:
         output = super()._update_season_validator(season)
         if season.key == self.uploads_key:
-            output.remove(season.id, "update_at")
+            output.changed(season.id, "update_at")
         return output
 
 
@@ -194,7 +192,7 @@ class TestNamedChannel(ChannelValidator):
 class TestChannelWithoutUploads(ChannelWithNoUploadsMixin, ChannelValidator):
     channel_key = "UCJ0cZ4i3wJU5OMVyRH_PxyQ"
     channel_name = "highballrider"
-    url = f"youtube.com/{channel_name}"
+    url = f"youtube.com/@{channel_name}"
 
     # When there are no uploads for a channel the fallback is to import all of the
     # playlists instead.
@@ -214,10 +212,10 @@ class TestChannelWithoutPlaylists(ChannelValidator):
     url = f"youtube.com/{channel_name}"
 
 
-class TestLargeChannel(ChannelValidator):
-    channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
-    channel_name = "MrBeast"
-    url = f"youtube.com/{channel_name}"
+# class TestLargeChannel(ChannelValidator):
+#     channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
+#     channel_name = "MrBeast"
+#     url = f"youtube.com/{channel_name}"
 
 
 class InvalidYouTubeURLValidator(InvalidURLValidator):

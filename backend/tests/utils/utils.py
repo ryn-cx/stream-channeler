@@ -8,11 +8,12 @@ from collections.abc import Callable
 from datetime import date, datetime
 from enum import Enum
 from types import NoneType
-from typing import Any, Literal, get_args, get_origin
+from typing import Annotated, Any, Literal, get_args, get_origin
 
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
+from app.channels.schemas import SortKeyInput
 from app.config import settings
 from app.utils import tz_datetime
 
@@ -86,6 +87,25 @@ def random_optional_future_timestamp() -> datetime | None:
     return None
 
 
+# TODO: What the ????
+def _random_sort_key_input() -> SortKeyInput:
+    private_attrs = SortKeyInput.__private_attributes__
+    model_map: dict[str, type[BaseModel]] = private_attrs["_MODEL_MAP"].default  # type: ignore[assignment]
+    special_fields: frozenset[str] = private_attrs["_SPECIAL_FIELDS"].default  # type: ignore[assignment]
+
+    model_name: str = random.choice(list(model_map))
+    model_class = model_map[model_name]
+    valid_fields = list(model_class.model_fields) + list(special_fields)
+    return SortKeyInput(
+        model=model_name,  # type: ignore[arg-type]
+        field=random.choice(valid_fields),
+        direction=random.choice(
+            get_args(SortKeyInput.model_fields["direction"].annotation)
+        ),
+        mode=random.choice(get_args(SortKeyInput.model_fields["mode"].annotation)),
+    )
+
+
 _TYPE_GENERATORS: dict[type, Callable[[], object]] = {
     str: random_lower_string,
     int: random_integer,
@@ -93,6 +113,8 @@ _TYPE_GENERATORS: dict[type, Callable[[], object]] = {
     datetime: random_past_timestamp,
     date: lambda: random_past_timestamp().date(),
     bool: random_bool,
+    float: lambda: random.uniform(0, 1000),
+    SortKeyInput: _random_sort_key_input,
 }
 
 
@@ -113,6 +135,10 @@ def _random_value(object_type: type) -> object:
     if generator is not None:
         return generator()
     origin = get_origin(object_type)
+    if origin is Annotated:
+        return _random_value(get_args(object_type)[0])
+    if origin is Literal:
+        return random.choice(get_args(object_type))
     if origin is list:
         inner_args = get_args(object_type)
         inner_type = inner_args[0] if inner_args else str

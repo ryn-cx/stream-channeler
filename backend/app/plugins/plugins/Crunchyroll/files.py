@@ -10,6 +10,7 @@ from chirashi.seasons import models as seasons_models
 from chirashi.series import models as series_models
 from sqlmodel import col, select
 
+from app.config import settings
 from app.plugins.models import File
 from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.plugins.plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
@@ -18,7 +19,10 @@ from app.utils import tz_datetime
 
 @cache
 def chirashi_client() -> Chirashi:
-    return Chirashi()
+    return Chirashi(
+        get_around_server=settings.GET_AROUND_SERVER,
+        get_around_password=settings.GET_AROUND_PASSWORD,
+    )
 
 
 class Series(GAPIJSON[series_models.Series]):
@@ -42,8 +46,9 @@ class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
     # Requires specific named parameters
     @override
     def _get(self) -> list[browse_series_models.BrowseSeries]:
+        # TODO: Why does this use tz_datetime but JustWatch has to use datetime
         return chirashi_client().browse_series.get_since_datetime(
-            end_datetime=tz_datetime.fromisotimestamp(self.unique_identifier),
+            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
     def datums(self) -> list[browse_series_models.Datum]:
@@ -93,10 +98,10 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _show_files(self, show_key: str, **kwargs: Any) -> Sequence[Series | Seasons]:
         return [
-            # Required to detect changes to the show.
-            self._series_file(show_key),
             # Required to detect new seasons.
             self._seasons_file(show_key),
+            # Required to detect changes to the show.
+            self._series_file(show_key),
         ]
 
     @override
@@ -106,10 +111,10 @@ class FileMixin(BasePlugin, register=False):
         show_key: str,
     ) -> Sequence[Seasons | Episodes]:
         return [
-            # Required to detect changes to the season.
-            self._seasons_file(show_key),
             # Required to detect new episodes.
             self._episodes_file(season_key),
+            # Required to detect changes to the season.
+            self._seasons_file(show_key),
         ]
 
     @override

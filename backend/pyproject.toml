@@ -62,28 +62,29 @@ target-version = "py314"
 exclude = ["alembic"]
 
 [tool.ruff.lint]
-select = ["ALL"]  # Enable all linters.
+select = ["ALL"]
 ignore = [
   # Ignores from the original template
   "E501",  # line too long, handled by black
   "B008",  # do not perform function calls in argument defaults
   "W191",  # indentation contains tabs
   "B904",  # Allow raising exceptions without from e, for HTTPException
-  # Additional ignores.
-  "D",  # Existing code does not contain docstrings.
-  # Too many false positives.
+
+  # Additional ignores
+  "D",  # Existing code does not contain docstrings
+
+  # Too many false positives
   "TC001",
   "TC002",
   "TC003",
-  "TD",  # Allow all TODO comments.
+
+  # Allow all TODO comments
+  "TD",
+  "FIX002"
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]  # Asserts should be allowed in tests.
-
-[tool.ruff.lint.pyupgrade]
-# Preserve types, even if a file imports `from __future__ import annotations`.
-keep-runtime-typing = true
 
 [tool.uv.sources]
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }

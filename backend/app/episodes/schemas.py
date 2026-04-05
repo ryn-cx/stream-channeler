@@ -51,11 +51,11 @@ class EpisodesListOutput(BaseModel):
 
 
 class EpisodePostInput(BaseEpisode):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
     key: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class EpisodePatchInput(BaseEpisode):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
     # assignment - Patch input can ignore required values.
     key: str | None = Field(default=None)  # type: ignore[assignment]

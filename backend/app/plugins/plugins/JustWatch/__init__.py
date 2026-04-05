@@ -2,13 +2,17 @@ import json
 from collections.abc import Sequence
 from datetime import date, timedelta
 from difflib import get_close_matches
-from typing import override
+from typing import Any, override
 
 from loguru import logger
 from sqlmodel import col, select
 
 from app.plugins.models import File, Plugin
-from app.plugins.plugins.JustWatch.files import NewTitlesBucket
+from app.plugins.plugins.JustWatch.files import (
+    NewTitleBucket,
+    ProvidersLocale,
+)
+from app.plugins.plugins.JustWatch.search import SearchMixin
 from app.plugins.plugins.JustWatch.upsert import UpsertMixin
 from app.plugins.plugins.utils.abstract_plugin import URLImportResult
 from app.seasons.models import Season
@@ -17,8 +21,43 @@ from app.sources.models import Source
 from app.utils import strict_re
 
 
-class JustWatch(UpsertMixin, register=True):
+class JustWatch(SearchMixin, UpsertMixin, register=True):
     _VERSION = "0.0.1"
+
+    @override
+    def initialize_plugin(self) -> None:
+        super().initialize_plugin()
+        if self.plugin.data_timestamp is None:
+            providers_file = self._providers_locale_file()
+            providers_file.download_if_outdated()
+
+            self._upsert_sources(providers_file)
+
+            bucket = self._new_titles_bucket_file(
+                providers_file.database_entry.data_timestamp,
+            )
+            bucket.download_if_outdated()
+
+            self._download_latest_new_titles_bucket()
+            latest_bucket = self._get_latest_new_titles_bucket().one()
+
+            self.plugin.data_timestamp = latest_bucket.data_timestamp
+            self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
+
+    supports_import_url = True
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        return (
+            "> [!TIP/TV Show on Hulu]\n"
+            "> `Hulu justwatch.com/us/tv-show/breaking-bad`\n\n"
+            "> [!TIP/Movie on Netflix]\n"
+            "> `Netflix justwatch.com/us/movie/inception`\n\n"
+            "> [!WARNING/TV Show on All Websites (may cause duplicates)]\n"
+            "> `justwatch.com/us/tv-show/breaking-bad`\n\n"
+            "> [!WARNING/Movie on All Websites (may cause duplicates)]\n"
+            "> `Netflix justwatch.com/us/movie/inception`\n\n"
+        )
 
     # region Import URL
 
@@ -106,19 +145,27 @@ class JustWatch(UpsertMixin, register=True):
 
     @override
     def update_plugin(self, plugin: Plugin) -> None:
+        providers_file = self._providers_locale_file()
+        providers_file.download_if_outdated(self.plugin.update_at)
+        self._upsert_sources(providers_file)
+
         _cache = plugin.sources
         self._download_latest_new_titles_bucket()
         self._process_new_titles_buckets()
         latest_bucket = self._get_latest_new_titles_bucket().one()
-        plugin.data_timestamp = latest_bucket.data_timestamp
-        plugin.set_update_at(latest_bucket.data_timestamp + timedelta(days=1))
+
+        plugin.data_timestamp = min(
+            latest_bucket.data_timestamp,
+            providers_file.database_entry.data_timestamp,
+        )
+        plugin.set_update_at(plugin.data_timestamp + timedelta(days=1))
 
     def _process_new_titles_buckets(self) -> None:
         statement = (
             select(File)
             .where(
                 File.plugin_id == self.plugin.id,
-                col(File.key).startswith(f"{NewTitlesBucket.__name__}/"),
+                col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
                 col(File.data_timestamp) > self.plugin.data_timestamp
                 if self.plugin.data_timestamp
                 else True,

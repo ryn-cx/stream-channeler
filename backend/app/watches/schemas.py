@@ -14,7 +14,7 @@ from app.watches.models import BaseWatch
 
 
 class WatchPostInput(BaseWatch):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
 
 
 class WatchCreateInput(WatchPostInput):
@@ -22,7 +22,7 @@ class WatchCreateInput(WatchPostInput):
 
 
 class WatchPatchInput(BaseWatch):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
     watch_date: datetime | None = None  # type: ignore[assignment]
     verified: bool | None = None  # type: ignore[assignment]
 
@@ -60,13 +60,6 @@ class WatchesListOutput(SQLModel):
     plugins: dict[uuid.UUID, PluginOutput] = Field()
 
 
-class WatchImportFormatInformation(BaseModel):
-    plugin_key: str
-    file_type: str
-    file_extension: str
-    instructions: str
-
-
 class WatchImportResult(BaseModel):
     show: str
     show_url: str
@@ -84,7 +77,3 @@ class WatchImportInput(BaseModel):
     plugin_key: str
     new_only: bool
     verified: bool
-
-
-class WatchImportPluginsOutput(BaseModel):
-    plugins: list[WatchImportFormatInformation]

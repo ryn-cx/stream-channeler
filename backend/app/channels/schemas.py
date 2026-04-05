@@ -45,15 +45,14 @@ class ChannelInput(BaseChannel):
 
 
 class ChannelPostInput(BaseChannel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
+    default_order: str | None = Field(default=None)  # type: ignore[assignment]
 
 
-class ChannelPatchInput(SQLModel):
-    model_config = ConfigDict(extra="forbid")
-    name: str | None = Field(default=None)
-    channel_number: int | None = Field(default=None)
-    public: bool = Field(default=False)
-    default_order: str | None = Field(default=None)
+class ChannelPatchInput(BaseChannel):
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
+    public: bool | None = Field(default=None)  # type: ignore[assignment]
+    default_order: str | None = Field(default=None)  # type: ignore[assignment]
 
 
 class ChannelOutput(BaseChannel):
@@ -202,6 +201,7 @@ def parse_sort_key_input(v: Any) -> Any:
     return v
 
 
+# TODO: Is it really worth it supporting all these aliases?
 class ChannelMediaFilter(SQLModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 

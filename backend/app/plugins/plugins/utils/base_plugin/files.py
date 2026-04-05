@@ -10,9 +10,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.config import settings
 from app.plugins.models import File, Plugin
-from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.plugins.schemas import FileInput
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
@@ -102,7 +100,7 @@ class BaseFile[T](ABC):
     @final  # Makes mocking downloads easier.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
-        if self._is_outdated(update_at):
+        if self.is_outdated(update_at):
             self._download()
 
     @final  # Makes mocking downloads easier.
@@ -111,7 +109,7 @@ class BaseFile[T](ABC):
         update_at: datetime | None = None,
     ) -> None:
         """Asynchronously download the file if it is outdated."""
-        if self._is_outdated(update_at):
+        if self.is_outdated(update_at):
             await self._async_download()
 
     # This is not an abstractmethod because async_download or download must be
@@ -141,7 +139,7 @@ class BaseFile[T](ABC):
         self.__db.commit()
         self._cached_parsed = None
 
-    def _is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
+    def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
         if self.IMMUTABLE and self._existing_database_entry:
             return False
@@ -196,7 +194,6 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
     api_endpoint: ClassVar[Any]
 
     acceptable_error: str | None = None
-    allow_local_ip: bool = False
 
     def __init__(self, db: Session, plugin: Plugin, unique_identifier: str) -> None:
         self.unique_identifier = unique_identifier
@@ -219,8 +216,6 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            if not self.allow_local_ip:
-                check_ip_not_matches(settings.LOCAL_IP)
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)

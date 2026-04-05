@@ -15,7 +15,6 @@ from app.channels.models import (
 from app.channels.schemas import ChannelShowInput
 from app.database import engine, load_models
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from app.plugins.plugins.utils.ip_validator import IPValidationError
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()
@@ -43,9 +42,8 @@ def import_queue(session: Session) -> None:
                 try:
                     queue_item.status = URLStatus.IMPORTING
                     plugin_instance = plugin(session)
-                    plugin_instance.initialize_plugin()
-                    results = plugin_instance.import_url(queue_item.url)
-                    add_results_to_channel(session, results, queue_item.channel)
+                    import_results = plugin_instance.import_url(queue_item.url)
+                    add_results_to_channel(session, import_results, queue_item.channel)
                     queue_item.status = URLStatus.IMPORTED
                     break
                 except InvalidURLError:
@@ -54,13 +52,6 @@ def import_queue(session: Session) -> None:
                     )
                     queue_item.status = URLStatus.FAILED
                     queue_item.note = "Invalid URL."
-                    break
-
-                except IPValidationError:
-                    logger.warning(
-                        f"IP validation error {plugin.__name__}: {queue_item.url}",
-                    )
-                    session.rollback()
                     break
 
                 # BLE001 - This needs to be able to capture all exceptions to work correctly.

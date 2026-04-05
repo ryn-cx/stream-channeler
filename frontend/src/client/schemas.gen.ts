@@ -349,7 +349,7 @@ export const ChannelOutputSchema = {
         channel_number: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'number'
                 },
                 {
                     type: 'null'
@@ -405,7 +405,7 @@ export const ChannelPatchInputSchema = {
         channel_number: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'number'
                 },
                 {
                     type: 'null'
@@ -414,9 +414,15 @@ export const ChannelPatchInputSchema = {
             title: 'Channel Number'
         },
         public: {
-            type: 'boolean',
-            title: 'Public',
-            default: false
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Public'
         },
         default_order: {
             anyOf: [
@@ -451,7 +457,7 @@ export const ChannelPostInputSchema = {
         channel_number: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'number'
                 },
                 {
                     type: 'null'
@@ -1351,6 +1357,49 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
+export const PluginImportURLInfoSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        instructions: {
+            type: 'string',
+            title: 'Instructions'
+        }
+    },
+    type: 'object',
+    required: ['name', 'instructions'],
+    title: 'PluginImportURLInfo'
+} as const;
+
+export const PluginImportWatchHistoryInfoSchema = {
+    properties: {
+        plugin_key: {
+            type: 'string',
+            title: 'Plugin Key'
+        },
+        file_extension: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Extension'
+        },
+        instructions: {
+            type: 'string',
+            title: 'Instructions'
+        }
+    },
+    type: 'object',
+    required: ['plugin_key', 'instructions'],
+    title: 'PluginImportWatchHistoryInfo'
+} as const;
+
 export const PluginOutputSchema = {
     properties: {
         key: {
@@ -1624,6 +1673,124 @@ export const PluginPostInputSchema = {
     type: 'object',
     required: ['public'],
     title: 'PluginPostInput'
+} as const;
+
+export const PluginSearchInfoSchema = {
+    properties: {
+        plugin_key: {
+            type: 'string',
+            title: 'Plugin Key'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['plugin_key', 'name'],
+    title: 'PluginSearchInfo'
+} as const;
+
+export const PluginSearchResultSchema = {
+    properties: {
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        sources: {
+            items: {
+                '$ref': '#/components/schemas/PluginSearchResultSource'
+            },
+            type: 'array',
+            title: 'Sources',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['title', 'url'],
+    title: 'PluginSearchResult',
+    description: 'A single result from a plugin search.'
+} as const;
+
+export const PluginSearchResultSourceSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        icon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Icon Url'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'PluginSearchResultSource',
+    description: 'A streaming source available for a search result.'
+} as const;
+
+export const PluginSearchResultsSchema = {
+    properties: {
+        has_source_selection: {
+            type: 'boolean',
+            title: 'Has Source Selection'
+        },
+        results: {
+            items: {
+                '$ref': '#/components/schemas/PluginSearchResult'
+            },
+            type: 'array',
+            title: 'Results'
+        }
+    },
+    type: 'object',
+    required: ['has_source_selection', 'results'],
+    title: 'PluginSearchResults',
+    description: 'Container for plugin search results.'
 } as const;
 
 export const PluginsListOutputSchema = {
@@ -3105,45 +3272,6 @@ export const ValidationErrorSchema = {
     type: 'object',
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
-} as const;
-
-export const WatchImportFormatInformationSchema = {
-    properties: {
-        plugin_key: {
-            type: 'string',
-            title: 'Plugin Key'
-        },
-        file_type: {
-            type: 'string',
-            title: 'File Type'
-        },
-        file_extension: {
-            type: 'string',
-            title: 'File Extension'
-        },
-        instructions: {
-            type: 'string',
-            title: 'Instructions'
-        }
-    },
-    type: 'object',
-    required: ['plugin_key', 'file_type', 'file_extension', 'instructions'],
-    title: 'WatchImportFormatInformation'
-} as const;
-
-export const WatchImportPluginsOutputSchema = {
-    properties: {
-        plugins: {
-            items: {
-                '$ref': '#/components/schemas/WatchImportFormatInformation'
-            },
-            type: 'array',
-            title: 'Plugins'
-        }
-    },
-    type: 'object',
-    required: ['plugins'],
-    title: 'WatchImportPluginsOutput'
 } as const;
 
 export const WatchImportResultSchema = {

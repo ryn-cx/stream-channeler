@@ -7,25 +7,22 @@ from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchImportFormatInformation,
     WatchImportResult,
     WatchImportResults,
 )
 
 
-class WatchMixin(UpsertMixin, register=False):
+class WatchHistoryMixin(UpsertMixin, register=False):
+    supports_import_watch_history = True
+    import_watch_history_file_extension = ".json"
+
     @classmethod
     @override
-    def import_watch_history_info(cls) -> WatchImportFormatInformation:
-        return WatchImportFormatInformation(
-            plugin_key=cls.plugin_key(),
-            file_type="JSON",
-            file_extension=".json",
-            instructions=(
-                "1. Use [Itamae](https://github.com/ryn-cx/itamae) to download "
-                "your Crunchyroll watch history\n"
-                "2. Upload the file here"
-            ),
+    def import_watch_history_instructions(cls) -> str:
+        return (
+            "1. Use [Itamae](https://github.com/ryn-cx/itamae) to download "
+            "your Crunchyroll watch history\n"
+            "2. Upload the file here"
         )
 
     @override
@@ -66,7 +63,7 @@ class WatchMixin(UpsertMixin, register=False):
                 skipped_watches.append(import_entry)
                 continue
 
-            watch_date = tz_datetime.fromisotimestamp(entry["date_played"])
+            watch_date = tz_datetime.fromisoformat(entry["date_played"])
 
             watched_dates = watched_episode_dates.setdefault(str(episode.id), [])
             if new_only and watched_dates:

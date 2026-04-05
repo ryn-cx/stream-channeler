@@ -1,6 +1,5 @@
 import re
-from datetime import date, datetime, timedelta
-from functools import cache
+from datetime import date, datetime
 from typing import override
 from urllib.parse import parse_qs, urlparse
 
@@ -8,7 +7,6 @@ from just_scrape.custom_buy_box_offers import (
     response_models as custom_buy_box_offers_models,
 )
 from just_scrape.url_title_details import response_models as url_title_details_models
-from loguru import logger
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeInput
@@ -27,33 +25,25 @@ from app.utils import tz_datetime
 
 
 class UpsertMixin(FileMixin, register=False):
-    # region Class Methods
+    @property
+    def _images_base_url(self) -> str:
+        """Returns the base URL for images."""
+        return f"https://images.{self._domain()}"
 
-    @classmethod
-    @cache
-    def _images_base_url(cls) -> str:
-        return f"https://images.{cls._domain()}"
-
-    @classmethod
-    # 332 is the highest resolution normally used on the website it looks like for
-    # season posters.
-    def _clean_poster_image_url(cls, url: str, resolution: int = 332) -> str:
-        formatted_url = url.replace("{profile}", f"s{resolution}")
-        formatted_url = formatted_url.replace("{format}", "avif")
-        return cls._images_base_url() + formatted_url
-
-    @classmethod
-    def _clean_favicon_image_url(cls, url: str) -> str:
-        formatted_url = url.replace("{format}", "jpeg")
-        return cls._images_base_url() + formatted_url
-
-    # endregion Class Methods
-
-    # region Other
+    def _format_image_url(
+        self,
+        url: str,
+        profile: int,
+        format: str = "avif",  # noqa: A002
+    ) -> str:
+        """Format an image URL from JustWatch replacing the placeholder strings."""
+        formatted_url = url.replace("{profile}", f"s{profile}")
+        formatted_url = formatted_url.replace("{format}", format)
+        return self._images_base_url + formatted_url
 
     @staticmethod
     def _clean_external_url(url: str) -> str:
-        """Remove affiliate tracking from the episode URL."""
+        """Remove affiliate tracking from an external URL."""
         parsed_url = urlparse(url)
 
         # Used by Crunchyroll and potentially others.
@@ -69,21 +59,21 @@ class UpsertMixin(FileMixin, register=False):
         source_key: str,
         custom_buy_box_offers: custom_buy_box_offers_models.Node,
     ) -> (
+        # TODO: Update Just Scrape models so these type errors go away, once that is
+        # done these types can be saved to a variable instead of being repeated.
         custom_buy_box_offers_models.FlatrateItem
         | custom_buy_box_offers_models.BuyItem
         | custom_buy_box_offers_models.FreeItem
         | custom_buy_box_offers_models.FastItem
-        # TODO: Enable rent items once the data structure exists.
-        # | custom_buy_box_offers_models.RentItem
+        | custom_buy_box_offers_models.RentItem
         | None
     ):
-        # Eventually the types here will no longer have unknown values so the type
-        # errors will go away as JustScrape automatically updates.
         offers: list[
             custom_buy_box_offers_models.FlatrateItem
             | custom_buy_box_offers_models.BuyItem
             | custom_buy_box_offers_models.FreeItem
             | custom_buy_box_offers_models.FastItem
+            | custom_buy_box_offers_models.RentItem
         ] = []
         if custom_buy_box_offers.flatrate:
             offers.extend(custom_buy_box_offers.flatrate)
@@ -109,10 +99,8 @@ class UpsertMixin(FileMixin, register=False):
 
         return None
 
-    def _get_best_episode_date(
-        self,
-        episode_data: UrlTitleDetails,
-    ) -> datetime | None:
+    # TODO: Compile some test data and determine if this function should be
+    def _pick_best_episode_date(self, episode_data: UrlTitleDetails) -> datetime | None:
         """Get the best available date for the episode."""
         if (
             release_date
@@ -126,20 +114,7 @@ class UpsertMixin(FileMixin, register=False):
             return tz_datetime(year, 1, 1)
         return None
 
-    # endregion Other
-
     # region Upsert
-
-    def initialize_plugin(self) -> None:
-        """Download the providers locale file and update the plugin's data_timestamp."""
-        if self.plugin.data_timestamp is None:
-            # TODO: Periodic updates of the providers.
-            providers_file = self._providers_locale_file()
-            providers_file.download_if_outdated()
-            self._download_initial_new_titles_bucket()
-            self._upsert_sources(providers_file)
-            self.plugin.data_timestamp = providers_file.database_entry.data_timestamp
-            self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
     def _upsert_sources(self, providers_file: ProvidersLocale) -> None:
         """Upsert all providers from the providers locale file as sources."""
@@ -150,16 +125,18 @@ class UpsertMixin(FileMixin, register=False):
                 self.plugin,
                 provider["short_name"],
             )
-            data_timestamp = providers_file.database_entry.data_timestamp
             source = SourceInput(
                 key=provider["short_name"],
                 name=provider["clear_name"],
-                favicon_url=self._clean_poster_image_url(
-                    provider["icon_url"],
-                    resolution=100,
-                ),
-                data_timestamp=data_timestamp,
+                # Resolution of 100 is used on https://www.justwatch.com/us/new
+                favicon_url=self._format_image_url(provider["icon_url"], profile=100),
             ).upsert(self.plugin, source)
+
+            # Only use the data timestamp from the providers file for the initial
+            # data_timestamp value, after this thedata_timestamp from  NewTitlesBucket
+            # should be used.
+            if not source.data_timestamp:
+                source.data_timestamp = providers_file.database_entry.data_timestamp
 
     def _upsert_shows(self, show_key: str) -> list[Show]:
         """Upsert all sources and their shows from the URL title details JSON."""
@@ -178,10 +155,9 @@ class UpsertMixin(FileMixin, register=False):
         force_reimport: bool = False,
     ) -> Show:
         show = Show.get_from_memory(self.db, source, show_key)
-        show_timestamp = self._oldest_file_timestamp(self._show_files(show_key))
+        show_timestamp = self._file_timestamp(self._show_files(show_key))
 
-        if force_reimport or not show or show.data_timestamp != show_timestamp:
-            logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
+        if force_reimport or not self._is_up_to_date(show, show_timestamp):
             parsed_json = self._url_title_details_file(show_key).parsed()
             offer = next(
                 offer
@@ -194,7 +170,7 @@ class UpsertMixin(FileMixin, register=False):
                 media_type=self._media_type(show_key),
                 description=parsed_json.data.url_v2.node.content.short_description,
                 url=self._clean_external_url(offer.standard_web_url),
-                image_url=self._images_base_url()
+                image_url=self._images_base_url
                 + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
                 data_timestamp=show_timestamp,
             ).upsert(source, show)
@@ -233,19 +209,13 @@ class UpsertMixin(FileMixin, register=False):
             raise ValueError(msg)
         for season_data in seasons_data:
             season = Season.get_from_memory(self.db, show, season_data.id)
-            season_timestamp = self._oldest_file_timestamp(
+            season_timestamp = self._file_timestamp(
                 self._season_files(season_data.id, show_key),
             )
-            if (
-                force_reimport
-                or not season
-                or season.data_timestamp != season_timestamp
-            ):
-                logger.info(f"Upserting season: {season_data.id}")
+            if force_reimport or not self._is_up_to_date(season, season_timestamp):
+                image_url = self._format_image_url(season_data.content.poster_url, 166)
                 season = SeasonInput(
-                    image_url=self._clean_poster_image_url(
-                        season_data.content.poster_url,
-                    ),
+                    image_url=image_url,
                     # TODO: Should I use the other ID that matches the URL instead?
                     key=season_data.id,
                     sort_order=season_data.content.season_number,
@@ -270,11 +240,8 @@ class UpsertMixin(FileMixin, register=False):
         parsed_json = self._url_title_details_file(show_key).parsed()
         node_id = parsed_json.data.url_v2.node.id
         season = Season.get_from_memory(self.db, show, node_id)
-        season_timestamp = self._oldest_file_timestamp(
-            self._season_files(node_id, show_key),
-        )
-        if force_reimport or not season or season.data_timestamp != season_timestamp:
-            logger.info(f"Upserting season: {node_id}")
+        season_timestamp = self._file_timestamp(self._season_files(node_id, show_key))
+        if force_reimport or not self._is_up_to_date(season, season_timestamp):
             season = SeasonInput(
                 key=node_id,
                 name="Movie",
@@ -325,17 +292,16 @@ class UpsertMixin(FileMixin, register=False):
             )
             # Each episode has its own CustomBuyBoxOffers file so the timestamp
             # must be computed per-episode.
-            episode_timestamp = self._oldest_file_timestamp(
+            episode_timestamp = self._file_timestamp(
                 self._episode_files(
                     season_episode.id,
                     season.key,
-                    show_key=show_key,
+                    show_key,
                 ),
             )
-            if (
-                not force_reimport
-                and existing_episode
-                and existing_episode.data_timestamp == episode_timestamp
+            if not force_reimport and self._is_up_to_date(
+                existing_episode,
+                episode_timestamp,
             ):
                 continue
 
@@ -360,7 +326,7 @@ class UpsertMixin(FileMixin, register=False):
                 sort_order=season_episode.content.episode_number,
                 episode_number=season_episode.content.episode_number,
                 data_timestamp=episode_timestamp,
-                image_url=self._images_base_url() + backdrop_image,
+                image_url=self._images_base_url + backdrop_image,
                 release_date=self._date_to_datetime(
                     season_episode.content.original_release_date,
                 ),
@@ -386,23 +352,21 @@ class UpsertMixin(FileMixin, register=False):
         if not episode_info:
             return
 
-        episode_timestamp = self._oldest_file_timestamp(
-            self._episode_files(episode_info.id, season.key, show_key=show_key),
+        episode_timestamp = self._file_timestamp(
+            self._episode_files(episode_info.id, season.key, show_key),
         )
         existing_episode = Episode.get_from_memory(
             self.db,
             season,
             episode_info.id,
         )
-        if (
-            not force_reimport
-            and existing_episode
-            and existing_episode.data_timestamp == episode_timestamp
+        if not force_reimport and self._is_up_to_date(
+            existing_episode,
+            episode_timestamp,
         ):
             return
 
         node = parsed_data.data.url_v2.node
-        logger.info(f"Upserting episode: {node.content.title}")
         EpisodeInput(
             url=self._clean_external_url(episode_info.standard_web_url),
             key=episode_info.id,

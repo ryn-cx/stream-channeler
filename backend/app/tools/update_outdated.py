@@ -12,7 +12,6 @@ from sqlmodel import Session, col, select
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from app.plugins.plugins.utils.ip_validator import IPValidationError
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -128,9 +127,9 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
                         updated_count += 1
 
                         session.commit()
-                    except IPValidationError:
-                        logger.warning(
-                            f"Skipping update for {media_type_name}: {item.key} - IP validation failed",
+                    except Exception:
+                        logger.exception(
+                            f"Failed to update {media_type_name}: {item.key}",
                         )
                     break
             else:

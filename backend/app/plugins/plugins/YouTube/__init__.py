@@ -2,7 +2,11 @@ import re
 from typing import Literal, override
 
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from app.plugins.plugins.YouTube.files import ChannelById, ChannelByName, Playlist
+from app.plugins.plugins.YouTube.files import (
+    ChannelByChannelId,
+    ChannelByHandle,
+    PlaylistItems,
+)
 from app.plugins.plugins.YouTube.watch import WatchMixin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -14,6 +18,19 @@ URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
 class YouTube(WatchMixin, register=True):
     _VERSION = "0.0.1"
 
+    supports_import_url = True
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        return (
+            "> [!TIP/Channel Name]\n"
+            "> `https://www.youtube.com/@jawed`\n\n"
+            "> [!TIP/Channel ID]\n"
+            "> `https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A`\n\n"
+            "> [!TIP/Playlist ID]\n"
+            "> `https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`"
+        )
+
     # region Import URL
 
     @override
@@ -22,13 +39,15 @@ class YouTube(WatchMixin, register=True):
         self.__validate_url(url, key_type, key_value)
 
         if key_type == "playlist_key":
-            show_key = self._playlist_file(key_value).parsed().channel_id
+            playlist_items = self._playlist_items_file(key_value).parsed()
+            show_key = playlist_items.items[0].snippet.channel_id
             playlist_key = key_value
         elif key_type == "channel_key":
             show_key = key_value
             playlist_key = self._get_channel_uploads_playlist_key(key_value)
         else:
-            show_key = self._channel_by_name_file(key_value).parsed().channel_id
+            channel_data = self._channel_by_handle_file(key_value).parsed()
+            show_key = channel_data.items[0].id
             playlist_key = self._get_channel_uploads_playlist_key(show_key)
 
         show = self.__import_show(show_key, playlist_key)
@@ -50,13 +69,13 @@ class YouTube(WatchMixin, register=True):
 
     def __validate_url(self, url: str, key_type: URLKeyType, key_value: str) -> None:
         """Download and validate that the URL points to real content."""
-        file: Playlist | ChannelById | ChannelByName
+        file: PlaylistItems | ChannelByChannelId | ChannelByHandle
         if key_type == "playlist_key":
-            file = self._playlist_file(key_value)
+            file = self._playlist_items_file(key_value)
         elif key_type == "channel_key":
-            file = self._channel_by_id_file(key_value)
+            file = self._channel_by_channel_id_file(key_value)
         else:
-            file = self._channel_by_name_file(key_value)
+            file = self._channel_by_handle_file(key_value)
         file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
@@ -64,6 +83,7 @@ class YouTube(WatchMixin, register=True):
         show = self._preload_show(show_key=show_key, preload_seasons=True).one_or_none()
         if not show:
             _cache = self._download_show_files(show_key)
+            # TODO: Move to initialization
             source = self._upsert_source()
             return self._upsert_show(source, show_key)
 
@@ -74,6 +94,7 @@ class YouTube(WatchMixin, register=True):
             for show_file in self._show_files(show.key):
                 show_file.download_if_outdated(tz_datetime.now())
             self._download_show_files(show_key)
+            # TODO: Move to initialization
             source = self._upsert_source()
             return self._upsert_show(source, show_key)
 

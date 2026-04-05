@@ -1,593 +1,466 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import {
+  BookOpen,
+  Filter,
+  Layers,
+  ListOrdered,
+  MonitorPlay,
+  Pencil,
+  Plus,
+  Rocket,
+  Search,
+  Shuffle,
+} from "lucide-react"
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
 
-const JUSTWATCH_SUPPORTED_SERVICES = [
-  "A&E",
-  "A&E Crime Central Apple TV Channel",
-  "Acaciatv Amazon Channel",
-  "Acorn TV",
-  "Acorn TV Apple TV",
-  "AcornTV Amazon Channel",
-  "AD tv",
-  "Adult Swim",
-  "Adultswim Amazon Channel",
-  "AeroCinema Amazon Channel",
-  "aha",
-  "Alchemiya Amazon Channel",
-  "All warrior network Amazon Channel",
-  "ALLBLK",
-  "ALLBLK Amazon channel",
-  "ALLBLK Apple TV channel",
-  "Amazon Prime Video",
-  "Amazon Prime Video Free with Ads",
-  "Amazon Prime Video with Ads",
-  "Amazon Video",
-  "AMC",
-  "AMC Plus Apple TV Channel",
-  "AMC Theatres",
-  "AMC+",
-  "AMC+ Amazon Channel",
-  "AMC+ Roku Premium Channel",
-  "Amebatv Amazon Channel",
-  "Angel Studios",
-  "Animal Planet",
-  "Apple TV",
-  "Apple TV Amazon Channel",
-  "ARROW",
-  "Artflix",
-  "AsianCrush",
-  "Aspire TV Amazon Channel",
-  "Atom Tickets",
-  "B&B Theatres",
-  "Baeble Amazon Channel",
-  "BBC America",
-  "BBC Select Apple Tv channel",
-  "BeFit Amazon Channel",
-  "Best of British Tv Amazon Channel",
-  "Best tv ever Amazon Channel",
-  "Best Westerns Ever Amazon Channel",
-  "BET+ Apple TV channel",
-  "Bet+ Amazon Channel",
-  "BFI Player Amazon Channel",
-  "Bloodstream",
-  "BongFlix Amazon Channel",
-  "Bravo TV",
-  "BritBox",
-  "BritBox Amazon Channel",
-  "Britbox Apple TV Channel",
-  "Broadway HD Amazon Channel",
-  "BroadwayHD",
-  "Brown Sugar Amazon Channel",
-  "BYUtv",
-  "CaixaForum+",
-  "Carnegie Hall+ Amazon Channel",
-  "Carnegie Hall+ Apple TV Channel",
-  "Cartoon Network Amazon Channel",
-  "Chai Flicks",
-  "Cinemark",
-  "Cinemax Amazon Channel",
-  "Cinemax Apple TV Channel",
-  "Cinepolis Cinemas",
-  "Cineverse",
-  "Cineverse LiveTV",
-  "Cocina ON Amazon Channel",
-  "Cohen Media Amazon Channel",
-  "Criterion Channel",
-  "Crunchyroll Amazon Channel",
-  "Cultpix",
-  "Curiosity Stream",
-  "CuriosityStream Apple TV Channel",
-  "Daily Burn Amazon Channel",
-  "dAnime Amazon Channel",
-  "Daring Docs Amazon Channel",
-  "Darkroom",
-  "Dekkoo",
-  "Dekkoo Amazon Channel",
-  "Demand Africa Amazon Channel",
-  "Destiny Image TV Amazon Channel",
-  "Discovery",
-  "Discovery +",
-  "Discovery+ Amazon Channel",
-  "Disney Plus",
-  "DisneyNOW",
-  "DistroTV",
-  "DocAlliance Films",
-  "DocCom Amazon Channel",
-  "DOCSVILLE",
-  "DocuramaFilms Amazon Channel",
-  "Doki Amazon Channel",
-  "Dove Amazon Channel",
-  "Dox Amazon Channel",
-  "Dreamscape Kids Amazon Channel",
-  "DreamWorksTV Amazon Channel",
-  "Echoboom Amazon Channel",
-  "Eros Now Select Apple TV Channel",
-  "Eternal Family",
-  "Eventive",
-  "Fandango",
-  "Fandango At Home",
-  "Fandango at Home Free",
-  "Fandor",
-  "Fandor Amazon Channel",
-  "Fawesome",
-  "Fear Factory Amazon Channel",
-  "FidoTV Channel Amazon Channel",
-  "Film Movement Plus",
-  "Film Movement Plus Amazon Channel",
-  "FilmBox Live Amazon Channel",
-  "FilmBox+",
-  "Filmzie",
-  "Fitfusion Amazon Channel",
-  "Flix Premiere",
-  "FlixFling",
-  "FlixHouse",
-  "FlixLatino Amazon Channel",
-  "Food Matters Amazon Channel",
-  "Food Network",
-  "FOUND TV",
-  "Fox",
-  "FOX One",
-  "FOX One Amazon Channel",
-  "France Channel Amazon Channel",
-  "Free Movies Plus",
-  "Freeform",
-  "fuboTV",
-  "FUEL TV+ Amazon Channel",
-  "Full Moon Amazon Channel",
-  "Fuse+ Amazon Channel",
-  "FXNow",
-  "FYI Network",
-  "Gaia Amazon Channel",
-  "Gaiam TV Yoga & Fit",
-  "GlewedTV",
-  "Google Play Movies",
-  "Great American Pure Flix Amazon Channel",
-  "Green Planet Stream Amazon Channel",
-  "Grokker Yoga & Fitness Amazon Channel",
-  "GuideDoc",
-  "Hallmark TV Amazon Channel",
-  "Hallmark+ Amazon Channel",
-  "Hallmark+ Apple TV Channel",
-  "Harkins Theatres",
-  "HBO Max",
-  "HBO Max Amazon Channel",
-  "HBO Max CNN Amazon Channel",
-  "Here TV",
-  "Here TV Amazon Channel",
-  "HGTV",
-  "Hidive Amazon Channel",
-  "History",
-  "History Vault",
-  "HISTORY Vault Amazon Channel",
-  "HISTORY Vault Apple TV Channel",
-  "Hi-YAH",
-  "Hi-YAH Amazon Channel",
-  "Hoichoi",
-  "Hoopla",
-  "Hopster Amazon Channel",
-  "Hulu",
-  "IFC Films Unlimited Apple TV Channel",
-  "Indie Club Amazon Channel",
-  "IndieFlix",
-  "IndieFlix Shorts Amazon Channel",
-  "IndiePix Unlimited Amazon Channel",
-  "Investigation Discovery",
-  "iQIYI",
-  "ITV Amazon Channel",
-  "Jolt Film",
-  "JustWatchTV",
-  "KableOne",
-  "Kanopy",
-  "Kartoon Channel Amazon Channel",
-  "Kids and Family Max amazon channel",
-  "Kidstream Amazon Channel",
-  "Kino Film Collection",
-  "Kino Film Collection Amazon Channel",
-  "Klassiki",
-  "Kocowa",
-  "Kocowa Amazon Channel",
-  "KQED",
-  "Kundalini Yoga TV Amazon Channel",
-  "Learn How to Run Amzon Channel",
-  "Lifetime",
-  "Lifetime Movie Club",
-  "Lifetime Movie Club Amazon Channel",
-  "Lifetime Movie Club Apple TV Channel",
-  "Magellan TV",
-  "Magnolia Network Amazon Channel",
-  "Magnolia Selects Amazon Channel",
-  "Marcus Theatres",
-  "Marquee TV Amazon Channel",
-  "Martha Stewart TV",
-  "Metrograph",
-  "MGM Plus",
-  "MGM Plus Roku Premium Channel",
-  "MGM+ Amazon Channel",
-  "Mhz Choice",
-  "MHz Choice Amazon Channel",
-  "Midnight Pulp",
-  "Midnight Pulp Amazon Channel",
-  "Mometu",
-  "Monsters and Nightmares Amazon Channel",
-  "Motorvision TV Amazon Channel",
-  "MovieMe",
-  "MovieSaints",
-  "MovieSphere+ Amazon Channel",
-  "MTV Hits Amazon Channel",
-  "MTV Plus Amazon Channel",
-  "MUBI",
-  "MUBI Amazon Channel",
-  "myfilmfriend",
-  "MyOutdoor TV Amazon Channel",
-  "MyOutdoorTV",
-  "MZ Choice Amazon Channel",
-  "National Geographic",
-  "NBC",
-  "Netflix",
-  "Netflix Kids",
-  "Netflix Standard with Ads",
-  "Night Flight Plus",
-  "Noggin Amazon Channel",
-  "On Air",
-  "OnDemandKorea",
-  "Outside TV Features Amzon Channel",
-  "Outside Watch",
-  "OUTtv Apple TV Channel",
-  "Ovation TV",
-  "OVID",
-  "OXYGEN",
-  "Panna Cooking Amazon Channel",
-  "Pantaya appletv channel",
-  "Paramount Plus Apple TV Channel",
-  "Paramount Plus Essential",
-  "Paramount Plus Premium",
-  "Paramount+ Amazon Channel",
-  "Paramount+ MTV Amazon Channel",
-  "Paramount+ Originals Amazon Channel",
-  "Paramount+ Roku Premium Channel",
-  "Passionflix Amazon Channel",
-  "PBS",
-  "PBS America Amazon Channel",
-  "PBS Documentaries Amazon Channel",
-  "PBS Kids Amazon Channel",
-  "PBS Living Amazon Channel",
-  "PBS Masterpiece Amazon Channel",
-  "Peacock Premium",
-  "Peacock Premium Plus",
-  "Peacock Premium Plus Amazon Channel",
-  "Philo",
-  "Pinoy Box Office Amazon Channel",
-  "PixL Amazon Channel",
-  "Planet Earth Amazon Channel",
-  "Plex",
-  "Plex Live TV",
-  "Plex Player",
-  "Pluto TV",
-  "Pluto TV Live",
-  "Pongalo Amazon Channel",
-  "Popflick",
-  "Public Domain Movies",
-  "Pure Flix",
-  "Qello Concerts by Stingray Amazon Channel",
-  "Rakuten Viki",
-  "REELZ+ Amazon Channel",
-  "Regal Cinemas",
-  "Retrocrush",
-  "RetroCrush Amazon Channel",
-  "Reveel",
-  "Revry",
-  "Revry Amazon Channel",
-  "Runtime",
-  "Ryan and Friends Plus Amazon Channel",
-  "Science Channel",
-  "Screambox Amazon Channel",
-  "ScreenPix Amazon Channel",
-  "ScreenPix Apple TV Channel",
-  "Sensical Amazon Channel",
-  "Shahid VIP",
-  "ShortsTV Amazon Channel",
-  "Shout! Factory Amazon Channel",
-  "Shout! Factory TV",
-  "Shudder",
-  "Shudder Amazon Channel",
-  "Shudder Apple TV Channel",
-  "Sleep Sounds & Meditation Amazon Channel",
-  "Spectrum On Demand",
-  "Starz",
-  "Starz Amazon Channel",
-  "Starz Apple TV Channel",
-  "Starz Roku Premium Channel",
-  "Stingray Classica Amazon Channel",
-  "Stingray Djazz Amazon Channel",
-  "Stingray Karaoke Amazon Channel",
-  "Strand Releasing Amazon Channel",
-  "Stupid Co",
-  "Sun Nxt",
-  "Sundance Now",
-  "Sundance Now Amazon Channel",
-  "Sundance Now Apple TV Channel",
-  "Sweatflix Amazon Channel",
-  "Takflix",
-  "Tastemade Amazon Channel",
-  "Tastemade Apple TV Channel",
-  "TBS",
-  "TCM",
-  "Telemundo",
-  "Tentkotta",
-  "The Coda Collection Amazon Channel",
-  "The CW",
-  "The Great Courses Amazon Channel",
-  "The Oprah Winfrey Network",
-  "The Roku Channel",
-  "The Surf Network Amazon Channel",
-  "The Titanic Channel Amazon Channel",
-  "Thirteen",
-  "TLC",
-  "TNT",
-  "Toku Amazon Channel",
-  "Toon Goggles",
-  "Travel Channel",
-  "Troma NOW",
-  "tru TV",
-  "True Royalty Amazon Channel",
-  "True Story",
-  "Tubi TV",
-  "TVCortos Amazon Channel",
-  "Univer Video",
-  "UP Faith & Family Amazon Channel",
-  "UP Faith & Family Apple TV Channel",
-  "USA Network",
-  "Vemox Cine Amazon Channel",
-  "VH1",
-  "Viaplay Amazon Channel",
-  "Vice TV",
-  "Vimeo",
-  "VIX",
-  "Vix Gratis Amazon Channel",
-  "ViX Premium Amazon Channel",
-  "Warriors and Gangsters Amazon Channel",
-  "Watchit.Kid Amazon Channel",
-  "Wellness Plus by Psychetruth Amazon Channel",
-  "WETA+",
-  "WeTV",
-  "WOW Presents Plus",
-  "WWE Network",
-  "Xive TV Documentaries Amazon Channel",
-  "XLTV Amazon Channel",
-  "Xumo Play",
-  "Yipee Kids TV Amazon Channel",
-  "Yoga and Fitness TV Amazon channel",
-  "Yoga Anytime Amazon Channel",
-  "Yoga Download Amazon Channel",
-  "Yoga International Amazon Channel",
-  "Young Hollywood Amazon Channel",
-  "YouTube Free",
-  "YouTube Premium",
-  "YouTube TV",
-  "ZenLIFE by Stingray Amazon Channel",
-]
+function ChannelFieldDescriptions() {
+  return (
+    <ul className="list-disc list-inside ml-2 space-y-1 text-muted-foreground">
+      <li>
+        <strong className="text-foreground">Name</strong>: the display name for
+        your channel
+      </li>
+      <li>
+        <strong className="text-foreground">Channel Number</strong>: controls
+        the order channels appear in on the channels page. You can even use
+        negative numbers or decimals.
+      </li>
+      <li>
+        <strong className="text-foreground">Public</strong>: when enabled,
+        anyone with the link can view your channel. When disabled, only you can
+        see it.
+      </li>
+      <li>
+        <strong className="text-foreground">Default Order</strong>: a JSON
+        string that sets the default sort and filter configuration. There is a
+        special menu for editing the episode order, but you can also copy and
+        paste a JSON string if you want to duplicate an existing sort order from
+        one channel to another channel.
+      </li>
+    </ul>
+  )
+}
 
 export function Dashboard() {
   return (
-    <div className="max-w-3xl mx-auto space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight">Getting Started</h2>
-        <p className="text-muted-foreground mt-1">
-          Learn how to set up and use Stream Channeler
+    <div className="max-w-4xl mx-auto space-y-10 px-4 py-8">
+      {/* Hero */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground text-lg">
+          Your home base for managing channels and discovering content
         </p>
       </div>
-      <div>
-        <Accordion type="single" collapsible className="w-full">
+
+      {/* Two main action cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link
+          to="/onboarding"
+          className="group flex flex-col items-center gap-4 p-8 border rounded-xl hover:border-primary hover:bg-accent/30 transition-all"
+        >
+          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <Rocket className="h-7 w-7 text-primary" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold">Guided Setup</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create a channel, add shows, and pick a sort order in a few quick
+              steps
+            </p>
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          className="group flex flex-col items-center gap-4 p-8 border rounded-xl hover:border-primary hover:bg-accent/30 transition-all"
+          onClick={() => {
+            document
+              .getElementById("user-manual")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }}
+        >
+          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <BookOpen className="h-7 w-7 text-primary" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold">User Manual</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Detailed guide covering channels, searching, sorting, filtering,
+              and more
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* User Manual */}
+      <div id="user-manual" className="space-y-4 scroll-mt-8">
+        <h2 className="text-2xl font-bold tracking-tight">User Manual</h2>
+
+        <Accordion
+          type="multiple"
+          className="w-full"
+          defaultValue={["create-channel"]}
+        >
+          {/* 1. Creating Channels */}
           <AccordionItem value="create-channel">
-            <AccordionTrigger>1. Create a Channel</AccordionTrigger>
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Creating Channels
+              </span>
+            </AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-2">
+              <div className="space-y-3 text-sm">
                 <p>
-                  Start by creating a channel to organize your media. A channel
-                  is like a personalized collection that you can customize to
-                  your liking.
+                  A channel is an automatically updated curated playlist of
+                  shows and movies. You choose exactly what appears on it and
+                  how it's sorted.
                 </p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
+                <ol className="list-decimal list-inside space-y-1.5 ml-2">
                   <li>
-                    Navigate to the{" "}
+                    Go to the{" "}
                     <Link
                       to="/channels"
                       className="text-primary hover:underline"
                     >
                       Channels page
-                    </Link>{" "}
-                    from the sidebar
+                    </Link>
                   </li>
-                  <li>Click the "New Channel" button</li>
                   <li>
-                    Give your channel a name and choose if it should be public
-                    or private.
+                    Click <strong>Add Channel</strong>
                   </li>
-                  <li>Save your channel</li>
                   <li>
-                    Click on the channel to add shows to it and set the episode
-                    order parameters
+                    Fill in the channel details:
+                    <div className="ml-4 mt-1">
+                      <ChannelFieldDescriptions />
+                    </div>
                   </li>
                 </ol>
-                <p className="text-sm text-muted-foreground mt-3">
-                  <strong>Note:</strong> Public channels can be accessed by
-                  anyone with a link to the channel. Private channels can only
-                  be accessed by you.
-                </p>
               </div>
             </AccordionContent>
           </AccordionItem>
 
+          {/* 2. Editing Channels */}
+          <AccordionItem value="edit-channel">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Pencil className="h-4 w-4" />
+                Editing Channels
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm">
+                <p>
+                  To edit an existing channel, click the pencil icon next to the
+                  channel name on the{" "}
+                  <Link to="/channels" className="text-primary hover:underline">
+                    Channels page
+                  </Link>
+                  . You can change any of the following:
+                </p>
+                <ChannelFieldDescriptions />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 3. Adding Shows */}
           <AccordionItem value="add-shows">
-            <AccordionTrigger>2. Add Shows to Your Channel</AccordionTrigger>
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Adding Shows
+              </span>
+            </AccordionTrigger>
             <AccordionContent>
-              <ol className="list-decimal list-inside space-y-1 ml-2 text-sm mb-4">
-                <li>From the channel page, click the "Add Shows" button</li>
-                <li>Add the show URLs to the textbox</li>
-                <li>Click "Add URLs" to add the URLs to the channel</li>
-              </ol>
-              <div className="text-sm mb-4">
+              <div className="space-y-4 text-sm">
                 <p>
-                  There are two main types of sources you can add to your
-                  channels:
+                  There are two ways to add shows: <strong>Search</strong> and{" "}
+                  <strong>Manual URLs</strong>.
                 </p>
-                <p>
-                  <strong>JustWatch supported websites</strong> that use URLs
-                  from JustWatch.
-                </p>
-                <p>
-                  <strong>Natively supported websites</strong> that support URLs
-                  directly from the source website.
-                </p>
-              </div>
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="justwatch-services">
-                  <AccordionTrigger>
-                    JustWatch Supported Services
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-3">
-                      These services support URLs through JustWatch:
-                    </p>
 
-                    <details className="mt-3">
-                      <summary className="cursor-pointer font-medium text-sm">
-                        View all supported services (
-                        {JUSTWATCH_SUPPORTED_SERVICES.length})
-                      </summary>
-                      <div className="mt-2 max-h-48 overflow-y-auto border rounded p-3">
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
-                          {JUSTWATCH_SUPPORTED_SERVICES.map((service) => (
-                            <li key={service} className="text-muted-foreground">
-                              {service}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </details>
-                    <p className="text-sm mb-3 mt-4">
-                      For JustWatch URLs, the name of the source should be
-                      included before the URL on the same line as the URL.
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Example:
-                    </p>
-                    <code className="block bg-muted p-2 rounded text-sm mb-3">
-                      Hulu https://www.justwatch.com/us/tv-show/breaking-bad
-                    </code>
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="native-websites">
-                  <AccordionTrigger>
-                    Natively supported websites
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-3">
-                      These services support URLs directly from the source
-                      website:
-                    </p>
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium mb-1">
-                          YouTube (Playlists and Channels)
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Channel Example:
-                        </p>
-                        <code className="block bg-muted p-2 rounded text-xs break-all mb-2">
-                          https://www.youtube.com/@jawed
-                        </code>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Playlist Example:
-                        </p>
-                        <code className="block bg-muted p-2 rounded text-xs break-all">
-                          https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
-                        </code>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium mb-1">Crunchyroll</p>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Example:
-                        </p>
-                        <code className="block bg-muted p-2 rounded text-xs break-all">
-                          https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family
-                        </code>
-                      </div>
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold">Search (Recommended)</h4>
+                  <p>
+                    From the channel page, click <strong>Add Shows</strong> and
+                    use the <strong>Search</strong> tab. Type a show name and
+                    results will appear from JustWatch, covering 900+ streaming
+                    services.
+                  </p>
+                  <p>
+                    When you expand a result, you can{" "}
+                    <strong>choose a specific source</strong> (like Netflix or
+                    Hulu) or click <strong>Add All Sources</strong> to import
+                    from every available provider. You can also type a custom
+                    source name if the one you want isn't listed.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Selecting a specific source means episodes will link
+                    directly to that streaming service's player.
+                  </p>
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold">Manual URLs</h4>
+                  <p>
+                    Switch to the <strong>Manual URLs</strong> tab to paste URLs
+                    directly, one per line. This supports:
+                  </p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li>
+                      <strong>JustWatch URLs</strong>: prepend the source name
+                      before the URL (e.g.,{" "}
+                      <code className="bg-muted px-1 rounded text-xs">
+                        Hulu justwatch.com/us/tv-show/breaking-bad
+                      </code>
+                      )
+                    </li>
+                    <li>
+                      <strong>YouTube</strong>: channel or playlist URLs
+                      directly
+                    </li>
+                    <li>
+                      <strong>Crunchyroll</strong>: series URLs directly
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 3. Sorting & Ordering */}
+          <AccordionItem value="sorting">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <ListOrdered className="h-4 w-4" />
+                Sorting & Ordering
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 text-sm">
+                <p>
+                  Sorting controls the order episodes appear on your channel.
+                  You can sort by any field (air date, episode number, show
+                  name, duration, etc.) and stack multiple sort rules. The last
+                  rule is the primary sort.
+                </p>
+
+                <h4 className="font-semibold">Sort Modes</h4>
+                <p>
+                  Each sort rule has a <strong>mode</strong> that changes how it
+                  behaves:
+                </p>
+
+                <div className="space-y-3">
+                  <div className="border rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-2 font-medium">
+                      <ListOrdered className="h-4 w-4 text-primary" />
+                      Normal
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </AccordionContent>
-          </AccordionItem>
+                    <p className="text-muted-foreground">
+                      Standard sorting. Episodes are ordered by the chosen
+                      field. All episodes from the same show will appear
+                      together. Use this when you want a straightforward sort
+                      like "newest first" or "alphabetical by show name."
+                    </p>
+                  </div>
 
-          <AccordionItem value="configure-channel">
-            <AccordionTrigger>3. Configure the Channel</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-semibold mb-2">Channel Options</h4>
-                  <p>
-                    Use Channel options to set the order that the episodes will
-                    be displayed.
-                  </p>
+                  <div className="border rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Shuffle className="h-4 w-4 text-primary" />
+                      Interleave (Sequential / Random)
+                    </div>
+                    <p className="text-muted-foreground">
+                      Spreads episodes from different shows across the list
+                      instead of grouping them. Think of it like shuffling a
+                      deck of cards: one episode from Show A, then one from Show
+                      B, then Show C, and so on. <strong>Sequential</strong>{" "}
+                      interleaves in a fixed order, while{" "}
+                      <strong>Random</strong> shuffles the show order each time.
+                      Great for a "TV channel" feel where you see variety
+                      instead of marathoning one show.
+                    </p>
+                  </div>
+
+                  <div className="border rounded-lg p-3 space-y-1">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Layers className="h-4 w-4 text-primary" />
+                      Show Group
+                    </div>
+                    <p className="text-muted-foreground">
+                      Groups all episodes by show, then sorts the{" "}
+                      <em>shows themselves</em> using an aggregate function
+                      (sum, max, min, avg, count) on the chosen field. For
+                      example, "recently aired + show group + max" puts shows
+                      that have any recently aired episode first. Use this to
+                      prioritize certain shows over others based on their
+                      episodes' properties.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold mb-2">
-                    Manage Additional Channels
-                  </h4>
-                  <p>
-                    Use manage additional channels to combine multiple channels
-                    into one (non-recursively).
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">Saving Configurations</h4>
-                  <p className="mb-2">
-                    Hitting "Save as default" will make the channel open with
-                    this setting when opening from the channel list.
-                  </p>
-                  <p>
-                    You can also bookmark the current URL at any time to save
-                    additional configurations.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                    <strong>Note:</strong> Episodes can be toggled between card
-                    mode and table mode with a button in the top right.
-                  </p>
+                <div className="bg-muted/50 border rounded-lg p-3 text-muted-foreground">
+                  <strong>Tip:</strong> Combine modes for powerful setups. For
+                  example, use Show Group to put recently-aired shows first,
+                  then Interleave to mix episodes between those shows, and
+                  Normal to sort by episode number within each show.
                 </div>
               </div>
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="managing-watches">
-            <AccordionTrigger>4. Managing Watches</AccordionTrigger>
+          {/* 4. Filtering */}
+          <AccordionItem value="filtering">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filtering
+              </span>
+            </AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-4 text-sm">
+              <div className="space-y-3 text-sm">
                 <p>
-                  Whenever you click on the link for a media, it will be marked
-                  as watched and the watch needs to be validated in the{" "}
-                  <Link to="/watches" className="text-primary hover:underline">
-                    watches page
-                  </Link>{" "}
-                  before any watch based filters will be applied to it.
+                  Filters let you narrow down which episodes appear on your
+                  channel. Open <strong>Channel Options</strong> on any channel
+                  to access filters.
                 </p>
+                <ul className="list-disc list-inside ml-2 space-y-1.5">
+                  <li>
+                    <strong>Hide Watched</strong>: only show episodes you
+                    haven't seen yet
+                  </li>
+                  <li>
+                    <strong>Hide Unwatched</strong>: only show episodes you've
+                    already watched
+                  </li>
+                  <li>
+                    <strong>Only Started Shows</strong>: only include shows
+                    where you've watched at least one episode
+                  </li>
+                  <li>
+                    <strong>Only New Shows</strong>: only include shows you
+                    haven't started yet
+                  </li>
+                  <li>
+                    <strong>Air Date Range</strong>: filter by when episodes
+                    originally aired
+                  </li>
+                  <li>
+                    <strong>Release Date Range</strong>: filter by streaming
+                    release date
+                  </li>
+                  <li>
+                    <strong>Duration Range</strong>: filter by episode length
+                  </li>
+                </ul>
+                <p className="text-muted-foreground">
+                  Click <strong>Save as Default</strong> to make your current
+                  filter + sort configuration the default when opening the
+                  channel. You can also bookmark the URL to save any
+                  configuration.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
+          {/* 5. Watch History */}
+          <AccordionItem value="watches">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <MonitorPlay className="h-4 w-4" />
+                Watch History
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm">
                 <p>
-                  This information can be used to determine channel order and
-                  sorting, allowing you to create more useful channels. For
-                  example, you can make a channel that only shows you content
-                  you have never seen before.
+                  When you click an episode to watch it, it's automatically
+                  marked as watched. However, watches need to be{" "}
+                  <strong>verified</strong> before watch-based filters apply
+                  (like "Hide Watched").
+                </p>
+                <p>
+                  You can verify watches from the episode card menu or from the{" "}
+                  <Link to="/watches" className="text-primary hover:underline">
+                    Watch History
+                  </Link>{" "}
+                  page. You can also import watch history from supported
+                  services like YouTube and Crunchyroll.
+                </p>
+                <p className="text-muted-foreground">
+                  Watch data powers sorting options like "Last Watched" and
+                  filters like "Only Started Shows," making your channels
+                  smarter over time.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 6. Additional Channels */}
+          <AccordionItem value="additional-channels">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                Combining Channels
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm">
+                <p>
+                  You can combine episodes from multiple channels into one view
+                  using <strong>Additional Channels</strong>. This lets you
+                  create a "super channel" that pulls from several smaller
+                  channels without duplicating shows.
+                </p>
+                <p>
+                  Each channel keeps its own whitelist/blacklist settings, so
+                  episodes are filtered according to the channel they belong to.
+                </p>
+                <p className="text-muted-foreground">
+                  Access this from <strong>Manage Additional Channels</strong>{" "}
+                  on any channel page.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 7. Whitelist/Blacklist */}
+          <AccordionItem value="whitelist">
+            <AccordionTrigger>
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Whitelist & Blacklist
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Each show in a channel can be in{" "}
+                  <strong>Blacklist Mode</strong> (default) or{" "}
+                  <strong>Whitelist Mode</strong>:
+                </p>
+                <ul className="list-disc list-inside ml-2 space-y-1.5">
+                  <li>
+                    <strong>Blacklist Mode</strong>: all episodes are included
+                    by default. New episodes are automatically added. Mark
+                    individual seasons or episodes to exclude them.
+                  </li>
+                  <li>
+                    <strong>Whitelist Mode</strong>: no episodes are included by
+                    default. New episodes are not automatically added. Mark
+                    individual seasons or episodes to include them.
+                  </li>
+                </ul>
+                <p className="text-muted-foreground">
+                  Within a whitelisted season, you can exclude specific
+                  episodes. Within a blacklisted season, you can include
+                  specific episodes. This gives you fine-grained control over
+                  exactly what appears on your channel.
                 </p>
               </div>
             </AccordionContent>

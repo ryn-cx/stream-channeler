@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 from typing import override
 
-from loguru import logger
-
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeInput
 from app.plugins.plugins.Crunchyroll.files import Browse, FileMixin
@@ -51,11 +49,10 @@ class UpsertMixin(FileMixin, register=False):
     ) -> Show:
         show = Show.get_from_memory(self.db, source, show_key)
         show_files = self._show_files(show_key=show_key)
-        show_timestamp = self._oldest_file_timestamp(show_files)
+        show_timestamp = self._file_timestamp(show_files)
 
         series_data = self._series_file(show_key).parsed().data[0]
-        if force_reimport or not show or show.data_timestamp != show_timestamp:
-            logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
+        if force_reimport or not self._is_up_to_date(show, show_timestamp):
             show = ShowInput(
                 key=series_data.id,
                 name=series_data.title,
@@ -97,20 +94,19 @@ class UpsertMixin(FileMixin, register=False):
         """
         time_delta = timedelta(days=7)
         for season in show.seasons:
-            latest_episode = max(
-                season.episodes,
-                # return-value - This should return an error if the value is not
-                # defined.
-                key=lambda ep: ep.release_date,  # type: ignore[return-value, arg-type]
+            release_dates: list[datetime] = []
+            for episode in season.episodes:
+                if not episode.release_date:
+                    msg = f"Episode {episode.key} is missing release_date"
+                    raise ValueError(msg)
+                release_dates.append(episode.release_date)
+            latest_release_date = max(release_dates)
+            season.set_update_at(
+                tz_datetime.combine(
+                    latest_release_date + time_delta,
+                    datetime.max.time(),
+                ),
             )
-
-            if latest_episode and latest_episode.release_date:
-                season.set_update_at(
-                    tz_datetime.combine(
-                        latest_episode.release_date + time_delta,
-                        datetime.max.time(),
-                    ),
-                )
 
     # endregion Upsert Show
 
@@ -128,13 +124,12 @@ class UpsertMixin(FileMixin, register=False):
         for i, season_data in enumerate(seasons_file.parsed().data):
             season = Season.get_from_memory(self.db, show, season_data.id)
             season_files = self._season_files(season_data.id, show.key)
-            season_timestamp = self._oldest_file_timestamp(season_files)
+            season_timestamp = self._file_timestamp(season_files)
             if (
                 force_reimport
                 or not season
                 or season.data_timestamp != season_timestamp
             ):
-                logger.info(f"Upserting season: {season_data.title}")
                 season = SeasonInput(
                     key=season_data.id,
                     sort_order=i,
@@ -155,19 +150,14 @@ class UpsertMixin(FileMixin, register=False):
         season.soft_delete_missing_children(episode_keys)
 
         episode_files = self._episode_files(season.key)
-        episode_timestamp = self._oldest_file_timestamp(episode_files)
+        episode_timestamp = self._file_timestamp(episode_files)
 
         episodes_data = self._episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):
             episode = Episode.get_from_memory(self.db, season, episode_data.id)
-            if (
-                not force_reimport
-                and episode
-                and episode.data_timestamp == episode_timestamp
-            ):
+            if not force_reimport and self._is_up_to_date(episode, episode_timestamp):
                 continue
 
-            logger.info(f"Upserting episode: {episode_data.title}")
             EpisodeInput(
                 key=episode_data.id,
                 url=self._episode_url(episode_data.id),

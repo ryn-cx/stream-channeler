@@ -14,6 +14,7 @@ from just_scrape.custom_season_episodes import (
 from just_scrape.exceptions import GraphQLError
 from just_scrape.new_title_buckets import response_models as new_title_buckets_models
 from just_scrape.new_titles import response_models as new_titles_models
+from just_scrape.search import response_models as search_models
 from just_scrape.url_title_details import response_models as url_title_details_models
 from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
@@ -23,7 +24,6 @@ from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
 from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
 from app.plugins.plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
-from app.plugins.plugins.utils.ip_validator import check_ip_not_matches
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -35,14 +35,13 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 @cache
 def just_scrape_client() -> JustScrape:
     return JustScrape(
-        proxy_url=settings.PROXY_URL,
-        proxy_auth_token=settings.PROXY_AUTH_TOKEN,
+        get_around_server=settings.GET_AROUND_SERVER,
+        get_around_password=settings.GET_AROUND_PASSWORD,
     )
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     api_endpoint = just_scrape_client().new_titles
-    allow_local_ip = True
 
     def __init__(
         self,
@@ -67,9 +66,8 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
         return just_scrape_client().new_titles.extract_edges(self.parsed())
 
 
-class NewTitlesBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
+class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     api_endpoint = just_scrape_client().new_title_buckets
-    allow_local_ip = True
 
     def __init__(self, db: Session, plugin: Plugin, end_datetime: datetime) -> None:
         self.end_datetime = end_datetime
@@ -107,14 +105,11 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     api_endpoint = just_scrape_client().url_title_details
-    allow_local_ip = True
 
     # TODO: Can this error be handled better?
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            if not self.allow_local_ip:
-                check_ip_not_matches(settings.LOCAL_IP)
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)
@@ -128,7 +123,6 @@ class CustomSeasonEpisodes(
     GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
 ):
     api_endpoint = just_scrape_client().custom_season_episodes
-    allow_local_ip = True
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
@@ -146,7 +140,10 @@ class CustomBuyBoxOffers(
     GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
     api_endpoint = just_scrape_client().custom_buy_box_offers
-    allow_local_ip = True
+
+
+class SearchTitles(GAPIJSON[search_models.SearchResponse]):
+    api_endpoint = just_scrape_client().search
 
 
 class FileMixin(BasePlugin, register=False):
@@ -208,14 +205,14 @@ class FileMixin(BasePlugin, register=False):
     def _new_titles_bucket_file(
         self,
         end_datetime: datetime | File,
-    ) -> NewTitlesBucket:
+    ) -> NewTitleBucket:
         if isinstance(end_datetime, File):
-            key = NewTitlesBucket.file_key_to_unique_identifier(end_datetime.key)
-            end_datetime = tz_datetime.fromisotimestamp(key)
+            key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
+            end_datetime = datetime.fromisoformat(key)
         return self._get_weakref_cached_file(
-            NewTitlesBucket,
+            NewTitleBucket,
             end_datetime,
-            lambda: NewTitlesBucket(self.db, self.plugin, end_datetime),
+            lambda: NewTitleBucket(self.db, self.plugin, end_datetime),
         )
 
     def _providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
@@ -225,7 +222,28 @@ class FileMixin(BasePlugin, register=False):
             lambda: ProvidersLocale(self.db, self.plugin, locale),
         )
 
+    def _search_titles_file(self, query: str) -> SearchTitles:
+        return self._get_weakref_cached_file(
+            SearchTitles,
+            query,
+            lambda: SearchTitles(self.db, self.plugin, query),
+        )
+
     # endregion File Cache
+
+    def _source_keys_from_buckets(self, db: Session, plugin: Plugin) -> set[str]:
+        """Get all source keys with new titles from unimported bucket files."""
+        statement = select(File).where(
+            File.plugin_id == plugin.id,
+            col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
+            col(File.data_timestamp) > plugin.data_timestamp,
+        )
+        source_keys: set[str] = set()
+        for file in db.exec(statement).all():
+            bucket = self._new_titles_bucket_file(file)
+            for edge in bucket.parsed_edges():
+                source_keys.add(edge.key.package.short_name)
+        return source_keys
 
     # region File Groups
 
@@ -245,10 +263,10 @@ class FileMixin(BasePlugin, register=False):
             # Required to detect changes to the season.
             return [self._url_title_details_file(show_key)]
         return [
-            # Required to detect changes to the season.
-            self._url_title_details_file(show_key),
             # Required to detect new episodes.
             self._custom_season_episodes_file(season_key),
+            # Required to detect changes to the season.
+            self._url_title_details_file(show_key),
         ]
 
     @override
@@ -256,8 +274,7 @@ class FileMixin(BasePlugin, register=False):
         self,
         episode_key: str,
         season_key: str,
-        *,
-        show_key: str = "",
+        show_key: str,
     ) -> Sequence[UrlTitleDetails | CustomSeasonEpisodes | CustomBuyBoxOffers]:
         if self._media_type(show_key) == "Movie":
             # Required to detect changes to the episode.
@@ -265,8 +282,8 @@ class FileMixin(BasePlugin, register=False):
 
         return [
             # Required to detect changes to the episode.
-            self._custom_season_episodes_file(season_key),
             self._custom_buy_box_offers_file(episode_key),
+            self._custom_season_episodes_file(season_key),
         ]
 
     # endregion File Groups
@@ -285,21 +302,19 @@ class FileMixin(BasePlugin, register=False):
             if minimum_timestamp <= tz_datetime.now():
                 new_titles_file.download_if_outdated(minimum_timestamp)
 
-    def _download_initial_new_titles_bucket(self) -> None:
-        if self._get_latest_new_titles_bucket().first():
-            return
-        # Adding an extra day makes it much easier to get test files that work because
-        # the test files need to include an entry for the media in the NewTitlesBucket
-        # file.
-        bucket = self._new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
-        bucket.download_if_outdated()
-
     def _download_latest_new_titles_bucket(self) -> None:
         latest_bucket = self._get_latest_new_titles_bucket().first()
+        # If no buckets exist download the initial one with a 1 day buffer worth of
+        # data.
         if not latest_bucket:
+            bucket = self._new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
+            bucket.download_if_outdated()
             return
+        # If the bucket was last updated within a day nothing needs to be done.
         if latest_bucket.data_timestamp > tz_datetime.now() - timedelta(days=1):
             return
+
+        # All other situations a new bucket should be downloaded.
         bucket = self._new_titles_bucket_file(latest_bucket.data_timestamp)
         bucket.download_if_outdated()
 
@@ -353,7 +368,7 @@ class FileMixin(BasePlugin, register=False):
             select(File)
             .where(
                 File.plugin_id == self.plugin.id,
-                col(File.key).startswith(f"{NewTitlesBucket.__name__}/"),
+                col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
             )
             .order_by(col(File.data_timestamp).desc())
         )

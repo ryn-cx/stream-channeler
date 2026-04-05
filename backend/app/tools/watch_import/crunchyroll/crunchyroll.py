@@ -71,7 +71,7 @@ def import_watches(session: Session, user: User) -> None:
             skipped_not_found += 1
             continue
 
-        watch_date = tz_datetime.fromisotimestamp(str(entry["date_played"]))
+        watch_date = tz_datetime.fromisoformat(str(entry["date_played"]))
         if (str(episode.id), watch_date) in existing_watches:
             skipped_already_watched += 1
             continue

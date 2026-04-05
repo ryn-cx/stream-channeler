@@ -25,13 +25,14 @@ from tests.conftest import (
     reset_tables,
     savepoint_session,
 )
-from tests.plugins.plugin_validator.mocks import block_downloads, disable_ip_validation
+from tests.plugins.plugin_validator.mocks import block_downloads
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
 class DatabaseMixin(SerializationMixin):
     plugin_class: type[BasePlugin]
-    url: str
+    url: str | None = None
+    search_query: str | None = None
     invalid_url: bool
 
     # region File paths
@@ -139,10 +140,8 @@ class DatabaseMixin(SerializationMixin):
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
         self._import_files(db)
         url = url or self.url
-        with disable_ip_validation():
-            plugin_instance = self.plugin_class(db, url=url)
-            plugin_instance.initialize_plugin()
-            output = plugin_instance.import_url(url)
+        plugin_instance = self.plugin_class(db, url=url)
+        output = plugin_instance.import_url(url)
 
         db.commit()  # Set the rollback point.
 
@@ -150,7 +149,11 @@ class DatabaseMixin(SerializationMixin):
 
     def _import_files(self, db: Session) -> None:
         """Import all exported files into the database."""
-        # Initialize class to make sure plugin exists before trying to import files.
+        # Mock initialize_plugin to only run the BasePlugin implementation
+        # (creates the database entry) without running subclass logic that
+        # would try to download files before the cached test data is loaded.
+        original_initialize = self.plugin_class.initialize_plugin
+        self.plugin_class.initialize_plugin = BasePlugin.initialize_plugin  # type: ignore[assignment]
         plugin = self.plugin_class(db, url=self.url)
 
         plugin_user = get_or_create_plugin_user(session=db)
@@ -182,7 +185,11 @@ class DatabaseMixin(SerializationMixin):
         # Files imported from JSON have raw Python types. Expiring forces SQLAlchemy to
         # re-read from the DB with proper type coercion.
         db.expire_all()
-        plugin.initialize_plugin()
+
+        # Run the full initialize_plugin now that the files are imported.
+        self.plugin_class.initialize_plugin = original_initialize  # type: ignore[assignment]
+        if all_files:
+            plugin.initialize_plugin()
 
         db.commit()  # Set the rollback point.
 
@@ -216,16 +223,28 @@ class DatabaseMixin(SerializationMixin):
         """Class-scoped connection with files and URL pre-imported on its own database."""
         if self.invalid_url:
             pytest.skip("invalid_url is set")
-        engine = create_test_engine("url")
-        reset_tables(engine)
-        connection = engine.connect()
-        with Session(bind=connection) as session:
-            init_db(session)
-            with block_downloads():
-                self._import_url(session)
-        yield connection
-        connection.close()
-        engine.dispose()
+        if self.url:
+            engine = create_test_engine("ALL")
+            reset_tables(engine)
+            connection = engine.connect()
+            with Session(bind=connection) as session:
+                init_db(session)
+                with block_downloads():
+                    self._import_url(session)
+            yield connection
+            connection.close()
+            engine.dispose()
+        if self.search_query:
+            engine = create_test_engine("ALL")
+            reset_tables(engine)
+            connection = engine.connect()
+            with Session(bind=connection) as session:
+                init_db(session)
+                with block_downloads():
+                    self._import_url(session, url=self.search_query)
+            yield connection
+            connection.close()
+            engine.dispose()
 
     @pytest.fixture
     def db_with_url(self, _db_with_url_connection: Connection) -> Generator[Session]:

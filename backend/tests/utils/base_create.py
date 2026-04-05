@@ -90,7 +90,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(parent_id),
                 output_model=self.output_model,
                 headers=headers,
-                parameters=parameters_model.model_dump(mode="json"),
+                parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
             )
             assert len(response) == 1
             result = response[0]
@@ -101,16 +101,16 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(parent_id),
                 output_model=self.output_model,
                 headers=headers,
-                parameters=parameters_model.model_dump(mode="json"),
+                parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
             )
 
         # Check the response from the API matches the input values.
-        input_dump = parameters_model.model_dump()
+        input_dump = parameters_model.model_dump(exclude_unset=True)
         result_dump = result.model_dump()
         assert input_dump.items() <= result_dump.items()
 
-        # Check that fields not provided in the input are null (except id and foreign
-        # keys).
+        # Check that fields not provided in the input match their default values
+        # (except id and foreign keys).
         extra_keys = (
             result_dump.keys()
             - input_dump.keys()
@@ -118,9 +118,18 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             - set(self.get_foreign_keys(self.database_model))
         )
         for key in extra_keys:
-            assert result_dump[key] is None, (
-                f"Expected {key!r} to be None, got {result_dump[key]!r}"
-            )
+            info = self.output_model.model_fields.get(key)
+            if not info or info.is_required():
+                # Required fields not in the input are server-generated (e.g. key).
+                continue
+            if info.default is not None:
+                assert result_dump[key] == info.default, (
+                    f"Expected {key!r} to be {info.default!r}, got {result_dump[key]!r}"
+                )
+            else:
+                assert result_dump[key] is None, (
+                    f"Expected {key!r} to be None, got {result_dump[key]!r}"
+                )
 
         # Check that the API response matches the database record.
         self.assert_record_saved_to_db(session_scoped_db, result.id, result)

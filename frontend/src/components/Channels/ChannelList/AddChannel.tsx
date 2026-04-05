@@ -39,7 +39,7 @@ import { handleError } from "@/utils"
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
-  channel_number: z.number().int().nullable().optional(),
+  channel_number: z.number().nullable().optional(),
   default_order: z.string().optional(),
   public: z.boolean(),
 })

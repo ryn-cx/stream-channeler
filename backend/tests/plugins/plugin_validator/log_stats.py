@@ -37,8 +37,8 @@ def _log_sql_statement_count(label: str, stats: dict[str, Any]) -> Generator[Non
         ]
         callers_str: str = "\n  ".join(callers)
 
-        logger.info(f"SQL #{stats['sql_statements']}")
-        logger.trace(f"Stack trace:\n {callers_str}")
+        # logger.info(f"SQL #{stats['sql_statements']}")
+        # logger.trace(f"Stack trace:\n {callers_str}")
 
     event.listen(Engine, "before_cursor_execute", count_queries)
     event.listen(Engine, "before_cursor_execute", log_queries)

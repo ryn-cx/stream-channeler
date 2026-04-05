@@ -35,12 +35,34 @@ def combine(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
 
 
 @copy_func_params(datetime.fromisoformat)
-def fromisotimestamp(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
+def fromisoformat(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
     """Construct a timezone-aware datetime from an ISO 8601 timestamp."""
     return datetime.fromisoformat(*args, **kwargs).astimezone()
+
+
+@copy_func_params(datetime.__init__)
+def new(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
+    """Construct a timezone-aware datetime from year, month, day, etc."""
+    return datetime(*args, **kwargs).astimezone()
 
 
 # A001 - This function name is copied directly from datetime.min.
 def min() -> datetime:  # noqa: A001
     """Get the minimum timezone-aware datetime."""
     return datetime.min.replace(tzinfo=now().tzinfo)
+
+
+import sys as _sys  # noqa: E402
+import types as _types  # noqa: E402
+
+
+class _TzDatetimeModule(_types.ModuleType):
+    """Module wrapper that makes tz_datetime callable as tz_datetime(year, month, day)."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
+        return new(*args, **kwargs)
+
+
+_module = _TzDatetimeModule(__name__)
+_module.__dict__.update({k: v for k, v in globals().items() if not k.startswith("_")})
+_sys.modules[__name__] = _module

@@ -208,7 +208,7 @@ class Source(BaseSource, MediaMixin, table=True):
         return Source.get(db, self.plugin, key)
 
     def __str__(self) -> str:
-        base_source = "Source: "
+        base_source = "Source:"
         if self.name:
             base_source += f" {self.name}"
         if self.key:

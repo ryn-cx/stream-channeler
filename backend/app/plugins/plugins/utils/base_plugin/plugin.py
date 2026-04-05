@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any, override
+from datetime import datetime
+from typing import Any, TypeIs, override
 from weakref import WeakValueDictionary
 
+from loguru import logger
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session
 
@@ -50,11 +52,11 @@ class BasePlugin(
         self._weakref_file_cache: WeakValueDictionary[tuple[type, object], Any] = (
             WeakValueDictionary()
         )
-        self._pre_initialize_plugin()
+        self.initialize_plugin()
         self._validate_plugin_version()
 
-    def _pre_initialize_plugin(self) -> None:
-        """"""
+    @override
+    def initialize_plugin(self) -> None:
         plugin_user = get_or_create_plugin_user(session=self.db)
         existing = Plugin.get(
             self.db,
@@ -88,6 +90,7 @@ class BasePlugin(
 
     @override
     def update_show(self, show: Show) -> None:
+        logger.info("Updating show: {}", show.key)
         show = self._preload_show(
             show_key=show.key,
             source_key=show.source.key,
@@ -98,6 +101,7 @@ class BasePlugin(
 
     @override
     def update_season(self, season: Season) -> None:
+        logger.info("Updating season: {}", season.key)
         season = self._preload_season(
             season.id,
             preload_episodes=True,
@@ -113,6 +117,7 @@ class BasePlugin(
 
     @override
     def update_episode(self, episode: Episode) -> None:
+        logger.info("Updating episode: {}", episode.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(
             episode.key,
@@ -133,6 +138,17 @@ class BasePlugin(
     ) -> Show: ...
 
     # endregion
+
+    @staticmethod
+    def _is_up_to_date(
+        entity: Show | Season | Episode | None,
+        timestamp: datetime,
+    ) -> TypeIs[Show | Season | Episode]:
+        """Check if an entity exists and is up to date.
+
+        When this returns True, the type checker narrows entity to not-None.
+        """
+        return entity is not None and entity.data_timestamp == timestamp
 
     @classmethod
     @override

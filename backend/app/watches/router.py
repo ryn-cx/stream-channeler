@@ -9,14 +9,12 @@ from app.watches.models import Watch
 from app.watches.schemas import (
     WatchesListOutput,
     WatchImportInput,
-    WatchImportPluginsOutput,
     WatchImportResults,
     WatchOutput,
     WatchPatchInput,
 )
 from app.watches.services import (
     delete_watches,
-    get_importable_plugins,
     get_installed_plugin,
     get_watched_episodes,
     sync_episode_watches,
@@ -45,21 +43,6 @@ def sync_watches(
 
 
 # TODO: Add tests
-@router.get("/import/plugins")
-def list_importable_plugins(
-    session: SessionDep,
-    _current_user: CurrentUser,
-) -> WatchImportPluginsOutput:
-    """List all plugins that support importing watch history."""
-    return WatchImportPluginsOutput(
-        plugins=[
-            plugin.import_watch_history_info()
-            for plugin in get_importable_plugins(session)
-        ],
-    )
-
-
-# TODO: Add tests
 @router.post("/import")
 def import_watch_history(
     file: UploadFile,
@@ -69,10 +52,16 @@ def import_watch_history(
     current_user: CurrentUser,
 ) -> WatchImportResults:
     """Import watch history from an uploaded file for a specific plugin."""
-    if not (plugin := get_installed_plugin(session, params.plugin_key)):
+    plugin = get_installed_plugin(session, params.plugin_key)
+    if not plugin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plugin '{params.plugin_key}' not found.",
+        )
+    if not plugin.supports_import_watch_history:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Plugin '{params.plugin_key}' does not support watch import.",
+            detail=f"Plugin '{params.plugin_key}' does not support watch history import.",
         )
 
     content = file.file.read().decode("utf-8")

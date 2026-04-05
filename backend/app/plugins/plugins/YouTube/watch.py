@@ -7,32 +7,29 @@ from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchImportFormatInformation,
     WatchImportResult,
     WatchImportResults,
 )
 
 
 class WatchMixin(UpsertMixin, register=False):
+    supports_import_watch_history = True
+    import_watch_history_file_extension = ".json"
+
     # region Watch Import
 
     @classmethod
     @override
-    def import_watch_history_info(cls) -> WatchImportFormatInformation:
-        return WatchImportFormatInformation(
-            plugin_key=cls.plugin_key(),
-            file_type="JSON",
-            file_extension=".json",
-            instructions=(
-                "1. Go to [takeout.google.com](https://takeout.google.com)\n"
-                "2. Deselect all products, then select only 'YouTube and YouTube Music'\n"
-                "3. Click 'All YouTube data included', then select only 'history'\n"
-                "4. Choose JSON format (not HTML)\n"
-                "5. Export and download the archive\n"
-                "6. Extract the archive and find "
-                "'watch-history.json'\n"
-                "7. Upload that file here"
-            ),
+    def import_watch_history_instructions(cls) -> str:
+        return (
+            "1. Go to [takeout.google.com](https://takeout.google.com)\n"
+            "2. Deselect all products, then select only 'YouTube and YouTube Music'\n"
+            "3. Click 'All YouTube data included', then select only 'history'\n"
+            "4. Choose JSON format (not HTML)\n"
+            "5. Export and download the archive\n"
+            "6. Extract the archive and find "
+            "'watch-history.json'\n"
+            "7. Upload that file here"
         )
 
     @override
@@ -80,7 +77,7 @@ class WatchMixin(UpsertMixin, register=False):
                 skipped_watches.append(import_entry)
                 continue
 
-            watch_date = tz_datetime.fromisotimestamp(entry["time"])
+            watch_date = tz_datetime.fromisoformat(entry["time"])
 
             watched_dates = watched_episode_dates.setdefault(str(episode.id), [])
             if new_only and watched_dates:

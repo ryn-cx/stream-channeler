@@ -230,7 +230,7 @@ class Show(BaseShow, MediaMixin, table=True):
         return Show.get(session, self.source, key)
 
     def __str__(self) -> str:
-        base_show = "Show: "
+        base_show = "Show:"
         if self.name:
             base_show += f" {self.name}"
         if self.key:

@@ -86,12 +86,28 @@ class PluginsListOutput(BaseModel):
 
 
 class PluginPostInput(BasePlugin):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
     key: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class PluginPatchInput(BasePlugin):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
     # assignment - Patch input can ignore required values.
     key: str | None = Field(default=None)  # type: ignore[assignment]
     public: bool | None = Field(default=None)  # type: ignore[assignment]
+
+
+class PluginImportWatchHistoryInfo(BaseModel):
+    plugin_key: str
+    file_extension: str | None = None
+    instructions: str
+
+
+class PluginImportURLInfo(BaseModel):
+    name: str
+    instructions: str
+
+
+class PluginSearchInfo(BaseModel):
+    plugin_key: str
+    name: str

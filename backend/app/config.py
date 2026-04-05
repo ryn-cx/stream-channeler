@@ -1,4 +1,4 @@
-# TODO: Validate
+# Validated
 import secrets
 import warnings
 from typing import Annotated, Literal, Self
@@ -82,7 +82,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _set_default_emails_from(self) -> Self:
         if not self.EMAILS_FROM_NAME:
-            self.EMAILS_FROM_NAME = self.PROJECT_NAME
+            # This error is from the original template.
+            self.EMAILS_FROM_NAME = self.PROJECT_NAME  # type: ignore[reportConstantRedefinition]
         return self
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
@@ -119,10 +120,9 @@ class Settings(BaseSettings):
         return self
 
     YOUTUBE_API_KEY: str
-    LOCAL_IP: str
 
-    PROXY_URL: str
-    PROXY_AUTH_TOKEN: str
+    GET_AROUND_SERVER: str
+    GET_AROUND_PASSWORD: str
 
 
 # call-arg - Error from original template.

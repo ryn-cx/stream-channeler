@@ -21,17 +21,6 @@ def _all_subclasses(cls: type) -> list[type]:
 
 
 @contextmanager
-def disable_ip_validation() -> Generator[None]:
-    """Disable IP validation checks in all modules that define _download."""
-    modules = {subclass.__module__ for subclass in _all_subclasses(BaseFile)}
-    with ExitStack() as stack:
-        for module_name in modules:
-            for func in ("check_ip_matches", "check_ip_not_matches"):
-                stack.enter_context(patch(f"{module_name}.{func}", create=True))
-        yield
-
-
-@contextmanager
 def _patch_download(replacement: object) -> Generator[None]:
     """Patch _download on all BaseFile subclasses."""
     with ExitStack() as stack:

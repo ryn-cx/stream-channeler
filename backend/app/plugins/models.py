@@ -291,7 +291,7 @@ class File(BaseFile, MediaMixin, table=True):
         return db.identity_map[(File, (plugin.id, file_key), None)]
 
     def __str__(self) -> str:
-        base_file = "File: "
+        base_file = "File:"
         if self.key:
             base_file += f" {self.key}"
         if self.id:

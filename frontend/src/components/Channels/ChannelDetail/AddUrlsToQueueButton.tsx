@@ -1,11 +1,17 @@
 // TODO: Validate
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Info, Plus, Trash2 } from "lucide-react"
+import { Info, Link2, Plus, Search, Trash2 } from "lucide-react"
 import { useState } from "react"
+import Markdown from "react-markdown"
+import { remarkAlert } from "remark-github-blockquote-alert"
+import "remark-github-blockquote-alert/alert.css"
 import type { ChannelQueueOutput } from "@/client"
 import { ChannelsService } from "@/client"
+import { OpenAPI } from "@/client/core/OpenAPI"
+import { request as apiRequest } from "@/client/core/request"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+
 import {
   Dialog,
   DialogContent,
@@ -17,6 +23,13 @@ import {
 } from "@/components/ui/dialog"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,10 +37,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { JustWatchSearch } from "./JustWatchSearch"
+import { ShowSearch } from "./Search"
 
 interface AddUrlsToQueueButtonProps {
   channelId: string
@@ -54,9 +66,21 @@ export function AddUrlsToQueueButton({
 }: AddUrlsToQueueButtonProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [isOpen, setIsOpen] = useState(false)
+  const [mode, setMode] = useState<"search" | "url">("search")
   const [urlsInput, setUrlsInput] = useState("")
+  const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null)
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
+
+  const { data: urlImportPlugins } = useQuery({
+    queryKey: ["url-import-plugins"],
+    queryFn: () =>
+      apiRequest<Array<{ name: string; instructions: string }>>(OpenAPI, {
+        method: "GET",
+        url: "/api/v1/plugins/supports-import-url",
+      }),
+    enabled: isOpen,
+  })
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
     queryKey: ["channelQueue", channelId],
@@ -277,41 +301,93 @@ export function AddUrlsToQueueButton({
           <DialogHeader className="px-8">
             <DialogTitle>Add Shows</DialogTitle>
             <DialogDescription>
-              Search for shows or paste URLs to add to the import queue.
+              {mode === "search"
+                ? "Search for shows and movies to add to your channel."
+                : "Add URLs to your channel directly, one per line."}
             </DialogDescription>
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMode(mode === "search" ? "url" : "search")}
+              >
+                {mode === "search" ? (
+                  <>
+                    <Link2 className="h-4 w-4 mr-1" /> Add Media By URL
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-1" /> Add Media By Searching
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogHeader>
 
-          <Tabs defaultValue="search" className="flex-1 min-h-0 px-8">
-            <TabsList>
-              <TabsTrigger value="search">Search</TabsTrigger>
-              <TabsTrigger value="urls">Manual URLs</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="search" className="overflow-y-auto py-4">
-              <JustWatchSearch channelId={channelId} />
-            </TabsContent>
-
-            <TabsContent value="urls" className="overflow-y-auto py-4">
+          <div className="overflow-y-auto flex-1 min-h-0 px-8 py-4">
+            {mode === "search" ? (
+              <ShowSearch channelId={channelId} />
+            ) : (
               <div className="space-y-4">
-                <h3>Add URLs (one per line)</h3>
-                <textarea
-                  value={urlsInput}
-                  onChange={(e) => setUrlsInput(e.target.value)}
-                  placeholder="https://example.com"
-                  rows={8}
-                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
-                  disabled={addUrlsMutation.isPending}
-                />
-                <Button
-                  onClick={handleSubmit}
-                  disabled={addUrlsMutation.isPending}
-                >
-                  <Plus className="mr-2" />
-                  {addUrlsMutation.isPending ? "Adding URLs..." : "Add URLs"}
-                </Button>
+                <div className="border rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Select a site to see supported URL formats:
+                  </p>
+                  <Select
+                    value={selectedPlugin ?? "__none__"}
+                    onValueChange={(value) =>
+                      setSelectedPlugin(value === "__none__" ? null : value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Choose a site...</SelectItem>
+                      {(urlImportPlugins ?? []).map((plugin) => (
+                        <SelectItem key={plugin.name} value={plugin.name}>
+                          {plugin.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedPlugin && (
+                    <div className="text-sm text-muted-foreground [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_.markdown-alert-title_svg]:hidden">
+                      <Markdown
+                        remarkPlugins={[[remarkAlert, { legacyTitle: true }]]}
+                      >
+                        {(urlImportPlugins ?? []).find(
+                          (p) => p.name === selectedPlugin,
+                        )?.instructions ?? ""}
+                      </Markdown>
+                    </div>
+                  )}
+                  <textarea
+                    value={urlsInput}
+                    onChange={(e) => setUrlsInput(e.target.value)}
+                    placeholder={
+                      "https://example.com/show-1\nhttps://example.com/show-2"
+                    }
+                    rows={6}
+                    className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
+                    disabled={addUrlsMutation.isPending}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={addUrlsMutation.isPending}
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      {addUrlsMutation.isPending
+                        ? "Adding URLs..."
+                        : "Add URLs"}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
 
           <div className="overflow-y-auto px-8 py-4 space-y-4">
             <div className="flex justify-between">

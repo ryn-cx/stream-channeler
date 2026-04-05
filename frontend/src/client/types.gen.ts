@@ -67,7 +67,7 @@ export type ChannelOutput = {
 export type ChannelPatchInput = {
     name?: (string | null);
     channel_number?: (number | null);
-    public?: boolean;
+    public?: (boolean | null);
     default_order?: (string | null);
 };
 
@@ -197,6 +197,17 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type PluginImportURLInfo = {
+    name: string;
+    instructions: string;
+};
+
+export type PluginImportWatchHistoryInfo = {
+    plugin_key: string;
+    file_extension?: (string | null);
+    instructions: string;
+};
+
 export type PluginOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -229,6 +240,39 @@ export type PluginPostInput = {
     name?: (string | null);
     version?: (string | null);
     public: boolean;
+};
+
+export type PluginSearchInfo = {
+    plugin_key: string;
+    name: string;
+};
+
+/**
+ * A single result from a plugin search.
+ */
+export type PluginSearchResult = {
+    title: string;
+    url: string;
+    year?: (number | null);
+    image_url?: (string | null);
+    media_type?: (string | null);
+    sources?: Array<PluginSearchResultSource>;
+};
+
+/**
+ * Container for plugin search results.
+ */
+export type PluginSearchResults = {
+    has_source_selection: boolean;
+    results: Array<PluginSearchResult>;
+};
+
+/**
+ * A streaming source available for a search result.
+ */
+export type PluginSearchResultSource = {
+    name: string;
+    icon_url?: (string | null);
 };
 
 export type PluginsListOutput = {
@@ -468,17 +512,6 @@ export type WatchesListOutput = {
     plugins: {
         [key: string]: PluginOutput;
     };
-};
-
-export type WatchImportFormatInformation = {
-    plugin_key: string;
-    file_type: string;
-    file_extension: string;
-    instructions: string;
-};
-
-export type WatchImportPluginsOutput = {
-    plugins: Array<WatchImportFormatInformation>;
 };
 
 export type WatchImportResult = {
@@ -790,6 +823,19 @@ export type PluginsCreateUserPluginData = {
 
 export type PluginsCreateUserPluginResponse = (PluginOutput);
 
+export type PluginsListPluginsThatSupportImportWatchHistoryResponse = (Array<PluginImportWatchHistoryInfo>);
+
+export type PluginsListPluginsThatSupportImportUrlResponse = (Array<PluginImportURLInfo>);
+
+export type PluginsListPluginsThatSupportSearchResponse = (Array<PluginSearchInfo>);
+
+export type PluginsSearchPluginData = {
+    pluginKey: string;
+    query: string;
+};
+
+export type PluginsSearchPluginResponse = (PluginSearchResults);
+
 export type PluginsGetUserPluginData = {
     pluginId: string;
 };
@@ -984,8 +1030,6 @@ export type UtilsHealthCheckResponse = (boolean);
 export type WatchesGetUserWatchesResponse = (WatchesListOutput);
 
 export type WatchesSyncWatchesResponse = (Message);
-
-export type WatchesListImportablePluginsResponse = (WatchImportPluginsOutput);
 
 export type WatchesImportWatchHistoryData = {
     formData: Body_watches_import_watch_history;

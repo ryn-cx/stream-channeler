@@ -37,11 +37,20 @@ class CrunchyrollValidator(PluginValidator):
 
     @override
     def _update_season_validator(self, season: Season) -> Validator:
-        return super()._update_season_validator(season).seasons_share_file(season)
+        output = super()._update_season_validator(season)
+
+        for episode in season.episodes:
+            output = output.incremented(episode.id, "modified_at", "data_timestamp")
+        return output.incremented(Show, "modified_at", "data_timestamp")
 
     @override
     def _update_episode_validator(self, episode: Episode) -> Validator:
-        return super()._update_episode_validator(episode).episodes_share_file(episode)
+        return (
+            super()
+            ._update_episode_validator(episode)
+            .episodes_share_file(episode)
+            .incremented(episode.season.id, "data_timestamp", "modified_at")
+        )
 
     def test_import_response(
         self,
@@ -61,20 +70,22 @@ class CrunchyrollSourceValidator(CrunchyrollValidator):
     @override
     def _update_source_validator(self, source: Source) -> Validator:
         validator = super()._update_source_validator(source)
-        # The update at value is based on the timestamp of the Browse file and the test
-        # will make a fake updated Browse file that will increment the update_at value.
-        validator.incremented(Source, "update_at")
+        # The update at value is decremented because the fake browse file that is used
+        # has a timestamp before the real one.
+        validator.decremented(Source, "update_at")
 
-        # Show/Season will be modified when they are found in the Browse file.
+        # Show/Season will have a match which will set their update_at values.
         validator.incremented(Season, "modified_at")
         validator.incremented(Show, "modified_at")
         # update_at is populated/decremented because the release date is mocked to be a
         # sooner timestamp to test that the value is set correctly.
         validator.populated(Show, "update_at")
         for show in source.shows:
-            for season in show.seasons[:-1]:
-                validator.populated(season.id, "update_at")
-            validator.decremented(show.seasons[-1].id, "update_at")
+            for season in show.seasons:
+                if season.update_at is None:
+                    validator.populated(season.id, "update_at")
+                else:
+                    validator.decremented(season.id, "update_at")
 
         return validator
 
@@ -92,7 +103,7 @@ class CrunchyrollSourceValidator(CrunchyrollValidator):
         assert isinstance(plugin_instance, Crunchyroll)
         existing_browse = plugin_instance._get_latest_browse_file()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_browse_timestamp = (
-            existing_browse.database_entry.data_timestamp + timedelta(days=1)
+            existing_browse.database_entry.data_timestamp + timedelta(minutes=1)
         )
         # Directly editing the existing_browse file's parsed value is safe because these
         # changes will not be persisted to the database.
@@ -108,15 +119,29 @@ class CrunchyrollSourceValidator(CrunchyrollValidator):
         self._update_and_validate(db_with_url, original_plugin, source)
 
 
+# TestAiring tests for shows with upcoming new episodes,
 class TestAiringSingleSeasonShow(CrunchyrollSourceValidator):
-    show_key = "GT00365592"
-    show_slug = "roll-over-and-die"
+    show_key = "GT00369409"
+    show_slug = "star-detective-precure"
     url = f"crunchyroll.com/series/{show_key}/{show_slug}"
 
 
 class TestAiringMultipleSeasonsShow(CrunchyrollSourceValidator):
-    show_key = "G0XHWM17X"
-    show_slug = "summer-pockets"
+    show_key = "G6NVG970Y"
+    show_slug = "welcome-to-demon-school-iruma-kun"
+    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
+
+
+# TestNew test for shows with new versions of existing episodes.
+class TestNewSingleSeasonShow(CrunchyrollSourceValidator):
+    show_key = "GG5H5XQZQ"
+    show_slug = "the-dark-history-of-the-reincarnated-villainess"
+    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
+
+
+class TestNewMultipleSeasonsShow(CrunchyrollSourceValidator):
+    show_key = "GYX0MZ58R"
+    show_slug = "ace-of-the-diamond"
     url = f"crunchyroll.com/series/{show_key}/{show_slug}"
 
 

@@ -6,10 +6,18 @@ import { useRef, useState } from "react"
 import Markdown from "react-markdown"
 import {
   WatchesService,
-  type WatchImportFormatInformation,
   type WatchImportResult,
   type WatchImportResults,
 } from "@/client"
+
+interface PluginImportWatchHistoryInfo {
+  plugin_key: string
+  file_extension: string | null
+  instructions: string
+}
+
+import { OpenAPI } from "@/client/core/OpenAPI"
+import { request as apiRequest } from "@/client/core/request"
 import {
   Accordion,
   AccordionContent,
@@ -169,7 +177,11 @@ function ImportWatchHistory() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: pluginsData, isLoading: pluginsLoading } = useQuery({
-    queryFn: () => WatchesService.listImportablePlugins(),
+    queryFn: () =>
+      apiRequest<PluginImportWatchHistoryInfo[]>(OpenAPI, {
+        method: "GET",
+        url: "/api/v1/plugins/supports-import-watch-history",
+      }),
     queryKey: ["watch-import-plugins"],
   })
 
@@ -195,8 +207,10 @@ function ImportWatchHistory() {
     onError: handleError.bind(showErrorToast),
   })
 
-  const selectedPluginInfo: WatchImportFormatInformation | undefined =
-    pluginsData?.plugins.find((p) => p.plugin_key === selectedPlugin)
+  const selectedPluginInfo: PluginImportWatchHistoryInfo | undefined =
+    pluginsData?.find(
+      (p: PluginImportWatchHistoryInfo) => p.plugin_key === selectedPlugin,
+    )
 
   return (
     <div className="flex flex-col gap-6">
@@ -227,9 +241,9 @@ function ImportWatchHistory() {
                 <SelectValue placeholder="Select a plugin" />
               </SelectTrigger>
               <SelectContent>
-                {pluginsData?.plugins.map((plugin) => (
+                {pluginsData?.map((plugin: PluginImportWatchHistoryInfo) => (
                   <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                    {plugin.plugin_key} ({plugin.file_type})
+                    {plugin.plugin_key}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -297,7 +311,7 @@ function ImportWatchHistory() {
                   id="file-upload"
                   ref={fileInputRef}
                   type="file"
-                  accept={selectedPluginInfo.file_extension}
+                  accept={selectedPluginInfo.file_extension ?? undefined}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
                   className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                 />

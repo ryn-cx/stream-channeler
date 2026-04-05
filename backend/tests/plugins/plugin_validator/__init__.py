@@ -12,7 +12,11 @@ from sqlmodel import Session
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeInput
 from app.plugins.models import Plugin
-from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from app.plugins.plugins.utils.abstract_plugin import (
+    InvalidURLError,
+    PluginSearchResults,
+    URLImportResult,
+)
 from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
@@ -21,11 +25,11 @@ from app.shows.models import Show
 from app.shows.schemas import ShowInput
 from app.sources.models import Source
 from app.sources.schemas import SourceInput
+from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
     block_downloads,
-    disable_ip_validation,
     mock_update,
     track_downloads,
 )
@@ -37,16 +41,16 @@ class PluginValidator(DatabaseMixin):
     # region Configuration
 
     plugin_class: type[BasePlugin]
-    url: str
+    url: str | None = None
     skip_update_tests = False
     skip_test_import_url = False
-    # TODO: Rename to skip_update_source_test etc
     skip_test_import_existing_url = False
     skip_test_update_source = False
     skip_test_update_show = False
     skip_test_update_season = False
     skip_test_update_episode = False
     invalid_url = False
+    search_query: str | None = None
 
     # endregion Configuration
 
@@ -149,28 +153,44 @@ class PluginValidator(DatabaseMixin):
         On first run this will download files and export them. Subsequent runs
         verify that all files are served from cache (no downloads occur).
         """
+        # Initialize the class
         files_already_cached = self.combined_files_path().exists()
-        try:
-            with disable_ip_validation(), track_downloads() as downloaded:
-                if self.invalid_url:
-                    with pytest.raises(InvalidURLError):
+        if self.url:
+            try:
+                with track_downloads() as downloaded:
+                    if self.invalid_url:
+                        with pytest.raises(InvalidURLError):
+                            self._import_url(db_with_files)
+                    else:
                         self._import_url(db_with_files)
-                else:
-                    self._import_url(db_with_files)
-            self._export_database_files(db_with_files)
-            if not self.invalid_url:
-                self._export_verification_file(db_with_files)
-        # If importing fails the downloaded files can still be dumped for analysis, but
-        # the verification file should not be dumped because it is not valid.
-        except Exception:
-            self._export_database_files(db_with_files)
-            raise
+                self._export_database_files(db_with_files)
+                if not self.invalid_url:
+                    self._export_verification_file(db_with_files)
+            # If importing fails the downloaded files can still be dumped for analysis, but
+            # the verification file should not be dumped because it is not valid.
+            except Exception:
+                self._export_database_files(db_with_files)
+                raise
 
-        if files_already_cached and downloaded:
-            pytest.fail(f"Files were downloaded during import: {downloaded}")
+            if files_already_cached and downloaded:
+                pytest.fail(f"Files were downloaded during import: {downloaded}")
+
+        if self.search_query:
+            try:
+                with track_downloads() as search_downloaded:
+                    plugin = self.plugin_class(db_with_files)
+                    plugin.search(self.search_query)
+            except Exception:
+                self._export_database_files(db_with_files)
+                raise
+
+            if files_already_cached and search_downloaded:
+                pytest.fail(
+                    f"Files were downloaded during search: {search_downloaded}",
+                )
 
     def test_import_url(self, db_with_files: Session) -> None:
-        if self.skip_test_import_url:
+        if not self.url or self.skip_test_import_url:
             pytest.skip()
 
         if self.invalid_url:
@@ -195,7 +215,7 @@ class PluginValidator(DatabaseMixin):
 
     def test_import_existing_url(self, db_with_url: Session) -> None:
         """Test importing a URL that already exists."""
-        if self.invalid_url or self.skip_test_import_existing_url:
+        if self.skip_test_import_existing_url:
             pytest.skip()
         original_plugin = self._get_detached_plugin(db_with_url)
         with log_stats(self), block_downloads():
@@ -212,7 +232,7 @@ class PluginValidator(DatabaseMixin):
         get_random: Callable[[list[URLImportResult]], Source | Show | Season | Episode],
     ) -> None:
         """Pick a random entity from the import results and validate updating it."""
-        if self.invalid_url or self.skip_update_tests or skip:
+        if self.skip_update_tests or skip:
             pytest.skip()
         original_plugin = self._get_detached_plugin(db_with_url)
         results = self._import_url(db_with_url)
@@ -255,7 +275,7 @@ class PluginValidator(DatabaseMixin):
     ) -> None:
         data_timestamp = entity.data_timestamp
         assert data_timestamp
-        update_at = data_timestamp + timedelta(milliseconds=1)
+        update_at = tz_datetime.now()
 
         defaults: dict[str, Any] = {
             "key": entity.key,
@@ -337,6 +357,17 @@ class PluginValidator(DatabaseMixin):
                     for episode in season.episodes:
                         self._update_and_validate(db_with_url, original_plugin, episode)
                         db_with_url.rollback()
+
+    def test_search(self, db_with_files: Session) -> None:
+        """Test searching if the plugin supports it."""
+        if not self.search_query:
+            pytest.skip()
+
+        plugin = self.plugin_class(db_with_files)
+        result = plugin.search(self.search_query)
+
+        assert isinstance(result, PluginSearchResults)
+        assert len(result.results) > 0
 
 
 class InvalidURLValidator(PluginValidator):

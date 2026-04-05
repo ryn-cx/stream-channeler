@@ -57,3 +57,9 @@ plugins: set[type[AbstractPlugin]] = set()
 def register_plugins(plugin: type[AbstractPlugin]) -> None:
     """Register all plugins in the plugins folder."""
     plugins.add(plugin)
+
+
+def sorted_plugins() -> list[type[AbstractPlugin]]:
+    """Return the registered plugins sorted by their plugin_key."""
+    import_plugins()
+    return sorted(plugins, key=lambda plugin: plugin.plugin_key())

@@ -328,10 +328,10 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#4db68ef8f2ae70f1d007aeb6c2e1e93e14b03335" }
+source = { git = "https://github.com/ryn-cx/chirashi#dc3fc5e6b3cc078e008f88e03ca4347131c65c3f" }
 dependencies = [
+    { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
-    { name = "requests" },
 ]
 
 [[package]]
@@ -590,6 +590,14 @@ wheels = [
 ]
 
 [[package]]
+name = "get-around"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/get-around#1f007cc2bd016943f52506cb03f2653ccb156835" }
+dependencies = [
+    { name = "httpx" },
+]
+
+[[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
 source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#6846063b648ca32480fc5ff85de4d7b900e7a48f" }
@@ -813,10 +821,10 @@ wheels = [
 [[package]]
 name = "just-scrape"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#8497dc15570e225d91e3ed629226008d5e28d3ed" }
+source = { git = "https://github.com/ryn-cx/just-scrape#6b1c627fbb919aa78a7041093123d64e965897d6" }
 dependencies = [
+    { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
-    { name = "requests" },
 ]
 
 [[package]]
@@ -1011,8 +1019,9 @@ wheels = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#47bb8fd06b9af7b2688361b45a1e9d7288bc4cd0" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#f81b5d8daf08a395d65738f61e038e84e472d561" }
 dependencies = [
+    { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
     { name = "google-api-python-client" },
 ]

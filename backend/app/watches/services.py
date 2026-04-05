@@ -279,7 +279,9 @@ def _get_plugin_episodes_by_key(
     return episodes_by_key
 
 
-def get_importable_plugins(session: Session) -> list[type[AbstractPlugin]]:
+def get_plugins_with_import_watch_history(
+    session: Session,
+) -> list[type[AbstractPlugin]]:
     """Return all plugin classes that support watch import.
 
     Only includes plugins that are owned by the official plugin user.
@@ -287,16 +289,12 @@ def get_importable_plugins(session: Session) -> list[type[AbstractPlugin]]:
     import_plugins()
     plugin_user = get_or_create_plugin_user(session=session)
 
-    result: list[type[AbstractPlugin]] = []
-    for plugin_cls in plugins:
-        if not Plugin.get(session, plugin_cls.plugin_key(), plugin_user):
-            continue
-        try:
-            plugin_cls.import_watch_history_info()
-            result.append(plugin_cls)
-        except NotImplementedError:
-            continue
-    return result
+    return [
+        plugin_cls
+        for plugin_cls in plugins
+        if plugin_cls.supports_import_watch_history
+        and Plugin.get(session, plugin_cls.plugin_key(), plugin_user)
+    ]
 
 
 def get_installed_plugin(
@@ -308,7 +306,7 @@ def get_installed_plugin(
     Only returns the plugin if it exists in the database and is owned by the official
     plugin user.
     """
-    for plugin_cls in get_importable_plugins(session):
+    for plugin_cls in plugins:
         if plugin_cls.plugin_key() == plugin_key:
             return plugin_cls
     return None

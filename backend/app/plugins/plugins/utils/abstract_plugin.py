@@ -11,7 +11,7 @@ from app.plugins.plugins.utils.manage_plugins import register_plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.watches.schemas import WatchImportFormatInformation, WatchImportResults
+from app.watches.schemas import WatchImportResults
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -159,14 +159,14 @@ class AbstractPlugin(ABC):
         msg = "update_source is not implemented."
         raise NotImplementedError(msg)
 
+    supports_import_watch_history: bool = False
+    import_watch_history_file_extension: str | None = None
+
     @classmethod
-    def import_watch_history_info(cls) -> WatchImportFormatInformation:
-        """Describe the expected input format for watch history import.
+    def import_watch_history_instructions(cls) -> str:
+        """Markdown instructions for how to import watch history.
 
         Only needs to be implemented if the plugin supports watch history import.
-
-        Returns:
-            A WatchImportFormatInformation object describing how importing works.
         """
         msg = "Watch history import is not supported by this plugin."
         raise NotImplementedError(msg)
@@ -196,6 +196,41 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # endregion
+
+    # region URL Import Info
+
+    supports_import_url: bool = False
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        """Markdown description of how URL importing works for this plugin.
+
+        Should include example URLs. Only needs to be set if the plugin
+        supports URL import.
+        """
+        return ""
+
+    # endregion URL Import Info
+
+    # region Search
+
+    supports_search: bool = False
+
+    def search(self, query: str) -> PluginSearchResults:
+        """Search for shows/movies on this plugin's platform.
+
+        Only needs to be implemented if the plugin supports searching.
+
+        Args:
+            query: The search string.
+
+        Returns:
+            Search results with metadata about source selection support.
+        """
+        msg = "Search is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    # endregion Search
 
     # region Magic methods
 
@@ -243,6 +278,31 @@ class AbstractPlugin(ABC):
         """
 
     # endregion
+
+
+class PluginSearchResultSource(BaseModel):
+    """A streaming source available for a search result."""
+
+    name: str
+    icon_url: str | None = None
+
+
+class PluginSearchResult(BaseModel):
+    """A single result from a plugin search."""
+
+    title: str
+    url: str
+    year: int | None = None
+    image_url: str | None = None
+    media_type: str | None = None
+    sources: list[PluginSearchResultSource] = Field(default=[])
+
+
+class PluginSearchResults(BaseModel):
+    """Container for plugin search results."""
+
+    has_source_selection: bool
+    results: list[PluginSearchResult]
 
 
 class InvalidURLError(Exception):

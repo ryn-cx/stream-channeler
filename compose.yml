@@ -75,6 +75,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - GET_AROUND_SERVER=${GET_AROUND_SERVER}
+      - GET_AROUND_PASSWORD=${GET_AROUND_PASSWORD}
 
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'

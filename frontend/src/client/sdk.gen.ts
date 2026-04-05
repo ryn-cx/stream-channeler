@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaTriggerPluginUpdateData, AdminMediaTriggerPluginUpdateResponse, AdminMediaTriggerSourceUpdateData, AdminMediaTriggerSourceUpdateResponse, AdminMediaTriggerShowUpdateData, AdminMediaTriggerShowUpdateResponse, AdminMediaTriggerSeasonUpdateData, AdminMediaTriggerSeasonUpdateResponse, AdminMediaTriggerEpisodeUpdateData, AdminMediaTriggerEpisodeUpdateResponse, ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesListImportablePluginsResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse } from './types.gen';
+import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaTriggerPluginUpdateData, AdminMediaTriggerPluginUpdateResponse, AdminMediaTriggerSourceUpdateData, AdminMediaTriggerSourceUpdateResponse, AdminMediaTriggerShowUpdateData, AdminMediaTriggerShowUpdateResponse, AdminMediaTriggerSeasonUpdateData, AdminMediaTriggerSeasonUpdateResponse, AdminMediaTriggerEpisodeUpdateData, AdminMediaTriggerEpisodeUpdateResponse, ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsListPluginsThatSupportImportWatchHistoryResponse, PluginsListPluginsThatSupportImportUrlResponse, PluginsListPluginsThatSupportSearchResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse } from './types.gen';
 
 export class AdminMediaService {
     /**
@@ -836,6 +836,68 @@ export class PluginsService {
     }
     
     /**
+     * List Plugins That Support Import Watch History
+     * List all plugins that support importing watch history.
+     * @returns PluginImportWatchHistoryInfo Successful Response
+     * @throws ApiError
+     */
+    public static listPluginsThatSupportImportWatchHistory(): CancelablePromise<PluginsListPluginsThatSupportImportWatchHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/supports-import-watch-history'
+        });
+    }
+    
+    /**
+     * List Plugins That Support Import Url
+     * List all plugins that support URL importing.
+     * @returns PluginImportURLInfo Successful Response
+     * @throws ApiError
+     */
+    public static listPluginsThatSupportImportUrl(): CancelablePromise<PluginsListPluginsThatSupportImportUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/supports-import-url'
+        });
+    }
+    
+    /**
+     * List Plugins That Support Search
+     * List all plugins that support searching.
+     * @returns PluginSearchInfo Successful Response
+     * @throws ApiError
+     */
+    public static listPluginsThatSupportSearch(): CancelablePromise<PluginsListPluginsThatSupportSearchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/supports-search'
+        });
+    }
+    
+    /**
+     * Search Plugin
+     * Search for shows/movies on a plugin's platform.
+     * @param data The data for the request.
+     * @param data.pluginKey
+     * @param data.query
+     * @returns PluginSearchResults Successful Response
+     * @throws ApiError
+     */
+    public static searchPlugin(data: PluginsSearchPluginData): CancelablePromise<PluginsSearchPluginResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/search',
+            query: {
+                plugin_key: data.pluginKey,
+                query: data.query
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Get User Plugin
      * Get a plugin by its id if it is public or owned by the current user.
      * @param data The data for the request.
@@ -1554,19 +1616,6 @@ export class WatchesService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/watches/sync'
-        });
-    }
-    
-    /**
-     * List Importable Plugins
-     * List all plugins that support importing watch history.
-     * @returns WatchImportPluginsOutput Successful Response
-     * @throws ApiError
-     */
-    public static listImportablePlugins(): CancelablePromise<WatchesListImportablePluginsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/watches/import/plugins'
         });
     }
     

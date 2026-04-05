@@ -228,7 +228,7 @@ class Season(BaseSeason, MediaMixin, table=True):
         return Season.get(db, self.show, key)
 
     def __str__(self) -> str:
-        base_season = "Season: "
+        base_season = "Season:"
         if self.season_number:
             base_season += f" {self.season_number} - "
         if self.name:

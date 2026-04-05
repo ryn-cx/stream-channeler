@@ -15,16 +15,31 @@ from sqlmodel import col, select
 
 from app.plugins.models import File
 from app.plugins.plugins.Crunchyroll.files import Browse
-from app.plugins.plugins.Crunchyroll.watch import WatchMixin
+from app.plugins.plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 
 
-class Crunchyroll(WatchMixin, register=True):
+class Crunchyroll(WatchHistoryMixin, register=True):
     _VERSION = "0.0.1"
     _skip_downloading_episodes = True
+    supports_import_url = True
+
+    @override
+    def initialize_plugin(self) -> None:
+        super().initialize_plugin()
+        if not Source.get_from_memory(self.db, self.plugin, self.plugin_key()):
+            latest_browse_file = self._get_latest_browse_file()
+            self._upsert_source(latest_browse_file)
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        return (
+            "> [!TIP/Series]\n"
+            "> `https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family`\n\n"
+        )
 
     # region Import URL
 
@@ -58,8 +73,7 @@ class Crunchyroll(WatchMixin, register=True):
             return show
 
         _cache = self._download_show_files(show_key, skip_episodes=True)
-        latest_browse_file = self._get_latest_browse_file()
-        source = self._upsert_source(latest_browse_file)
+        source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
         return self._upsert_show(source, show_key=show_key)
 
     # endregion Import URL

@@ -2,7 +2,7 @@
 import { useQueries } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
@@ -16,12 +16,11 @@ import EditChannel from "./EditChannel"
 
 interface ChannelRowProps {
   channel: ChannelOutput
-  onEmpty?: (channelId: string) => void
   onEdit: (channel: ChannelOutput) => void
   onDelete: (channel: ChannelOutput) => void
 }
 
-function ChannelRow({ channel, onEmpty, onEdit, onDelete }: ChannelRowProps) {
+function ChannelRow({ channel, onEdit, onDelete }: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -80,12 +79,6 @@ function ChannelRow({ channel, onEmpty, onEdit, onDelete }: ChannelRowProps) {
       return { ...episode, season, show, source, plugin }
     },
   )
-
-  useEffect(() => {
-    if (!isLoading && episodesWithDetails.length === 0) {
-      onEmpty?.(channel.id)
-    }
-  }, [isLoading, episodesWithDetails.length, channel.id, onEmpty])
 
   return (
     <div className="group/row relative">
@@ -189,40 +182,15 @@ export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
     if (numA !== numB) return numA - numB
     return (a.name ?? "").localeCompare(b.name ?? "")
   })
-  const [emptyChannelIds, setEmptyChannelIds] = useState<Set<string>>(new Set())
   const [editChannel, setEditChannel] = useState<ChannelOutput | null>(null)
   const [deleteChannel, setDeleteChannel] = useState<ChannelOutput | null>(null)
 
-  const handleEmpty = useCallback((channelId: string) => {
-    setEmptyChannelIds((prev) => {
-      if (prev.has(channelId)) return prev
-      return new Set(prev).add(channelId)
-    })
-  }, [])
-
-  const withEpisodes = sorted.filter(
-    (channel) => !emptyChannelIds.has(channel.id),
-  )
-  const withoutEpisodes = sorted.filter((channel) =>
-    emptyChannelIds.has(channel.id),
-  )
-
   return (
     <div className="flex flex-col gap-8 pb-8">
-      {withEpisodes.map((channel) => (
+      {sorted.map((channel) => (
         <ChannelRow
           key={channel.id}
           channel={channel}
-          onEmpty={handleEmpty}
-          onEdit={setEditChannel}
-          onDelete={setDeleteChannel}
-        />
-      ))}
-      {withoutEpisodes.map((channel) => (
-        <ChannelRow
-          key={channel.id}
-          channel={channel}
-          onEmpty={handleEmpty}
           onEdit={setEditChannel}
           onDelete={setDeleteChannel}
         />
