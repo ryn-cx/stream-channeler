@@ -1,3 +1,4 @@
+// TODO: Validate
 import type { EpisodeWithDetails } from "../columns"
 
 /** Props shared by all card overlay components. */

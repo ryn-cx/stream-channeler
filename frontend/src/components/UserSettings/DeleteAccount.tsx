@@ -1,3 +1,4 @@
+// TODO: Validate
 import DeleteConfirmation from "./DeleteConfirmation"
 
 const DeleteAccount = () => {
