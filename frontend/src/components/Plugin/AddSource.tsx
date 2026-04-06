@@ -34,10 +34,7 @@ import { handleError } from "@/utils"
 
 import type { SourceTableData } from "./sourceColumns"
 
-interface SourcesListOutput {
-  data: SourceTableData[]
-  count: number
-}
+type SourcesData = Array<SourceTableData>
 
 const formSchema = z.object({
   key: z.string().max(255).optional().or(z.literal("")),
@@ -81,24 +78,20 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
     onMutate: async (newSource, context) => {
       const queryKey = ["plugins", pluginId, "sources"]
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<SourcesListOutput>(queryKey)
+      const previous = context.client.getQueryData<SourcesData>(queryKey)
 
-      context.client.setQueryData<SourcesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: [
-          ...old!.data,
-          {
-            key: crypto.randomUUID(),
-            name: newSource.name ?? null,
-            id: crypto.randomUUID(),
-            plugin_id: pluginId,
-            favicon_url: null,
-            image_url: null,
-            data_timestamp: null,
-          },
-        ],
-        count: old!.count + 1,
-      }))
+      context.client.setQueryData<SourcesData>(queryKey, (old) => [
+        ...(old ?? []),
+        {
+          key: crypto.randomUUID(),
+          name: newSource.name ?? null,
+          id: crypto.randomUUID(),
+          plugin_id: pluginId,
+          favicon_url: null,
+          image_url: null,
+          data_timestamp: null,
+        },
+      ])
 
       return { previous }
     },

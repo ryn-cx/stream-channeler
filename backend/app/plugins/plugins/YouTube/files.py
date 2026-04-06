@@ -186,7 +186,7 @@ class FileMixin(BasePlugin, register=False):
         return video_title not in ("Deleted video", "Private video")
 
     def _get_channel_uploads_playlist_key(self, show_key: str) -> str:
-        """Returns the playlist ID for the channel's uploads."""
+        """Return the playlist ID for the channel's uploads."""
         return show_key[:1] + "U" + show_key[2:]
 
     @override

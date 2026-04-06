@@ -29,10 +29,7 @@ import { handleError } from "@/utils"
 
 import type { SourceTableData } from "./sourceColumns"
 
-interface SourcesListOutput {
-  data: SourceTableData[]
-  count: number
-}
+type SourcesData = Array<SourceTableData>
 
 interface DeleteSourceProps {
   source: SourceTableData
@@ -54,13 +51,11 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
     onMutate: async (_sourceKey, context) => {
       const queryKey = ["plugins", pluginId, "sources"]
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<SourcesListOutput>(queryKey)
+      const previous = context.client.getQueryData<SourcesData>(queryKey)
 
-      context.client.setQueryData<SourcesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.filter((s) => s.key !== source.key),
-        count: old!.count - 1,
-      }))
+      context.client.setQueryData<SourcesData>(queryKey, (old) =>
+        old!.filter((s) => s.key !== source.key),
+      )
 
       return { previous }
     },

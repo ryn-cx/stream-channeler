@@ -40,10 +40,7 @@ import { handleError } from "@/utils"
 
 import type { PluginTableData } from "./columns"
 
-interface PluginsListOutput {
-  data: PluginTableData[]
-  count: number
-}
+type PluginsData = Array<PluginTableData>
 
 const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
@@ -86,14 +83,11 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       }),
     onMutate: async (newData, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<PluginsListOutput>(queryKey)
+      const previous = context.client.getQueryData<PluginsData>(queryKey)
 
-      context.client.setQueryData<PluginsListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.map((p) =>
-          p.id === plugin.id ? { ...p, ...newData } : p,
-        ),
-      }))
+      context.client.setQueryData<PluginsData>(queryKey, (old) =>
+        old!.map((p) => (p.id === plugin.id ? { ...p, ...newData } : p)),
+      )
 
       return { previous }
     },

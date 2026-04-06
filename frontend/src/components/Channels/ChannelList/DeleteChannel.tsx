@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { type ChannelsListOutput, ChannelsService } from "@/client"
+import { type ChannelOutput, ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -54,15 +54,14 @@ const DeleteChannel = ({
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
-        "channels",
-      ])
+      const previousChannels = context.client.getQueryData<
+        Array<ChannelOutput>
+      >(["channels"])
 
       // Optimistically update to the new value
-      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => ({
-        ...old!,
-        data: old!.data.filter((c: { id: string }) => c.id !== id),
-      }))
+      context.client.setQueryData<Array<ChannelOutput>>(["channels"], (old) =>
+        old!.filter((c: { id: string }) => c.id !== id),
+      )
 
       // Return a result with the snapshotted value
       return { previousChannels }

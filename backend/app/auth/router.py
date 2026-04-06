@@ -11,7 +11,7 @@ from app.auth.dependencies import CurrentUser, SessionDep, get_current_active_su
 from app.auth.schemas import NewPassword, Token
 from app.auth.security import create_access_token
 from app.config import settings
-from app.models import Message
+from app.schemas import Message
 from app.users import service as user_service
 from app.users.schemas import UserPublic, UserUpdate
 from app.utils import service as email_service

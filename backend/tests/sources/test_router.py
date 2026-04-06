@@ -1,9 +1,9 @@
+# TODO: Validate
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceOutput,
     SourcePatchInput,
     SourcePostInput,
-    SourcesListOutput,
 )
 from tests.plugins.utils import create_random_plugin
 from tests.sources.utils import create_random_source
@@ -19,7 +19,6 @@ class SourceTestMixin(BaseTests[Source]):
     input_schema = SourcePostInput
     output_model = SourceOutput
     patch_model = SourcePatchInput
-    list_output_model = SourcesListOutput
 
     create_parent_function = staticmethod(create_random_plugin)
     create_record_function = staticmethod(create_random_source)

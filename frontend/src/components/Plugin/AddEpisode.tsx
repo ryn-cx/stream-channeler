@@ -34,10 +34,7 @@ import { handleError } from "@/utils"
 
 import type { EpisodeTableData } from "./episodeColumns"
 
-interface EpisodesListOutput {
-  data: EpisodeTableData[]
-  count: number
-}
+type EpisodesData = Array<EpisodeTableData>
 
 const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
@@ -93,30 +90,26 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
       }),
     onMutate: async (newEpisode, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<EpisodesListOutput>(queryKey)
+      const previous = context.client.getQueryData<EpisodesData>(queryKey)
 
-      context.client.setQueryData<EpisodesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: [
-          ...old!.data,
-          {
-            key: crypto.randomUUID(),
-            name: newEpisode.name ?? null,
-            id: crypto.randomUUID(),
-            season_id: seasonKey,
-            episode_number: null,
-            url: null,
-            description: null,
-            image_url: null,
-            release_date: null,
-            air_date: null,
-            duration: null,
-            sort_order: null,
-            data_timestamp: null,
-          },
-        ],
-        count: old!.count + 1,
-      }))
+      context.client.setQueryData<EpisodesData>(queryKey, (old) => [
+        ...(old ?? []),
+        {
+          key: crypto.randomUUID(),
+          name: newEpisode.name ?? null,
+          id: crypto.randomUUID(),
+          season_id: seasonKey,
+          episode_number: null,
+          url: null,
+          description: null,
+          image_url: null,
+          release_date: null,
+          air_date: null,
+          duration: null,
+          sort_order: null,
+          data_timestamp: null,
+        },
+      ])
 
       return { previous }
     },

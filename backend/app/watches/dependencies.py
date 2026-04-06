@@ -7,7 +7,7 @@ from sqlmodel import select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.models import Episode
-from app.media.service import get_user_resource
+from app.media.service import get_owned_record
 from app.watches.models import Watch
 
 
@@ -16,7 +16,7 @@ def require_user_watch(
     current_user: CurrentUser,
     watch_id: Annotated[uuid.UUID, Path()],
 ) -> Watch:
-    return get_user_resource(session, Watch, watch_id, current_user.id)
+    return get_owned_record(session, Watch, watch_id, current_user.id)
 
 
 UserWatch = Annotated[Watch, Depends(require_user_watch)]

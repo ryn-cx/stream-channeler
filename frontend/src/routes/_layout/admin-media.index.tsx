@@ -23,10 +23,6 @@ interface AdminPluginTableData {
   public: boolean
 }
 
-interface AdminPluginsListOutput {
-  data: AdminPluginTableData[]
-}
-
 const queryKey = ["admin-media", "plugins"]
 
 function getAdminPluginsQueryOptions() {
@@ -35,7 +31,7 @@ function getAdminPluginsQueryOptions() {
       request(OpenAPI, {
         method: "GET",
         url: "/api/v1/admin-media/plugins",
-      }) as Promise<AdminPluginsListOutput>,
+      }) as Promise<AdminPluginTableData[]>,
     queryKey,
     refetchOnWindowFocus: false,
     placeholderData: (previousData: any) => previousData,
@@ -135,7 +131,7 @@ function AdminPluginsTableContent() {
   })
 
   const table = useReactTable({
-    data: plugins?.data ?? [],
+    data: plugins ?? [],
     columns: adminPluginColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -163,7 +159,7 @@ function AdminPluginsTableContent() {
       </div>
       <DataTable
         columns={adminPluginColumns}
-        data={plugins.data}
+        data={plugins}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

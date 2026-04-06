@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -15,7 +16,7 @@ from tests.users.utils import CreatedUser
 type Method = Literal["get", "post", "put", "patch", "delete"]
 
 
-def _request(
+def make_request(
     client: TestClient,
     method: Method,
     url: str,
@@ -36,7 +37,7 @@ def assert_not_authenticated(
     url: str,
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, parameters=parameters)
+    response = make_request(client, method, url, parameters=parameters)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -47,7 +48,7 @@ def assert_not_enough_permission(
     user: CreatedUser,
     parameters: dict[str, Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, user.headers, parameters)
+    response = make_request(client, method, url, user.headers, parameters)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -59,7 +60,7 @@ def assert_not_found(  # noqa: PLR0913
     headers: dict[str, str],
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == detail
 
@@ -72,7 +73,7 @@ def assert_forbidden(  # noqa: PLR0913
     headers: dict[str, str],
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json()["detail"] == detail
 
@@ -85,7 +86,7 @@ def assert_conflict(  # noqa: PLR0913
     headers: dict[str, str],
     parameters: dict[str, Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_409_CONFLICT
     assert response.json()["detail"] == detail
 
@@ -96,7 +97,7 @@ def assert_delete(
     message: str,
     headers: dict[str, str],
 ) -> None:
-    response = _request(client, "delete", url, headers=headers)
+    response = make_request(client, "delete", url, headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["message"] == message
 
@@ -108,7 +109,7 @@ def assert_unprocessable(
     headers: dict[str, str],
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> None:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -120,7 +121,7 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> T:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_200_OK
     response_json: dict[str, object] = response.json()
     assert not isinstance(response_json, list)
@@ -135,7 +136,7 @@ def assert_success_list[T: BaseModel](  # noqa: PLR0913
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> list[T]:
-    response = _request(client, method, url, headers=headers, parameters=parameters)
+    response = make_request(client, method, url, headers=headers, parameters=parameters)
     assert response.status_code == status.HTTP_200_OK
     response_json: list[dict[str, object]] = response.json()
     assert isinstance(response_json, list)

@@ -59,7 +59,7 @@ def load_watch_history() -> list[tuple[str, str]]:
 
 
 def import_watches(session: Session, user: User) -> None:
-    plugin = session.get(Plugin, PLUGIN_KEY)
+    plugin = Plugin.get(session, PLUGIN_KEY, user)
     if not plugin:
         logger.warning(f"Plugin '{PLUGIN_KEY}' not found in database")
         return

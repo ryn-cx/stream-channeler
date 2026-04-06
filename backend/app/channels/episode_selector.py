@@ -12,7 +12,6 @@ from sqlmodel import and_, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.channels.dependencies import get_readable_channels
 from app.channels.models import (
     Channel,
     ChannelEpisodeWhiteList,
@@ -69,12 +68,25 @@ class EpisodeQueryBuilder:
 
     def _compile_channel_ids(self, main_channel: Channel) -> None:
         """Compile a list of channels that the user has access to."""
-        additional_channels = get_readable_channels(
-            self._session,
-            self._user,
-            self._media_filter.additional_channels,
-        )
-        self._channel_ids = [main_channel.id, *(x.id for x in additional_channels)]
+        additional_ids = self._media_filter.additional_channels
+        if not additional_ids:
+            self._channel_ids = [main_channel.id]
+            return
+
+        query = select(Channel.id).where(col(Channel.id).in_(additional_ids))
+        if not (self._user and self._user.is_superuser):
+            if self._user:
+                query = query.where(
+                    or_(
+                        col(Channel.public).is_(True),
+                        col(Channel.user_id) == self._user.id,
+                    ),
+                )
+            else:
+                query = query.where(col(Channel.public).is_(True))
+
+        readable_ids = self._session.exec(query).all()
+        self._channel_ids = [main_channel.id, *readable_ids]
 
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
@@ -659,3 +671,22 @@ class EpisodeQueryBuilder:
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)
+
+    def _not_started_show_sort_expression(self) -> ColumnElement[Any]:
+        if not self._user:
+            return literal_column("1")
+        started_query = (
+            select(Watch.id)
+            .join(Episode, Watch.episode_id == Episode.id)
+            .join(Season, Episode.season_id == Season.id)
+            .where(
+                and_(
+                    col(Season.show_id) == col(Show.id),
+                    Watch.user_id == self._user.id,
+                    col(Watch.verified).is_(True),
+                ),
+            )
+            .correlate(Show)
+            .limit(1)
+        )
+        return case((started_query.exists(), 0), else_=1)

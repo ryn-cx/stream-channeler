@@ -18,14 +18,6 @@ from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 from app.sources.models import Source
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
-    from app.channels.models import ChannelShow
-    from app.seasons.models import Season
-
 
 class BaseShow(BaseMediaMixin):
     name: str | None = Field(default=None)
@@ -35,17 +27,27 @@ class BaseShow(BaseMediaMixin):
     image_url: str | None = Field(default=None)
 
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.selectable import ForUpdateParameter
+
+    from app.channels.models import ChannelShow
+    from app.seasons.models import Season
+
+
 # The name "Show" was used instead of "Series" because it has a distinct singular and
 # plural form and some people may use "Series" to refer to a "Season" so the word "Show"
 # is less ambiguous and more flexible.
-class Show(BaseShow, MediaMixin, table=True):
+class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
-        # Filtering options.
+        # Used in episode_selector._apply_sort_key to sort episodes by show name.
         Index("Show-name-index", "name"),
+        # Used in episode_selector._apply_sort_key to sort episodes by media type.
         Index("Show-media_type-index", "media_type"),
-        # Deleted filtering.
+        # Used in episode_selector._filter_deleted_media to exclude soft-deleted shows.
         Index("Show-deleted_at-index", "deleted_at"),
     )
 
@@ -70,6 +72,7 @@ class Show(BaseShow, MediaMixin, table=True):
             ).first(),
         )
 
+    @override
     def parent(self) -> Source:
         return self.source
 

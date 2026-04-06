@@ -35,10 +35,7 @@ import { handleError } from "@/utils"
 
 import type { PluginTableData } from "./columns"
 
-interface PluginsListOutput {
-  data: PluginTableData[]
-  count: number
-}
+type PluginsData = Array<PluginTableData>
 
 const formSchema = z.object({
   key: z.string().optional().or(z.literal("")),
@@ -77,26 +74,20 @@ const AddPlugin = () => {
       }),
     onMutate: async (newPlugin, context) => {
       await context.client.cancelQueries({ queryKey: ["plugins"] })
-      const previous = context.client.getQueryData<PluginsListOutput>([
-        "plugins",
-      ])
+      const previous = context.client.getQueryData<PluginsData>(["plugins"])
 
-      context.client.setQueryData<PluginsListOutput>(["plugins"], (old) => ({
-        ...old!,
-        data: [
-          ...old!.data,
-          {
-            key: newPlugin.key ?? "",
-            name: newPlugin.name ?? null,
-            version: newPlugin.version ?? null,
-            id: crypto.randomUUID(),
-            user_id: null,
-            data_timestamp: null,
-            public: newPlugin.public,
-          },
-        ],
-        count: old!.count + 1,
-      }))
+      context.client.setQueryData<PluginsData>(["plugins"], (old) => [
+        ...(old ?? []),
+        {
+          key: newPlugin.key ?? "",
+          name: newPlugin.name ?? null,
+          version: newPlugin.version ?? null,
+          id: crypto.randomUUID(),
+          user_id: null,
+          data_timestamp: null,
+          public: newPlugin.public,
+        },
+      ])
 
       return { previous }
     },

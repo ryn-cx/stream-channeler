@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.models import Message
+from app.schemas import Message
 from app.watches.dependencies import UserWatch
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -78,15 +78,14 @@ def import_watch_history(
     return result
 
 
-# FAST003 - Parameter is used by UserWatch.
-@router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003
+# FAST003 - Parameter is u
+@router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003 - Used by UserWatch.
 def get_user_watch(watch: UserWatch) -> Watch:
     """Get a watch owned by the current user by its id."""
     return watch
 
 
-# FAST003 - Parameter is used by UserWatch.
-@router.patch("/{watch_id}")  # noqa: FAST003
+@router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
 def update_user_watch(
     session: SessionDep,
     watch: UserWatch,
@@ -97,7 +96,7 @@ def update_user_watch(
 
 
 # FAST003 - Parameter is used by UserWatch.
-@router.delete("/{watch_id}")  # noqa: FAST003
+@router.delete("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
 def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
     """Delete a watch and all sibling watches by its id."""
     return delete_watches(session, watch)

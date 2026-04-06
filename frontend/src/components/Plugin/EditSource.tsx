@@ -40,10 +40,7 @@ import { handleError } from "@/utils"
 
 import type { SourceTableData } from "./sourceColumns"
 
-interface SourcesListOutput {
-  data: SourceTableData[]
-  count: number
-}
+type SourcesData = Array<SourceTableData>
 
 const formSchema = z.object({
   key: z.string().max(255).optional().or(z.literal("")),
@@ -89,14 +86,11 @@ const EditSource = ({ source }: EditSourceProps) => {
       }),
     onMutate: async (newData, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<SourcesListOutput>(queryKey)
+      const previous = context.client.getQueryData<SourcesData>(queryKey)
 
-      context.client.setQueryData<SourcesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.map((s) =>
-          s.id === source.id ? { ...s, ...newData } : s,
-        ),
-      }))
+      context.client.setQueryData<SourcesData>(queryKey, (old) =>
+        old!.map((s) => (s.id === source.id ? { ...s, ...newData } : s)),
+      )
 
       return { previous }
     },

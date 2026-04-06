@@ -3,12 +3,11 @@ from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
 from app.media.service import create_child, delete_record, list_children, update_record
-from app.models import Message
+from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
     SeasonPostInput,
-    SeasonsListOutput,
 )
 from app.shows.dependencies import ReadableShow, UserShow
 from app.shows.models import Show
@@ -28,20 +27,13 @@ def get_user_show(show: ReadableShow) -> Show:
 
 
 # FAST003 - Parameter is used by ReadableShow.
-@router.get("/{show_id}/seasons", response_model=SeasonsListOutput)  # noqa: FAST003
+@router.get("/{show_id}/seasons", response_model=list[SeasonOutput])  # noqa: FAST003
 def get_user_show_seasons(
     session: SessionDep,
     show: ReadableShow,
-) -> SeasonsListOutput:
+) -> list[Season]:
     """List all seasons for a show if its plugin is public or owned by the current user."""
-    return list_children(
-        session,
-        Season,
-        "show_id",
-        show.id,
-        SeasonOutput,
-        SeasonsListOutput,
-    )
+    return list_children(session, Season, "show_id", show.id)
 
 
 # FAST003 - Parameter is used by UserShow.

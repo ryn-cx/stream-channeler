@@ -1,3 +1,4 @@
+# TODO: Validate
 import json
 from datetime import date, datetime, timedelta
 from typing import override
@@ -8,7 +9,6 @@ from sqlmodel import Session
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.plugins.plugins.JustWatch import JustWatch
-from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -70,7 +70,7 @@ class BaseJustWatch(PluginValidator):
             db_with_url,
             original_plugin,
             plugin,
-            static_keys=list(PluginInput.model_fields),
+            static_keys=list(Plugin.model_fields),
         )
 
     def _update_source_validator(self, source: Source) -> Validator:

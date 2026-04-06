@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import uuid
@@ -11,6 +12,7 @@ from tests.utils.base import SUPPORTED_MODELS, BaseTests, CreatedTestData
 from tests.utils.route_assertions import (
     assert_not_found,
     assert_success,
+    assert_success_list,
 )
 
 
@@ -26,7 +28,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_owner: bool,
         record_is_public: bool,
     ) -> bool:
-        """Returns if the user can get a specific record based on itspermissions."""
+        """Return if the user can get a specific record based on itspermissions."""
         return (user_is_authenticated and user_is_owner) or record_is_public
 
     def assert_api_get_list_success(
@@ -37,11 +39,11 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         headers: dict[str, str],
     ) -> None:
         """Assert that the get list endpoint returns the expected data."""
-        response = assert_success(
+        response = assert_success_list(
             client,
             "get",
             self.get_record_list_url(parent_id),
-            self.list_output_model,
+            self.output_model,
             headers,
         )
 
@@ -49,8 +51,8 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         siblings_select = select(self.database_model).where(parent_column == parent_id)
         database_records = db.exec(siblings_select).all()
 
-        assert len(response.data) == len(database_records)
-        response_by_id = {item.id: item for item in response.data}
+        assert len(response) == len(database_records)
+        response_by_id = {item.id: item for item in response}
         for record in database_records:
             expected_dump = self.output_model.model_validate(record).model_dump()
             # This works as a check to make sure the responses are not empty

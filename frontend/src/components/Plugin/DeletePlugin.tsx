@@ -28,10 +28,7 @@ import { handleError } from "@/utils"
 
 import type { PluginTableData } from "./columns"
 
-interface PluginsListOutput {
-  data: PluginTableData[]
-  count: number
-}
+type PluginsData = Array<PluginTableData>
 
 interface DeletePluginProps {
   plugin: PluginTableData
@@ -51,15 +48,11 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
       }),
     onMutate: async (_pluginId, context) => {
       await context.client.cancelQueries({ queryKey: ["plugins"] })
-      const previous = context.client.getQueryData<PluginsListOutput>([
-        "plugins",
-      ])
+      const previous = context.client.getQueryData<PluginsData>(["plugins"])
 
-      context.client.setQueryData<PluginsListOutput>(["plugins"], (old) => ({
-        ...old!,
-        data: old!.data.filter((p) => p.id !== plugin.id),
-        count: old!.count - 1,
-      }))
+      context.client.setQueryData<PluginsData>(["plugins"], (old) =>
+        old!.filter((p) => p.id !== plugin.id),
+      )
 
       return { previous }
     },

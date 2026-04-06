@@ -10,25 +10,21 @@ from just_scrape.custom_buy_box_offers import (
 from just_scrape.url_title_details import response_models as url_title_details_models
 
 from app.episodes.models import Episode
-from app.episodes.schemas import EpisodeInput
 from app.plugins.plugins.JustWatch.files import (
     FileMixin,
     ProvidersLocale,
     UrlTitleDetails,
 )
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
-from app.shows.schemas import ShowInput
 from app.sources.models import Source
-from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
 
 
 class UpsertMixin(FileMixin, register=False):
     @property
     def _images_base_url(self) -> str:
-        """Returns the base URL for images."""
+        """Return the base URL for images."""
         return f"https://images.{self._domain()}"
 
     def _format_image_url(
@@ -126,11 +122,12 @@ class UpsertMixin(FileMixin, register=False):
                 self.plugin,
                 provider["short_name"],
             )
-            source = SourceInput(
+            source = Source(
                 key=provider["short_name"],
                 name=provider["clear_name"],
                 # Resolution of 100 is used on https://www.justwatch.com/us/new
                 favicon_url=self._format_image_url(provider["icon_url"], profile=100),
+                plugin_id=self.plugin.id,
             ).upsert(self.plugin, source)
 
             # Only use the data timestamp from the providers file for the initial
@@ -165,7 +162,7 @@ class UpsertMixin(FileMixin, register=False):
                 for source_key, offer in self._sources_with_offers(show_key)
                 if source_key == source.key
             )
-            show = ShowInput(
+            show = Show(
                 key=show_key,
                 name=parsed_json.data.url_v2.node.content.title,
                 media_type=self._media_type(show_key),
@@ -174,6 +171,7 @@ class UpsertMixin(FileMixin, register=False):
                 image_url=self._images_base_url
                 + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
                 data_timestamp=show_timestamp,
+                source_id=source.id,
             ).upsert(source, show)
 
         self._upsert_seasons(show, show_key, force_reimport=force_reimport)
@@ -215,13 +213,14 @@ class UpsertMixin(FileMixin, register=False):
             )
             if force_reimport or not self._is_up_to_date(season, season_timestamp):
                 image_url = self._format_image_url(season_data.content.poster_url, 166)
-                season = SeasonInput(
+                season = Season(
                     image_url=image_url,
                     # TODO: Should I use the other ID that matches the URL instead?
                     key=season_data.id,
                     sort_order=season_data.content.season_number,
                     season_number=season_data.content.season_number,
                     data_timestamp=season_timestamp,
+                    show_id=show.id,
                 ).upsert(show, season)
             self._upsert_season_episodes(
                 show,
@@ -243,11 +242,12 @@ class UpsertMixin(FileMixin, register=False):
         season = Season.get_from_memory(self.db, show, node_id)
         season_timestamp = self._file_timestamp(self._season_files(node_id, show_key))
         if force_reimport or not self._is_up_to_date(season, season_timestamp):
-            season = SeasonInput(
+            season = Season(
                 key=node_id,
                 name="Movie",
                 sort_order=0,
                 data_timestamp=season_timestamp,
+                show_id=show.id,
             ).upsert(show, season)
         self._upsert_movie_episode(
             show,
@@ -318,7 +318,7 @@ class UpsertMixin(FileMixin, register=False):
             # images so every episode doesn't have the same image.
             backdrop_image = backdrops[i % len(backdrops)].backdrop_url
 
-            EpisodeInput(
+            Episode(
                 url=self._clean_external_url(episode_info.standard_web_url),
                 key=season_episode.id,
                 name=season_episode.content.title,
@@ -334,6 +334,7 @@ class UpsertMixin(FileMixin, register=False):
                 air_date=self._date_to_datetime(
                     season_episode.content.original_release_date,
                 ),
+                season_id=season.id,
             ).upsert(season, existing_episode)
 
     def _upsert_movie_episode(
@@ -368,7 +369,7 @@ class UpsertMixin(FileMixin, register=False):
             return
 
         node = parsed_data.data.url_v2.node
-        EpisodeInput(
+        Episode(
             url=self._clean_external_url(episode_info.standard_web_url),
             key=episode_info.id,
             name=node.content.title,
@@ -379,6 +380,7 @@ class UpsertMixin(FileMixin, register=False):
             data_timestamp=episode_timestamp,
             release_date=self._date_to_datetime(node.content.original_release_date),
             air_date=self._date_to_datetime(node.content.original_release_date),
+            season_id=season.id,
         ).upsert(season, existing_episode)
 
     # endregion Upsert

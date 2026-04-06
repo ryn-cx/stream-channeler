@@ -2,7 +2,7 @@
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never, override
 
 from sqlalchemy import util
 from sqlmodel import (
@@ -15,19 +15,11 @@ from sqlmodel import (
     select,
 )
 
-from app.models import SA_TYPE, BaseMediaMixin, MediaMixin
+from app.models import BaseMediaMixin, DateTimeField, MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-
-if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
-    from app.channels.models import ChannelEpisodeWhiteList
-    from app.watches.models import Watch
 
 
 class BaseEpisode(BaseMediaMixin):
@@ -38,24 +30,47 @@ class BaseEpisode(BaseMediaMixin):
     episode_number: int | None = Field(default=None)
     name: str | None = Field(default=None)
     duration: int | None = Field(ge=0, default=None)
-    release_date: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
-    air_date: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
+    release_date: datetime | None = DateTimeField(default=None)
+    air_date: datetime | None = DateTimeField(default=None)
 
 
-class Episode(BaseEpisode, MediaMixin, table=True):
+if TYPE_CHECKING:
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.selectable import ForUpdateParameter
+
+    from app.channels.models import ChannelEpisodeWhiteList
+    from app.watches.models import Watch
+
+
+class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
-        # Filtering options.
+        # Used in episode_selector._apply_sort_key to sort episodes by sort order.
         Index("Episode-sort_order-index", "sort_order"),
+        # Used in episode_selector._apply_sort_key to sort episodes by episode number.
         Index("Episode-episode_number-index", "episode_number"),
+        # Used in episode_selector._apply_sort_key to sort episodes by name.
         Index("Episode-name-index", "name"),
+        # Used in episode_selector._filter_by_release_date to filter episodes by
+        # release date range and in episode_selector._apply_sort_key for sorting.
         Index("Episode-release_date-index", "release_date"),
+        # Used in episode_selector._filter_by_air_date to filter episodes by air date
+        # range, in episode_selector._apply_recently_aired_sort for the recently aired
+        # sort, and in episode_selector._apply_sort_key for sorting.
         Index("Episode-air_date-index", "air_date"),
+        # Used in episode_selector._filter_by_duration to filter episodes by duration
+        # range and in episode_selector._apply_sort_key for sorting.
         Index("Episode-duration-index", "duration"),
-        # Deleted filtering.
+        # Used in episode_selector._filter_deleted_media and watches/services to
+        # exclude soft-deleted episodes.
         Index("Episode-deleted_at-index", "deleted_at"),
     )
+
+    @classmethod
+    def parent_id_column(cls) -> uuid.UUID:
+        return cls.season_id
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
@@ -91,6 +106,7 @@ class Episode(BaseEpisode, MediaMixin, table=True):
             ).first(),
         )
 
+    @override
     def parent(self) -> Season:
         return self.season
 

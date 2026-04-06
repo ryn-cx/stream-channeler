@@ -1,9 +1,9 @@
+# TODO: Validate
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginOutput,
     PluginPatchInput,
     PluginPostInput,
-    PluginsListOutput,
 )
 from tests.plugins.utils import create_random_plugin
 from tests.utils.base import BaseTests
@@ -19,7 +19,6 @@ class PluginTestMixin(BaseTests[Plugin]):
     output_model = PluginOutput
     patch_model = PluginPatchInput
     create_record_function = staticmethod(create_random_plugin)
-    list_output_model = PluginsListOutput
 
 
 class TestCreatePlugin(PluginTestMixin, UserOwnedCreateMixin[Plugin]):

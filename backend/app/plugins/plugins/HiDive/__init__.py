@@ -300,13 +300,13 @@
 #         return None
 
 #     def _seasons_dict_from_db(self, show_key: str) -> dict[str, Season]:
-#         """Returns a dictionary of seasons keyed by season key."""
+#         """Return a dictionary of seasons keyed by season key."""
 #         if show := self._show_from_db(show_key):
 #             return {season.key: season for season in show.seasons}
 #         return {}
 
 #     def _episodes_dict_from_db(self, show_key: str) -> dict[str, Episode]:
-#         """Returns a dictionary of episodes keyed by episode key."""
+#         """Return a dictionary of episodes keyed by episode key."""
 #         if show := self._show_from_db(show_key):
 #             return {
 #                 episode.key: episode
@@ -319,7 +319,7 @@
 #         self,
 #         show_key: str,
 #     ) -> dict[str, dict[str, Episode]]:
-#         """Returns a nested dictionary of episodes keyed by season key and episode key."""
+#         """Return a nested dictionary of episodes keyed by season key and episode key."""
 #         if show := self._show_from_db(show_key):
 #             return {
 #                 season.key: {episode.key: episode for episode in season.episodes}

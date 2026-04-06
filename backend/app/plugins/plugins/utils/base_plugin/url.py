@@ -11,12 +11,12 @@ class URLMixin(ABC):
     @classmethod
     @abstractmethod
     def _url_regex(cls) -> str:
-        """Returns the regex string to check if a URL is supported by the plugin."""
+        """Return the regex string to check if a URL is supported by the plugin."""
 
     @classmethod
     @abstractmethod
     def domains(cls) -> list[str]:
-        """Returns a list of the domains the plugin supports.
+        """Return a list of the domains the plugin supports.
 
         The first domain should be the primary domain used by self.base_url().
 
@@ -26,12 +26,12 @@ class URLMixin(ABC):
 
     @classmethod
     def _domain(cls) -> str:
-        """Returns the first domain the plugin supports."""
+        """Return the first domain the plugin supports."""
         return cls.domains()[0]
 
     @classmethod
     def _base_url(cls) -> str:
-        """Returns the base URL for the source.
+        """Return the base URL for the source.
 
         The base url is in the format of https://www.example.com/
         """
@@ -39,7 +39,7 @@ class URLMixin(ABC):
 
     @classmethod
     def _domain_regex(cls) -> str:
-        """Returns a regex string that matches all of the source's domains."""
+        """Return a regex string that matches all of the source's domains."""
         if len(cls.domains()) > 1:
             escaped_domains = [cls._escape_domain(domain) for domain in cls.domains()]
             return "(?:" + "|".join(escaped_domains) + ")"

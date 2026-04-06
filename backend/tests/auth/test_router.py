@@ -1,3 +1,4 @@
+# TODO: Validate
 from unittest.mock import patch
 
 from fastapi import status
@@ -21,7 +22,8 @@ def test_get_access_token(session_scoped_client: TestClient) -> None:
         "password": settings.FIRST_SUPERUSER_PASSWORD,
     }
     r = session_scoped_client.post(
-        f"{settings.API_V1_STR}/login/access-token", data=login_data
+        f"{settings.API_V1_STR}/login/access-token",
+        data=login_data,
     )
     tokens = r.json()
     assert r.status_code == status.HTTP_200_OK
@@ -35,7 +37,8 @@ def test_get_access_token_incorrect_password(session_scoped_client: TestClient) 
         "password": "incorrect",
     }
     r = session_scoped_client.post(
-        f"{settings.API_V1_STR}/login/access-token", data=login_data
+        f"{settings.API_V1_STR}/login/access-token",
+        data=login_data,
     )
     assert r.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -89,7 +92,8 @@ def test_recovery_password_user_not_exits(
 
 
 def test_reset_password(
-    session_scoped_client: TestClient, session_scoped_db: Session
+    session_scoped_client: TestClient,
+    session_scoped_db: Session,
 ) -> None:
     email = random_email()
     password = random_lower_string()
@@ -105,7 +109,9 @@ def test_reset_password(
     user = user_service.create_user(session=session_scoped_db, user_create=user_create)
     token = generate_password_reset_token(email=email)
     headers = user_authentication_headers(
-        client=session_scoped_client, email=email, password=password
+        client=session_scoped_client,
+        email=email,
+        password=password,
     )
     data = {"new_password": new_password, "token": token}
 
@@ -162,7 +168,8 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
 
     login_data = {"username": email, "password": password}
     r = session_scoped_client.post(
-        f"{settings.API_V1_STR}/login/access-token", data=login_data
+        f"{settings.API_V1_STR}/login/access-token",
+        data=login_data,
     )
     assert r.status_code == status.HTTP_200_OK
     tokens = r.json()
@@ -180,7 +187,8 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
 
 
 def test_login_with_argon2_password_keeps_hash(
-    session_scoped_client: TestClient, session_scoped_db: Session
+    session_scoped_client: TestClient,
+    session_scoped_db: Session,
 ) -> None:
     """Test that logging in with an argon2 password hash does not update it."""
     email = random_email()
@@ -200,7 +208,8 @@ def test_login_with_argon2_password_keeps_hash(
 
     login_data = {"username": email, "password": password}
     r = session_scoped_client.post(
-        f"{settings.API_V1_STR}/login/access-token", data=login_data
+        f"{settings.API_V1_STR}/login/access-token",
+        data=login_data,
     )
     assert r.status_code == status.HTTP_200_OK
     tokens = r.json()

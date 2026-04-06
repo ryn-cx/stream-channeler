@@ -34,10 +34,7 @@ import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./showColumns"
 
-interface ShowsListOutput {
-  data: ShowTableData[]
-  count: number
-}
+type ShowsData = Array<ShowTableData>
 
 const formSchema = z.object({
   key: z.string().max(255).optional().or(z.literal("")),
@@ -85,26 +82,22 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
       }),
     onMutate: async (newShow, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<ShowsListOutput>(queryKey)
+      const previous = context.client.getQueryData<ShowsData>(queryKey)
 
-      context.client.setQueryData<ShowsListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: [
-          ...old!.data,
-          {
-            key: crypto.randomUUID(),
-            name: newShow.name ?? null,
-            id: crypto.randomUUID(),
-            source_id: sourceKey,
-            media_type: null,
-            description: null,
-            url: null,
-            image_url: null,
-            data_timestamp: null,
-          },
-        ],
-        count: old!.count + 1,
-      }))
+      context.client.setQueryData<ShowsData>(queryKey, (old) => [
+        ...(old ?? []),
+        {
+          key: crypto.randomUUID(),
+          name: newShow.name ?? null,
+          id: crypto.randomUUID(),
+          source_id: sourceKey,
+          media_type: null,
+          description: null,
+          url: null,
+          image_url: null,
+          data_timestamp: null,
+        },
+      ])
 
       return { previous }
     },

@@ -3,9 +3,9 @@ from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
 from app.media.service import create_child, delete_record, list_children, update_record
-from app.models import Message
+from app.schemas import Message
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput, ShowPostInput, ShowsListOutput
+from app.shows.schemas import ShowOutput, ShowPostInput
 from app.sources.dependencies import ReadableSource, UserSource
 from app.sources.models import Source
 from app.sources.schemas import (
@@ -24,20 +24,13 @@ def get_user_source(source: ReadableSource) -> Source:
 
 
 # FAST003 - Parameter is used by ReadableSource.
-@router.get("/{source_id}/shows", response_model=ShowsListOutput)  # noqa: FAST003
+@router.get("/{source_id}/shows", response_model=list[ShowOutput])  # noqa: FAST003
 def get_user_source_shows(
     session: SessionDep,
     source: ReadableSource,
-) -> ShowsListOutput:
+) -> list[Show]:
     """List all shows for a source if its plugin is public or owned by the current user."""
-    return list_children(
-        session,
-        Show,
-        "source_id",
-        source.id,
-        ShowOutput,
-        ShowsListOutput,
-    )
+    return list_children(session, Show, "source_id", source.id)
 
 
 # FAST003 - Parameter is used by UserSource.

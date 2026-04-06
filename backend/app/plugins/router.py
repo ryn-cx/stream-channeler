@@ -9,7 +9,6 @@ from app.media.service import (
     raise_if_exists,
     update_record,
 )
-from app.models import Message
 from app.plugins.dependencies import ReadablePlugin, UserPlugin
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.abstract_plugin import PluginSearchResults
@@ -21,28 +20,21 @@ from app.plugins.schemas import (
     PluginPatchInput,
     PluginPostInput,
     PluginSearchInfo,
-    PluginsListOutput,
 )
+from app.schemas import Message
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput, SourcePostInput, SourcesListOutput
+from app.sources.schemas import SourceOutput, SourcePostInput
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 
 
-@router.get("")
+@router.get("", response_model=list[PluginOutput])
 def get_user_plugins(
     session: SessionDep,
     current_user: CurrentUser,
-) -> PluginsListOutput:
+) -> list[Plugin]:
     """List all plugins owned by the current user."""
-    return list_children(
-        session,
-        Plugin,
-        "user_id",
-        current_user.id,
-        PluginOutput,
-        PluginsListOutput,
-    )
+    return list_children(session, Plugin, "user_id", current_user.id)
 
 
 @router.get("/supports-import-watch-history")
@@ -120,20 +112,13 @@ def get_user_plugin(plugin: ReadablePlugin) -> Plugin:
     return plugin
 
 
-@router.get("/{plugin_id}/sources")  # noqa: FAST003 - Used by ReadablePlugin
+@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
 def get_user_plugin_sources(
     session: SessionDep,
     plugin: ReadablePlugin,
-) -> SourcesListOutput:
+) -> list[Source]:
     """List all sources for a plugin if it is public or owned by the current user."""
-    return list_children(
-        session,
-        Source,
-        "plugin_id",
-        plugin.id,
-        SourceOutput,
-        SourcesListOutput,
-    )
+    return list_children(session, Source, "plugin_id", plugin.id)
 
 
 @router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by UserPlugin

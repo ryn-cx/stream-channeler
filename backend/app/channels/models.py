@@ -16,7 +16,7 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import TimestampAndIdMixin
+from app.models import TimestampIdAndHashMixin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
@@ -26,15 +26,11 @@ class BaseChannel(SQLModel):
     name: str | None = Field(default=None)
     channel_number: float | None = Field(default=None)
     public: bool = Field(default=False)
-    # Default value is required to be able to create a channel without a default order.
-    # TODO: Make this always a str and add some sort of validation on the create/update
-    # channel endpoints.
     default_order: str | None = Field(default=None)
 
 
-class Channel(BaseChannel, TimestampAndIdMixin, table=True):
+class Channel(BaseChannel, TimestampIdAndHashMixin, table=True):
     __table_args__ = (PrimaryKeyConstraint("id"),)
-
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="channels")
 
@@ -124,12 +120,13 @@ class BaseChannelShow(SQLModel):
     white_list_mode: bool = Field()
 
 
-class ChannelShow(BaseChannelShow, TimestampAndIdMixin, table=True):
+class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     """Many-to-many relationship between Channels and Shows."""
 
     __table_args__ = (
-        # Used to find all shows in a channel
+        # Used in episode_selector._base_query to join episodes to their channel.
         Index("ChannelShow-channel_id-index", "channel_id"),
+        # Used in episode_selector._base_query to join shows to channel shows.
         Index("ChannelShow-show_id-index", "show_id"),
         PrimaryKeyConstraint("channel_id", "show_id"),
     )
@@ -158,18 +155,19 @@ class ChannelShow(BaseChannelShow, TimestampAndIdMixin, table=True):
         show: Show | uuid.UUID,
         options: list[ExecutableOption] | None = None,
     ) -> ChannelShow | None:
-        """Get a channel by the parent user and channel name.
+        """Get a ChannelShow by parent channel and show.
 
         Args:
             db: Database session
             channel: Parent channel instance
-            show: Parent show instance or its key
+            show: Parent show instance or its ID
             options: SQLAlchemy query options (e.g., joinedload, selectinload)
 
         Returns:
-            Channel instance if found, None otherwise
+            ChannelShow instance if found, None otherwise
         """
-        return cls._get_query(db, channel, show, options).first()
+        show_id = show.id if isinstance(show, Show) else show
+        return db.get(cls, (channel.id, show_id), options=options)
 
     @classmethod
     def get_one(
@@ -179,37 +177,24 @@ class ChannelShow(BaseChannelShow, TimestampAndIdMixin, table=True):
         show: Show | uuid.UUID,
         options: list[ExecutableOption] | None = None,
     ) -> ChannelShow:
-        """Get a channel by the user and channel name.
+        """Get a ChannelShow by parent channel and show.
 
         Raises an exception if no match is found.
 
         Args:
             db: Database session
             channel: Parent channel instance
-            show: Parent show instance or its key
+            show: Parent show instance or its ID
             options: SQLAlchemy query options (e.g., joinedload, selectinload)
 
         Returns:
-            Channel instance
-        """
-        return cls._get_query(db, channel, show, options).one()
+            ChannelShow instance
 
-    @classmethod
-    def _get_query(
-        cls,
-        db: Session,
-        channel: Channel,
-        show: Show | uuid.UUID,
-        options: list[ExecutableOption] | None = None,
-    ) -> ScalarResult[Self]:
-        if isinstance(show, Show):
-            show = show.id
-        statement = (
-            select(cls)
-            .where(cls.channel == channel, cls.show_id == show)
-            .options(*(options or []))
-        )
-        return db.exec(statement)
+        Raises:
+            NoResultFound: If no ChannelShow with the given channel and show exists
+        """
+        show_id = show.id if isinstance(show, Show) else show
+        return db.get_one(cls, (channel.id, show_id), options=options)
 
 
 class BaseChannelSeasonWhiteList(SQLModel):
@@ -218,7 +203,7 @@ class BaseChannelSeasonWhiteList(SQLModel):
 
 class ChannelSeasonWhiteList(
     BaseChannelSeasonWhiteList,
-    TimestampAndIdMixin,
+    TimestampIdAndHashMixin,
     table=True,
 ):
     """Many-to-many relationship between Channel Shows and Seasons.
@@ -227,8 +212,11 @@ class ChannelSeasonWhiteList(
     """
 
     __table_args__ = (
-        # Used to find all seasons in a channel show
+        # Used in episode_selector._join_whitelist_tables to join season whitelist
+        # entries by channel show.
         Index("ChannelSeasonWhiteList-channel_show_id-index", "channel_show_id"),
+        # Used in episode_selector._join_whitelist_tables to match seasons to their
+        # whitelist entries.
         Index("ChannelSeasonWhiteList-season_id-index", "season_id"),
         PrimaryKeyConstraint("channel_show_id", "season_id"),
     )
@@ -248,7 +236,7 @@ class BaseChannelEpisodeWhiteList(SQLModel):
 
 class ChannelEpisodeWhiteList(
     BaseChannelEpisodeWhiteList,
-    TimestampAndIdMixin,
+    TimestampIdAndHashMixin,
     table=True,
 ):
     """Many-to-many relationship between Channel Shows and Episodes.
@@ -257,8 +245,11 @@ class ChannelEpisodeWhiteList(
     """
 
     __table_args__ = (
-        # Used to find all episodes in a channel show
+        # Used in episode_selector._join_whitelist_tables to join episode whitelist
+        # entries by channel show.
         Index("ChannelEpisodeWhiteList-channel_show_id-index", "channel_show_id"),
+        # Used in episode_selector._join_whitelist_tables to match episodes to their
+        # whitelist entries.
         Index("ChannelEpisodeWhiteList-episode_id-index", "episode_id"),
         PrimaryKeyConstraint("channel_show_id", "episode_id"),
     )
@@ -283,7 +274,7 @@ class BaseChannelQueue(SQLModel):
     note: str | None = Field(default=None)
 
 
-class ChannelQueue(BaseChannelQueue, TimestampAndIdMixin, table=True):
+class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
     __table_args__ = (PrimaryKeyConstraint("channel_id", "url"),)
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")

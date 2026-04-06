@@ -10,130 +10,60 @@ from sqlmodel import col, select
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channels import service
 from app.channels.dependencies import (
+    OwnedChannel,
+    OwnedChannelReadableShow,
     ReadableChannel,
-    UserChannel,
-    UserChannelShow,
 )
-from app.channels.episode_selector import (
-    EpisodeQueryBuilder,
-)
-from app.channels.models import (
-    Channel,
-    ChannelQueue,
-)
+from app.channels.episode_selector import EpisodeQueryBuilder
+from app.channels.models import Channel, ChannelQueue
 from app.channels.schemas import (
     ChannelEpisodesOutput,
     ChannelMediaFilter,
     ChannelOutput,
     ChannelPatchInput,
     ChannelPostInput,
-    ChannelQueuesListOutput,
+    ChannelQueueOutput,
     ChannelShowsOutput,
-    ChannelsListOutput,
     EpisodeWithExtrasOutput,
     MultipleSortOptionOutputs,
-    SortOptionOutput,
     WhitelistShowInput,
     WhitelistShowOutput,
 )
-from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record, list_children, update_record
-from app.models import Message
-from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
-from app.seasons.models import Season
+from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowOutput
-from app.sources.models import Source
 from app.sources.schemas import SourceOutput
 from app.users.dependencies import OptionalUser
 
 router = APIRouter(prefix="/channels", tags=["channels"])
 
 
-@router.get("")
+@router.get("", response_model=list[ChannelOutput])
 def get_user_channels(
     session: SessionDep,
     current_user: CurrentUser,
-) -> ChannelsListOutput:
+) -> list[Channel]:
     """List all channels owned by the current user."""
-    return list_children(
-        session,
-        Channel,
-        "user_id",
-        current_user.id,
-        ChannelOutput,
-        ChannelsListOutput,
-    )
+    return list_children(session, Channel, "user_id", current_user.id)
 
 
 @router.get("/sort-options")
 def get_sort_options() -> MultipleSortOptionOutputs:
     """Get a list of all possible sorting options."""
-    # Random needs to be added by hand because it does not rely on a specific field.
-    data: list[SortOptionOutput] = []
-
-    # For simplicity all of the other possible values are dynamically generated from the
-    # model fields.
-    skip_fields = ("extra", "id", "description", "data_timestamp", "version")
-    for model in (Episode, Season, Show, Source, Plugin):
-        for field in model.model_fields:
-            if field.endswith(("key", "url", "_at", "_id")) or field in skip_fields:
-                continue
-
-            label = f"{model.__name__} - {field.replace('_', ' ').title()}"
-            model_name = model.__name__.lower()
-            data.append(
-                SortOptionOutput(
-                    label=label,
-                    model=model_name,
-                    field=field,
-                ),
-            )
-
-    # Special sort options that don't map to simple model fields.
-    data.append(SortOptionOutput(label="Show - Started", model="show", field="started"))
-    data.append(
-        SortOptionOutput(
-            label="Episode - Recently Aired",
-            model="episode",
-            field="recently_aired",
-        ),
-    )
-    data.append(
-        SortOptionOutput(label="Episode - Random", model="episode", field="random"),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Last Watched",
-            model="episode",
-            field="last_watched",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Episode Count",
-            model="episode",
-            field="episode_count",
-        ),
-    )
-    # Sort everything by the label
-    data.sort(key=lambda x: x.label)
-
-    return MultipleSortOptionOutputs(data=data)
+    return service.get_sort_options()
 
 
-# FAST003 - Parameter is used by ReadableChannel.
-@router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003
+@router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by ReadableChannel
 def get_user_channel(channel: ReadableChannel) -> Channel:
     """Get a channel by its id."""
     return channel
 
 
-# FAST003 - Parameter is used by ReadableChannel.
-@router.get("/{channel_id}/episodes")  # noqa: FAST003
+@router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.
 def get_channel_episodes(
     channel: ReadableChannel,
     media_filter: Annotated[ChannelMediaFilter, Query()],
@@ -194,13 +124,20 @@ def get_channel_episodes(
 
 # FAST003 - Parameter is used by ReadableChannel.
 @router.get("/{channel_id}/shows")  # noqa: FAST003
-def get_channel_shows(channel: ReadableChannel) -> ChannelShowsOutput:
+def get_channel_shows(
+    channel: ReadableChannel,
+    user: OptionalUser,
+) -> ChannelShowsOutput:
     """Read all shows for a channel."""
     output = ChannelShowsOutput()
 
     for channel_show in channel.shows:
         show = channel_show.show
         source = show.source
+        plugin = source.plugin
+
+        if not plugin.public and (not user or user.id != plugin.user_id):
+            continue
 
         output.shows.append(ShowOutput.model_validate(show))
 
@@ -213,7 +150,7 @@ def get_channel_shows(channel: ReadableChannel) -> ChannelShowsOutput:
 # FAST003 - Parameter is used by UserChannelShow.
 @router.get("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
 def get_user_channel_whitelist(
-    channel_show: UserChannelShow,
+    channel_show: OwnedChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Read the whitelist for a show in a channel."""
     seasons: list[SeasonOutput] = []
@@ -245,7 +182,7 @@ def get_user_channel_whitelist(
 def update_user_channel_whitelist(
     session: SessionDep,
     whitelist_config: WhitelistShowInput,
-    channel_show: UserChannelShow,
+    channel_show: OwnedChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Update the whitelist/blacklist for a show in a channel."""
     service.update_whitelist(session, channel_show, whitelist_config)
@@ -269,7 +206,7 @@ def create_user_channel(
 @router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003
 def update_user_channel(
     session: SessionDep,
-    channel: UserChannel,
+    channel: OwnedChannel,
     channel_in: ChannelPatchInput,
 ) -> Channel:
     """Update a channel owned by the current user."""
@@ -280,7 +217,7 @@ def update_user_channel(
 @router.patch("/{channel_id}/default-order", response_model=ChannelOutput)  # noqa: FAST003
 def update_user_channel_default_order(
     session: SessionDep,
-    channel: UserChannel,
+    channel: OwnedChannel,
     media_filter: ChannelMediaFilter,
 ) -> Channel:
     """Update the default sort order for a channel."""
@@ -296,7 +233,7 @@ def update_user_channel_default_order(
 
 # FAST003 - Parameter is used by UserChannel.
 @router.delete("/{channel_id}")  # noqa: FAST003
-def delete_user_channel(session: SessionDep, channel: UserChannel) -> Message:
+def delete_user_channel(session: SessionDep, channel: OwnedChannel) -> Message:
     """Delete a channel owned by the current user."""
     return delete_record(session, channel)
 
@@ -304,7 +241,7 @@ def delete_user_channel(session: SessionDep, channel: UserChannel) -> Message:
 # FAST003 - Parameter is used by UserChannel.
 @router.delete("/{channel_id}/remove-show/{show_id}")  # noqa: FAST003
 def delete_channel_show(
-    channel: UserChannel,
+    channel: OwnedChannel,
     session: SessionDep,
     show_id: str,
 ) -> Message:
@@ -323,11 +260,11 @@ def delete_channel_show(
 
 
 # FAST003 - Parameter is used by UserChannel.
-@router.get("/{channel_id}/import-queue")  # noqa: FAST003
+@router.get("/{channel_id}/import-queue", response_model=list[ChannelQueueOutput])  # noqa: FAST003
 def get_user_channel_queue(
     session: SessionDep,
-    channel: UserChannel,
-) -> ChannelQueuesListOutput:
+    channel: OwnedChannel,
+) -> list[ChannelQueue]:
     """Read the URLs in a channel's import queue."""
     statement = (
         select(ChannelQueue)
@@ -340,32 +277,30 @@ def get_user_channel_queue(
 
     channels = session.exec(statement).all()
 
-    return ChannelQueuesListOutput(
-        data=channels,  # pyright: ignore[reportArgumentType] - Pydantic casting
-    )
+    return list(channels)
 
 
 # FAST003 - Parameter is used by UserChannel.
-@router.post("/{channel_id}/import-queue")  # noqa: FAST003
+@router.post("/{channel_id}/import-queue", response_model=list[ChannelQueueOutput])  # noqa: FAST003
 def create_user_channel_queue_urls(
     session: SessionDep,
-    channel: UserChannel,
+    channel: OwnedChannel,
     urls: list[str],
-) -> ChannelQueuesListOutput:
+) -> list[ChannelQueue]:
     """Add URLs to a channel's import queue."""
     data = service.add_urls_to_channel_import_queue(
         session=session,
         urls=urls,
         channel=channel,
     )
-    return ChannelQueuesListOutput(data=data)  # pyright: ignore[reportArgumentType] - Pydantic casting
+    return data
 
 
 # FAST003 - Parameter is used by UserChannel.
 @router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003
 def delete_user_channel_queue_url(
     session: SessionDep,
-    channel: UserChannel,
+    channel: OwnedChannel,
     url_id: uuid.UUID,
 ) -> Message:
     """Delete url from a channel's import queue."""
@@ -383,7 +318,7 @@ def delete_user_channel_queue_url(
 @router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003
 def clear_user_channel_completed_queue(
     session: SessionDep,
-    channel: UserChannel,
+    channel: OwnedChannel,
 ) -> Message:
     """Clear a channel's import queue."""
     for existing_entry in channel.queue:

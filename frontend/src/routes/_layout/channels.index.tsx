@@ -58,7 +58,7 @@ function ChannelsContent() {
     id: false,
   })
 
-  const tableData = channels?.data ?? []
+  const tableData = channels ?? []
 
   const table = useReactTable({
     data: tableData,

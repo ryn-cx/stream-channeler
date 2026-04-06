@@ -29,10 +29,7 @@ import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./showColumns"
 
-interface ShowsListOutput {
-  data: ShowTableData[]
-  count: number
-}
+type ShowsData = Array<ShowTableData>
 
 interface DeleteShowProps {
   show: ShowTableData
@@ -54,13 +51,11 @@ const DeleteShow = ({ show }: DeleteShowProps) => {
       }),
     onMutate: async (_showKey, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<ShowsListOutput>(queryKey)
+      const previous = context.client.getQueryData<ShowsData>(queryKey)
 
-      context.client.setQueryData<ShowsListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.filter((s) => s.key !== show.key),
-        count: old!.count - 1,
-      }))
+      context.client.setQueryData<ShowsData>(queryKey, (old) =>
+        old!.filter((s) => s.key !== show.key),
+      )
 
       return { previous }
     },

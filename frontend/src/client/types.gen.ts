@@ -83,10 +83,7 @@ export type ChannelQueueOutput = {
     status: URLStatus;
     note?: (string | null);
     id: string;
-};
-
-export type ChannelQueuesListOutput = {
-    data: Array<ChannelQueueOutput>;
+    channel_id: string;
 };
 
 export type ChannelShowsOutput = {
@@ -94,10 +91,6 @@ export type ChannelShowsOutput = {
     sources?: {
         [key: string]: SourceOutput;
     };
-};
-
-export type ChannelsListOutput = {
-    data: Array<ChannelOutput>;
 };
 
 export type EpisodeOutput = {
@@ -151,10 +144,6 @@ export type EpisodePostInput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-};
-
-export type EpisodesListOutput = {
-    data: Array<EpisodeOutput>;
 };
 
 export type EpisodeWithExtrasOutput = {
@@ -275,10 +264,6 @@ export type PluginSearchResultSource = {
     icon_url?: (string | null);
 };
 
-export type PluginsListOutput = {
-    data: Array<PluginOutput>;
-};
-
 export type PrivateUserCreate = {
     email: string;
     password: string;
@@ -327,10 +312,6 @@ export type SeasonPostInput = {
     season_number?: (number | null);
 };
 
-export type SeasonsListOutput = {
-    data: Array<SeasonOutput>;
-};
-
 export type ShowOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -370,10 +351,6 @@ export type ShowPostInput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-};
-
-export type ShowsListOutput = {
-    data: Array<ShowOutput>;
 };
 
 export type SortKeyInput = {
@@ -431,10 +408,6 @@ export type SourcePostInput = {
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
-};
-
-export type SourcesListOutput = {
-    data: Array<SourceOutput>;
 };
 
 export type Token = {
@@ -583,31 +556,31 @@ export type WhitelistShowOutput = {
     episodes: Array<EpisodeOutput>;
 };
 
-export type AdminMediaListAllPluginsResponse = (PluginsListOutput);
+export type AdminMediaListAllPluginsResponse = (Array<PluginOutput>);
 
 export type AdminMediaListPluginSourcesData = {
     pluginId: string;
 };
 
-export type AdminMediaListPluginSourcesResponse = (SourcesListOutput);
+export type AdminMediaListPluginSourcesResponse = (Array<SourceOutput>);
 
 export type AdminMediaListSourceShowsData = {
     sourceId: string;
 };
 
-export type AdminMediaListSourceShowsResponse = (ShowsListOutput);
+export type AdminMediaListSourceShowsResponse = (Array<ShowOutput>);
 
 export type AdminMediaListShowSeasonsData = {
     showId: string;
 };
 
-export type AdminMediaListShowSeasonsResponse = (SeasonsListOutput);
+export type AdminMediaListShowSeasonsResponse = (Array<SeasonOutput>);
 
 export type AdminMediaListSeasonEpisodesData = {
     seasonId: string;
 };
 
-export type AdminMediaListSeasonEpisodesResponse = (EpisodesListOutput);
+export type AdminMediaListSeasonEpisodesResponse = (Array<EpisodeOutput>);
 
 export type AdminMediaTriggerPluginUpdateData = {
     pluginId: string;
@@ -639,7 +612,7 @@ export type AdminMediaTriggerEpisodeUpdateData = {
 
 export type AdminMediaTriggerEpisodeUpdateResponse = (Message);
 
-export type ChannelsGetUserChannelsResponse = (ChannelsListOutput);
+export type ChannelsGetUserChannelsResponse = (Array<ChannelOutput>);
 
 export type ChannelsCreateUserChannelData = {
     requestBody: ChannelPostInput;
@@ -733,14 +706,14 @@ export type ChannelsGetUserChannelQueueData = {
     channelId: string;
 };
 
-export type ChannelsGetUserChannelQueueResponse = (ChannelQueuesListOutput);
+export type ChannelsGetUserChannelQueueResponse = (Array<ChannelQueueOutput>);
 
 export type ChannelsCreateUserChannelQueueUrlsData = {
     channelId: string;
     requestBody: Array<(string)>;
 };
 
-export type ChannelsCreateUserChannelQueueUrlsResponse = (ChannelQueuesListOutput);
+export type ChannelsCreateUserChannelQueueUrlsResponse = (Array<ChannelQueueOutput>);
 
 export type ChannelsDeleteUserChannelQueueUrlData = {
     channelId: string;
@@ -815,7 +788,7 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
-export type PluginsGetUserPluginsResponse = (PluginsListOutput);
+export type PluginsGetUserPluginsResponse = (Array<PluginOutput>);
 
 export type PluginsCreateUserPluginData = {
     requestBody: PluginPostInput;
@@ -859,7 +832,7 @@ export type PluginsGetUserPluginSourcesData = {
     pluginId: string;
 };
 
-export type PluginsGetUserPluginSourcesResponse = (SourcesListOutput);
+export type PluginsGetUserPluginSourcesResponse = (Array<SourceOutput>);
 
 export type PluginsCreateUserSourceData = {
     pluginId: string;
@@ -897,7 +870,7 @@ export type SeasonsGetUserSeasonEpisodesData = {
     seasonId: string;
 };
 
-export type SeasonsGetUserSeasonEpisodesResponse = (EpisodesListOutput);
+export type SeasonsGetUserSeasonEpisodesResponse = (Array<EpisodeOutput>);
 
 export type SeasonsCreateUserEpisodeData = {
     requestBody: EpisodePostInput;
@@ -929,7 +902,7 @@ export type ShowsGetUserShowSeasonsData = {
     showId: string;
 };
 
-export type ShowsGetUserShowSeasonsResponse = (SeasonsListOutput);
+export type ShowsGetUserShowSeasonsResponse = (Array<SeasonOutput>);
 
 export type ShowsCreateUserSeasonData = {
     requestBody: SeasonPostInput;
@@ -961,7 +934,7 @@ export type SourcesGetUserSourceShowsData = {
     sourceId: string;
 };
 
-export type SourcesGetUserSourceShowsResponse = (ShowsListOutput);
+export type SourcesGetUserSourceShowsResponse = (Array<ShowOutput>);
 
 export type SourcesCreateUserShowData = {
     requestBody: ShowPostInput;

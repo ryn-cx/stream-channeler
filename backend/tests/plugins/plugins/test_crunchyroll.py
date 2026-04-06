@@ -1,3 +1,4 @@
+# TODO: Validate
 from datetime import timedelta
 from typing import override
 
@@ -12,6 +13,9 @@ from app.shows.models import Show
 from app.sources.models import Source
 from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
 from tests.plugins.plugin_validator.validator import Validator
+
+# TODO: ADD TESTS FOR DELETIONS, CREATE FAKE SHOW/SEASON/EPISODE THEN MAKE SURE IT GETS
+# DELETED WHEN UPDATE OCCURS.
 
 
 class CrunchyrollValidator(PluginValidator):

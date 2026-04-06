@@ -87,7 +87,7 @@ export function AddUrlsToQueueButton({
     queryFn: () => ChannelsService.getUserChannelQueue({ channelId }),
   })
 
-  const queueEntries = queueData?.data || []
+  const queueEntries = queueData ?? []
 
   const addUrlsMutation = useMutation({
     mutationFn: (urls: string[]) =>
@@ -112,19 +112,16 @@ export function AddUrlsToQueueButton({
       // Optimistically update to the new value
       context.client.setQueryData(
         ["channelQueue", channelId],
-        (oldData: any) => ({
-          ...oldData,
-          data: [
-            ...oldData.data,
-            ...urls.map((url, index) => ({
-              id: `placeholder_${index}`,
-              url,
-              status: "Pending",
-              note: null,
-              created_at: new Date().toISOString(),
-            })),
-          ],
-        }),
+        (oldData: any) => [
+          ...(oldData ?? []),
+          ...urls.map((url, index) => ({
+            id: `placeholder_${index}`,
+            url,
+            status: "Pending",
+            note: null,
+            created_at: new Date().toISOString(),
+          })),
+        ],
       )
 
       showSuccessToast(
@@ -172,14 +169,8 @@ export function AddUrlsToQueueButton({
       ])
 
       // Optimistically update to the new value
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        (oldData: any) => ({
-          ...oldData,
-          data: oldData.data.filter(
-            (entry: ChannelQueueOutput) => entry.id !== urlId,
-          ),
-        }),
+      context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
+        oldData.filter((entry: ChannelQueueOutput) => entry.id !== urlId),
       )
 
       showSuccessToast("URL removed from queue")
@@ -223,15 +214,11 @@ export function AddUrlsToQueueButton({
       ])
 
       // Optimistically update to the new value
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        (oldData: any) => ({
-          ...oldData,
-          data: oldData.data.filter(
-            (entry: ChannelQueueOutput) =>
-              entry.status !== "Imported" && entry.status !== "Failed",
-          ),
-        }),
+      context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
+        oldData.filter(
+          (entry: ChannelQueueOutput) =>
+            entry.status !== "Imported" && entry.status !== "Failed",
+        ),
       )
 
       showSuccessToast("Completed queue entries cleared")

@@ -511,26 +511,16 @@ export const ChannelQueueOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
         }
     },
     type: 'object',
-    required: ['url', 'status', 'id'],
+    required: ['url', 'status', 'id', 'channel_id'],
     title: 'ChannelQueueOutput'
-} as const;
-
-export const ChannelQueuesListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ChannelQueueOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'ChannelQueuesListOutput'
 } as const;
 
 export const ChannelShowsOutputSchema = {
@@ -555,21 +545,6 @@ export const ChannelShowsOutputSchema = {
     },
     type: 'object',
     title: 'ChannelShowsOutput'
-} as const;
-
-export const ChannelsListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ChannelOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'ChannelsListOutput'
 } as const;
 
 export const EpisodeOutputSchema = {
@@ -1283,21 +1258,6 @@ export const EpisodeWithExtrasOutputSchema = {
     title: 'EpisodeWithExtrasOutput'
 } as const;
 
-export const EpisodesListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/EpisodeOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'EpisodesListOutput'
-} as const;
-
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -1793,21 +1753,6 @@ export const PluginSearchResultsSchema = {
     description: 'Container for plugin search results.'
 } as const;
 
-export const PluginsListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/PluginOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'PluginsListOutput'
-} as const;
-
 export const PrivateUserCreateSchema = {
     properties: {
         email: {
@@ -2192,21 +2137,6 @@ export const SeasonPostInputSchema = {
     title: 'SeasonPostInput'
 } as const;
 
-export const SeasonsListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/SeasonOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'SeasonsListOutput'
-} as const;
-
 export const ShowOutputSchema = {
     properties: {
         key: {
@@ -2564,21 +2494,6 @@ export const ShowPostInputSchema = {
     additionalProperties: false,
     type: 'object',
     title: 'ShowPostInput'
-} as const;
-
-export const ShowsListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ShowOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'ShowsListOutput'
 } as const;
 
 export const SortKeyInputSchema = {
@@ -2955,21 +2870,6 @@ export const SourcePostInputSchema = {
     additionalProperties: false,
     type: 'object',
     title: 'SourcePostInput'
-} as const;
-
-export const SourcesListOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/SourceOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'SourcesListOutput'
 } as const;
 
 export const TokenSchema = {

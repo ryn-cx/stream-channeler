@@ -3,14 +3,10 @@ from datetime import timedelta
 from typing import Any, override
 
 from app.episodes.models import Episode
-from app.episodes.schemas import EpisodeInput
 from app.plugins.plugins.YouTube.files import FileMixin
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
-from app.shows.schemas import ShowInput
 from app.sources.models import Source
-from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
 
 
@@ -65,12 +61,13 @@ class UpsertMixin(FileMixin, register=False):
         if source and source.data_timestamp:
             data_timestamp = source.data_timestamp
 
-        return SourceInput(
+        return Source(
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
             favicon_url="https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png",
             data_timestamp=data_timestamp,
+            plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 
     @override
@@ -90,7 +87,7 @@ class UpsertMixin(FileMixin, register=False):
         channel_item = channel_data.items[0]
 
         if force_reimport or not self._is_up_to_date(show, show_timestamp):
-            show = ShowInput(
+            show = Show(
                 key=channel_item.id,
                 name=channel_item.snippet.title,
                 url=f"{self._base_url()}channel/{channel_item.id}",
@@ -98,6 +95,7 @@ class UpsertMixin(FileMixin, register=False):
                 update_at=channel_file.database_entry.data_timestamp
                 + timedelta(days=30),
                 data_timestamp=show_timestamp,
+                source_id=source.id,
             ).upsert(source, show)
 
         self._upsert_seasons(show, show_key=show_key, force_reimport=force_reimport)
@@ -127,11 +125,12 @@ class UpsertMixin(FileMixin, register=False):
         season = Season.get_from_memory(self.db, show, uploads_key)
         timestamp = self._file_timestamp(self._season_files(show_key, uploads_key))
         if force_reimport or not self._is_up_to_date(season, timestamp):
-            season = SeasonInput(
+            season = Season(
                 key=uploads_key,
                 name=f"Uploads from {show.name}",
                 url=self._playlist_url(uploads_key),
                 data_timestamp=timestamp,
+                show_id=show.id,
             ).upsert(show, season)
         self._upsert_episodes(season, force_reimport=force_reimport)
         self._set_season_update_at(season)
@@ -150,7 +149,7 @@ class UpsertMixin(FileMixin, register=False):
             season_files = self._season_files(show_key, parsed_playlist.id)
             timestamp = self._file_timestamp(season_files)
             if force_reimport or not self._is_up_to_date(season, timestamp):
-                season = SeasonInput(
+                season = Season(
                     key=parsed_playlist.id,
                     name=parsed_playlist.snippet.title,
                     url=self._playlist_url(parsed_playlist.id),
@@ -158,6 +157,7 @@ class UpsertMixin(FileMixin, register=False):
                         parsed_playlist.snippet.thumbnails,
                     ),
                     data_timestamp=timestamp,
+                    show_id=show.id,
                 ).upsert(show, season)
             self._upsert_episodes(season, force_reimport=force_reimport)
             self._set_season_update_at(season)
@@ -181,7 +181,7 @@ class UpsertMixin(FileMixin, register=False):
             else:
                 duration = None
 
-            existing = EpisodeInput(
+            existing = Episode(
                 key=video_item.id,
                 name=video_snippet.title,
                 url=f"{self._base_url()}watch?v={video_item.id}",
@@ -192,6 +192,7 @@ class UpsertMixin(FileMixin, register=False):
                 image_url=self._best_thumbnail_url(video_snippet.thumbnails),
                 sort_order=sort_order,
                 data_timestamp=self._file_timestamp(self._episode_files(episode_key)),
+                season_id=season.id,
             ).upsert(season, existing)
 
     @staticmethod

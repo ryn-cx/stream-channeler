@@ -1,5 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
+from functools import cache
 
 from sqlmodel import Session
 
@@ -11,7 +12,17 @@ from app.channels.models import (
     ChannelShow,
     URLStatus,
 )
-from app.channels.schemas import ChannelQueueInput, WhitelistShowInput
+from app.channels.schemas import (
+    ChannelQueueInput,
+    MultipleSortOptionOutputs,
+    SortOptionOutput,
+    WhitelistShowInput,
+)
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
 
 
 def add_urls_to_channel_import_queue(
@@ -113,3 +124,47 @@ def _toggle_episode(
             if entry.episode_id == episode_id:
                 session.delete(entry)
                 break
+
+
+@cache
+def get_sort_options() -> MultipleSortOptionOutputs:
+    """Build and cache the list of all possible sorting options."""
+    data: list[SortOptionOutput] = []
+
+    skip_fields = ("extra", "description", "data_timestamp", "version")
+    for model in (Episode, Season, Show, Source, Plugin):
+        for field in model.model_fields:
+            if field.endswith(("key", "url", "_at", "_id")) or field in skip_fields:
+                continue
+
+            label = f"{model.__name__} - {field.replace('_', ' ').title()}"
+            model_name = model.__name__.lower()
+            data.append(
+                SortOptionOutput(label=label, model=model_name, field=field),
+            )
+
+    data.append(SortOptionOutput(label="Show - Started", model="show", field="started"))
+    data.append(
+        SortOptionOutput(
+            label="Episode - Recently Aired",
+            model="episode",
+            field="recently_aired",
+        ),
+    )
+    data.append(
+        SortOptionOutput(
+            label="Show - Last Watched",
+            model="show",
+            field="last_watched",
+        ),
+    )
+    data.append(
+        SortOptionOutput(
+            label="Show - Episode Count",
+            model="show",
+            field="episode_count",
+        ),
+    )
+
+    data.sort(key=lambda option: option.label)
+    return MultipleSortOptionOutputs(data=data)

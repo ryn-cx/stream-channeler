@@ -1,8 +1,10 @@
 # TODO: Validate
+from __future__ import annotations
+
 import json
 import uuid
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, model_validator
 from pydantic import Field as PydanticField
@@ -12,9 +14,6 @@ from app.channels.models import (
     BaseChannel,
     BaseChannelQueue,
     BaseChannelShow,
-    Channel,
-    ChannelQueue,
-    ChannelShow,
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
@@ -29,6 +28,9 @@ from app.sources.schemas import SourceOutput
 from app.users.models import User
 from app.utils import tz_datetime
 
+if TYPE_CHECKING:
+    from app.channels.models import Channel, ChannelQueue, ChannelShow
+
 
 class ChannelInput(BaseChannel):
     def upsert(
@@ -36,10 +38,12 @@ class ChannelInput(BaseChannel):
         user: User,
         existing_channel: Channel | None,
     ) -> Channel:
+        from app.channels.models import Channel as _Channel  # noqa: PLC0415
+
         if existing_channel:
             existing_channel.sqlmodel_update(self.model_dump())
             return existing_channel
-        channel = Channel.model_validate(self, update={"user_id": user.id})
+        channel = _Channel.model_validate(self, update={"user_id": user.id})
         user.channels.append(channel)
         return channel
 
@@ -56,61 +60,8 @@ class ChannelPatchInput(BaseChannel):
 
 
 class ChannelOutput(BaseChannel):
-    # When returning a list of channels there needs to be a way to identify the channel.
     id: uuid.UUID
-    # When accessing a public page there needs to be a way to identify if the user owns
-    # the channel so the UI can change based on that.
     user_id: uuid.UUID
-
-
-class ChannelsListOutput(SQLModel):
-    data: list[ChannelOutput]
-
-
-# This schema is just used for inserting data into the database. It is not used for
-# reading the user's input because it is simpler for the user to have the input just be
-# a list of URLs.
-class ChannelQueueInput(BaseChannelQueue):
-    """Input schema for creating or updating a channel queue entry."""
-
-    def upsert(
-        self,
-        channel: Channel,
-        existing_entry: ChannelQueue | None = None,
-        protected_keys: set[str] | None = None,
-    ) -> ChannelQueue:
-        """Insert or update a ChannelQueue entry.
-
-        Args:
-            channel: Parent channel instance
-            existing_entry: Existing ChannelQueue instance to update.
-
-        Returns:
-            ChannelQueue instance (either newly created or updated)
-        """
-        if protected_keys is None:
-            protected_keys = set()
-
-        if existing_entry:
-            # TODO: Use _update_existing_entry like other classes
-            dumped = self.model_dump(exclude=protected_keys)
-            # If no values are changed modified_at will not be autoamtically set,
-            # the easy way to fix this is to just set it manually so there will
-            # always be a changed value.
-            dumped["modified_at"] = tz_datetime.now()
-            return existing_entry.sqlmodel_update(dumped)
-
-        entry = ChannelQueue.model_validate(self, update={"channel_id": channel.id})
-        channel.queue.append(entry)
-        return entry
-
-
-class ChannelQueueOutput(BaseChannelQueue):
-    id: uuid.UUID
-
-
-class ChannelQueuesListOutput(SQLModel):
-    data: list[ChannelQueueOutput]
 
 
 class ChannelShowInput(BaseChannelShow):
@@ -120,30 +71,41 @@ class ChannelShowInput(BaseChannelShow):
         existing_entry: ChannelShow | None = None,
         protected_keys: set[str] | None = None,
     ) -> ChannelShow:
-        """Insert or update a ChannelShow.
+        from app.channels.models import ChannelShow as _ChannelShow  # noqa: PLC0415
 
-        Args:
-            channel: Parent channel instance
-            existing_entry: Existing ChannelShow instance to update.
-
-        Returns:
-            ChannelShowOutput instance (either newly created or updated)
-        """
         if protected_keys is None:
             protected_keys = set()
 
         if existing_entry:
-            # TODO: Use _update_existing_entry like other classes
             dumped = self.model_dump(exclude=protected_keys)
-            # If no values are changed modified_at will not be autoamtically set,
-            # the easy way to fix this is to just set it manually so there will
-            # always be a changed value.
             dumped["modified_at"] = tz_datetime.now()
             return existing_entry.sqlmodel_update(dumped)
 
-        entry = ChannelShow.model_validate(self, update={"channel_id": channel.id})
+        entry = _ChannelShow.model_validate(self, update={"channel_id": channel.id})
         channel.shows.append(entry)
         return entry
+
+
+class ChannelQueueInput(BaseChannelQueue):
+    def upsert(
+        self,
+        channel: Channel,
+        existing_entry: ChannelQueue | None = None,
+    ) -> ChannelQueue:
+        from app.channels.models import ChannelQueue as _ChannelQueue  # noqa: PLC0415
+
+        if existing_entry:
+            existing_entry.sqlmodel_update(self.model_dump())
+            return existing_entry
+
+        entry = _ChannelQueue.model_validate(self, update={"channel_id": channel.id})
+        channel.queue.append(entry)
+        return entry
+
+
+class ChannelQueueOutput(BaseChannelQueue):
+    id: uuid.UUID
+    channel_id: uuid.UUID
 
 
 class SortKeyInput(BaseModel):
@@ -195,17 +157,22 @@ class SortKeyInput(BaseModel):
         return self
 
 
-def parse_sort_key_input(v: Any) -> Any:
-    if isinstance(v, str):
-        return json.loads(v)
-    return v
+def _parse_sort_keys(v: Any) -> list[SortKeyInput]:
+    """Parse sort key JSON strings into validated SortKeyInput objects."""
+    if not isinstance(v, list):
+        return v  # type: ignore[return-value]
+    return [
+        SortKeyInput.model_validate(
+            json.loads(item) if isinstance(item, str) else item,
+        )
+        for item in v
+    ]
 
 
-# TODO: Is it really worth it supporting all these aliases?
 class ChannelMediaFilter(SQLModel):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    sort_by: list[Annotated[SortKeyInput, BeforeValidator(parse_sort_key_input)]] = (
+    sort_by: Annotated[list[SortKeyInput], BeforeValidator(_parse_sort_keys)] = (
         PydanticField(
             default=[],
             validation_alias="sortBy",
@@ -233,7 +200,6 @@ class ChannelMediaFilter(SQLModel):
         validation_alias="hideUnwatched",
         serialization_alias="hideUnwatched",
     )
-    # Absolute date filters (ISO date strings)
     maximum_watch_date_absolute: datetime | None = PydanticField(
         default=None,
         validation_alias="maximumWatchDateAbsolute",
@@ -259,8 +225,6 @@ class ChannelMediaFilter(SQLModel):
         validation_alias="maximumReleaseDateAbsolute",
         serialization_alias="maximumReleaseDateAbsolute",
     )
-
-    # Relative date filters (integer days ago)
     maximum_watch_date_relative: int | None = PydanticField(
         default=None,
         validation_alias="maximumWatchDateRelative",
@@ -286,7 +250,6 @@ class ChannelMediaFilter(SQLModel):
         validation_alias="maximumReleaseDateRelative",
         serialization_alias="maximumReleaseDateRelative",
     )
-
     only_started_shows: bool = PydanticField(
         default=False,
         validation_alias="onlyStartedShows",
@@ -320,12 +283,7 @@ class EpisodeWithExtrasOutput(EpisodeOutput):
     channel_id: uuid.UUID
 
 
-# This class uses no default values so when initialized blank lists and dicts need to be
-# supplied, this is a workaround because using default_factory, default, or "= {}" will
-# make the FastAPI endpoint list those fields as optional.
 class ChannelEpisodesOutput(SQLModel):
-    # The order of episodes matters so it must be a list, everything else can be a dict
-    # because the order does not matter.
     episodes: list[EpisodeWithExtrasOutput]
     seasons: dict[uuid.UUID, SeasonOutput]
     shows: dict[uuid.UUID, ShowOutput]

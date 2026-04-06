@@ -68,44 +68,31 @@ class AbstractPlugin(ABC):
             A list of URLImportResult based on the URL.
         """
 
-    @abstractmethod
     def update_show(self, show: Show) -> None:
         """Update an existing show in the database.
 
-        This function will be called when a show has an update_at value that is in the
-        past and is after the data_timestamp value.
-
-        Args:
-            show: The show to update.
+        Called when a show has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
+        show.update_at = None
 
-    @abstractmethod
     def update_season(self, season: Season) -> None:
         """Update an existing season in the database.
 
-        This function will be called when a season has an update_at value that is in the
-        past and is after the data_timestamp value.
-
-        Args:
-            season: The season to update.
+        Called when a season has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
+        season.update_at = None
 
-    @abstractmethod
     def update_episode(self, episode: Episode) -> None:
         """Update an existing episode in the database.
 
-        This function will be called when an episode has an update_at value that is in
-        the past and is after the data_timestamp value.
-
-        Args:
-            episode: The episode to update.
+        Called when an episode has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
+        episode.update_at = None
 
-    # endregion
-
-    # region Optional methods
-
-    # B027 - This function does not need to be implemented so it does not need the
+    # B027 - These functions do not need to be implemented so they do not need the
     # @abstractmethod decorator.
     def initialize_plugin(self) -> None:  # noqa: B027
         """Run plugin-specific initialization.
@@ -118,47 +105,26 @@ class AbstractPlugin(ABC):
     def update_plugin(self, plugin: Plugin) -> None:
         """Update an existing plugin in the database.
 
-        This function will be called when update_at > data_timestamp and update_at <
-        current_time.
-
-        Only needs to be implemented if update_at is set on the Plugin model by the
-        plugin because users cannot set update_at on the Plugin model.
-
-        Args:
-            plugin: The plugin to update.
+        Called when a plugin has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
-        msg = "Function is not implemented."
-        raise NotImplementedError(msg)
+        plugin.update_at = None
 
     def update_file(self, file: File) -> None:
         """Update an existing file in the database.
 
-        This function will be called when update_at > data_timestamp and update_at <
-        current_time.
-
-        Only needs to be implemented if update_at is set on the File model by the
-        plugin because users cannot set update_at on the File model.
-
-        Args:
-            file: The file to update.
+        Called when a file has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
-        msg = "update_file is not implemented."
-        raise NotImplementedError(msg)
+        file.update_at = None
 
     def update_source(self, source: Source) -> None:
         """Update an existing source in the database.
 
-        This function will be called when update_at > data_timestamp and update_at <
-        current_time.
-
-        Only needs to be implemented if update_at is set on the Source model by the
-        plugin because users cannot set update_at on the Source model.
-
-        Args:
-            source: The source to update.
+        Called when a source has an update_at value that is in the past. By default
+        clears update_at so it is not retried.
         """
-        msg = "update_source is not implemented."
-        raise NotImplementedError(msg)
+        source.update_at = None
 
     supports_import_watch_history: bool = False
     import_watch_history_file_extension: str | None = None

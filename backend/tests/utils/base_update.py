@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import uuid
@@ -271,6 +272,8 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             pytest.skip("Model has no key field")
         if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent field")
+        if "key" not in self.patch_model.model_fields:
+            pytest.skip("Patch model does not expose key field")
 
         initial_test_data = self.create_test_data(
             session_scoped_client,

@@ -14,7 +14,7 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import TimestampAndIdMixin
+from app.models import TimestampIdAndHashMixin
 from app.users.models import User
 from app.utils import tz_datetime
 
@@ -29,13 +29,18 @@ class BaseWatch(SQLModel):
     verified: bool = Field(default=False)
 
 
-class Watch(TimestampAndIdMixin, BaseWatch, table=True):
+class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "episode_id", "watch_date"),
         UniqueConstraint("id"),
-        # Filtering options.
+        # Used in episode_selector._fetch_watches and episode_selector._build_last_watched
+        # to look up watches for a user across a set of episodes.
         Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),
+        # Used in episode_selector._apply_hide_watched and
+        # episode_selector._apply_only_started_shows to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
+        # Used in episode_selector._build_last_watched to aggregate the latest watch
+        # date per episode and in episode_selector._apply_recently_aired_sort.
         Index("Watch-watch_date-index", "watch_date"),
     )
 

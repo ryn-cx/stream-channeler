@@ -1,3 +1,4 @@
+# TODO: Validate
 import uuid
 from typing import override
 
@@ -8,8 +9,8 @@ from sqlmodel import Session, col, select
 from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
-from app.models import Message
 from app.plugins.schemas import PluginOutput
+from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show

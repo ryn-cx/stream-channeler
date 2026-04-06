@@ -20,11 +20,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
 
-interface ShowsListOutput {
-  data: ShowTableData[]
-  count: number
-}
-
 function getShowsQueryOptions(sourceKey: string) {
   return {
     queryFn: () =>
@@ -32,7 +27,7 @@ function getShowsQueryOptions(sourceKey: string) {
         method: "GET",
         url: "/api/v1/sources/{source_id}/shows",
         path: { source_id: sourceKey },
-      }) as Promise<ShowsListOutput>,
+      }) as Promise<ShowTableData[]>,
     queryKey: ["sources", sourceKey, "shows"],
   }
 }
@@ -57,7 +52,7 @@ function ShowsTableContent() {
   })
 
   const table = useReactTable({
-    data: shows.data,
+    data: shows,
     columns: showColumns,
     state: {
       columnVisibility,
@@ -91,7 +86,7 @@ function ShowsTableContent() {
       </div>
       <DataTable
         columns={showColumns}
-        data={shows.data}
+        data={shows}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

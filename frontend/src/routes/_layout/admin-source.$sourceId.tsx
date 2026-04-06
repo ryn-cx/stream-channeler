@@ -27,10 +27,6 @@ interface AdminShowTableData {
   update_at: string | null
 }
 
-interface AdminShowsListOutput {
-  data: AdminShowTableData[]
-}
-
 export const Route = createFileRoute("/_layout/admin-source/$sourceId")({
   component: AdminSourceDetailPage,
   beforeLoad: async () => {
@@ -54,7 +50,7 @@ function AdminShowsTableContent() {
         method: "GET",
         url: "/api/v1/admin-media/sources/{source_id}/shows",
         path: { source_id: sourceId },
-      }) as Promise<AdminShowsListOutput>,
+      }) as Promise<AdminShowTableData[]>,
     queryKey,
   })
 
@@ -133,7 +129,7 @@ function AdminShowsTableContent() {
   })
 
   const table = useReactTable({
-    data: shows.data,
+    data: shows,
     columns: adminShowColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -162,7 +158,7 @@ function AdminShowsTableContent() {
       </div>
       <DataTable
         columns={adminShowColumns}
-        data={shows.data}
+        data={shows}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

@@ -27,10 +27,6 @@ interface AdminSeasonTableData {
   update_at: string | null
 }
 
-interface AdminSeasonsListOutput {
-  data: AdminSeasonTableData[]
-}
-
 export const Route = createFileRoute("/_layout/admin-show/$showId")({
   component: AdminShowDetailPage,
   beforeLoad: async () => {
@@ -54,7 +50,7 @@ function AdminSeasonsTableContent() {
         method: "GET",
         url: "/api/v1/admin-media/shows/{show_id}/seasons",
         path: { show_id: showId },
-      }) as Promise<AdminSeasonsListOutput>,
+      }) as Promise<AdminSeasonTableData[]>,
     queryKey,
   })
 
@@ -142,7 +138,7 @@ function AdminSeasonsTableContent() {
   })
 
   const table = useReactTable({
-    data: seasons.data,
+    data: seasons,
     columns: adminSeasonColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -171,7 +167,7 @@ function AdminSeasonsTableContent() {
       </div>
       <DataTable
         columns={adminSeasonColumns}
-        data={seasons.data}
+        data={seasons}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

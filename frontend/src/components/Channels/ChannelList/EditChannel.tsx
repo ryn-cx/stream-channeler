@@ -9,7 +9,6 @@ import { z } from "zod"
 import {
   type ChannelOutput,
   type ChannelPatchInput,
-  type ChannelsListOutput,
   ChannelsService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -95,19 +94,14 @@ const EditChannel = ({
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
-        "channels",
-      ])
+      const previousChannels = context.client.getQueryData<
+        Array<ChannelOutput>
+      >(["channels"])
 
       // Optimistically update to the new value
-      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => {
+      context.client.setQueryData<Array<ChannelOutput>>(["channels"], (old) => {
         if (!old) return old
-        return {
-          ...old,
-          data: old.data.map((c) =>
-            c.id === channel.id ? { ...c, ...newData } : c,
-          ),
-        }
+        return old.map((c) => (c.id === channel.id ? { ...c, ...newData } : c))
       })
 
       // Return a result with the snapshotted value

@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import {
+  type ChannelOutput,
   type ChannelPostInput,
-  type ChannelsListOutput,
   ChannelsService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -72,24 +72,21 @@ const AddChannel = () => {
       await context.client.cancelQueries({ queryKey: ["channels"] })
 
       // Snapshot the previous value
-      const previousChannels = context.client.getQueryData<ChannelsListOutput>([
-        "channels",
-      ])
+      const previousChannels = context.client.getQueryData<
+        Array<ChannelOutput>
+      >(["channels"])
 
       // Optimistically update to the new value
-      context.client.setQueryData<ChannelsListOutput>(["channels"], (old) => {
+      context.client.setQueryData<Array<ChannelOutput>>(["channels"], (old) => {
         if (!old) return old
-        return {
+        return [
           ...old,
-          data: [
-            ...old.data,
-            {
-              ...newChannel,
-              id: "Loading...",
-              user_id: "Loading...",
-            },
-          ],
-        }
+          {
+            ...newChannel,
+            id: "Loading...",
+            user_id: "Loading...",
+          },
+        ]
       })
 
       // Return a result with the snapshotted value

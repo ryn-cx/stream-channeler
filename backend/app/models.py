@@ -2,47 +2,41 @@
 from __future__ import annotations
 
 import uuid
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING
+from functools import partial
+from typing import TYPE_CHECKING, Self
 
 from sqlmodel import DateTime, Field, SQLModel
 
-from app.users.models import User
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
+    from app.channels.models import Channel
     from app.episodes.models import Episode
-    from app.plugins.models import Plugin
+    from app.plugins.models import File, Plugin
     from app.seasons.models import Season
     from app.shows.models import Show
     from app.sources.models import Source
+    from app.users.models import User
 
 
-SA_TYPE = DateTime(timezone=True)
+# Partial function because it reduces the number of locations that need to
+# have a "# type: ignore[call-overload]" comment. Ignoring this error is acceptable
+# because the official example for implementing a DateTime field also ignore the error:
+# https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
+DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
 
 
-# Generic message
-class Message(SQLModel):
-    message: str
+class TimestampIdAndHashMixin(SQLModel):
+    """Mixin that adds created_at, modified_at, and id fields and a hash function."""
 
-
-class TimestampAndIdMixin(SQLModel):
-    """Mixin to add created_at, modified_at and id fields to the model."""
-
+    # Named id because uuid already contains the word id inside of it, making it easier
+    # to differentiate between the id field and the key field.
     id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
 
-    # This is basically the same as the "official" example of how to implement a
-    # created_at timestamp as seen here:
-    # https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
-    # call-overload - From the original template
-    created_at: datetime = Field(sa_type=SA_TYPE, default_factory=tz_datetime.now)  # type: ignore[call-overload]
-
-    # This is basically the same as the implementation of created_at, but it includes
-    # the addition of an onupdate to automatically update the timestamp when the record
-    # is modified.
-    modified_at: datetime = Field(
-        sa_type=SA_TYPE,  # type: ignore[call-overload]
+    created_at: datetime = DateTimeField(default_factory=tz_datetime.now)
+    modified_at: datetime = DateTimeField(
         sa_column_kwargs={"onupdate": tz_datetime.now},
         default_factory=tz_datetime.now,
     )
@@ -52,34 +46,42 @@ class TimestampAndIdMixin(SQLModel):
 
 
 class BaseMediaMixin(SQLModel):
-    """Base mixin for media models (Plugin/Source/Show/Season/Episode).
+    """Mixin for base media models.
 
-    Mixin to add data_timestamp update_at, deleted_at, and extra fields to the model."""
+    Used for ``BasePlugin``, ``BaseSource``, ``BaseShow``, ``BaseSeason``, and
+    ``BaseEpisode`` models.
 
+    Adds data_timestamp update_at, deleted_at, and extra fields and a set_update_at
+    function."""
+
+    # Named key because it is a surrogate key, making it easier to differentiate between
+    # the id field and the key field.
     key: str
-    data_timestamp: datetime | None = Field(sa_type=SA_TYPE, default=None)  #  type: ignore[call-overload]
-    update_at: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
-    deleted_at: datetime | None = Field(sa_type=SA_TYPE, default=None)  # type: ignore[call-overload]
+    data_timestamp: datetime | None = DateTimeField(default=None)
+    update_at: datetime | None = DateTimeField(default=None)
+    deleted_at: datetime | None = DateTimeField(default=None)
 
-    # This is an optional field that can store anything that does not fit in the other
-    # available fields. It will only ever be used by custom plugins, and allows them to
-    # store extra information without needing to modify the database schema.
+    # Allows plugins to store custom information beyond the database's structure.
     extra: str | None = Field(default=None)
 
+
+class MediaMixin[
+    ParentT: User | Plugin | Source | Show | Season,
+    ChildT: Channel | Plugin | Source | Show | Season | Episode | File,
+](TimestampIdAndHashMixin, BaseMediaMixin, ABC):
+    """Mixin for media models.
+
+    Used for ``Plugin``, ``Source``, ``Show``, ``Season``, and ``Episode`` models.
+    """
+
+    @abstractmethod
+    def parent(self) -> ParentT:
+        """Return the parent of the entry."""
+
     def set_update_at(self, update_at: datetime | None) -> None:
-        """Validate and set the update_at field.
-
-        Before applying the new value, any existing update_at that is older than
-        data_timestamp is cleared because it has already been fulfilled.
-
-        The new value is ignored if data_timestamp is already newer than it,
-        since the data is already up to date.
-
-        Otherwise the new value is only accepted if it would decrement update_at.
-        This ensures updates are never pushed further into the future.
-        """
-        # If the existing update_at value is newer than the data_timestamp, it has
-        # already been used and can be cleared.
+        """Set ``update_at`` to the earliest useful time, clearing stale values."""
+        # If the existing update_at is newer than the existing data_timestamp update_at
+        # can be cleared because the update has been completed.
         if (
             self.update_at
             and self.data_timestamp
@@ -87,42 +89,53 @@ class BaseMediaMixin(SQLModel):
         ):
             self.update_at = None
 
-        # If update_at is not set nothing else needs to be done.
         if not update_at:
             return
 
-        # If the existing data is newer than the new update_at value then the new
-        # update_at can be ignored because the data is already up to date.
+        # If the existing data_timestamp is newer than the new update_at value update_at
+        # can be ignored because the data is already up to date.
         if self.data_timestamp and self.data_timestamp >= update_at:
             return
 
-        # If the existing data is newer than the existing update_at value that update_at
-        # value is no longer useful and can be cleared.
-        if (
-            self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
-        ):
-            self.update_at = None
-
-        #  If the new date is before the existing date the existing date should be
-        #  updated so the update happens as soon as possible.
+        # If the new update_at happens before the existing update_at the existing
+        # update_at should be replaced so the updates occur as soon as possible.
         if self.update_at is None or update_at < self.update_at:
             self.update_at = update_at
 
+    def add_child(self, child: ChildT) -> None:
+        self.children().append(child)
 
-class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
-    """Main mixin for media models (Plugin/Source/Show/Season/Episode)."""
+    def upsert(
+        self,
+        parent: ParentT,
+        existing_entry: Self | None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        if protected_keys is None:
+            protected_keys = set()
+        if existing_entry:
+            # id is automatically generated when making a model, but that value should
+            # only be used for new entries. When updating the original id should be
+            # preserved.
+            # update_at is set manually with set_update_at.
+            # created_at and modified_at are set by the database.
+            protected_keys.update({"id", "update_at", "created_at", "modified_at"})
+            dumped = self.model_dump(exclude=protected_keys)
+            existing_entry.sqlmodel_update(dumped)
+            existing_entry.set_update_at(self.update_at)
+            return existing_entry
+        # TODO: Is there a good way to type hint this?
+        parent.add_child(self)  # type: ignore[arg-type]
+        return self
 
-    def children(self) -> list[Source] | list[Show] | list[Season] | list[Episode]:
+    def children(self) -> list[ChildT]:
         """Return the direct children of the entry.
 
-        Parent list: Plugin > Source > Show > Season > Episode
-
-        Files are intentionally excluded from the children because they are not part of
-        the direct media hierarchy.
-
-        This is used for all recursive operations.
+        Parent list
+        - ``Plugin`` -> ``Source | Files``
+        - ``Source`` -> ``Show``
+        - ``Show`` -> ``Season``
+        - ``Season`` -> ``Episode``
         """
         # Default value used by episodes because episodes have no children.
         return []
@@ -144,15 +157,6 @@ class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
             for child in self.children():
                 child.soft_delete(timestamp)
 
-    def soft_delete_missing_children(self, valid_keys: list[str] | set[str]) -> None:
-        """Soft-delete children if their key is not in valid_keys."""
-        if isinstance(valid_keys, list):
-            valid_keys = set(valid_keys)
-
-        for child in self.children():
-            if child.key not in valid_keys and child.deleted_at is None:
-                child.soft_delete()
-
     def soft_undelete(self, *, recursive: bool = True) -> None:
         """Soft undelete the entry."""
         self.deleted_at = None
@@ -160,36 +164,30 @@ class MediaMixin(TimestampAndIdMixin, BaseMediaMixin, ABC):
             for child in self.children():
                 child.soft_undelete()
 
-    def parent(self) -> Plugin | Source | Show | Season | User | None:
-        """Return the parent of the entry."""
-        # Default to having no parent and let subclasses override this method.
-        return None
-
-
-class BaseInputMixin[T: BaseMediaMixin](BaseMediaMixin):
-    def _update_existing_entry(
+    def soft_delete_missing_children(
         self,
-        existing_entry: T,
-        protected_keys: set[str],
-    ) -> T:
-        # This function will never directly set update_at to None because it is possible
-        # that update_at is None because the value was not defined. However, the call to
-        # set_update_at can set the value to None if the data_timestamp is newer than
-        # the existing update_at value.
+        keys: list[str] | set[str],
+        *,
+        recursive: bool = True,
+    ) -> None:
+        """Soft-delete all children whose key is not in keys."""
+        if isinstance(keys, list):
+            keys = set(keys)
 
-        # Never upsert the update_at value because it will be managed by the
-        # set_update_at method which has additional logic to validate and set the value.
-        protected_keys.add("update_at")
+        for child in self.children():
+            if child.key not in keys and child.deleted_at is None:
+                child.soft_delete(recursive=recursive)
 
-        dumped = self.model_dump(exclude=protected_keys)
-        existing_entry.sqlmodel_update(dumped)
-        existing_entry.set_update_at(self.update_at)
-        return existing_entry
-
-    def clean_protected_keys(
+    def soft_undelete_found_children(
         self,
-        protected_keys: set[str] | None,
-    ) -> set[str]:
-        if protected_keys is None:
-            return set()
-        return protected_keys
+        keys: list[str] | set[str],
+        *,
+        recursive: bool = True,
+    ) -> None:
+        """Soft-undelete all children whose key is in keys."""
+        if isinstance(keys, list):
+            keys = set(keys)
+
+        for child in self.children():
+            if child.key in keys and child.deleted_at is not None:
+                child.soft_undelete(recursive=recursive)

@@ -1,3 +1,4 @@
+# TODO: Validate
 # TODO: This file was entirely AI generated just to have a baseline for testing.
 """Tests for EpisodeQueryBuilder sorting, filtering, and interleaving."""
 
@@ -5,6 +6,7 @@ import json
 from datetime import timedelta
 
 import pytest
+from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder, EpisodeResult
@@ -594,40 +596,41 @@ class TestDeletedEpisodes:
 
 
 class TestInvalidSortKeys:
-    def test_invalid_field_ignored(self, episode_setup: dict) -> None:
-        episodes = _build(
-            episode_setup,
-            sort_by=[_sort_key("episode.nonexistent_field")],
-        )
-        assert len(episodes) == 4
+    def test_invalid_field_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            ChannelMediaFilter(
+                sort_by=[_sort_key("episode.nonexistent_field")],
+            )
 
-    def test_invalid_mode_ignored(self, episode_setup: dict) -> None:
-        episodes = _build(
-            episode_setup,
-            sort_by=[
-                json.dumps(
-                    {
-                        "field": "episode.duration",
-                        "mode": "invalid_mode",
-                    },
-                ),
-            ],
-        )
-        assert len(episodes) == 4
+    def test_invalid_mode_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            ChannelMediaFilter(
+                sort_by=[
+                    json.dumps(
+                        {
+                            "field": "episode.duration",
+                            "mode": "invalid_mode",
+                        },
+                    ),
+                ],
+            )
 
-    def test_invalid_direction_ignored(self, episode_setup: dict) -> None:
-        episodes = _build(
-            episode_setup,
-            sort_by=[
-                json.dumps(
-                    {
-                        "field": "episode.duration",
-                        "direction": "sideways",
-                    },
-                ),
-            ],
-        )
-        assert len(episodes) == 4
+    def test_invalid_direction_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            ChannelMediaFilter(
+                sort_by=[
+                    json.dumps(
+                        {
+                            "field": "episode.duration",
+                            "direction": "sideways",
+                        },
+                    ),
+                ],
+            )
+
+    def test_invalid_json_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            ChannelMediaFilter(sort_by=["not valid json"])
 
 
 class TestMultipleSortKeys:
@@ -1267,14 +1270,14 @@ class TestWhitelistWithEpisodeExclusion:
             ChannelSeasonWhiteList(
                 channel_show_id=channel_show.id,
                 season_id=season.id,
-            )
+            ),
         )
         # Also mark the episode — this should exclude it from the whitelisted season
         session_scoped_db.add(
             ChannelEpisodeWhiteList(
                 channel_show_id=channel_show.id,
                 episode_id=episode_excluded.id,
-            )
+            ),
         )
         session_scoped_db.flush()
 
@@ -1314,14 +1317,14 @@ class TestBlacklistWithEpisodeInclusion:
             ChannelSeasonWhiteList(
                 channel_show_id=channel_show.id,
                 season_id=season.id,
-            )
+            ),
         )
         # Also mark the episode — this should include it despite the season blacklist
         session_scoped_db.add(
             ChannelEpisodeWhiteList(
                 channel_show_id=channel_show.id,
                 episode_id=episode_included.id,
-            )
+            ),
         )
         session_scoped_db.flush()
 

@@ -2,7 +2,7 @@
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Never, override
 
 from sqlalchemy import util
 from sqlmodel import (
@@ -15,8 +15,15 @@ from sqlmodel import (
     select,
 )
 
-from app.models import SA_TYPE, BaseMediaMixin, MediaMixin
+from app.models import BaseMediaMixin, DateTimeField, MediaMixin
 from app.users.models import User
+
+
+class BasePlugin(BaseMediaMixin):
+    name: str | None = Field(default=None)
+    version: str | None = Field(default=None)
+    public: bool
+
 
 if TYPE_CHECKING:
     from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
@@ -26,17 +33,11 @@ if TYPE_CHECKING:
     from app.sources.models import Source
 
 
-class BasePlugin(BaseMediaMixin):
-    name: str | None = Field(default=None)
-    version: str | None = Field(default=None)
-    public: bool
-
-
-class Plugin(BasePlugin, MediaMixin, table=True):
+class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     __table_args__ = (
-        PrimaryKeyConstraint("id"),
-        UniqueConstraint("user_id", "key"),
-        # Deleted filtering.
+        PrimaryKeyConstraint("user_id", "key"),
+        UniqueConstraint("id"),
+        # Used in episode_selector._filter_deleted_media to exclude soft-deleted plugins.
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
@@ -49,8 +50,16 @@ class Plugin(BasePlugin, MediaMixin, table=True):
     sources: list[Source] = Relationship(back_populates="plugin", cascade_delete=True)
     files: list[File] = Relationship(back_populates="plugin", cascade_delete=True)
 
+    @override
     def parent(self) -> User:
         return self.user
+
+    def add_child(self, child: Source | File) -> None:
+        """Append a child to the correct relationship list based on its type."""
+        if isinstance(child, File):
+            self.files.append(child)
+        else:
+            self.sources.append(child)
 
     def get_user_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
@@ -59,8 +68,8 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         return self.public
 
     @override
-    def children(self) -> list[Source]:
-        return self.sources
+    def children(self) -> list[Source | File]:
+        return [*self.sources, *self.files]
 
     def get_sibling(self, db: Session, key: str) -> Plugin | None:
         return Plugin.get(db, key, self.user)
@@ -72,6 +81,25 @@ class Plugin(BasePlugin, MediaMixin, table=True):
         if self.id:
             base_plugin += f" ({self.id})"
         return base_plugin
+
+    @classmethod
+    def get_from_memory(
+        cls,
+        db: Session,
+        plugin_key: str,
+        user: User,
+    ) -> Plugin | None:
+        """Like Plugin.get but will only return a Plugin if it is found in memory.
+
+        Args:
+            db: Database session
+            plugin_key: Unique key of the plugin
+            user: Parent user instance
+
+        Returns:
+            Plugin instance if found in memory, None otherwise
+        """
+        return db.identity_map.get((Plugin, (user.id, plugin_key), None))
 
     @classmethod
     def get(
@@ -138,16 +166,17 @@ class Plugin(BasePlugin, MediaMixin, table=True):
 
 
 class BaseFile(BaseMediaMixin):
-    data_timestamp: datetime = Field(sa_type=SA_TYPE)  # type: ignore[call-overload]
+    data_timestamp: datetime = DateTimeField()
     content: str | None = Field(default=None)
 
 
-class File(BaseFile, MediaMixin, table=True):
+class File(BaseFile, MediaMixin[Plugin, Never], table=True):
     __table_args__ = (PrimaryKeyConstraint("plugin_id", "key"),)
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="files")
 
+    @override
     def parent(self) -> Plugin:
         return self.plugin
 

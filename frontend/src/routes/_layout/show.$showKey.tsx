@@ -19,11 +19,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
 
-interface SeasonsListOutput {
-  data: SeasonTableData[]
-  count: number
-}
-
 function getSeasonsQueryOptions(showKey: string) {
   return {
     queryFn: () =>
@@ -31,7 +26,7 @@ function getSeasonsQueryOptions(showKey: string) {
         method: "GET",
         url: "/api/v1/shows/{show_id}/seasons",
         path: { show_id: showKey },
-      }) as Promise<SeasonsListOutput>,
+      }) as Promise<SeasonTableData[]>,
     queryKey: ["shows", showKey, "seasons"],
   }
 }
@@ -56,7 +51,7 @@ function SeasonsTableContent() {
   })
 
   const table = useReactTable({
-    data: seasons.data,
+    data: seasons,
     columns: seasonColumns,
     state: {
       columnVisibility,
@@ -90,7 +85,7 @@ function SeasonsTableContent() {
       </div>
       <DataTable
         columns={seasonColumns}
-        data={seasons.data}
+        data={seasons}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

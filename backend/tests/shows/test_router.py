@@ -1,9 +1,9 @@
+# TODO: Validate
 from app.shows.models import Show
 from app.shows.schemas import (
     ShowOutput,
     ShowPatchInput,
     ShowPostInput,
-    ShowsListOutput,
 )
 from tests.shows.utils import create_random_show
 from tests.sources.utils import create_random_source
@@ -19,7 +19,6 @@ class ShowTestMixin(BaseTests[Show]):
     input_schema = ShowPostInput
     output_model = ShowOutput
     patch_model = ShowPatchInput
-    list_output_model = ShowsListOutput
     create_parent_function = staticmethod(create_random_source)
     create_record_function = staticmethod(create_random_show)
 

@@ -11,10 +11,10 @@ from sqlmodel import Session, col, or_, select
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record, update_record
-from app.models import Message
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.plugins.schemas import PluginOutput
+from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show

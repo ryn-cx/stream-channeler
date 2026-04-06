@@ -40,10 +40,7 @@ import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./showColumns"
 
-interface ShowsListOutput {
-  data: ShowTableData[]
-  count: number
-}
+type ShowsData = Array<ShowTableData>
 
 const formSchema = z.object({
   key: z.string().max(255).optional().or(z.literal("")),
@@ -93,14 +90,11 @@ const EditShow = ({ show }: EditShowProps) => {
       }),
     onMutate: async (newData, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<ShowsListOutput>(queryKey)
+      const previous = context.client.getQueryData<ShowsData>(queryKey)
 
-      context.client.setQueryData<ShowsListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.map((s) =>
-          s.id === show.id ? { ...s, ...newData } : s,
-        ),
-      }))
+      context.client.setQueryData<ShowsData>(queryKey, (old) =>
+        old!.map((s) => (s.id === show.id ? { ...s, ...newData } : s)),
+      )
 
       return { previous }
     },

@@ -10,7 +10,6 @@ import yaml
 from sqlmodel import Session
 
 from app.episodes.models import Episode
-from app.episodes.schemas import EpisodeInput
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -18,13 +17,9 @@ from app.plugins.plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from app.plugins.plugins.utils.base_plugin import BasePlugin
-from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
-from app.shows.schemas import ShowInput
 from app.sources.models import Source
-from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
@@ -289,35 +284,45 @@ class PluginValidator(DatabaseMixin):
 
         match entity:
             case Plugin() as plugin:
-                build_random_model(PluginInput, **kwargs).upsert(plugin.user, plugin)
+                build_random_model(Plugin, user_id=plugin.user_id, **kwargs).upsert(
+                    plugin.user, plugin
+                )
                 validator = validator or self._update_plugin_validator(db, plugin)
 
                 def update() -> None:
                     self.plugin_class(db).update_plugin(plugin=plugin)
 
             case Source() as source:
-                build_random_model(SourceInput, **kwargs).upsert(source.plugin, source)
+                build_random_model(Source, plugin_id=source.plugin_id, **kwargs).upsert(
+                    source.plugin, source
+                )
                 validator = validator or self._update_source_validator(source)
 
                 def update() -> None:
                     self.plugin_class(db, source=source).update_source(source=source)
 
             case Show() as show:
-                build_random_model(ShowInput, **kwargs).upsert(show.source, show)
+                build_random_model(Show, source_id=show.source_id, **kwargs).upsert(
+                    show.source, show
+                )
                 validator = validator or self._update_show_validator(show)
 
                 def update() -> None:
                     self.plugin_class(db, show=show).update_show(show=show)
 
             case Season() as season:
-                build_random_model(SeasonInput, **kwargs).upsert(season.show, season)
+                build_random_model(Season, show_id=season.show_id, **kwargs).upsert(
+                    season.show, season
+                )
                 validator = validator or self._update_season_validator(season)
 
                 def update() -> None:
                     self.plugin_class(db, season=season).update_season(season)
 
             case Episode() as episode:
-                build_random_model(EpisodeInput, **kwargs).upsert(
+                build_random_model(
+                    Episode, season_id=episode.season_id, **kwargs
+                ).upsert(
                     episode.season,
                     episode,
                 )

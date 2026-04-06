@@ -18,7 +18,6 @@ from app.channels.schemas import (
     ChannelOutput,
     ChannelPatchInput,
     ChannelPostInput,
-    ChannelsListOutput,
 )
 from app.config import settings
 from app.episodes.models import Episode
@@ -26,30 +25,26 @@ from app.episodes.schemas import (
     EpisodeOutput,
     EpisodePatchInput,
     EpisodePostInput,
-    EpisodesListOutput,
 )
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginOutput,
     PluginPatchInput,
     PluginPostInput,
-    PluginsListOutput,
 )
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
     SeasonPatchInput,
     SeasonPostInput,
-    SeasonsListOutput,
 )
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput, ShowPatchInput, ShowPostInput, ShowsListOutput
+from app.shows.schemas import ShowOutput, ShowPatchInput, ShowPostInput
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceOutput,
     SourcePatchInput,
     SourcePostInput,
-    SourcesListOutput,
 )
 from app.users.models import User
 from app.watches.models import Watch
@@ -86,12 +81,12 @@ OUTPUT_MODELS = (
     | WatchOutput
 )
 LIST_OUTPUT_MODELS = (
-    ChannelsListOutput
-    | EpisodesListOutput
-    | PluginsListOutput
-    | SeasonsListOutput
-    | ShowsListOutput
-    | SourcesListOutput
+    list[ChannelOutput]
+    | list[EpisodeOutput]
+    | list[PluginOutput]
+    | list[SeasonOutput]
+    | list[ShowOutput]
+    | list[SourceOutput]
 )
 PATCH_MODELS = (
     ChannelPatchInput
@@ -121,7 +116,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
     database_model: type[T]
     input_schema: type[INPUT_SCHEMAS]
     output_model: type[OUTPUT_MODELS]
-    list_output_model: type[LIST_OUTPUT_MODELS]
+    list_output_model: None = None
     patch_model: type[PATCH_MODELS]
     create_parent_function: Callable[..., Plugin | Source | Show | Season | Episode]
     create_record_function: Callable[..., T]

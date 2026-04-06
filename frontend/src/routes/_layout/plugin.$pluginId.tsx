@@ -19,11 +19,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
 
-interface SourcesListOutput {
-  data: SourceTableData[]
-  count: number
-}
-
 function getSourcesQueryOptions(pluginId: string) {
   return {
     queryFn: () =>
@@ -31,7 +26,7 @@ function getSourcesQueryOptions(pluginId: string) {
         method: "GET",
         url: "/api/v1/plugins/{plugin_id}/sources",
         path: { plugin_id: pluginId },
-      }) as Promise<SourcesListOutput>,
+      }) as Promise<SourceTableData[]>,
     queryKey: ["plugins", pluginId, "sources"],
   }
 }
@@ -55,7 +50,7 @@ function SourcesTableContent() {
     key: false,
   })
   const table = useReactTable({
-    data: sources.data,
+    data: sources,
     columns: sourceColumns,
     state: {
       columnVisibility,
@@ -87,7 +82,7 @@ function SourcesTableContent() {
       </div>
       <DataTable
         columns={sourceColumns}
-        data={sources.data}
+        data={sources}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

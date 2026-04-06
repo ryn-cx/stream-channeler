@@ -17,6 +17,13 @@ from sqlmodel import (
 from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 
+
+class BaseSource(BaseMediaMixin):
+    name: str | None = Field(default=None)
+    favicon_url: str | None = Field(default=None)
+    image_url: str | None = Field(default=None)
+
+
 if TYPE_CHECKING:
     from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
     from sqlalchemy.orm.interfaces import ORMOption
@@ -25,19 +32,13 @@ if TYPE_CHECKING:
     from app.shows.models import Show
 
 
-class BaseSource(BaseMediaMixin):
-    name: str | None = Field(default=None)
-    favicon_url: str | None = Field(default=None)
-    image_url: str | None = Field(default=None)
-
-
-class Source(BaseSource, MediaMixin, table=True):
+class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("plugin_id", "key"),
         UniqueConstraint("id"),
-        # Filtering options.
+        # Used in episode_selector._apply_sort_key to sort episodes by source name.
         Index("Source-name-index", "name"),
-        # Deleted filtering.
+        # Used in episode_selector._filter_deleted_media to exclude soft-deleted sources.
         Index("Source-deleted_at-index", "deleted_at"),
     )
 

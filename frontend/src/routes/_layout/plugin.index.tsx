@@ -14,18 +14,13 @@ import AddPlugin from "@/components/Plugin/AddPlugin"
 import { columns, type PluginTableData } from "@/components/Plugin/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 
-interface PluginsListOutput {
-  data: PluginTableData[]
-  count: number
-}
-
 function getPluginsQueryOptions() {
   return {
     queryFn: () =>
       request(OpenAPI, {
         method: "GET",
         url: "/api/v1/plugins",
-      }) as Promise<PluginsListOutput>,
+      }) as Promise<PluginTableData[]>,
     queryKey: ["plugins"],
     refetchOnWindowFocus: false,
     placeholderData: (previousData: any) => previousData,
@@ -53,7 +48,7 @@ function PluginsTableContent() {
   })
 
   const table = useReactTable({
-    data: plugins?.data ?? [],
+    data: plugins ?? [],
     columns,
     state: {
       columnVisibility,
@@ -84,7 +79,7 @@ function PluginsTableContent() {
       </div>
       <DataTable
         columns={columns}
-        data={plugins.data}
+        data={plugins}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

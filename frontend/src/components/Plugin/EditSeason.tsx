@@ -40,10 +40,7 @@ import { handleError } from "@/utils"
 
 import type { SeasonTableData } from "./seasonColumns"
 
-interface SeasonsListOutput {
-  data: SeasonTableData[]
-  count: number
-}
+type SeasonsData = Array<SeasonTableData>
 
 const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
@@ -93,14 +90,13 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       }),
     onMutate: async (newData, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<SeasonsListOutput>(queryKey)
+      const previous = context.client.getQueryData<SeasonsData>(queryKey)
 
-      context.client.setQueryData<SeasonsListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.map((s) =>
+      context.client.setQueryData<SeasonsData>(queryKey, (old) =>
+        old!.map((s) =>
           s.id === season.id ? ({ ...s, ...newData } as SeasonTableData) : s,
         ),
-      }))
+      )
 
       return { previous }
     },

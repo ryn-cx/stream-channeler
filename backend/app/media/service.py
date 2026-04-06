@@ -10,53 +10,31 @@ if TYPE_CHECKING:
     from app.users.models import User
 
 from app.channels.models import Channel
-from app.channels.schemas import ChannelOutput, ChannelPatchInput, ChannelsListOutput
+from app.channels.schemas import ChannelPatchInput
 from app.episodes.models import Episode
 from app.episodes.schemas import (
-    EpisodeOutput,
     EpisodePatchInput,
     EpisodePostInput,
-    EpisodesListOutput,
 )
-from app.models import Message
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginOutput, PluginPatchInput, PluginsListOutput
+from app.plugins.schemas import PluginPatchInput
+from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import (
-    SeasonOutput,
     SeasonPatchInput,
     SeasonPostInput,
-    SeasonsListOutput,
 )
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput, ShowPatchInput, ShowPostInput, ShowsListOutput
+from app.shows.schemas import ShowPatchInput, ShowPostInput
 from app.sources.models import Source
 from app.sources.schemas import (
-    SourceOutput,
     SourcePatchInput,
     SourcePostInput,
-    SourcesListOutput,
 )
 from app.watches.models import Watch
 from app.watches.schemas import WatchPatchInput
 
 type MediaModel = Channel | Episode | Season | Show | Source | Plugin | Watch
-type ListOutput = (
-    ChannelsListOutput
-    | PluginsListOutput
-    | SourcesListOutput
-    | ShowsListOutput
-    | SeasonsListOutput
-    | EpisodesListOutput
-)
-type Output = (
-    ChannelOutput
-    | PluginOutput
-    | SourceOutput
-    | ShowOutput
-    | SeasonOutput
-    | EpisodeOutput
-)
 type PatchInput = (
     ChannelPatchInput
     | EpisodePatchInput
@@ -68,26 +46,21 @@ type PatchInput = (
 )
 
 
-# TODO: Consider adding the output_schema and other paramters to the models themselves
-# to reduce the number of parameters here.
-def list_children[T: ListOutput](  # noqa: PLR0913
+def list_children[T: (Channel, Plugin, Source, Show, Season, Episode)](
     session: Session,
-    model: type[Channel | Plugin | Source | Show | Season | Episode],
+    model: type[T],
     parent_key_field: str,
     parent_id: uuid.UUID,
-    output_schema: type[Output],
-    list_schema: type[T],
-) -> T:
-    """Generic list: query children by FK, validate, and return list output."""
-    records = session.exec(
-        select(model).where(getattr(model, parent_key_field) == parent_id),
-    ).all()
-    data = [output_schema.model_validate(record) for record in records]
-    # Automatic Pydantic casting.
-    return list_schema(data=data)  # type: ignore[arg-type]
+) -> list[T]:
+    """Generic list: query children by FK and return model instances."""
+    return list(
+        session.exec(
+            select(model).where(getattr(model, parent_key_field) == parent_id),
+        ).all(),
+    )
 
 
-def get_first_or_error[T: MediaModel](
+def get_first_user_record_or_error[T: MediaModel](
     session: Session,
     statement: SelectOfScalar[T],
     current_user_id: uuid.UUID,
@@ -107,7 +80,7 @@ def get_first_or_error[T: MediaModel](
     )
 
 
-def get_first_readable_or_error[T: MediaModel](
+def get_first_readable_record_or_error[T: MediaModel](
     session: Session,
     statement: SelectOfScalar[T],
     current_user_id: uuid.UUID | None,
@@ -134,7 +107,7 @@ def get_first_readable_or_error[T: MediaModel](
     )
 
 
-def get_user_resource[T: MediaModel](
+def get_owned_record[T: MediaModel](
     session: Session,
     model: type[T],
     resource_id: uuid.UUID,
@@ -142,10 +115,15 @@ def get_user_resource[T: MediaModel](
 ) -> T:
     """Look up a resource by ID and verify user ownership."""
     statement = select(model).where(model.id == resource_id)
-    return get_first_or_error(session, statement, current_user_id, model.__name__)
+    return get_first_user_record_or_error(
+        session,
+        statement,
+        current_user_id,
+        model.__name__,
+    )
 
 
-def get_readable_resource[T: MediaModel](
+def get_readable_record[T: MediaModel](
     session: Session,
     model: type[T],
     resource_id: uuid.UUID,
@@ -154,7 +132,12 @@ def get_readable_resource[T: MediaModel](
     """Get a resource by ID if it is public or owned by the current user."""
     statement = select(model).where(model.id == resource_id)
     user_id = user.id if user else None
-    return get_first_readable_or_error(session, statement, user_id, model.__name__)
+    return get_first_readable_record_or_error(
+        session,
+        statement,
+        user_id,
+        model.__name__,
+    )
 
 
 def raise_if_exists(

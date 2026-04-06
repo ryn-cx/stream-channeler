@@ -13,8 +13,8 @@ from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.channels.models import Channel
 from app.config import settings
-from app.models import Message
 from app.plugins.models import Plugin
+from app.schemas import Message
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import (
@@ -36,11 +36,9 @@ def read_users(session: SessionDep) -> UsersPublic:
     """
     Retrieve users.
     """
-    statement = select(User).order_by(col(User.created_at).desc())
-    users = session.exec(statement).all()
+    users = session.exec(select(User)).all()
 
-    # reportArgumentType - Arguments are automatically converted.
-    return UsersPublic(data=users)  # pyright: ignore[reportArgumentType]
+    return UsersPublic(data=users)  # pyright: ignore[reportArgumentType] - Pydantic casting
 
 
 @router.post(

@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
-from functools import partial
 from typing import Any, Literal
 
 import pytest
@@ -19,9 +17,8 @@ from app.channels.schemas import (
     ChannelOutput,
     ChannelPatchInput,
     ChannelPostInput,
-    ChannelQueuesListOutput,
+    ChannelQueueOutput,
     ChannelShowsOutput,
-    ChannelsListOutput,
     EpisodeWithExtrasOutput,
     MultipleSortOptionOutputs,
     WhitelistEntryInput,
@@ -32,7 +29,6 @@ from app.channels.service import update_whitelist
 from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
-from app.models import Message
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
@@ -59,6 +55,8 @@ from tests.utils.route_assertions import (
     assert_not_authenticated,
     assert_not_found,
     assert_success,
+    assert_success_list,
+    make_request,
 )
 from tests.utils.utils import dump_random_model, random_lower_string
 
@@ -74,7 +72,6 @@ class ChannelTestMixin(BaseTests[Channel]):
     output_model = ChannelOutput
     patch_model = ChannelPatchInput
     create_record_function = staticmethod(create_random_channel)
-    list_output_model = ChannelsListOutput
 
     # Channels do not rely on plugins for visibility and instead have their own public
     # field.
@@ -130,7 +127,6 @@ class TestSortOptions:
 
 class BaseChannelSubEndpointTests(ChannelTestMixin):
     sub_http_method: Method
-    sub_assert_response: Callable[..., None]
     sub_parameters: dict[str, Any] | list[Any] | None = None
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
@@ -141,9 +137,9 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
-        record_is_public: bool,  # noqa: ARG002
+        record_is_public: bool,
     ) -> bool:
-        return user_is_authenticated and user_is_owner
+        return (user_is_authenticated and user_is_owner) or record_is_public
 
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -171,13 +167,17 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
         ):
-            self.sub_assert_response(
-                client=session_scoped_client,
-                method=self.sub_http_method,
-                url=url,
+            response = make_request(
+                session_scoped_client,
+                self.sub_http_method,
+                url,
                 headers=initial_test_data.headers,
                 parameters=self.sub_parameters,
             )
+            assert response.status_code not in {
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            }
         else:
             self.assert_cannot_access(
                 session_scoped_db,
@@ -310,17 +310,6 @@ class TestUpdateDefaultOrder:
 class TestChannelEpisodes(BaseChannelSubEndpointTests):
     sub_http_method = "get"
     sub_parameters = None
-
-    @staticmethod
-    def sub_assert_response(
-        client: TestClient,
-        method: str,  # noqa: ARG004
-        url: str,
-        headers: dict[str, str] | None = None,
-        parameters: dict[str, object] | list[object] | None = None,  # noqa: ARG004
-    ) -> None:
-        response = client.get(url, headers=headers)
-        assert response.status_code == status.HTTP_200_OK
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel_id}/episodes"
@@ -706,7 +695,7 @@ class TestListChannelShows:
         )
         channel = create_random_channel(session_scoped_db, user=owner.id)
         for _ in range(show_count):
-            create_random_channel_show(session_scoped_db, channel)
+            create_random_channel_show(session_scoped_db, channel, owner)
 
         result = assert_success(
             client=session_scoped_client,
@@ -944,41 +933,16 @@ class TestDeleteChannelShow:
         )
 
 
-def assert_queue_list_response(
-    client: TestClient,
-    method: Method,
-    url: str,
-    headers: dict[str, str] | None = None,
-    parameters: dict[str, object] | list[object] | None = None,
-) -> None:
-    assert_success(
-        client=client,
-        method=method,
-        url=url,
-        output_model=ChannelQueuesListOutput,
-        headers=headers,
-        parameters=parameters,
-    )
-
-
-def assert_message_response(
-    client: TestClient,
-    method: Method,
-    url: str,
-    headers: dict[str, str] | None = None,
-    parameters: dict[str, object] | list[object] | None = None,
-) -> None:
-    assert_success(
-        client=client,
-        method=method,
-        url=url,
-        output_model=Message,
-        headers=headers,
-        parameters=parameters,
-    )
-
-
 class BaseChannelQueueTests(BaseChannelSubEndpointTests):
+    def can_access_sub_endpoint(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
+
     def queue_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/import-queue"
 
@@ -995,14 +959,14 @@ class BaseChannelQueueTests(BaseChannelSubEndpointTests):
         headers: dict[str, str],
         expected_urls: list[str],
     ) -> None:
-        result = assert_success(
+        result = assert_success_list(
             client=session_scoped_client,
             method="get",
             url=self.queue_url(channel.id),
-            output_model=ChannelQueuesListOutput,
+            output_model=ChannelQueueOutput,
             headers=headers,
         )
-        assert [entry.url for entry in result.data] == expected_urls
+        assert [entry.url for entry in result] == expected_urls
 
     def test_not_found(
         self,
@@ -1028,7 +992,6 @@ class BaseChannelQueueTests(BaseChannelSubEndpointTests):
 
 class TestQueueGet(BaseChannelQueueTests):
     sub_http_method = "get"
-    sub_assert_response = staticmethod(assert_queue_list_response)
 
     def test_get_queue(
         self,
@@ -1081,7 +1044,6 @@ class TestQueueGet(BaseChannelQueueTests):
 
 class TestQueueAddURL(BaseChannelQueueTests):
     sub_http_method = "post"
-    sub_assert_response = staticmethod(assert_queue_list_response)
     sub_parameters = ["placeholder"]
 
     def queue_parameters(self) -> list[str]:
@@ -1095,11 +1057,11 @@ class TestQueueAddURL(BaseChannelQueueTests):
         urls: list[str],
         expected_urls: list[str],
     ) -> None:
-        assert_success(
+        assert_success_list(
             client=session_scoped_client,
             method="post",
             url=self.queue_url(channel.id),
-            output_model=ChannelQueuesListOutput,
+            output_model=ChannelQueueOutput,
             headers=headers,
             parameters=urls,
         )
@@ -1213,9 +1175,6 @@ class TestQueueAddURL(BaseChannelQueueTests):
 
 class TestQueueDeleteURL(BaseChannelQueueTests):
     sub_http_method = "delete"
-    sub_assert_response = staticmethod(
-        partial(assert_not_found, detail="URL not found"),
-    )
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{self.queue_url(channel_id)}/{uuid.uuid4()}"
@@ -1279,7 +1238,15 @@ class TestQueueDeleteURL(BaseChannelQueueTests):
 
 class TestClearCompletedQueue(BaseChannelSubEndpointTests):
     sub_http_method = "delete"
-    sub_assert_response = staticmethod(assert_message_response)
+
+    def can_access_sub_endpoint(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/clear-completed-import-queue"
@@ -1329,15 +1296,14 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["message"] == "Import queue cleared successfully"
 
-        result = assert_success(
+        result = assert_success_list(
             client=session_scoped_client,
             method="get",
             url=f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/import-queue",
-            output_model=ChannelQueuesListOutput,
+            output_model=ChannelQueueOutput,
             headers=initial_test_data.headers,
         )
-        assert isinstance(result, ChannelQueuesListOutput)  # For type checker
-        remaining_urls = {entry.url for entry in result.data}
+        remaining_urls = {entry.url for entry in result}
         expected_urls = {
             e.url
             for e, s in zip(entries, initial_statuses, strict=True)
@@ -1348,12 +1314,15 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
 
 class TestGetWhitelist(BaseChannelSubEndpointTests):
     sub_http_method = "get"
-    sub_assert_response = staticmethod(
-        partial(
-            assert_not_found,
-            detail="Show was not found on channel",
-        ),
-    )
+
+    def can_access_sub_endpoint(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
@@ -1383,6 +1352,120 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             EpisodeOutput.model_validate(episode) for episode in episodes
         ]
 
+    @pytest.mark.parametrize("plugin_is_public", [True, False])
+    @pytest.mark.parametrize("user_owns_plugin", [True, False])
+    def test_get_shows_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_owns_plugin: bool,
+        plugin_is_public: bool,
+    ) -> None:
+        """Test show listing with plugin visibility and plugin ownership.
+
+        The channel is public and the user is the channel owner. Shows from
+        private plugins should only be visible if the user also owns the plugin.
+        """
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=True,
+        )
+        plugin_owner = (
+            initial_test_data.user
+            if user_owns_plugin
+            else create_random_user(session_scoped_db)
+        )
+        plugin = create_random_plugin(
+            session_scoped_db,
+            plugin_owner,
+            public=plugin_is_public,
+        )
+
+        show = create_random_show(session_scoped_db, plugin)
+        create_random_episode(session_scoped_db, show)
+        create_random_channel_show(session_scoped_db, initial_test_data.record, show)
+
+        url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/shows"
+        result = assert_success(
+            client=session_scoped_client,
+            method="get",
+            url=url,
+            output_model=ChannelShowsOutput,
+            headers=initial_test_data.headers,
+        )
+        if plugin_is_public or user_owns_plugin:
+            assert len(result.shows) == 1
+        else:
+            assert len(result.shows) == 0
+
+    @pytest.mark.parametrize("plugin_is_public", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True, False])
+    def test_get_whitelist_permissions(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+        *,
+        user_is_owner: bool,
+        plugin_is_public: bool,
+    ) -> None:
+        """Test whitelist endpoint with plugin visibility and channel ownership.
+
+        The whitelist endpoint requires channel ownership AND that the show is
+        readable. Non-owners get a channel permission error. Owners with an
+        unreadable show (private plugin owned by someone else) get a show
+        permission error.
+        """
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=user_is_owner,
+            user_is_authenticated=True,
+            record_is_public=True,
+        )
+        other_user = create_random_user(session_scoped_db)
+        plugin = create_random_plugin(
+            session_scoped_db,
+            other_user,
+            public=plugin_is_public,
+        )
+        show = create_random_show(session_scoped_db, plugin)
+        channel_show = create_random_channel_show(
+            session_scoped_db,
+            initial_test_data.record,
+            show,
+        )
+        episode = create_random_episode(session_scoped_db, channel_show.show)
+
+        url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/whitelist/{channel_show.show_id}"
+        if user_is_owner and plugin_is_public:
+            self.assert_whitelist_success(
+                session_scoped_client,
+                initial_test_data.record,
+                channel_show,
+                [episode],
+                initial_test_data.headers,
+            )
+        elif not user_is_owner:
+            assert_forbidden(
+                client=session_scoped_client,
+                method="get",
+                url=url,
+                detail="Not authorized to access this Channel",
+                headers=initial_test_data.headers,
+            )
+        else:
+            assert_forbidden(
+                client=session_scoped_client,
+                method="get",
+                url=url,
+                detail="Not authorized to access this Show",
+                headers=initial_test_data.headers,
+            )
+
     @pytest.mark.parametrize("episode_count", [0, 1, 2])
     def test_read_whitelist(
         self,
@@ -1400,6 +1483,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         channel_show = create_random_channel_show(
             session_scoped_db,
             initial_test_data.record,
+            initial_test_data.user,
         )
         episodes = [
             create_random_episode(session_scoped_db, channel_show.show)
@@ -1428,13 +1512,16 @@ class WhitelistUpdateTestData:
 
 class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     sub_http_method = "patch"
-    sub_assert_response = staticmethod(
-        partial(
-            assert_not_found,
-            detail="Show was not found on channel",
-        ),
-    )
     sub_parameters = WhitelistShowInput(whitelist_mode=True).model_dump(mode="json")
+
+    def can_access_sub_endpoint(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+    ) -> bool:
+        return user_is_authenticated and user_is_owner
 
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
@@ -1492,6 +1579,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         channel_show = create_random_channel_show(
             session_scoped_db,
             initial_test_data.record,
+            initial_test_data.user,
             white_list_mode=True,
         )
         episodes = [

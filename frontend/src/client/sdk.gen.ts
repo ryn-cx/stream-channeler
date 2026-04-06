@@ -8,8 +8,8 @@ import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData,
 export class AdminMediaService {
     /**
      * List All Plugins
-     * List all plugins across all users.
-     * @returns PluginsListOutput Successful Response
+     * List all plugins owned by the plugin user.
+     * @returns PluginOutput Successful Response
      * @throws ApiError
      */
     public static listAllPlugins(): CancelablePromise<AdminMediaListAllPluginsResponse> {
@@ -24,7 +24,7 @@ export class AdminMediaService {
      * List all sources for a plugin.
      * @param data The data for the request.
      * @param data.pluginId
-     * @returns SourcesListOutput Successful Response
+     * @returns SourceOutput Successful Response
      * @throws ApiError
      */
     public static listPluginSources(data: AdminMediaListPluginSourcesData): CancelablePromise<AdminMediaListPluginSourcesResponse> {
@@ -45,7 +45,7 @@ export class AdminMediaService {
      * List all shows for a source.
      * @param data The data for the request.
      * @param data.sourceId
-     * @returns ShowsListOutput Successful Response
+     * @returns ShowOutput Successful Response
      * @throws ApiError
      */
     public static listSourceShows(data: AdminMediaListSourceShowsData): CancelablePromise<AdminMediaListSourceShowsResponse> {
@@ -66,7 +66,7 @@ export class AdminMediaService {
      * List all seasons for a show.
      * @param data The data for the request.
      * @param data.showId
-     * @returns SeasonsListOutput Successful Response
+     * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
     public static listShowSeasons(data: AdminMediaListShowSeasonsData): CancelablePromise<AdminMediaListShowSeasonsResponse> {
@@ -87,7 +87,7 @@ export class AdminMediaService {
      * List all episodes for a season.
      * @param data The data for the request.
      * @param data.seasonId
-     * @returns EpisodesListOutput Successful Response
+     * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
     public static listSeasonEpisodes(data: AdminMediaListSeasonEpisodesData): CancelablePromise<AdminMediaListSeasonEpisodesResponse> {
@@ -105,7 +105,6 @@ export class AdminMediaService {
     
     /**
      * Trigger Plugin Update
-     * Set update_at to now on a plugin.
      * @param data The data for the request.
      * @param data.pluginId
      * @returns Message Successful Response
@@ -126,7 +125,6 @@ export class AdminMediaService {
     
     /**
      * Trigger Source Update
-     * Set update_at to now on a source.
      * @param data The data for the request.
      * @param data.sourceId
      * @returns Message Successful Response
@@ -147,7 +145,6 @@ export class AdminMediaService {
     
     /**
      * Trigger Show Update
-     * Set update_at to now on a show.
      * @param data The data for the request.
      * @param data.showId
      * @returns Message Successful Response
@@ -168,7 +165,6 @@ export class AdminMediaService {
     
     /**
      * Trigger Season Update
-     * Set update_at to now on a season.
      * @param data The data for the request.
      * @param data.seasonId
      * @returns Message Successful Response
@@ -189,7 +185,6 @@ export class AdminMediaService {
     
     /**
      * Trigger Episode Update
-     * Set update_at to now on an episode.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns Message Successful Response
@@ -213,7 +208,7 @@ export class ChannelsService {
     /**
      * Get User Channels
      * List all channels owned by the current user.
-     * @returns ChannelsListOutput Successful Response
+     * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
     public static getUserChannels(): CancelablePromise<ChannelsGetUserChannelsResponse> {
@@ -410,8 +405,8 @@ export class ChannelsService {
      * Get User Channel Whitelist
      * Read the whitelist for a show in a channel.
      * @param data The data for the request.
-     * @param data.showId
      * @param data.channelId
+     * @param data.showId
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
      */
@@ -420,8 +415,8 @@ export class ChannelsService {
             method: 'GET',
             url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
             path: {
-                show_id: data.showId,
-                channel_id: data.channelId
+                channel_id: data.channelId,
+                show_id: data.showId
             },
             errors: {
                 422: 'Validation Error'
@@ -433,8 +428,8 @@ export class ChannelsService {
      * Update User Channel Whitelist
      * Update the whitelist/blacklist for a show in a channel.
      * @param data The data for the request.
-     * @param data.showId
      * @param data.channelId
+     * @param data.showId
      * @param data.requestBody
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
@@ -444,8 +439,8 @@ export class ChannelsService {
             method: 'PATCH',
             url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
             path: {
-                show_id: data.showId,
-                channel_id: data.channelId
+                channel_id: data.channelId,
+                show_id: data.showId
             },
             body: data.requestBody,
             mediaType: 'application/json',
@@ -507,7 +502,7 @@ export class ChannelsService {
      * Read the URLs in a channel's import queue.
      * @param data The data for the request.
      * @param data.channelId
-     * @returns ChannelQueuesListOutput Successful Response
+     * @returns ChannelQueueOutput Successful Response
      * @throws ApiError
      */
     public static getUserChannelQueue(data: ChannelsGetUserChannelQueueData): CancelablePromise<ChannelsGetUserChannelQueueResponse> {
@@ -529,7 +524,7 @@ export class ChannelsService {
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
-     * @returns ChannelQueuesListOutput Successful Response
+     * @returns ChannelQueueOutput Successful Response
      * @throws ApiError
      */
     public static createUserChannelQueueUrls(data: ChannelsCreateUserChannelQueueUrlsData): CancelablePromise<ChannelsCreateUserChannelQueueUrlsResponse> {
@@ -805,7 +800,7 @@ export class PluginsService {
     /**
      * Get User Plugins
      * List all plugins owned by the current user.
-     * @returns PluginsListOutput Successful Response
+     * @returns PluginOutput Successful Response
      * @throws ApiError
      */
     public static getUserPlugins(): CancelablePromise<PluginsGetUserPluginsResponse> {
@@ -968,7 +963,7 @@ export class PluginsService {
      * List all sources for a plugin if it is public or owned by the current user.
      * @param data The data for the request.
      * @param data.pluginId
-     * @returns SourcesListOutput Successful Response
+     * @returns SourceOutput Successful Response
      * @throws ApiError
      */
     public static getUserPluginSources(data: PluginsGetUserPluginSourcesData): CancelablePromise<PluginsGetUserPluginSourcesResponse> {
@@ -1103,7 +1098,7 @@ export class SeasonsService {
      * List all episodes for a season if its plugin is public or owned by the current user.
      * @param data The data for the request.
      * @param data.seasonId
-     * @returns EpisodesListOutput Successful Response
+     * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
     public static getUserSeasonEpisodes(data: SeasonsGetUserSeasonEpisodesData): CancelablePromise<SeasonsGetUserSeasonEpisodesResponse> {
@@ -1216,7 +1211,7 @@ export class ShowsService {
      * List all seasons for a show if its plugin is public or owned by the current user.
      * @param data The data for the request.
      * @param data.showId
-     * @returns SeasonsListOutput Successful Response
+     * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
     public static getUserShowSeasons(data: ShowsGetUserShowSeasonsData): CancelablePromise<ShowsGetUserShowSeasonsResponse> {
@@ -1329,7 +1324,7 @@ export class SourcesService {
      * List all shows for a source if its plugin is public or owned by the current user.
      * @param data The data for the request.
      * @param data.sourceId
-     * @returns ShowsListOutput Successful Response
+     * @returns ShowOutput Successful Response
      * @throws ApiError
      */
     public static getUserSourceShows(data: SourcesGetUserSourceShowsData): CancelablePromise<SourcesGetUserSourceShowsResponse> {

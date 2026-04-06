@@ -29,10 +29,7 @@ import { handleError } from "@/utils"
 
 import type { EpisodeTableData } from "./episodeColumns"
 
-interface EpisodesListOutput {
-  data: EpisodeTableData[]
-  count: number
-}
+type EpisodesData = Array<EpisodeTableData>
 
 interface DeleteEpisodeProps {
   episode: EpisodeTableData
@@ -54,13 +51,11 @@ const DeleteEpisode = ({ episode }: DeleteEpisodeProps) => {
       }),
     onMutate: async (_episodeKey, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<EpisodesListOutput>(queryKey)
+      const previous = context.client.getQueryData<EpisodesData>(queryKey)
 
-      context.client.setQueryData<EpisodesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.filter((e) => e.key !== episode.key),
-        count: old!.count - 1,
-      }))
+      context.client.setQueryData<EpisodesData>(queryKey, (old) =>
+        old!.filter((e) => e.key !== episode.key),
+      )
 
       return { previous }
     },

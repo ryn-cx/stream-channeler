@@ -40,10 +40,7 @@ import { handleError } from "@/utils"
 
 import type { EpisodeTableData } from "./episodeColumns"
 
-interface EpisodesListOutput {
-  data: EpisodeTableData[]
-  count: number
-}
+type EpisodesData = Array<EpisodeTableData>
 
 const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
@@ -101,14 +98,13 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       }),
     onMutate: async (newData, context) => {
       await context.client.cancelQueries({ queryKey })
-      const previous = context.client.getQueryData<EpisodesListOutput>(queryKey)
+      const previous = context.client.getQueryData<EpisodesData>(queryKey)
 
-      context.client.setQueryData<EpisodesListOutput>(queryKey, (old) => ({
-        ...old!,
-        data: old!.data.map((e) =>
+      context.client.setQueryData<EpisodesData>(queryKey, (old) =>
+        old!.map((e) =>
           e.id === episode.id ? ({ ...e, ...newData } as EpisodeTableData) : e,
         ),
-      }))
+      )
 
       return { previous }
     },

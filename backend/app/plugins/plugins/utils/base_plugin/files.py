@@ -12,7 +12,6 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.plugins.models import File, Plugin
-from app.plugins.schemas import FileInput
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 
@@ -131,10 +130,11 @@ class BaseFile[T](ABC):
 
     def _write(self, content: str | None) -> None:
         """Write content to the file and immediately commit it to the database."""
-        self._existing_database_entry = FileInput(
+        self._existing_database_entry = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
+            plugin_id=self.__plugin.id,
         ).upsert(self.__plugin, self._existing_database_entry)
 
         self.__db.commit()

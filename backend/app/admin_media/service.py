@@ -1,0 +1,20 @@
+# TODO: Validate
+from sqlmodel import Session
+
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.schemas import Message
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
+
+
+def trigger_update(
+    session: Session,
+    entry: Episode | Season | Show | Source | Plugin,
+) -> Message:
+    """Set update_at to now, commit the change, and return a Message."""
+    entry.update_at = tz_datetime.now()
+    session.commit()
+    return Message(message=f"{entry} \nSet to update")

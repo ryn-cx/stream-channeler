@@ -37,3 +37,11 @@ class User(UserBase, table=True):
         back_populates="user",
         cascade_delete=True,
     )
+
+    def add_child(self, child: "Plugin | Channel") -> None:  # noqa: UP037
+        from app.plugins.models import Plugin  # noqa: PLC0415
+
+        if isinstance(child, Plugin):
+            self.plugins.append(child)
+        else:
+            self.channels.append(child)

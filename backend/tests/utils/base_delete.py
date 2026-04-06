@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import uuid
@@ -85,11 +86,15 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             )
 
     def test_delete_not_found(
-        self, session_scoped_client: TestClient, session_scoped_db: Session
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
     ) -> None:
         user = create_random_user(session_scoped_db)
         user_headers = authentication_token_from_email(
-            client=session_scoped_client, email=user.email, db=session_scoped_db
+            client=session_scoped_client,
+            email=user.email,
+            db=session_scoped_db,
         )
         with self.assert_no_db_change(session_scoped_db):
             assert_not_found(

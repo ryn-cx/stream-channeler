@@ -19,14 +19,6 @@ from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
-    from app.channels.models import ChannelSeasonWhiteList
-    from app.episodes.models import Episode
-
 
 class BaseSeason(BaseMediaMixin):
     sort_order: int | None = Field(default=None)
@@ -36,15 +28,26 @@ class BaseSeason(BaseMediaMixin):
     season_number: int | None = Field(default=None)
 
 
-class Season(BaseSeason, MediaMixin, table=True):
+if TYPE_CHECKING:
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.selectable import ForUpdateParameter
+
+    from app.channels.models import ChannelSeasonWhiteList
+    from app.episodes.models import Episode
+
+
+class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
-        # Filtering options.
+        # Used in episode_selector._apply_sort_key to sort episodes by season sort order.
         Index("Season-sort_order-index", "sort_order"),
+        # Used in episode_selector._apply_sort_key to sort episodes by season number.
         Index("Season-season_number-index", "season_number"),
+        # Used in episode_selector._apply_sort_key to sort episodes by season name.
         Index("Season-name-index", "name"),
-        # Deleted filtering.
+        # Used in episode_selector._filter_deleted_media to exclude soft-deleted seasons.
         Index("Season-deleted_at-index", "deleted_at"),
     )
 

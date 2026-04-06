@@ -25,10 +25,6 @@ interface AdminSourceTableData {
   update_at: string | null
 }
 
-interface AdminSourcesListOutput {
-  data: AdminSourceTableData[]
-}
-
 export const Route = createFileRoute("/_layout/admin-plugin/$pluginId")({
   component: AdminPluginDetailPage,
   beforeLoad: async () => {
@@ -52,7 +48,7 @@ function AdminSourcesTableContent() {
         method: "GET",
         url: "/api/v1/admin-media/plugins/{plugin_id}/sources",
         path: { plugin_id: pluginId },
-      }) as Promise<AdminSourcesListOutput>,
+      }) as Promise<AdminSourceTableData[]>,
     queryKey,
   })
 
@@ -122,7 +118,7 @@ function AdminSourcesTableContent() {
   })
 
   const table = useReactTable({
-    data: sources.data,
+    data: sources,
     columns: adminSourceColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -149,7 +145,7 @@ function AdminSourcesTableContent() {
       </div>
       <DataTable
         columns={adminSourceColumns}
-        data={sources.data}
+        data={sources}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

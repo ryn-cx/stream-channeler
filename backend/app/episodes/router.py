@@ -9,7 +9,7 @@ from app.episodes.schemas import (
     EpisodePatchInput,
 )
 from app.media.service import delete_record, update_record
-from app.models import Message
+from app.schemas import Message
 from app.watches.schemas import (
     WatchOutput,
     WatchPostInput,

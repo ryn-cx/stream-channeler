@@ -159,7 +159,7 @@ function AddShowsStep({
     refetchInterval: 5000,
   })
 
-  const queueEntries = queueData?.data ?? []
+  const queueEntries = queueData ?? []
 
   const addUrlsMutation = useMutation({
     mutationFn: (urls: string[]) =>

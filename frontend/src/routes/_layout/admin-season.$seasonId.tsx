@@ -31,10 +31,6 @@ interface AdminEpisodeTableData {
   update_at: string | null
 }
 
-interface AdminEpisodesListOutput {
-  data: AdminEpisodeTableData[]
-}
-
 export const Route = createFileRoute("/_layout/admin-season/$seasonId")({
   component: AdminSeasonDetailPage,
   beforeLoad: async () => {
@@ -58,7 +54,7 @@ function AdminEpisodesTableContent() {
         method: "GET",
         url: "/api/v1/admin-media/seasons/{season_id}/episodes",
         path: { season_id: seasonId },
-      }) as Promise<AdminEpisodesListOutput>,
+      }) as Promise<AdminEpisodeTableData[]>,
     queryKey,
   })
 
@@ -160,7 +156,7 @@ function AdminEpisodesTableContent() {
   })
 
   const table = useReactTable({
-    data: episodes.data,
+    data: episodes,
     columns: adminEpisodeColumns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -189,7 +185,7 @@ function AdminEpisodesTableContent() {
       </div>
       <DataTable
         columns={adminEpisodeColumns}
-        data={episodes.data}
+        data={episodes}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
       />

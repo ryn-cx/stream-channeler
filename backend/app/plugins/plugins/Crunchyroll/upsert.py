@@ -3,14 +3,10 @@ from datetime import datetime, timedelta
 from typing import override
 
 from app.episodes.models import Episode
-from app.episodes.schemas import EpisodeInput
 from app.plugins.plugins.Crunchyroll.files import Browse, FileMixin
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonInput
 from app.shows.models import Show
-from app.shows.schemas import ShowInput
 from app.sources.models import Source
-from app.sources.schemas import SourceInput
 from app.utils import tz_datetime
 
 
@@ -26,7 +22,7 @@ class UpsertMixin(FileMixin, register=False):
     def _upsert_source(self, latest_browse_file: Browse) -> Source:
         source = Source.get_from_memory(self.db, self.plugin, self.plugin_key())
         timestamp = latest_browse_file.database_entry.data_timestamp
-        return SourceInput(
+        return Source(
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
@@ -34,6 +30,7 @@ class UpsertMixin(FileMixin, register=False):
             # Check for new data daily.
             update_at=timestamp + timedelta(days=1),
             data_timestamp=timestamp,
+            plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 
     # endregion Upsert Source
@@ -54,13 +51,14 @@ class UpsertMixin(FileMixin, register=False):
 
         series_data = self._series_file(show_key).parsed().data[0]
         if force_reimport or not self._is_up_to_date(show, show_timestamp):
-            show = ShowInput(
+            show = Show(
                 key=series_data.id,
                 name=series_data.title,
                 description=series_data.description,
                 url=self._show_url(series_data.id),
                 data_timestamp=show_timestamp,
                 media_type=self._get_media_type(show_key),
+                source_id=source.id,
             ).upsert(source, show)
 
         self._upsert_seasons(show, show_key=show_key, force_reimport=force_reimport)
@@ -131,12 +129,13 @@ class UpsertMixin(FileMixin, register=False):
                 or not season
                 or season.data_timestamp != season_timestamp
             ):
-                season = SeasonInput(
+                season = Season(
                     key=season_data.id,
                     sort_order=i,
                     name=season_data.title,
                     season_number=season_data.season_number,
                     data_timestamp=season_timestamp,
+                    show_id=show.id,
                 ).upsert(show, season)
 
             self._upsert_episodes(season, force_reimport=force_reimport)
@@ -159,7 +158,7 @@ class UpsertMixin(FileMixin, register=False):
             if not force_reimport and self._is_up_to_date(episode, episode_timestamp):
                 continue
 
-            EpisodeInput(
+            Episode(
                 key=episode_data.id,
                 url=self._episode_url(episode_data.id),
                 sort_order=i,
@@ -171,6 +170,7 @@ class UpsertMixin(FileMixin, register=False):
                 air_date=episode_data.episode_air_date,
                 duration=episode_data.duration_ms // 1000,
                 data_timestamp=episode_timestamp,
+                season_id=season.id,
             ).upsert(season, episode)
 
     # endregion

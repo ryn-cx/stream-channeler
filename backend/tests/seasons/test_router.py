@@ -1,9 +1,9 @@
+# TODO: Validate
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
     SeasonPatchInput,
     SeasonPostInput,
-    SeasonsListOutput,
 )
 from tests.seasons.utils import create_random_season
 from tests.shows.utils import create_random_show
@@ -19,7 +19,6 @@ class SeasonTestMixin(BaseTests[Season]):
     input_schema = SeasonPostInput
     output_model = SeasonOutput
     patch_model = SeasonPatchInput
-    list_output_model = SeasonsListOutput
 
     create_parent_function = staticmethod(create_random_show)
     create_record_function = staticmethod(create_random_season)

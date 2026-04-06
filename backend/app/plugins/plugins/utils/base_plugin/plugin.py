@@ -17,7 +17,6 @@ from app.plugins.plugins.utils.base_plugin.files import BaseFile
 from app.plugins.plugins.utils.base_plugin.preload import PreloadMixin
 from app.plugins.plugins.utils.base_plugin.url import URLMixin
 from app.plugins.plugins.utils.base_plugin.watch import WatchMixin
-from app.plugins.schemas import PluginInput
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -67,11 +66,12 @@ class BasePlugin(
         )
 
         if not existing:
-            self.plugin = PluginInput(
+            self.plugin = Plugin(
                 key=self.plugin_key(),
                 name=self.plugin_key(),
                 version=self._VERSION,
                 public=True,
+                user_id=plugin_user.id,
             ).upsert(plugin_user, existing)
         else:
             self.plugin = existing

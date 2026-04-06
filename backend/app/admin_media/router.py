@@ -1,23 +1,28 @@
 # TODO: Validate
-import uuid
-from typing import Annotated
+from collections.abc import Sequence
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends
 from sqlmodel import select
 
+from app.admin_media.service import trigger_update
 from app.auth.dependencies import SessionDep, get_current_active_superuser
+from app.episodes.dependencies import ReadableEpisode
 from app.episodes.models import Episode
-from app.episodes.schemas import EpisodeOutput, EpisodesListOutput
-from app.models import Message
+from app.episodes.schemas import EpisodeOutput
+from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginOutput, PluginsListOutput
+from app.plugins.schemas import PluginOutput
+from app.schemas import Message
+from app.seasons.dependencies import ReadableSeason
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonOutput, SeasonsListOutput
+from app.seasons.schemas import SeasonOutput
+from app.shows.dependencies import ReadableShow
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput, ShowsListOutput
+from app.shows.schemas import ShowOutput
+from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput, SourcesListOutput
-from app.utils import tz_datetime
+from app.sources.schemas import SourceOutput
+from app.users.service import get_or_create_plugin_user
 
 router = APIRouter(
     prefix="/admin-media",
@@ -26,121 +31,58 @@ router = APIRouter(
 )
 
 
-@router.get("/plugins")
-def list_all_plugins(session: SessionDep) -> PluginsListOutput:
-    """List all plugins across all users."""
-    plugins = session.exec(select(Plugin)).all()
-    data = [PluginOutput.model_validate(plugin) for plugin in plugins]
-    return PluginsListOutput(data=data)
+@router.get("/plugins", response_model=list[PluginOutput])
+def list_all_plugins(session: SessionDep) -> Sequence[Plugin]:
+    """List all plugins owned by the plugin user."""
+    plugin_user = get_or_create_plugin_user(session=session)
+    plugin_select = select(Plugin).where(Plugin.user_id == plugin_user.id)
+    return session.exec(plugin_select).all()
 
 
-@router.get("/plugins/{plugin_id}/sources")
-def list_plugin_sources(
-    session: SessionDep,
-    plugin_id: Annotated[uuid.UUID, Path()],
-) -> SourcesListOutput:
+@router.get("/plugins/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
+def list_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
     """List all sources for a plugin."""
-    sources = session.exec(
-        select(Source).where(Source.plugin_id == plugin_id),
-    ).all()
-    data = [SourceOutput.model_validate(source) for source in sources]
-    return SourcesListOutput(data=data)
+    return list(plugin.sources)
 
 
-@router.get("/sources/{source_id}/shows")
-def list_source_shows(
-    session: SessionDep,
-    source_id: Annotated[uuid.UUID, Path()],
-) -> ShowsListOutput:
+@router.get("/sources/{source_id}/shows", response_model=list[ShowOutput])  # noqa: FAST003 - Used by ReadableSource
+def list_source_shows(source: ReadableSource) -> list[Show]:
     """List all shows for a source."""
-    shows = session.exec(
-        select(Show).where(Show.source_id == source_id),
-    ).all()
-    data = [ShowOutput.model_validate(show) for show in shows]
-    return ShowsListOutput(data=data)
+    return list(source.shows)
 
 
-@router.get("/shows/{show_id}/seasons")
-def list_show_seasons(
-    session: SessionDep,
-    show_id: Annotated[uuid.UUID, Path()],
-) -> SeasonsListOutput:
+@router.get("/shows/{show_id}/seasons", response_model=list[SeasonOutput])  # noqa: FAST003 - Used by ReadableShow
+def list_show_seasons(show: ReadableShow) -> list[Season]:
     """List all seasons for a show."""
-    seasons = session.exec(
-        select(Season).where(Season.show_id == show_id),
-    ).all()
-    data = [SeasonOutput.model_validate(season) for season in seasons]
-    return SeasonsListOutput(data=data)
+    return list(show.seasons)
 
 
-@router.get("/seasons/{season_id}/episodes")
-def list_season_episodes(
-    session: SessionDep,
-    season_id: Annotated[uuid.UUID, Path()],
-) -> EpisodesListOutput:
+@router.get("/seasons/{season_id}/episodes", response_model=list[EpisodeOutput])  # noqa: FAST003 - Used by ReadableSeason
+def list_season_episodes(season: ReadableSeason) -> list[Episode]:
     """List all episodes for a season."""
-    episodes = session.exec(
-        select(Episode).where(Episode.season_id == season_id),
-    ).all()
-    data = [EpisodeOutput.model_validate(episode) for episode in episodes]
-    return EpisodesListOutput(data=data)
+    return list(season.episodes)
 
 
-@router.post("/plugins/{plugin_id}/trigger-update")
-def trigger_plugin_update(
-    session: SessionDep,
-    plugin_id: Annotated[uuid.UUID, Path()],
-) -> Message:
-    """Set update_at to now on a plugin."""
-    plugin = session.get_one(Plugin, plugin_id)
-    plugin.update_at = tz_datetime.now()
-    session.commit()
-    return Message(message="Update triggered")
+@router.post("/plugins/{plugin_id}/trigger-update")  # noqa: FAST003 - Used by ReadablePlugin
+def trigger_plugin_update(session: SessionDep, plugin: ReadablePlugin) -> Message:
+    return trigger_update(session, plugin)
 
 
-@router.post("/sources/{source_id}/trigger-update")
-def trigger_source_update(
-    session: SessionDep,
-    source_id: Annotated[uuid.UUID, Path()],
-) -> Message:
-    """Set update_at to now on a source."""
-    source = session.get_one(Source, source_id)
-    source.update_at = tz_datetime.now()
-    session.commit()
-    return Message(message="Update triggered")
+@router.post("/sources/{source_id}/trigger-update")  # noqa: FAST003 - Used by ReadableSource
+def trigger_source_update(session: SessionDep, source: ReadableSource) -> Message:
+    return trigger_update(session, source)
 
 
-@router.post("/shows/{show_id}/trigger-update")
-def trigger_show_update(
-    session: SessionDep,
-    show_id: Annotated[uuid.UUID, Path()],
-) -> Message:
-    """Set update_at to now on a show."""
-    show = session.get_one(Show, show_id)
-    show.update_at = tz_datetime.now()
-    session.commit()
-    return Message(message="Update triggered")
+@router.post("/shows/{show_id}/trigger-update")  # noqa: FAST003 - Used by ReadableShow
+def trigger_show_update(session: SessionDep, show: ReadableShow) -> Message:
+    return trigger_update(session, show)
 
 
-@router.post("/seasons/{season_id}/trigger-update")
-def trigger_season_update(
-    session: SessionDep,
-    season_id: Annotated[uuid.UUID, Path()],
-) -> Message:
-    """Set update_at to now on a season."""
-    season = session.get_one(Season, season_id)
-    season.update_at = tz_datetime.now()
-    session.commit()
-    return Message(message="Update triggered")
+@router.post("/seasons/{season_id}/trigger-update")  # noqa: FAST003 - Used by ReadableSeason
+def trigger_season_update(session: SessionDep, season: ReadableSeason) -> Message:
+    return trigger_update(session, season)
 
 
-@router.post("/episodes/{episode_id}/trigger-update")
-def trigger_episode_update(
-    session: SessionDep,
-    episode_id: Annotated[uuid.UUID, Path()],
-) -> Message:
-    """Set update_at to now on an episode."""
-    episode = session.get_one(Episode, episode_id)
-    episode.update_at = tz_datetime.now()
-    session.commit()
-    return Message(message="Update triggered")
+@router.post("/episodes/{episode_id}/trigger-update")  # noqa: FAST003 - Used by ReadableEpisode
+def trigger_episode_update(session: SessionDep, episode: ReadableEpisode) -> Message:
+    return trigger_update(session, episode)
