@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import random
 import uuid
 from datetime import datetime
 from typing import ClassVar, Literal
@@ -161,7 +162,7 @@ class ChannelMediaFilter(BaseInput):
         ]
 
     additional_channels: list[uuid.UUID] = Field(default_factory=list)
-    random_seed: int = Field(default=42)
+    random_seed: int = Field(default_factory=lambda: random.randint(0, 2**31))
     hide_watched: bool = Field(default=False)
     hide_unwatched: bool = Field(default=False)
     maximum_watch_date_absolute: datetime | None = Field(default=None)
