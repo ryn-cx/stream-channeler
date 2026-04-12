@@ -1019,7 +1019,7 @@ wheels = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#f81b5d8daf08a395d65738f61e038e84e472d561" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#3ecc195656c2cc47d08924bbaac83a029f2878d2" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
