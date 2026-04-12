@@ -1,15 +1,14 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
-from app.media.service import create_child, delete_record, list_children, update_record
+from app.media.service import delete_record
 from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonOutput,
     SeasonPostInput,
 )
-from app.shows.dependencies import ReadableShow, UserShow
+from app.shows.dependencies import OwnedShow, ReadableShow
 from app.shows.models import Show
 from app.shows.schemas import (
     ShowOutput,
@@ -19,47 +18,39 @@ from app.shows.schemas import (
 router = APIRouter(prefix="/shows", tags=["shows"])
 
 
-# FAST003 - Parameter is used by ReadableShow.
-@router.get("/{show_id}", response_model=ShowOutput)  # noqa: FAST003
-def get_user_show(show: ReadableShow) -> Show:
-    """Get a show by its id if its plugin is public or owned by the current user."""
+@router.get("/{show_id}", response_model=ShowOutput)  # noqa: FAST003 - Used by ReadableShow
+def get_show(show: ReadableShow) -> Show:
+    """Get a ``Show`` if it's readable by the current ``User``."""
     return show
 
 
-# FAST003 - Parameter is used by ReadableShow.
-@router.get("/{show_id}/seasons", response_model=list[SeasonOutput])  # noqa: FAST003
-def get_user_show_seasons(
-    session: SessionDep,
-    show: ReadableShow,
-) -> list[Season]:
-    """List all seasons for a show if its plugin is public or owned by the current user."""
-    return list_children(session, Season, "show_id", show.id)
+@router.get("/{show_id}/seasons", response_model=list[SeasonOutput])  # noqa: FAST003 - Used by ReadableShow
+def get_seasons(show: ReadableShow) -> list[Season]:
+    """List all ``Season``s for a ``Show`` if its ``Plugin`` is public or owned by the current ``User``."""
+    return show.seasons
 
 
-# FAST003 - Parameter is used by UserShow.
-@router.post("/{show_id}/seasons", response_model=SeasonOutput)  # noqa: FAST003
-def create_user_season(
+@router.post("/{show_id}/seasons", response_model=SeasonOutput)  # noqa: FAST003 - Used by OwnedShow
+def create_season(
     session: SessionDep,
-    show: UserShow,
+    show: OwnedShow,
     season_input: SeasonPostInput,
 ) -> Season:
-    """Create a season for a show."""
-    return create_child(session, Season, show, season_input, "show_id")
+    """Create a ``Season`` if the ``Show`` is owned by the current ``User``."""
+    return season_input.create(session, Season, show)
 
 
-# FAST003 - Parameter is used by UserShow.
-@router.patch("/{show_id}", response_model=ShowOutput)  # noqa: FAST003
-def update_user_show(
+@router.patch("/{show_id}", response_model=ShowOutput)  # noqa: FAST003 - Used by OwnedShow
+def update_show(
     session: SessionDep,
-    show: UserShow,
+    show: OwnedShow,
     show_input: ShowPatchInput,
 ) -> Show:
-    """Update a show by its id."""
-    return update_record(session, show, show_input)
+    """Update and return a ``Show`` if it's owned by the current ``User``."""
+    return show_input.update(session, show)
 
 
-# FAST003 - Parameter is used by UserShow.
-@router.delete("/{show_id}")  # noqa: FAST003
-def delete_user_show(session: SessionDep, show: UserShow) -> Message:
-    """Delete a show by its id."""
+@router.delete("/{show_id}")  # noqa: FAST003 - Used by OwnedShow.
+def delete_show(session: SessionDep, show: OwnedShow) -> Message:
+    """Delete a ``Show`` if it's owned by the current ``User``."""
     return delete_record(session, show)

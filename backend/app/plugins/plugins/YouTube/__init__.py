@@ -11,6 +11,7 @@ from app.plugins.plugins.YouTube.files import (
 from app.plugins.plugins.YouTube.watch import WatchMixin
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.sources.models import Source
 from app.utils import tz_datetime
 
 URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
@@ -18,8 +19,13 @@ URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
 
 class YouTube(WatchMixin, register=True):
     _VERSION = "0.0.1"
-
     supports_import_url = True
+
+    @override
+    def initialize_plugin(self) -> None:
+        super().initialize_plugin()
+        if not Source.get_from_memory(self.db, self.plugin, self.plugin_key()):
+            self._upsert_source()
 
     @classmethod
     def import_url_instructions(cls) -> str:
@@ -34,10 +40,26 @@ class YouTube(WatchMixin, register=True):
 
     # region Import URL
 
+    @classmethod
+    @override
+    def parse_url(cls, url: str) -> tuple[URLKeyType, str]:
+        if match := re.match(cls.playlist_key_regex(), url):
+            return ("playlist_key", match.group("playlist_key"))
+
+        if match := re.match(cls.channel_key_regex(), url):
+            return ("channel_key", match.group("channel_key"))
+
+        if match := re.match(cls.channel_name_regex(), url):
+            return ("channel_name", match.group("channel_name"))
+
+        msg = f"Invalid {cls.plugin_key()} URL: {url}"
+        raise InvalidURLError(msg)
+
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        key_type, key_value = self.__parse_url(url)
-        self.__validate_url(url, key_type, key_value)
+        parsed = self.parse_url(url)
+        key_type, key_value = parsed
+        self._validate_url(url, key_type, key_value)
 
         if key_type == "playlist_key":
             playlist_items = self._playlist_items_file(key_value).parsed()
@@ -46,62 +68,47 @@ class YouTube(WatchMixin, register=True):
         elif key_type == "channel_key":
             show_key = key_value
             playlist_key = self._get_channel_uploads_playlist_key(key_value)
-        else:
+        else:  # key_type == "channel_name":
             channel_data = self._channel_by_handle_file(key_value).parsed()
             show_key = channel_data.items[0].id
             playlist_key = self._get_channel_uploads_playlist_key(show_key)
 
-        show = self.__import_show(show_key, playlist_key)
-        return [self.__build_import_result(url, show, show_key, key_type, playlist_key)]
+        show = self._import_show(show_key, playlist_key)
+        return [self._build_import_result(url, show, show_key, key_type, playlist_key)]
 
-    @classmethod
-    def __parse_url(cls, url: str) -> tuple[URLKeyType, str]:
-        if match := re.match(cls.playlist_key_regex(), url):
-            return "playlist_key", match.group("playlist_key")
-
-        if match := re.match(cls.channel_key_regex(), url):
-            return "channel_key", match.group("channel_key")
-
-        if match := re.match(cls.channel_name_regex(), url):
-            return "channel_name", match.group("channel_name")
-
-        msg = f"Invalid {cls.plugin_key()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    def __validate_url(self, url: str, key_type: URLKeyType, key_value: str) -> None:
-        """Download and validate that the URL points to real content."""
+    def _validate_url(self, url: str, key_type: URLKeyType, key_value: str) -> None:
         file: PlaylistItems | ChannelByChannelId | ChannelByHandle
         if key_type == "playlist_key":
             file = self._playlist_items_file(key_value)
         elif key_type == "channel_key":
             file = self._channel_by_channel_id_file(key_value)
-        else:
+        else:  # key_type == "channel_name"
             file = self._channel_by_handle_file(key_value)
         file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
-    def __import_show(self, show_key: str, playlist_key: str) -> Show:
+    def _import_show(self, show_key: str, playlist_key: str) -> Show:
         show = self._preload_show(show_key=show_key, preload_seasons=True).one_or_none()
         if not show:
             _cache = self._download_show_files(show_key)
-            # TODO: Move to initialization
-            source = self._upsert_source()
+            source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
             return self._upsert_show(source, show_key)
 
-        # Handle the edge case where a user adds a playlist that belongs to a channel
-        # that is already in the database, but that specific playlist is not in the
-        # database.
+        if playlist_key == self._get_channel_uploads_playlist_key(show.key):
+            channel_item = self._channel_by_channel_id_file(show.key).parsed().items[0]
+            if int(channel_item.statistics.video_count) == 0:
+                return show
+
         if not Season.get_from_memory(self.db, show, playlist_key):
             for show_file in self._show_files(show.key):
                 show_file.download_if_outdated(tz_datetime.now())
             self._download_show_files(show_key)
-            # TODO: Move to initialization
-            source = self._upsert_source()
+            source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
             return self._upsert_show(source, show_key)
 
         return show
 
-    def __build_import_result(
+    def _build_import_result(
         self,
         url: str,
         show: Show,
@@ -110,9 +117,7 @@ class YouTube(WatchMixin, register=True):
         playlist_key: str,
     ) -> URLImportResult:
         seasons = [season for season in show.seasons if season.key == playlist_key]
-        is_channel = key_type != "playlist_key"
-
-        if is_channel:
+        if key_type != "playlist_key":
             # The user is importing a channel so whitelist new playlists by default.
             whitelist_mode = True
             uploads_key = self._get_channel_uploads_playlist_key(show_key)

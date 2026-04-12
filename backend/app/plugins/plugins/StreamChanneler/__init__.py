@@ -27,19 +27,15 @@ class StreamChanneler(BasePlugin, register=True):
         return []
 
     @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str | None = None,
-    ) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
     @override
     def _episode_files(
         self,
         episode_key: str,
-        season_key: str | None = None,
-        show_key: str | None = None,
+        season_key: str,
+        show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return []
 
@@ -52,13 +48,7 @@ class StreamChanneler(BasePlugin, register=True):
         return []
 
     @override
-    def _upsert_show(
-        self,
-        source: Source,
-        show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> Show:
+    def _upsert_show(self, source: Source, show_key: str) -> Show:
         msg = "StreamChanneler does not support upserting shows"
         raise NotImplementedError(msg)
 
@@ -79,15 +69,23 @@ class StreamChanneler(BasePlugin, register=True):
             + rf"\/(?P<media_id>{uuid_pattern})(?:\/|$)"
         )
 
+    @classmethod
+    @override
+    def parse_url(cls, url: str) -> dict[str, str]:
+        match = re.match(cls._url_regex(), url)
+        if not match:
+            msg = f"Invalid {cls.plugin_key()} URL: {url}"
+            raise InvalidURLError(msg)
+        return {
+            "media_type": match.group("media_type"),
+            "media_id": match.group("media_id"),
+        }
+
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        match = re.match(self._url_regex(), url)
-        if not match:
-            msg = f"Invalid {self.plugin_key} URL: {url}"
-            raise InvalidURLError(msg)
-
-        media_type = match.group("media_type")
-        media_id = uuid.UUID(match.group("media_id"))
+        parsed = self.parse_url(url)
+        media_type = parsed["media_type"]
+        media_id = uuid.UUID(parsed["media_id"])
 
         handlers: dict[str, Callable[[uuid.UUID, str], list[URLImportResult]]] = {
             "show": self._import_show,
@@ -185,15 +183,3 @@ class StreamChanneler(BasePlugin, register=True):
                 whitelist_mode=True,
             ),
         ]
-
-    @override
-    def update_show(self, show: Show) -> None:
-        pass
-
-    @override
-    def update_season(self, season: Season) -> None:
-        pass
-
-    @override
-    def update_episode(self, episode: Episode) -> None:
-        pass

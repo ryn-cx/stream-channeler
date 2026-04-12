@@ -166,7 +166,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             self.assert_api_get_list_success(
                 session_scoped_client,
                 session_scoped_db,
-                initial_test_data.record.parent().id,
+                initial_test_data.record.parent.id,
                 initial_test_data.headers,
             )
         else:
@@ -175,7 +175,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="get",
-                url=self.get_record_list_url(initial_test_data.record.parent().id),
+                url=self.get_record_list_url(initial_test_data.record.parent.id),
                 model_name=self.parent_name,
                 headers=initial_test_data.headers,
             )
@@ -197,7 +197,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_authenticated=True,
             record_is_public=False,
         )
-        parent = initial_test_data.record.parent()
+        parent = initial_test_data.record.parent
 
         # Delete all existing records under this parent to start clean.
         parent_column = getattr(self.database_model, self.parent_key_name)

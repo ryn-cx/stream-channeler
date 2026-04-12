@@ -10,11 +10,10 @@ from collections.abc import Callable
 
 from sqlmodel import Session, select
 
-from app.database import engine
 from app.plugins.models import Plugin
 from app.users.models import User
 from app.utils import tz_datetime
-from tests.conftest import init_db, reset_tables
+from tests.conftest import init_db, reset_tables, test_engine
 
 COUNT = 1_000
 
@@ -38,7 +37,7 @@ def _merge_upsert(
     """Alternative upsert using Session.merge."""
     dumped = plugin.model_dump(exclude={"update_at"})
 
-    existing = Plugin.get_from_memory(session, plugin.key, user)
+    existing = Plugin.get_from_memory(session, user, plugin.key)
     if existing:
         dumped["id"] = existing.id
         dumped["created_at"] = existing.created_at
@@ -113,8 +112,8 @@ def _run_merge_upsert(session: Session, user: User) -> None:
 
 
 def _time_benchmark(function: Callable[[Session, User], None]) -> float:
-    reset_tables(engine)
-    with Session(engine) as session:
+    reset_tables(test_engine)
+    with Session(test_engine) as session:
         init_db(session)
         user = _create_user(session)
         session.flush()

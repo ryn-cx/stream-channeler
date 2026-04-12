@@ -1,10 +1,10 @@
-# TODO: Validate
 import uuid
 
-from pydantic import ConfigDict
 from sqlmodel import Field
 
-from app.sources.models import BaseSource
+from app.plugins.models import Plugin
+from app.schemas import BasePatchInputWithKey, BasePostInputWithChild
+from app.sources.models import BaseSource, Source
 
 
 class SourceOutput(BaseSource):
@@ -12,11 +12,9 @@ class SourceOutput(BaseSource):
     id: uuid.UUID
 
 
-class SourcePostInput(BaseSource):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    key: str = Field(default_factory=lambda: str(uuid.uuid4()))
+class SourcePostInput(BasePostInputWithChild[Source, Plugin], BaseSource):
+    pass
 
 
-class SourcePatchInput(BaseSource):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    key: str | None = Field(default=None)  # type: ignore[assignment]
+class SourcePatchInput(BasePatchInputWithKey[Source], BaseSource):
+    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment] # Patch input can ignore required values.

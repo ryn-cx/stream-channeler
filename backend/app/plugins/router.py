@@ -1,25 +1,21 @@
-# TODO: Validate
 from fastapi import APIRouter, HTTPException, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.media.service import (
-    create_child,
     delete_record,
-    list_children,
     raise_if_exists,
-    update_record,
 )
-from app.plugins.dependencies import ReadablePlugin, UserPlugin
+from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.abstract_plugin import PluginSearchResults
 from app.plugins.plugins.utils.manage_plugins import sorted_plugins
 from app.plugins.schemas import (
-    PluginImportURLInfo,
-    PluginImportWatchHistoryInfo,
+    PluginImportURLInformation,
+    PluginImportWatchHistoryInformation,
     PluginOutput,
     PluginPatchInput,
     PluginPostInput,
-    PluginSearchInfo,
+    PluginSearchInformation,
 )
 from app.schemas import Message
 from app.sources.models import Source
@@ -27,23 +23,80 @@ from app.sources.schemas import SourceOutput, SourcePostInput
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 
+# region CRUD
+
 
 @router.get("", response_model=list[PluginOutput])
-def get_user_plugins(
+def get_plugins(current_user: CurrentUser) -> list[Plugin]:
+    """Get all ``Plugin``s owned by the current ``User``."""
+    return current_user.plugins
+
+
+@router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
+def get_plugin(plugin: ReadablePlugin) -> Plugin:
+    """Get a ``Plugin`` if it's readable by the current ``User``."""
+    return plugin
+
+
+@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
+def get_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
+    """List all ``Source``s for a ``Plugin`` if it is public or owned by the current ``User``."""
+    return plugin.sources
+
+
+@router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by OwnedPlugin
+def create_source(
+    session: SessionDep,
+    plugin: OwnedPlugin,
+    source_input: SourcePostInput,
+) -> Source:
+    """Create a ``Source`` if the ``Plugin`` is owned by the current ``User``."""
+    return source_input.create(session, Source, plugin)
+
+
+@router.post("", response_model=PluginOutput)
+def create_plugin(
     session: SessionDep,
     current_user: CurrentUser,
-) -> list[Plugin]:
-    """List all plugins owned by the current user."""
-    return list_children(session, Plugin, "user_id", current_user.id)
+    plugin_input: PluginPostInput,
+) -> Plugin:
+    """Create a ``Plugin`` owned by the current ``User``."""
+    raise_if_exists(Plugin.get(session, current_user, plugin_input.key))
+    plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
+    session.add(plugin)
+    session.commit()
+    return plugin
 
 
-@router.get("/supports-import-watch-history")
-def list_plugins_that_support_import_watch_history(
+@router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin
+def update_plugin(
+    session: SessionDep,
+    plugin: OwnedPlugin,
+    plugin_input: PluginPatchInput,
+) -> Plugin:
+    """Update and return a ``Plugin`` if it's owned by the current ``User``."""
+    return plugin_input.update(session, plugin)
+
+
+@router.delete("/{plugin_id}")  # noqa: FAST003 - Used by OwnedPlugin
+def delete_plugin(session: SessionDep, plugin: OwnedPlugin) -> Message:
+    """Delete a ``Plugin`` if it's owned by the current ``User``."""
+    return delete_record(session, plugin)
+
+
+# endregion CRUD
+
+
+# region Plugin Information
+
+
+@router.get("/import-watch-history-information")
+def import_watch_history_information(
     _current_user: CurrentUser,
-) -> list[PluginImportWatchHistoryInfo]:
-    """List all plugins that support importing watch history."""
+) -> list[PluginImportWatchHistoryInformation]:
+    """Return information about all plugins that support importing watch history."""
     return [
-        PluginImportWatchHistoryInfo(
+        PluginImportWatchHistoryInformation(
             plugin_key=plugin_cls.plugin_key(),
             file_extension=plugin_cls.import_watch_history_file_extension,
             instructions=plugin_cls.import_watch_history_instructions(),
@@ -53,13 +106,13 @@ def list_plugins_that_support_import_watch_history(
     ]
 
 
-@router.get("/supports-import-url")
-def list_plugins_that_support_import_url(
+@router.get("/import-url-information")
+def import_url_information(
     _current_user: CurrentUser,
-) -> list[PluginImportURLInfo]:
-    """List all plugins that support URL importing."""
+) -> list[PluginImportURLInformation]:
+    """Return information about all plugins that support importing URLs."""
     return [
-        PluginImportURLInfo(
+        PluginImportURLInformation(
             name=plugin_cls.plugin_key(),
             instructions=plugin_cls.import_url_instructions(),
         )
@@ -68,19 +121,22 @@ def list_plugins_that_support_import_url(
     ]
 
 
-@router.get("/supports-search")
-def list_plugins_that_support_search(
+@router.get("/search-information")
+def search_information(
     _current_user: CurrentUser,
-) -> list[PluginSearchInfo]:
-    """List all plugins that support searching."""
+) -> list[PluginSearchInformation]:
+    """Return information about all plugins that support searching."""
     return [
-        PluginSearchInfo(
+        PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
         )
         for plugin_cls in sorted_plugins()
         if plugin_cls.supports_search
     ]
+
+
+# endregion Plugin Information
 
 
 @router.get("/search")
@@ -104,58 +160,3 @@ def search_plugin(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Plugin '{plugin_key}' not found.",
     )
-
-
-@router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
-def get_user_plugin(plugin: ReadablePlugin) -> Plugin:
-    """Get a plugin by its id if it is public or owned by the current user."""
-    return plugin
-
-
-@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
-def get_user_plugin_sources(
-    session: SessionDep,
-    plugin: ReadablePlugin,
-) -> list[Source]:
-    """List all sources for a plugin if it is public or owned by the current user."""
-    return list_children(session, Source, "plugin_id", plugin.id)
-
-
-@router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by UserPlugin
-def create_user_source(
-    session: SessionDep,
-    plugin: UserPlugin,
-    source_input: SourcePostInput,
-) -> Source:
-    """Create a source for a plugin."""
-    return create_child(session, Source, plugin, source_input, "plugin_id")
-
-
-@router.post("", response_model=PluginOutput)
-def create_user_plugin(
-    session: SessionDep,
-    current_user: CurrentUser,
-    plugin_input: PluginPostInput,
-) -> Plugin:
-    """Create a plugin owned by the current user."""
-    raise_if_exists(Plugin.get(session, plugin_input.key, current_user))
-    plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
-    session.add(plugin)
-    session.commit()
-    return plugin
-
-
-@router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by UserPlugin
-def update_user_plugin(
-    session: SessionDep,
-    plugin: UserPlugin,
-    plugin_input: PluginPatchInput,
-) -> Plugin:
-    """Update a plugin owned by the current user."""
-    return update_record(session, plugin, plugin_input)
-
-
-@router.delete("/{plugin_id}")  # noqa: FAST003 - Used by UserPlugin
-def delete_user_plugin(session: SessionDep, plugin: UserPlugin) -> Message:
-    """Delete a plugin owned by the current user."""
-    return delete_record(session, plugin)

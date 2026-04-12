@@ -17,10 +17,10 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutWatchesRouteImport } from './routes/_layout/watches'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutPluginsRouteImport } from './routes/_layout/plugins'
 import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboarding'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutPluginIndexRouteImport } from './routes/_layout/plugin.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
 import { Route as LayoutAdminMediaIndexRouteImport } from './routes/_layout/admin-media.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
@@ -73,6 +73,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPluginsRoute = LayoutPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutOnboardingRoute = LayoutOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -86,11 +91,6 @@ const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutPluginIndexRoute = LayoutPluginIndexRouteImport.update({
-  id: '/plugin/',
-  path: '/plugin/',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
@@ -166,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/onboarding': typeof LayoutOnboardingRoute
+  '/plugins': typeof LayoutPluginsRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
   '/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
@@ -180,7 +181,6 @@ export interface FileRoutesByFullPath {
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
-  '/plugin/': typeof LayoutPluginIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -190,6 +190,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/onboarding': typeof LayoutOnboardingRoute
+  '/plugins': typeof LayoutPluginsRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
@@ -205,7 +206,6 @@ export interface FileRoutesByTo {
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-media': typeof LayoutAdminMediaIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
-  '/plugin': typeof LayoutPluginIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -217,6 +217,7 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/onboarding': typeof LayoutOnboardingRoute
+  '/_layout/plugins': typeof LayoutPluginsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
@@ -232,7 +233,6 @@ export interface FileRoutesById {
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
   '/_layout/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
-  '/_layout/plugin/': typeof LayoutPluginIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -245,6 +245,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/onboarding'
+    | '/plugins'
     | '/settings'
     | '/watches'
     | '/admin-plugin/$pluginId'
@@ -259,7 +260,6 @@ export interface FileRouteTypes {
     | '/watches/import'
     | '/admin-media/'
     | '/channels/'
-    | '/plugin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -269,6 +269,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/onboarding'
+    | '/plugins'
     | '/settings'
     | '/watches'
     | '/'
@@ -284,7 +285,6 @@ export interface FileRouteTypes {
     | '/watches/import'
     | '/admin-media'
     | '/channels'
-    | '/plugin'
   id:
     | '__root__'
     | '/_layout'
@@ -295,6 +295,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/dashboard'
     | '/_layout/onboarding'
+    | '/_layout/plugins'
     | '/_layout/settings'
     | '/_layout/watches'
     | '/_layout/'
@@ -310,7 +311,6 @@ export interface FileRouteTypes {
     | '/_layout/watches_/import'
     | '/_layout/admin-media/'
     | '/_layout/channels/'
-    | '/_layout/plugin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -379,6 +379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/plugins': {
+      id: '/_layout/plugins'
+      path: '/plugins'
+      fullPath: '/plugins'
+      preLoaderRoute: typeof LayoutPluginsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/onboarding': {
       id: '/_layout/onboarding'
       path: '/onboarding'
@@ -398,13 +405,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof LayoutAdminRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/plugin/': {
-      id: '/_layout/plugin/'
-      path: '/plugin'
-      fullPath: '/plugin/'
-      preLoaderRoute: typeof LayoutPluginIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/channels/': {
@@ -498,6 +498,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutOnboardingRoute: typeof LayoutOnboardingRoute
+  LayoutPluginsRoute: typeof LayoutPluginsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -513,13 +514,13 @@ interface LayoutRouteChildren {
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutAdminMediaIndexRoute: typeof LayoutAdminMediaIndexRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
-  LayoutPluginIndexRoute: typeof LayoutPluginIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutOnboardingRoute: LayoutOnboardingRoute,
+  LayoutPluginsRoute: LayoutPluginsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
@@ -535,7 +536,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutAdminMediaIndexRoute: LayoutAdminMediaIndexRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
-  LayoutPluginIndexRoute: LayoutPluginIndexRoute,
 }
 
 const LayoutRouteWithChildren =

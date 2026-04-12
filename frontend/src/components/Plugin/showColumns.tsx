@@ -27,7 +27,7 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
         params={{ showKey: row.original.id }}
         className="font-medium text-primary hover:underline"
       >
-        {row.original.name || `No Name (${row.original.id.split("-")[0]})`}
+        {row.original.name || `No Name (${row.original.key})`}
       </Link>
     ),
   },
@@ -84,6 +84,15 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     cell: ({ row }) => (
       <span className="text-muted-foreground font-mono text-sm">
         {row.original.key}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground font-mono text-sm">
+        {row.original.id}
       </span>
     ),
   },

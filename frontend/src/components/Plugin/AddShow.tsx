@@ -37,7 +37,7 @@ import type { ShowTableData } from "./showColumns"
 type ShowsData = Array<ShowTableData>
 
 const formSchema = z.object({
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1).max(255),
   name: z.string().max(255).optional().or(z.literal("")),
   media_type: z.string().max(255).optional().or(z.literal("")),
   description: z.string().optional().or(z.literal("")),
@@ -47,6 +47,16 @@ const formSchema = z.object({
 })
 
 type FormData = z.infer<typeof formSchema>
+
+const makeDefaults = (): FormData => ({
+  key: crypto.randomUUID(),
+  name: "",
+  media_type: "",
+  description: "",
+  url: "",
+  image_url: "",
+  data_timestamp: "",
+})
 
 interface AddShowProps {
   sourceKey: string
@@ -61,15 +71,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     criteriaMode: "all",
-    defaultValues: {
-      key: "",
-      name: "",
-      media_type: "",
-      description: "",
-      url: "",
-      image_url: "",
-      data_timestamp: "",
-    },
+    defaultValues: makeDefaults(),
   })
 
   const mutation = useMutation({
@@ -87,7 +89,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
       context.client.setQueryData<ShowsData>(queryKey, (old) => [
         ...(old ?? []),
         {
-          key: crypto.randomUUID(),
+          key: newShow.key,
           name: newShow.name ?? null,
           id: crypto.randomUUID(),
           source_id: sourceKey,
@@ -103,7 +105,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
     },
     onSuccess: () => {
       showSuccessToast("Show created successfully")
-      form.reset()
+      form.reset(makeDefaults())
       setIsOpen(false)
     },
     onError: (error, _variables, onMutateResult, context) => {
@@ -117,7 +119,6 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
     })
@@ -230,11 +231,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
                   <FormItem>
                     <FormLabel>Key</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Auto-generated if empty"
-                        type="text"
-                        {...field}
-                      />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

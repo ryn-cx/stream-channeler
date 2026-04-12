@@ -164,7 +164,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
         # Get parent before deleting the initial record.
-        parent = initial_test_data.record.parent()
+        parent = initial_test_data.record.parent
 
         # Delete the initial record so this will only test creating for an empty parent,
         # this is done mostly to support watch better which has extra logic if there are
@@ -213,7 +213,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             record_is_public=False,
         )
 
-        parent = initial_test_data.record.parent()
+        parent = initial_test_data.record.parent
         session_scoped_db.delete(initial_test_data.record)
         parameters_model = build_random_model(self.input_schema, mode)
 
@@ -243,7 +243,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             record_is_public=False,
         )
 
-        parent = initial_test_data.record.parent()
+        parent = initial_test_data.record.parent
         for _ in range(existing_record_count - 1):
             self.create_record_function(session_scoped_db, parent)
 
@@ -276,7 +276,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             record_is_public=random_bool(),
         )
 
-        parent = initial_test_data.record.parent()
+        parent = initial_test_data.record.parent
         other_user = create_random_user(session_scoped_db)
         existing_record = self.create_record_function(session_scoped_db, other_user.id)
         parameters_model = build_random_model(
@@ -367,7 +367,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         result = self.assert_create_record_success(
             session_scoped_client,
             session_scoped_db,
-            initial_test_data.record.parent().id,
+            initial_test_data.record.parent.id,
             initial_test_data.headers,
             build_random_model(self.input_schema, "minimal"),
         )

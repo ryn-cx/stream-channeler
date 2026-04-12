@@ -249,13 +249,13 @@ class FileMixin(BasePlugin, register=False):
     # region File Groups
 
     @override
-    def _show_files(self, show_key: str, **kwargs: Any) -> Sequence[UrlTitleDetails]:  # type: ignore[override]
+    def _show_files(self, show_key: str) -> Sequence[UrlTitleDetails]:
         # Movies - Required to detect changes to the show (there are no new seasons).
         # TV Show - Required to detect changes to the show and new seasons.
         return [self._url_title_details_file(show_key)]
 
     @override
-    def _season_files(  # type: ignore[override]
+    def _season_files(
         self,
         season_key: str,
         show_key: str,
@@ -271,7 +271,7 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     @override
-    def _episode_files(  # type: ignore[override]
+    def _episode_files(
         self,
         episode_key: str,
         season_key: str,
@@ -324,8 +324,12 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         url_title_details = self._url_title_details_file(show_key).parsed()
-        seasons = url_title_details.data.url_v2.node.seasons or []
-        return [season.id for season in seasons]
+        node = url_title_details.data.url_v2.node
+        if seasons := node.seasons:
+            return [season.id for season in seasons]
+        # Movies have no real seasons, but `_upsert_movie_season` creates a
+        # virtual season whose key is the movie's node id.
+        return [node.id]
 
     @override
     def _episode_keys_from_file(
@@ -372,6 +376,7 @@ class FileMixin(BasePlugin, register=False):
                 col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
             )
             .order_by(col(File.data_timestamp).desc())
+            .limit(1)
         )
         return self.db.exec(statement)
 

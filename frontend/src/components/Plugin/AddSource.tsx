@@ -37,7 +37,7 @@ import type { SourceTableData } from "./sourceColumns"
 type SourcesData = Array<SourceTableData>
 
 const formSchema = z.object({
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1).max(255),
   name: z.string().max(255).optional().or(z.literal("")),
   favicon_url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
@@ -45,6 +45,14 @@ const formSchema = z.object({
 })
 
 type FormData = z.infer<typeof formSchema>
+
+const makeDefaults = (): FormData => ({
+  key: crypto.randomUUID(),
+  name: "",
+  favicon_url: "",
+  image_url: "",
+  data_timestamp: "",
+})
 
 interface AddSourceProps {
   pluginId: string
@@ -58,13 +66,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     criteriaMode: "all",
-    defaultValues: {
-      key: "",
-      name: "",
-      favicon_url: "",
-      image_url: "",
-      data_timestamp: "",
-    },
+    defaultValues: makeDefaults(),
   })
 
   const mutation = useMutation({
@@ -83,7 +85,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
       context.client.setQueryData<SourcesData>(queryKey, (old) => [
         ...(old ?? []),
         {
-          key: crypto.randomUUID(),
+          key: newSource.key,
           name: newSource.name ?? null,
           id: crypto.randomUUID(),
           plugin_id: pluginId,
@@ -97,7 +99,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
     },
     onSuccess: () => {
       showSuccessToast("Source created successfully")
-      form.reset()
+      form.reset(makeDefaults())
       setIsOpen(false)
     },
     onError: (error, _variables, onMutateResult, context) => {
@@ -116,7 +118,6 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
     })
@@ -199,11 +200,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
                   <FormItem>
                     <FormLabel>Key</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Auto-generated if empty"
-                        type="text"
-                        {...field}
-                      />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

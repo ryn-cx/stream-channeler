@@ -180,7 +180,7 @@ function ImportWatchHistory() {
     queryFn: () =>
       apiRequest<PluginImportWatchHistoryInfo[]>(OpenAPI, {
         method: "GET",
-        url: "/api/v1/plugins/supports-import-watch-history",
+        url: "/api/v1/plugins/import-watch-history-information",
       }),
     queryKey: ["watch-import-plugins"],
   })

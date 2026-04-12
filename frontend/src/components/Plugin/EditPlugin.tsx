@@ -43,6 +43,7 @@ import type { PluginTableData } from "./columns"
 type PluginsData = Array<PluginTableData>
 
 const formSchema = z.object({
+  key: z.string().min(1, "Key is required").max(255),
   name: z.string().max(255).optional().or(z.literal("")),
   version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
@@ -65,6 +66,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      key: plugin.key ?? "",
       name: plugin.name ?? "",
       version: plugin.version ?? "",
       data_timestamp: plugin.data_timestamp?.slice(0, 16) ?? "",
@@ -136,6 +138,19 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key</FormLabel>
+                    <FormControl>
+                      <Input type="text" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="name"

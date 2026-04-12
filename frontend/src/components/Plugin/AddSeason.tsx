@@ -43,10 +43,20 @@ const formSchema = z.object({
   image_url: z.string().max(2048).optional().or(z.literal("")),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1).max(255),
 })
 
 type FormData = z.infer<typeof formSchema>
+
+const makeDefaults = (): FormData => ({
+  name: "",
+  season_number: "",
+  url: "",
+  image_url: "",
+  sort_order: "",
+  data_timestamp: "",
+  key: crypto.randomUUID(),
+})
 
 interface AddSeasonProps {
   showKey: string
@@ -61,15 +71,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
     resolver: zodResolver(formSchema) as any,
     mode: "onBlur",
     criteriaMode: "all",
-    defaultValues: {
-      name: "",
-      season_number: "",
-      url: "",
-      image_url: "",
-      sort_order: "",
-      data_timestamp: "",
-      key: "",
-    },
+    defaultValues: makeDefaults(),
   })
 
   const mutation = useMutation({
@@ -87,7 +89,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
       context.client.setQueryData<SeasonsData>(queryKey, (old) => [
         ...(old ?? []),
         {
-          key: crypto.randomUUID(),
+          key: newSeason.key,
           name: newSeason.name ?? null,
           id: crypto.randomUUID(),
           show_id: showKey,
@@ -103,7 +105,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
     },
     onSuccess: () => {
       showSuccessToast("Season created successfully")
-      form.reset()
+      form.reset(makeDefaults())
       setIsOpen(false)
     },
     onError: (error, _variables, onMutateResult, context) => {
@@ -117,7 +119,6 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       season_number: data.season_number || undefined,
       sort_order: data.sort_order || undefined,
@@ -228,11 +229,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
                   <FormItem>
                     <FormLabel>Key</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Auto-generated if empty"
-                        type="text"
-                        {...field}
-                      />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

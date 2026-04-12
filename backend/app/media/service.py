@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from typing import TYPE_CHECKING
 
@@ -9,64 +8,21 @@ from sqlmodel.sql.expression import SelectOfScalar
 if TYPE_CHECKING:
     from app.users.models import User
 
-from app.channels.models import Channel
-from app.channels.schemas import ChannelPatchInput
-from app.episodes.models import Episode
-from app.episodes.schemas import (
-    EpisodePatchInput,
-    EpisodePostInput,
-)
-from app.plugins.models import Plugin
-from app.plugins.schemas import PluginPatchInput
-from app.schemas import Message
-from app.seasons.models import Season
-from app.seasons.schemas import (
-    SeasonPatchInput,
-    SeasonPostInput,
-)
-from app.shows.models import Show
-from app.shows.schemas import ShowPatchInput, ShowPostInput
-from app.sources.models import Source
-from app.sources.schemas import (
-    SourcePatchInput,
-    SourcePostInput,
-)
-from app.watches.models import Watch
-from app.watches.schemas import WatchPatchInput
-
-type MediaModel = Channel | Episode | Season | Show | Source | Plugin | Watch
-type PatchInput = (
-    ChannelPatchInput
-    | EpisodePatchInput
-    | SeasonPatchInput
-    | ShowPatchInput
-    | SourcePatchInput
-    | PluginPatchInput
-    | WatchPatchInput
-)
+from app.schemas import MediaModel, Message
 
 
-def list_children[T: (Channel, Plugin, Source, Show, Season, Episode)](
-    session: Session,
-    model: type[T],
-    parent_key_field: str,
-    parent_id: uuid.UUID,
-) -> list[T]:
-    """Generic list: query children by FK and return model instances."""
-    return list(
-        session.exec(
-            select(model).where(getattr(model, parent_key_field) == parent_id),
-        ).all(),
-    )
-
-
-def get_first_user_record_or_error[T: MediaModel](
+def get_first_owned_record_or_error[T: MediaModel](
     session: Session,
     statement: SelectOfScalar[T],
     current_user_id: uuid.UUID,
     name: str,
 ) -> T:
-    """Execute query, returning 403 if not owned or 404 if not found."""
+    """Get a record if it is owned by the current user or raise an error.
+
+    Raises:
+        403 if authenticated but not owner
+        404 if record not found
+    """
     if result := session.exec(statement).first():
         if result.get_user_id(session) != current_user_id:
             raise HTTPException(
@@ -86,7 +42,13 @@ def get_first_readable_record_or_error[T: MediaModel](
     current_user_id: uuid.UUID | None,
     name: str,
 ) -> T:
-    """Execute query, allowing access if public, owned, or superuser."""
+    """Get a record if it is readable by the current user or raise an error.
+
+    Raises:
+        401 if not authenticated and record is not public
+        403 if authenticated but not owner and record is not public
+        404 if record not found
+    """
     if result := session.exec(statement).first():
         if result.is_public(session):
             return result
@@ -113,9 +75,9 @@ def get_owned_record[T: MediaModel](
     resource_id: uuid.UUID,
     current_user_id: uuid.UUID,
 ) -> T:
-    """Look up a resource by ID and verify user ownership."""
+    """Get a record if it is owned by the current user."""
     statement = select(model).where(model.id == resource_id)
-    return get_first_user_record_or_error(
+    return get_first_owned_record_or_error(
         session,
         statement,
         current_user_id,
@@ -129,7 +91,7 @@ def get_readable_record[T: MediaModel](
     resource_id: uuid.UUID,
     user: User | None,
 ) -> T:
-    """Get a resource by ID if it is public or owned by the current user."""
+    """Get a record if it is readable by the current user."""
     statement = select(model).where(model.id == resource_id)
     user_id = user.id if user else None
     return get_first_readable_record_or_error(
@@ -151,60 +113,11 @@ def raise_if_exists(
         )
 
 
-def create_child[T: Source | Show | Season | Episode](
-    session: Session,
-    model: type[T],
-    parent: Plugin | Source | Show | Season,
-    body: SourcePostInput | ShowPostInput | SeasonPostInput | EpisodePostInput,
-    parent_key: str,
-) -> T:
-    """Generic create: check for existing, validate, add, commit, and return."""
-    # There is no good way to type hint the relationship between the parent and child
-    # models.
-    raise_if_exists(model.get(session, parent, body.key))  # type: ignore[attr-defined, arg-type]
-    child = model.model_validate(body, update={parent_key: parent.id})
-    session.add(child)
-    session.commit()
-    session.refresh(child)
-    return child  # type: ignore[return-value]
-
-
-def _check_duplicate_key(
-    session: Session,
-    entry: MediaModel,
-    body: PatchInput,
-) -> None:
-    """Raise 409 if updating key would conflict with a sibling record."""
-    # Channel and Watch do not have user editable unique keys.
-    if isinstance(entry, (Channel, Watch)):
-        return
-    if isinstance(body, (ChannelPatchInput, WatchPatchInput)):
-        return
-
-    # If the key is not changing no checks needs to be done.
-    if body.key is None or body.key == entry.key:
-        return
-    raise_if_exists(entry.get_sibling(session, body.key))
-
-
-def update_record[T: MediaModel](
-    session: Session,
-    entry: T,
-    body: PatchInput,
-) -> T:
-    """Generic update: apply patch, commit, refresh, and return."""
-    _check_duplicate_key(session, entry, body)
-    entry.sqlmodel_update(body.model_dump(exclude_unset=True))
-    session.commit()
-    session.refresh(entry)
-    return entry
-
-
 def delete_record(
     session: Session,
-    entry: MediaModel,
+    existing_record: MediaModel,
 ) -> Message:
-    """Generic delete: remove entry, commit, and return a success message."""
-    session.delete(entry)
+    """Remove record, commit, and return a success message."""
+    session.delete(existing_record)
     session.commit()
-    return Message(message=f"{type(entry).__name__} deleted successfully")
+    return Message(message=f"{type(existing_record).__name__} deleted successfully")

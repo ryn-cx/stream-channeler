@@ -45,3 +45,8 @@ class User(UserBase, table=True):
             self.plugins.append(child)
         else:
             self.channels.append(child)
+
+    # TODO: Where is this used?
+    @property
+    def children(self) -> "list[Plugin]":  # noqa: UP037
+        return self.plugins

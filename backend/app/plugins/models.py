@@ -1,10 +1,7 @@
-# TODO: Validate
 import uuid
-from collections.abc import Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Never, override
+from typing import TYPE_CHECKING, ClassVar, Never, override
 
-from sqlalchemy import util
 from sqlmodel import (
     Field,
     Index,
@@ -12,11 +9,13 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
-    select,
 )
 
 from app.models import BaseMediaMixin, DateTimeField, MediaMixin
 from app.users.models import User
+
+if TYPE_CHECKING:
+    from app.sources.models import Source
 
 
 class BasePlugin(BaseMediaMixin):
@@ -25,21 +24,14 @@ class BasePlugin(BaseMediaMixin):
     public: bool
 
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
-    from app.sources.models import Source
-
-
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "key"),
         UniqueConstraint("id"),
-        # Used in episode_selector._filter_deleted_media to exclude soft-deleted plugins.
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
+
+    SORTABLE_FIELDS: ClassVar[list[str]] = ["name", "public"]
 
     user_id: uuid.UUID = Field(
         foreign_key="user.id",
@@ -50,31 +42,33 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     sources: list[Source] = Relationship(back_populates="plugin", cascade_delete=True)
     files: list[File] = Relationship(back_populates="plugin", cascade_delete=True)
 
+    @property
     @override
     def parent(self) -> User:
         return self.user
 
+    @override
     def add_child(self, child: Source | File) -> None:
-        """Append a child to the correct relationship list based on its type."""
         if isinstance(child, File):
             self.files.append(child)
         else:
             self.sources.append(child)
 
-    def get_user_id(self, _session: Session) -> uuid.UUID:
+    @override
+    def get_user_id(self, session: Session) -> uuid.UUID:
         return self.user_id
 
-    def is_public(self, _session: Session) -> bool:
+    @override
+    def is_public(self, session: Session) -> bool:
         return self.public
 
+    @property
     @override
     def children(self) -> list[Source | File]:
         return [*self.sources, *self.files]
 
-    def get_sibling(self, db: Session, key: str) -> Plugin | None:
-        return Plugin.get(db, key, self.user)
-
     def __str__(self) -> str:
+        """Return a string representation of the Plugin."""
         base_plugin = "Plugin:"
         if self.key:
             base_plugin += f" {self.key}"
@@ -82,244 +76,40 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
             base_plugin += f" ({self.id})"
         return base_plugin
 
-    @classmethod
-    def get_from_memory(
-        cls,
-        db: Session,
-        plugin_key: str,
-        user: User,
-    ) -> Plugin | None:
-        """Like Plugin.get but will only return a Plugin if it is found in memory.
-
-        Args:
-            db: Database session
-            plugin_key: Unique key of the plugin
-            user: Parent user instance
-
-        Returns:
-            Plugin instance if found in memory, None otherwise
-        """
-        return db.identity_map.get((Plugin, (user.id, plugin_key), None))
-
-    @classmethod
-    def get(
-        cls,
-        db: Session,
-        plugin_key: str,
-        user: User,
-        *,
-        options: Sequence[ORMOption] | None = None,
-    ) -> Plugin | None:
-        """Look up a Plugin by its unique key.
-
-        Args:
-            db: Database session.
-            plugin_key: Unique key of the plugin.
-            user: User to scope the lookup.
-            options: SQLAlchemy ORM options (e.g. joinedload).
-
-        Returns:
-            Plugin instance if found, None otherwise.
-
-        """
-        statement = select(Plugin).where(
-            Plugin.key == plugin_key,
-            Plugin.user_id == user.id,
-        )
-        if options:
-            statement = statement.options(*options)
-        return db.exec(statement).first()
-
-    @classmethod
-    def get_one(
-        cls,
-        db: Session,
-        plugin_key: str,
-        user: User,
-        *,
-        options: Sequence[ORMOption] | None = None,
-    ) -> Plugin:
-        """Look up a Plugin by its unique key.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session.
-            plugin_key: Unique key of the plugin.
-            user: User to scope the lookup.
-            options: SQLAlchemy ORM options (e.g. joinedload).
-
-        Returns:
-            Plugin instance.
-
-        Raises:
-            NoResultFound: If no plugin with the given key exists.
-
-        """
-        statement = select(Plugin).where(
-            Plugin.key == plugin_key,
-            Plugin.user_id == user.id,
-        )
-        if options:
-            statement = statement.options(*options)
-        return db.exec(statement).unique().one()
-
 
 class BaseFile(BaseMediaMixin):
-    data_timestamp: datetime = DateTimeField()
+    # data_timestamp is a required field for files.
+    data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
     content: str | None = Field(default=None)
 
 
-class File(BaseFile, MediaMixin[Plugin, Never], table=True):
+# data_timestamp is a required value for files.
+class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
     __table_args__ = (PrimaryKeyConstraint("plugin_id", "key"),)
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="files")
 
+    @property
     @override
     def parent(self) -> Plugin:
         return self.plugin
 
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get(  # noqa: PLR0913
-        cls,
-        db: Session,
-        plugin: Plugin,
-        file_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> File | None:
-        """Wrap `db.get(File, ...)` for easier use.
+    @property
+    @override
+    def children(self) -> list[Never]:
+        return []
 
-        Args:
-            db: Database session.
-            plugin: Parent plugin instance.
-            file_key: Unique ID of the file within the plugin.
-            options: Passed directly to ``db.get``.
-            populate_existing: Passed directly to ``db.get``.
-            with_for_update: Passed directly to ``db.get``.
-            identity_token: Passed directly to ``db.get``.
-            execution_options: Passed directly to ``db.get``.
-            bind_arguments: Passed directly to ``db.get``.
+    @override
+    def get_user_id(self, session: Session) -> uuid.UUID | None:
+        return self.plugin.get_user_id(session)
 
-        Returns:
-            - File instance if File is found.
-            - None if no File is found.
-
-        """
-        return db.get(
-            File,
-            (plugin.id, file_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get_one(  # noqa: PLR0913
-        cls,
-        db: Session,
-        plugin: Plugin,
-        file_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> File:
-        """Wrap `db.get_one(File, ...)` for easier use.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session.
-            plugin: Parent plugin instance.
-            file_key: Unique ID of the file within the plugin.
-            options: Passed directly to ``db.get_one``.
-            populate_existing: Passed directly to ``db.get_one``.
-            with_for_update: Passed directly to ``db.get_one``.
-            identity_token: Passed directly to ``db.get_one``.
-            execution_options: Passed directly to ``db.get_one``.
-            bind_arguments: Passed directly to ``db.get_one``.
-
-        Returns:
-            File instance
-
-        Raises:
-            NoResultFound: If no file with the given ID exists in the plugin
-
-        """
-        return db.get_one(
-            File,
-            (plugin.id, file_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    @classmethod
-    def get_from_memory(
-        cls,
-        db: Session,
-        plugin: Plugin,
-        file_key: str,
-    ) -> File | None:
-        """Like File.get but will only return a File if it is found in memory.
-
-        Args:
-            db: Database session
-            plugin: Parent plugin instance
-            file_key: Unique ID of the file within the plugin
-
-        Returns:
-            File instance if found in memory, None otherwise
-
-        """
-        return db.identity_map.get((File, (plugin.id, file_key), None))
-
-    @classmethod
-    def get_one_from_memory(
-        cls,
-        db: Session,
-        plugin: Plugin,
-        file_key: str,
-    ) -> File:
-        """Like File.get_one but will only return a File if it is found in memory.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session
-            plugin: Parent plugin instance
-            file_key: Unique ID of the file within the plugin
-
-        Returns:
-            File instance
-
-        Raises:
-            KeyError: If no file with the given ID exists in memory
-
-        """
-        return db.identity_map[(File, (plugin.id, file_key), None)]
+    @override
+    def is_public(self, session: Session) -> bool:
+        return self.plugin.is_public(session)
 
     def __str__(self) -> str:
+        """Return a string representation of the File."""
         base_file = "File:"
         if self.key:
             base_file += f" {self.key}"

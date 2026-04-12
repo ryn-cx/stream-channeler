@@ -77,7 +77,7 @@ export function AddUrlsToQueueButton({
     queryFn: () =>
       apiRequest<Array<{ name: string; instructions: string }>>(OpenAPI, {
         method: "GET",
-        url: "/api/v1/plugins/supports-import-url",
+        url: "/api/v1/plugins/import-url-information",
       }),
     enabled: isOpen,
   })

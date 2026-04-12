@@ -1,6 +1,6 @@
-# TODO: Validate
 from collections.abc import Sequence
 from functools import cache
+from uuid import UUID
 
 from sqlmodel import Session
 
@@ -13,8 +13,6 @@ from app.channels.models import (
     URLStatus,
 )
 from app.channels.schemas import (
-    ChannelQueueInput,
-    MultipleSortOptionOutputs,
     SortOptionOutput,
     WhitelistShowInput,
 )
@@ -31,22 +29,28 @@ def add_urls_to_channel_import_queue(
     urls: Sequence[str],
 ) -> list[ChannelQueue]:
     """Add URLs to a channel's import queue."""
-    queue_by_url = {queue.url: queue for queue in channel.queue}
-
-    # Remove duplicates while preserving order
-    unique_urls = dict.fromkeys(urls)
 
     output: list[ChannelQueue] = []
+    # Remove duplicates without changing the order allowing the output order to match
+    # the input order.
+    unique_urls = dict.fromkeys(urls)
     for url in unique_urls:
         stripped_url = url.strip()
-        existing_queue_entry = queue_by_url.get(stripped_url)
+        queue_record = session.get(ChannelQueue, (channel.id, stripped_url))
 
-        queue_entry = ChannelQueueInput(
-            url=stripped_url,
-            status=URLStatus.PENDING,
-        ).upsert(channel, existing_queue_entry)
+        # If the entry already exists reset it to pending because the user may have
+        # removed it from the channel or it may have failed to import for some reaosn.
+        if queue_record:
+            queue_record.status = URLStatus.PENDING
+        else:
+            queue_record = ChannelQueue(
+                channel_id=channel.id,
+                url=stripped_url,
+                status=URLStatus.PENDING,
+            )
+            session.add(queue_record)
 
-        output.append(queue_entry)
+        output.append(queue_record)
 
     session.commit()
     return output
@@ -57,114 +61,92 @@ def update_whitelist(
     channel_show: ChannelShow,
     config: WhitelistShowInput,
 ) -> None:
-    """Update whitelist entries for a channel show, only modifying provided values."""
+    """Update whitelist records for a channel show."""
     if config.whitelist_mode is not None:
         channel_show.white_list_mode = config.whitelist_mode
 
-    existing_seasons = {s.season_id for s in channel_show.season_white_list}
-    existing_episodes = {e.episode_id for e in channel_show.episode_white_list}
+    existing_seasons = {season.season_id for season in channel_show.season_white_list}
+    existing_episodes = {
+        episode.episode_id for episode in channel_show.episode_white_list
+    }
 
     for season in config.seasons:
-        _toggle_season(
+        toggle_season_whitelist(
             session,
             channel_show,
             season.id,
-            season.enabled,
             existing_seasons,
+            marked=season.marked,
         )
     for episode in config.episodes:
-        _toggle_episode(
+        toggle_episode_whitelist(
             session,
             channel_show,
             episode.id,
-            episode.enabled,
             existing_episodes,
+            marked=episode.marked,
         )
 
     session.commit()
 
 
-def _toggle_season(
+def toggle_season_whitelist(
     session: Session,
     channel_show: ChannelShow,
-    season_id: object,
-    enabled: bool,
-    existing: set[object],
+    season_id: UUID,
+    existing: set[UUID],
+    *,
+    marked: bool,
 ) -> None:
-    if enabled and season_id not in existing:
+    if marked and season_id not in existing:
         channel_show.season_white_list.append(
             ChannelSeasonWhiteList(
                 channel_show_id=channel_show.id,
                 season_id=season_id,
             ),
         )
-    elif not enabled and season_id in existing:
-        for entry in channel_show.season_white_list:
-            if entry.season_id == season_id:
-                session.delete(entry)
-                break
+    elif not marked and season_id in existing:
+        existing_season = ChannelSeasonWhiteList.get(session, channel_show, season_id)
+        if existing_season:
+            session.delete(existing_season)
 
 
-def _toggle_episode(
+def toggle_episode_whitelist(
     session: Session,
     channel_show: ChannelShow,
-    episode_id: object,
-    enabled: bool,
-    existing: set[object],
+    episode_id: UUID,
+    existing: set[UUID],
+    *,
+    marked: bool,
 ) -> None:
-    if enabled and episode_id not in existing:
+    if marked and episode_id not in existing:
         channel_show.episode_white_list.append(
             ChannelEpisodeWhiteList(
                 channel_show_id=channel_show.id,
                 episode_id=episode_id,
             ),
         )
-    elif not enabled and episode_id in existing:
-        for entry in channel_show.episode_white_list:
-            if entry.episode_id == episode_id:
-                session.delete(entry)
-                break
+    elif not marked and episode_id in existing:
+        existing_episode = ChannelEpisodeWhiteList.get(
+            session,
+            channel_show,
+            episode_id,
+        )
+        if existing_episode:
+            session.delete(existing_episode)
 
 
 @cache
-def get_sort_options() -> MultipleSortOptionOutputs:
+def get_sort_options() -> list[SortOptionOutput]:
     """Build and cache the list of all possible sorting options."""
-    data: list[SortOptionOutput] = []
-
-    skip_fields = ("extra", "description", "data_timestamp", "version")
-    for model in (Episode, Season, Show, Source, Plugin):
-        for field in model.model_fields:
-            if field.endswith(("key", "url", "_at", "_id")) or field in skip_fields:
-                continue
-
-            label = f"{model.__name__} - {field.replace('_', ' ').title()}"
-            model_name = model.__name__.lower()
-            data.append(
-                SortOptionOutput(label=label, model=model_name, field=field),
-            )
-
-    data.append(SortOptionOutput(label="Show - Started", model="show", field="started"))
-    data.append(
+    options: list[SortOptionOutput] = [
         SortOptionOutput(
-            label="Episode - Recently Aired",
-            model="episode",
-            field="recently_aired",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Last Watched",
-            model="show",
-            field="last_watched",
-        ),
-    )
-    data.append(
-        SortOptionOutput(
-            label="Show - Episode Count",
-            model="show",
-            field="episode_count",
-        ),
-    )
-
-    data.sort(key=lambda option: option.label)
-    return MultipleSortOptionOutputs(data=data)
+            label=f"{model.__name__} - {field_name.replace('_', ' ').title()}",
+            model=model.__name__.lower(),
+            field=field_name,
+        )
+        for model in (Episode, Season, Show, Source, Plugin)
+        for field_name in model.SORTABLE_FIELDS
+    ]
+    options.sort(key=lambda option: option.label)
+    return options

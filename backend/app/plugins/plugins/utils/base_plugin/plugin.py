@@ -1,9 +1,7 @@
 # TODO: Validate
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import datetime
-from typing import Any, TypeIs, override
-from weakref import WeakValueDictionary
+from typing import Any, override
 
 from loguru import logger
 from sqlalchemy.orm import joinedload
@@ -49,9 +47,11 @@ class BasePlugin(
     ) -> None:
         self.db = db
         self._file_cache: dict[tuple[type, object], Any] = {}
-        self._weakref_file_cache: WeakValueDictionary[tuple[type, object], Any] = (
-            WeakValueDictionary()
-        )
+        self._weakref_file_cache: dict[tuple[type, object], Any] = dict()
+        # TODO: Make this a weakref again if safe
+        # self._weakref_file_cache: WeakValueDictionary[tuple[type, object], Any] = (
+        #     WeakValueDictionary()
+        # )
         self.initialize_plugin()
         self._validate_plugin_version()
 
@@ -60,8 +60,8 @@ class BasePlugin(
         plugin_user = get_or_create_plugin_user(session=self.db)
         existing = Plugin.get(
             self.db,
-            self.plugin_key(),
             plugin_user,
+            self.plugin_key(),
             options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
         )
 
@@ -81,7 +81,7 @@ class BasePlugin(
             msg = (
                 f"Plugin {self.plugin_key()!r} requires version {self._VERSION!r} "
                 f"but the database has version {self.plugin.version!r}. "
-                f"The database entry needs to be migrated."
+                f"The database record needs to be migrated."
             )
             raise RuntimeError(msg)
 
@@ -108,12 +108,9 @@ class BasePlugin(
             preload_episodes=True,
             preload_show=True,
         ).one()
-        self._download_season_files(
-            season.key,
-            season.update_at,
-            show_key=season.show.key,
-        )
+        self._download_season_files(season.key, season.show.key, season.update_at)
         _cache = self._download_show_files(season.show.key)
+        self._preload_show(show_id=season.show.id, preload_episodes=True).one()
         self._upsert_show(season.show.source, season.show.key)
 
     @override
@@ -122,11 +119,15 @@ class BasePlugin(
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(
             episode.key,
+            episode.season.key,
+            episode.season.show.key,
             episode.update_at,
-            season_key=episode.season.key,
-            show_key=episode.season.show.key,
         )
         _cache = self._download_show_files(episode.season.show.key)
+        self._preload_show(
+            show_id=episode.season.show.id,
+            preload_episodes=True,
+        ).one()
         self._upsert_show(episode.season.show.source, episode.season.show.key)
 
     @abstractmethod
@@ -134,22 +135,38 @@ class BasePlugin(
         self,
         source: Source,
         show_key: str,
-        *,
-        force_reimport: bool = False,
     ) -> Show: ...
 
+    def soft_delete_missing_seasons(self, show_key: str) -> None:
+        """Soft-delete seasons whose keys are not in the show's season file."""
+        expected_keys = self._season_keys_from_file(show_key)
+        source_ids = {source.id for source in self.plugin.sources}
+        for obj in list(self.db.identity_map.values()):
+            if (
+                isinstance(obj, Show)
+                and obj.key == show_key
+                and obj.source_id in source_ids
+            ):
+                obj.soft_delete_missing_children(expected_keys)
+
+    def soft_delete_missing_episodes(self, season_key: str) -> None:
+        """Soft-delete episodes whose keys are not in the season's episode file."""
+        expected_keys = self._episode_keys_from_file(season_key)
+        source_ids = {source.id for source in self.plugin.sources}
+        show_ids = {
+            obj.id
+            for obj in self.db.identity_map.values()
+            if isinstance(obj, Show) and obj.source_id in source_ids
+        }
+        for obj in list(self.db.identity_map.values()):
+            if (
+                isinstance(obj, Season)
+                and obj.key == season_key
+                and obj.show_id in show_ids
+            ):
+                obj.soft_delete_missing_children(expected_keys)
+
     # endregion
-
-    @staticmethod
-    def _is_up_to_date(
-        entity: Show | Season | Episode | None,
-        timestamp: datetime,
-    ) -> TypeIs[Show | Season | Episode]:
-        """Check if an entity exists and is up to date.
-
-        When this returns True, the type checker narrows entity to not-None.
-        """
-        return entity is not None and entity.data_timestamp == timestamp
 
     @classmethod
     @override
@@ -170,6 +187,6 @@ class BasePlugin(
         return obj
 
     def raise_invalid_url_if_no_content(self, file: BaseFile[Any], url: str) -> None:
-        if not file.database_entry.content:
+        if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)

@@ -26,7 +26,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Name",
     cell: ({ row }) => (
       <span className="font-medium">
-        {row.original.name || `No Name (${row.original.id.split("-")[0]})`}
+        {row.original.name || `No Name (${row.original.key})`}
       </span>
     ),
   },
@@ -119,6 +119,15 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     cell: ({ row }) => (
       <span className="text-muted-foreground font-mono text-sm">
         {row.original.key}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground font-mono text-sm">
+        {row.original.id}
       </span>
     ),
   },

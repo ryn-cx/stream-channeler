@@ -50,6 +50,7 @@ function EpisodesTableContent() {
   )
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
+    id: false,
   })
 
   const table = useReactTable({

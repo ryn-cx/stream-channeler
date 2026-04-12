@@ -2,17 +2,18 @@
 import json
 from typing import override
 
-from app.plugins.plugins.YouTube.upsert import UpsertMixin
-from app.users.models import User
-from app.utils import tz_datetime
-from app.watches.models import Watch
-from app.watches.schemas import (
-    WatchImportResult,
-    WatchImportResults,
+from app.plugins.plugins.utils.base_plugin.watch_history import (
+    ParsedWatchEntry,
 )
+from app.plugins.plugins.utils.base_plugin.watch_history import (
+    WatchHistoryMixin as BaseWatchHistoryMixin,
+)
+from app.plugins.plugins.YouTube.upsert import UpsertMixin
+from app.utils import tz_datetime
+from app.watches.schemas import WatchImportResult
 
 
-class WatchMixin(UpsertMixin, register=False):
+class WatchMixin(BaseWatchHistoryMixin, UpsertMixin, register=False):
     supports_import_watch_history = True
     import_watch_history_file_extension = ".json"
 
@@ -33,76 +34,31 @@ class WatchMixin(UpsertMixin, register=False):
         )
 
     @override
-    def import_watch_history(
-        self,
-        content: str,
-        user: User,
-        *,
-        new_only: bool,
-        verified: bool,
-    ) -> WatchImportResults:
-        """Import YouTube watch history from Google Takeout JSON content."""
+    def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
+        """Parse YouTube watch history from Google Takeout JSON content."""
         entries = json.loads(content)
-        # TODO: Why do some entries have no titleUrl?
-        entries = [entry for entry in entries if "titleUrl" in entry]
-
-        entry_video_keys: list[str] = []
+        parsed_entries: list[ParsedWatchEntry] = []
         for entry in entries:
-            video_key = entry["titleUrl"].split("=", maxsplit=1)[-1]
-            entry_video_keys.append(video_key)
-
-        episodes_on_database = self._get_episodes_by_key(entry_video_keys)
-        watched_episode_dates = self._get_watched_episode_dates(
-            user,
-            episodes_on_database,
-        )
-
-        added_watches: list[WatchImportResult] = []
-        skipped_watches: list[WatchImportResult] = []
-        existing_watches: list[WatchImportResult] = []
-
-        for entry, video_key in zip(entries, entry_video_keys, strict=True):
+            # TODO: Why do some entries have no titleUrl?
+            if "titleUrl" not in entry:
+                continue
             # Ignore deleted videos
             if "subtitles" not in entry:
                 continue
 
-            import_entry = WatchImportResult(
-                show=entry["subtitles"][0]["name"],
-                show_url=entry["titleUrl"],
-                episode=entry["title"].removeprefix("Watched "),
-                episode_url=entry["titleUrl"],
-            )
-
-            if not (episode := episodes_on_database.get(video_key)):
-                skipped_watches.append(import_entry)
-                continue
-
-            watch_date = tz_datetime.fromisoformat(entry["time"])
-
-            watched_dates = watched_episode_dates.setdefault(str(episode.id), [])
-            if new_only and watched_dates:
-                existing_watches.append(import_entry)
-                continue
-
-            if watch_date in watched_dates:
-                existing_watches.append(import_entry)
-                continue
-
-            self.db.add(
-                Watch(
-                    user_id=user.id,
-                    episode_id=episode.id,
-                    watch_date=watch_date,
-                    verified=verified,
+            video_key = entry["titleUrl"].split("=", maxsplit=1)[-1]
+            parsed_entries.append(
+                ParsedWatchEntry(
+                    episode_key=video_key,
+                    watch_date=tz_datetime.fromisoformat(entry["time"]),
+                    import_result=WatchImportResult(
+                        show=entry["subtitles"][0]["name"],
+                        show_url=entry["titleUrl"],
+                        episode=entry["title"].removeprefix("Watched "),
+                        episode_url=entry["titleUrl"],
+                    ),
                 ),
             )
-            watched_dates.append(watch_date)
-            added_watches.append(import_entry)
-
-        return WatchImportResults(
-            added=added_watches,
-            existing=existing_watches,
-            skipped=skipped_watches,
-        )
+        return parsed_entries
 
     # endregion Watch Import

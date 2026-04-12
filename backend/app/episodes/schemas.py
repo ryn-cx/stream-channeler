@@ -1,10 +1,10 @@
-# TODO: Validate
 import uuid
 
-from pydantic import ConfigDict
 from sqlmodel import Field
 
-from app.episodes.models import BaseEpisode
+from app.episodes.models import BaseEpisode, Episode
+from app.schemas import BasePatchInputWithKey, BasePostInputWithChild
+from app.seasons.models import Season
 
 
 class EpisodeOutput(BaseEpisode):
@@ -12,12 +12,9 @@ class EpisodeOutput(BaseEpisode):
     season_id: uuid.UUID
 
 
-class EpisodePostInput(BaseEpisode):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    key: str = Field(default_factory=lambda: str(uuid.uuid4()))
+class EpisodePostInput(BasePostInputWithChild[Episode, Season], BaseEpisode):
+    pass
 
 
-class EpisodePatchInput(BaseEpisode):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    # assignment - Patch input can ignore required values.
-    key: str | None = Field(default=None)  # type: ignore[assignment]
+class EpisodePatchInput(BasePatchInputWithKey[Episode], BaseEpisode):
+    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment] # Patch input can ignore required values.

@@ -1,4 +1,3 @@
-# TODO: Validate
 # TODO: This file was entirely AI generated just to have a baseline for testing.
 """Tests for EpisodeQueryBuilder sorting, filtering, and interleaving."""
 
@@ -313,44 +312,44 @@ class TestInterleave:
         assert [ep.id for ep in first] == [ep.id for ep in second]
 
 
-class TestShowGroup:
-    def test_show_group_sum_duration(self, episode_setup: dict) -> None:
+class TestGroupByShow:
+    def test_group_by_show_sum_duration(self, episode_setup: dict) -> None:
         episodes = _build(
             episode_setup,
             sort_by=[
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="sum",
                 ),
             ],
         )
         assert len(episodes) == 4
 
-    def test_show_group_max_air_date(self, episode_setup: dict) -> None:
+    def test_group_by_show_max_air_date(self, episode_setup: dict) -> None:
         episodes = _build(
             episode_setup,
             sort_by=[
                 _sort_key(
                     "episode.air_date",
                     "descending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="max",
                 ),
             ],
         )
         assert len(episodes) == 4
 
-    def test_show_group_with_show_field(self, episode_setup: dict) -> None:
-        """Show group with a show field just returns the field value directly."""
+    def test_group_by_show_with_show_field(self, episode_setup: dict) -> None:
+        """Group by show with a show field just returns the field value directly."""
         episodes = _build(
             episode_setup,
             sort_by=[
                 _sort_key(
                     "show.name",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                 ),
             ],
         )
@@ -667,7 +666,7 @@ class TestRandomSort:
         assert [ep.id for ep in first] != [ep.id for ep in second]
 
 
-class TestShowGroupAggregations:
+class TestGroupByShowAggregations:
     @pytest.mark.parametrize("aggregation", ["sum", "avg", "count", "max", "min"])
     def test_all_aggregation_functions(
         self,
@@ -680,14 +679,14 @@ class TestShowGroupAggregations:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation=aggregation,
                 ),
             ],
         )
         assert len(episodes) == 4
 
-    def test_show_group_groups_episodes_by_show(
+    def test_group_by_show_groups_episodes_by_show(
         self,
         episode_setup: dict,
     ) -> None:
@@ -698,7 +697,7 @@ class TestShowGroupAggregations:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="sum",
                 ),
             ],
@@ -711,7 +710,7 @@ class TestShowGroupAggregations:
                 seen_shows.append(show_id)
         assert len(seen_shows) == 2
 
-    def test_show_group_count_episodes(self, episode_setup: dict) -> None:
+    def test_group_by_show_count_episodes(self, episode_setup: dict) -> None:
         """Count aggregation should sort by number of episodes per show."""
         episodes = _build(
             episode_setup,
@@ -719,7 +718,7 @@ class TestShowGroupAggregations:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="count",
                 ),
             ],
@@ -849,7 +848,7 @@ class TestSortWithFilterCombinations:
         )
         assert all(ep.duration >= 150 for ep in episodes)
 
-    def test_show_group_with_hide_watched(
+    def test_group_by_show_with_hide_watched(
         self,
         episode_setup: dict,
     ) -> None:
@@ -866,7 +865,7 @@ class TestSortWithFilterCombinations:
                 _sort_key(
                     "episode.duration",
                     "descending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="sum",
                 ),
             ],
@@ -911,8 +910,8 @@ class TestSortWithFilterCombinations:
 
 
 class TestMultipleSortKeyCombinations:
-    def test_show_group_then_episode_sort(self, episode_setup: dict) -> None:
-        """Show group as primary, episode field as secondary."""
+    def test_group_by_show_then_episode_sort(self, episode_setup: dict) -> None:
+        """Group by show as primary, episode field as secondary."""
         episodes = _build(
             episode_setup,
             sort_by=[
@@ -920,7 +919,7 @@ class TestMultipleSortKeyCombinations:
                 _sort_key(
                     "episode.duration",
                     "descending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="sum",
                 ),
             ],
@@ -1116,18 +1115,18 @@ class TestAdditionalChannels:
         assert len(episodes) == 5
 
 
-class TestRecentlyAiredShowGroup:
-    """Test show_group + recently_aired sorting.
+class TestRecentlyAiredGroupByShow:
+    """Test group_by_show + recently_aired sorting.
 
     Shows that have at least one episode aired in the past 30 days should
     appear before shows that have no recently aired episodes.
     """
 
-    def test_interleave_sequential_with_show_group_and_duration(
+    def test_interleave_sequential_with_group_by_show_and_duration(
         self,
         session_scoped_db: Session,
     ) -> None:
-        """Interleaving by show with show_group recently_aired sort should:
+        """Interleaving by show with group_by_show recently_aired sort should:
         1. Group shows by recently aired status (not-recent first when ascending)
         2. Interleave episodes across shows within each group
         3. Sort by duration descending within each show's episodes
@@ -1201,7 +1200,7 @@ class TestRecentlyAiredShowGroup:
                 _sort_key(
                     "episode.recently_aired",
                     "ascending",
-                    mode="show_group",
+                    mode="group_by_show",
                     aggregation="max",
                     days=365,
                 ),
@@ -1211,7 +1210,7 @@ class TestRecentlyAiredShowGroup:
 
         assert len(episodes) == 9
 
-        # The show_group sort with ascending recently_aired should separate
+        # The group_by_show sort with ascending recently_aired should separate
         # shows into two tiers:
         #   - Tier 1 (recently_aired=0): Old Show (not aired in 365 days)
         #   - Tier 2 (recently_aired=1): Recent 1, Recent 2

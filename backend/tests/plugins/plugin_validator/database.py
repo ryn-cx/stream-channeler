@@ -6,14 +6,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.constants import TEST_FILES_FOLDER
 from app.plugins.models import File, Plugin
-from app.plugins.plugins.utils.abstract_plugin import URLImportResult
+from app.plugins.plugins.utils.abstract_plugin import (
+    PluginSearchResults,
+    URLImportResult,
+)
 from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -29,8 +31,8 @@ from tests.plugins.plugin_validator.mocks import block_downloads
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
-class DatabaseMixin(SerializationMixin):
-    plugin_class: type[BasePlugin]
+class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
+    plugin_class: type[PluginT]
     url: str | None = None
     search_query: str | None = None
     invalid_url: bool
@@ -47,7 +49,7 @@ class DatabaseMixin(SerializationMixin):
 
     def verification_file_path(self) -> Path:
         """Path to the file that has the expected output for the test class."""
-        return self.files_directory_path() / "verification.yaml"
+        return self.files_directory_path() / "verification.json"
 
     def combined_files_path(self) -> Path:
         """Path to the combined file containing all exported database files."""
@@ -86,9 +88,11 @@ class DatabaseMixin(SerializationMixin):
             return
         plugin = self.select_plugin_with_children(db)
         plugin_dict = self._dump_model(plugin)
-        plugin_yaml = yaml.dump(plugin_dict, width=float("inf"))
         self.verification_file_path().parent.mkdir(parents=True, exist_ok=True)
-        self.verification_file_path().write_text(plugin_yaml, encoding="utf-8")
+        self.verification_file_path().write_text(
+            json.dumps(plugin_dict, default=str, indent=2),
+            encoding="utf-8",
+        )
 
     def _export_database_files(self, db: Session) -> None:
         """Export all files from the database to disk."""
@@ -111,11 +115,11 @@ class DatabaseMixin(SerializationMixin):
         # Make the file names NTFS compatible.
         file_id = file.key.replace(":", " - ")
 
-        # Export the full file (metadata + content) as YAML for importing.
-        yaml_path = self.files_directory_path() / f"{file_id}.yaml"
-        yaml_path.parent.mkdir(parents=True, exist_ok=True)
-        yaml_path.write_text(
-            yaml.dump(file.model_dump(), width=float("inf")),
+        # Export the full file (metadata + content) as JSON for importing.
+        metadata_path = self.files_directory_path() / f"{file_id}.metadata.json"
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        metadata_path.write_text(
+            json.dumps(file.model_dump(), default=str, indent=2),
             encoding="utf-8",
         )
 
@@ -138,58 +142,56 @@ class DatabaseMixin(SerializationMixin):
         url: str | None = None,
     ) -> list[URLImportResult]:
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
-        self._import_files(db)
         url = url or self.url
-        plugin_instance = self.plugin_class(db, url=url)
-        output = plugin_instance.import_url(url)
+        assert url, "URL must be provided for URL import tests"
+        output = self.plugin_class(db, url=url).import_url(url)
 
         db.commit()  # Set the rollback point.
 
         return output
 
+    def _search(self, db: Session, query: str) -> PluginSearchResults:
+        """Search using the plugin. Files are pre-imported by the class fixture."""
+        return self.plugin_class(db).search(query)
+
     def _import_files(self, db: Session) -> None:
         """Import all exported files into the database."""
-        # Mock initialize_plugin to only run the BasePlugin implementation
-        # (creates the database entry) without running subclass logic that
-        # would try to download files before the cached test data is loaded.
+        # Mock initialize_plugin to only run the BasePlugin implementation (creates the
+        # database record) without running subclass logic that would try to download
+        # files before the cached test data is loaded.
         original_initialize = self.plugin_class.initialize_plugin
         self.plugin_class.initialize_plugin = BasePlugin.initialize_plugin  # type: ignore[assignment]
         plugin = self.plugin_class(db, url=self.url)
 
         plugin_user = get_or_create_plugin_user(session=db)
-        plugin_db_entry = Plugin.get_one(
+        plugin_db_record = Plugin.get_one(
             db,
-            self.plugin_class.plugin_key(),
             plugin_user,
+            self.plugin_class.plugin_key(),
         )
 
         if self.combined_files_path().exists():
             combined_content = self.combined_files_path().read_text(encoding="utf-8")
             all_files: list[dict[str, Any]] = json.loads(combined_content)
         else:
-            # S506 - It is safe and required to import using FullLoader. It is safe
-            # because all of the data is written by the test suite, and it is required
-            # because that is the only way for the timestamps to be loaded correctly.
             all_files = []
-            for file_path in self.files_directory_path().rglob("*.yaml"):
-                if file_path.name == "verification.yaml":
-                    continue
+            for file_path in self.files_directory_path().rglob("*.metadata.json"):
                 file_content = file_path.read_text(encoding="utf-8")
-                all_files.append(yaml.load(file_content, Loader=yaml.Loader))  # noqa: S506
+                all_files.append(json.loads(file_content))
 
-        existing_keys = {file.key for file in plugin_db_entry.files}
+        existing_keys = {file.key for file in plugin_db_record.files}
         for file_data in all_files:
             if file_data["key"] not in existing_keys:
-                plugin_db_entry.files.append(File(**file_data))
+                plugin_db_record.files.append(File(**file_data))
 
         # Files imported from JSON have raw Python types. Expiring forces SQLAlchemy to
-        # re-read from the DB with proper type coercion.
+        # re-read from the DB with proper type coercion. This is required to validate
+        # datetime values.
         db.expire_all()
 
         # Run the full initialize_plugin now that the files are imported.
         self.plugin_class.initialize_plugin = original_initialize  # type: ignore[assignment]
-        if all_files:
-            plugin.initialize_plugin()
+        plugin.initialize_plugin()
 
         db.commit()  # Set the rollback point.
 
@@ -210,7 +212,7 @@ class DatabaseMixin(SerializationMixin):
         connection.close()
         engine.dispose()
 
-    @pytest.fixture(autouse=True)
+    @pytest.fixture
     def db_with_files(
         self,
         _db_with_files_connection: Connection,
@@ -223,28 +225,23 @@ class DatabaseMixin(SerializationMixin):
         """Class-scoped connection with files and URL pre-imported on its own database."""
         if self.invalid_url:
             pytest.skip("invalid_url is set")
-        if self.url:
-            engine = create_test_engine("ALL")
-            reset_tables(engine)
-            connection = engine.connect()
-            with Session(bind=connection) as session:
-                init_db(session)
-                with block_downloads():
+        if not self.url and not self.search_query:
+            pytest.skip("No URL or search query defined")
+
+        engine = create_test_engine("url")
+        reset_tables(engine)
+        connection = engine.connect()
+        with Session(bind=connection) as session:
+            init_db(session)
+            self._import_files(session)
+            with block_downloads():
+                if self.url:
                     self._import_url(session)
-            yield connection
-            connection.close()
-            engine.dispose()
-        if self.search_query:
-            engine = create_test_engine("ALL")
-            reset_tables(engine)
-            connection = engine.connect()
-            with Session(bind=connection) as session:
-                init_db(session)
-                with block_downloads():
-                    self._import_url(session, url=self.search_query)
-            yield connection
-            connection.close()
-            engine.dispose()
+                if self.search_query:
+                    self._search(session, self.search_query)
+        yield connection
+        connection.close()
+        engine.dispose()
 
     @pytest.fixture
     def db_with_url(self, _db_with_url_connection: Connection) -> Generator[Session]:

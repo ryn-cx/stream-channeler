@@ -1,10 +1,7 @@
-# TODO: Validate
 import uuid
-from collections.abc import Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Never, override
+from typing import TYPE_CHECKING, ClassVar, Never, override
 
-from sqlalchemy import util
 from sqlmodel import (
     Field,
     Index,
@@ -35,10 +32,6 @@ class BaseEpisode(BaseMediaMixin):
 
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
     from app.channels.models import ChannelEpisodeWhiteList
     from app.watches.models import Watch
 
@@ -47,30 +40,27 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
-        # Used in episode_selector._apply_sort_key to sort episodes by sort order.
+        # Included in SORTABLE_FIELDS.
         Index("Episode-sort_order-index", "sort_order"),
-        # Used in episode_selector._apply_sort_key to sort episodes by episode number.
         Index("Episode-episode_number-index", "episode_number"),
-        # Used in episode_selector._apply_sort_key to sort episodes by name.
         Index("Episode-name-index", "name"),
-        # Used in episode_selector._filter_by_release_date to filter episodes by
-        # release date range and in episode_selector._apply_sort_key for sorting.
         Index("Episode-release_date-index", "release_date"),
-        # Used in episode_selector._filter_by_air_date to filter episodes by air date
-        # range, in episode_selector._apply_recently_aired_sort for the recently aired
-        # sort, and in episode_selector._apply_sort_key for sorting.
         Index("Episode-air_date-index", "air_date"),
-        # Used in episode_selector._filter_by_duration to filter episodes by duration
-        # range and in episode_selector._apply_sort_key for sorting.
         Index("Episode-duration-index", "duration"),
-        # Used in episode_selector._filter_deleted_media and watches/services to
-        # exclude soft-deleted episodes.
         Index("Episode-deleted_at-index", "deleted_at"),
     )
 
-    @classmethod
-    def parent_id_column(cls) -> uuid.UUID:
-        return cls.season_id
+    SORTABLE_FIELDS: ClassVar[list[str]] = [
+        "sort_order",
+        "episode_number",
+        "name",
+        "duration",
+        "release_date",
+        "air_date",
+        "recently_aired",
+        "last_watched",
+        "random",
+    ]
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
@@ -84,6 +74,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         cascade_delete=True,
     )
 
+    @override
     def get_user_id(self, session: Session) -> uuid.UUID | None:
         return session.exec(
             select(Plugin.user_id)
@@ -94,6 +85,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             .where(Season.id == self.season_id),
         ).first()
 
+    @override
     def is_public(self, session: Session) -> bool:
         return bool(
             session.exec(
@@ -106,153 +98,18 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             ).first(),
         )
 
+    @property
     @override
     def parent(self) -> Season:
         return self.season
 
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get(  # noqa: PLR0913
-        cls,
-        db: Session,
-        season: Season,
-        episode_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> Episode | None:
-        """Wrap `db.get(Episode, ...)` for easier use.
-
-        Args:
-            db: Database session.
-            season: Parent season instance.
-            episode_key: Unique ID of the episode within the season.
-            options: Passed directly to ``db.get``.
-            populate_existing: Passed directly to ``db.get``.
-            with_for_update: Passed directly to ``db.get``.
-            identity_token: Passed directly to ``db.get``.
-            execution_options: Passed directly to ``db.get``.
-            bind_arguments: Passed directly to ``db.get``.
-
-        Returns:
-            - Episode instance if Episode is found.
-            - None if no Episode is found.
-
-        """
-        return db.get(
-            Episode,
-            (season.id, episode_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    @classmethod
-    def get_from_memory(
-        cls,
-        db: Session,
-        season: Season,
-        episode_key: str,
-    ) -> Episode | None:
-        """Like Episode.get but will only return a Episode if it is found in memory.
-
-        Args:
-            db: Database session
-            season: Parent season instance
-            episode_key: Unique ID of the episode within the season
-
-        Returns:
-            Episode instance if found in memory, None otherwise
-
-        """
-        return db.identity_map.get((Episode, (season.id, episode_key), None))
-
-    @classmethod
-    def get_one_from_memory(
-        cls,
-        db: Session,
-        season: Season,
-        episode_key: str,
-    ) -> Episode:
-        """Like Episode.get_one but will only return a Episode if it is found in memory.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session
-            season: Parent season instance
-            episode_key: Unique ID of the episode within the season
-
-        Returns:
-            Episode instance
-
-        Raises:
-            KeyError: If no episode with the given ID exists in memory
-
-        """
-        return db.identity_map[(Episode, (season.id, episode_key), None)]
-
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get_one(  # noqa: PLR0913
-        cls,
-        db: Session,
-        season: Season,
-        episode_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> Episode:
-        """Wrap `db.get_one(Episode, ...)` for easier use.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session.
-            season: Parent season instance.
-            episode_key: Unique ID of the episode within the season.
-            options: Passed directly to ``db.get_one``.
-            populate_existing: Passed directly to ``db.get_one``.
-            with_for_update: Passed directly to ``db.get_one``.
-            identity_token: Passed directly to ``db.get_one``.
-            execution_options: Passed directly to ``db.get_one``.
-            bind_arguments: Passed directly to ``db.get_one``.
-
-        Returns:
-            Episode instance
-
-        Raises:
-            NoResultFound: If no episode with the given ID exists in the season
-
-        """
-        return db.get_one(
-            Episode,
-            (season.id, episode_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    def get_sibling(self, db: Session, key: str) -> Episode | None:
-        return Episode.get(db, self.season, key)
+    @property
+    @override
+    def children(self) -> list[Never]:
+        return []
 
     def __str__(self) -> str:
+        """Return a string representation of the Episode."""
         base_episode = "Episode:"
         if self.episode_number:
             base_episode += f" {self.episode_number} - "

@@ -35,12 +35,9 @@ def mock_update(files_directory: Path) -> Generator[None]:
     """Mock _download to load content from saved files instead of actually downloading."""
 
     def _mock(self: BaseFile[Any]) -> None:
-        key = self.database_entry.key
+        key = self.database_record.key
         logger.debug(f"Mock Updating {key}")
-        file_id = key.replace(":", " - ")
-        content_path = files_directory / file_id
-        self.database_entry.content = content_path.read_text(encoding="utf-8")
-        self.database_entry.data_timestamp = tz_datetime.now()
+        self.database_record.data_timestamp = tz_datetime.now()
 
     with _patch_download(_mock):
         yield
@@ -51,7 +48,7 @@ def block_downloads() -> Generator[None]:
     """Raise an error if any file download is attempted."""
 
     def _block_downloads(self: BaseFile[Any]) -> None:
-        msg = f"Unexpected download attempted: {self.database_entry.key}"
+        msg = f"Unexpected download attempted: {self.database_record.key}"
         raise RuntimeError(msg)
 
     with _patch_download(_block_downloads):
@@ -76,7 +73,7 @@ def track_downloads() -> Generator[list[str]]:
             if cls in originals:
                 originals[cls](self)
                 break
-        downloaded.append(self.database_entry.key)
+        downloaded.append(self.database_record.key)
 
     with _patch_download(_track_downloads):
         yield downloaded

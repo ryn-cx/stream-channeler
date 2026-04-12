@@ -47,7 +47,7 @@ const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "Channels", path: "/channels" },
   { icon: Eye, title: "Watches", path: "/watches" },
-  { icon: Plug, title: "Custom Media", path: "/plugin" },
+  { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]
 
 const adminItems: NavItem[] = [

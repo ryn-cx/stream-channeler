@@ -130,7 +130,7 @@ export type EpisodePatchInput = {
 };
 
 export type EpisodePostInput = {
-    key?: string;
+    key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
@@ -177,23 +177,19 @@ export type Message = {
     message: string;
 };
 
-export type MultipleSortOptionOutputs = {
-    data: Array<SortOptionOutput>;
-};
-
 export type NewPassword = {
     token: string;
     new_password: string;
 };
 
-export type PluginImportURLInfo = {
+export type PluginImportURLInformation = {
     name: string;
     instructions: string;
 };
 
-export type PluginImportWatchHistoryInfo = {
+export type PluginImportWatchHistoryInformation = {
     plugin_key: string;
-    file_extension?: (string | null);
+    file_extension: string;
     instructions: string;
 };
 
@@ -221,7 +217,7 @@ export type PluginPatchInput = {
 };
 
 export type PluginPostInput = {
-    key?: string;
+    key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
@@ -231,7 +227,7 @@ export type PluginPostInput = {
     public: boolean;
 };
 
-export type PluginSearchInfo = {
+export type PluginSearchInformation = {
     plugin_key: string;
     name: string;
 };
@@ -300,7 +296,7 @@ export type SeasonPatchInput = {
 };
 
 export type SeasonPostInput = {
-    key?: string;
+    key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
@@ -341,7 +337,7 @@ export type ShowPatchInput = {
 };
 
 export type ShowPostInput = {
-    key?: string;
+    key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
@@ -357,7 +353,7 @@ export type SortKeyInput = {
     model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
     field: string;
     direction: 'ascending' | 'descending';
-    mode: 'normal' | 'interleave_sequential' | 'interleave_random' | 'show_group';
+    mode: 'normal' | 'interleave_sequential' | 'interleave_random' | 'group_by_show';
     aggregation?: ('sum' | 'count' | 'max' | 'min' | 'first_value' | 'avg' | null);
     days?: (number | null);
     recentlyAiredDate?: (string | null);
@@ -367,7 +363,7 @@ export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
 
 export type direction = 'ascending' | 'descending';
 
-export type mode = 'normal' | 'interleave_sequential' | 'interleave_random' | 'show_group';
+export type mode = 'normal' | 'interleave_sequential' | 'interleave_random' | 'group_by_show';
 
 export type SortOptionOutput = {
     label: string;
@@ -400,7 +396,7 @@ export type SourcePatchInput = {
 };
 
 export type SourcePostInput = {
-    key?: string;
+    key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
@@ -527,7 +523,7 @@ export type WatchPostInput = {
 
 export type WhitelistEntryInput = {
     id: string;
-    enabled: boolean;
+    marked: boolean;
 };
 
 export type WhitelistShowInput = {
@@ -582,64 +578,64 @@ export type AdminMediaListSeasonEpisodesData = {
 
 export type AdminMediaListSeasonEpisodesResponse = (Array<EpisodeOutput>);
 
-export type AdminMediaTriggerPluginUpdateData = {
+export type AdminMediaForcePluginUpdateData = {
     pluginId: string;
 };
 
-export type AdminMediaTriggerPluginUpdateResponse = (Message);
+export type AdminMediaForcePluginUpdateResponse = (Message);
 
-export type AdminMediaTriggerSourceUpdateData = {
+export type AdminMediaForceSourceUpdateData = {
     sourceId: string;
 };
 
-export type AdminMediaTriggerSourceUpdateResponse = (Message);
+export type AdminMediaForceSourceUpdateResponse = (Message);
 
-export type AdminMediaTriggerShowUpdateData = {
+export type AdminMediaForceShowUpdateData = {
     showId: string;
 };
 
-export type AdminMediaTriggerShowUpdateResponse = (Message);
+export type AdminMediaForceShowUpdateResponse = (Message);
 
-export type AdminMediaTriggerSeasonUpdateData = {
+export type AdminMediaForceSeasonUpdateData = {
     seasonId: string;
 };
 
-export type AdminMediaTriggerSeasonUpdateResponse = (Message);
+export type AdminMediaForceSeasonUpdateResponse = (Message);
 
-export type AdminMediaTriggerEpisodeUpdateData = {
+export type AdminMediaForceEpisodeUpdateData = {
     episodeId: string;
 };
 
-export type AdminMediaTriggerEpisodeUpdateResponse = (Message);
+export type AdminMediaForceEpisodeUpdateResponse = (Message);
 
-export type ChannelsGetUserChannelsResponse = (Array<ChannelOutput>);
+export type ChannelsGetChannelsResponse = (Array<ChannelOutput>);
 
-export type ChannelsCreateUserChannelData = {
+export type ChannelsCreateChannelData = {
     requestBody: ChannelPostInput;
 };
 
-export type ChannelsCreateUserChannelResponse = (ChannelOutput);
+export type ChannelsCreateChannelResponse = (ChannelOutput);
 
-export type ChannelsGetSortOptionsResponse = (MultipleSortOptionOutputs);
+export type ChannelsGetSortOptionsResponse = (Array<SortOptionOutput>);
 
-export type ChannelsGetUserChannelData = {
+export type ChannelsGetChannelData = {
     channelId: string;
 };
 
-export type ChannelsGetUserChannelResponse = (ChannelOutput);
+export type ChannelsGetChannelResponse = (ChannelOutput);
 
-export type ChannelsUpdateUserChannelData = {
+export type ChannelsUpdateChannelData = {
     channelId: string;
     requestBody: ChannelPatchInput;
 };
 
-export type ChannelsUpdateUserChannelResponse = (ChannelOutput);
+export type ChannelsUpdateChannelResponse = (ChannelOutput);
 
-export type ChannelsDeleteUserChannelData = {
+export type ChannelsDeleteChannelData = {
     channelId: string;
 };
 
-export type ChannelsDeleteUserChannelResponse = (Message);
+export type ChannelsDeleteChannelResponse = (Message);
 
 export type ChannelsGetChannelEpisodesData = {
     additionalChannels?: Array<(string)>;
@@ -673,27 +669,27 @@ export type ChannelsGetChannelShowsData = {
 
 export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
 
-export type ChannelsGetUserChannelWhitelistData = {
+export type ChannelsGetChannelWhitelistData = {
     channelId: string;
     showId: string;
 };
 
-export type ChannelsGetUserChannelWhitelistResponse = (WhitelistShowOutput);
+export type ChannelsGetChannelWhitelistResponse = (WhitelistShowOutput);
 
-export type ChannelsUpdateUserChannelWhitelistData = {
+export type ChannelsUpdateChannelWhitelistData = {
     channelId: string;
     requestBody: WhitelistShowInput;
     showId: string;
 };
 
-export type ChannelsUpdateUserChannelWhitelistResponse = (WhitelistShowOutput);
+export type ChannelsUpdateChannelWhitelistResponse = (WhitelistShowOutput);
 
-export type ChannelsUpdateUserChannelDefaultOrderData = {
+export type ChannelsUpdateChannelDefaultOrderData = {
     channelId: string;
     requestBody: ChannelMediaFilter;
 };
 
-export type ChannelsUpdateUserChannelDefaultOrderResponse = (ChannelOutput);
+export type ChannelsUpdateChannelDefaultOrderResponse = (ChannelOutput);
 
 export type ChannelsDeleteChannelShowData = {
     channelId: string;
@@ -702,31 +698,31 @@ export type ChannelsDeleteChannelShowData = {
 
 export type ChannelsDeleteChannelShowResponse = (Message);
 
-export type ChannelsGetUserChannelQueueData = {
+export type ChannelsGetChannelQueueData = {
     channelId: string;
 };
 
-export type ChannelsGetUserChannelQueueResponse = (Array<ChannelQueueOutput>);
+export type ChannelsGetChannelQueueResponse = (Array<ChannelQueueOutput>);
 
-export type ChannelsCreateUserChannelQueueUrlsData = {
+export type ChannelsCreateChannelQueueUrlsData = {
     channelId: string;
     requestBody: Array<(string)>;
 };
 
-export type ChannelsCreateUserChannelQueueUrlsResponse = (Array<ChannelQueueOutput>);
+export type ChannelsCreateChannelQueueUrlsResponse = (Array<ChannelQueueOutput>);
 
-export type ChannelsDeleteUserChannelQueueUrlData = {
+export type ChannelsDeleteChannelQueueUrlData = {
     channelId: string;
     urlId: string;
 };
 
-export type ChannelsDeleteUserChannelQueueUrlResponse = (Message);
+export type ChannelsDeleteChannelQueueUrlResponse = (Message);
 
-export type ChannelsClearUserChannelCompletedQueueData = {
+export type ChannelsClearChannelCompletedQueueData = {
     channelId: string;
 };
 
-export type ChannelsClearUserChannelCompletedQueueResponse = (Message);
+export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
 export type ChannelsBulkImportQueueUrlsData = {
     requestBody: {
@@ -743,24 +739,24 @@ export type EpisodesCreateWatchData = {
 
 export type EpisodesCreateWatchResponse = (Array<WatchOutput>);
 
-export type EpisodesGetUserEpisodeData = {
+export type EpisodesGetEpisodeData = {
     episodeId: string;
 };
 
-export type EpisodesGetUserEpisodeResponse = (EpisodeOutput);
+export type EpisodesGetEpisodeResponse = (EpisodeOutput);
 
-export type EpisodesUpdateUserEpisodeData = {
+export type EpisodesUpdateEpisodeData = {
     episodeId: string;
     requestBody: EpisodePatchInput;
 };
 
-export type EpisodesUpdateUserEpisodeResponse = (EpisodeOutput);
+export type EpisodesUpdateEpisodeResponse = (EpisodeOutput);
 
-export type EpisodesDeleteUserEpisodeData = {
+export type EpisodesDeleteEpisodeData = {
     episodeId: string;
 };
 
-export type EpisodesDeleteUserEpisodeResponse = (Message);
+export type EpisodesDeleteEpisodeResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -788,19 +784,51 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
-export type PluginsGetUserPluginsResponse = (Array<PluginOutput>);
+export type PluginsGetPluginsResponse = (Array<PluginOutput>);
 
-export type PluginsCreateUserPluginData = {
+export type PluginsCreatePluginData = {
     requestBody: PluginPostInput;
 };
 
-export type PluginsCreateUserPluginResponse = (PluginOutput);
+export type PluginsCreatePluginResponse = (PluginOutput);
 
-export type PluginsListPluginsThatSupportImportWatchHistoryResponse = (Array<PluginImportWatchHistoryInfo>);
+export type PluginsGetPluginData = {
+    pluginId: string;
+};
 
-export type PluginsListPluginsThatSupportImportUrlResponse = (Array<PluginImportURLInfo>);
+export type PluginsGetPluginResponse = (PluginOutput);
 
-export type PluginsListPluginsThatSupportSearchResponse = (Array<PluginSearchInfo>);
+export type PluginsUpdatePluginData = {
+    pluginId: string;
+    requestBody: PluginPatchInput;
+};
+
+export type PluginsUpdatePluginResponse = (PluginOutput);
+
+export type PluginsDeletePluginData = {
+    pluginId: string;
+};
+
+export type PluginsDeletePluginResponse = (Message);
+
+export type PluginsGetPluginSourcesData = {
+    pluginId: string;
+};
+
+export type PluginsGetPluginSourcesResponse = (Array<SourceOutput>);
+
+export type PluginsCreateSourceData = {
+    pluginId: string;
+    requestBody: SourcePostInput;
+};
+
+export type PluginsCreateSourceResponse = (SourceOutput);
+
+export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
+
+export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
+
+export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
 
 export type PluginsSearchPluginData = {
     pluginKey: string;
@@ -809,139 +837,107 @@ export type PluginsSearchPluginData = {
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
-export type PluginsGetUserPluginData = {
-    pluginId: string;
-};
-
-export type PluginsGetUserPluginResponse = (PluginOutput);
-
-export type PluginsUpdateUserPluginData = {
-    pluginId: string;
-    requestBody: PluginPatchInput;
-};
-
-export type PluginsUpdateUserPluginResponse = (PluginOutput);
-
-export type PluginsDeleteUserPluginData = {
-    pluginId: string;
-};
-
-export type PluginsDeleteUserPluginResponse = (Message);
-
-export type PluginsGetUserPluginSourcesData = {
-    pluginId: string;
-};
-
-export type PluginsGetUserPluginSourcesResponse = (Array<SourceOutput>);
-
-export type PluginsCreateUserSourceData = {
-    pluginId: string;
-    requestBody: SourcePostInput;
-};
-
-export type PluginsCreateUserSourceResponse = (SourceOutput);
-
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
 
-export type SeasonsGetUserSeasonData = {
+export type SeasonsGetSeasonData = {
     seasonId: string;
 };
 
-export type SeasonsGetUserSeasonResponse = (SeasonOutput);
+export type SeasonsGetSeasonResponse = (SeasonOutput);
 
-export type SeasonsUpdateUserSeasonData = {
+export type SeasonsUpdateSeasonData = {
     requestBody: SeasonPatchInput;
     seasonId: string;
 };
 
-export type SeasonsUpdateUserSeasonResponse = (SeasonOutput);
+export type SeasonsUpdateSeasonResponse = (SeasonOutput);
 
-export type SeasonsDeleteUserSeasonData = {
+export type SeasonsDeleteSeasonData = {
     seasonId: string;
 };
 
-export type SeasonsDeleteUserSeasonResponse = (Message);
+export type SeasonsDeleteSeasonResponse = (Message);
 
-export type SeasonsGetUserSeasonEpisodesData = {
+export type SeasonsGetEpisodesData = {
     seasonId: string;
 };
 
-export type SeasonsGetUserSeasonEpisodesResponse = (Array<EpisodeOutput>);
+export type SeasonsGetEpisodesResponse = (Array<EpisodeOutput>);
 
-export type SeasonsCreateUserEpisodeData = {
+export type SeasonsCreateEpisodeData = {
     requestBody: EpisodePostInput;
     seasonId: string;
 };
 
-export type SeasonsCreateUserEpisodeResponse = (EpisodeOutput);
+export type SeasonsCreateEpisodeResponse = (EpisodeOutput);
 
-export type ShowsGetUserShowData = {
+export type ShowsGetShowData = {
     showId: string;
 };
 
-export type ShowsGetUserShowResponse = (ShowOutput);
+export type ShowsGetShowResponse = (ShowOutput);
 
-export type ShowsUpdateUserShowData = {
+export type ShowsUpdateShowData = {
     requestBody: ShowPatchInput;
     showId: string;
 };
 
-export type ShowsUpdateUserShowResponse = (ShowOutput);
+export type ShowsUpdateShowResponse = (ShowOutput);
 
-export type ShowsDeleteUserShowData = {
+export type ShowsDeleteShowData = {
     showId: string;
 };
 
-export type ShowsDeleteUserShowResponse = (Message);
+export type ShowsDeleteShowResponse = (Message);
 
-export type ShowsGetUserShowSeasonsData = {
+export type ShowsGetSeasonsData = {
     showId: string;
 };
 
-export type ShowsGetUserShowSeasonsResponse = (Array<SeasonOutput>);
+export type ShowsGetSeasonsResponse = (Array<SeasonOutput>);
 
-export type ShowsCreateUserSeasonData = {
+export type ShowsCreateSeasonData = {
     requestBody: SeasonPostInput;
     showId: string;
 };
 
-export type ShowsCreateUserSeasonResponse = (SeasonOutput);
+export type ShowsCreateSeasonResponse = (SeasonOutput);
 
-export type SourcesGetUserSourceData = {
+export type SourcesGetSourceData = {
     sourceId: string;
 };
 
-export type SourcesGetUserSourceResponse = (SourceOutput);
+export type SourcesGetSourceResponse = (SourceOutput);
 
-export type SourcesUpdateUserSourceData = {
+export type SourcesUpdateSourceData = {
     requestBody: SourcePatchInput;
     sourceId: string;
 };
 
-export type SourcesUpdateUserSourceResponse = (SourceOutput);
+export type SourcesUpdateSourceResponse = (SourceOutput);
 
-export type SourcesDeleteUserSourceData = {
+export type SourcesDeleteSourceData = {
     sourceId: string;
 };
 
-export type SourcesDeleteUserSourceResponse = (Message);
+export type SourcesDeleteSourceResponse = (Message);
 
-export type SourcesGetUserSourceShowsData = {
+export type SourcesGetShowsData = {
     sourceId: string;
 };
 
-export type SourcesGetUserSourceShowsResponse = (Array<ShowOutput>);
+export type SourcesGetShowsResponse = (Array<ShowOutput>);
 
-export type SourcesCreateUserShowData = {
+export type SourcesCreateShowData = {
     requestBody: ShowPostInput;
     sourceId: string;
 };
 
-export type SourcesCreateUserShowResponse = (ShowOutput);
+export type SourcesCreateShowResponse = (ShowOutput);
 
 export type UsersReadUsersResponse = (UsersPublic);
 
@@ -1000,7 +996,26 @@ export type UtilsTestEmailResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);
 
-export type WatchesGetUserWatchesResponse = (WatchesListOutput);
+export type WatchesGetWatchesResponse = (WatchesListOutput);
+
+export type WatchesGetWatchData = {
+    watchId: string;
+};
+
+export type WatchesGetWatchResponse = (WatchOutput);
+
+export type WatchesUpdateWatchData = {
+    requestBody: WatchPatchInput;
+    watchId: string;
+};
+
+export type WatchesUpdateWatchResponse = (Array<WatchOutput>);
+
+export type WatchesDeleteWatchData = {
+    watchId: string;
+};
+
+export type WatchesDeleteWatchResponse = (Message);
 
 export type WatchesSyncWatchesResponse = (Message);
 
@@ -1012,22 +1027,3 @@ export type WatchesImportWatchHistoryData = {
 };
 
 export type WatchesImportWatchHistoryResponse = (WatchImportResults);
-
-export type WatchesGetUserWatchData = {
-    watchId: string;
-};
-
-export type WatchesGetUserWatchResponse = (WatchOutput);
-
-export type WatchesUpdateUserWatchData = {
-    requestBody: WatchPatchInput;
-    watchId: string;
-};
-
-export type WatchesUpdateUserWatchResponse = (Array<WatchOutput>);
-
-export type WatchesDeleteUserWatchData = {
-    watchId: string;
-};
-
-export type WatchesDeleteUserWatchResponse = (Message);

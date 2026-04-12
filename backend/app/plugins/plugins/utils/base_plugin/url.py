@@ -1,6 +1,7 @@
 # TODO: Validate
 import re
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class URLMixin(ABC):
@@ -12,6 +13,18 @@ class URLMixin(ABC):
     @abstractmethod
     def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
+
+    @classmethod
+    @abstractmethod
+    def parse_url(cls, url: str) -> Any:
+        """Parse a URL and return its components.
+
+        Args:
+            url: The URL to parse.
+
+        Returns:
+            The parsed URL components. The exact type depends on the plugin implementation.
+        """
 
     @classmethod
     @abstractmethod

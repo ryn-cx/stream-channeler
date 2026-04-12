@@ -2,31 +2,32 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
+from app.schemas import BaseInput, BasePatchInputWithoutKey
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowOutput
 from app.sources.schemas import SourceOutput
-from app.watches.models import BaseWatch
+from app.watches.models import BaseWatch, Watch
 
 
-class WatchPostInput(BaseWatch):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
+class WatchPostInput(BaseInput, BaseWatch):
+    pass
 
 
 class WatchCreateInput(WatchPostInput):
     user_id: uuid.UUID
 
 
-class WatchPatchInput(BaseWatch):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
+class WatchPatchInput(BasePatchInputWithoutKey[Watch], BaseWatch):
     watch_date: datetime | None = None  # type: ignore[assignment]
     verified: bool | None = None  # type: ignore[assignment]
 
 
+# TODO: This class may be redundant
 class WatchOutput(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID
@@ -73,7 +74,7 @@ class WatchImportResults(BaseModel):
     skipped: list[WatchImportResult]
 
 
-class WatchImportInput(BaseModel):
+class WatchImportInput(BaseInput):
     plugin_key: str
     new_only: bool
     verified: bool

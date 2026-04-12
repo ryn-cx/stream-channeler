@@ -48,6 +48,7 @@ function SeasonsTableContent() {
   const { data: seasons } = useSuspenseQuery(getSeasonsQueryOptions(showKey))
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
+    id: false,
   })
 
   const table = useReactTable({

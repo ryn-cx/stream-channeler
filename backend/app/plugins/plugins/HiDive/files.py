@@ -413,7 +413,7 @@
 #         for season_key in self._season_keys_from_json(show_key):
 #             season_json = self._season_json(season_key)
 #             all_file_keys.append(season_json.file_key())
-#             if season_json.database_entry.content:
+#             if season_json.database_record.content:
 #                 tv_show_key = season_json.parsed().metadata.series.series_id
 #                 all_file_keys.append(
 #                     self._adjacent_series_json(tv_show_key, season_key).file_key(),
@@ -440,7 +440,7 @@
 #         playlist_file = self._playlist_json(show_key)
 #         all_file_keys: list[str] = [playlist_file.file_key()]
 
-#         if playlist_file.database_entry.content:
+#         if playlist_file.database_record.content:
 #             playlist_json = playlist_file.parsed()
 #             playlist_bucket = self.client.playlist.extract_bucket(
 #                 playlist_json,

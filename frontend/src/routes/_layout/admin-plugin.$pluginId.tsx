@@ -8,7 +8,7 @@ import { Suspense, useState } from "react"
 
 import { OpenAPI, UsersService } from "@/client"
 import { request } from "@/client/core/request"
-import TriggerUpdateButton from "@/components/AdminMedia/TriggerUpdateButton"
+import ForceUpdateButton from "@/components/AdminMedia/ForceUpdateButton"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingPlugins from "@/components/Pending/PendingPlugins"
@@ -103,7 +103,7 @@ function AdminSourcesTableContent() {
       enableHiding: false,
       cell: ({ row }) => (
         <div className="flex justify-end">
-          <TriggerUpdateButton
+          <ForceUpdateButton
             entityType="sources"
             entityId={row.original.id}
             queryKey={queryKey}

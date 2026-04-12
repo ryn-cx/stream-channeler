@@ -6,24 +6,24 @@ import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
 import { Button } from "@/components/ui/button"
 
-interface TriggerUpdateButtonProps {
+interface ForceUpdateButtonProps {
   entityType: "plugins" | "sources" | "shows" | "seasons" | "episodes"
   entityId: string
   queryKey: string[]
 }
 
-export default function TriggerUpdateButton({
+export default function ForceUpdateButton({
   entityType,
   entityId,
   queryKey,
-}: TriggerUpdateButtonProps) {
+}: ForceUpdateButtonProps) {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: () =>
       request(OpenAPI, {
         method: "POST",
-        url: `/api/v1/admin-media/${entityType}/{entity_id}/trigger-update`,
+        url: `/api/v1/admin-media/${entityType}/{entity_id}/force-update`,
         path: { entity_id: entityId },
       }),
     onSuccess: () => {
@@ -37,7 +37,7 @@ export default function TriggerUpdateButton({
       size="icon"
       onClick={() => mutation.mutate()}
       disabled={mutation.isPending}
-      title="Trigger update"
+      title="Force update"
     >
       <RefreshCw className={mutation.isPending ? "animate-spin" : ""} />
     </Button>

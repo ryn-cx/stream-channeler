@@ -30,7 +30,7 @@ class AbstractPlugin(ABC):
     def plugin_key(cls) -> str:
         """The unique identifier for the plugin.
 
-        This is used to match Plugin entries in the database with the actual plugins.
+        This is used to match Plugin records in the database with the actual plugins.
 
         Returns:
             The unique identifier for the plugin.

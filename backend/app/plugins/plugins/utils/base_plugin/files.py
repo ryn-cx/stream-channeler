@@ -15,7 +15,7 @@ from app.plugins.models import File, Plugin
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 
-_UNLOADED = Sentinel("DATABASE_ENTRY")
+_UNLOADED = Sentinel("DATABASE_RECORD")
 
 
 class BaseFile[T](ABC):
@@ -28,37 +28,37 @@ class BaseFile[T](ABC):
         self.__db = db
         self.__plugin = plugin
         self._cached_parsed: T | None = None
-        self.__database_entry: File | None | Sentinel = _UNLOADED
+        self.__database_record: File | None | Sentinel = _UNLOADED
 
     # endregion Initialization
 
-    # region Database Entry
+    # region Database Record
 
     @property
-    def _existing_database_entry(self) -> File | None:
-        if isinstance(self.__database_entry, Sentinel):
+    def _existing_database_record(self) -> File | None:
+        if isinstance(self.__database_record, Sentinel):
             key = self.file_key()
             existing = File.get_from_memory(self.__db, self.__plugin, key)
-            self.__database_entry = existing or File.get(
+            self.__database_record = existing or File.get(
                 self.__db,
                 self.__plugin,
                 key,
             )
-        return self.__database_entry
+        return self.__database_record
 
-    @_existing_database_entry.setter
-    def _existing_database_entry(self, value: File | None) -> None:
-        self.__database_entry = value
+    @_existing_database_record.setter
+    def _existing_database_record(self, value: File | None) -> None:
+        self.__database_record = value
 
     @property
-    def database_entry(self) -> File:
+    def database_record(self) -> File:
         """Return the underlying database File object."""
-        if not self._existing_database_entry:
+        if not self._existing_database_record:
             msg = "File has not been downloaded yet."
             raise ValueError(msg)
-        return self._existing_database_entry
+        return self._existing_database_record
 
-    # endregion Database Entry
+    # endregion Database Record
 
     # region Key/Identifier
     unique_identifier: str
@@ -92,7 +92,7 @@ class BaseFile[T](ABC):
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).__name__
-        action = "Updating" if self._existing_database_entry else "Downloading"
+        action = "Updating" if self._existing_database_record else "Downloading"
         logger.info(f"{action} {class_name} for {identifier}")
         yield
         logger.info(f"Finished {action.lower()} {class_name} for {identifier}")
@@ -130,23 +130,23 @@ class BaseFile[T](ABC):
 
     def _write(self, content: str | None) -> None:
         """Write content to the file and immediately commit it to the database."""
-        self._existing_database_entry = File(
+        self._existing_database_record = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
             plugin_id=self.__plugin.id,
-        ).upsert(self.__plugin, self._existing_database_entry)
+        ).upsert(self.__plugin, self._existing_database_record)
 
         self.__db.commit()
         self._cached_parsed = None
 
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
-        if self.IMMUTABLE and self._existing_database_entry:
+        if self.IMMUTABLE and self._existing_database_record:
             return False
 
-        # If there is no database entry the file is outdated.
-        if not self._existing_database_entry:
+        # If there is no database record the file is outdated.
+        if not self._existing_database_record:
             return True
 
         # If there is no minimum timestamp and the file exists it is up to date.
@@ -159,7 +159,7 @@ class BaseFile[T](ABC):
             return False
 
         # If the file is older than the minimum timestamp it is outdated.
-        return self.database_entry.data_timestamp < minimum_timestamp
+        return self.database_record.data_timestamp < minimum_timestamp
 
 
 class JSONFile[T](BaseFile[T], ABC):
@@ -171,7 +171,7 @@ class JSONFile[T](BaseFile[T], ABC):
     def parsed(self) -> T:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
-            if not (content := self.database_entry.content):
+            if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
 

@@ -48,6 +48,7 @@ function SourcesTableContent() {
   const { data: sources } = useSuspenseQuery(getSourcesQueryOptions(pluginId))
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
+    id: false,
   })
   const table = useReactTable({
     data: sources,
@@ -64,7 +65,7 @@ function SourcesTableContent() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link to="/plugin">
+            <Link to="/plugins">
               <ArrowLeft />
             </Link>
           </Button>

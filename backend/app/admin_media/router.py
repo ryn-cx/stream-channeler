@@ -1,10 +1,9 @@
-# TODO: Validate
 from collections.abc import Sequence
 
 from fastapi import APIRouter, Depends
 from sqlmodel import select
 
-from app.admin_media.service import trigger_update
+from app.admin_media.service import force_update
 from app.auth.dependencies import SessionDep, get_current_active_superuser
 from app.episodes.dependencies import ReadableEpisode
 from app.episodes.models import Episode
@@ -63,26 +62,31 @@ def list_season_episodes(season: ReadableSeason) -> list[Episode]:
     return list(season.episodes)
 
 
-@router.post("/plugins/{plugin_id}/trigger-update")  # noqa: FAST003 - Used by ReadablePlugin
-def trigger_plugin_update(session: SessionDep, plugin: ReadablePlugin) -> Message:
-    return trigger_update(session, plugin)
+@router.post("/plugins/{plugin_id}/force-update")  # noqa: FAST003 - Used by ReadablePlugin
+def force_plugin_update(session: SessionDep, plugin: ReadablePlugin) -> Message:
+    """Force update a plugin by setting its update_at value to now."""
+    return force_update(session, plugin)
 
 
-@router.post("/sources/{source_id}/trigger-update")  # noqa: FAST003 - Used by ReadableSource
-def trigger_source_update(session: SessionDep, source: ReadableSource) -> Message:
-    return trigger_update(session, source)
+@router.post("/sources/{source_id}/force-update")  # noqa: FAST003 - Used by ReadableSource
+def force_source_update(session: SessionDep, source: ReadableSource) -> Message:
+    """Force update a source by setting its update_at value to now."""
+    return force_update(session, source)
 
 
-@router.post("/shows/{show_id}/trigger-update")  # noqa: FAST003 - Used by ReadableShow
-def trigger_show_update(session: SessionDep, show: ReadableShow) -> Message:
-    return trigger_update(session, show)
+@router.post("/shows/{show_id}/force-update")  # noqa: FAST003 - Used by ReadableShow
+def force_show_update(session: SessionDep, show: ReadableShow) -> Message:
+    """Force update a show by setting its update_at value to now."""
+    return force_update(session, show)
 
 
-@router.post("/seasons/{season_id}/trigger-update")  # noqa: FAST003 - Used by ReadableSeason
-def trigger_season_update(session: SessionDep, season: ReadableSeason) -> Message:
-    return trigger_update(session, season)
+@router.post("/seasons/{season_id}/force-update")  # noqa: FAST003 - Used by ReadableSeason
+def force_season_update(session: SessionDep, season: ReadableSeason) -> Message:
+    """Force update a season by setting its update_at value to now."""
+    return force_update(session, season)
 
 
-@router.post("/episodes/{episode_id}/trigger-update")  # noqa: FAST003 - Used by ReadableEpisode
-def trigger_episode_update(session: SessionDep, episode: ReadableEpisode) -> Message:
-    return trigger_update(session, episode)
+@router.post("/episodes/{episode_id}/force-update")  # noqa: FAST003 - Used by ReadableEpisode
+def force_episode_update(session: SessionDep, episode: ReadableEpisode) -> Message:
+    """Force update an episode by setting its update_at value to now."""
+    return force_update(session, episode)

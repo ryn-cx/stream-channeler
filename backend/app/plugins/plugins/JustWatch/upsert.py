@@ -1,8 +1,8 @@
 # TODO: Validate
 import re
 from datetime import date, datetime
-from typing import override
-from urllib.parse import parse_qs, urlparse
+from itertools import chain
+from typing import cast, override
 
 from just_scrape.custom_buy_box_offers import (
     response_models as custom_buy_box_offers_models,
@@ -13,7 +13,6 @@ from app.episodes.models import Episode
 from app.plugins.plugins.JustWatch.files import (
     FileMixin,
     ProvidersLocale,
-    UrlTitleDetails,
 )
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -29,93 +28,68 @@ class UpsertMixin(FileMixin, register=False):
 
     def _format_image_url(
         self,
-        url: str,
-        profile: int,
-        format: str = "avif",  # noqa: A002
-    ) -> str:
-        """Format an image URL from JustWatch replacing the placeholder strings."""
-        formatted_url = url.replace("{profile}", f"s{profile}")
-        formatted_url = formatted_url.replace("{format}", format)
-        return self._images_base_url + formatted_url
+        url: str | None,
+        profile: int = 100,
+    ) -> str | None:
+        """Format a JustWatch image URL with the correct base URL and profile."""
+        if url is None:
+            return None
+        return f"{self._images_base_url}{url}".replace(
+            "{profile}",
+            str(profile),
+        )
 
     @staticmethod
     def _clean_external_url(url: str) -> str:
-        """Remove affiliate tracking from an external URL."""
-        parsed_url = urlparse(url)
+        """Extract the actual external URL from JustWatch's redirect wrapper."""
+        match = re.search(r"r=(https?://[^&]+)", url)
+        return match.group(1) if match else url
 
-        # Used by Crunchyroll and potentially others.
-        if re.compile(r"^https:\/\/[a-z]+\.pxf\.io\/").match(url):
-            query_params = parse_qs(parsed_url.query)
-            if redirect_url := query_params.get("u"):
-                url = redirect_url[0]
-        return url
-
-    # TODO: What are FastItem entries?
+    @staticmethod
     def _find_matching_episode(
-        self,
         source_key: str,
-        custom_buy_box_offers: custom_buy_box_offers_models.Node,
-    ) -> (
-        # TODO: Update Just Scrape models so these type errors go away, once that is
-        # done these types can be saved to a variable instead of being repeated.
-        custom_buy_box_offers_models.FlatrateItem
-        | custom_buy_box_offers_models.BuyItem
-        | custom_buy_box_offers_models.FreeItem
-        | custom_buy_box_offers_models.FastItem
-        | custom_buy_box_offers_models.RentItem
-        | None
-    ):
-        offers: list[
-            custom_buy_box_offers_models.FlatrateItem
-            | custom_buy_box_offers_models.BuyItem
-            | custom_buy_box_offers_models.FreeItem
-            | custom_buy_box_offers_models.FastItem
-            | custom_buy_box_offers_models.RentItem
-        ] = []
-        if custom_buy_box_offers.flatrate:
-            offers.extend(custom_buy_box_offers.flatrate)
+        node: custom_buy_box_offers_models.Node | url_title_details_models.Node,
+    ) -> custom_buy_box_offers_models.Offer | None:
+        """Find the offer that matches the source key.
 
-        if custom_buy_box_offers.buy:
-            offers.extend(custom_buy_box_offers.buy)
-
-        if custom_buy_box_offers.rent:
-            offers.extend(custom_buy_box_offers.rent)
-
-        if custom_buy_box_offers.free:
-            offers.extend(custom_buy_box_offers.free)
-
-        if custom_buy_box_offers.fast:
-            offers.extend(custom_buy_box_offers.fast)
-
-        for offer in offers:
-            if not offer.package:
-                msg = "Offer package is None, which shouldn't happen."
-                raise ValueError(msg)
-            if offer.package.short_name == source_key:
-                return offer
-
-        return None
-
-    # TODO: Compile some test data and determine if this function should be
-    def _pick_best_episode_date(self, episode_data: UrlTitleDetails) -> datetime | None:
-        """Get the best available date for the episode."""
-        if (
-            release_date
-            := episode_data.parsed().data.url_v2.node.content.original_release_date
+        The just_scrape models split offers into separate categorized lists
+        (flatrate, buy, rent, free, fast); walk them all and return the first
+        item whose package short_name matches.
+        """
+        for item in chain(
+            node.flatrate,
+            node.buy,
+            node.rent,
+            node.free,
+            node.fast,
         ):
-            return tz_datetime.combine(release_date, datetime.min.time())
-
-        # When the year is not known a value of 0 is returned for shows, this is
-        # PROBABLY also true for movies. If the value is 0 None is returned.
-        if year := episode_data.parsed().data.url_v2.node.content.original_release_year:
-            return tz_datetime(year, 1, 1)
+            if item is None:
+                continue
+            if item.package.short_name == source_key:
+                return cast("custom_buy_box_offers_models.Offer", item)
         return None
 
-    # region Upsert
+    def _sources_with_offers(
+        self,
+        show_key: str,
+    ) -> list[tuple[str, custom_buy_box_offers_models.Offer]]:
+        """Return (source_key, offer) pairs for all sources that have offers."""
+        parsed_json = self._url_title_details_file(show_key).parsed()
+        results: list[tuple[str, custom_buy_box_offers_models.Offer]] = []
+        if not parsed_json.data.url_v2.node.offers:
+            return results
+
+        seen: set[str] = set()
+        for offer in parsed_json.data.url_v2.node.offers:
+            if offer.package.short_name not in seen:
+                seen.add(offer.package.short_name)
+                results.append((offer.package.short_name, offer))
+
+        return results
+
+    # region Upsert Source
 
     def _upsert_sources(self, providers_file: ProvidersLocale) -> None:
-        """Upsert all providers from the providers locale file as sources."""
-        _cache = self._preload_sources().all()
         for provider in providers_file.parsed():
             source = Source.get_from_memory(
                 self.db,
@@ -131,13 +105,15 @@ class UpsertMixin(FileMixin, register=False):
             ).upsert(self.plugin, source)
 
             # Only use the data timestamp from the providers file for the initial
-            # data_timestamp value, after this thedata_timestamp from  NewTitlesBucket
-            # should be used.
+            # import. If the source already has a data_timestamp we want to keep it
+            # because it will be based on data from the new titles files which are
+            # more up to date.
             if not source.data_timestamp:
-                source.data_timestamp = providers_file.database_entry.data_timestamp
+                source.data_timestamp = providers_file.database_record.data_timestamp
+
+    # endregion Upsert Source
 
     def _upsert_shows(self, show_key: str) -> list[Show]:
-        """Upsert all sources and their shows from the URL title details JSON."""
         shows: list[Show] = []
         for source_key, _ in self._sources_with_offers(show_key):
             source = Source.get_one_from_memory(self.db, self.plugin, source_key)
@@ -145,59 +121,41 @@ class UpsertMixin(FileMixin, register=False):
         return shows
 
     @override
-    def _upsert_show(
-        self,
-        source: Source,
-        show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.db, source, show_key)
-        show_timestamp = self._file_timestamp(self._show_files(show_key))
+    def _upsert_show(self, source: Source, show_key: str) -> Show:
+        existing_show = Show.get_from_memory(self.db, source, show_key)
 
-        if force_reimport or not self._is_up_to_date(show, show_timestamp):
-            parsed_json = self._url_title_details_file(show_key).parsed()
-            offer = next(
-                offer
-                for source_key, offer in self._sources_with_offers(show_key)
-                if source_key == source.key
-            )
-            show = Show(
-                key=show_key,
-                name=parsed_json.data.url_v2.node.content.title,
-                media_type=self._media_type(show_key),
-                description=parsed_json.data.url_v2.node.content.short_description,
-                url=self._clean_external_url(offer.standard_web_url),
-                image_url=self._images_base_url
-                + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
-                data_timestamp=show_timestamp,
-                source_id=source.id,
-            ).upsert(source, show)
+        parsed_json = self._url_title_details_file(show_key).parsed()
+        offer = next(
+            offer
+            for source_key, offer in self._sources_with_offers(show_key)
+            if source_key == source.key
+        )
+        media_type = self._media_type(show_key)
+        show = Show(
+            key=show_key,
+            name=parsed_json.data.url_v2.node.content.title,
+            media_type=media_type,
+            description=parsed_json.data.url_v2.node.content.short_description,
+            url=self._clean_external_url(offer.standard_web_url),
+            image_url=self._images_base_url
+            + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
+            data_timestamp=self.show_data_timestamp(show_key),
+            source_id=source.id,
+        ).upsert(source, existing_show)
 
-        self._upsert_seasons(show, show_key, force_reimport=force_reimport)
+        self._upsert_seasons(show, show_key)
+
+        self.soft_delete_missing_seasons(show_key)
+
         return show
 
-    def _upsert_seasons(
-        self,
-        show: Show,
-        show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> None:
-        season_keys = self._season_keys_from_file(show_key)
-        show.soft_delete_missing_children(season_keys)
+    def _upsert_seasons(self, show: Show, show_key: str) -> None:
         if self._media_type(show_key) == "TV Show":
-            self._upsert_show_seasons(show, show_key, force_reimport=force_reimport)
+            self._upsert_show_seasons(show, show_key)
         else:
-            self._upsert_movie_season(show, show_key, force_reimport=force_reimport)
+            self._upsert_movie_season(show, show_key)
 
-    def _upsert_show_seasons(
-        self,
-        show: Show,
-        show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> None:
+    def _upsert_show_seasons(self, show: Show, show_key: str) -> None:
         # TODO: Upstream in JustScrape, add the ability to parse specific types so there
         # is less need for checking for None.
         parsed_json = self._url_title_details_file(show_key).parsed()
@@ -207,54 +165,34 @@ class UpsertMixin(FileMixin, register=False):
             msg = f"No seasons found for show: {show_key}"
             raise ValueError(msg)
         for season_data in seasons_data:
-            season = Season.get_from_memory(self.db, show, season_data.id)
-            season_timestamp = self._file_timestamp(
-                self._season_files(season_data.id, show_key),
-            )
-            if force_reimport or not self._is_up_to_date(season, season_timestamp):
-                image_url = self._format_image_url(season_data.content.poster_url, 166)
-                season = Season(
-                    image_url=image_url,
-                    # TODO: Should I use the other ID that matches the URL instead?
-                    key=season_data.id,
-                    sort_order=season_data.content.season_number,
-                    season_number=season_data.content.season_number,
-                    data_timestamp=season_timestamp,
-                    show_id=show.id,
-                ).upsert(show, season)
-            self._upsert_season_episodes(
-                show,
-                season,
-                season_data,
-                show_key,
-                force_reimport=force_reimport,
-            )
+            existing_season = Season.get_from_memory(self.db, show, season_data.id)
+            image_url = self._format_image_url(season_data.content.poster_url, 166)
+            season = Season(
+                image_url=image_url,
+                # TODO: Should I use the other ID that matches the URL instead?
+                key=season_data.id,
+                sort_order=season_data.content.season_number,
+                season_number=season_data.content.season_number,
+                data_timestamp=self.season_data_timestamp(season_data.id, show_key),
+                show_id=show.id,
+            ).upsert(show, existing_season)
+            self._upsert_season_episodes(show, season, season_data, show_key)
+            self.soft_delete_missing_episodes(season.key)
 
-    def _upsert_movie_season(
-        self,
-        show: Show,
-        show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> None:
+    def _upsert_movie_season(self, show: Show, show_key: str) -> None:
         parsed_json = self._url_title_details_file(show_key).parsed()
         node_id = parsed_json.data.url_v2.node.id
-        season = Season.get_from_memory(self.db, show, node_id)
-        season_timestamp = self._file_timestamp(self._season_files(node_id, show_key))
-        if force_reimport or not self._is_up_to_date(season, season_timestamp):
-            season = Season(
-                key=node_id,
-                name="Movie",
-                sort_order=0,
-                data_timestamp=season_timestamp,
-                show_id=show.id,
-            ).upsert(show, season)
-        self._upsert_movie_episode(
-            show,
-            season,
-            show_key,
-            force_reimport=force_reimport,
-        )
+        existing_season = Season.get_from_memory(self.db, show, node_id)
+        season = Season(
+            key=node_id,
+            name="Movie",
+            sort_order=0,
+            data_timestamp=self.season_data_timestamp(node_id, show_key),
+            show_id=show.id,
+        ).upsert(show, existing_season)
+        upserted_key = self._upsert_movie_episode(show, season, show_key)
+        expected_keys = [upserted_key] if upserted_key else []
+        season.soft_delete_missing_children(expected_keys)
 
     @staticmethod
     def _date_to_datetime(value: date | None) -> datetime | None:
@@ -268,12 +206,7 @@ class UpsertMixin(FileMixin, register=False):
         season: Season,
         season_data: url_title_details_models.Season,
         show_key: str,
-        *,
-        force_reimport: bool = False,
     ) -> None:
-        episode_keys = self._episode_keys_from_file(season_data.id)
-        season.soft_delete_missing_children(episode_keys)
-
         source_key = show.source.key
         custom_season_episodes_file = self._custom_season_episodes_file(
             season_data.id,
@@ -291,18 +224,14 @@ class UpsertMixin(FileMixin, register=False):
                 season,
                 season_episode.id,
             )
-            # Each episode has its own CustomBuyBoxOffers file so the timestamp
-            # must be computed per-episode.
-            episode_timestamp = self._file_timestamp(
-                self._episode_files(
-                    season_episode.id,
-                    season.key,
-                    show_key,
-                ),
+            episode_timestamp = self.episode_data_timestamp(
+                season_episode.id,
+                season.key,
+                show_key,
             )
-            if not force_reimport and self._is_up_to_date(
-                existing_episode,
-                episode_timestamp,
+            if (
+                existing_episode
+                and existing_episode.data_timestamp == episode_timestamp
             ):
                 continue
 
@@ -342,9 +271,7 @@ class UpsertMixin(FileMixin, register=False):
         show: Show,
         season: Season,
         show_key: str,
-        *,
-        force_reimport: bool = False,
-    ) -> None:
+    ) -> str | None:
         source_key = show.source.key
         parsed_data = self._url_title_details_file(show_key).parsed()
         episode_info = self._find_matching_episode(
@@ -352,21 +279,20 @@ class UpsertMixin(FileMixin, register=False):
             parsed_data.data.url_v2.node,
         )
         if not episode_info:
-            return
+            return None
 
-        episode_timestamp = self._file_timestamp(
-            self._episode_files(episode_info.id, season.key, show_key),
-        )
         existing_episode = Episode.get_from_memory(
             self.db,
             season,
             episode_info.id,
         )
-        if not force_reimport and self._is_up_to_date(
-            existing_episode,
-            episode_timestamp,
-        ):
-            return
+        episode_timestamp = self.episode_data_timestamp(
+            episode_info.id,
+            season.key,
+            show_key,
+        )
+        if existing_episode and existing_episode.data_timestamp == episode_timestamp:
+            return episode_info.id
 
         node = parsed_data.data.url_v2.node
         Episode(
@@ -382,5 +308,6 @@ class UpsertMixin(FileMixin, register=False):
             air_date=self._date_to_datetime(node.content.original_release_date),
             season_id=season.id,
         ).upsert(season, existing_episode)
+        return episode_info.id
 
     # endregion Upsert

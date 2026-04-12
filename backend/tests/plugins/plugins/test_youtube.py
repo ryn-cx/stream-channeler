@@ -9,17 +9,20 @@ from app.plugins.plugins.YouTube import YouTube
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
+from tests.plugins.plugin_validator import (
+    InvalidURLValidator,
+    PluginValidator,
+    StandardTests,
+)
 from tests.plugins.plugin_validator.validator import Validator
 
 
-class YouTubeValidator(PluginValidator):
+class YouTubeValidator(PluginValidator[YouTube]):
     url: str
     channel_key: str
     playlist_key: str
     channel_name: str
 
-    skip_test_update_source = True
     plugin_class = YouTube
 
     @pytest.fixture(params=YouTube.domains())
@@ -27,32 +30,41 @@ class YouTubeValidator(PluginValidator):
         return request.param
 
     @override
-    def _import_url_validator(self) -> Validator:
-        output = super()._import_url_validator()
+    def import_url_validator(self) -> Validator:
+        output = super().import_url_validator()
         # Source.data_timestamp is based on when the Source is created.
         output.incremented(Source, "data_timestamp")
         return output
 
     @override
-    def _update_show_validator(self, show: Show) -> Validator:
-        output = super()._update_show_validator(show)
+    def update_show_validator(self, show: Show) -> Validator:
+        output = super().update_show_validator(show)
         # Season.update_at is set based on the data_timestamp of the Show.
         output.incremented(Show, "update_at")
         return output
 
     @override
-    def _update_season_validator(self, season: Season) -> Validator:
-        output = super()._update_season_validator(season)
+    def update_season_validator(self, season: Season) -> Validator:
+        output = super().update_season_validator(season)
         # Season.update_at is set based on the data_timestamp of the season files.
         output.incremented(season.id, "update_at")
         output.incremented(season.show.id, "data_timestamp", "modified_at")
         return output
 
     @override
-    def _update_episode_validator(self, episode: Episode) -> Validator:
-        output = super()._update_episode_validator(episode)
+    def update_episode_validator(self, episode: Episode) -> Validator:
+        output = super().update_episode_validator(episode)
         # Episodes with the same key will all get updated together.
         output.incremented(episode.key, "modified_at", "data_timestamp")
+        return output
+
+    @override
+    def deleted_episode_validator(self, episode: Episode) -> Validator:
+        output = super().deleted_episode_validator(episode)
+        # _set_season_update_at recalculates update_at from episode release dates.
+        # Whether it changes depends on whether the fake episode had the latest
+        # release date, so we ignore it.
+        output.ignore(episode.season.id, "update_at")
         return output
 
 
@@ -139,38 +151,41 @@ class ChannelWithNoUploadsMixin(YouTubeValidator):
         return "UU" + self.channel_key[2:]
 
     @override
-    def _import_url_validator(self) -> Validator:
-        output = super()._import_url_validator()
+    def import_url_validator(self) -> Validator:
+        output = super().import_url_validator()
         output.ignore(self.uploads_key, "update_at")
         return output
 
     @override
-    def _update_season_validator(self, season: Season) -> Validator:
-        output = super()._update_season_validator(season)
+    def update_season_validator(self, season: Season) -> Validator:
+        output = super().update_season_validator(season)
         if season.key == self.uploads_key:
             output.changed(season.id, "update_at")
         return output
 
 
-class Test16CharacterPlaylist(PlaylistValidator):
+# This also ends up having a playlist with no videos PL2666A74DC50B1A76
+class Test16CharacterPlaylist(StandardTests, PlaylistValidator):
     channel_key = "UCeAS7YuMOKpz39PD07O2p_w"
     playlist_key = "PL374F6CD60916C2C7"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-class Test32CharacterPlaylist(PlaylistValidator):
+class Test32CharacterPlaylist(StandardTests, PlaylistValidator):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     playlist_key = "PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-class TestPlaylistWithDeletedVideos(ChannelWithNoUploadsMixin, PlaylistValidator):
+class TestPlaylistWithDeletedVideos(
+    StandardTests, ChannelWithNoUploadsMixin, PlaylistValidator
+):
     channel_key = "UCJ0cZ4i3wJU5OMVyRH_PxyQ"
     playlist_key = "PL1cA0ECqV9x-mC2Pxon9_YNDuM5PdyhyH"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-class TestNamedChannel(ChannelValidator):
+class TestNamedChannel(StandardTests, ChannelValidator):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     channel_name = "jawed"
     url = f"youtube.com/{channel_name}"
@@ -190,7 +205,9 @@ class TestNamedChannel(ChannelValidator):
 
 # A channel with no uploads can be imported because the channel may have playlists with
 # videos.
-class TestChannelWithoutUploads(ChannelWithNoUploadsMixin, ChannelValidator):
+class TestChannelWithoutUploads(
+    StandardTests, ChannelWithNoUploadsMixin, ChannelValidator
+):
     channel_key = "UCJ0cZ4i3wJU5OMVyRH_PxyQ"
     channel_name = "highballrider"
     url = f"youtube.com/@{channel_name}"
@@ -207,7 +224,7 @@ class TestChannelWithoutUploads(ChannelWithNoUploadsMixin, ChannelValidator):
 
 
 # A channel with no playlists can be imported because the channel may have uploads.
-class TestChannelWithoutPlaylists(ChannelValidator):
+class TestChannelWithoutPlaylists(StandardTests, ChannelValidator):
     channel_key = "UCVlx-IvZ_TBWRKU0UQCaueQ"
     channel_name = "chad"
     url = f"youtube.com/{channel_name}"
@@ -219,7 +236,7 @@ class TestChannelWithoutPlaylists(ChannelValidator):
 #     url = f"youtube.com/{channel_name}"
 
 
-class InvalidYouTubeURLValidator(InvalidURLValidator):
+class InvalidYouTubeURLValidator(InvalidURLValidator[YouTube]):
     plugin_class = YouTube
 
 

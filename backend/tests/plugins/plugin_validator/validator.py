@@ -222,9 +222,9 @@ class Validator:
     ) -> list[str]:
         errors: list[str] = []
 
-        if len(original.children()) != len(actual.children()):
-            original_children = original.children()
-            actual_children = actual.children()
+        if len(original.children) != len(actual.children):
+            original_children = original.children
+            actual_children = actual.children
             missing = [
                 original_child
                 for original_child in original_children
@@ -251,8 +251,8 @@ class Validator:
         # Recursively validate children
         if isinstance(original, (Plugin, Source, Show, Season)):
             for original_child, actual_child in zip(
-                sorted(original.children(), key=lambda x: x.key),
-                sorted(actual.children(), key=lambda x: x.key),
+                sorted(original.children, key=lambda x: x.key),
+                sorted(actual.children, key=lambda x: x.key),
                 strict=True,
             ):
                 # Help MyPy identify the objects correctly.

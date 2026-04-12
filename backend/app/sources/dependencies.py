@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from typing import Annotated
 
@@ -10,15 +9,12 @@ from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 
 
-def require_user_source(
+def require_owned_source(
     session: SessionDep,
     current_user: CurrentUser,
     source_id: Annotated[uuid.UUID, Path()],
 ) -> Source:
     return get_owned_record(session, Source, source_id, current_user.id)
-
-
-UserSource = Annotated[Source, Depends(require_user_source)]
 
 
 def require_readable_source(
@@ -30,3 +26,4 @@ def require_readable_source(
 
 
 ReadableSource = Annotated[Source, Depends(require_readable_source)]
+OwnedSource = Annotated[Source, Depends(require_owned_source)]

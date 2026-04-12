@@ -10,7 +10,7 @@ from sqlmodel import Session, col, or_, select
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
-from app.media.service import delete_record, update_record
+from app.media.service import delete_record
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.plugins.schemas import PluginOutput
@@ -185,7 +185,7 @@ def update_watches(
     """Update a watch and all matching watches."""
     all_watches = get_matching_watches(session, input_watch)
     for watch in all_watches:
-        update_record(session, watch, watch_input)
+        watch_input.update(session, watch)
     return [WatchOutput.model_validate(watch) for watch in all_watches]
 
 
@@ -293,7 +293,7 @@ def get_plugins_with_import_watch_history(
         plugin_cls
         for plugin_cls in plugins
         if plugin_cls.supports_import_watch_history
-        and Plugin.get(session, plugin_cls.plugin_key(), plugin_user)
+        and Plugin.get(session, plugin_user, plugin_cls.plugin_key())
     ]
 
 

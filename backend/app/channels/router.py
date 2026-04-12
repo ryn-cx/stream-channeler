@@ -25,12 +25,12 @@ from app.channels.schemas import (
     ChannelQueueOutput,
     ChannelShowsOutput,
     EpisodeWithExtrasOutput,
-    MultipleSortOptionOutputs,
+    SortOptionOutput,
     WhitelistShowInput,
     WhitelistShowOutput,
 )
 from app.episodes.schemas import EpisodeOutput
-from app.media.service import delete_record, list_children, update_record
+from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
@@ -43,22 +43,19 @@ router = APIRouter(prefix="/channels", tags=["channels"])
 
 
 @router.get("", response_model=list[ChannelOutput])
-def get_user_channels(
-    session: SessionDep,
-    current_user: CurrentUser,
-) -> list[Channel]:
-    """List all channels owned by the current user."""
-    return list_children(session, Channel, "user_id", current_user.id)
+def get_channels(current_user: CurrentUser) -> list[Channel]:
+    """List all ``Channel``s owned by the current ``User``."""
+    return current_user.channels
 
 
 @router.get("/sort-options")
-def get_sort_options() -> MultipleSortOptionOutputs:
+def get_sort_options() -> list[SortOptionOutput]:
     """Get a list of all possible sorting options."""
     return service.get_sort_options()
 
 
 @router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by ReadableChannel
-def get_user_channel(channel: ReadableChannel) -> Channel:
+def get_channel(channel: ReadableChannel) -> Channel:
     """Get a channel by its id."""
     return channel
 
@@ -149,7 +146,7 @@ def get_channel_shows(
 
 # FAST003 - Parameter is used by UserChannelShow.
 @router.get("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
-def get_user_channel_whitelist(
+def get_channel_whitelist(
     channel_show: OwnedChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Read the whitelist for a show in a channel."""
@@ -179,23 +176,23 @@ def get_user_channel_whitelist(
 
 # FAST003 - Parameter is used by UserChannelShow.
 @router.patch("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
-def update_user_channel_whitelist(
+def update_channel_whitelist(
     session: SessionDep,
     whitelist_config: WhitelistShowInput,
     channel_show: OwnedChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Update the whitelist/blacklist for a show in a channel."""
     service.update_whitelist(session, channel_show, whitelist_config)
-    return get_user_channel_whitelist(channel_show)
+    return get_channel_whitelist(channel_show)
 
 
 @router.post("", response_model=ChannelOutput)
-def create_user_channel(
+def create_channel(
     session: SessionDep,
     current_user: CurrentUser,
     channel_in: ChannelPostInput,
 ) -> Channel:
-    """Create a channel owned by the current user."""
+    """Create a ``Channel`` owned by the current ``User``."""
     channel = Channel.model_validate(channel_in, update={"user_id": current_user.id})
     session.add(channel)
     session.commit()
@@ -204,23 +201,23 @@ def create_user_channel(
 
 # FAST003 - Parameter is used by UserChannel.
 @router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003
-def update_user_channel(
+def update_channel(
     session: SessionDep,
     channel: OwnedChannel,
     channel_in: ChannelPatchInput,
 ) -> Channel:
-    """Update a channel owned by the current user."""
-    return update_record(session, channel, channel_in)
+    """Update a ``Channel`` owned by the current ``User``."""
+    return channel_in.update(session, channel)
 
 
 # FAST003 - Parameter is used by UserChannel.
 @router.patch("/{channel_id}/default-order", response_model=ChannelOutput)  # noqa: FAST003
-def update_user_channel_default_order(
+def update_channel_default_order(
     session: SessionDep,
     channel: OwnedChannel,
     media_filter: ChannelMediaFilter,
 ) -> Channel:
-    """Update the default sort order for a channel."""
+    """Update the default sort order for a ``Channel``."""
     channel.default_order = media_filter.model_dump_json(
         by_alias=True,
         exclude_defaults=True,
@@ -233,8 +230,8 @@ def update_user_channel_default_order(
 
 # FAST003 - Parameter is used by UserChannel.
 @router.delete("/{channel_id}")  # noqa: FAST003
-def delete_user_channel(session: SessionDep, channel: OwnedChannel) -> Message:
-    """Delete a channel owned by the current user."""
+def delete_channel(session: SessionDep, channel: OwnedChannel) -> Message:
+    """Delete a ``Channel`` owned by the current ``User``."""
     return delete_record(session, channel)
 
 
@@ -245,7 +242,7 @@ def delete_channel_show(
     session: SessionDep,
     show_id: str,
 ) -> Message:
-    """Remove a show from a channel."""
+    """Remove a ``Show`` from a ``Channel``."""
     if not (show := session.exec(select(Show).where(Show.id == show_id)).first()):
         raise HTTPException(status_code=404, detail="Show not found")
 
@@ -261,7 +258,7 @@ def delete_channel_show(
 
 # FAST003 - Parameter is used by UserChannel.
 @router.get("/{channel_id}/import-queue", response_model=list[ChannelQueueOutput])  # noqa: FAST003
-def get_user_channel_queue(
+def get_channel_queue(
     session: SessionDep,
     channel: OwnedChannel,
 ) -> list[ChannelQueue]:
@@ -282,7 +279,7 @@ def get_user_channel_queue(
 
 # FAST003 - Parameter is used by UserChannel.
 @router.post("/{channel_id}/import-queue", response_model=list[ChannelQueueOutput])  # noqa: FAST003
-def create_user_channel_queue_urls(
+def create_channel_queue_urls(
     session: SessionDep,
     channel: OwnedChannel,
     urls: list[str],
@@ -296,34 +293,32 @@ def create_user_channel_queue_urls(
     return data
 
 
-# FAST003 - Parameter is used by UserChannel.
-@router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003
-def delete_user_channel_queue_url(
+@router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003 - Used by UserChannel.
+def delete_channel_queue_url(
     session: SessionDep,
     channel: OwnedChannel,
     url_id: uuid.UUID,
 ) -> Message:
     """Delete url from a channel's import queue."""
-    for existing_entry in channel.queue:
-        if existing_entry.id == url_id:
-            url = existing_entry.url
-            session.delete(existing_entry)
+    for existing_record in channel.queue:
+        if existing_record.id == url_id:
+            url = existing_record.url
+            session.delete(existing_record)
             session.commit()
             return Message(message=f"{url} removed from import queue successfully")
 
     raise HTTPException(status_code=404, detail="URL not found")
 
 
-# FAST003 - Parameter is used by UserChannel.
-@router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003
-def clear_user_channel_completed_queue(
+@router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003 - Used by UserChannel.
+def clear_channel_completed_queue(
     session: SessionDep,
     channel: OwnedChannel,
 ) -> Message:
     """Clear a channel's import queue."""
-    for existing_entry in channel.queue:
-        if existing_entry.status == service.URLStatus.IMPORTED:
-            session.delete(existing_entry)
+    for existing_record in channel.queue:
+        if existing_record.status == service.URLStatus.IMPORTED:
+            session.delete(existing_record)
 
     session.commit()
     return Message(message="Import queue cleared successfully")

@@ -477,22 +477,22 @@ class EpisodeQueryBuilder:
     def _collect_sort_expressions(
         self,
         *,
-        exclude_show_group: bool = False,
-        only_show_group: bool = False,
+        exclude_group_by_show: bool = False,
+        only_group_by_show: bool = False,
     ) -> list[UnaryExpression[Any] | ColumnElement[Any]]:
         """Collect sort expressions from configured sort keys.
 
         Args:
-            exclude_show_group: If True, skip show_group sort keys (used for
+            exclude_group_by_show: If True, skip group_by_show sort keys (used for
                 window function partitioning to avoid nested window functions).
-            only_show_group: If True, only include show_group sort keys.
+            only_group_by_show: If True, only include group_by_show sort keys.
         """
         sort_expressions: list[UnaryExpression[Any] | ColumnElement[Any]] = []
         for sort_key in reversed(self._sort_keys):
-            is_show_group = sort_key.mode == "show_group"
-            if exclude_show_group and is_show_group:
+            is_group_by_show = sort_key.mode == "group_by_show"
+            if exclude_group_by_show and is_group_by_show:
                 continue
-            if only_show_group and not is_show_group:
+            if only_group_by_show and not is_group_by_show:
                 continue
             sort_expressions.append(self._sql_sort_expression(sort_key))
         return sort_expressions
@@ -504,20 +504,20 @@ class EpisodeQueryBuilder:
         if not self._has_interleave:
             return query.order_by(*self._collect_sort_expressions())
 
-        # show_group sorts act as tiers above interleaving — episodes are first
+        # group_by_show sorts act as tiers above interleaving — episodes are first
         # grouped by these expressions, then interleaved within each tier.
-        show_group_sorts = self._collect_sort_expressions(only_show_group=True)
-        non_group_sorts = self._collect_sort_expressions(exclude_show_group=True)
+        group_by_show_sorts = self._collect_sort_expressions(only_group_by_show=True)
+        non_group_sorts = self._collect_sort_expressions(exclude_group_by_show=True)
         remaining_sorts = non_group_sorts[1:]
 
         last_sort_key = self._sort_keys[-1]
-        if last_sort_key.mode == "show_group":
+        if last_sort_key.mode == "group_by_show":
             partition_by = col(Show.id)
         else:
             partition_by = self._get_sorter(last_sort_key)
         interleave_partition = func.row_number().over(
             partition_by=partition_by,
-            order_by=self._collect_sort_expressions(exclude_show_group=True),
+            order_by=self._collect_sort_expressions(exclude_group_by_show=True),
         )
 
         if self._interleave_is_random:
@@ -528,21 +528,21 @@ class EpisodeQueryBuilder:
                 ),
             )
             return query.order_by(
-                *show_group_sorts,
+                *group_by_show_sorts,
                 interleave_partition,
                 show_random,
                 *remaining_sorts,
             )
 
         return query.order_by(
-            *show_group_sorts,
+            *group_by_show_sorts,
             interleave_partition,
             *remaining_sorts,
         )
 
     def _get_sorter(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         """Route a sort key to the appropriate SQL expression builder."""
-        if sort_key.mode == "show_group" and sort_key.model == "episode":
+        if sort_key.mode == "group_by_show" and sort_key.model == "episode":
             return self._sql_sort_by_show_episodes_expression(sort_key)
         return self._sql_sort_by_value_expression(sort_key)
 
@@ -570,9 +570,19 @@ class EpisodeQueryBuilder:
     ) -> ColumnElement[Any]:
         """Get SQL expression for a value-based sort."""
         if sort_key.field == "random":
+            # Hash the id of the model the sort key targets so episodes within
+            # the same parent stay grouped. For example, sorting by "Show -
+            # Random" hashes Show.id, which keeps every show's episodes
+            # together while randomizing the order shows appear in.
+            random_columns: dict[str, Mapped[UUID]] = {
+                "episode": Episode.id,
+                "season": Season.id,
+                "show": Show.id,
+            }
+            random_column = random_columns[sort_key.model]
             return func.hashtext(
                 func.concat(
-                    func.cast(Episode.id, String),
+                    func.cast(random_column, String),
                     str(self._media_filter.random_seed),
                 ),
             )

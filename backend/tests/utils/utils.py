@@ -87,20 +87,15 @@ def random_optional_future_timestamp() -> datetime | None:
     return None
 
 
-# TODO: What the ????
 def _random_sort_key_input() -> SortKeyInput:
-    private_attrs = SortKeyInput.__private_attributes__
-    model_map: dict[str, type[BaseModel]] = private_attrs["_MODEL_MAP"].default  # type: ignore[assignment]
-    special_fields: frozenset[str] = private_attrs["_SPECIAL_FIELDS"].default  # type: ignore[assignment]
-
+    model_map = SortKeyInput._MODEL_MAP  # noqa: SLF001
     model_name: str = random.choice(list(model_map))
     model_class = model_map[model_name]
-    valid_fields = list(model_class.model_fields) + list(special_fields)
     return SortKeyInput(
         model=model_name,  # type: ignore[arg-type]
-        field=random.choice(valid_fields),
+        field=random.choice(model_class.SORTABLE_FIELDS),
         direction=random.choice(
-            get_args(SortKeyInput.model_fields["direction"].annotation)
+            get_args(SortKeyInput.model_fields["direction"].annotation),
         ),
         mode=random.choice(get_args(SortKeyInput.model_fields["mode"].annotation)),
     )

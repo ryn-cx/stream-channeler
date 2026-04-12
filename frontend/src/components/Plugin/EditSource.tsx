@@ -43,7 +43,7 @@ import type { SourceTableData } from "./sourceColumns"
 type SourcesData = Array<SourceTableData>
 
 const formSchema = z.object({
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1, "Key is required").max(255),
   name: z.string().max(255).optional().or(z.literal("")),
   favicon_url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
@@ -109,7 +109,6 @@ const EditSource = ({ source }: EditSourceProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
     })

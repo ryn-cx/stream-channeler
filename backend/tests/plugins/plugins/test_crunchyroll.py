@@ -1,8 +1,12 @@
 # TODO: Validate
-from datetime import timedelta
-from typing import override
+from datetime import datetime, timedelta
 
 import pytest
+
+try:
+    from typing import override
+except ImportError:
+    from typing import override
 from chirashi.browse_series import BrowseSeries
 from sqlmodel import Session
 
@@ -11,157 +15,150 @@ from app.plugins.plugins.Crunchyroll import Crunchyroll
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
+from app.utils import tz_datetime
+from tests.plugins.plugin_validator import (
+    InvalidURLValidator,
+    PluginValidator,
+    StandardTests,
+)
 from tests.plugins.plugin_validator.validator import Validator
 
 # TODO: ADD TESTS FOR DELETIONS, CREATE FAKE SHOW/SEASON/EPISODE THEN MAKE SURE IT GETS
 # DELETED WHEN UPDATE OCCURS.
 
 
-class CrunchyrollValidator(PluginValidator):
-    url: str
-    show_key: str
-    show_slug: str
-
+class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     plugin_class = Crunchyroll
-
-    @pytest.fixture(params=Crunchyroll.domains())
-    def domain(self, request: pytest.FixtureRequest) -> str:
-        return request.param
-
-    @pytest.fixture(
-        params=[
-            "/series/{key}/{slug}",
-            "/series/{key}/",
-            "/series/{key}",
-        ],
+    url_path_patterns = (
+        "/series/{parse_url_response}/{show_slug}",
+        "/series/{parse_url_response}/",
+        "/series/{parse_url_response}",
     )
-    def series_path(self, request: pytest.FixtureRequest) -> str:
-        return request.param.format(key=self.show_key, slug=self.show_slug)
 
     @override
-    def _update_season_validator(self, season: Season) -> Validator:
-        output = super()._update_season_validator(season)
-
-        for episode in season.episodes:
-            output = output.incremented(episode.id, "modified_at", "data_timestamp")
-        return output.incremented(Show, "modified_at", "data_timestamp")
-
-    @override
-    def _update_episode_validator(self, episode: Episode) -> Validator:
+    def update_season_validator(self, season: Season) -> Validator:
         return (
             super()
-            ._update_episode_validator(episode)
-            .episodes_share_file(episode)
-            .incremented(episode.season.id, "data_timestamp", "modified_at")
+            .update_season_validator(season)
+            .episodes_share_season_file(season)
+            .seasons_share_show_file(season)
         )
 
-    def test_import_response(
-        self,
-        db_with_url: Session,
-        domain: str,
-        series_path: str,
-    ) -> None:
-        results = self._import_url(db_with_url, url=domain + series_path)
-        result = results[0]
-
-        assert len(results) == 1
-        assert result.show.key == self.show_key
-        assert result.whitelist_mode is False
-
-
-class CrunchyrollSourceValidator(CrunchyrollValidator):
     @override
-    def _update_source_validator(self, source: Source) -> Validator:
-        validator = super()._update_source_validator(source)
-        # The update at value is decremented because the fake browse file that is used
-        # has a timestamp before the real one.
-        validator.decremented(Source, "update_at")
+    def update_episode_validator(self, episode: Episode) -> Validator:
+        return (
+            super()
+            .update_episode_validator(episode)
+            .episodes_share_season_file(episode)
+        )
+
+
+class CrunchyrollStandardTests(StandardTests[Crunchyroll], CrunchyrollValidator):
+    pass
+
+
+class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
+    @override
+    def update_source_validator(self, source: Source) -> Validator:
+        validator = super().update_source_validator(source)
+        # The update_at value is incremented because the fake browse file's
+        # data_timestamp is set to now() on write, making update_at (timestamp + 1 day)
+        # later than the original.
+        validator = validator.incremented(Source, "update_at")
 
         # Show/Season will have a match which will set their update_at values.
-        validator.incremented(Season, "modified_at")
-        validator.incremented(Show, "modified_at")
+        validator = validator.incremented(Season, "modified_at")
+        validator = validator.incremented(Show, "modified_at")
+        validator = validator.decremented(Show, "update_at")
         # update_at is populated/decremented because the release date is mocked to be a
         # sooner timestamp to test that the value is set correctly.
-        validator.populated(Show, "update_at")
         for show in source.shows:
             for season in show.seasons:
                 if season.update_at is None:
-                    validator.populated(season.id, "update_at")
+                    validator = validator.populated(season.id, "update_at")
                 else:
-                    validator.decremented(season.id, "update_at")
+                    validator = validator.decremented(season.id, "update_at")
 
         return validator
 
+    @staticmethod
+    def _create_fake_browse_file(
+        plugin_instance: Crunchyroll,
+        timestamp: datetime,
+        show_key: str,
+    ) -> None:
+        """Create a fake Browse file with updated last_public for the given show."""
+        existing_browse = plugin_instance._get_latest_browse_file()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        parsed = existing_browse.parsed()
+        first_entry = parsed[0].data[0]
+        assert first_entry is not None, "Browse file has no entries"
+        first_entry.id = show_key
+        first_entry.last_public = timestamp
+        new_browse = plugin_instance._browse_file(timestamp)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_browse._write(BrowseSeries.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
+
     def test_update_source(self, db_with_url: Session) -> None:
         """Update a random source and validate the data."""
-        if self.invalid_url or self.skip_update_tests or self.skip_test_update_source:
+        if self.invalid_url:
             pytest.skip()
+
+        if not self.url:
+            msg = "URL is required for update source test"
+            raise ValueError(msg)
 
         plugin_instance = self.plugin_class(db_with_url, url=self.url)
         results = plugin_instance.import_url(self.url)
-        source = self._random_source(results)
+        source = self.get_random_source(results)
 
-        # Make a fake updated Browse file based on the existing one to simulate
-        # downloading a new Browse file.
-        assert isinstance(plugin_instance, Crunchyroll)
-        existing_browse = plugin_instance._get_latest_browse_file()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-        new_browse_timestamp = (
-            existing_browse.database_entry.data_timestamp + timedelta(minutes=1)
+        new_browse_timestamp = tz_datetime.now() + timedelta(minutes=1)
+        self._create_fake_browse_file(
+            plugin_instance,
+            new_browse_timestamp,
+            source.shows[0].key,
         )
-        # Directly editing the existing_browse file's parsed value is safe because these
-        # changes will not be persisted to the database.
-        for page in existing_browse.parsed():
-            for entry in page.data:
-                # Update all last_public values to make sure the value is newer than the
-                # data_timestamp of the shows and seasons.
-                entry.last_public = new_browse_timestamp
-        new_browse = plugin_instance._browse_file(new_browse_timestamp)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-        new_browse._write(BrowseSeries.dump_response(existing_browse.parsed()))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
 
-        original_plugin = self._get_detached_plugin(db_with_url)
+        # Manually set show.update_at and season.update_at values so they will
+        # always decrement.
+        source.shows[0].update_at = new_browse_timestamp + timedelta(minutes=1)
+        for season in source.shows[0].seasons:
+            if season.update_at:
+                season.update_at = new_browse_timestamp + timedelta(minutes=1)
+
+        original_plugin = self.get_detached_plugin(db_with_url)
         self._update_and_validate(db_with_url, original_plugin, source)
 
 
-# TestAiring tests for shows with upcoming new episodes,
-class TestAiringSingleSeasonShow(CrunchyrollSourceValidator):
-    show_key = "GT00369409"
-    show_slug = "star-detective-precure"
-    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
+class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    # This needs to be a series with a recently aired episode.
+    parse_url_response = "GT00374493"
+    show_slug = "rilakkuma"
+    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"
 
 
-class TestAiringMultipleSeasonsShow(CrunchyrollSourceValidator):
-    show_key = "G6NVG970Y"
-    show_slug = "welcome-to-demon-school-iruma-kun"
-    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
+class TestAiringMultipleSeasonsShow(
+    CrunchyrollStandardTests,
+    CrunchyrollUpdateSourceTest,
+):
+    # This needs to be a series with a recently aired episode.
+    parse_url_response = "G9VHN91DJ"
+    show_slug = "the-angel-next-door-spoils-me-rotten"
+    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"
 
 
-# TestNew test for shows with new versions of existing episodes.
-class TestNewSingleSeasonShow(CrunchyrollSourceValidator):
-    show_key = "GG5H5XQZQ"
-    show_slug = "the-dark-history-of-the-reincarnated-villainess"
-    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
-
-
-class TestNewMultipleSeasonsShow(CrunchyrollSourceValidator):
-    show_key = "GYX0MZ58R"
-    show_slug = "ace-of-the-diamond"
-    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
-
-
-class InvalidCrunchyrollURLValidator(InvalidURLValidator):
+class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
     plugin_class = Crunchyroll
 
 
 class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
-    url = "crunchyroll.com/series/ABCDEFGHI"
+    url = "crunchyroll.com/series/GGGGGGGGG"
 
 
-class TestInvalidPath(InvalidCrunchyrollURLValidator):
+class TestInvalidURL(InvalidCrunchyrollURLValidator):
     url = "crunchyroll.com/watch/GT00365592"
 
 
-class TestLargeShow(CrunchyrollValidator):
-    show_key = "GRMG8ZQZR"
+class TestLargeShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    parse_url_response = "GRMG8ZQZR"
     show_slug = "one-piece"
-    url = f"crunchyroll.com/series/{show_key}/{show_slug}"
+    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"

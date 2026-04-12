@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.schemas import Message
-from app.watches.dependencies import UserWatch
+from app.watches.dependencies import OwnedWatch
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchesListOutput,
@@ -24,14 +24,41 @@ from app.watches.services import (
 
 router = APIRouter(prefix="/watches", tags=["watches"])
 
+# region CRUD
+
 
 @router.get("")
-def get_user_watches(
+def get_watches(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> WatchesListOutput:
-    """Get multiple watched episode entries."""
+    """Get multiple watched episode records."""
     return get_watched_episodes(session, current_user.id)
+
+
+@router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003 - Used by UserWatch.
+def get_watch(watch: OwnedWatch) -> Watch:
+    """Get a watch owned by the current user by its id."""
+    return watch
+
+
+@router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
+def update_watch(
+    session: SessionDep,
+    watch: OwnedWatch,
+    watch_input: WatchPatchInput,
+) -> list[WatchOutput]:
+    """Update a watch and all matching sibling watches."""
+    return update_watches(session, watch, watch_input)
+
+
+@router.delete("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
+def delete_watch(session: SessionDep, watch: OwnedWatch) -> Message:
+    """Delete a watch and all sibling watches by its id."""
+    return delete_watches(session, watch)
+
+
+# endregion CRUD
 
 
 @router.post("/sync")
@@ -76,27 +103,3 @@ def import_watch_history(
     )
     session.commit()
     return result
-
-
-# FAST003 - Parameter is u
-@router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003 - Used by UserWatch.
-def get_user_watch(watch: UserWatch) -> Watch:
-    """Get a watch owned by the current user by its id."""
-    return watch
-
-
-@router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
-def update_user_watch(
-    session: SessionDep,
-    watch: UserWatch,
-    watch_input: WatchPatchInput,
-) -> list[WatchOutput]:
-    """Update a watch and all matching sibling watches."""
-    return update_watches(session, watch, watch_input)
-
-
-# FAST003 - Parameter is used by UserWatch.
-@router.delete("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
-def delete_user_watch(session: SessionDep, watch: UserWatch) -> Message:
-    """Delete a watch and all sibling watches by its id."""
-    return delete_watches(session, watch)

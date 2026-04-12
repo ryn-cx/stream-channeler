@@ -2,7 +2,7 @@
 import json
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, override
+from typing import override
 
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
@@ -66,6 +66,10 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistModel]):
     def _get(self) -> PlaylistModel:
         assert isinstance(self.api_endpoint, PlaylistsEndpoint)  # noqa: S101
         return self.api_endpoint.get_all(self.unique_identifier)
+
+    @override
+    def _get_acceptable_error(self) -> str:
+        return f"No playlists found for channel '{self.unique_identifier}'."
 
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
@@ -161,11 +165,10 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     @override
-    def _season_files(  # type: ignore[override]
+    def _season_files(
         self,
-        show_key: str,
         season_key: str,
-        **kwargs: Any,
+        show_key: str,
     ) -> Sequence[ChannelPlaylists | PlaylistItems]:
         return [
             # Required to detect new episodes (videos).
@@ -175,7 +178,12 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     @override
-    def _episode_files(self, episode_key: str, **kwargs: Any) -> Sequence[Videos]:  # type: ignore[override]
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[Videos]:
         # Required to detect changes to the episode (video).
         return [self._videos_file(episode_key)]
 
@@ -192,11 +200,18 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         channel_playlists_file = self._channel_playlists_file(show_key)
-        season_keys = [item.id for item in channel_playlists_file.parsed().items]
+        season_keys: list[str] = []
+        if channel_playlists_file.database_record.content:
+            season_keys = [
+                item.id
+                for item in channel_playlists_file.parsed().items
+                if item.content_details.item_count > 0
+            ]
 
-        # Channel uploads are not included in ChannelPlaylists so it needs to be added
-        # manually.
-        season_keys.append(self._get_channel_uploads_playlist_key(show_key))
+        # If the channel has uploads also include that as a season.
+        channel_item = self._channel_by_channel_id_file(show_key).parsed().items[0]
+        if int(channel_item.statistics.video_count) > 0:
+            season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
         return season_keys
 
@@ -222,14 +237,13 @@ class FileMixin(BasePlugin, register=False):
     def _download_all_episode_files(
         self,
         season_key: str,
-        *,
-        show_key: str | None = None,
-        preloaded_episode_files: Sequence[File] | None = None,
+        show_key: str,
+        preloaded_episodes_files: Sequence[File] | None = None,
     ) -> list[File]:
         """Batch download all videos for a season in a single API call."""
         video_keys = self._episode_keys_from_file(season_key)
-        if not preloaded_episode_files:
-            preloaded_episode_files = self._preload_episode_files(
+        if not preloaded_episodes_files:
+            preloaded_episodes_files = self._preload_episode_files(
                 video_keys,
                 season_key=season_key,
                 show_key=show_key,
@@ -251,4 +265,4 @@ class FileMixin(BasePlugin, register=False):
                 # because of the way the files are batch downloaded.
                 video_file._write(content)  # noqa: SLF001 # type: ignore[reportPrivateUsage]
 
-        return [self._videos_file(video_id).database_entry for video_id in video_keys]
+        return [self._videos_file(video_id).database_record for video_id in video_keys]

@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, override
+from typing import override
 
 from chirashi import Chirashi
 from chirashi.browse_series import models as browse_series_models
@@ -44,10 +44,8 @@ class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
     IMMUTABLE = True
     api_endpoint = chirashi_client().browse_series
 
-    # Requires specific named parameters
     @override
     def _get(self) -> list[browse_series_models.BrowseSeries]:
-        # TODO: Why does this use tz_datetime but JustWatch has to use datetime
         return chirashi_client().browse_series.get_since_datetime(
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
@@ -97,7 +95,7 @@ class FileMixin(BasePlugin, register=False):
     # region File Groups
 
     @override
-    def _show_files(self, show_key: str, **kwargs: Any) -> Sequence[Series | Seasons]:
+    def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
         return [
             # Required to detect new seasons.
             self._seasons_file(show_key),
@@ -106,7 +104,7 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     @override
-    def _season_files(  # type: ignore[override]
+    def _season_files(
         self,
         season_key: str,
         show_key: str,
@@ -119,8 +117,12 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     @override
-    def _episode_files(self, season_key: str, **kwargs: Any) -> Sequence[Episodes]:  # type: ignore[override]
-        # Required to detect changes to the episode.
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[Episodes]:
         return [self._episodes_file(season_key)]
 
     # endregion File Groups

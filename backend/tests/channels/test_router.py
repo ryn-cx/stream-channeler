@@ -20,7 +20,7 @@ from app.channels.schemas import (
     ChannelQueueOutput,
     ChannelShowsOutput,
     EpisodeWithExtrasOutput,
-    MultipleSortOptionOutputs,
+    SortOptionOutput,
     WhitelistEntryInput,
     WhitelistShowInput,
     WhitelistShowOutput,
@@ -112,14 +112,14 @@ class TestSortOptions:
                 email=user.email,
                 db=session_scoped_db,
             )
-        result = assert_success(
+        result = assert_success_list(
             client=session_scoped_client,
             method="get",
             url=SORT_OPTIONS_URL,
-            output_model=MultipleSortOptionOutputs,
+            output_model=SortOptionOutput,
             headers=headers,
         )
-        assert len(result.data) > 0
+        assert len(result) > 0
 
 
 # endregion Validated
@@ -966,7 +966,7 @@ class BaseChannelQueueTests(BaseChannelSubEndpointTests):
             output_model=ChannelQueueOutput,
             headers=headers,
         )
-        assert [entry.url for entry in result] == expected_urls
+        assert [record.url for record in result] == expected_urls
 
     def test_not_found(
         self,
@@ -1280,7 +1280,7 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
             user_is_authenticated=True,
             record_is_public=False,
         )
-        entries = [
+        records = [
             create_random_channel_queue(
                 session_scoped_db,
                 initial_test_data.record,
@@ -1303,10 +1303,10 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
             output_model=ChannelQueueOutput,
             headers=initial_test_data.headers,
         )
-        remaining_urls = {entry.url for entry in result}
+        remaining_urls = {record.url for record in result}
         expected_urls = {
-            e.url
-            for e, s in zip(entries, initial_statuses, strict=True)
+            r.url
+            for r, s in zip(records, initial_statuses, strict=True)
             if s in expected_remaining
         }
         assert remaining_urls == expected_urls
@@ -1591,15 +1591,15 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         target_episode = episodes[2]
 
         seasons = [
-            WhitelistEntryInput(id=preserved_marked_episode.season.id, enabled=True),
-            WhitelistEntryInput(id=preserved_unmarked_episode.season.id, enabled=False),
+            WhitelistEntryInput(id=preserved_marked_episode.season.id, marked=True),
+            WhitelistEntryInput(id=preserved_unmarked_episode.season.id, marked=False),
         ]
         episodes_input = [
-            WhitelistEntryInput(id=preserved_marked_episode.id, enabled=True),
-            WhitelistEntryInput(id=preserved_unmarked_episode.id, enabled=False),
+            WhitelistEntryInput(id=preserved_marked_episode.id, marked=True),
+            WhitelistEntryInput(id=preserved_unmarked_episode.id, marked=False),
         ]
-        seasons.append(WhitelistEntryInput(id=target_episode.season.id, enabled=True))
-        episodes_input.append(WhitelistEntryInput(id=target_episode.id, enabled=True))
+        seasons.append(WhitelistEntryInput(id=target_episode.season.id, marked=True))
+        episodes_input.append(WhitelistEntryInput(id=target_episode.id, marked=True))
         initial_input = WhitelistShowInput(
             whitelist_mode=True,
             seasons=seasons,
@@ -1633,16 +1633,16 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             seasons=[
                 WhitelistEntryInput(
                     id=setup.preserved_unmarked_episode.season.id,
-                    enabled=True,
+                    marked=True,
                 ),
-                WhitelistEntryInput(id=setup.target_episode.season.id, enabled=False),
+                WhitelistEntryInput(id=setup.target_episode.season.id, marked=False),
             ],
             episodes=[
                 WhitelistEntryInput(
                     id=setup.preserved_unmarked_episode.id,
-                    enabled=True,
+                    marked=True,
                 ),
-                WhitelistEntryInput(id=setup.target_episode.id, enabled=False),
+                WhitelistEntryInput(id=setup.target_episode.id, marked=False),
             ],
         )
         expected_episode_ids = {

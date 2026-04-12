@@ -27,7 +27,7 @@ function getPluginsQueryOptions() {
   }
 }
 
-export const Route = createFileRoute("/_layout/plugin/")({
+export const Route = createFileRoute("/_layout/plugins")({
   component: PluginPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
@@ -45,6 +45,7 @@ function PluginsTableContent() {
   )
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
+    id: false,
   })
 
   const table = useReactTable({

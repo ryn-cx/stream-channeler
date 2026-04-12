@@ -110,7 +110,7 @@ const MODE_OPTIONS = [
   { value: "normal", label: "Normal" },
   { value: "interleave_sequential", label: "Interleave (Sequential)" },
   { value: "interleave_random", label: "Interleave (Random)" },
-  { value: "show_group", label: "Show Group" },
+  { value: "group_by_show", label: "Group by Show" },
 ] as const
 type Mode = (typeof MODE_OPTIONS)[number]["value"]
 
@@ -356,14 +356,12 @@ export function EpisodeFilters({
 
   const navigate = useNavigate()
 
-  const { data: sortOptionsResponse } = useQuery({
+  const { data: sortOptions = [] } = useQuery({
     queryKey: ["sort-options"],
     queryFn: () => ChannelsService.getSortOptions(),
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
-
-  const sortOptions = sortOptionsResponse?.data || []
 
   const form = useForm<FormValues>({
     // TODO: Fix this as any cast
@@ -439,7 +437,8 @@ export function EpisodeFilters({
       field: entry.field,
       direction: entry.direction,
       mode: entry.mode,
-      aggregation: entry.mode === "show_group" ? entry.aggregation : undefined,
+      aggregation:
+        entry.mode === "group_by_show" ? entry.aggregation : undefined,
       days:
         isRecentlyAired(entry) && entry.recentlyAiredMode === "relative"
           ? entry.days
@@ -795,7 +794,7 @@ export function EpisodeFilters({
                                 ))}
                               </SelectContent>
                             </Select>
-                            {entry.mode === "show_group" && (
+                            {entry.mode === "group_by_show" && (
                               <Select
                                 value={entry.aggregation}
                                 onValueChange={(value) =>

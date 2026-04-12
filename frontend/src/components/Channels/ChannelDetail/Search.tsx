@@ -183,7 +183,7 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
     queryFn: () =>
       apiRequest<Array<{ plugin_key: string; name: string }>>(OpenAPI, {
         method: "GET",
-        url: "/api/v1/plugins/supports-search",
+        url: "/api/v1/plugins/search-information",
       }),
   })
 

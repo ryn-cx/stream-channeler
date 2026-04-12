@@ -1,12 +1,11 @@
-# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
-from app.media.service import create_child, delete_record, list_children, update_record
+from app.media.service import delete_record
 from app.schemas import Message
 from app.shows.models import Show
 from app.shows.schemas import ShowOutput, ShowPostInput
-from app.sources.dependencies import ReadableSource, UserSource
+from app.sources.dependencies import OwnedSource, ReadableSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceOutput,
@@ -16,47 +15,39 @@ from app.sources.schemas import (
 router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-# FAST003 - Parameter is used by ReadableSource.
-@router.get("/{source_id}", response_model=SourceOutput)  # noqa: FAST003
-def get_user_source(source: ReadableSource) -> Source:
-    """Get a source by its id if its plugin is public or owned by the current user."""
+@router.get("/{source_id}", response_model=SourceOutput)  # noqa: FAST003 - Used by ReadableSource
+def get_source(source: ReadableSource) -> Source:
+    """Get a ``Source`` if it's readable by the current ``User``."""
     return source
 
 
-# FAST003 - Parameter is used by ReadableSource.
-@router.get("/{source_id}/shows", response_model=list[ShowOutput])  # noqa: FAST003
-def get_user_source_shows(
-    session: SessionDep,
-    source: ReadableSource,
-) -> list[Show]:
-    """List all shows for a source if its plugin is public or owned by the current user."""
-    return list_children(session, Show, "source_id", source.id)
+@router.get("/{source_id}/shows", response_model=list[ShowOutput])  # noqa: FAST003 - Used by ReadableSource
+def get_shows(source: ReadableSource) -> list[Show]:
+    """List all ``Show``s for a ``Source`` if its ``Plugin`` is public or owned by the current ``User``."""
+    return source.shows
 
 
-# FAST003 - Parameter is used by UserSource.
-@router.post("/{source_id}/shows", response_model=ShowOutput)  # noqa: FAST003
-def create_user_show(
+@router.post("/{source_id}/shows", response_model=ShowOutput)  # noqa: FAST003 - Used by OwnedSource
+def create_show(
     session: SessionDep,
-    source: UserSource,
+    source: OwnedSource,
     show_input: ShowPostInput,
 ) -> Show:
-    """Create a show for a source."""
-    return create_child(session, Show, source, show_input, "source_id")
+    """Create a ``Show`` if the ``Source`` is owned by the current ``User``."""
+    return show_input.create(session, Show, source)
 
 
-# FAST003 - Parameter is used by UserSource.
-@router.patch("/{source_id}", response_model=SourceOutput)  # noqa: FAST003
-def update_user_source(
+@router.patch("/{source_id}", response_model=SourceOutput)  # noqa: FAST003 - Used by OwnedSource
+def update_source(
     session: SessionDep,
-    source: UserSource,
+    source: OwnedSource,
     source_input: SourcePatchInput,
 ) -> Source:
-    """Update a source by its id."""
-    return update_record(session, source, source_input)
+    """Update and return a ``Source`` if it's owned by the current ``User``."""
+    return source_input.update(session, source)
 
 
-# FAST003 - Parameter is used by UserSource.
-@router.delete("/{source_id}")  # noqa: FAST003
-def delete_user_source(session: SessionDep, source: UserSource) -> Message:
-    """Delete a source by its id."""
+@router.delete("/{source_id}")  # noqa: FAST003 - Used by OwnedSource
+def delete_source(session: SessionDep, source: OwnedSource) -> Message:
+    """Delete a ``Source`` if it's owned by the current ``User``."""
     return delete_record(session, source)

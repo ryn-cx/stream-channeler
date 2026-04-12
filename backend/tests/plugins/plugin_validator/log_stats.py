@@ -82,7 +82,7 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
 
 
 @contextmanager
-def log_stats(plugin_validator: PluginValidator) -> Generator[None]:
+def log_stats(plugin_validator: PluginValidator[Any]) -> Generator[None]:
     """Combined context manager for all stats logging."""
     label = next(
         fi.function.removeprefix("test_")

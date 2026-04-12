@@ -50,6 +50,7 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
     episode: Episode = Relationship(back_populates="watches")
 
+    @property
     def parent(self) -> Episode:
         return self.episode
 

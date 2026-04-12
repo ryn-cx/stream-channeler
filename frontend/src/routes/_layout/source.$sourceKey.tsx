@@ -49,6 +49,7 @@ function ShowsTableContent() {
   const { data: shows } = useSuspenseQuery(getShowsQueryOptions(sourceKey))
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     key: false,
+    id: false,
   })
 
   const table = useReactTable({

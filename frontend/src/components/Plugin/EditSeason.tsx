@@ -49,7 +49,7 @@ const formSchema = z.object({
   image_url: z.string().max(2048).optional().or(z.literal("")),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1, "Key is required").max(255),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -115,7 +115,6 @@ const EditSeason = ({ season }: EditSeasonProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       season_number: data.season_number || undefined,
       sort_order: data.sort_order || undefined,

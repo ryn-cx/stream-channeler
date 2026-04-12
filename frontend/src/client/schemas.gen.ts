@@ -142,8 +142,7 @@ export const ChannelMediaFilterSchema = {
                 '$ref': '#/components/schemas/SortKeyInput'
             },
             type: 'array',
-            title: 'Sortby',
-            default: []
+            title: 'Sortby'
         },
         additionalChannels: {
             items: {
@@ -151,8 +150,7 @@ export const ChannelMediaFilterSchema = {
                 format: 'uuid'
             },
             type: 'array',
-            title: 'Additionalchannels',
-            default: []
+            title: 'Additionalchannels'
         },
         randomSeed: {
             type: 'integer',
@@ -329,6 +327,7 @@ export const ChannelMediaFilterSchema = {
             title: 'Limit'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'ChannelMediaFilter'
 } as const;
@@ -551,6 +550,7 @@ export const EpisodeOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -723,7 +723,8 @@ export const EpisodePatchInputSchema = {
         key: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -1044,6 +1045,7 @@ export const EpisodePostInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
+    required: ['key'],
     title: 'EpisodePostInput'
 } as const;
 
@@ -1051,6 +1053,7 @@ export const EpisodeWithExtrasOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -1284,21 +1287,6 @@ export const MessageSchema = {
     title: 'Message'
 } as const;
 
-export const MultipleSortOptionOutputsSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/SortOptionOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        }
-    },
-    type: 'object',
-    required: ['data'],
-    title: 'MultipleSortOptionOutputs'
-} as const;
-
 export const NewPasswordSchema = {
     properties: {
         token: {
@@ -1317,7 +1305,7 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
-export const PluginImportURLInfoSchema = {
+export const PluginImportURLInformationSchema = {
     properties: {
         name: {
             type: 'string',
@@ -1330,24 +1318,17 @@ export const PluginImportURLInfoSchema = {
     },
     type: 'object',
     required: ['name', 'instructions'],
-    title: 'PluginImportURLInfo'
+    title: 'PluginImportURLInformation'
 } as const;
 
-export const PluginImportWatchHistoryInfoSchema = {
+export const PluginImportWatchHistoryInformationSchema = {
     properties: {
         plugin_key: {
             type: 'string',
             title: 'Plugin Key'
         },
         file_extension: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'File Extension'
         },
         instructions: {
@@ -1356,14 +1337,15 @@ export const PluginImportWatchHistoryInfoSchema = {
         }
     },
     type: 'object',
-    required: ['plugin_key', 'instructions'],
-    title: 'PluginImportWatchHistoryInfo'
+    required: ['plugin_key', 'file_extension', 'instructions'],
+    title: 'PluginImportWatchHistoryInformation'
 } as const;
 
 export const PluginOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -1455,7 +1437,8 @@ export const PluginPatchInputSchema = {
         key: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -1553,6 +1536,7 @@ export const PluginPostInputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -1631,11 +1615,11 @@ export const PluginPostInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
-    required: ['public'],
+    required: ['key', 'public'],
     title: 'PluginPostInput'
 } as const;
 
-export const PluginSearchInfoSchema = {
+export const PluginSearchInformationSchema = {
     properties: {
         plugin_key: {
             type: 'string',
@@ -1648,7 +1632,7 @@ export const PluginSearchInfoSchema = {
     },
     type: 'object',
     required: ['plugin_key', 'name'],
-    title: 'PluginSearchInfo'
+    title: 'PluginSearchInformation'
 } as const;
 
 export const PluginSearchResultSchema = {
@@ -1782,6 +1766,7 @@ export const SeasonOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -1907,7 +1892,8 @@ export const SeasonPatchInputSchema = {
         key: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -2134,6 +2120,7 @@ export const SeasonPostInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
+    required: ['key'],
     title: 'SeasonPostInput'
 } as const;
 
@@ -2141,6 +2128,7 @@ export const ShowOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -2266,7 +2254,8 @@ export const ShowPatchInputSchema = {
         key: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -2493,6 +2482,7 @@ export const ShowPostInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
+    required: ['key'],
     title: 'ShowPostInput'
 } as const;
 
@@ -2514,7 +2504,7 @@ export const SortKeyInputSchema = {
         },
         mode: {
             type: 'string',
-            enum: ['normal', 'interleave_sequential', 'interleave_random', 'show_group'],
+            enum: ['normal', 'interleave_sequential', 'interleave_random', 'group_by_show'],
             title: 'Mode'
         },
         aggregation: {
@@ -2553,6 +2543,7 @@ export const SortKeyInputSchema = {
             title: 'Recentlyaireddate'
         }
     },
+    additionalProperties: false,
     type: 'object',
     required: ['model', 'field', 'direction', 'mode'],
     title: 'SortKeyInput'
@@ -2583,6 +2574,7 @@ export const SourceOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -2686,7 +2678,8 @@ export const SourcePatchInputSchema = {
         key: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -2869,6 +2862,7 @@ export const SourcePostInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
+    required: ['key'],
     title: 'SourcePostInput'
 } as const;
 
@@ -3407,13 +3401,14 @@ export const WhitelistEntryInputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        enabled: {
+        marked: {
             type: 'boolean',
-            title: 'Enabled'
+            title: 'Marked'
         }
     },
+    additionalProperties: false,
     type: 'object',
-    required: ['id', 'enabled'],
+    required: ['id', 'marked'],
     title: 'WhitelistEntryInput'
 } as const;
 
@@ -3435,18 +3430,17 @@ export const WhitelistShowInputSchema = {
                 '$ref': '#/components/schemas/WhitelistEntryInput'
             },
             type: 'array',
-            title: 'Seasons',
-            default: []
+            title: 'Seasons'
         },
         episodes: {
             items: {
                 '$ref': '#/components/schemas/WhitelistEntryInput'
             },
             type: 'array',
-            title: 'Episodes',
-            default: []
+            title: 'Episodes'
         }
     },
+    additionalProperties: false,
     type: 'object',
     title: 'WhitelistShowInput'
 } as const;
@@ -3455,6 +3449,7 @@ export const WhitelistShowOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {

@@ -10,9 +10,9 @@ from app.channels.models import (
     ChannelEpisodeWhiteList,
     ChannelQueue,
     ChannelSeasonWhiteList,
+    ChannelShow,
     URLStatus,
 )
-from app.channels.schemas import ChannelShowInput
 from app.database import engine, load_models
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
@@ -77,29 +77,34 @@ def add_results_to_channel(
     results: list[URLImportResult],
     channel: Channel,
 ) -> None:
-    shows_by_show_id = {show.show_id: show for show in channel.shows}
+    existing_show_ids = {show.show_id for show in channel.shows}
     for result in results:
-        channel_show = ChannelShowInput(
+        # If a ChannelShow already exists for this show, leave it untouched.
+        if result.show.id in existing_show_ids:
+            continue
+
+        channel_show = ChannelShow(
             channel_id=channel.id,
             show_id=result.show.id,
             white_list_mode=result.whitelist_mode,
-        ).upsert(channel, shows_by_show_id.get(result.show.id))
+        )
+        channel.shows.append(channel_show)
 
-        channel_show.season_white_list = []
         for season in result.seasons:
-            channel_season_whitelist = ChannelSeasonWhiteList(
-                channel_show_id=channel_show.id,
-                season_id=season.id,
+            session.add(
+                ChannelSeasonWhiteList(
+                    channel_show_id=channel_show.id,
+                    season_id=season.id,
+                ),
             )
-            session.add(channel_season_whitelist)
 
-        channel_show.episode_white_list = []
         for episode in result.episodes:
-            channel_episode_whitelist = ChannelEpisodeWhiteList(
-                channel_show_id=channel_show.id,
-                episode_id=episode.id,
+            session.add(
+                ChannelEpisodeWhiteList(
+                    channel_show_id=channel_show.id,
+                    episode_id=episode.id,
+                ),
             )
-            session.add(channel_episode_whitelist)
 
 
 if __name__ == "__main__":

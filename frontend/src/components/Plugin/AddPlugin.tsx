@@ -38,7 +38,7 @@ import type { PluginTableData } from "./columns"
 type PluginsData = Array<PluginTableData>
 
 const formSchema = z.object({
-  key: z.string().optional().or(z.literal("")),
+  key: z.string().min(1),
   name: z.string().max(255).optional().or(z.literal("")),
   version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
@@ -46,6 +46,14 @@ const formSchema = z.object({
 })
 
 type FormData = z.infer<typeof formSchema>
+
+const makeDefaults = (): FormData => ({
+  key: crypto.randomUUID(),
+  name: "",
+  version: "",
+  data_timestamp: "",
+  public: false,
+})
 
 const AddPlugin = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -55,13 +63,7 @@ const AddPlugin = () => {
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     criteriaMode: "all",
-    defaultValues: {
-      key: "",
-      name: "",
-      version: "",
-      data_timestamp: "",
-      public: false,
-    },
+    defaultValues: makeDefaults(),
   })
 
   const mutation = useMutation({
@@ -79,7 +81,7 @@ const AddPlugin = () => {
       context.client.setQueryData<PluginsData>(["plugins"], (old) => [
         ...(old ?? []),
         {
-          key: newPlugin.key ?? "",
+          key: newPlugin.key,
           name: newPlugin.name ?? null,
           version: newPlugin.version ?? null,
           id: crypto.randomUUID(),
@@ -93,7 +95,7 @@ const AddPlugin = () => {
     },
     onSuccess: () => {
       showSuccessToast("Plugin created successfully")
-      form.reset()
+      form.reset(makeDefaults())
       setIsOpen(false)
     },
     onError: (error, _variables, onMutateResult, context) => {
@@ -107,7 +109,6 @@ const AddPlugin = () => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       version: data.version || undefined,
       data_timestamp: data.data_timestamp || undefined,
@@ -178,11 +179,7 @@ const AddPlugin = () => {
                   <FormItem>
                     <FormLabel>Key</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Auto-generated if empty"
-                        type="text"
-                        {...field}
-                      />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

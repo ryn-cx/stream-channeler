@@ -1,9 +1,9 @@
-# TODO: Validate
+# TODO: Add search support.
 # This plugin intentionally does not support movies from the movies page because it has
 # been unofficially deprecated as movies are now added as a series instead.
 
 # New movie format example:
-#   https://www.crunchyroll.com/series/GMTE00335490/spy-x-family-code-white
+# https://www.crunchyroll.com/series/GMTE00335490/spy-x-family-code-white
 # Old movie page:
 # https://www.crunchyroll.com/videos/alphabetical?media=movies
 
@@ -25,7 +25,6 @@ from app.utils import tz_datetime
 
 class Crunchyroll(WatchHistoryMixin, register=True):
     _VERSION = "0.0.1"
-    _skip_downloading_episodes = True
     supports_import_url = True
 
     @override
@@ -46,13 +45,14 @@ class Crunchyroll(WatchHistoryMixin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        show_key = self.parse_url(url)
         self._validate_url(show_key, url)
         show = self._import_show(show_key)
         return [URLImportResult(show=show, whitelist_mode=False)]
 
     @classmethod
-    def _parse_url(cls, url: str) -> str:
+    @override
+    def parse_url(cls, url: str) -> str:
         if match := re.match(cls._url_regex(), url):
             return match.group("show_key")
 
@@ -65,15 +65,10 @@ class Crunchyroll(WatchHistoryMixin, register=True):
         self.raise_invalid_url_if_no_content(series_json, url)
 
     def _import_show(self, show_key: str) -> Show:
-        show = self._preload_show(
-            show_key=show_key,
-            preload_source=True,
-            preload_episodes=True,
-        ).one_or_none()
-        if show:
+        if show := self._preload_show(show_key=show_key).one_or_none():
             return show
 
-        _cache = self._download_show_files(show_key, skip_episodes=True)
+        _cache = self._download_show_files(show_key)
         source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
         return self._upsert_show(source, show_key=show_key)
 
@@ -91,7 +86,7 @@ class Crunchyroll(WatchHistoryMixin, register=True):
     def _download_new_browse_json(self, source: Source, browse: Browse) -> Browse:
         # Only download a Browse file at most once a day. This will protect against a
         # failed source update downloading a Browse file over and over again.
-        browse_download_date = browse.database_entry.data_timestamp
+        browse_download_date = browse.database_record.data_timestamp
         minimum_timestamp = browse_download_date + timedelta(days=1)
         if minimum_timestamp > tz_datetime.now():
             return browse
@@ -99,16 +94,16 @@ class Crunchyroll(WatchHistoryMixin, register=True):
         # Use data_timestamp as the key so this import will download everything up
         # to the last import because data_timestamp represents when the file was
         # written and the key represents the end_datetime used to generate the file.
-        new_browse = self._browse_file(browse.database_entry.data_timestamp)
+        new_browse = self._browse_file(browse.database_record.data_timestamp)
         new_browse.download_if_outdated(source.update_at)
         return new_browse
 
     def _process_new_browse_files(self, source: Source) -> None:
         """Import existing browse files that have not been imported yet."""
-        _cache = self._preload_sources(preload_shows=True).all()
+        _cache = self._preload_sources(preload_seasons=True).all()
 
         for browse_json in self._get_new_browse_files_from_db(source):
-            logger.info("Processing browse file: {}", browse_json.database_entry.key)
+            logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.db, source, release.id):
                     logger.info("Matched show: {}", show.name or release.id)
@@ -123,20 +118,19 @@ class Crunchyroll(WatchHistoryMixin, register=True):
                         season.set_update_at(release.last_public)
 
     def _get_new_browse_files_from_db(self, source: Source) -> list[Browse]:
+        data_timestamp = source.data_timestamp or tz_datetime.fromtimestamp(0)
+
         statement = (
             select(File)
             .where(
                 File.plugin == self.plugin,
                 col(File.key).startswith(f"{Browse.__name__}/"),
-                col(File.data_timestamp) > source.data_timestamp
-                if source.data_timestamp
-                else True,
+                col(File.data_timestamp) > data_timestamp,
             )
             .order_by(col(File.data_timestamp).asc())
         )
-        return [
-            self._browse_file(browse_file) for browse_file in self.db.exec(statement)
-        ]
+        browse_files = self.db.exec(statement)
+        return [self._browse_file(browse_file) for browse_file in browse_files]
 
     # endregion
 

@@ -153,7 +153,7 @@
 
 #     @override
 #     def update_show(self, show: Show) -> None:
-#         show_key = show.active_seasons()[0].key
+#         show_key = show.active_children()[0].key
 #         self._media_type = show.media_type
 #         self.__preload_update_media(show_key)
 #         for show_file in self._show_files(show_key):
@@ -162,7 +162,7 @@
 
 #     @override
 #     def update_season(self, season: Season) -> None:
-#         show_key = season.show.active_seasons()[0].key
+#         show_key = season.show.active_children()[0].key
 #         self._media_type = season.show.media_type
 #         self.__preload_update_media(show_key)
 #         for season_file in self._season_files(int(season.key)):
@@ -171,7 +171,7 @@
 
 #     @override
 #     def update_episode(self, episode: Episode) -> None:
-#         show_key = episode.season.show.active_seasons()[0].key
+#         show_key = episode.season.show.active_children()[0].key
 #         self._media_type = episode.season.show.media_type
 #         self.__preload_update_media(show_key)
 #         for episode_file in self._episode_files(
@@ -196,7 +196,7 @@
 #             )
 #             self.db.exec(file_select).all()
 #             season_json = self._season_json(show_key)
-#             if season_json.database_entry.content:
+#             if season_json.database_record.content:
 #                 tv_show_key = str(season_json.parsed().metadata.series.series_id)
 #                 adj_keys = [AdjacentSeriesJSON.file_key(tv_show_key)]
 #                 adj_select = (

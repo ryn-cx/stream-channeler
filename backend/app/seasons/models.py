@@ -1,9 +1,6 @@
-# TODO: Validate
 import uuid
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, ClassVar, override
 
-from sqlalchemy import util
 from sqlmodel import (
     Field,
     Index,
@@ -29,10 +26,6 @@ class BaseSeason(BaseMediaMixin):
 
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.orm.interfaces import ORMOption
-    from sqlalchemy.sql.selectable import ForUpdateParameter
-
     from app.channels.models import ChannelSeasonWhiteList
     from app.episodes.models import Episode
 
@@ -41,15 +34,19 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
-        # Used in episode_selector._apply_sort_key to sort episodes by season sort order.
+        # Included in SORTABLE_FIELDS.
         Index("Season-sort_order-index", "sort_order"),
-        # Used in episode_selector._apply_sort_key to sort episodes by season number.
         Index("Season-season_number-index", "season_number"),
-        # Used in episode_selector._apply_sort_key to sort episodes by season name.
         Index("Season-name-index", "name"),
-        # Used in episode_selector._filter_deleted_media to exclude soft-deleted seasons.
         Index("Season-deleted_at-index", "deleted_at"),
     )
+
+    SORTABLE_FIELDS: ClassVar[list[str]] = [
+        "sort_order",
+        "name",
+        "season_number",
+        "random",
+    ]
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")
@@ -60,6 +57,17 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         cascade_delete=True,
     )
 
+    @property
+    @override
+    def parent(self) -> Show:
+        return self.show
+
+    @property
+    @override
+    def children(self) -> list[Episode]:
+        return self.episodes
+
+    @override
     def get_user_id(self, session: Session) -> uuid.UUID | None:
         return session.exec(
             select(Plugin.user_id)
@@ -69,6 +77,7 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
             .where(Show.id == self.show_id),
         ).first()
 
+    @override
     def is_public(self, session: Session) -> bool:
         return bool(
             session.exec(
@@ -80,157 +89,8 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
             ).first(),
         )
 
-    @override
-    def parent(self) -> Show:
-        return self.show
-
-    @override
-    def children(self) -> list[Episode]:
-        return self.episodes
-
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get(  # noqa: PLR0913
-        cls,
-        db: Session,
-        show: Show,
-        season_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> Season | None:
-        """Wrap `db.get(Season, ...)` for easier use.
-
-        Args:
-            db: Database session.
-            show: Parent show instance.
-            season_key: Unique ID of the season within the show.
-            options: Passed directly to ``db.get``.
-            populate_existing: Passed directly to ``db.get``.
-            with_for_update: Passed directly to ``db.get``.
-            identity_token: Passed directly to ``db.get``.
-            execution_options: Passed directly to ``db.get``.
-            bind_arguments: Passed directly to ``db.get``.
-
-        Returns:
-            - Season instance if Season is found.
-            - None if no Season is found.
-
-        """
-        return db.get(
-            Season,
-            (show.id, season_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    @classmethod
-    # PLR0913 - Parameters are copied from the wrapped function.
-    def get_one(  # noqa: PLR0913
-        cls,
-        db: Session,
-        show: Show,
-        season_key: str,
-        *,
-        options: Sequence[ORMOption] | None = None,
-        populate_existing: bool = False,
-        with_for_update: ForUpdateParameter = None,
-        # ANN401 - Parameter copied from the wrapped function.
-        identity_token: Any | None = None,  # noqa: ANN401
-        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
-        bind_arguments: dict[str, Any] | None = None,
-    ) -> Season:
-        """Wrap `db.get_one(Season, ...)` for easier use.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session.
-            show: Parent show instance.
-            season_key: Unique ID of the season within the show.
-            options: Passed directly to ``db.get_one``.
-            populate_existing: Passed directly to ``db.get_one``.
-            with_for_update: Passed directly to ``db.get_one``.
-            identity_token: Passed directly to ``db.get_one``.
-            execution_options: Passed directly to ``db.get_one``.
-            bind_arguments: Passed directly to ``db.get_one``.
-
-        Returns:
-            Season instance
-
-        Raises:
-            NoResultFound: If no season with the given ID exists in the show
-
-        """
-        return db.get_one(
-            Season,
-            (show.id, season_key),
-            options=options,
-            populate_existing=populate_existing,
-            with_for_update=with_for_update,
-            identity_token=identity_token,
-            execution_options=execution_options,
-            bind_arguments=bind_arguments,
-        )
-
-    @classmethod
-    def get_from_memory(
-        cls,
-        db: Session,
-        show: Show,
-        season_key: str,
-    ) -> Season | None:
-        """Like Season.get but will only return a Season if it is found in memory.
-
-        Args:
-            db: Database session
-            show: Parent show instance
-            season_key: Unique ID of the season within the show
-
-        Returns:
-            Season instance if found in memory, None otherwise
-
-        """
-        return db.identity_map.get((Season, (show.id, season_key), None))
-
-    @classmethod
-    def get_one_from_memory(
-        cls,
-        db: Session,
-        show: Show,
-        season_key: str,
-    ) -> Season:
-        """Like Season.get_one but will only return a Season if it is found in memory.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session
-            show: Parent show instance
-            season_key: Unique ID of the season within the show
-
-        Returns:
-            Season instance
-
-        Raises:
-            KeyError: If no season with the given ID exists in memory
-
-        """
-        return db.identity_map[(Season, (show.id, season_key), None)]
-
-    def get_sibling(self, db: Session, key: str) -> Season | None:
-        return Season.get(db, self.show, key)
-
     def __str__(self) -> str:
+        """Return a string representation of the Season."""
         base_season = "Season:"
         if self.season_number:
             base_season += f" {self.season_number} - "

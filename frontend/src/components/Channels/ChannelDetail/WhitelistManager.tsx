@@ -118,11 +118,11 @@ export function WhitelistManager({
       whitelist_mode: whitelistMode,
       seasons: whitelistData.seasons.map((season) => ({
         id: season.id,
-        enabled: enabledSeasonIds.has(season.id),
+        marked: enabledSeasonIds.has(season.id),
       })),
       episodes: whitelistData.episodes.map((episode) => ({
         id: episode.id,
-        enabled: enabledEpisodeIds.has(episode.id),
+        marked: enabledEpisodeIds.has(episode.id),
       })),
     }
     saveMutation.mutate(input)

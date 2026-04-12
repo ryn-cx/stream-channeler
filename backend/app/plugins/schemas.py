@@ -1,41 +1,36 @@
-# TODO: Validate
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from sqlmodel import Field
 
-from app.plugins.models import BasePlugin
+from app.plugins.models import BasePlugin, Plugin
+from app.schemas import BaseInput, BasePatchInputWithKey
 
 
 class PluginOutput(BasePlugin):
     id: uuid.UUID
 
 
-class PluginPostInput(BasePlugin):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    # Simplify the process of creating custom media by automatically making a key for
-    # the user.
-    key: str = Field(default_factory=lambda: str(uuid.uuid4()))
+class PluginPostInput(BaseInput, BasePlugin):
+    pass
 
 
-class PluginPatchInput(BasePlugin):
-    model_config = ConfigDict(extra="forbid")  # type: ignore[reportAssignmentType]
-    key: str | None = Field(default=None)  # type: ignore[assignment]
+class PluginPatchInput(BasePatchInputWithKey[Plugin], BasePlugin):
+    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment] # Patch input can ignore required values.
     public: bool | None = Field(default=None)  # type: ignore[assignment]
 
 
-class PluginImportWatchHistoryInfo(BaseModel):
+class PluginImportWatchHistoryInformation(BaseModel):
     plugin_key: str
-    # TODO: Can probably be changed to be required.
-    file_extension: str | None = None
+    file_extension: str
     instructions: str
 
 
-class PluginImportURLInfo(BaseModel):
+class PluginImportURLInformation(BaseModel):
     name: str
     instructions: str
 
 
-class PluginSearchInfo(BaseModel):
+class PluginSearchInformation(BaseModel):
     plugin_key: str
     name: str

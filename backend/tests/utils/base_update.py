@@ -283,7 +283,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             record_is_public=False,
         )
         record = initial_test_data.record
-        sibling = self.create_record_function(session_scoped_db, record.parent())
+        sibling = self.create_record_function(session_scoped_db, record.parent)
 
         # union-attr - hasattr checks already ensure this attribute exists.
         parameters = dump_random_model(self.patch_model, key=sibling.key)  # type: ignore[union-attr]
@@ -293,6 +293,38 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 method="patch",
                 url=self.generic_record_url(record.id),
                 detail=f"{self.model_name} with this key already exists",
+                headers=initial_test_data.headers,
+                parameters=parameters,
+            )
+
+    def test_update_rejects_empty_key(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_db: Session,
+    ) -> None:
+        """Ensure updating a record's key to an empty string fails."""
+        if not hasattr(self.database_model, "key"):
+            pytest.skip("Model has no key field")
+        if "key" not in self.patch_model.model_fields:
+            pytest.skip("Patch model does not expose key field")
+
+        initial_test_data = self.create_test_data(
+            session_scoped_client,
+            session_scoped_db,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+
+        update_model = build_random_model(self.patch_model)
+        parameters = update_model.model_dump(mode="json", exclude_unset=True)
+        parameters["key"] = ""
+
+        with self.assert_no_db_change(session_scoped_db):
+            assert_unprocessable(
+                session_scoped_client,
+                "patch",
+                self.generic_record_url(initial_test_data.record.id),
                 headers=initial_test_data.headers,
                 parameters=parameters,
             )

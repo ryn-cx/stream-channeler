@@ -328,7 +328,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#dc3fc5e6b3cc078e008f88e03ca4347131c65c3f" }
+source = { git = "https://github.com/ryn-cx/chirashi#e05c5d4c0b18cecba950bb9a94eb79cbacdaf033" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

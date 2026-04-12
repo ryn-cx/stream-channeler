@@ -47,10 +47,24 @@ const formSchema = z.object({
   duration: z.union([z.literal(""), z.coerce.number().int().min(0)]).optional(),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
-  key: z.string().max(255).optional().or(z.literal("")),
+  key: z.string().min(1).max(255),
 })
 
 type FormData = z.infer<typeof formSchema>
+
+const makeDefaults = (): FormData => ({
+  name: "",
+  episode_number: "",
+  url: "",
+  description: "",
+  image_url: "",
+  release_date: "",
+  air_date: "",
+  duration: "",
+  sort_order: "",
+  data_timestamp: "",
+  key: crypto.randomUUID(),
+})
 
 interface AddEpisodeProps {
   seasonKey: string
@@ -65,19 +79,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
     resolver: zodResolver(formSchema) as any,
     mode: "onBlur",
     criteriaMode: "all",
-    defaultValues: {
-      name: "",
-      episode_number: "",
-      url: "",
-      description: "",
-      image_url: "",
-      release_date: "",
-      air_date: "",
-      duration: "",
-      sort_order: "",
-      data_timestamp: "",
-      key: "",
-    },
+    defaultValues: makeDefaults(),
   })
 
   const mutation = useMutation({
@@ -95,7 +97,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
       context.client.setQueryData<EpisodesData>(queryKey, (old) => [
         ...(old ?? []),
         {
-          key: crypto.randomUUID(),
+          key: newEpisode.key,
           name: newEpisode.name ?? null,
           id: crypto.randomUUID(),
           season_id: seasonKey,
@@ -115,7 +117,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
     },
     onSuccess: () => {
       showSuccessToast("Episode created successfully")
-      form.reset()
+      form.reset(makeDefaults())
       setIsOpen(false)
     },
     onError: (error, _variables, onMutateResult, context) => {
@@ -129,7 +131,6 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const onSubmit = (data: FormData) => {
     mutation.mutate({
       ...data,
-      key: data.key || undefined,
       name: data.name || undefined,
       episode_number: data.episode_number || undefined,
       duration: data.duration || undefined,
@@ -299,11 +300,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
                   <FormItem>
                     <FormLabel>Key</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Auto-generated if empty"
-                        type="text"
-                        {...field}
-                      />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

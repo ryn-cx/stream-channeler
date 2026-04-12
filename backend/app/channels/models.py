@@ -1,10 +1,9 @@
-# TODO: Validate
 import uuid
+from collections.abc import Sequence
 from enum import Enum
-from typing import Self
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ScalarResult
-from sqlalchemy.sql.base import ExecutableOption
+from sqlalchemy import util
 from sqlmodel import (
     Field,
     Index,
@@ -12,7 +11,6 @@ from sqlmodel import (
     Relationship,
     Session,
     SQLModel,
-    select,
 )
 
 from app.episodes.models import Episode
@@ -20,6 +18,11 @@ from app.models import TimestampIdAndHashMixin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.selectable import ForUpdateParameter
 
 
 class BaseChannel(SQLModel):
@@ -30,7 +33,11 @@ class BaseChannel(SQLModel):
 
 
 class Channel(BaseChannel, TimestampIdAndHashMixin, table=True):
-    __table_args__ = (PrimaryKeyConstraint("id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        # Used to list all channels owned by a user.
+        Index("Channel-user_id-index", "user_id"),
+    )
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="channels")
 
@@ -43,75 +50,18 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, table=True):
         cascade_delete=True,
     )
 
+    @property
     def parent(self) -> User:
+        """Return the user that owns this channel."""
         return self.user
 
     def get_user_id(self, _session: Session) -> uuid.UUID:
+        """Return the id of the user that owns this channel."""
         return self.user_id
 
     def is_public(self, _session: Session) -> bool:
+        """Return whether this channel is publicly accessible."""
         return self.public
-
-    @classmethod
-    def get(
-        cls,
-        db: Session,
-        user: User | uuid.UUID,
-        name: str,
-        options: list[ExecutableOption] | None = None,
-    ) -> Channel | None:
-        """Get a channel by the parent user and channel name.
-
-        Args:
-            db: Database session
-            user: Parent user instance
-            name: Unique name of the channel within the user
-            options: SQLAlchemy query options (e.g., joinedload, selectinload)
-
-        Returns:
-            Channel instance if found, None otherwise
-        """
-        return cls._get_query(db, user, name, options).first()
-
-    @classmethod
-    def get_one(
-        cls,
-        db: Session,
-        user: User | uuid.UUID,
-        name: str,
-        options: list[ExecutableOption] | None = None,
-    ) -> Channel:
-        """Get a channel by the user and channel name.
-
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session
-            user: Parent user instance
-            name: Unique name of the channel within the user
-            options: SQLAlchemy query options (e.g., joinedload, selectinload)
-
-        Returns:
-            Channel instance
-        """
-        return cls._get_query(db, user, name, options).one()
-
-    @classmethod
-    def _get_query(
-        cls,
-        db: Session,
-        user: User | uuid.UUID,
-        name: str,
-        options: list[ExecutableOption] | None = None,
-    ) -> ScalarResult[Self]:
-        if isinstance(user, User):
-            user = user.id
-        statement = (
-            select(cls)
-            .where(cls.user_id == user, cls.name == name)
-            .options(*(options or []))
-        )
-        return db.exec(statement)
 
 
 class BaseChannelShow(SQLModel):
@@ -121,14 +71,11 @@ class BaseChannelShow(SQLModel):
 
 
 class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
-    """Many-to-many relationship between Channels and Shows."""
-
     __table_args__ = (
-        # Used in episode_selector._base_query to join episodes to their channel.
-        Index("ChannelShow-channel_id-index", "channel_id"),
-        # Used in episode_selector._base_query to join shows to channel shows.
-        Index("ChannelShow-show_id-index", "show_id"),
+        # Used in _filter_episodes_by_channels to filter episodes by channel.
         PrimaryKeyConstraint("channel_id", "show_id"),
+        # Used to cascade deletions when a show is deleted.
+        Index("ChannelShow-show_id-index", "show_id"),
     )
 
     channel: Channel = Relationship(
@@ -148,53 +95,75 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     )
 
     @classmethod
-    def get(
+    def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
         db: Session,
         channel: Channel,
         show: Show | uuid.UUID,
-        options: list[ExecutableOption] | None = None,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
     ) -> ChannelShow | None:
-        """Get a ChannelShow by parent channel and show.
+        """Get the ChannelShow if it exists.
 
-        Args:
-            db: Database session
-            channel: Parent channel instance
-            show: Parent show instance or its ID
-            options: SQLAlchemy query options (e.g., joinedload, selectinload)
+        This is a wrapper around ``db.get``.
 
         Returns:
-            ChannelShow instance if found, None otherwise
+            The matching ChannelShow if found, else None.
+
         """
         show_id = show.id if isinstance(show, Show) else show
-        return db.get(cls, (channel.id, show_id), options=options)
+        return db.get(
+            cls,
+            (channel.id, show_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
 
     @classmethod
-    def get_one(
+    def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
         db: Session,
         channel: Channel,
         show: Show | uuid.UUID,
-        options: list[ExecutableOption] | None = None,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
     ) -> ChannelShow:
-        """Get a ChannelShow by parent channel and show.
+        """Get the ChannelShow, raising if not found.
 
-        Raises an exception if no match is found.
-
-        Args:
-            db: Database session
-            channel: Parent channel instance
-            show: Parent show instance or its ID
-            options: SQLAlchemy query options (e.g., joinedload, selectinload)
+        This is a wrapper around ``db.get_one``.
 
         Returns:
-            ChannelShow instance
+            The matching ChannelShow.
 
         Raises:
-            NoResultFound: If no ChannelShow with the given channel and show exists
+            NoResultFound: If no ChannelShow links the given channel and show.
+
         """
         show_id = show.id if isinstance(show, Show) else show
-        return db.get_one(cls, (channel.id, show_id), options=options)
+        return db.get_one(
+            cls,
+            (channel.id, show_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
 
 
 class BaseChannelSeasonWhiteList(SQLModel):
@@ -206,28 +175,88 @@ class ChannelSeasonWhiteList(
     TimestampIdAndHashMixin,
     table=True,
 ):
-    """Many-to-many relationship between Channel Shows and Seasons.
-
-    Allows the user to specify which seasons of a show to include in the channel.
-    """
-
     __table_args__ = (
-        # Used in episode_selector._join_whitelist_tables to join season whitelist
-        # entries by channel show.
-        Index("ChannelSeasonWhiteList-channel_show_id-index", "channel_show_id"),
-        # Used in episode_selector._join_whitelist_tables to match seasons to their
-        # whitelist entries.
-        Index("ChannelSeasonWhiteList-season_id-index", "season_id"),
+        # Used to cascade deletions when a channel show is deleted.
         PrimaryKeyConstraint("channel_show_id", "season_id"),
+        # Used to cascade deletions when a season is deleted.
+        Index("ChannelSeasonWhiteList-season_id-index", "season_id"),
     )
 
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
-    channel_show: ChannelShow = Relationship(
-        back_populates="season_white_list",
-    )
-    season: Season = Relationship(
-        back_populates="channel_white_list",
-    )
+    channel_show: ChannelShow = Relationship(back_populates="season_white_list")
+    season: Season = Relationship(back_populates="channel_white_list")
+
+    @classmethod
+    def get(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        db: Session,
+        channel_show: ChannelShow,
+        season: Season | uuid.UUID,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> ChannelSeasonWhiteList | None:
+        """Get the ChannelSeasonWhiteList if it exists.
+
+        This is a wrapper around ``db.get``.
+
+        Returns:
+            The matching ChannelSeasonWhiteList if found, else None.
+
+        """
+        season_id = season.id if isinstance(season, Season) else season
+        return db.get(
+            cls,
+            (channel_show.id, season_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    @classmethod
+    def get_one(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        db: Session,
+        channel_show: ChannelShow,
+        season: Season | uuid.UUID,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> ChannelSeasonWhiteList:
+        """Get the ChannelSeasonWhiteList, raising if not found.
+
+        This is a wrapper around ``db.get_one``.
+
+        Returns:
+            The matching ChannelSeasonWhiteList.
+
+        Raises:
+            NoResultFound: If no ChannelSeasonWhiteList links the given channel show
+                and season.
+
+        """
+        season_id = season.id if isinstance(season, Season) else season
+        return db.get_one(
+            cls,
+            (channel_show.id, season_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
 
 
 class BaseChannelEpisodeWhiteList(SQLModel):
@@ -239,26 +268,88 @@ class ChannelEpisodeWhiteList(
     TimestampIdAndHashMixin,
     table=True,
 ):
-    """Many-to-many relationship between Channel Shows and Episodes.
-
-    Allows the user to specify which episodes of a season to include in the channel.
-    """
-
     __table_args__ = (
-        # Used in episode_selector._join_whitelist_tables to join episode whitelist
-        # entries by channel show.
-        Index("ChannelEpisodeWhiteList-channel_show_id-index", "channel_show_id"),
-        # Used in episode_selector._join_whitelist_tables to match episodes to their
-        # whitelist entries.
-        Index("ChannelEpisodeWhiteList-episode_id-index", "episode_id"),
+        # Used to cascade deletions when a channel show is deleted.
         PrimaryKeyConstraint("channel_show_id", "episode_id"),
+        # Used to cascade deletions when an episode is deleted.
+        Index("ChannelEpisodeWhiteList-episode_id-index", "episode_id"),
     )
 
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
-    channel_show: ChannelShow = Relationship(
-        back_populates="episode_white_list",
-    )
+    channel_show: ChannelShow = Relationship(back_populates="episode_white_list")
     episode: Episode = Relationship(back_populates="white_lists")
+
+    @classmethod
+    def get(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        db: Session,
+        channel_show: ChannelShow,
+        episode: Episode | uuid.UUID,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> ChannelEpisodeWhiteList | None:
+        """Get the ChannelEpisodeWhiteList if it exists.
+
+        This is a wrapper around ``db.get``.
+
+        Returns:
+            The matching ChannelEpisodeWhiteList if found, else None.
+
+        """
+        episode_id = episode.id if isinstance(episode, Episode) else episode
+        return db.get(
+            cls,
+            (channel_show.id, episode_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    @classmethod
+    def get_one(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        db: Session,
+        channel_show: ChannelShow,
+        episode: Episode | uuid.UUID,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> ChannelEpisodeWhiteList:
+        """Get the ChannelEpisodeWhiteList, raising if not found.
+
+        This is a wrapper around ``db.get_one``.
+
+        Returns:
+            The matching ChannelEpisodeWhiteList.
+
+        Raises:
+            NoResultFound: If no ChannelEpisodeWhiteList links the given channel show
+                and episode.
+
+        """
+        episode_id = episode.id if isinstance(episode, Episode) else episode
+        return db.get_one(
+            cls,
+            (channel_show.id, episode_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
 
 
 class URLStatus(Enum):
@@ -275,9 +366,8 @@ class BaseChannelQueue(SQLModel):
 
 
 class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
+    # Used to lookup the queue for a specific channel.
     __table_args__ = (PrimaryKeyConstraint("channel_id", "url"),)
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
-    channel: Channel = Relationship(
-        back_populates="queue",
-    )
+    channel: Channel = Relationship(back_populates="queue")

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaTriggerPluginUpdateData, AdminMediaTriggerPluginUpdateResponse, AdminMediaTriggerSourceUpdateData, AdminMediaTriggerSourceUpdateResponse, AdminMediaTriggerShowUpdateData, AdminMediaTriggerShowUpdateResponse, AdminMediaTriggerSeasonUpdateData, AdminMediaTriggerSeasonUpdateResponse, AdminMediaTriggerEpisodeUpdateData, AdminMediaTriggerEpisodeUpdateResponse, ChannelsGetUserChannelsResponse, ChannelsCreateUserChannelData, ChannelsCreateUserChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetUserChannelData, ChannelsGetUserChannelResponse, ChannelsUpdateUserChannelData, ChannelsUpdateUserChannelResponse, ChannelsDeleteUserChannelData, ChannelsDeleteUserChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetUserChannelWhitelistData, ChannelsGetUserChannelWhitelistResponse, ChannelsUpdateUserChannelWhitelistData, ChannelsUpdateUserChannelWhitelistResponse, ChannelsUpdateUserChannelDefaultOrderData, ChannelsUpdateUserChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetUserChannelQueueData, ChannelsGetUserChannelQueueResponse, ChannelsCreateUserChannelQueueUrlsData, ChannelsCreateUserChannelQueueUrlsResponse, ChannelsDeleteUserChannelQueueUrlData, ChannelsDeleteUserChannelQueueUrlResponse, ChannelsClearUserChannelCompletedQueueData, ChannelsClearUserChannelCompletedQueueResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetUserEpisodeData, EpisodesGetUserEpisodeResponse, EpisodesUpdateUserEpisodeData, EpisodesUpdateUserEpisodeResponse, EpisodesDeleteUserEpisodeData, EpisodesDeleteUserEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetUserPluginsResponse, PluginsCreateUserPluginData, PluginsCreateUserPluginResponse, PluginsListPluginsThatSupportImportWatchHistoryResponse, PluginsListPluginsThatSupportImportUrlResponse, PluginsListPluginsThatSupportSearchResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetUserPluginData, PluginsGetUserPluginResponse, PluginsUpdateUserPluginData, PluginsUpdateUserPluginResponse, PluginsDeleteUserPluginData, PluginsDeleteUserPluginResponse, PluginsGetUserPluginSourcesData, PluginsGetUserPluginSourcesResponse, PluginsCreateUserSourceData, PluginsCreateUserSourceResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetUserSeasonData, SeasonsGetUserSeasonResponse, SeasonsUpdateUserSeasonData, SeasonsUpdateUserSeasonResponse, SeasonsDeleteUserSeasonData, SeasonsDeleteUserSeasonResponse, SeasonsGetUserSeasonEpisodesData, SeasonsGetUserSeasonEpisodesResponse, SeasonsCreateUserEpisodeData, SeasonsCreateUserEpisodeResponse, ShowsGetUserShowData, ShowsGetUserShowResponse, ShowsUpdateUserShowData, ShowsUpdateUserShowResponse, ShowsDeleteUserShowData, ShowsDeleteUserShowResponse, ShowsGetUserShowSeasonsData, ShowsGetUserShowSeasonsResponse, ShowsCreateUserSeasonData, ShowsCreateUserSeasonResponse, SourcesGetUserSourceData, SourcesGetUserSourceResponse, SourcesUpdateUserSourceData, SourcesUpdateUserSourceResponse, SourcesDeleteUserSourceData, SourcesDeleteUserSourceResponse, SourcesGetUserSourceShowsData, SourcesGetUserSourceShowsResponse, SourcesCreateUserShowData, SourcesCreateUserShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetUserWatchesResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesGetUserWatchData, WatchesGetUserWatchResponse, WatchesUpdateUserWatchData, WatchesUpdateUserWatchResponse, WatchesDeleteUserWatchData, WatchesDeleteUserWatchResponse } from './types.gen';
+import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaForcePluginUpdateData, AdminMediaForcePluginUpdateResponse, AdminMediaForceSourceUpdateData, AdminMediaForceSourceUpdateResponse, AdminMediaForceShowUpdateData, AdminMediaForceShowUpdateResponse, AdminMediaForceSeasonUpdateData, AdminMediaForceSeasonUpdateResponse, AdminMediaForceEpisodeUpdateData, AdminMediaForceEpisodeUpdateResponse, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetSortOptionsResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsGetPluginsResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginSourcesData, PluginsGetPluginSourcesResponse, PluginsCreateSourceData, PluginsCreateSourceResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsGetEpisodesData, SeasonsGetEpisodesResponse, SeasonsCreateEpisodeData, SeasonsCreateEpisodeResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsGetSeasonsData, ShowsGetSeasonsResponse, ShowsCreateSeasonData, ShowsCreateSeasonResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesGetShowsData, SourcesGetShowsResponse, SourcesCreateShowData, SourcesCreateShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
 
 export class AdminMediaService {
     /**
@@ -104,16 +104,17 @@ export class AdminMediaService {
     }
     
     /**
-     * Trigger Plugin Update
+     * Force Plugin Update
+     * Force update a plugin by setting its update_at value to now.
      * @param data The data for the request.
      * @param data.pluginId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static triggerPluginUpdate(data: AdminMediaTriggerPluginUpdateData): CancelablePromise<AdminMediaTriggerPluginUpdateResponse> {
+    public static forcePluginUpdate(data: AdminMediaForcePluginUpdateData): CancelablePromise<AdminMediaForcePluginUpdateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/admin-media/plugins/{plugin_id}/trigger-update',
+            url: '/api/v1/admin-media/plugins/{plugin_id}/force-update',
             path: {
                 plugin_id: data.pluginId
             },
@@ -124,16 +125,17 @@ export class AdminMediaService {
     }
     
     /**
-     * Trigger Source Update
+     * Force Source Update
+     * Force update a source by setting its update_at value to now.
      * @param data The data for the request.
      * @param data.sourceId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static triggerSourceUpdate(data: AdminMediaTriggerSourceUpdateData): CancelablePromise<AdminMediaTriggerSourceUpdateResponse> {
+    public static forceSourceUpdate(data: AdminMediaForceSourceUpdateData): CancelablePromise<AdminMediaForceSourceUpdateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/admin-media/sources/{source_id}/trigger-update',
+            url: '/api/v1/admin-media/sources/{source_id}/force-update',
             path: {
                 source_id: data.sourceId
             },
@@ -144,16 +146,17 @@ export class AdminMediaService {
     }
     
     /**
-     * Trigger Show Update
+     * Force Show Update
+     * Force update a show by setting its update_at value to now.
      * @param data The data for the request.
      * @param data.showId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static triggerShowUpdate(data: AdminMediaTriggerShowUpdateData): CancelablePromise<AdminMediaTriggerShowUpdateResponse> {
+    public static forceShowUpdate(data: AdminMediaForceShowUpdateData): CancelablePromise<AdminMediaForceShowUpdateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/admin-media/shows/{show_id}/trigger-update',
+            url: '/api/v1/admin-media/shows/{show_id}/force-update',
             path: {
                 show_id: data.showId
             },
@@ -164,16 +167,17 @@ export class AdminMediaService {
     }
     
     /**
-     * Trigger Season Update
+     * Force Season Update
+     * Force update a season by setting its update_at value to now.
      * @param data The data for the request.
      * @param data.seasonId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static triggerSeasonUpdate(data: AdminMediaTriggerSeasonUpdateData): CancelablePromise<AdminMediaTriggerSeasonUpdateResponse> {
+    public static forceSeasonUpdate(data: AdminMediaForceSeasonUpdateData): CancelablePromise<AdminMediaForceSeasonUpdateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/admin-media/seasons/{season_id}/trigger-update',
+            url: '/api/v1/admin-media/seasons/{season_id}/force-update',
             path: {
                 season_id: data.seasonId
             },
@@ -184,16 +188,17 @@ export class AdminMediaService {
     }
     
     /**
-     * Trigger Episode Update
+     * Force Episode Update
+     * Force update an episode by setting its update_at value to now.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static triggerEpisodeUpdate(data: AdminMediaTriggerEpisodeUpdateData): CancelablePromise<AdminMediaTriggerEpisodeUpdateResponse> {
+    public static forceEpisodeUpdate(data: AdminMediaForceEpisodeUpdateData): CancelablePromise<AdminMediaForceEpisodeUpdateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/admin-media/episodes/{episode_id}/trigger-update',
+            url: '/api/v1/admin-media/episodes/{episode_id}/force-update',
             path: {
                 episode_id: data.episodeId
             },
@@ -206,12 +211,12 @@ export class AdminMediaService {
 
 export class ChannelsService {
     /**
-     * Get User Channels
-     * List all channels owned by the current user.
+     * Get Channels
+     * List all ``Channel``s owned by the current ``User``.
      * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
-    public static getUserChannels(): CancelablePromise<ChannelsGetUserChannelsResponse> {
+    public static getChannels(): CancelablePromise<ChannelsGetChannelsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/channels'
@@ -219,14 +224,14 @@ export class ChannelsService {
     }
     
     /**
-     * Create User Channel
-     * Create a channel owned by the current user.
+     * Create Channel
+     * Create a ``Channel`` owned by the current ``User``.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
-    public static createUserChannel(data: ChannelsCreateUserChannelData): CancelablePromise<ChannelsCreateUserChannelResponse> {
+    public static createChannel(data: ChannelsCreateChannelData): CancelablePromise<ChannelsCreateChannelResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/channels',
@@ -241,7 +246,7 @@ export class ChannelsService {
     /**
      * Get Sort Options
      * Get a list of all possible sorting options.
-     * @returns MultipleSortOptionOutputs Successful Response
+     * @returns SortOptionOutput Successful Response
      * @throws ApiError
      */
     public static getSortOptions(): CancelablePromise<ChannelsGetSortOptionsResponse> {
@@ -252,14 +257,14 @@ export class ChannelsService {
     }
     
     /**
-     * Get User Channel
+     * Get Channel
      * Get a channel by its id.
      * @param data The data for the request.
      * @param data.channelId
      * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
-    public static getUserChannel(data: ChannelsGetUserChannelData): CancelablePromise<ChannelsGetUserChannelResponse> {
+    public static getChannel(data: ChannelsGetChannelData): CancelablePromise<ChannelsGetChannelResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/channels/{channel_id}',
@@ -273,15 +278,15 @@ export class ChannelsService {
     }
     
     /**
-     * Update User Channel
-     * Update a channel owned by the current user.
+     * Update Channel
+     * Update a ``Channel`` owned by the current ``User``.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
      * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserChannel(data: ChannelsUpdateUserChannelData): CancelablePromise<ChannelsUpdateUserChannelResponse> {
+    public static updateChannel(data: ChannelsUpdateChannelData): CancelablePromise<ChannelsUpdateChannelResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/channels/{channel_id}',
@@ -297,14 +302,14 @@ export class ChannelsService {
     }
     
     /**
-     * Delete User Channel
-     * Delete a channel owned by the current user.
+     * Delete Channel
+     * Delete a ``Channel`` owned by the current ``User``.
      * @param data The data for the request.
      * @param data.channelId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserChannel(data: ChannelsDeleteUserChannelData): CancelablePromise<ChannelsDeleteUserChannelResponse> {
+    public static deleteChannel(data: ChannelsDeleteChannelData): CancelablePromise<ChannelsDeleteChannelResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/channels/{channel_id}',
@@ -353,25 +358,25 @@ export class ChannelsService {
                 channel_id: data.channelId
             },
             query: {
-                sort_by: data.sortBy,
-                additional_channels: data.additionalChannels,
-                random_seed: data.randomSeed,
-                hide_watched: data.hideWatched,
-                hide_unwatched: data.hideUnwatched,
-                maximum_watch_date_absolute: data.maximumWatchDateAbsolute,
-                minimum_air_date_absolute: data.minimumAirDateAbsolute,
-                maximum_air_date_absolute: data.maximumAirDateAbsolute,
-                minimum_release_date_absolute: data.minimumReleaseDateAbsolute,
-                maximum_release_date_absolute: data.maximumReleaseDateAbsolute,
-                maximum_watch_date_relative: data.maximumWatchDateRelative,
-                minimum_air_date_relative: data.minimumAirDateRelative,
-                maximum_air_date_relative: data.maximumAirDateRelative,
-                minimum_release_date_relative: data.minimumReleaseDateRelative,
-                maximum_release_date_relative: data.maximumReleaseDateRelative,
-                only_started_shows: data.onlyStartedShows,
-                only_new_shows: data.onlyNewShows,
-                minimum_duration: data.minimumDuration,
-                maximum_duration: data.maximumDuration,
+                sortBy: data.sortBy,
+                additionalChannels: data.additionalChannels,
+                randomSeed: data.randomSeed,
+                hideWatched: data.hideWatched,
+                hideUnwatched: data.hideUnwatched,
+                maximumWatchDateAbsolute: data.maximumWatchDateAbsolute,
+                minimumAirDateAbsolute: data.minimumAirDateAbsolute,
+                maximumAirDateAbsolute: data.maximumAirDateAbsolute,
+                minimumReleaseDateAbsolute: data.minimumReleaseDateAbsolute,
+                maximumReleaseDateAbsolute: data.maximumReleaseDateAbsolute,
+                maximumWatchDateRelative: data.maximumWatchDateRelative,
+                minimumAirDateRelative: data.minimumAirDateRelative,
+                maximumAirDateRelative: data.maximumAirDateRelative,
+                minimumReleaseDateRelative: data.minimumReleaseDateRelative,
+                maximumReleaseDateRelative: data.maximumReleaseDateRelative,
+                onlyStartedShows: data.onlyStartedShows,
+                onlyNewShows: data.onlyNewShows,
+                minimumDuration: data.minimumDuration,
+                maximumDuration: data.maximumDuration,
                 limit: data.limit
             },
             errors: {
@@ -402,7 +407,7 @@ export class ChannelsService {
     }
     
     /**
-     * Get User Channel Whitelist
+     * Get Channel Whitelist
      * Read the whitelist for a show in a channel.
      * @param data The data for the request.
      * @param data.channelId
@@ -410,7 +415,7 @@ export class ChannelsService {
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
      */
-    public static getUserChannelWhitelist(data: ChannelsGetUserChannelWhitelistData): CancelablePromise<ChannelsGetUserChannelWhitelistResponse> {
+    public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
@@ -425,7 +430,7 @@ export class ChannelsService {
     }
     
     /**
-     * Update User Channel Whitelist
+     * Update Channel Whitelist
      * Update the whitelist/blacklist for a show in a channel.
      * @param data The data for the request.
      * @param data.channelId
@@ -434,7 +439,7 @@ export class ChannelsService {
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserChannelWhitelist(data: ChannelsUpdateUserChannelWhitelistData): CancelablePromise<ChannelsUpdateUserChannelWhitelistResponse> {
+    public static updateChannelWhitelist(data: ChannelsUpdateChannelWhitelistData): CancelablePromise<ChannelsUpdateChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
@@ -451,15 +456,15 @@ export class ChannelsService {
     }
     
     /**
-     * Update User Channel Default Order
-     * Update the default sort order for a channel.
+     * Update Channel Default Order
+     * Update the default sort order for a ``Channel``.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
      * @returns ChannelOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserChannelDefaultOrder(data: ChannelsUpdateUserChannelDefaultOrderData): CancelablePromise<ChannelsUpdateUserChannelDefaultOrderResponse> {
+    public static updateChannelDefaultOrder(data: ChannelsUpdateChannelDefaultOrderData): CancelablePromise<ChannelsUpdateChannelDefaultOrderResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/channels/{channel_id}/default-order',
@@ -476,7 +481,7 @@ export class ChannelsService {
     
     /**
      * Delete Channel Show
-     * Remove a show from a channel.
+     * Remove a ``Show`` from a ``Channel``.
      * @param data The data for the request.
      * @param data.showId
      * @param data.channelId
@@ -498,14 +503,14 @@ export class ChannelsService {
     }
     
     /**
-     * Get User Channel Queue
+     * Get Channel Queue
      * Read the URLs in a channel's import queue.
      * @param data The data for the request.
      * @param data.channelId
      * @returns ChannelQueueOutput Successful Response
      * @throws ApiError
      */
-    public static getUserChannelQueue(data: ChannelsGetUserChannelQueueData): CancelablePromise<ChannelsGetUserChannelQueueResponse> {
+    public static getChannelQueue(data: ChannelsGetChannelQueueData): CancelablePromise<ChannelsGetChannelQueueResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/channels/{channel_id}/import-queue',
@@ -519,7 +524,7 @@ export class ChannelsService {
     }
     
     /**
-     * Create User Channel Queue Urls
+     * Create Channel Queue Urls
      * Add URLs to a channel's import queue.
      * @param data The data for the request.
      * @param data.channelId
@@ -527,7 +532,7 @@ export class ChannelsService {
      * @returns ChannelQueueOutput Successful Response
      * @throws ApiError
      */
-    public static createUserChannelQueueUrls(data: ChannelsCreateUserChannelQueueUrlsData): CancelablePromise<ChannelsCreateUserChannelQueueUrlsResponse> {
+    public static createChannelQueueUrls(data: ChannelsCreateChannelQueueUrlsData): CancelablePromise<ChannelsCreateChannelQueueUrlsResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/channels/{channel_id}/import-queue',
@@ -543,7 +548,7 @@ export class ChannelsService {
     }
     
     /**
-     * Delete User Channel Queue Url
+     * Delete Channel Queue Url
      * Delete url from a channel's import queue.
      * @param data The data for the request.
      * @param data.urlId
@@ -551,7 +556,7 @@ export class ChannelsService {
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserChannelQueueUrl(data: ChannelsDeleteUserChannelQueueUrlData): CancelablePromise<ChannelsDeleteUserChannelQueueUrlResponse> {
+    public static deleteChannelQueueUrl(data: ChannelsDeleteChannelQueueUrlData): CancelablePromise<ChannelsDeleteChannelQueueUrlResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/channels/{channel_id}/import-queue/{url_id}',
@@ -566,14 +571,14 @@ export class ChannelsService {
     }
     
     /**
-     * Clear User Channel Completed Queue
+     * Clear Channel Completed Queue
      * Clear a channel's import queue.
      * @param data The data for the request.
      * @param data.channelId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static clearUserChannelCompletedQueue(data: ChannelsClearUserChannelCompletedQueueData): CancelablePromise<ChannelsClearUserChannelCompletedQueueResponse> {
+    public static clearChannelCompletedQueue(data: ChannelsClearChannelCompletedQueueData): CancelablePromise<ChannelsClearChannelCompletedQueueResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/channels/{channel_id}/clear-completed-import-queue',
@@ -610,7 +615,7 @@ export class ChannelsService {
 export class EpisodesService {
     /**
      * Create Watch
-     * Create watch entries for an episode and all matching siblings.
+     * Create a ``Watch`` if the ``Episode`` is owned by the current ``User``.
      * @param data The data for the request.
      * @param data.episodeId
      * @param data.requestBody
@@ -633,14 +638,14 @@ export class EpisodesService {
     }
     
     /**
-     * Get User Episode
-     * Get an episode by its id if its plugin is public or owned by the current user.
+     * Get Episode
+     * Get an ``Episode`` if it's readable by the current ``User``.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static getUserEpisode(data: EpisodesGetUserEpisodeData): CancelablePromise<EpisodesGetUserEpisodeResponse> {
+    public static getEpisode(data: EpisodesGetEpisodeData): CancelablePromise<EpisodesGetEpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/episodes/{episode_id}',
@@ -654,15 +659,15 @@ export class EpisodesService {
     }
     
     /**
-     * Update User Episode
-     * Update an episode by its id.
+     * Update Episode
+     * Update and return an ``Episode`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.episodeId
      * @param data.requestBody
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserEpisode(data: EpisodesUpdateUserEpisodeData): CancelablePromise<EpisodesUpdateUserEpisodeResponse> {
+    public static updateEpisode(data: EpisodesUpdateEpisodeData): CancelablePromise<EpisodesUpdateEpisodeResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/episodes/{episode_id}',
@@ -678,14 +683,14 @@ export class EpisodesService {
     }
     
     /**
-     * Delete User Episode
-     * Delete an episode by its id.
+     * Delete Episode
+     * Delete an ``Episode`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserEpisode(data: EpisodesDeleteUserEpisodeData): CancelablePromise<EpisodesDeleteUserEpisodeResponse> {
+    public static deleteEpisode(data: EpisodesDeleteEpisodeData): CancelablePromise<EpisodesDeleteEpisodeResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/episodes/{episode_id}',
@@ -798,12 +803,12 @@ export class LoginService {
 
 export class PluginsService {
     /**
-     * Get User Plugins
-     * List all plugins owned by the current user.
+     * Get Plugins
+     * Get all ``Plugin``s owned by the current ``User``.
      * @returns PluginOutput Successful Response
      * @throws ApiError
      */
-    public static getUserPlugins(): CancelablePromise<PluginsGetUserPluginsResponse> {
+    public static getPlugins(): CancelablePromise<PluginsGetPluginsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/plugins'
@@ -811,14 +816,14 @@ export class PluginsService {
     }
     
     /**
-     * Create User Plugin
-     * Create a plugin owned by the current user.
+     * Create Plugin
+     * Create a ``Plugin`` owned by the current ``User``.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns PluginOutput Successful Response
      * @throws ApiError
      */
-    public static createUserPlugin(data: PluginsCreateUserPluginData): CancelablePromise<PluginsCreateUserPluginResponse> {
+    public static createPlugin(data: PluginsCreatePluginData): CancelablePromise<PluginsCreatePluginResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/plugins',
@@ -831,41 +836,152 @@ export class PluginsService {
     }
     
     /**
-     * List Plugins That Support Import Watch History
-     * List all plugins that support importing watch history.
-     * @returns PluginImportWatchHistoryInfo Successful Response
+     * Get Plugin
+     * Get a ``Plugin`` if it's readable by the current ``User``.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns PluginOutput Successful Response
      * @throws ApiError
      */
-    public static listPluginsThatSupportImportWatchHistory(): CancelablePromise<PluginsListPluginsThatSupportImportWatchHistoryResponse> {
+    public static getPlugin(data: PluginsGetPluginData): CancelablePromise<PluginsGetPluginResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/plugins/supports-import-watch-history'
+            url: '/api/v1/plugins/{plugin_id}',
+            path: {
+                plugin_id: data.pluginId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
     /**
-     * List Plugins That Support Import Url
-     * List all plugins that support URL importing.
-     * @returns PluginImportURLInfo Successful Response
+     * Update Plugin
+     * Update and return a ``Plugin`` if it's owned by the current ``User``.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.requestBody
+     * @returns PluginOutput Successful Response
      * @throws ApiError
      */
-    public static listPluginsThatSupportImportUrl(): CancelablePromise<PluginsListPluginsThatSupportImportUrlResponse> {
+    public static updatePlugin(data: PluginsUpdatePluginData): CancelablePromise<PluginsUpdatePluginResponse> {
         return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/supports-import-url'
+            method: 'PATCH',
+            url: '/api/v1/plugins/{plugin_id}',
+            path: {
+                plugin_id: data.pluginId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
     /**
-     * List Plugins That Support Search
-     * List all plugins that support searching.
-     * @returns PluginSearchInfo Successful Response
+     * Delete Plugin
+     * Delete a ``Plugin`` if it's owned by the current ``User``.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns Message Successful Response
      * @throws ApiError
      */
-    public static listPluginsThatSupportSearch(): CancelablePromise<PluginsListPluginsThatSupportSearchResponse> {
+    public static deletePlugin(data: PluginsDeletePluginData): CancelablePromise<PluginsDeletePluginResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/plugins/{plugin_id}',
+            path: {
+                plugin_id: data.pluginId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Plugin Sources
+     * List all ``Source``s for a ``Plugin`` if it is public or owned by the current ``User``.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns SourceOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPluginSources(data: PluginsGetPluginSourcesData): CancelablePromise<PluginsGetPluginSourcesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/plugins/supports-search'
+            url: '/api/v1/plugins/{plugin_id}/sources',
+            path: {
+                plugin_id: data.pluginId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Source
+     * Create a ``Source`` if the ``Plugin`` is owned by the current ``User``.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.requestBody
+     * @returns SourceOutput Successful Response
+     * @throws ApiError
+     */
+    public static createSource(data: PluginsCreateSourceData): CancelablePromise<PluginsCreateSourceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/plugins/{plugin_id}/sources',
+            path: {
+                plugin_id: data.pluginId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Import Watch History Information
+     * Return information about all plugins that support importing watch history.
+     * @returns PluginImportWatchHistoryInformation Successful Response
+     * @throws ApiError
+     */
+    public static importWatchHistoryInformation(): CancelablePromise<PluginsImportWatchHistoryInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-watch-history-information'
+        });
+    }
+    
+    /**
+     * Import Url Information
+     * Return information about all plugins that support importing URLs.
+     * @returns PluginImportURLInformation Successful Response
+     * @throws ApiError
+     */
+    public static importUrlInformation(): CancelablePromise<PluginsImportUrlInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-url-information'
+        });
+    }
+    
+    /**
+     * Search Information
+     * Return information about all plugins that support searching.
+     * @returns PluginSearchInformation Successful Response
+     * @throws ApiError
+     */
+    public static searchInformation(): CancelablePromise<PluginsSearchInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/search-information'
         });
     }
     
@@ -886,117 +1002,6 @@ export class PluginsService {
                 plugin_key: data.pluginKey,
                 query: data.query
             },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get User Plugin
-     * Get a plugin by its id if it is public or owned by the current user.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @returns PluginOutput Successful Response
-     * @throws ApiError
-     */
-    public static getUserPlugin(data: PluginsGetUserPluginData): CancelablePromise<PluginsGetUserPluginResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}',
-            path: {
-                plugin_id: data.pluginId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update User Plugin
-     * Update a plugin owned by the current user.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.requestBody
-     * @returns PluginOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateUserPlugin(data: PluginsUpdateUserPluginData): CancelablePromise<PluginsUpdateUserPluginResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/plugins/{plugin_id}',
-            path: {
-                plugin_id: data.pluginId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete User Plugin
-     * Delete a plugin owned by the current user.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteUserPlugin(data: PluginsDeleteUserPluginData): CancelablePromise<PluginsDeleteUserPluginResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/plugins/{plugin_id}',
-            path: {
-                plugin_id: data.pluginId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get User Plugin Sources
-     * List all sources for a plugin if it is public or owned by the current user.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @returns SourceOutput Successful Response
-     * @throws ApiError
-     */
-    public static getUserPluginSources(data: PluginsGetUserPluginSourcesData): CancelablePromise<PluginsGetUserPluginSourcesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/sources',
-            path: {
-                plugin_id: data.pluginId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Create User Source
-     * Create a source for a plugin.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.requestBody
-     * @returns SourceOutput Successful Response
-     * @throws ApiError
-     */
-    public static createUserSource(data: PluginsCreateUserSourceData): CancelablePromise<PluginsCreateUserSourceResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/plugins/{plugin_id}/sources',
-            path: {
-                plugin_id: data.pluginId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -1028,14 +1033,14 @@ export class PrivateService {
 
 export class SeasonsService {
     /**
-     * Get User Season
-     * Get a season by its id if its plugin is public or owned by the current user.
+     * Get Season
+     * Get a ``Season`` if it's readable by the current ``User``.
      * @param data The data for the request.
      * @param data.seasonId
      * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
-    public static getUserSeason(data: SeasonsGetUserSeasonData): CancelablePromise<SeasonsGetUserSeasonResponse> {
+    public static getSeason(data: SeasonsGetSeasonData): CancelablePromise<SeasonsGetSeasonResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/seasons/{season_id}',
@@ -1049,15 +1054,15 @@ export class SeasonsService {
     }
     
     /**
-     * Update User Season
-     * Update a season by its id.
+     * Update Season
+     * Update and return a ``Season`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.requestBody
      * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserSeason(data: SeasonsUpdateUserSeasonData): CancelablePromise<SeasonsUpdateUserSeasonResponse> {
+    public static updateSeason(data: SeasonsUpdateSeasonData): CancelablePromise<SeasonsUpdateSeasonResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/seasons/{season_id}',
@@ -1073,14 +1078,14 @@ export class SeasonsService {
     }
     
     /**
-     * Delete User Season
-     * Delete a season by its id.
+     * Delete Season
+     * Delete a ``Season`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.seasonId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserSeason(data: SeasonsDeleteUserSeasonData): CancelablePromise<SeasonsDeleteUserSeasonResponse> {
+    public static deleteSeason(data: SeasonsDeleteSeasonData): CancelablePromise<SeasonsDeleteSeasonResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/seasons/{season_id}',
@@ -1094,14 +1099,14 @@ export class SeasonsService {
     }
     
     /**
-     * Get User Season Episodes
-     * List all episodes for a season if its plugin is public or owned by the current user.
+     * Get Episodes
+     * List all ``Episode``s for a ``Season`` if its ``Plugin`` is public or owned by the current ``User``.
      * @param data The data for the request.
      * @param data.seasonId
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static getUserSeasonEpisodes(data: SeasonsGetUserSeasonEpisodesData): CancelablePromise<SeasonsGetUserSeasonEpisodesResponse> {
+    public static getEpisodes(data: SeasonsGetEpisodesData): CancelablePromise<SeasonsGetEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/seasons/{season_id}/episodes',
@@ -1115,15 +1120,15 @@ export class SeasonsService {
     }
     
     /**
-     * Create User Episode
-     * Create an episode for a season.
+     * Create Episode
+     * Create an ``Episode`` if the ``Season`` is owned by the current ``User``.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.requestBody
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static createUserEpisode(data: SeasonsCreateUserEpisodeData): CancelablePromise<SeasonsCreateUserEpisodeResponse> {
+    public static createEpisode(data: SeasonsCreateEpisodeData): CancelablePromise<SeasonsCreateEpisodeResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/seasons/{season_id}/episodes',
@@ -1141,14 +1146,14 @@ export class SeasonsService {
 
 export class ShowsService {
     /**
-     * Get User Show
-     * Get a show by its id if its plugin is public or owned by the current user.
+     * Get Show
+     * Get a ``Show`` if it's readable by the current ``User``.
      * @param data The data for the request.
      * @param data.showId
      * @returns ShowOutput Successful Response
      * @throws ApiError
      */
-    public static getUserShow(data: ShowsGetUserShowData): CancelablePromise<ShowsGetUserShowResponse> {
+    public static getShow(data: ShowsGetShowData): CancelablePromise<ShowsGetShowResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/shows/{show_id}',
@@ -1162,15 +1167,15 @@ export class ShowsService {
     }
     
     /**
-     * Update User Show
-     * Update a show by its id.
+     * Update Show
+     * Update and return a ``Show`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody
      * @returns ShowOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserShow(data: ShowsUpdateUserShowData): CancelablePromise<ShowsUpdateUserShowResponse> {
+    public static updateShow(data: ShowsUpdateShowData): CancelablePromise<ShowsUpdateShowResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/shows/{show_id}',
@@ -1186,14 +1191,14 @@ export class ShowsService {
     }
     
     /**
-     * Delete User Show
-     * Delete a show by its id.
+     * Delete Show
+     * Delete a ``Show`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.showId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserShow(data: ShowsDeleteUserShowData): CancelablePromise<ShowsDeleteUserShowResponse> {
+    public static deleteShow(data: ShowsDeleteShowData): CancelablePromise<ShowsDeleteShowResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/shows/{show_id}',
@@ -1207,14 +1212,14 @@ export class ShowsService {
     }
     
     /**
-     * Get User Show Seasons
-     * List all seasons for a show if its plugin is public or owned by the current user.
+     * Get Seasons
+     * List all ``Season``s for a ``Show`` if its ``Plugin`` is public or owned by the current ``User``.
      * @param data The data for the request.
      * @param data.showId
      * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
-    public static getUserShowSeasons(data: ShowsGetUserShowSeasonsData): CancelablePromise<ShowsGetUserShowSeasonsResponse> {
+    public static getSeasons(data: ShowsGetSeasonsData): CancelablePromise<ShowsGetSeasonsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/shows/{show_id}/seasons',
@@ -1228,15 +1233,15 @@ export class ShowsService {
     }
     
     /**
-     * Create User Season
-     * Create a season for a show.
+     * Create Season
+     * Create a ``Season`` if the ``Show`` is owned by the current ``User``.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody
      * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
-    public static createUserSeason(data: ShowsCreateUserSeasonData): CancelablePromise<ShowsCreateUserSeasonResponse> {
+    public static createSeason(data: ShowsCreateSeasonData): CancelablePromise<ShowsCreateSeasonResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/shows/{show_id}/seasons',
@@ -1254,14 +1259,14 @@ export class ShowsService {
 
 export class SourcesService {
     /**
-     * Get User Source
-     * Get a source by its id if its plugin is public or owned by the current user.
+     * Get Source
+     * Get a ``Source`` if it's readable by the current ``User``.
      * @param data The data for the request.
      * @param data.sourceId
      * @returns SourceOutput Successful Response
      * @throws ApiError
      */
-    public static getUserSource(data: SourcesGetUserSourceData): CancelablePromise<SourcesGetUserSourceResponse> {
+    public static getSource(data: SourcesGetSourceData): CancelablePromise<SourcesGetSourceResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/sources/{source_id}',
@@ -1275,15 +1280,15 @@ export class SourcesService {
     }
     
     /**
-     * Update User Source
-     * Update a source by its id.
+     * Update Source
+     * Update and return a ``Source`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.sourceId
      * @param data.requestBody
      * @returns SourceOutput Successful Response
      * @throws ApiError
      */
-    public static updateUserSource(data: SourcesUpdateUserSourceData): CancelablePromise<SourcesUpdateUserSourceResponse> {
+    public static updateSource(data: SourcesUpdateSourceData): CancelablePromise<SourcesUpdateSourceResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/sources/{source_id}',
@@ -1299,14 +1304,14 @@ export class SourcesService {
     }
     
     /**
-     * Delete User Source
-     * Delete a source by its id.
+     * Delete Source
+     * Delete a ``Source`` if it's owned by the current ``User``.
      * @param data The data for the request.
      * @param data.sourceId
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteUserSource(data: SourcesDeleteUserSourceData): CancelablePromise<SourcesDeleteUserSourceResponse> {
+    public static deleteSource(data: SourcesDeleteSourceData): CancelablePromise<SourcesDeleteSourceResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/sources/{source_id}',
@@ -1320,14 +1325,14 @@ export class SourcesService {
     }
     
     /**
-     * Get User Source Shows
-     * List all shows for a source if its plugin is public or owned by the current user.
+     * Get Shows
+     * List all ``Show``s for a ``Source`` if its ``Plugin`` is public or owned by the current ``User``.
      * @param data The data for the request.
      * @param data.sourceId
      * @returns ShowOutput Successful Response
      * @throws ApiError
      */
-    public static getUserSourceShows(data: SourcesGetUserSourceShowsData): CancelablePromise<SourcesGetUserSourceShowsResponse> {
+    public static getShows(data: SourcesGetShowsData): CancelablePromise<SourcesGetShowsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/sources/{source_id}/shows',
@@ -1341,15 +1346,15 @@ export class SourcesService {
     }
     
     /**
-     * Create User Show
-     * Create a show for a source.
+     * Create Show
+     * Create a ``Show`` if the ``Source`` is owned by the current ``User``.
      * @param data The data for the request.
      * @param data.sourceId
      * @param data.requestBody
      * @returns ShowOutput Successful Response
      * @throws ApiError
      */
-    public static createUserShow(data: SourcesCreateUserShowData): CancelablePromise<SourcesCreateUserShowResponse> {
+    public static createShow(data: SourcesCreateShowData): CancelablePromise<SourcesCreateShowResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/sources/{source_id}/shows',
@@ -1589,15 +1594,81 @@ export class UtilsService {
 
 export class WatchesService {
     /**
-     * Get User Watches
-     * Get multiple watched episode entries.
+     * Get Watches
+     * Get multiple watched episode records.
      * @returns WatchesListOutput Successful Response
      * @throws ApiError
      */
-    public static getUserWatches(): CancelablePromise<WatchesGetUserWatchesResponse> {
+    public static getWatches(): CancelablePromise<WatchesGetWatchesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/watches'
+        });
+    }
+    
+    /**
+     * Get Watch
+     * Get a watch owned by the current user by its id.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static getWatch(data: WatchesGetWatchData): CancelablePromise<WatchesGetWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Watch
+     * Update a watch and all matching sibling watches.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @param data.requestBody
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateWatch(data: WatchesUpdateWatchData): CancelablePromise<WatchesUpdateWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Watch
+     * Delete a watch and all sibling watches by its id.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteWatch(data: WatchesDeleteWatchData): CancelablePromise<WatchesDeleteWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -1636,72 +1707,6 @@ export class WatchesService {
             },
             formData: data.formData,
             mediaType: 'multipart/form-data',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get User Watch
-     * Get a watch owned by the current user by its id.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @returns WatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static getUserWatch(data: WatchesGetUserWatchData): CancelablePromise<WatchesGetUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update User Watch
-     * Update a watch and all matching sibling watches.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @param data.requestBody
-     * @returns WatchOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateUserWatch(data: WatchesUpdateUserWatchData): CancelablePromise<WatchesUpdateUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete User Watch
-     * Delete a watch and all sibling watches by its id.
-     * @param data The data for the request.
-     * @param data.watchId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteUserWatch(data: WatchesDeleteUserWatchData): CancelablePromise<WatchesDeleteUserWatchResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/watches/{watch_id}',
-            path: {
-                watch_id: data.watchId
-            },
             errors: {
                 422: 'Validation Error'
             }

@@ -35,7 +35,7 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             self._upsert_sources(providers_file)
 
             bucket = self._new_titles_bucket_file(
-                providers_file.database_entry.data_timestamp,
+                providers_file.database_record.data_timestamp,
             )
             bucket.download_if_outdated()
 
@@ -62,13 +62,23 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
 
     # region Import URL
 
+    @classmethod
+    @override
+    def parse_url(cls, url: str) -> dict[str, str]:
+        match = strict_re.strict_match(cls._url_regex(), url)
+        return {
+            "source_name": match.group("source_name"),
+            "show_key": match.group("show_key"),
+            "locale": match.group("locale"),
+            "season_key": match.group("season_key"),
+        }
+
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        match = strict_re.strict_match(self._url_regex(), url)
-        source_name = match.group("source_name")
-        show_key = match.group("show_key")
-        _locale = match.group("locale")  # TODO: Support multiple locales from JustWatch
-        season_key = match.group("season_key")
+        parsed = self.parse_url(url)
+        source_name = parsed["source_name"]
+        show_key = parsed["show_key"]
+        season_key = parsed["season_key"]
 
         if not (shows := self._preload_show(show_key=show_key).all()):
             self._validate_show_key(show_key, url)
@@ -157,7 +167,7 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
 
         plugin.data_timestamp = min(
             latest_bucket.data_timestamp,
-            providers_file.database_entry.data_timestamp,
+            providers_file.database_record.data_timestamp,
         )
         plugin.set_update_at(plugin.data_timestamp + timedelta(days=1))
 
@@ -208,7 +218,7 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
             # The files should be downloaded again at a later date if there is a chance
             # new entries can be added to it in the future.
-            if minimum_timestamp > new_titles_file.database_entry.data_timestamp:
+            if minimum_timestamp > new_titles_file.database_record.data_timestamp:
                 incomplete_dates.append(new_titles_date.isoformat())
 
         if incomplete_dates:
@@ -225,7 +235,7 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             self._new_titles_file(
                 source.key,
                 new_titles_date,
-            ).database_entry.data_timestamp
+            ).database_record.data_timestamp
             for new_titles_date in dates
         )
 
@@ -239,13 +249,13 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
         for new_titles_date in dates:
             file = self._new_titles_file(source.key, new_titles_date)
             source = Source.get_one(self.db, self.plugin, file.source_key)
-            timestamp = file.database_entry.data_timestamp
+            timestamp = file.database_record.data_timestamp
             _cache_sources = self._preload_sources(
                 file.source_key,
                 preload_seasons=True,
             ).all()
 
-            logger.info("Processing new titles file: {}", file.database_entry.key)
+            logger.info("Processing new titles file: {}", file.database_record.key)
             for edge in file.parsed_edges():
                 full_path = edge.node.content.full_path
                 match edge.node.field__typename:
