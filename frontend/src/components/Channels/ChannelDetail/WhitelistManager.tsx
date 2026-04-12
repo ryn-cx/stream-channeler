@@ -46,8 +46,7 @@ export function WhitelistManager({
 
   const { data: whitelistData, isLoading } = useQuery({
     queryKey: ["channelShowWhitelist", channelId, showId],
-    queryFn: () =>
-      ChannelsService.getUserChannelWhitelist({ channelId, showId }),
+    queryFn: () => ChannelsService.getChannelWhitelist({ channelId, showId }),
     enabled: isOpen,
   })
 
@@ -61,7 +60,7 @@ export function WhitelistManager({
 
   const saveMutation = useMutation({
     mutationFn: (input: WhitelistShowInput) =>
-      ChannelsService.updateUserChannelWhitelist({
+      ChannelsService.updateChannelWhitelist({
         channelId,
         showId,
         requestBody: input,
@@ -116,11 +115,11 @@ export function WhitelistManager({
 
     const input: WhitelistShowInput = {
       whitelist_mode: whitelistMode,
-      seasons: whitelistData.seasons.map((season) => ({
+      seasons: whitelistData.seasons.map((season: SeasonOutput) => ({
         id: season.id,
         marked: enabledSeasonIds.has(season.id),
       })),
-      episodes: whitelistData.episodes.map((episode) => ({
+      episodes: whitelistData.episodes.map((episode: EpisodeOutput) => ({
         id: episode.id,
         marked: enabledEpisodeIds.has(episode.id),
       })),
@@ -165,7 +164,7 @@ export function WhitelistManager({
   if (!whitelistData) return
   const episodesBySeason = new Map<string, typeof whitelistData.episodes>()
   if (whitelistData) {
-    whitelistData.episodes.forEach((episode) => {
+    whitelistData.episodes.forEach((episode: EpisodeOutput) => {
       const seasonEpisodes = episodesBySeason.get(episode.season_id) || []
       seasonEpisodes.push(episode)
       episodesBySeason.set(episode.season_id, seasonEpisodes)
@@ -216,7 +215,7 @@ export function WhitelistManager({
                       No seasons found for this show
                     </p>
                   ) : (
-                    whitelistData.seasons.map((season) => {
+                    whitelistData.seasons.map((season: SeasonOutput) => {
                       const seasonEnabled = enabledSeasonIds.has(season.id)
                       return (
                         <div key={season.id} className="border rounded">
@@ -254,7 +253,7 @@ export function WhitelistManager({
                               ) : (
                                 episodesBySeason
                                   .get(season.id)!
-                                  .map((episode) => {
+                                  .map((episode: EpisodeOutput) => {
                                     const episodeEnabled =
                                       enabledEpisodeIds.has(episode.id)
                                     return (

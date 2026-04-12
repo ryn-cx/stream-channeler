@@ -12,8 +12,8 @@ export const Route = createFileRoute("/_layout/dashboard")({
       throw redirect({ to: "/" })
     }
     try {
-      const channels = await ChannelsService.getUserChannels()
-      if (channels.data.length === 0) {
+      const channels = await ChannelsService.getChannels()
+      if (channels.length === 0) {
         throw redirect({ to: "/onboarding" })
       }
     } catch (error) {

@@ -105,7 +105,7 @@ export function EpisodeTile({
 
   const verifyMutation = useMutation({
     mutationFn: () =>
-      WatchesService.updateUserWatch({
+      WatchesService.updateWatch({
         watchId: episode.episode_watch_id!,
         requestBody: {
           watch_date: episode.watch_date!,

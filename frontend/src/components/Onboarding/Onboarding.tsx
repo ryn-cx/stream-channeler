@@ -19,7 +19,7 @@ import { useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelQueueOutput, SortKeyInput } from "@/client"
+import type { ChannelOutput, ChannelQueueOutput, SortKeyInput } from "@/client"
 import { ChannelsService } from "@/client"
 import { OpenAPI } from "@/client/core/OpenAPI"
 import { request as apiRequest } from "@/client/core/request"
@@ -155,7 +155,7 @@ function AddShowsStep({
 
   const { data: queueData } = useQuery({
     queryKey: ["channelQueue", channelId],
-    queryFn: () => ChannelsService.getUserChannelQueue({ channelId }),
+    queryFn: () => ChannelsService.getChannelQueue({ channelId }),
     refetchInterval: 5000,
   })
 
@@ -163,7 +163,7 @@ function AddShowsStep({
 
   const addUrlsMutation = useMutation({
     mutationFn: (urls: string[]) =>
-      ChannelsService.createUserChannelQueueUrls({
+      ChannelsService.createChannelQueueUrls({
         channelId,
         requestBody: urls,
       }),
@@ -179,7 +179,7 @@ function AddShowsStep({
 
   const deleteUrlMutation = useMutation({
     mutationFn: (urlId: string) =>
-      ChannelsService.deleteUserChannelQueueUrl({ channelId, urlId }),
+      ChannelsService.deleteChannelQueueUrl({ channelId, urlId }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -343,14 +343,14 @@ export function Onboarding() {
 
   const createChannelMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.createUserChannel({
+      ChannelsService.createChannel({
         requestBody: {
           name: channelName.trim(),
           channel_number: 3,
           public: false,
         },
       }),
-    onSuccess: (channel) => {
+    onSuccess: (channel: ChannelOutput) => {
       setChannelId(channel.id)
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       setStep("shows")
@@ -360,7 +360,7 @@ export function Onboarding() {
 
   const updateChannelMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.updateUserChannel({
+      ChannelsService.updateChannel({
         channelId: channelId!,
         requestBody: { name: channelName.trim() },
       }),
@@ -373,7 +373,7 @@ export function Onboarding() {
 
   const saveSortMutation = useMutation({
     mutationFn: (sortBy: SortKeyInput[]) =>
-      ChannelsService.updateUserChannelDefaultOrder({
+      ChannelsService.updateChannelDefaultOrder({
         channelId: channelId!,
         requestBody: { sortBy } as any,
       }),

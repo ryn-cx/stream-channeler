@@ -20,7 +20,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 
 function getChannelsQueryOptions() {
   return {
-    queryFn: () => ChannelsService.getUserChannels(),
+    queryFn: () => ChannelsService.getChannels(),
     queryKey: ["channels"],
     refetchOnWindowFocus: false,
     placeholderData: (previousData: any) => previousData,

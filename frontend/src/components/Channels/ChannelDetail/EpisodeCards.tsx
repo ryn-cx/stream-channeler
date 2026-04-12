@@ -149,7 +149,7 @@ export function EpisodeCard({
   const queryClient = useQueryClient()
   const verifyMutation = useMutation({
     mutationFn: () =>
-      WatchesService.updateUserWatch({
+      WatchesService.updateWatch({
         watchId: episode.episode_watch_id!,
         requestBody: {
           watch_date: episode.watch_date!,
@@ -212,7 +212,7 @@ export function EpisodeCard({
 
   const deleteWatchMutation = useMutation({
     mutationFn: () =>
-      WatchesService.deleteUserWatch({
+      WatchesService.deleteWatch({
         watchId: episode.episode_watch_id!,
       }),
     onMutate: async () => {

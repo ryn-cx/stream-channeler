@@ -64,7 +64,7 @@ const AddChannel = () => {
 
   const mutation = useMutation({
     mutationFn: (data: ChannelPostInput) =>
-      ChannelsService.createUserChannel({ requestBody: data }),
+      ChannelsService.createChannel({ requestBody: data }),
     // When mutate is called:
     onMutate: async (newChannel, context) => {
       // Cancel any outgoing refetches

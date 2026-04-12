@@ -9,6 +9,7 @@ import {
   type WatchesListOutput,
   WatchesService,
   type WatchItem,
+  type WatchOutput,
   type WatchPatchInput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -68,7 +69,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
 
   const mutation = useMutation({
     mutationFn: (data: WatchPatchInput) =>
-      WatchesService.updateUserWatch({
+      WatchesService.updateWatch({
         watchId: watch.id,
         requestBody: data,
       }),
@@ -111,7 +112,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: (result) => {
+    onSuccess: (result: WatchOutput[]) => {
       const message =
         result.length > 1
           ? `${result.length} watches updated successfully`

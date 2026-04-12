@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { type WatchesListOutput, WatchesService } from "@/client"
+import { type Message, type WatchesListOutput, WatchesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -36,8 +36,7 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
   const { handleSubmit } = useForm()
 
   const mutation = useMutation({
-    mutationFn: (watchId: string) =>
-      WatchesService.deleteUserWatch({ watchId }),
+    mutationFn: (watchId: string) => WatchesService.deleteWatch({ watchId }),
     // When mutate is called:
     onMutate: async (deletedId, context) => {
       // Cancel any outgoing refetches
@@ -76,7 +75,7 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: (result) => {
+    onSuccess: (result: Message) => {
       showSuccessToast(result.message)
       setIsOpen(false)
       onSuccess()

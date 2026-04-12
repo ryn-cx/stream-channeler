@@ -60,7 +60,7 @@ function useAddToQueue(channelId: string) {
 
   return useMutation({
     mutationFn: (url: string) =>
-      ChannelsService.createUserChannelQueueUrls({
+      ChannelsService.createChannelQueueUrls({
         channelId,
         requestBody: [url],
       }),

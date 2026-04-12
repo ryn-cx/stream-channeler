@@ -46,7 +46,7 @@ const DeleteChannel = ({
 
   const mutation = useMutation({
     mutationFn: (channelId: string) =>
-      ChannelsService.deleteUserChannel({ channelId }),
+      ChannelsService.deleteChannel({ channelId }),
     // When mutate is called:
     onMutate: async (_channelId, context) => {
       // Cancel any outgoing refetches

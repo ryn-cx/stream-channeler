@@ -83,7 +83,7 @@ const EditChannel = ({
 
   const mutation = useMutation({
     mutationFn: (data: ChannelPatchInput) =>
-      ChannelsService.updateUserChannel({
+      ChannelsService.updateChannel({
         channelId: channel.id,
         requestBody: data,
       }),
@@ -101,7 +101,11 @@ const EditChannel = ({
       // Optimistically update to the new value
       context.client.setQueryData<Array<ChannelOutput>>(["channels"], (old) => {
         if (!old) return old
-        return old.map((c) => (c.id === channel.id ? { ...c, ...newData } : c))
+        return old.map((c) =>
+          c.id === channel.id
+            ? { ...c, ...newData, public: newData.public ?? undefined }
+            : c,
+        )
       })
 
       // Return a result with the snapshotted value

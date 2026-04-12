@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Plus, TvMinimal, X } from "lucide-react"
 import { useState } from "react"
 
 import { getChannelEpisodes } from "@/api/channels"
-import { ChannelsService } from "@/client"
+import { type ChannelOutput, ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -59,15 +59,15 @@ export function ManageAdditionalChannels({
   // Channels that are owned by the user
   const { data: channelsData, isLoading: isLoadingChannels } = useQuery({
     queryKey: ["channels"],
-    queryFn: () => ChannelsService.getUserChannels(),
+    queryFn: () => ChannelsService.getChannels(),
     enabled: isOpen && isLoggedIn,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
-  const channels = channelsData?.data || []
+  const channels = channelsData ?? []
 
   const channelNames = channels.reduce(
-    (acc, channel) => {
+    (acc: Record<string, string>, channel: ChannelOutput) => {
       acc[channel.id] = channel.name ?? ""
       return acc
     },
@@ -76,7 +76,7 @@ export function ManageAdditionalChannels({
 
   // Channels that the user owns that are not already in the chosen additional channels
   const selectableChannels = channels.filter(
-    (channel) =>
+    (channel: ChannelOutput) =>
       !currentChannelIds.includes(channel.id) &&
       !localAdditionalChannelIds.includes(channel.id),
   )
@@ -205,7 +205,7 @@ export function ManageAdditionalChannels({
                       <SelectValue placeholder="Select a channel" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectableChannels.map((channel) => (
+                      {selectableChannels.map((channel: ChannelOutput) => (
                         <SelectItem key={channel.id} value={channel.id}>
                           {channel.name}
                         </SelectItem>

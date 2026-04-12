@@ -36,7 +36,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 
 function getChannelQueryOptions(channelId: string) {
   return {
-    queryFn: () => ChannelsService.getUserChannel({ channelId }),
+    queryFn: () => ChannelsService.getChannel({ channelId }),
     queryKey: ["channels", channelId],
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -65,7 +65,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
   beforeLoad: async ({ params }) => {
     // Check if the user can access this channel
     try {
-      await ChannelsService.getUserChannel({ channelId: params.channelId })
+      await ChannelsService.getChannel({ channelId: params.channelId })
     } catch (error: any) {
       // If 401 or 403, user doesn't have access to this channel
       if (error?.status === 401 || error?.status === 403) {

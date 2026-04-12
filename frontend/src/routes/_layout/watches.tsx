@@ -24,7 +24,7 @@ import { handleError } from "@/utils"
 
 function getWatchesQueryOptions() {
   return {
-    queryFn: () => WatchesService.getUserWatches(),
+    queryFn: () => WatchesService.getWatches(),
     queryKey: ["watches"],
     placeholderData: keepPreviousData,
   }
