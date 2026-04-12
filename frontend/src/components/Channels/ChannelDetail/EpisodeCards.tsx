@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Check,
   ExternalLink,
+  EyeOff,
   ListX,
   MoreVertical,
   Radio,
@@ -126,12 +127,14 @@ export function EpisodeCard({
   channelId,
   nextEpisodeId,
   onNextEpisode,
+  onHide,
   hideWatched,
 }: {
   episode: EpisodeWithDetails
   channelId: string
   nextEpisodeId?: string | undefined
   onNextEpisode?: (currentEpisodeId: string) => void
+  onHide?: (episodeId: string) => void
   hideWatched?: boolean
 }) {
   const [_cardRendered, setCardRendered] = useState(false)
@@ -385,6 +388,15 @@ export function EpisodeCard({
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
+                    onHide?.(episode.id)
+                  }}
+                >
+                  <EyeOff className="h-4 w-4" />
+                  Temporarily Hide
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setConfirmBlacklist(true)
                   }}
                 >
@@ -471,6 +483,19 @@ export function EpisodeCards({
     lastSeenByShow.set(showId, i)
   }
 
+  const handleHide = (episodeId: string) => {
+    queryClient.setQueriesData(
+      { queryKey: ["episodes", channelId] },
+      (oldData: any) => {
+        if (!oldData) return oldData
+        return {
+          ...oldData,
+          episodes: oldData.episodes.filter((ep: any) => ep.id !== episodeId),
+        }
+      },
+    )
+  }
+
   const handleNextEpisode = (currentEpisodeId: string) => {
     const nextEpisodeId = nextEpisodeMap.get(currentEpisodeId)
     if (!nextEpisodeId) return
@@ -504,6 +529,7 @@ export function EpisodeCards({
           channelId={channelId}
           nextEpisodeId={nextEpisodeMap.get(episode.id)}
           onNextEpisode={handleNextEpisode}
+          onHide={handleHide}
           hideWatched={hideWatched}
         />
       ))}
