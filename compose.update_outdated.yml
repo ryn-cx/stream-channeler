@@ -1,5 +1,5 @@
 # TODO: Validate
-name: stream-channeler-import
+name: stream-channeler-update-outdated
 
 x-common-env: &common-env
   env_file:
@@ -29,15 +29,15 @@ x-common-env: &common-env
     - LOGLEVEL=INFO
 
 services:
-  import:
-    container_name: import
+  update-outdated:
+    container_name: update-outdated
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
     build:
       context: .
       dockerfile: backend/Dockerfile
     networks:
       - main-network
-    command: python -m app.tools.import_queue
+    command: python -m app.tools.update_outdated
     <<: *common-env
 
 networks:
