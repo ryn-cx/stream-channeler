@@ -4,13 +4,15 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 
 from app.plugins.models import File
 from app.plugins.plugins.utils.base_plugin.files import BaseFile
 
 
 class DownloadMixin(ABC):
+    db: Session
+
     # region File Groups
 
     @abstractmethod
@@ -72,14 +74,17 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
         preloaded_show_files: Sequence[File] | None = None,
     ) -> list[File]:
-        if not preloaded_show_files:
-            preloaded_show_files = self._preload_show_files(show_key)
-        show_files = self._show_files(show_key)
-        for show_file in show_files:
-            show_file.download_if_outdated(update_at)
-        all_files = [file.database_record for file in show_files]
-        all_files.extend(self._download_all_season_files(show_key))
-        return all_files
+        try:
+            if not preloaded_show_files:
+                preloaded_show_files = self._preload_show_files(show_key)
+            show_files = self._show_files(show_key)
+            for show_file in show_files:
+                show_file.download_if_outdated(update_at)
+            all_files = [file.database_record for file in show_files]
+            all_files.extend(self._download_all_season_files(show_key))
+            return all_files
+        finally:
+            self.db.commit()
 
     def _download_all_season_files(
         self,
@@ -148,17 +153,20 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
         preloaded_season_files: Sequence[File] | None = None,
     ) -> list[File]:
-        if not preloaded_season_files:
-            preloaded_season_files = self._preload_season_files(
-                [season_key],
-                show_key,
-            )
-        season_files = self._season_files(season_key, show_key)
-        for season_file in season_files:
-            season_file.download_if_outdated(update_at)
-        all_files = [file.database_record for file in season_files]
-        all_files.extend(self._download_all_episode_files(season_key, show_key))
-        return all_files
+        try:
+            if not preloaded_season_files:
+                preloaded_season_files = self._preload_season_files(
+                    [season_key],
+                    show_key,
+                )
+            season_files = self._season_files(season_key, show_key)
+            for season_file in season_files:
+                season_file.download_if_outdated(update_at)
+            all_files = [file.database_record for file in season_files]
+            all_files.extend(self._download_all_episode_files(season_key, show_key))
+            return all_files
+        finally:
+            self.db.commit()
 
     def _download_episode_files(
         self,
@@ -168,16 +176,19 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
         preloaded_episode_files: Sequence[File] | None = None,
     ) -> list[File]:
-        if not preloaded_episode_files:
-            preloaded_episode_files = self._preload_episode_files(
-                [episode_key],
-                season_key,
-                show_key,
-            )
-        episode_files = self._episode_files(episode_key, season_key, show_key)
-        for episode_file in episode_files:
-            episode_file.download_if_outdated(update_at)
-        return [file.database_record for file in episode_files]
+        try:
+            if not preloaded_episode_files:
+                preloaded_episode_files = self._preload_episode_files(
+                    [episode_key],
+                    season_key,
+                    show_key,
+                )
+            episode_files = self._episode_files(episode_key, season_key, show_key)
+            for episode_file in episode_files:
+                episode_file.download_if_outdated(update_at)
+            return [file.database_record for file in episode_files]
+        finally:
+            self.db.commit()
 
     # endregion Download
 

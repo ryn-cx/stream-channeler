@@ -129,7 +129,7 @@ class BaseFile[T](ABC):
     # endregion Download
 
     def _write(self, content: str | None) -> None:
-        """Write content to the file and immediately commit it to the database."""
+        """Write content to the file without committing to the database."""
         self._existing_database_record = File(
             key=self.file_key(),
             content=content,
@@ -137,7 +137,6 @@ class BaseFile[T](ABC):
             plugin_id=self.__plugin.id,
         ).upsert(self.__plugin, self._existing_database_record)
 
-        self.__db.commit()
         self._cached_parsed = None
 
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
