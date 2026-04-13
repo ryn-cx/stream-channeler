@@ -154,8 +154,7 @@ export const ChannelMediaFilterSchema = {
         },
         randomSeed: {
             type: 'integer',
-            title: 'Randomseed',
-            default: 42
+            title: 'Randomseed'
         },
         hideWatched: {
             type: 'boolean',

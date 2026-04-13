@@ -618,6 +618,14 @@ export type ChannelsCreateChannelResponse = (ChannelOutput);
 
 export type ChannelsGetSortOptionsResponse = (Array<SortOptionOutput>);
 
+export type ChannelsBulkImportQueueUrlsData = {
+    requestBody: {
+        [key: string]: Array<(string)>;
+    };
+};
+
+export type ChannelsBulkImportQueueUrlsResponse = (Message);
+
 export type ChannelsGetChannelData = {
     channelId: string;
 };
@@ -724,14 +732,6 @@ export type ChannelsClearChannelCompletedQueueData = {
 
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
-export type ChannelsBulkImportQueueUrlsData = {
-    requestBody: {
-        [key: string]: Array<(string)>;
-    };
-};
-
-export type ChannelsBulkImportQueueUrlsResponse = (Message);
-
 export type EpisodesCreateWatchData = {
     episodeId: string;
     requestBody: WatchPostInput;
@@ -784,6 +784,19 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
+export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
+
+export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
+
+export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
+
+export type PluginsSearchPluginData = {
+    pluginKey: string;
+    query: string;
+};
+
+export type PluginsSearchPluginResponse = (PluginSearchResults);
+
 export type PluginsGetPluginsResponse = (Array<PluginOutput>);
 
 export type PluginsCreatePluginData = {
@@ -791,25 +804,6 @@ export type PluginsCreatePluginData = {
 };
 
 export type PluginsCreatePluginResponse = (PluginOutput);
-
-export type PluginsGetPluginData = {
-    pluginId: string;
-};
-
-export type PluginsGetPluginResponse = (PluginOutput);
-
-export type PluginsUpdatePluginData = {
-    pluginId: string;
-    requestBody: PluginPatchInput;
-};
-
-export type PluginsUpdatePluginResponse = (PluginOutput);
-
-export type PluginsDeletePluginData = {
-    pluginId: string;
-};
-
-export type PluginsDeletePluginResponse = (Message);
 
 export type PluginsGetPluginSourcesData = {
     pluginId: string;
@@ -824,18 +818,24 @@ export type PluginsCreateSourceData = {
 
 export type PluginsCreateSourceResponse = (SourceOutput);
 
-export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
-
-export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
-
-export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
-
-export type PluginsSearchPluginData = {
-    pluginKey: string;
-    query: string;
+export type PluginsUpdatePluginData = {
+    pluginId: string;
+    requestBody: PluginPatchInput;
 };
 
-export type PluginsSearchPluginResponse = (PluginSearchResults);
+export type PluginsUpdatePluginResponse = (PluginOutput);
+
+export type PluginsDeletePluginData = {
+    pluginId: string;
+};
+
+export type PluginsDeletePluginResponse = (Message);
+
+export type PluginsGetPluginData = {
+    pluginId: string;
+};
+
+export type PluginsGetPluginResponse = (PluginOutput);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

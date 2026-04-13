@@ -23,69 +23,6 @@ from app.sources.schemas import SourceOutput, SourcePostInput
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 
-# region CRUD
-
-
-@router.get("", response_model=list[PluginOutput])
-def get_plugins(current_user: CurrentUser) -> list[Plugin]:
-    """Get all ``Plugin``s owned by the current ``User``."""
-    return current_user.plugins
-
-
-@router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
-def get_plugin(plugin: ReadablePlugin) -> Plugin:
-    """Get a ``Plugin`` if it's readable by the current ``User``."""
-    return plugin
-
-
-@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
-def get_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
-    """List all ``Source``s for a ``Plugin`` if it is public or owned by the current ``User``."""
-    return plugin.sources
-
-
-@router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by OwnedPlugin
-def create_source(
-    session: SessionDep,
-    plugin: OwnedPlugin,
-    source_input: SourcePostInput,
-) -> Source:
-    """Create a ``Source`` if the ``Plugin`` is owned by the current ``User``."""
-    return source_input.create(session, Source, plugin)
-
-
-@router.post("", response_model=PluginOutput)
-def create_plugin(
-    session: SessionDep,
-    current_user: CurrentUser,
-    plugin_input: PluginPostInput,
-) -> Plugin:
-    """Create a ``Plugin`` owned by the current ``User``."""
-    raise_if_exists(Plugin.get(session, current_user, plugin_input.key))
-    plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
-    session.add(plugin)
-    session.commit()
-    return plugin
-
-
-@router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin
-def update_plugin(
-    session: SessionDep,
-    plugin: OwnedPlugin,
-    plugin_input: PluginPatchInput,
-) -> Plugin:
-    """Update and return a ``Plugin`` if it's owned by the current ``User``."""
-    return plugin_input.update(session, plugin)
-
-
-@router.delete("/{plugin_id}")  # noqa: FAST003 - Used by OwnedPlugin
-def delete_plugin(session: SessionDep, plugin: OwnedPlugin) -> Message:
-    """Delete a ``Plugin`` if it's owned by the current ``User``."""
-    return delete_record(session, plugin)
-
-
-# endregion CRUD
-
 
 # region Plugin Information
 
@@ -160,3 +97,67 @@ def search_plugin(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Plugin '{plugin_key}' not found.",
     )
+
+
+# region CRUD
+
+
+@router.get("", response_model=list[PluginOutput])
+def get_plugins(current_user: CurrentUser) -> list[Plugin]:
+    """Get all ``Plugin``s owned by the current ``User``."""
+    return current_user.plugins
+
+
+@router.post("", response_model=PluginOutput)
+def create_plugin(
+    session: SessionDep,
+    current_user: CurrentUser,
+    plugin_input: PluginPostInput,
+) -> Plugin:
+    """Create a ``Plugin`` owned by the current ``User``."""
+    raise_if_exists(Plugin.get(session, current_user, plugin_input.key))
+    plugin = Plugin.model_validate(plugin_input, update={"user_id": current_user.id})
+    session.add(plugin)
+    session.commit()
+    return plugin
+
+
+@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
+def get_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
+    """List all ``Source``s for a ``Plugin`` if it is public or owned by the current ``User``."""
+    return plugin.sources
+
+
+@router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by OwnedPlugin
+def create_source(
+    session: SessionDep,
+    plugin: OwnedPlugin,
+    source_input: SourcePostInput,
+) -> Source:
+    """Create a ``Source`` if the ``Plugin`` is owned by the current ``User``."""
+    return source_input.create(session, Source, plugin)
+
+
+@router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin
+def update_plugin(
+    session: SessionDep,
+    plugin: OwnedPlugin,
+    plugin_input: PluginPatchInput,
+) -> Plugin:
+    """Update and return a ``Plugin`` if it's owned by the current ``User``."""
+    return plugin_input.update(session, plugin)
+
+
+@router.delete("/{plugin_id}")  # noqa: FAST003 - Used by OwnedPlugin
+def delete_plugin(session: SessionDep, plugin: OwnedPlugin) -> Message:
+    """Delete a ``Plugin`` if it's owned by the current ``User``."""
+    return delete_record(session, plugin)
+
+
+@router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
+def get_plugin(plugin: ReadablePlugin) -> Plugin:
+    """Get a ``Plugin`` if it's readable by the current ``User``."""
+    return plugin
+
+
+# endregion CRUD
