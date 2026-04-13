@@ -30,13 +30,15 @@ class UpsertMixin(FileMixin, register=False):
         self,
         url: str | None,
         profile: int = 100,
+        format: str = "jpeg",
     ) -> str | None:
         """Format a JustWatch image URL with the correct base URL and profile."""
         if url is None:
             return None
-        return f"{self._images_base_url}{url}".replace(
-            "{profile}",
-            str(profile),
+        return (
+            f"{self._images_base_url}{url}"
+            .replace("{profile}", f"s{profile}")
+            .replace("{format}", format)
         )
 
     @staticmethod
