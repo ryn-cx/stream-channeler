@@ -35,9 +35,11 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
 @cache
 def just_scrape_client() -> JustScrape:
+    server = settings.GET_AROUND_SERVER
+    password = settings.GET_AROUND_PASSWORD
     return JustScrape(
-        get_around_server=settings.GET_AROUND_SERVER,
-        get_around_password=settings.GET_AROUND_PASSWORD,
+        get_around_server=None if server == "changethis" else server,
+        get_around_password=None if password == "changethis" else password,
     )
 
 

@@ -1,6 +1,6 @@
 // TODO: Validate
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { Info, Link2, Plus, Search, Trash2 } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Info, Link2, List, Plus, Search, Settings, Trash2 } from "lucide-react"
 import { useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
@@ -37,40 +37,56 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { ShowSearch } from "./Search"
+import { WhitelistManager } from "./WhitelistManager"
 
-interface AddUrlsToQueueButtonProps {
+interface ManageShowsButtonProps {
   channelId: string
-  isOwner?: boolean
   variant?: "button" | "menu"
+}
+
+interface Show {
+  id: string
+  name: string | null
+  source_id: string
+  url?: string | null
+}
+
+interface Source {
+  favicon_url?: string | null
+  name: string | null
 }
 
 function getStatusBadgeVariant(status: string) {
   switch (status) {
     case "Imported":
-      return "default" // green/primary
+      return "default"
     case "Failed":
-      return "destructive" // red
+      return "destructive"
     case "Importing":
-      return "secondary" // gray/blue
+      return "secondary"
     default:
-      return "outline" // outlined
+      return "outline"
   }
 }
 
-export function AddUrlsToQueueButton({
+export function ManageShowsButton({
   channelId,
   variant = "button",
-}: AddUrlsToQueueButtonProps) {
+}: ManageShowsButtonProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
-  const [mode, setMode] = useState<"search" | "url">("search")
   const [urlsInput, setUrlsInput] = useState("")
   const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null)
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
+  const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
+
+  // region Queries
 
   const { data: urlImportPlugins } = useQuery({
     queryKey: ["url-import-plugins"],
@@ -87,7 +103,31 @@ export function AddUrlsToQueueButton({
     queryFn: () => ChannelsService.getChannelQueue({ channelId }),
   })
 
+  const { data: showsData } = useQuery({
+    queryKey: ["channel-shows", channelId],
+    queryFn: () =>
+      apiRequest<{
+        shows: Show[]
+        sources: Record<string, Source>
+      }>(OpenAPI, {
+        method: "GET",
+        url: `/api/v1/channels/${channelId}/shows`,
+      }),
+    enabled: isOpen,
+  })
+
   const queueEntries = queueData ?? []
+  const showsList = (showsData?.shows ?? []).sort((a, b) =>
+    (a.name ?? "").localeCompare(b.name ?? ""),
+  )
+  const sources: Record<string, Source> = showsData?.sources || {}
+  const shows: Record<string, Show> = showsData?.shows
+    ? Object.fromEntries(showsData.shows.map((show) => [show.id, show]))
+    : {}
+
+  // endregion Queries
+
+  // region Mutations
 
   const addUrlsMutation = useMutation({
     mutationFn: (urls: string[]) =>
@@ -95,21 +135,14 @@ export function AddUrlsToQueueButton({
         channelId,
         requestBody: urls,
       }),
-    // When mutate is called:
     onMutate: async (urls, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({
         queryKey: ["channelQueue", channelId],
       })
-
-      // Snapshot the previous value
       const previousQueue = context.client.getQueryData([
         "channelQueue",
         channelId,
       ])
-
-      // Optimistically update to the new value
       context.client.setQueryData(
         ["channelQueue", channelId],
         (oldData: any) => [
@@ -123,17 +156,12 @@ export function AddUrlsToQueueButton({
           })),
         ],
       )
-
       showSuccessToast(
         `${urls.length} URL${urls.length !== 1 ? "s" : ""} added to import queue`,
       )
       setUrlsInput("")
-
-      // Return a result with the snapshotted value
       return { previousQueue }
     },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
     onError: (error, _urls, onMutateResult, context) => {
       context.client.setQueryData(
         ["channelQueue", channelId],
@@ -141,7 +169,6 @@ export function AddUrlsToQueueButton({
       )
       handleError.call(showErrorToast, error as any)
     },
-    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -150,36 +177,21 @@ export function AddUrlsToQueueButton({
 
   const deleteUrlMutation = useMutation({
     mutationFn: (urlId: string) =>
-      ChannelsService.deleteChannelQueueUrl({
-        channelId,
-        urlId,
-      }),
-    // When mutate is called:
+      ChannelsService.deleteChannelQueueUrl({ channelId, urlId }),
     onMutate: async (urlId, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({
         queryKey: ["channelQueue", channelId],
       })
-
-      // Snapshot the previous value
       const previousQueue = context.client.getQueryData([
         "channelQueue",
         channelId,
       ])
-
-      // Optimistically update to the new value
       context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
         oldData.filter((entry: ChannelQueueOutput) => entry.id !== urlId),
       )
-
       showSuccessToast("URL removed from queue")
-
-      // Return a result with the snapshotted value
       return { previousQueue }
     },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
     onError: (_error, _urlId, onMutateResult, context) => {
       context.client.setQueryData(
         ["channelQueue", channelId],
@@ -187,7 +199,6 @@ export function AddUrlsToQueueButton({
       )
       showErrorToast("Failed to remove URL from queue")
     },
-    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -195,39 +206,24 @@ export function AddUrlsToQueueButton({
   })
 
   const clearQueueMutation = useMutation({
-    mutationFn: () =>
-      ChannelsService.clearChannelCompletedQueue({
-        channelId,
-      }),
-    // When mutate is called:
+    mutationFn: () => ChannelsService.clearChannelCompletedQueue({ channelId }),
     onMutate: async (_variables, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({
         queryKey: ["channelQueue", channelId],
       })
-
-      // Snapshot the previous value
       const previousQueue = context.client.getQueryData([
         "channelQueue",
         channelId,
       ])
-
-      // Optimistically update to the new value
       context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
         oldData.filter(
           (entry: ChannelQueueOutput) =>
             entry.status !== "Imported" && entry.status !== "Failed",
         ),
       )
-
       showSuccessToast("Completed queue entries cleared")
-
-      // Return a result with the snapshotted value
       return { previousQueue }
     },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
     onError: (_error, _variables, onMutateResult, context) => {
       context.client.setQueryData(
         ["channelQueue", channelId],
@@ -235,12 +231,61 @@ export function AddUrlsToQueueButton({
       )
       showErrorToast("Failed to clear queue")
     },
-    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
       }),
   })
+
+  const removeShowMutation = useMutation({
+    mutationFn: (showId: string) =>
+      ChannelsService.deleteChannelShow({ channelId, showId }),
+    onMutate: async (showId) => {
+      await queryClient.cancelQueries({
+        queryKey: ["channel-shows", channelId],
+      })
+      const previousEpisodesEntries = queryClient.getQueriesData({
+        queryKey: ["episodes", channelId],
+      })
+      const previousShowsData = queryClient.getQueryData([
+        "channel-shows",
+        channelId,
+      ])
+      queryClient.setQueryData(
+        ["channel-shows", channelId],
+        (oldData: any) => ({
+          ...oldData,
+          shows: oldData.shows.filter((show: Show) => show.id !== showId),
+        }),
+      )
+      showSuccessToast("Show removed successfully")
+      return { previousEpisodesEntries, previousShowsData }
+    },
+    onError: (error, _showId, context) => {
+      for (const [queryKey, data] of context?.previousEpisodesEntries ?? []) {
+        queryClient.setQueryData(queryKey as any, data)
+      }
+      if (context?.previousShowsData) {
+        queryClient.setQueryData(
+          ["channel-shows", channelId],
+          context.previousShowsData,
+        )
+      }
+      handleError.call(showErrorToast, error as any)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["channel-shows", channelId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["episodes", channelId],
+      })
+    },
+  })
+
+  // endregion Mutations
+
+  // region Handlers
 
   const handleSubmit = () => {
     const urls = urlsInput
@@ -261,6 +306,18 @@ export function AddUrlsToQueueButton({
     setNoteDialogOpen(true)
   }
 
+  const handleRemoveShow = (showId: string) => {
+    if (
+      confirm(
+        "Are you sure you want to remove this show from the channel? This will remove all episodes from this show.",
+      )
+    ) {
+      removeShowMutation.mutate(showId)
+    }
+  }
+
+  // endregion Handlers
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -271,181 +328,262 @@ export function AddUrlsToQueueButton({
                 e.preventDefault()
               }}
             >
-              <Plus className="mr-2 size-4" />
-              Add Shows
+              <Settings className="mr-2 size-4" />
+              Manage Shows
             </DropdownMenuItem>
           ) : (
             <Button className="mt-2 mb-4">
-              <Plus className="mr-2" />
-              Add Shows
+              <Settings className="mr-2" />
+              Manage Shows
             </Button>
           )}
         </DialogTrigger>
-        {/* sm:max-w-4xl - Needs to be really wide for URLs */}
-        {/* max-h-[85vh] flex - Make it scrollable when it is too tall */}
-        {/* flex-col - Put everything in a column */}
         <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
           <DialogHeader className="px-8">
-            <DialogTitle>Add Shows</DialogTitle>
+            <DialogTitle>Manage Shows</DialogTitle>
             <DialogDescription>
-              {mode === "search"
-                ? "Search for shows and movies to add to your channel."
-                : "Add URLs to your channel directly, one per line."}
+              Search, import, and manage shows in your channel.
             </DialogDescription>
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMode(mode === "search" ? "url" : "search")}
-              >
-                {mode === "search" ? (
-                  <>
-                    <Link2 className="h-4 w-4 mr-1" /> Add Media By URL
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4 mr-1" /> Add Media By Searching
-                  </>
-                )}
-              </Button>
-            </div>
           </DialogHeader>
 
-          <div className="overflow-y-auto flex-1 min-h-0 px-8 py-4">
-            {mode === "search" ? (
+          <Tabs defaultValue="search" className="flex-1 min-h-0 flex flex-col">
+            <TabsList className="mx-8">
+              <TabsTrigger value="search">
+                <Search className="h-4 w-4 mr-1" /> Search
+              </TabsTrigger>
+              <TabsTrigger value="url">
+                <Link2 className="h-4 w-4 mr-1" /> Add By URL
+              </TabsTrigger>
+              <TabsTrigger value="shows">
+                <List className="h-4 w-4 mr-1" /> Shows
+                {showsList.length > 0 && ` (${showsList.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="queue">
+                Queue{queueEntries.length > 0 && ` (${queueEntries.length})`}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Search Tab */}
+            <TabsContent
+              value="search"
+              className="overflow-y-auto flex-1 min-h-0 px-8 py-4"
+            >
               <ShowSearch channelId={channelId} />
-            ) : (
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Select a site to see supported URL formats:
-                  </p>
-                  <Select
-                    value={selectedPlugin ?? "__none__"}
-                    onValueChange={(value) =>
-                      setSelectedPlugin(value === "__none__" ? null : value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Choose a site...</SelectItem>
-                      {(urlImportPlugins ?? []).map((plugin) => (
-                        <SelectItem key={plugin.name} value={plugin.name}>
-                          {plugin.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedPlugin && (
-                    <div className="text-sm text-muted-foreground [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_.markdown-alert-title_svg]:hidden">
-                      <Markdown
-                        remarkPlugins={[[remarkAlert, { legacyTitle: true }]]}
-                      >
-                        {(urlImportPlugins ?? []).find(
-                          (p) => p.name === selectedPlugin,
-                        )?.instructions ?? ""}
-                      </Markdown>
-                    </div>
-                  )}
-                  <textarea
-                    value={urlsInput}
-                    onChange={(e) => setUrlsInput(e.target.value)}
-                    placeholder={
-                      "https://example.com/show-1\nhttps://example.com/show-2"
-                    }
-                    rows={6}
-                    className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
-                    disabled={addUrlsMutation.isPending}
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={addUrlsMutation.isPending}
-                      size="sm"
+            </TabsContent>
+
+            {/* Add By URL Tab */}
+            <TabsContent
+              value="url"
+              className="overflow-y-auto flex-1 min-h-0 px-8 py-4"
+            >
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Select a site to see supported URL formats:
+                </p>
+                <Select
+                  value={selectedPlugin ?? "__none__"}
+                  onValueChange={(value) =>
+                    setSelectedPlugin(value === "__none__" ? null : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Choose a site...</SelectItem>
+                    {(urlImportPlugins ?? []).map((plugin) => (
+                      <SelectItem key={plugin.name} value={plugin.name}>
+                        {plugin.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPlugin && (
+                  <div className="text-sm text-muted-foreground [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_.markdown-alert-title_svg]:hidden">
+                    <Markdown
+                      remarkPlugins={[[remarkAlert, { legacyTitle: true }]]}
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      {addUrlsMutation.isPending
-                        ? "Adding URLs..."
-                        : "Add URLs"}
-                    </Button>
+                      {(urlImportPlugins ?? []).find(
+                        (p) => p.name === selectedPlugin,
+                      )?.instructions ?? ""}
+                    </Markdown>
                   </div>
+                )}
+                <textarea
+                  value={urlsInput}
+                  onChange={(e) => setUrlsInput(e.target.value)}
+                  placeholder={
+                    "https://example.com/show-1\nhttps://example.com/show-2"
+                  }
+                  rows={6}
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
+                  disabled={addUrlsMutation.isPending}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={addUrlsMutation.isPending}
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {addUrlsMutation.isPending ? "Adding URLs..." : "Add URLs"}
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
+            </TabsContent>
 
-          <div className="overflow-y-auto px-8 py-4 space-y-4">
-            <div className="flex justify-between">
-              <h3>Queue ({queueEntries.length} items)</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => clearQueueMutation.mutate()}
-                disabled={
-                  clearQueueMutation.isPending || queueEntries.length === 0
-                }
-              >
-                {clearQueueMutation.isPending
-                  ? "Clearing Completed Entries..."
-                  : "Clear Completed Entries"}
-              </Button>
-            </div>
-
-            {isLoadingQueue ? (
-              <p className="text-sm text-muted-foreground">Loading queue...</p>
-            ) : queueEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No items in queue</p>
-            ) : (
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>URL</TableHead>
-                      <TableHead className="w-[100px]">Status</TableHead>
-                      <TableHead className="w-[100px] text-center">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {queueEntries.map((entry: ChannelQueueOutput) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="truncate">{entry.url}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(entry.status)}>
-                            {entry.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => showNote(entry.note)}
-                              title="Show note"
-                            >
-                              <Info className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => deleteUrlMutation.mutate(entry.id)}
-                              disabled={deleteUrlMutation.isPending}
-                              title="Delete URL"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            {/* Queue Tab */}
+            <TabsContent
+              value="queue"
+              className="overflow-y-auto flex-1 min-h-0 px-8 py-4 space-y-4"
+            >
+              <div className="flex justify-between">
+                <h3>Queue ({queueEntries.length} items)</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => clearQueueMutation.mutate()}
+                  disabled={
+                    clearQueueMutation.isPending || queueEntries.length === 0
+                  }
+                >
+                  {clearQueueMutation.isPending
+                    ? "Clearing Completed Entries..."
+                    : "Clear Completed Entries"}
+                </Button>
               </div>
-            )}
-          </div>
+
+              {isLoadingQueue ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading queue...
+                </p>
+              ) : queueEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No items in queue
+                </p>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>URL</TableHead>
+                        <TableHead className="w-25">Status</TableHead>
+                        <TableHead className="w-25 text-center">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {queueEntries.map((entry: ChannelQueueOutput) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="truncate">
+                            {entry.url}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getStatusBadgeVariant(entry.status)}
+                            >
+                              {entry.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => showNote(entry.note)}
+                                title="Show note"
+                              >
+                                <Info className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() =>
+                                  deleteUrlMutation.mutate(entry.id)
+                                }
+                                disabled={deleteUrlMutation.isPending}
+                                title="Delete URL"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Shows Tab */}
+            <TabsContent
+              value="shows"
+              className="overflow-y-auto flex-1 min-h-0 px-8 py-4"
+            >
+              {showsList.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No shows in this channel
+                </p>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Show</TableHead>
+                        <TableHead className="w-25 text-center">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {showsList.map((show) => {
+                        const source = sources[show.source_id]
+                        return (
+                          <TableRow key={show.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {source?.favicon_url && (
+                                  <img
+                                    src={source.favicon_url}
+                                    alt={`${source.name} favicon`}
+                                    className="size-4"
+                                  />
+                                )}
+                                <span>{show.name ?? ""}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => setSelectedShowId(show.id)}
+                                  title="Manage whitelist"
+                                >
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => handleRemoveShow(show.id)}
+                                  disabled={removeShowMutation.isPending}
+                                  title="Remove show"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter className="px-8">
             <Button
@@ -459,6 +597,7 @@ export function AddUrlsToQueueButton({
         </DialogContent>
       </Dialog>
 
+      {/* Note Dialog */}
       <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -476,6 +615,17 @@ export function AddUrlsToQueueButton({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Whitelist Manager */}
+      {selectedShowId && (
+        <WhitelistManager
+          channelId={channelId}
+          showId={selectedShowId}
+          showName={shows[selectedShowId]?.name || "Unknown Show"}
+          isOpen={!!selectedShowId}
+          onClose={() => setSelectedShowId(null)}
+        />
+      )}
     </>
   )
 }

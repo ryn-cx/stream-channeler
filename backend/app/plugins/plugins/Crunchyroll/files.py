@@ -20,9 +20,11 @@ from app.utils import tz_datetime
 
 @cache
 def chirashi_client() -> Chirashi:
+    server = settings.GET_AROUND_SERVER
+    password = settings.GET_AROUND_PASSWORD
     return Chirashi(
-        get_around_server=settings.GET_AROUND_SERVER,
-        get_around_password=settings.GET_AROUND_PASSWORD,
+        get_around_server=None if server == "changethis" else server,
+        get_around_password=None if password == "changethis" else password,
     )
 
 

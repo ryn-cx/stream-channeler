@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -102,32 +108,38 @@ function ExpandedSources({
   }
 
   return (
-    <div className="border-t p-3 space-y-2">
+    <div className="p-3 space-y-2">
       {hasSourceSelection && result.sources.length > 0 && (
         <>
           <p className="text-sm text-muted-foreground">
             Choose a source to add:
           </p>
           <div className="flex flex-wrap gap-2">
-            {result.sources.map((source) => (
-              <Button
-                key={source.name}
-                size="sm"
-                variant="outline"
-                onClick={() => handleAddSource(source.name)}
-                disabled={addUrlMutation.isPending}
-                className="gap-1.5"
-              >
-                {source.icon_url && (
-                  <img
-                    src={source.icon_url}
-                    alt={source.name}
-                    className="h-4 w-4 rounded-sm"
-                  />
-                )}
-                {source.name}
-              </Button>
-            ))}
+            <TooltipProvider>
+              {result.sources.map((source) => (
+                <Tooltip key={source.name}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleAddSource(source.name)}
+                      disabled={addUrlMutation.isPending}
+                      className="h-auto p-2"
+                    >
+                      {source.icon_url ? (
+                        <img
+                          src={source.icon_url}
+                          alt={source.name}
+                          className="h-10 w-10"
+                        />
+                      ) : (
+                        source.name
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{source.name}</TooltipContent>
+                </Tooltip>
+              ))}
+            </TooltipProvider>
           </div>
         </>
       )}
@@ -243,44 +255,45 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
       )}
 
       {results.length > 0 && (
-        <div className="space-y-2">
+        <div className="flex flex-wrap gap-3">
           {results.map((result, index) => {
             const isSelected = selectedIndex === index
 
             return (
               <div
                 key={`${result.url}-${index}`}
-                className="border rounded-lg overflow-hidden"
+                className={`flex gap-3 ${isSelected ? "w-full" : ""}`}
               >
                 <button
                   type="button"
-                  className="flex items-center gap-3 p-3 w-full text-left hover:bg-accent/50 transition-colors"
+                  className={`border rounded-lg flex flex-col items-center text-center p-3 hover:bg-accent/50 transition-colors w-36 shrink-0 ${isSelected ? "ring-2 ring-primary" : ""}`}
                   onClick={() => setSelectedIndex(isSelected ? null : index)}
                 >
                   {result.image_url && (
                     <img
                       src={result.image_url}
                       alt={result.title}
-                      className="w-12 h-18 rounded object-cover shrink-0"
+                      className="w-full aspect-2/3 rounded object-cover mb-2"
                     />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{result.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {result.media_type}
-                      {result.year && ` (${result.year})`}
-                    </p>
-                  </div>
+                  <p className="font-medium text-sm leading-tight line-clamp-2">
+                    {result.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {result.media_type}
+                    {result.year && ` (${result.year})`}
+                  </p>
                 </button>
-
                 {isSelected && (
-                  <ExpandedSources
-                    result={result}
-                    hasSourceSelection={
-                      searchResponse?.has_source_selection ?? false
-                    }
-                    channelId={channelId}
-                  />
+                  <div className="border rounded-lg flex-1 min-w-0">
+                    <ExpandedSources
+                      result={result}
+                      hasSourceSelection={
+                        searchResponse?.has_source_selection ?? false
+                      }
+                      channelId={channelId}
+                    />
+                  </div>
                 )}
               </div>
             )

@@ -7,7 +7,7 @@ import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
-import { AddUrlsToQueueButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
+import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import {
   columns,
   type EpisodeWithDetails,
@@ -15,7 +15,6 @@ import {
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { HeroBillboard } from "@/components/Channels/ChannelDetail/HeroBillboard"
-import { ManageShows } from "@/components/Channels/ChannelDetail/ManageShows"
 import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
 import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -231,8 +230,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               {isOwner && (
                 <>
                   <DropdownMenuSeparator />
-                  <AddUrlsToQueueButton channelId={channelId} variant="menu" />
-                  <ManageShows channelId={channelId} variant="menu" />
+                  <ManageShowsButton channelId={channelId} variant="menu" />
                 </>
               )}
               <DropdownMenuSeparator />
@@ -286,12 +284,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               Table
             </Button>
           </ButtonGroup>
-          {isOwner && (
-            <>
-              <AddUrlsToQueueButton channelId={channelId} />
-              <ManageShows channelId={channelId} />
-            </>
-          )}
+          {isOwner && <ManageShowsButton channelId={channelId} />}
           <ManageAdditionalChannels
             channelId={channelId}
             filterParams={search}
