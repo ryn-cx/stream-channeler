@@ -25,6 +25,9 @@ jobs:
       EMAILS_FROM_EMAIL: ${{ secrets.EMAILS_FROM_EMAIL }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      GET_AROUND_SERVER: ${{ secrets.GET_AROUND_SERVER }}
+      GET_AROUND_PASSWORD: ${{ secrets.GET_AROUND_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
