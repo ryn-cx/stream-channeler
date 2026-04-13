@@ -39,15 +39,16 @@ class YouTubeValidator(PluginValidator[YouTube]):
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
-        # Season.update_at is set based on the data_timestamp of the Show.
-        output.incremented(Show, "update_at")
+        # update_at is recalculated from channel_file.data_timestamp + 30 days.
+        output.incremented(show.id, "update_at")
         return output
 
     @override
     def update_season_validator(self, season: Season) -> Validator:
         output = super().update_season_validator(season)
-        # Season.update_at is set based on the data_timestamp of the season files.
+        # Season update_at is recalculated by _set_season_update_at.
         output.incremented(season.id, "update_at")
+        # The show is also re-upserted during update_season.
         output.incremented(season.show.id, "data_timestamp", "modified_at")
         return output
 

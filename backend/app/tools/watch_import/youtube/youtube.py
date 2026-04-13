@@ -3,7 +3,22 @@ import re
 from datetime import timedelta, timezone
 from pathlib import Path
 
-from dateutil import parser as dateutil_parser
+from dateutil import parser as dateutil_parser  # type: ignore[import-untyped]
+from dotenv import load_dotenv
+from loguru import logger
+from sqlmodel import Session, select
+
+from app.database import engine, load_models
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.users.models import User
+from app.watches.models import Watch
+
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
+load_models()
 
 # Mapping for common US timezone abbreviations that dateutil doesn't understand
 TZINFOS = {
@@ -16,22 +31,6 @@ TZINFOS = {
     "EST": timezone(timedelta(hours=-5)),
     "EDT": timezone(timedelta(hours=-4)),
 }
-from dotenv import load_dotenv
-from loguru import logger
-from sqlmodel import Session, select
-
-load_dotenv(Path(__file__).resolve().parents[3] / ".env")
-
-from app.database import engine, load_models
-from app.episodes.models import Episode
-from app.plugins.models import Plugin
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.users.models import User
-from app.watches.models import Watch
-
-load_models()
 
 INPUTS_DIR = Path(__file__).parent / "inputs"
 PLUGIN_KEY = "YouTube"
@@ -90,7 +89,7 @@ def import_watches(session: Session, user: User) -> None:
     skipped_already_watched = 0
 
     for video_id, date_string in entries:
-        episode = episodes_by_key.get(video_id)
+        episode = episodes_by_key.get(video_id)  # type: ignore[assignment]
         if not episode:
             skipped_not_found += 1
             continue

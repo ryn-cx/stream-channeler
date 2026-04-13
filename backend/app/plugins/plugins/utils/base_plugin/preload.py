@@ -41,7 +41,7 @@ class PreloadMixin(ABC):
             options.append(selectinload(Source.shows))  # type: ignore[arg-type]
         statement = select(Source).where(Source.plugin_id == self.plugin.id)
         if isinstance(source_key, list):
-            statement = statement.where(Source.key.in_(source_key))
+            statement = statement.where(Source.key.in_(source_key))  # type: ignore[attr-defined]
         elif source_key is not None:
             statement = statement.where(Source.key == source_key)
         return self.db.exec(statement.options(*options)).unique()

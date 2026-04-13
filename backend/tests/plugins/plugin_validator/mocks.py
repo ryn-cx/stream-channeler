@@ -1,14 +1,15 @@
 # TODO: Validate
 from collections.abc import Generator
 from contextlib import ExitStack, contextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+from freezegun import freeze_time
 from loguru import logger
 
 from app.plugins.plugins.utils.base_plugin import BaseFile
-from app.utils import tz_datetime
 
 
 def _all_subclasses(cls: type) -> list[type]:
@@ -32,14 +33,21 @@ def _patch_download(replacement: object) -> Generator[None]:
 
 @contextmanager
 def mock_update(files_directory: Path) -> Generator[None]:
-    """Mock _download to load content from saved files instead of actually downloading."""
+    """Mock _download to increment data_timestamp instead of actually downloading."""
 
     def _mock(self: BaseFile[Any]) -> None:
         key = self.database_record.key
         logger.debug(f"Mock Updating {key}")
-        self.database_record.data_timestamp = tz_datetime.now()
+        self.database_record.data_timestamp += timedelta(minutes=1)
 
     with _patch_download(_mock):
+        yield
+
+
+@contextmanager
+def frozen_time(timestamp: datetime) -> Generator[None]:
+    """Freeze time at the given timestamp for deterministic modified_at values."""
+    with freeze_time(timestamp):
         yield
 
 

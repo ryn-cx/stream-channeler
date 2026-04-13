@@ -36,6 +36,14 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     )
 
     @override
+    def update_show_validator(self, show: Show) -> Validator:
+        validator = super().update_show_validator(show)
+        # update_at is recalculated by _set_update_at_from_episodes. Whether it
+        # changes depends on episode release dates relative to data_timestamp.
+        validator.ignore(show.id, "update_at")
+        return validator
+
+    @override
     def update_season_validator(self, season: Season) -> Validator:
         return (
             super()
@@ -51,6 +59,13 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
             .update_episode_validator(episode)
             .episodes_share_season_file(episode)
         )
+
+    @override
+    def deleted_season_validator(self, season: Season) -> Validator:
+        validator = super().deleted_season_validator(season)
+        # update_at is recalculated by _set_update_at_from_episodes.
+        validator.ignore(season.show.id, "update_at")
+        return validator
 
 
 class CrunchyrollStandardTests(StandardTests[Crunchyroll], CrunchyrollValidator):

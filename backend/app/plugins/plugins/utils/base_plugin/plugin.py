@@ -47,11 +47,7 @@ class BasePlugin(
     ) -> None:
         self.db = db
         self._file_cache: dict[tuple[type, object], Any] = {}
-        self._weakref_file_cache: dict[tuple[type, object], Any] = dict()
-        # TODO: Make this a weakref again if safe
-        # self._weakref_file_cache: WeakValueDictionary[tuple[type, object], Any] = (
-        #     WeakValueDictionary()
-        # )
+        self._weakref_file_cache: dict[tuple[type, object], Any] = {}
         self.initialize_plugin()
         self._validate_plugin_version()
 
@@ -95,9 +91,13 @@ class BasePlugin(
         show = self._preload_show(
             show_key=show.key,
             source_key=show.source.key,
-            preload_episodes=True,
         ).one()
         _cache = self._download_show_files(show.key, show.update_at)
+        show = self._preload_show(
+            show_key=show.key,
+            source_key=show.source.key,
+            preload_episodes=True,
+        ).one()
         self._upsert_show(show.source, show.key)
 
     @override

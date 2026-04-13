@@ -69,7 +69,7 @@ class UpsertMixin(FileMixin, register=False):
                 return cast("custom_buy_box_offers_models.Offer", item)
         return None
 
-    def _sources_with_offers(
+    def _sources_with_offers(  # type: ignore[override]
         self,
         show_key: str,
     ) -> list[tuple[str, custom_buy_box_offers_models.Offer]]:
@@ -83,7 +83,7 @@ class UpsertMixin(FileMixin, register=False):
         for offer in parsed_json.data.url_v2.node.offers:
             if offer.package.short_name not in seen:
                 seen.add(offer.package.short_name)
-                results.append((offer.package.short_name, offer))
+                results.append((offer.package.short_name, offer))  # type: ignore[arg-type]
 
         return results
 

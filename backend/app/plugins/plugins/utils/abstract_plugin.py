@@ -127,7 +127,7 @@ class AbstractPlugin(ABC):
         source.update_at = None
 
     supports_import_watch_history: bool = False
-    import_watch_history_file_extension: str | None = None
+    import_watch_history_file_extension: str
 
     @classmethod
     def import_watch_history_instructions(cls) -> str:

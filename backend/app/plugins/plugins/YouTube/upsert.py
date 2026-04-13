@@ -163,14 +163,14 @@ class UpsertMixin(FileMixin, register=False):
             msg = f"Season {season.key} is missing data_timestamp"
             raise ValueError(msg)
 
-        if not season.episodes:
+        if not (active_episodes := season.active_episodes):
             season.set_update_at(season.data_timestamp + timedelta(days=36500))
             return
 
         latest_release_date = max(
             (
                 episode.release_date
-                for episode in season.episodes
+                for episode in active_episodes
                 if episode.release_date
             ),
         )

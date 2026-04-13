@@ -1,10 +1,9 @@
 # TODO: Validate
 import json
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import timedelta
-from typing import Any
 
 import pytest
 from sqlmodel import Session
@@ -20,11 +19,11 @@ from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
     block_downloads,
+    frozen_time,
     mock_update,
     track_downloads,
 )
@@ -146,33 +145,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     # region Update Helpers
 
-    def _randomize_entity(
-        self,
-        entity: Plugin | Source | Show | Season | Episode,
-        static_keys: list[str] | None = None,
-    ) -> None:
-        """Randomize non-key fields on the entity to detect unintended overwrites."""
-        data_timestamp = entity.data_timestamp
-        assert data_timestamp
-        update_at = tz_datetime.now()
-
-        defaults: dict[str, Any] = {
-            "key": entity.key,
-            "data_timestamp": data_timestamp,
-        }
-        for key in static_keys or []:
-            defaults[key] = getattr(entity, key)
-
-        parent_id_field = f"{type(entity.parent).__name__.lower()}_id"
-        defaults[parent_id_field] = getattr(entity, parent_id_field)
-        # update_at must be set AFTER static_keys so the plugin considers the
-        # entity due for update, even when static_keys includes "update_at".
-        defaults["update_at"] = update_at
-        build_random_model(
-            type(entity),
-            **defaults,
-        ).upsert(entity.parent, entity)
-
     def _get_update_function(
         self,
         db: Session,
@@ -215,7 +187,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             case Episode() as episode:
                 return self.update_episode_validator(episode)
 
-    def _update_and_validate(  # noqa: PLR0913
+    def _update_and_validate(
         self,
         db: Session,
         original_plugin: Plugin,
@@ -223,16 +195,12 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         validator: Validator | None = None,
         *,
         use_mock_update: bool = True,
-        static_keys: list[str] | None = None,
     ) -> None:
-        """Randomize an entity's data and verify the update function restores it.
-
-        Overwrites the entity's fields with random values (preserving key,
-        data_timestamp, and any static_keys), sets update_at to now so the
-        plugin considers it due for an update, then runs the plugin's update
-        function and validates that all fields were restored correctly.
-        """
-        self._randomize_entity(entity, static_keys)
+        """Mark an entity as outdated, run its update, and validate the result."""
+        assert entity.data_timestamp
+        entity.update_at = entity.data_timestamp + timedelta(seconds=1)
+        if isinstance(entity, (Show, Season, Episode)):
+            entity.extra = "Outdated"
         validator = validator or self._get_validator(db, entity)
         update = self._get_update_function(db, entity)
 
@@ -241,7 +209,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             if use_mock_update
             else nullcontext()
         )
-        with maybe_mock_wrapper, log_stats(self):
+        freeze_at = entity.data_timestamp + timedelta(minutes=2)
+        with maybe_mock_wrapper, frozen_time(freeze_at), log_stats(self):
             update()
             db.flush()
 
@@ -285,13 +254,12 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         *,
         files_already_cached: bool,
     ) -> None:
-        """Run a search query, exporting files for analysis on failure."""
+        """Run a search query, always exporting files for analysis even on failure."""
         try:
             with track_downloads() as download_count:
                 self._search(db, search_query)
-        except Exception:
+        finally:
             self._export_database_files(db)
-            raise
 
         if files_already_cached and download_count:
             pytest.fail(f"Files were downloaded during search: {download_count}")
@@ -443,6 +411,7 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
         fake_episode = build_random_model(
             Episode,
+            "full",
             season_id=season.id,
             deleted_at=None,
         )
@@ -453,7 +422,7 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         original_plugin = self.get_detached_plugin(db_with_url)
         fake_episode.soft_undelete()
 
-        with mock_update(self.files_directory_path()), log_stats(self):
+        with block_downloads(), log_stats(self):
             self.plugin_class(db_with_url, season=season).update_season(season)
             db_with_url.flush()
 
@@ -483,7 +452,7 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         original_plugin = self.get_detached_plugin(db_with_url)
         fake_season.soft_undelete()
 
-        with mock_update(self.files_directory_path()), log_stats(self):
+        with block_downloads(), log_stats(self):
             self.plugin_class(db_with_url, show=show).update_show(show=show)
             db_with_url.flush()
 
@@ -501,10 +470,22 @@ class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         if not self.search_query:
             pytest.skip()
 
-        result = self._search(db_with_files, self.search_query)
+        with block_downloads(), log_stats(self):
+            result = self._search(db_with_files, self.search_query)
 
         assert isinstance(result, PluginSearchResults)
         assert len(result.results) > 0
+
+        if self.url:
+            stripped_url = (
+                self.url.removeprefix("https://")
+                .removeprefix("http://")
+                .removeprefix("www.")
+                .removesuffix("/")
+            )
+            assert any(
+                stripped_url in search_result.url for search_result in result.results
+            )
 
 
 class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -561,6 +542,7 @@ class StandardTests[PluginT: BasePlugin](
     URLTests[PluginT],
     UpdateTests[PluginT],
     DeletionTests[PluginT],
+    SearchTests[PluginT],
     AllUpdatesTests[PluginT],
 ):
     """The standard set of tests for a plugin with URL import support."""

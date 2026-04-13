@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from loguru import logger
 from sqlmodel import Session, select
 
-load_dotenv(Path(__file__).resolve().parents[3] / ".env")
-
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
@@ -19,6 +17,7 @@ from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 load_models()
 
 INPUTS_DIR = Path(__file__).parent / "inputs"
@@ -66,7 +65,7 @@ def import_watches(session: Session, user: User) -> None:
 
     for entry in entries:
         episode_key = str(entry["id"])
-        episode = episodes_by_key.get(episode_key)
+        episode = episodes_by_key.get(episode_key)  # type: ignore[assignment]
         if not episode:
             skipped_not_found += 1
             continue

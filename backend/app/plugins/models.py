@@ -67,6 +67,10 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     def children(self) -> list[Source | File]:
         return [*self.sources, *self.files]
 
+    @property
+    def active_sources(self) -> list[Source]:
+        return [source for source in self.sources if not source.deleted_at]
+
     def __str__(self) -> str:
         """Return a string representation of the Plugin."""
         base_plugin = "Plugin:"

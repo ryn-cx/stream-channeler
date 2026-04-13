@@ -21,7 +21,7 @@ class BaseInput(SQLModel):
     Sets ``model_config = ConfigDict(extra="forbid")"``.
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportAssignmentType]
+    model_config = ConfigDict(extra="forbid")  # type: ignore[assignment]
 
 
 MediaModel = Episode | Season | Show | Source | Plugin | Channel | Watch

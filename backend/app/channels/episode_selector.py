@@ -274,7 +274,7 @@ class EpisodeQueryBuilder:
         """Filter out episodes from private plugins the viewer doesn't own."""
         conditions = [col(Plugin.public).is_(True)]
         if self._user:
-            conditions.append(col(Plugin.user_id) == self._user.id)
+            conditions.append(col(Plugin.user_id) == self._user.id)  # type: ignore[arg-type]
         return (
             query.join(Source, col(Show.source_id) == Source.id)
             .join(Plugin, col(Source.plugin_id) == Plugin.id)
@@ -514,7 +514,7 @@ class EpisodeQueryBuilder:
         if last_sort_key.mode == "group_by_show":
             partition_by = col(Show.id)
         else:
-            partition_by = self._get_sorter(last_sort_key)
+            partition_by = self._get_sorter(last_sort_key)  # type: ignore[assignment]
         interleave_partition = func.row_number().over(
             partition_by=partition_by,
             order_by=self._collect_sort_expressions(exclude_group_by_show=True),
@@ -523,7 +523,7 @@ class EpisodeQueryBuilder:
         if self._interleave_is_random:
             show_random = func.hashtext(
                 func.concat(
-                    func.cast(Show.id, String),
+                    func.cast(Show.id, String),  # type: ignore[arg-type]
                     str(self._media_filter.random_seed),
                 ),
             )
@@ -564,7 +564,7 @@ class EpisodeQueryBuilder:
 
         return sorter
 
-    def _sql_sort_by_value_expression(
+    def _sql_sort_by_value_expression(  # noqa: PLR0911
         self,
         sort_key: SortKeyInput,
     ) -> ColumnElement[Any]:
@@ -575,9 +575,9 @@ class EpisodeQueryBuilder:
             # Random" hashes Show.id, which keeps every show's episodes
             # together while randomizing the order shows appear in.
             random_columns: dict[str, Mapped[UUID]] = {
-                "episode": Episode.id,
-                "season": Season.id,
-                "show": Show.id,
+                "episode": Episode.id,  # type: ignore[dict-item]
+                "season": Season.id,  # type: ignore[dict-item]
+                "show": Show.id,  # type: ignore[dict-item]
             }
             random_column = random_columns[sort_key.model]
             return func.hashtext(
@@ -595,7 +595,7 @@ class EpisodeQueryBuilder:
         if sort_key.field == "last_watched":
             return literal_column("show_last_watched.show_last_watch_date")
         if sort_key.field == "episode_count":
-            return func.count(Episode.id).over(partition_by=col(Show.id))
+            return func.count(Episode.id).over(partition_by=col(Show.id))  # type: ignore[arg-type]
         if sort_key.model == "show" and sort_key.field == "started":
             return self._started_show_sort_expression()
 
@@ -613,19 +613,19 @@ class EpisodeQueryBuilder:
         if sort_key.field == "random":
             salt = str(self._media_filter.random_seed)
             episode_field = func.hashtext(
-                func.concat(func.cast(Show.id, String), salt),
+                func.concat(func.cast(Show.id, String), salt),  # type: ignore[arg-type]
             )
         elif sort_key.field == "recently_aired":
             if sort_key.recently_aired_date:
-                episode_field = self._recently_airing_sort_expression_absolute(
+                episode_field = self._recently_airing_sort_expression_absolute(  # type: ignore[assignment]
                     sort_key.recently_aired_date,
                 )
             else:
-                episode_field = self._recently_airing_sort_expression(
+                episode_field = self._recently_airing_sort_expression(  # type: ignore[assignment]
                     sort_key.days or 7,
                 )
         elif sort_key.field == "episode_count":
-            episode_field = Episode.id
+            episode_field = Episode.id  # type: ignore[assignment]
         else:
             episode_field = getattr(Episode, sort_key.field)
 
@@ -637,7 +637,7 @@ class EpisodeQueryBuilder:
             "min": func.min,
             "first_value": func.first_value,
         }
-        agg_func = agg_funcs.get(sort_key.aggregation)
+        agg_func = agg_funcs.get(sort_key.aggregation)  # type: ignore[arg-type]
         if agg_func is None:
             msg = f"Unsupported aggregation '{sort_key.aggregation}'"
             raise ValueError(msg)
@@ -668,8 +668,8 @@ class EpisodeQueryBuilder:
             return literal_column("0")
         started_query = (
             select(Watch.id)
-            .join(Episode, Watch.episode_id == Episode.id)
-            .join(Season, Episode.season_id == Season.id)
+            .join(Episode, Watch.episode_id == Episode.id)  # type: ignore[arg-type]
+            .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
             .where(
                 and_(
                     col(Season.show_id) == col(Show.id),
@@ -687,8 +687,8 @@ class EpisodeQueryBuilder:
             return literal_column("1")
         started_query = (
             select(Watch.id)
-            .join(Episode, Watch.episode_id == Episode.id)
-            .join(Season, Episode.season_id == Season.id)
+            .join(Episode, Watch.episode_id == Episode.id)  # type: ignore[arg-type]
+            .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
             .where(
                 and_(
                     col(Season.show_id) == col(Show.id),

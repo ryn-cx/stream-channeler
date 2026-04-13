@@ -68,8 +68,8 @@ class UpsertMixin(FileMixin, register=False):
     @staticmethod
     def _set_update_at_from_episodes(show: Show) -> None:
         """Set update_at on the show and each season based on episode release dates."""
-        for season in show.active_children:
-            for episode in season.active_children:
+        for season in show.active_seasons:
+            for episode in season.active_episodes:
                 if episode.release_date:
                     update_at = episode.release_date + timedelta(days=7)
                     season.set_update_at(update_at)

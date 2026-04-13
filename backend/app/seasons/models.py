@@ -67,6 +67,10 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     def children(self) -> list[Episode]:
         return self.episodes
 
+    @property
+    def active_episodes(self) -> list[Episode]:
+        return [episode for episode in self.episodes if not episode.deleted_at]
+
     @override
     def get_user_id(self, session: Session) -> uuid.UUID | None:
         return session.exec(

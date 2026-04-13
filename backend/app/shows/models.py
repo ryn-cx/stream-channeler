@@ -90,6 +90,10 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         return self.seasons
 
     @property
+    def active_seasons(self) -> list[Season]:
+        return [season for season in self.seasons if not season.deleted_at]
+
+    @property
     @override
     def parent(self) -> Source:
         return self.source

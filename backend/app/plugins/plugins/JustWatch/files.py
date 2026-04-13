@@ -249,6 +249,14 @@ class FileMixin(BasePlugin, register=False):
     # region File Groups
 
     @override
+    def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
+        # Doesn't actually return all of the files, only the latest versions,
+        return [
+            self._providers_locale_file(),
+            self._new_titles_bucket_file(self._get_latest_new_titles_bucket().one()),
+        ]
+
+    @override
     def _show_files(self, show_key: str) -> Sequence[UrlTitleDetails]:
         # Movies - Required to detect changes to the show (there are no new seasons).
         # TV Show - Required to detect changes to the show and new seasons.
@@ -352,8 +360,8 @@ class FileMixin(BasePlugin, register=False):
         if not self._cached_media_type:
             url_title_details = self._url_title_details_file(show_key).parsed()
             raw_media_type = url_title_details.data.url_v2.node.object_type
-            self._cached_media_type = _MEDIA_TYPE_MAP[raw_media_type]
-        return self._cached_media_type
+            self._cached_media_type = _MEDIA_TYPE_MAP[raw_media_type]  # type: ignore[assignment]
+        return self._cached_media_type  # type: ignore[return-value]
 
     def _sources_with_offers(
         self,

@@ -99,7 +99,7 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
         for model in join_chain:
             statement = statement.join(model)
         statement = (
-            statement.join(User, Plugin.user_id == User.id)
+            statement.join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
             .where(User.email == PLUGIN_USER_EMAIL)
             .options(load_options)
         )
@@ -127,7 +127,7 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
                         updated_count += 1
 
                         session.commit()
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.exception(
                             f"Failed to update {media_type_name}: {item.key}",
                         )

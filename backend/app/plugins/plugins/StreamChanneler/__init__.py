@@ -104,7 +104,7 @@ class StreamChanneler(BasePlugin, register=True):
         plugin_entity = self.db.exec(
             select(PluginModel)
             .where(PluginModel.id == plugin_id)
-            .options(joinedload(PluginModel.sources).joinedload(Source.shows)),
+            .options(joinedload(PluginModel.sources).joinedload(Source.shows)),  # type: ignore[arg-type]
         ).first()
         if not plugin_entity:
             msg = f"Plugin not found: {url}"

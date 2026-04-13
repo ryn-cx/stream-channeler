@@ -246,8 +246,8 @@ class MediaMixin[
 
     def set_update_at(self, new_update_at_value: datetime | None) -> None:
         """Set the update_at value based on the existing values and the new value."""
-        # If the existing update_at is newer than the existing data_timestamp update_at
-        # can be cleared because the update has been completed.
+        # If the existing update_at is older than data_timestamp the update has
+        # been completed and update_at can be cleared.
         if (
             self.update_at
             and self.data_timestamp

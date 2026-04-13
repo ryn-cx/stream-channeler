@@ -64,6 +64,10 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     def children(self) -> list[Show]:
         return self.shows
 
+    @property
+    def active_shows(self) -> list[Show]:
+        return [show for show in self.shows if not show.deleted_at]
+
     def __str__(self) -> str:
         """Return a string representation of the Source."""
         base_source = "Source:"

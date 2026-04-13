@@ -40,9 +40,8 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             bucket.download_if_outdated()
 
             self._download_latest_new_titles_bucket()
-            latest_bucket = self._get_latest_new_titles_bucket().one()
 
-            self.plugin.data_timestamp = latest_bucket.data_timestamp
+            self.plugin.data_timestamp = self.plugin_data_timestamp()
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
     supports_import_url = True
@@ -163,12 +162,8 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
         _cache = plugin.sources
         self._download_latest_new_titles_bucket()
         self._process_new_titles_buckets()
-        latest_bucket = self._get_latest_new_titles_bucket().one()
 
-        plugin.data_timestamp = min(
-            latest_bucket.data_timestamp,
-            providers_file.database_record.data_timestamp,
-        )
+        plugin.data_timestamp = self.plugin_data_timestamp()
         plugin.set_update_at(plugin.data_timestamp + timedelta(days=1))
 
     def _process_new_titles_buckets(self) -> None:

@@ -22,7 +22,7 @@ class SearchMixin(UpsertMixin, register=False):
         return {
             provider["short_name"]: {
                 "clear_name": provider["clear_name"],
-                "icon_url": self._format_image_url(
+                "icon_url": self._format_image_url(  # type: ignore[dict-item]
                     provider["icon_url"],
                     profile=100,
                 ),

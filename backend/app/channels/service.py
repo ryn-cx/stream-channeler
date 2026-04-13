@@ -142,7 +142,8 @@ def get_sort_options() -> list[SortOptionOutput]:
     options: list[SortOptionOutput] = [
         SortOptionOutput(
             label=f"{model.__name__} - {field_name.replace('_', ' ').title()}",
-            model=model.__name__.lower(),
+            # If this value does not match it should raise an error.
+            model=model.__name__.lower(),  # type: ignore[arg-type]
             field=field_name,
         )
         for model in (Episode, Season, Show, Source, Plugin)
