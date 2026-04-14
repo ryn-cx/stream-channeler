@@ -549,8 +549,15 @@ class EpisodeQueryBuilder:
                     )
                     order_by.extend([row_num, random_value])
 
-                case "completion":
-                    order_by.append(directed)
+                case "sequential_randomize":
+                    # Play groups in order, randomize episodes within each.
+                    random_value = func.hashtext(
+                        func.concat(
+                            func.cast(inner.c.id, String),
+                            str(self._media_filter.random_seed),
+                        ),
+                    )
+                    order_by.extend([directed, random_value])
 
             simple_values.append(directed)
             parent_values.append(raw_col)
@@ -599,8 +606,15 @@ class EpisodeQueryBuilder:
                     )
                     order_by.extend([row_num, random_value])
 
-                case "completion":
-                    order_by.append(sort_value_directed)
+                case "sequential_randomize":
+                    # Play groups in order, randomize episodes within each.
+                    random_value = func.hashtext(
+                        func.concat(
+                            func.cast(col(Episode.id), String),
+                            str(self._media_filter.random_seed),
+                        ),
+                    )
+                    order_by.extend([sort_value_directed, random_value])
 
             simple_values.append(sort_value_directed)
             parent_values.append(self._get_sorter(sort_key))

@@ -117,9 +117,12 @@ class SortKeyInput(BaseInput):
     model: Literal["episode", "season", "show", "source", "plugin"]
     field: str
     direction: Literal["ascending", "descending"]
-    display: Literal["sequential", "interleave", "randomize", "completion"] = Field(
-        default="sequential",
-    )
+    display: Literal[
+        "sequential",
+        "interleave",
+        "randomize",
+        "sequential_randomize",
+    ] = Field(default="sequential")
     aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
     days: int | None = Field(default=None)
     recently_aired_date: datetime | None = Field(default=None)

@@ -110,7 +110,7 @@ const DISPLAY_OPTIONS = [
   { value: "sequential", label: "Sequential" },
   { value: "interleave", label: "Interleave" },
   { value: "randomize", label: "Randomize" },
-  { value: "completion", label: "Completion" },
+  { value: "sequential_randomize", label: "Sequential Randomize" },
 ] as const
 type Display = (typeof DISPLAY_OPTIONS)[number]["value"]
 
