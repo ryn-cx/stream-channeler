@@ -35,20 +35,14 @@ export function InfoPage() {
                 search={{
                   sortBy: [
                     {
-                      model: "episode",
-                      field: "air_date",
-                      direction: "descending",
-                      display: "sequential",
-                    },
-                    {
                       model: "season",
-                      field: "season_number",
+                      field: "sequential",
                       direction: "ascending",
                       display: "sequential",
                     },
                     {
                       model: "episode",
-                      field: "episode_number",
+                      field: "sequential",
                       direction: "ascending",
                       display: "randomize",
                     },
