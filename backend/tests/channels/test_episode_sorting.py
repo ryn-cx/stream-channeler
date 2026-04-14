@@ -24,8 +24,8 @@ from tests.watches.utils import create_random_watch
 def _sort_key(
     model_field: str,
     direction: str = "ascending",
-    mode: str = "normal",
-    aggregation: str = "sum",
+    display: str = "sequential",
+    aggregation: str | None = None,
     days: int | None = None,
 ) -> str:
     model, field = model_field.split(".")
@@ -33,9 +33,10 @@ def _sort_key(
         "model": model,
         "field": field,
         "direction": direction,
-        "mode": mode,
-        "aggregation": aggregation,
+        "display": display,
     }
+    if aggregation is not None:
+        data["aggregation"] = aggregation
     if days is not None:
         data["days"] = days
     return json.dumps(data)
@@ -256,7 +257,7 @@ class TestRecentlyAired:
 
 
 class TestInterleave:
-    def test_sequential_interleave_alternates_groups(
+    def test_sequential_interleave_alternates_shows(
         self,
         episode_setup: dict,
     ) -> None:
@@ -264,19 +265,17 @@ class TestInterleave:
             episode_setup,
             sort_by=[
                 _sort_key(
-                    "episode.recently_aired",
-                    "descending",
-                    days=7,
-                    mode="interleave_sequential",
+                    "episode.air_date",
+                    "ascending",
+                    display="interleave",
                 ),
             ],
             random_seed=42,
         )
-        recent = _recent_ids(episode_setup)
-        result_ids = [ep.id for ep in episodes]
-        is_recent = [eid in recent for eid in result_ids]
-        for index in range(len(is_recent) - 1):
-            assert is_recent[index] != is_recent[index + 1]
+        show_ids = [ep.season.show_id for ep in episodes]
+        # Episodes from different shows should alternate
+        for index in range(len(show_ids) - 1):
+            assert show_ids[index] != show_ids[index + 1]
 
     def test_random_interleave_returns_all_episodes(
         self,
@@ -289,7 +288,7 @@ class TestInterleave:
                     "episode.recently_aired",
                     "descending",
                     days=7,
-                    mode="interleave_random",
+                    display="randomize",
                 ),
             ],
             random_seed=42,
@@ -304,7 +303,7 @@ class TestInterleave:
             _sort_key(
                 "episode.air_date",
                 "descending",
-                mode="interleave_random",
+                display="randomize",
             ),
         ]
         first = _build(episode_setup, sort_by=sort_by, random_seed=42)
@@ -320,8 +319,7 @@ class TestGroupByShow:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="group_by_show",
-                    aggregation="sum",
+                    aggregation="max",
                 ),
             ],
         )
@@ -334,7 +332,6 @@ class TestGroupByShow:
                 _sort_key(
                     "episode.air_date",
                     "descending",
-                    mode="group_by_show",
                     aggregation="max",
                 ),
             ],
@@ -346,11 +343,7 @@ class TestGroupByShow:
         episodes = _build(
             episode_setup,
             sort_by=[
-                _sort_key(
-                    "show.name",
-                    "ascending",
-                    mode="group_by_show",
-                ),
+                _sort_key("show.name", "ascending"),
             ],
         )
         assert len(episodes) == 4
@@ -667,7 +660,7 @@ class TestRandomSort:
 
 
 class TestGroupByShowAggregations:
-    @pytest.mark.parametrize("aggregation", ["sum", "avg", "count", "max", "min"])
+    @pytest.mark.parametrize("aggregation", ["max", "min", "avg"])
     def test_all_aggregation_functions(
         self,
         episode_setup: dict,
@@ -679,7 +672,6 @@ class TestGroupByShowAggregations:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="group_by_show",
                     aggregation=aggregation,
                 ),
             ],
@@ -697,8 +689,7 @@ class TestGroupByShowAggregations:
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="group_by_show",
-                    aggregation="sum",
+                    aggregation="max",
                 ),
             ],
         )
@@ -710,20 +701,18 @@ class TestGroupByShowAggregations:
                 seen_shows.append(show_id)
         assert len(seen_shows) == 2
 
-    def test_group_by_show_count_episodes(self, episode_setup: dict) -> None:
-        """Count aggregation should sort by number of episodes per show."""
+    def test_group_by_show_min_duration(self, episode_setup: dict) -> None:
+        """Min aggregation should sort by minimum episode duration per show."""
         episodes = _build(
             episode_setup,
             sort_by=[
                 _sort_key(
                     "episode.duration",
                     "ascending",
-                    mode="group_by_show",
-                    aggregation="count",
+                    aggregation="min",
                 ),
             ],
         )
-        # Both shows have 2 episodes, so count is the same — just verify it works
         assert len(episodes) == 4
 
 
@@ -840,7 +829,7 @@ class TestSortWithFilterCombinations:
                     "episode.recently_aired",
                     "descending",
                     days=7,
-                    mode="interleave_sequential",
+                    display="interleave",
                 ),
             ],
             minimum_duration=150,
@@ -865,8 +854,7 @@ class TestSortWithFilterCombinations:
                 _sort_key(
                     "episode.duration",
                     "descending",
-                    mode="group_by_show",
-                    aggregation="sum",
+                    aggregation="max",
                 ),
             ],
             hide_watched=True,
@@ -890,7 +878,7 @@ class TestSortWithFilterCombinations:
                 _sort_key(
                     "episode.air_date",
                     "descending",
-                    mode="interleave_random",
+                    display="randomize",
                 ),
             ],
             only_started_shows=True,
@@ -919,8 +907,7 @@ class TestMultipleSortKeyCombinations:
                 _sort_key(
                     "episode.duration",
                     "descending",
-                    mode="group_by_show",
-                    aggregation="sum",
+                    aggregation="max",
                 ),
             ],
         )
@@ -939,7 +926,7 @@ class TestMultipleSortKeyCombinations:
                     "episode.recently_aired",
                     "descending",
                     days=7,
-                    mode="interleave_sequential",
+                    display="interleave",
                 ),
             ],
             random_seed=42,
@@ -963,7 +950,7 @@ class TestMultipleSortKeyCombinations:
                 _sort_key(
                     "show.name",
                     "ascending",
-                    mode="interleave_sequential",
+                    display="interleave",
                 ),
             ],
             random_seed=42,
@@ -1196,11 +1183,10 @@ class TestRecentlyAiredGroupByShow:
             setup,
             sort_by=[
                 _sort_key("episode.duration", "descending"),
-                _sort_key("show.name", "ascending", mode="interleave_sequential"),
+                _sort_key("show.name", "ascending", display="interleave"),
                 _sort_key(
                     "episode.recently_aired",
                     "ascending",
-                    mode="group_by_show",
                     aggregation="max",
                     days=365,
                 ),

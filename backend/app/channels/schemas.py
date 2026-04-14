@@ -101,7 +101,9 @@ class SortKeyInput(BaseInput):
     # Redeclaring model_config replaces (not merges with) BaseInput's config, so
     # both settings have to be listed here.
     model_config = ConfigDict(
-        validate_by_name=True, extra="forbid", alias_generator=to_camel
+        validate_by_name=True,
+        extra="forbid",
+        alias_generator=to_camel,
     )  # type: ignore[reportAssignmentType]
 
     _MODEL_MAP: ClassVar[dict[str, type[Episode | Season | Show | Source | Plugin]]] = {
@@ -115,15 +117,10 @@ class SortKeyInput(BaseInput):
     model: Literal["episode", "season", "show", "source", "plugin"]
     field: str
     direction: Literal["ascending", "descending"]
-    mode: Literal[
-        "normal",
-        "interleave_sequential",
-        "interleave_random",
-        "group_by_show",
-    ]
-    aggregation: Literal["sum", "count", "max", "min", "first_value", "avg"] | None = (
-        Field(default=None)
+    display: Literal["sequential", "interleave", "randomize", "completion"] = Field(
+        default="sequential",
     )
+    aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
     days: int | None = Field(default=None)
     recently_aired_date: datetime | None = Field(default=None)
 
@@ -146,7 +143,9 @@ class SortKeyInput(BaseInput):
 
 class ChannelMediaFilter(BaseInput):
     model_config = ConfigDict(
-        validate_by_name=True, extra="forbid", alias_generator=to_camel
+        validate_by_name=True,
+        extra="forbid",
+        alias_generator=to_camel,
     )  # type: ignore[reportAssignmentType]
 
     sort_by: list[SortKeyInput] = Field(default_factory=list)

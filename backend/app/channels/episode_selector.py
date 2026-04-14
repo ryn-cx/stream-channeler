@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import String, case, literal_column
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
@@ -185,7 +185,7 @@ class EpisodeQueryBuilder:
                     model="episode",
                     field="random",
                     direction="ascending",
-                    mode="normal",
+                    display="sequential",
                 ),
             )
 
@@ -463,86 +463,153 @@ class EpisodeQueryBuilder:
             return query.limit(self._media_filter.limit)
         return query
 
-    @property
-    def _has_interleave(self) -> bool:
-        return any(
-            sort_key.mode in ("interleave_sequential", "interleave_random")
-            for sort_key in self._sort_keys
+    def _show_random_expression(self) -> ColumnElement[Any]:
+        return func.hashtext(
+            func.concat(
+                func.cast(Show.id, String),  # type: ignore[arg-type]
+                str(self._media_filter.random_seed),
+            ),
         )
-
-    @property
-    def _interleave_is_random(self) -> bool:
-        return any(sort_key.mode == "interleave_random" for sort_key in self._sort_keys)
-
-    def _collect_sort_expressions(
-        self,
-        *,
-        exclude_group_by_show: bool = False,
-        only_group_by_show: bool = False,
-    ) -> list[UnaryExpression[Any] | ColumnElement[Any]]:
-        """Collect sort expressions from configured sort keys.
-
-        Args:
-            exclude_group_by_show: If True, skip group_by_show sort keys (used for
-                window function partitioning to avoid nested window functions).
-            only_group_by_show: If True, only include group_by_show sort keys.
-        """
-        sort_expressions: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        for sort_key in reversed(self._sort_keys):
-            is_group_by_show = sort_key.mode == "group_by_show"
-            if exclude_group_by_show and is_group_by_show:
-                continue
-            if only_group_by_show and not is_group_by_show:
-                continue
-            sort_expressions.append(self._sql_sort_expression(sort_key))
-        return sort_expressions
 
     def _sort_episodes(
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
-        if not self._has_interleave:
-            return query.order_by(*self._collect_sort_expressions())
+        """Build ORDER BY from sort keys. Each key groups by its value, and
+        its display mode controls interleaving within that group. Multiple
+        keys nest as subgroups.
 
-        # group_by_show sorts act as tiers above interleaving — episodes are first
-        # grouped by these expressions, then interleaved within each tier.
-        group_by_show_sorts = self._collect_sort_expressions(only_group_by_show=True)
-        non_group_sorts = self._collect_sort_expressions(exclude_group_by_show=True)
-        remaining_sorts = non_group_sorts[1:]
-
-        last_sort_key = self._sort_keys[-1]
-        if last_sort_key.mode == "group_by_show":
-            partition_by = col(Show.id)
-        else:
-            partition_by = self._get_sorter(last_sort_key)  # type: ignore[assignment]
-        interleave_partition = func.row_number().over(
-            partition_by=partition_by,
-            order_by=self._collect_sort_expressions(exclude_group_by_show=True),
+        Window-function sort values (aggregations, sequential, etc.) are
+        materialized as columns in an inner subquery so they can be used
+        inside outer window function PARTITION BY / ORDER BY clauses.
+        """
+        window_fields = {"sequential", "last_watched", "episode_count", "started"}
+        # Identify which sort keys need materialization (window functions).
+        needs_subquery = any(
+            bool(sort_key.aggregation) or sort_key.field in window_fields
+            for sort_key in self._sort_keys
         )
 
-        if self._interleave_is_random:
-            show_random = func.hashtext(
-                func.concat(
-                    func.cast(Show.id, String),  # type: ignore[arg-type]
-                    str(self._media_filter.random_seed),
-                ),
-            )
-            return query.order_by(
-                *group_by_show_sorts,
-                interleave_partition,
-                show_random,
-                *remaining_sorts,
-            )
+        if not needs_subquery:
+            # No window values - build ORDER BY directly.
+            return self._build_simple_order_by(query)
 
-        return query.order_by(
-            *group_by_show_sorts,
-            interleave_partition,
-            *remaining_sorts,
+        # Materialize sort values as columns in a subquery.
+        labeled_values = [
+            self._get_sorter(sort_key).label(f"sv_{index}")
+            for index, sort_key in enumerate(self._sort_keys)
+        ]
+        inner = query.add_columns(*labeled_values).subquery()
+
+        episode_alias = aliased(Episode, inner)
+        outer: Select[tuple[Episode, Any]] = select(  # type: ignore[assignment]
+            episode_alias,
+            inner.c.primary_sort_value,
         )
+
+        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
+        simple_values: list[ColumnElement[Any]] = []
+        parent_values: list[ColumnElement[Any]] = []
+
+        for index, sort_key in enumerate(self._sort_keys):
+            raw_col: ColumnElement[Any] = getattr(inner.c, f"sv_{index}")
+            directed: UnaryExpression[Any] | ColumnElement[Any] = raw_col
+            if sort_key.direction == "descending":
+                directed = desc(raw_col)
+            if sort_key.field == "last_watched" and sort_key.direction == "ascending":
+                directed = directed.nulls_first()
+            else:
+                directed = directed.nulls_last()
+
+            match sort_key.display:
+                case "sequential":
+                    order_by.append(directed)
+
+                case "interleave":
+                    partition = [*parent_values, raw_col]
+                    window_order = simple_values.copy() or [directed]
+                    row_num = func.row_number().over(
+                        partition_by=partition,
+                        order_by=window_order,
+                    )
+                    order_by.extend([row_num, directed])
+
+                case "randomize":
+                    partition = [*parent_values, raw_col]
+                    window_order = simple_values.copy() or [directed]
+                    row_num = func.row_number().over(
+                        partition_by=partition,
+                        order_by=window_order,
+                    )
+                    random_value = func.hashtext(
+                        func.concat(
+                            func.cast(raw_col, String),
+                            str(self._media_filter.random_seed),
+                        ),
+                    )
+                    order_by.extend([row_num, random_value])
+
+                case "completion":
+                    order_by.append(directed)
+
+            simple_values.append(directed)
+            parent_values.append(raw_col)
+
+        return outer.order_by(*order_by)
+
+    def _build_simple_order_by(
+        self,
+        query: Select[tuple[Episode, Any]],
+    ) -> Select[tuple[Episode, Any]]:
+        """Build ORDER BY directly when no window-function values are used."""
+        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
+        simple_values: list[UnaryExpression[Any] | ColumnElement[Any]] = []
+        parent_values: list[ColumnElement[Any]] = []
+
+        for sort_key in self._sort_keys:
+            sort_value_directed = self._sql_sort_expression(sort_key)
+
+            match sort_key.display:
+                case "sequential":
+                    order_by.append(sort_value_directed)
+
+                case "interleave":
+                    sort_value_raw = self._get_sorter(sort_key)
+                    partition = [*parent_values, sort_value_raw]
+                    window_order = simple_values.copy() or [sort_value_directed]
+                    row_num = func.row_number().over(
+                        partition_by=partition,
+                        order_by=window_order,
+                    )
+                    order_by.extend([row_num, sort_value_directed])
+
+                case "randomize":
+                    sort_value_raw = self._get_sorter(sort_key)
+                    partition = [*parent_values, sort_value_raw]
+                    window_order = simple_values.copy() or [sort_value_directed]
+                    row_num = func.row_number().over(
+                        partition_by=partition,
+                        order_by=window_order,
+                    )
+                    random_value = func.hashtext(
+                        func.concat(
+                            func.cast(sort_value_raw, String),
+                            str(self._media_filter.random_seed),
+                        ),
+                    )
+                    order_by.extend([row_num, random_value])
+
+                case "completion":
+                    order_by.append(sort_value_directed)
+
+            simple_values.append(sort_value_directed)
+            parent_values.append(self._get_sorter(sort_key))
+
+        return query.order_by(*order_by)
 
     def _get_sorter(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         """Route a sort key to the appropriate SQL expression builder."""
-        if sort_key.mode == "group_by_show" and sort_key.model == "episode":
+        if sort_key.aggregation and sort_key.model == "episode":
             return self._sql_sort_by_show_episodes_expression(sort_key)
         return self._sql_sort_by_value_expression(sort_key)
 
@@ -586,6 +653,21 @@ class EpisodeQueryBuilder:
                     str(self._media_filter.random_seed),
                 ),
             )
+        if sort_key.field == "sequential":
+            if sort_key.model == "episode":
+                # Position of this episode within its show, ordered by
+                # season then episode sort_order. Interleaves shows at the
+                # same position.
+                return func.row_number().over(
+                    partition_by=col(Show.id),
+                    order_by=[col(Season.sort_order), col(Episode.sort_order)],
+                )
+            if sort_key.model == "season":
+                # Position of this season within its show.
+                return func.row_number().over(
+                    partition_by=col(Show.id),
+                    order_by=col(Season.sort_order),
+                )
         if sort_key.field == "recently_aired":
             if sort_key.recently_aired_date:
                 return self._recently_airing_sort_expression_absolute(
@@ -630,12 +712,9 @@ class EpisodeQueryBuilder:
             episode_field = getattr(Episode, sort_key.field)
 
         agg_funcs: dict[str, Any] = {
-            "sum": func.sum,
-            "avg": func.avg,
-            "count": func.count,
             "max": func.max,
             "min": func.min,
-            "first_value": func.first_value,
+            "avg": func.avg,
         }
         agg_func = agg_funcs.get(sort_key.aggregation)  # type: ignore[arg-type]
         if agg_func is None:

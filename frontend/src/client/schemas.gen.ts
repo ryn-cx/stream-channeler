@@ -2501,16 +2501,17 @@ export const SortKeyInputSchema = {
             enum: ['ascending', 'descending'],
             title: 'Direction'
         },
-        mode: {
+        display: {
             type: 'string',
-            enum: ['normal', 'interleave_sequential', 'interleave_random', 'group_by_show'],
-            title: 'Mode'
+            enum: ['sequential', 'interleave', 'randomize', 'completion'],
+            title: 'Display',
+            default: 'sequential'
         },
         aggregation: {
             anyOf: [
                 {
                     type: 'string',
-                    enum: ['sum', 'count', 'max', 'min', 'first_value', 'avg']
+                    enum: ['max', 'min', 'avg']
                 },
                 {
                     type: 'null'
@@ -2544,7 +2545,7 @@ export const SortKeyInputSchema = {
     },
     additionalProperties: false,
     type: 'object',
-    required: ['model', 'field', 'direction', 'mode'],
+    required: ['model', 'field', 'direction'],
     title: 'SortKeyInput'
 } as const;
 

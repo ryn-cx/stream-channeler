@@ -43,6 +43,7 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
 
     SORTABLE_FIELDS: ClassVar[list[str]] = [
         "sort_order",
+        "sequential",
         "name",
         "season_number",
         "random",

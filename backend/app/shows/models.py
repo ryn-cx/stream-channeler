@@ -46,7 +46,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         "name",
         "media_type",
         "started",
-        "last_watched",
         "episode_count",
         "random",
     ]

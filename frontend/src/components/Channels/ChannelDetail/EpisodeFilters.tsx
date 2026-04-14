@@ -72,7 +72,7 @@ const formSchema = z.object({
         model: z.string(),
         field: z.string(),
         direction: z.string().optional(),
-        mode: z.string().optional(),
+        display: z.string().optional(),
         aggregation: z.string().optional(),
         days: z.number().nullable().optional(),
       }),
@@ -103,16 +103,16 @@ type SortOption = {
   label: string
 }
 
-const AGGREGATION_OPTIONS = ["sum", "avg", "count", "max", "min"] as const
+const AGGREGATION_OPTIONS = ["max", "min", "avg"] as const
 type Aggregation = (typeof AGGREGATION_OPTIONS)[number]
 
-const MODE_OPTIONS = [
-  { value: "normal", label: "Normal" },
-  { value: "interleave_sequential", label: "Interleave (Sequential)" },
-  { value: "interleave_random", label: "Interleave (Random)" },
-  { value: "group_by_show", label: "Group by Show" },
+const DISPLAY_OPTIONS = [
+  { value: "sequential", label: "Sequential" },
+  { value: "interleave", label: "Interleave" },
+  { value: "randomize", label: "Randomize" },
+  { value: "completion", label: "Completion" },
 ] as const
-type Mode = (typeof MODE_OPTIONS)[number]["value"]
+type Display = (typeof DISPLAY_OPTIONS)[number]["value"]
 
 type RecentlyAiredMode = "relative" | "absolute"
 
@@ -120,8 +120,8 @@ type SortEntry = {
   model: string
   field: string
   direction: "ascending" | "descending"
-  mode: Mode
-  aggregation: Aggregation
+  display: Display
+  aggregation: Aggregation | null
   days: number | null
   recentlyAiredDate: string | null
   recentlyAiredMode: RecentlyAiredMode
@@ -155,8 +155,8 @@ function SortOptionsList({
                     model: option.model,
                     field: option.field,
                     direction: "ascending",
-                    mode: "normal",
-                    aggregation: "sum",
+                    display: "sequential",
+                    aggregation: null,
                     days: null,
                     recentlyAiredDate: null,
                     recentlyAiredMode: "relative",
@@ -333,10 +333,10 @@ export function EpisodeFilters({
         direction: (input.direction === "descending"
           ? "descending"
           : "ascending") as SortEntry["direction"],
-        mode: (MODE_OPTIONS.some((o) => o.value === input.mode)
-          ? input.mode
-          : "normal") as Mode,
-        aggregation: (input.aggregation ?? "sum") as Aggregation,
+        display: (DISPLAY_OPTIONS.some((o) => o.value === input.display)
+          ? input.display
+          : "sequential") as Display,
+        aggregation: (input.aggregation as Aggregation) ?? null,
         days: input.days ?? null,
         recentlyAiredDate: input.recentlyAiredDate ?? null,
         recentlyAiredMode: (input.recentlyAiredDate
@@ -436,9 +436,8 @@ export function EpisodeFilters({
       model: entry.model,
       field: entry.field,
       direction: entry.direction,
-      mode: entry.mode,
-      aggregation:
-        entry.mode === "group_by_show" ? entry.aggregation : undefined,
+      display: entry.display,
+      aggregation: entry.aggregation ?? undefined,
       days:
         isRecentlyAired(entry) && entry.recentlyAiredMode === "relative"
           ? entry.days
@@ -504,7 +503,7 @@ export function EpisodeFilters({
         )}
       </DialogTrigger>
       {/* Large max width looks nicer than medium. */}
-      <DialogContent className="sm:max-w-lrg">
+      <DialogContent className="sm:max-w-lrg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Channel Options</DialogTitle>
           <DialogDescription>
@@ -516,7 +515,7 @@ export function EpisodeFilters({
           {/* onSubmit is needed to manage additionalChannels and URL redirection */}
           <form
             onSubmit={form.handleSubmit((data) => onSubmit(data))}
-            className="grid gap-4 py-4"
+            className="grid gap-4 py-4 overflow-y-auto flex-1 min-h-0"
           >
             {/* grid - Use a grid layout */}
             {/* md:grid-cols-2 - 2 column grid */}
@@ -775,16 +774,18 @@ export function EpisodeFilters({
                             </Button>
                             <span className="text-xs">{label}</span>
                             <Select
-                              value={entry.mode}
+                              value={entry.display}
                               onValueChange={(value) =>
-                                updateEntry(index, { mode: value as Mode })
+                                updateEntry(index, {
+                                  display: value as Display,
+                                })
                               }
                             >
                               <SelectTrigger className="h-6 w-auto text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {MODE_OPTIONS.map((option) => (
+                                {DISPLAY_OPTIONS.map((option) => (
                                   <SelectItem
                                     key={option.value}
                                     value={option.value}
@@ -794,28 +795,29 @@ export function EpisodeFilters({
                                 ))}
                               </SelectContent>
                             </Select>
-                            {entry.mode === "group_by_show" && (
-                              <Select
-                                value={entry.aggregation}
-                                onValueChange={(value) =>
-                                  updateEntry(index, {
-                                    aggregation: value as Aggregation,
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-6 w-20 text-xs">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {AGGREGATION_OPTIONS.map((agg) => (
-                                    <SelectItem key={agg} value={agg}>
-                                      {agg.charAt(0).toUpperCase() +
-                                        agg.slice(1)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            <Select
+                              value={entry.aggregation ?? "__none__"}
+                              onValueChange={(value) =>
+                                updateEntry(index, {
+                                  aggregation:
+                                    value === "__none__"
+                                      ? null
+                                      : (value as Aggregation),
+                                })
+                              }
+                            >
+                              <SelectTrigger className="h-6 w-auto text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">No Agg</SelectItem>
+                                {AGGREGATION_OPTIONS.map((agg) => (
+                                  <SelectItem key={agg} value={agg}>
+                                    {agg.charAt(0).toUpperCase() + agg.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button
