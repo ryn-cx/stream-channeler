@@ -33,7 +33,7 @@ def _sort_key(
         "model": model,
         "field": field,
         "direction": direction,
-        "display": display,
+        "order": display,
     }
     if aggregation is not None:
         data["aggregation"] = aggregation

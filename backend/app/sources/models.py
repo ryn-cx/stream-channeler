@@ -34,7 +34,7 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
         Index("Source-deleted_at-index", "deleted_at"),
     )
 
-    SORTABLE_FIELDS: ClassVar[list[str]] = ["name"]
+    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="sources")

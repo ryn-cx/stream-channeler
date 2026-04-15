@@ -97,7 +97,9 @@ def _random_sort_key_input() -> SortKeyInput:
         direction=random.choice(
             get_args(SortKeyInput.model_fields["direction"].annotation),
         ),
-        mode=random.choice(get_args(SortKeyInput.model_fields["mode"].annotation)),
+        order=random.choice(
+            get_args(SortKeyInput.model_fields["order"].annotation),
+        ),
     )
 
 

@@ -48,19 +48,24 @@ interface SortPreset {
   sortBy: SortKeyInput[]
 }
 
+function sortKey(
+  modelField: `${SortKeyInput["model"]}.${string}`,
+  direction: SortKeyInput["direction"],
+  order: NonNullable<SortKeyInput["order"]> = "sequential",
+): SortKeyInput {
+  const [model, field] = modelField.split(".") as [
+    SortKeyInput["model"],
+    string,
+  ]
+  return { model, field, direction, order }
+}
+
 const SORT_PRESETS: SortPreset[] = [
   {
     label: "Roll The Dice",
     description: "The episode order is completely random",
     icon: <Dice5 className="h-10 w-10" />,
-    sortBy: [
-      {
-        model: "episode",
-        field: "random",
-        direction: "ascending",
-        display: "sequential",
-      },
-    ],
+    sortBy: [sortKey("episode.random", "ascending")],
   },
   {
     label: "Channel Surfing",
@@ -68,32 +73,15 @@ const SORT_PRESETS: SortPreset[] = [
       "Episodes play in order within each show, but shows are interleaved randomly",
     icon: <Waves className="h-10 w-10" />,
     sortBy: [
-      {
-        model: "season",
-        field: "sequential",
-        direction: "ascending",
-        display: "sequential",
-      },
-      {
-        model: "episode",
-        field: "sequential",
-        direction: "ascending",
-        display: "randomize",
-      },
+      sortKey("season.sequential", "ascending"),
+      sortKey("episode.sequential", "ascending", "randomize"),
     ],
   },
   {
     label: "Fresh Picks",
     description: "Most recently aired episodes appear first",
     icon: <Cherry className="h-10 w-10" />,
-    sortBy: [
-      {
-        model: "episode",
-        field: "air_date",
-        direction: "descending",
-        display: "sequential",
-      },
-    ],
+    sortBy: [sortKey("episode.air_date", "descending")],
   },
   {
     label: "Marathon Mode",
@@ -101,24 +89,9 @@ const SORT_PRESETS: SortPreset[] = [
       "All episodes of one show play in order before moving to the next show",
     icon: <ListOrdered className="h-10 w-10" />,
     sortBy: [
-      {
-        model: "show",
-        field: "name",
-        direction: "ascending",
-        display: "completion",
-      },
-      {
-        model: "season",
-        field: "season_number",
-        direction: "ascending",
-        display: "sequential",
-      },
-      {
-        model: "episode",
-        field: "episode_number",
-        direction: "ascending",
-        display: "sequential",
-      },
+      sortKey("show.name", "ascending"),
+      sortKey("season.season_number", "ascending"),
+      sortKey("episode.episode_number", "ascending"),
     ],
   },
 ]

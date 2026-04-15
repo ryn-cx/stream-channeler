@@ -108,17 +108,17 @@ class EpisodeQueryBuilder:
         rows = self._session.exec(query).all()
 
         episodes = [row[0] for row in rows]
-        channel_map = self._get_episode_channels(episodes)
-        watch_map = self._get_latest_watches(episodes)
+        channels = self._get_episode_channels(episodes)
+        watches = self._get_latest_watches(episodes)
 
         return [
             EpisodeResult(
                 episode=episode,
-                channel_id=channel_map[episode.id],
-                latest_watch=watch_map.get(episode.id),
+                channel_id=channels[episode.id],
+                latest_watch=watches.get(episode.id),
             )
             for episode in episodes
-            if episode.id in channel_map
+            if episode.id in channels
         ]
 
     def _get_episode_channels(
@@ -185,20 +185,18 @@ class EpisodeQueryBuilder:
                     model="episode",
                     field="random",
                     direction="ascending",
-                    display="sequential",
                 ),
             )
 
-        sort_expression = self._get_sorter(self._sort_keys[-1])
+        sort_expression = self._sort_value_expr(self._sort_keys[-1])
 
-        query = (
+        return (
             select(Episode, sort_expression.label("primary_sort_value"))
             .select_from(Episode)
             .join(Season)
             .join(Show)
             .join(ChannelShow)
         )
-        return query.limit(MAX_EPISODES_RETURNED)
 
     def _join_whitelist_tables[
         T: Select[tuple[UUID, UUID]] | Select[tuple[Episode, Any]],
@@ -463,263 +461,129 @@ class EpisodeQueryBuilder:
             return query.limit(self._media_filter.limit)
         return query
 
-    def _show_random_expression(self) -> ColumnElement[Any]:
-        return func.hashtext(
-            func.concat(
-                func.cast(Show.id, String),  # type: ignore[arg-type]
-                str(self._media_filter.random_seed),
-            ),
-        )
-
     def _sort_episodes(
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
-        """Build ORDER BY from sort keys. Each key groups by its value, and
-        its display mode controls interleaving within that group. Multiple
-        keys nest as subgroups.
+        """Build ORDER BY from sort keys.
 
-        Window-function sort values (aggregations, sequential, etc.) are
-        materialized as columns in an inner subquery so they can be used
-        inside outer window function PARTITION BY / ORDER BY clauses.
+        Sort values are materialized in an inner subquery so window-function
+        values (aggregates, episode_count, etc.) can be referenced inside
+        outer window PARTITION BY clauses without violating Postgres's
+        nested-window restriction.
         """
-        window_fields = {"sequential", "last_watched", "episode_count", "started"}
-        # Identify which sort keys need materialization (window functions).
-        needs_subquery = any(
-            bool(sort_key.aggregation) or sort_key.field in window_fields
-            for sort_key in self._sort_keys
-        )
-
-        if not needs_subquery:
-            # No window values - build ORDER BY directly.
-            return self._build_simple_order_by(query)
-
-        # Materialize sort values as columns in a subquery.
-        labeled_values = [
-            self._get_sorter(sort_key).label(f"sv_{index}")
+        labeled_values: list[ColumnElement[Any]] = [
+            self._sort_value_expr(sort_key).label(f"sv_{index}")
             for index, sort_key in enumerate(self._sort_keys)
         ]
+        # show_id is materialized so it can serve as the primary deterministic
+        # tiebreak below, keeping same-show episodes adjacent when every
+        # user-specified key ties.
+        labeled_values.append(Season.show_id.label("show_id"))  # type: ignore[arg-type]
         inner = query.add_columns(*labeled_values).subquery()
 
-        episode_alias = aliased(Episode, inner)
+        raws = [getattr(inner.c, f"sv_{i}") for i in range(len(self._sort_keys))]
+        directeds = [
+            self._apply_direction(raws[i], key) for i, key in enumerate(self._sort_keys)
+        ]
+
+        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
+        for index, sort_key in enumerate(self._sort_keys):
+            if sort_key.order == "sequential":
+                order_by.append(directeds[index])
+                continue
+
+            # interleave / randomize: partition by this value and spread rows
+            # with row_number. Inner ORDER BY uses the subsequent sort keys so
+            # row_num=1 picks each partition's first sequential row, row_num=2
+            # the second, etc. randomize shuffles the partition order.
+            row_num = func.row_number().over(
+                partition_by=raws[: index + 1],
+                order_by=directeds[index + 1 :] or [directeds[index]],
+            )
+            partition_order = (
+                self._random_hash(raws[index])
+                if sort_key.order == "randomize"
+                else directeds[index]
+            )
+            order_by.extend([row_num, partition_order])
+
+        # Final deterministic tiebreaks.
+        order_by.extend([inner.c.show_id, inner.c.id])
+
         outer: Select[tuple[Episode, Any]] = select(  # type: ignore[assignment]
-            episode_alias,
+            aliased(Episode, inner),
             inner.c.primary_sort_value,
         )
-
-        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        simple_values: list[ColumnElement[Any]] = []
-        parent_values: list[ColumnElement[Any]] = []
-
-        for index, sort_key in enumerate(self._sort_keys):
-            raw_col: ColumnElement[Any] = getattr(inner.c, f"sv_{index}")
-            directed: UnaryExpression[Any] | ColumnElement[Any] = raw_col
-            if sort_key.direction == "descending":
-                directed = desc(raw_col)
-            if sort_key.field == "last_watched" and sort_key.direction == "ascending":
-                directed = directed.nulls_first()
-            else:
-                directed = directed.nulls_last()
-
-            match sort_key.display:
-                case "sequential":
-                    order_by.append(directed)
-
-                case "interleave":
-                    partition = [*parent_values, raw_col]
-                    window_order = simple_values.copy() or [directed]
-                    row_num = func.row_number().over(
-                        partition_by=partition,
-                        order_by=window_order,
-                    )
-                    order_by.extend([row_num, directed])
-
-                case "randomize":
-                    partition = [*parent_values, raw_col]
-                    window_order = simple_values.copy() or [directed]
-                    row_num = func.row_number().over(
-                        partition_by=partition,
-                        order_by=window_order,
-                    )
-                    random_value = func.hashtext(
-                        func.concat(
-                            func.cast(raw_col, String),
-                            str(self._media_filter.random_seed),
-                        ),
-                    )
-                    order_by.extend([row_num, random_value])
-
-                case "sequential_randomize":
-                    # Play groups in order, randomize episodes within each.
-                    random_value = func.hashtext(
-                        func.concat(
-                            func.cast(inner.c.id, String),
-                            str(self._media_filter.random_seed),
-                        ),
-                    )
-                    order_by.extend([directed, random_value])
-
-            simple_values.append(directed)
-            parent_values.append(raw_col)
-
         return outer.order_by(*order_by)
 
-    def _build_simple_order_by(
-        self,
-        query: Select[tuple[Episode, Any]],
-    ) -> Select[tuple[Episode, Any]]:
-        """Build ORDER BY directly when no window-function values are used."""
-        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        simple_values: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        parent_values: list[ColumnElement[Any]] = []
-
-        for sort_key in self._sort_keys:
-            sort_value_directed = self._sql_sort_expression(sort_key)
-
-            match sort_key.display:
-                case "sequential":
-                    order_by.append(sort_value_directed)
-
-                case "interleave":
-                    sort_value_raw = self._get_sorter(sort_key)
-                    partition = [*parent_values, sort_value_raw]
-                    window_order = simple_values.copy() or [sort_value_directed]
-                    row_num = func.row_number().over(
-                        partition_by=partition,
-                        order_by=window_order,
-                    )
-                    order_by.extend([row_num, sort_value_directed])
-
-                case "randomize":
-                    sort_value_raw = self._get_sorter(sort_key)
-                    partition = [*parent_values, sort_value_raw]
-                    window_order = simple_values.copy() or [sort_value_directed]
-                    row_num = func.row_number().over(
-                        partition_by=partition,
-                        order_by=window_order,
-                    )
-                    random_value = func.hashtext(
-                        func.concat(
-                            func.cast(sort_value_raw, String),
-                            str(self._media_filter.random_seed),
-                        ),
-                    )
-                    order_by.extend([row_num, random_value])
-
-                case "sequential_randomize":
-                    # Play groups in order, randomize episodes within each.
-                    random_value = func.hashtext(
-                        func.concat(
-                            func.cast(col(Episode.id), String),
-                            str(self._media_filter.random_seed),
-                        ),
-                    )
-                    order_by.extend([sort_value_directed, random_value])
-
-            simple_values.append(sort_value_directed)
-            parent_values.append(self._get_sorter(sort_key))
-
-        return query.order_by(*order_by)
-
-    def _get_sorter(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
-        """Route a sort key to the appropriate SQL expression builder."""
-        if sort_key.aggregation and sort_key.model == "episode":
-            return self._sql_sort_by_show_episodes_expression(sort_key)
-        return self._sql_sort_by_value_expression(sort_key)
-
-    def _sql_sort_expression(
-        self,
+    @staticmethod
+    def _apply_direction(
+        expr: ColumnElement[Any],
         sort_key: SortKeyInput,
     ) -> UnaryExpression[Any] | ColumnElement[Any]:
-        sorter = self._get_sorter(sort_key)
-
-        if sort_key.direction == "descending":
-            sorter = desc(sorter)
-
-        # Last watched with ascending should have nulls first because never watched
-        # episodes should appear first.
+        """Add direction and null-handling to a raw sort value."""
+        directed: UnaryExpression[Any] | ColumnElement[Any] = (
+            desc(expr) if sort_key.direction == "descending" else expr
+        )
+        # Never-watched episodes (NULL last_watched) should appear first when
+        # ascending so unwatched content surfaces before rewatches.
         if sort_key.field == "last_watched" and sort_key.direction == "ascending":
-            sorter = sorter.nulls_first()
-        else:
-            sorter = sorter.nulls_last()
+            return directed.nulls_first()
+        return directed.nulls_last()
 
-        return sorter
+    def _random_hash(self, expr: ColumnElement[Any]) -> ColumnElement[Any]:
+        """Stable pseudo-random ordering keyed by ``expr`` and the user seed."""
+        return func.hashtext(
+            func.concat(
+                func.cast(expr, String),
+                str(self._media_filter.random_seed),
+            ),
+        )
 
-    def _sql_sort_by_value_expression(  # noqa: PLR0911
-        self,
-        sort_key: SortKeyInput,
-    ) -> ColumnElement[Any]:
-        """Get SQL expression for a value-based sort."""
-        if sort_key.field == "random":
-            # Hash the id of the model the sort key targets so episodes within
-            # the same parent stay grouped. For example, sorting by "Show -
-            # Random" hashes Show.id, which keeps every show's episodes
-            # together while randomizing the order shows appear in.
-            random_columns: dict[str, Mapped[UUID]] = {
+    def _sort_value_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
+        """Return the SQL expression for a sort key's raw value."""
+        if sort_key.aggregation and sort_key.model == "episode":
+            return self._aggregate_episode_expr(sort_key)
+        return self._value_expr(sort_key)
+
+    def _value_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:  # noqa: PLR0911
+        """SQL expression for a non-aggregate sort key."""
+        field = sort_key.field
+
+        if field == "random":
+            random_ids: dict[str, Mapped[UUID]] = {
                 "episode": Episode.id,  # type: ignore[dict-item]
                 "season": Season.id,  # type: ignore[dict-item]
                 "show": Show.id,  # type: ignore[dict-item]
             }
-            random_column = random_columns[sort_key.model]
-            return func.hashtext(
-                func.concat(
-                    func.cast(random_column, String),
-                    str(self._media_filter.random_seed),
-                ),
-            )
-        if sort_key.field == "sequential":
-            if sort_key.model == "episode":
-                # Position of this episode within its show, ordered by
-                # season then episode sort_order. Interleaves shows at the
-                # same position.
-                return func.row_number().over(
-                    partition_by=col(Show.id),
-                    order_by=[col(Season.sort_order), col(Episode.sort_order)],
-                )
-            if sort_key.model == "season":
-                # Position of this season within its show.
-                return func.row_number().over(
-                    partition_by=col(Show.id),
-                    order_by=col(Season.sort_order),
-                )
-        if sort_key.field == "recently_aired":
-            if sort_key.recently_aired_date:
-                return self._recently_airing_sort_expression_absolute(
-                    sort_key.recently_aired_date,
-                )
-            return self._recently_airing_sort_expression(sort_key.days or 7)
-        if sort_key.field == "last_watched":
+            return self._random_hash(random_ids[sort_key.model])
+        if field == "sequential":
+            return self._sequential_rank(sort_key.model)
+        if field == "recently_aired":
+            return self._recently_aired_expr(sort_key)
+        if field == "last_watched":
             return literal_column("show_last_watched.show_last_watch_date")
-        if sort_key.field == "episode_count":
+        if field == "episode_count":
             return func.count(Episode.id).over(partition_by=col(Show.id))  # type: ignore[arg-type]
-        if sort_key.model == "show" and sort_key.field == "started":
-            return self._started_show_sort_expression()
+        if field == "started" and sort_key.model == "show":
+            return self._started_show_expr()
 
         # no-any-return - Validated to be a ColumnElement.
-        return getattr(sort_key.model_class, sort_key.field)  # type: ignore[no-any-return]
+        return getattr(sort_key.model_class, field)  # type: ignore[no-any-return]
 
-    def _sql_sort_by_show_episodes_expression(
+    def _aggregate_episode_expr(
         self,
         sort_key: SortKeyInput,
     ) -> ColumnElement[Any]:
-        """Get aggregate window function for show-grouped episode sorting."""
+        """Aggregate an episode field per show (e.g. max air_date per show)."""
         if sort_key.field == "last_watched":
             return literal_column("show_last_watched.show_last_watch_date")
 
         if sort_key.field == "random":
-            salt = str(self._media_filter.random_seed)
-            episode_field = func.hashtext(
-                func.concat(func.cast(Show.id, String), salt),  # type: ignore[arg-type]
-            )
+            episode_field: ColumnElement[Any] = self._random_hash(Show.id)  # type: ignore[arg-type]
         elif sort_key.field == "recently_aired":
-            if sort_key.recently_aired_date:
-                episode_field = self._recently_airing_sort_expression_absolute(  # type: ignore[assignment]
-                    sort_key.recently_aired_date,
-                )
-            else:
-                episode_field = self._recently_airing_sort_expression(  # type: ignore[assignment]
-                    sort_key.days or 7,
-                )
+            episode_field = self._recently_aired_expr(sort_key)
         elif sort_key.field == "episode_count":
             episode_field = Episode.id  # type: ignore[assignment]
         else:
@@ -734,17 +598,49 @@ class EpisodeQueryBuilder:
         if agg_func is None:
             msg = f"Unsupported aggregation '{sort_key.aggregation}'"
             raise ValueError(msg)
-
         return agg_func(episode_field).over(partition_by=col(Show.id))
 
-    def _recently_airing_sort_expression(self, days: int) -> ColumnElement[Any]:
-        cutoff = tz_datetime.now() - timedelta(days=days)
-        return self._recently_airing_sort_expression_absolute(cutoff)
+    @staticmethod
+    def _sequential_rank(model: str) -> ColumnElement[Any]:
+        """Position (1-indexed) of the row among its siblings by ``sort_order``.
+
+        Uses a correlated scalar subquery so the rank counts every sibling,
+        not only rows that survive the outer WHERE. Otherwise ``hide_watched``
+        would shift season 4 to position 1 once earlier seasons filter out.
+        """
+        if model == "episode":
+            sibling = aliased(Episode)
+            return (
+                select(func.count(func.distinct(sibling.sort_order)) + 1)
+                .where(
+                    sibling.season_id == col(Episode.season_id),
+                    col(sibling.sort_order) < col(Episode.sort_order),
+                    col(sibling.deleted_at).is_(None),
+                )
+                .correlate(Episode)
+                .scalar_subquery()
+            )
+        if model == "season":
+            sibling = aliased(Season)
+            return (
+                select(func.count(func.distinct(sibling.sort_order)) + 1)
+                .where(
+                    sibling.show_id == col(Season.show_id),
+                    col(sibling.sort_order) < col(Season.sort_order),
+                    col(sibling.deleted_at).is_(None),
+                )
+                .correlate(Season)
+                .scalar_subquery()
+            )
+        msg = f"sequential is not supported for model '{model}'"
+        raise ValueError(msg)
 
     @staticmethod
-    def _recently_airing_sort_expression_absolute(
-        cutoff: datetime,
-    ) -> ColumnElement[Any]:
+    def _recently_aired_expr(sort_key: SortKeyInput) -> ColumnElement[Any]:
+        """1 if the episode aired on/after the cutoff, else 0."""
+        cutoff = sort_key.recently_aired_date or (
+            tz_datetime.now() - timedelta(days=sort_key.days or 7)
+        )
         return case(
             (
                 and_(
@@ -756,7 +652,8 @@ class EpisodeQueryBuilder:
             else_=0,
         )
 
-    def _started_show_sort_expression(self) -> ColumnElement[Any]:
+    def _started_show_expr(self) -> ColumnElement[Any]:
+        """1 if the show has any verified watch by the current user, else 0."""
         if not self._user:
             return literal_column("0")
         started_query = (
@@ -774,22 +671,3 @@ class EpisodeQueryBuilder:
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)
-
-    def _not_started_show_sort_expression(self) -> ColumnElement[Any]:
-        if not self._user:
-            return literal_column("1")
-        started_query = (
-            select(Watch.id)
-            .join(Episode, Watch.episode_id == Episode.id)  # type: ignore[arg-type]
-            .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
-            .where(
-                and_(
-                    col(Season.show_id) == col(Show.id),
-                    Watch.user_id == self._user.id,
-                    col(Watch.verified).is_(True),
-                ),
-            )
-            .correlate(Show)
-            .limit(1)
-        )
-        return case((started_query.exists(), 0), else_=1)

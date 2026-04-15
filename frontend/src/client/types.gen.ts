@@ -353,7 +353,7 @@ export type SortKeyInput = {
     model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
     field: string;
     direction: 'ascending' | 'descending';
-    display?: 'sequential' | 'interleave' | 'randomize' | 'completion';
+    order?: 'sequential' | 'interleave' | 'randomize';
     aggregation?: ('max' | 'min' | 'avg' | null);
     days?: (number | null);
     recentlyAiredDate?: (string | null);
@@ -363,7 +363,7 @@ export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
 
 export type direction = 'ascending' | 'descending';
 
-export type display = 'sequential' | 'interleave' | 'randomize' | 'completion';
+export type order = 'sequential' | 'interleave' | 'randomize';
 
 export type SortOptionOutput = {
     label: string;

@@ -31,7 +31,7 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
-    SORTABLE_FIELDS: ClassVar[list[str]] = ["name", "public"]
+    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "public"]
 
     user_id: uuid.UUID = Field(
         foreign_key="user.id",

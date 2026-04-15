@@ -117,12 +117,14 @@ class SortKeyInput(BaseInput):
     model: Literal["episode", "season", "show", "source", "plugin"]
     field: str
     direction: Literal["ascending", "descending"]
-    display: Literal[
-        "sequential",
-        "interleave",
-        "randomize",
-        "sequential_randomize",
-    ] = Field(default="sequential")
+    # order controls how this key contributes to the final ordering:
+    # - "sequential": standard ORDER BY contribution using the value itself.
+    # - "interleave": partition rows by this value and spread them across the
+    #   output using row_number, so rows with distinct values alternate.
+    # - "randomize": like interleave but partitions play in a random order.
+    order: Literal["sequential", "interleave", "randomize"] = Field(
+        default="sequential",
+    )
     aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
     days: int | None = Field(default=None)
     recently_aired_date: datetime | None = Field(default=None)

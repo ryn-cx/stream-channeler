@@ -14,6 +14,7 @@ export interface PluginTableData {
   id: string
   user_id: string | null
   data_timestamp: string | null
+  deleted_at: string | null
   public: boolean
 }
 
@@ -38,6 +39,17 @@ export const columns: ColumnDef<PluginTableData>[] = [
       <span className="text-muted-foreground text-sm">
         {row.original.data_timestamp
           ? new Date(row.original.data_timestamp).toLocaleString()
+          : "-"}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "deleted_at",
+    header: "Deleted At",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.deleted_at
+          ? new Date(row.original.deleted_at).toLocaleString()
           : "-"}
       </span>
     ),

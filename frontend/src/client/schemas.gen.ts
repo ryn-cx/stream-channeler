@@ -2501,10 +2501,10 @@ export const SortKeyInputSchema = {
             enum: ['ascending', 'descending'],
             title: 'Direction'
         },
-        display: {
+        order: {
             type: 'string',
-            enum: ['sequential', 'interleave', 'randomize', 'completion'],
-            title: 'Display',
+            enum: ['sequential', 'interleave', 'randomize'],
+            title: 'Order',
             default: 'sequential'
         },
         aggregation: {

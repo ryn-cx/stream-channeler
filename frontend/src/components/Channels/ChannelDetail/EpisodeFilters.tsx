@@ -72,7 +72,7 @@ const formSchema = z.object({
         model: z.string(),
         field: z.string(),
         direction: z.string().optional(),
-        display: z.string().optional(),
+        order: z.string().optional(),
         aggregation: z.string().optional(),
         days: z.number().nullable().optional(),
       }),
@@ -106,13 +106,12 @@ type SortOption = {
 const AGGREGATION_OPTIONS = ["max", "min", "avg"] as const
 type Aggregation = (typeof AGGREGATION_OPTIONS)[number]
 
-const DISPLAY_OPTIONS = [
+const ORDER_OPTIONS = [
   { value: "sequential", label: "Sequential" },
   { value: "interleave", label: "Interleave" },
   { value: "randomize", label: "Randomize" },
-  { value: "sequential_randomize", label: "Sequential Randomize" },
 ] as const
-type Display = (typeof DISPLAY_OPTIONS)[number]["value"]
+type Order = (typeof ORDER_OPTIONS)[number]["value"]
 
 type RecentlyAiredMode = "relative" | "absolute"
 
@@ -120,7 +119,7 @@ type SortEntry = {
   model: string
   field: string
   direction: "ascending" | "descending"
-  display: Display
+  order: Order
   aggregation: Aggregation | null
   days: number | null
   recentlyAiredDate: string | null
@@ -155,7 +154,7 @@ function SortOptionsList({
                     model: option.model,
                     field: option.field,
                     direction: "ascending",
-                    display: "sequential",
+                    order: "sequential",
                     aggregation: null,
                     days: null,
                     recentlyAiredDate: null,
@@ -333,9 +332,9 @@ export function EpisodeFilters({
         direction: (input.direction === "descending"
           ? "descending"
           : "ascending") as SortEntry["direction"],
-        display: (DISPLAY_OPTIONS.some((o) => o.value === input.display)
-          ? input.display
-          : "sequential") as Display,
+        order: (ORDER_OPTIONS.some((option) => option.value === input.order)
+          ? input.order
+          : "sequential") as Order,
         aggregation: (input.aggregation as Aggregation) ?? null,
         days: input.days ?? null,
         recentlyAiredDate: input.recentlyAiredDate ?? null,
@@ -436,7 +435,7 @@ export function EpisodeFilters({
       model: entry.model,
       field: entry.field,
       direction: entry.direction,
-      display: entry.display,
+      order: entry.order,
       aggregation: entry.aggregation ?? undefined,
       days:
         isRecentlyAired(entry) && entry.recentlyAiredMode === "relative"
@@ -741,11 +740,15 @@ export function EpisodeFilters({
                         option.field === entry.field,
                     )
                     const label = sortOption?.label ?? entry.field
+                    const isRecentlyAired =
+                      entry.model === "episode" &&
+                      entry.field === "recently_aired"
                     return (
-                      <div key={index}>
-                        <div
-                          className={`flex items-center justify-between p-2 border text-sm ${entry.model === "episode" && entry.field === "recently_aired" ? "rounded-t" : "rounded"}`}
-                        >
+                      <div
+                        key={`${entry.model}.${entry.field}.${index}`}
+                        className="border rounded text-sm overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between p-2">
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"
@@ -759,7 +762,7 @@ export function EpisodeFilters({
                                       : "ascending",
                                 })
                               }
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0"
                               title={
                                 entry.direction === "ascending"
                                   ? "Ascending"
@@ -772,52 +775,7 @@ export function EpisodeFilters({
                                 <ArrowDown className="h-3 w-3" />
                               )}
                             </Button>
-                            <span className="text-xs">{label}</span>
-                            <Select
-                              value={entry.display}
-                              onValueChange={(value) =>
-                                updateEntry(index, {
-                                  display: value as Display,
-                                })
-                              }
-                            >
-                              <SelectTrigger className="h-6 w-auto text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {DISPLAY_OPTIONS.map((option) => (
-                                  <SelectItem
-                                    key={option.value}
-                                    value={option.value}
-                                  >
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              value={entry.aggregation ?? "__none__"}
-                              onValueChange={(value) =>
-                                updateEntry(index, {
-                                  aggregation:
-                                    value === "__none__"
-                                      ? null
-                                      : (value as Aggregation),
-                                })
-                              }
-                            >
-                              <SelectTrigger className="h-6 w-auto text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">No Agg</SelectItem>
-                                {AGGREGATION_OPTIONS.map((agg) => (
-                                  <SelectItem key={agg} value={agg}>
-                                    {agg.charAt(0).toUpperCase() + agg.slice(1)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <span className="text-xs font-medium">{label}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Button
@@ -826,7 +784,7 @@ export function EpisodeFilters({
                               variant="ghost"
                               onClick={() => moveSortOption(index, "up")}
                               disabled={index === 0}
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0"
                             >
                               <ChevronUp className="h-3 w-3" />
                             </Button>
@@ -836,7 +794,7 @@ export function EpisodeFilters({
                               variant="ghost"
                               onClick={() => moveSortOption(index, "down")}
                               disabled={index === sortEntries.length - 1}
-                              className="h-6 w-6 p-0"
+                              className="h-7 w-7 p-0"
                             >
                               <ChevronDown className="h-3 w-3" />
                             </Button>
@@ -845,19 +803,62 @@ export function EpisodeFilters({
                               size="sm"
                               variant="ghost"
                               onClick={() => removeSortOption(index)}
-                              className="h-6 w-6 p-0 text-destructive"
+                              className="h-7 w-7 p-0 text-destructive"
                             >
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
-                        {entry.model === "episode" &&
-                          entry.field === "recently_aired" && (
-                            <div className="flex items-center gap-2 p-2 border-x border-b rounded-b text-xs">
+                        <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
+                          <Select
+                            value={entry.order}
+                            onValueChange={(value) =>
+                              updateEntry(index, { order: value as Order })
+                            }
+                          >
+                            <SelectTrigger className="h-9 w-auto text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ORDER_OPTIONS.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={entry.aggregation ?? "__none__"}
+                            onValueChange={(value) =>
+                              updateEntry(index, {
+                                aggregation:
+                                  value === "__none__"
+                                    ? null
+                                    : (value as Aggregation),
+                              })
+                            }
+                          >
+                            <SelectTrigger className="h-9 w-auto text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">No Agg</SelectItem>
+                              {AGGREGATION_OPTIONS.map((agg) => (
+                                <SelectItem key={agg} value={agg}>
+                                  {agg.charAt(0).toUpperCase() + agg.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isRecentlyAired && (
+                            <>
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() =>
                                   updateEntry(index, {
                                     recentlyAiredMode:
@@ -866,7 +867,7 @@ export function EpisodeFilters({
                                         : "relative",
                                   })
                                 }
-                                className="h-6 text-xs px-2"
+                                className="h-9 px-3 text-sm"
                               >
                                 {entry.recentlyAiredMode === "relative"
                                   ? "Days ago"
@@ -885,7 +886,7 @@ export function EpisodeFilters({
                                         : null,
                                     })
                                   }
-                                  className="h-6 w-20 text-xs"
+                                  className="h-9 w-20 text-sm"
                                 />
                               ) : (
                                 <Input
@@ -897,11 +898,12 @@ export function EpisodeFilters({
                                         event.target.value || null,
                                     })
                                   }
-                                  className="h-6 w-36 text-xs"
+                                  className="h-9 w-36 text-sm"
                                 />
                               )}
-                            </div>
+                            </>
                           )}
+                        </div>
                       </div>
                     )
                   })}

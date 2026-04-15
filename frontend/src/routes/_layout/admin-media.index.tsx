@@ -20,6 +20,7 @@ interface AdminPluginTableData {
   user_id: string | null
   data_timestamp: string | null
   update_at: string | null
+  deleted_at: string | null
   public: boolean
 }
 
@@ -70,6 +71,17 @@ const adminPluginColumns: ColumnDef<AdminPluginTableData>[] = [
       <span className="text-muted-foreground text-sm">
         {row.original.update_at
           ? new Date(row.original.update_at).toLocaleString()
+          : "-"}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "deleted_at",
+    header: "Deleted At",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.deleted_at
+          ? new Date(row.original.deleted_at).toLocaleString()
           : "-"}
       </span>
     ),
