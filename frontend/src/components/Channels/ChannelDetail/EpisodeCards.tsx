@@ -155,8 +155,6 @@ export function EpisodeCard({
   index?: number
 }) {
   const [_cardRendered, setCardRendered] = useState(false)
-  const [hovered, setHovered] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -327,8 +325,6 @@ export function EpisodeCard({
           editOrder ? "ring-2 ring-green-600/60" : ""
         }`}
         onClick={handleClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         draggable={editOrder && index !== undefined}
         onDragStart={(event) => {
           if (!editOrder || index === undefined) return
@@ -424,9 +420,8 @@ export function EpisodeCard({
             </Badge>
           )}
 
-          {/* Burger menu in top right corner - only mount when hovered or open to avoid Radix ref loops */}
-          {(hovered || menuOpen) && (
-            <DropdownMenu onOpenChange={setMenuOpen}>
+          {/* Burger menu in top right corner */}
+          <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -528,7 +523,6 @@ export function EpisodeCard({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
         </div>
 
         {/* px-2 pb-2 - Border area around the text to make easier to read */}
