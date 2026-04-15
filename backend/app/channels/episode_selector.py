@@ -457,9 +457,13 @@ class EpisodeQueryBuilder:
         self,
         query: Select[tuple[Episode, Any]],
     ) -> Select[tuple[Episode, Any]]:
-        if self._media_filter.limit is not None:
-            return query.limit(self._media_filter.limit)
-        return query
+        user_limit = self._media_filter.limit
+        limit = (
+            min(user_limit, MAX_EPISODES_RETURNED)
+            if user_limit is not None
+            else MAX_EPISODES_RETURNED
+        )
+        return query.limit(limit)
 
     def _sort_episodes(
         self,
