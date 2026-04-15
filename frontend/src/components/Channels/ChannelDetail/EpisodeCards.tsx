@@ -4,6 +4,12 @@ import { Link } from "@tanstack/react-router"
 import {
   BadgeCheck,
   Check,
+  ChevronDown,
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   ExternalLink,
   EyeOff,
   ListX,
@@ -12,7 +18,7 @@ import {
   SkipForward,
   Trash2,
 } from "lucide-react"
-import { lazy, Suspense, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import { WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { Badge } from "@/components/ui/badge"
@@ -34,7 +40,10 @@ interface EpisodeCardsProps {
   episodes: EpisodeWithDetails[]
   channelId: string
   hideWatched?: boolean
+  editOrder?: boolean
 }
+
+type MoveDirection = "up" | "down" | "left" | "right" | "first" | "last"
 
 export function formatDuration(
   seconds: number | null | undefined,
@@ -129,6 +138,10 @@ export function EpisodeCard({
   onNextEpisode,
   onHide,
   hideWatched,
+  editOrder,
+  onMove,
+  onDrop,
+  index,
 }: {
   episode: EpisodeWithDetails
   channelId: string
@@ -136,6 +149,10 @@ export function EpisodeCard({
   onNextEpisode?: (currentEpisodeId: string) => void
   onHide?: (episodeId: string) => void
   hideWatched?: boolean
+  editOrder?: boolean
+  onMove?: (index: number, direction: MoveDirection) => void
+  onDrop?: (fromIndex: number, toIndex: number) => void
+  index?: number
 }) {
   const [_cardRendered, setCardRendered] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -282,6 +299,18 @@ export function EpisodeCard({
     episode.show.image_url ||
     ""
 
+  const moveArrowBaseClass =
+    "absolute z-20 h-7 w-7 rounded-full bg-background/90 hover:bg-background text-foreground shadow-md flex items-center justify-center transition-colors"
+
+  const handleArrowClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    direction: MoveDirection,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (index !== undefined) onMove?.(index, direction)
+  }
+
   return (
     <>
       <Card
@@ -294,14 +323,87 @@ export function EpisodeCard({
         // p-0 - No extra padding
         // bg-card - Give cards a slight background color
         // flex flex-col - Make height of card flexible
-        className="group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-lg"
+        className={`group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-lg ${
+          editOrder ? "ring-2 ring-green-600/60" : ""
+        }`}
         onClick={handleClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        draggable={editOrder && index !== undefined}
+        onDragStart={(event) => {
+          if (!editOrder || index === undefined) return
+          event.dataTransfer.effectAllowed = "move"
+          event.dataTransfer.setData("text/plain", String(index))
+        }}
+        onDragOver={(event) => {
+          if (!editOrder) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = "move"
+        }}
+        onDrop={(event) => {
+          if (!editOrder || index === undefined) return
+          event.preventDefault()
+          const fromIndex = Number(event.dataTransfer.getData("text/plain"))
+          if (Number.isFinite(fromIndex) && fromIndex !== index) {
+            onDrop?.(fromIndex, index)
+          }
+        }}
       >
         {/* relative - I have no idea but everything breaks without it */}
         {/* flex-shrink-0 - Fit images to the card without stretching */}
         <div className="relative flex-shrink-0 aspect-video overflow-hidden">
+          {editOrder && index !== undefined && (
+            <>
+              <button
+                type="button"
+                aria-label="Move to front"
+                className={`${moveArrowBaseClass} top-1 left-1`}
+                onClick={(event) => handleArrowClick(event, "first")}
+              >
+                <ChevronFirst className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move to end"
+                className={`${moveArrowBaseClass} bottom-1 right-1`}
+                onClick={(event) => handleArrowClick(event, "last")}
+              >
+                <ChevronLast className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move up"
+                className={`${moveArrowBaseClass} top-1 left-1/2 -translate-x-1/2`}
+                onClick={(event) => handleArrowClick(event, "up")}
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move down"
+                className={`${moveArrowBaseClass} bottom-1 left-1/2 -translate-x-1/2`}
+                onClick={(event) => handleArrowClick(event, "down")}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move left"
+                className={`${moveArrowBaseClass} left-1 top-1/2 -translate-y-1/2`}
+                onClick={(event) => handleArrowClick(event, "left")}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Move right"
+                className={`${moveArrowBaseClass} right-1 top-1/2 -translate-y-1/2`}
+                onClick={(event) => handleArrowClick(event, "right")}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          )}
           <img
             loading="lazy"
             src={imageUrl}
@@ -468,8 +570,33 @@ export function EpisodeCards({
   episodes,
   channelId,
   hideWatched,
+  editOrder,
 }: EpisodeCardsProps) {
   const queryClient = useQueryClient()
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [columnCount, setColumnCount] = useState(1)
+
+  // Measure how many cards fit on the first row so vertical arrow moves land
+  // on the same column.
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    const measure = () => {
+      const children = Array.from(grid.children) as HTMLElement[]
+      if (children.length === 0) return
+      const firstTop = children[0].offsetTop
+      let count = 0
+      for (const child of children) {
+        if (child.offsetTop !== firstTop) break
+        count++
+      }
+      setColumnCount(Math.max(count, 1))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(grid)
+    return () => observer.disconnect()
+  }, [])
 
   // Build a map of episodeId → next episode ID for the same show
   const nextEpisodeMap = new Map<string, string>()
@@ -520,9 +647,79 @@ export function EpisodeCards({
     })
   }
 
+  // Swap two positions in every matching episodes cache entry.
+  const swapEpisodes = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+    queryClient.setQueriesData(
+      { queryKey: ["episodes", channelId] },
+      (oldData: any) => {
+        if (!oldData?.episodes) return oldData
+        const eps = [...oldData.episodes]
+        if (
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= eps.length ||
+          toIndex >= eps.length
+        ) {
+          return oldData
+        }
+        ;[eps[fromIndex], eps[toIndex]] = [eps[toIndex], eps[fromIndex]]
+        return { ...oldData, episodes: eps }
+      },
+    )
+  }
+
+  // Move a single item to a different position, shifting the rest.
+  const moveEpisode = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+    queryClient.setQueriesData(
+      { queryKey: ["episodes", channelId] },
+      (oldData: any) => {
+        if (!oldData?.episodes) return oldData
+        const eps = [...oldData.episodes]
+        if (
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= eps.length ||
+          toIndex >= eps.length
+        ) {
+          return oldData
+        }
+        const [moved] = eps.splice(fromIndex, 1)
+        eps.splice(toIndex, 0, moved)
+        return { ...oldData, episodes: eps }
+      },
+    )
+  }
+
+  const handleArrowMove = (index: number, direction: MoveDirection) => {
+    if (direction === "first") {
+      moveEpisode(index, 0)
+      return
+    }
+    if (direction === "last") {
+      moveEpisode(index, episodes.length - 1)
+      return
+    }
+    const offset =
+      direction === "left"
+        ? -1
+        : direction === "right"
+          ? 1
+          : direction === "up"
+            ? -columnCount
+            : columnCount
+    const target = index + offset
+    if (target < 0 || target >= episodes.length) return
+    swapEpisodes(index, target)
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 gap-4 items-start">
-      {episodes.map((episode) => (
+    <div
+      ref={gridRef}
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 gap-4 items-start"
+    >
+      {episodes.map((episode, index) => (
         <EpisodeCard
           key={episode.id}
           episode={episode}
@@ -531,6 +728,10 @@ export function EpisodeCards({
           onNextEpisode={handleNextEpisode}
           onHide={handleHide}
           hideWatched={hideWatched}
+          editOrder={editOrder}
+          onMove={handleArrowMove}
+          onDrop={moveEpisode}
+          index={index}
         />
       ))}
     </div>

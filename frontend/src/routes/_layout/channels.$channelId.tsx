@@ -3,7 +3,13 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
+import {
+  Check,
+  EllipsisVertical,
+  LayoutGrid,
+  Move,
+  Table as TableIcon,
+} from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
@@ -141,6 +147,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     "channel-detail-view",
     "cards",
   )
+  const [editOrder, setEditOrder] = useState(false)
 
   const currentChannelIds = search.additionalChannels
     ? [channelId, ...search.additionalChannels]
@@ -301,6 +308,16 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {isOwner && (
             <SaveDefaultButton channelId={channelId} searchParams={search} />
           )}
+          {viewMode === "cards" && (
+            <Button
+              onClick={() => setEditOrder((value) => !value)}
+              title={editOrder ? "Finish reordering" : "Reorder episodes"}
+              className="mt-2 mb-4"
+            >
+              {editOrder ? <Check /> : <Move />}
+              {editOrder ? "Done" : "Edit Order"}
+            </Button>
+          )}
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>
       </div>
@@ -331,6 +348,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             episodes={episodesWithDetails}
             channelId={channelId}
             hideWatched={search.hideWatched}
+            editOrder={editOrder}
           />
         )}
       </div>
