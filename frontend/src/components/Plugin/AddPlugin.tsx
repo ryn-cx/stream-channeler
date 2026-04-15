@@ -87,6 +87,7 @@ const AddPlugin = () => {
           id: crypto.randomUUID(),
           user_id: null,
           data_timestamp: null,
+          deleted_at: null,
           public: newPlugin.public,
         },
       ])
