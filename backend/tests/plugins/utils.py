@@ -12,15 +12,15 @@ PluginParent = User | CreatedUser | uuid.UUID
 
 
 def create_random_plugin(
-    db: Session,
+    session: Session,
     parent: User | CreatedUser | uuid.UUID | None = None,
     **kwargs: object,
 ) -> Plugin:
     if parent is None:
-        parent = create_random_user(db)
+        parent = create_random_user(session)
     if isinstance(parent, (User, CreatedUser)):
         parent = parent.id
     plugin = build_random_model(Plugin, user_id=parent, deleted_at=None, **kwargs)
-    db.add(plugin)
-    db.flush()  # Allows plugin.user, plugin.sources, and plugin.files to be accessed.
+    session.add(plugin)
+    session.flush()  # Allows plugin.user, plugin.sources, and plugin.files to be accessed.
     return plugin

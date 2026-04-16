@@ -19,7 +19,7 @@ class UpsertMixin(FileMixin, register=False):
         return f"{cls._base_url()}series/{show_key}"
 
     def _upsert_source(self, latest_browse_file: Browse) -> Source:
-        source = Source.get_from_memory(self.db, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         timestamp = latest_browse_file.database_record.data_timestamp
         return Source(
             key=self.plugin_key(),
@@ -33,7 +33,7 @@ class UpsertMixin(FileMixin, register=False):
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
-        existing_show = Show.get_from_memory(self.db, source, show_key)
+        existing_show = Show.get_from_memory(self.session, source, show_key)
         series_data = self._series_file(show_key).parsed().data[0]
         show = Show(
             key=series_data.id,
@@ -79,7 +79,7 @@ class UpsertMixin(FileMixin, register=False):
         seasons_file = self._seasons_file(show_key)
         for i, season_data in enumerate(seasons_file.parsed().data):
             season_timestamp = self.season_data_timestamp(season_data.id, show.key)
-            season = Season.get_from_memory(self.db, show, season_data.id)
+            season = Season.get_from_memory(self.session, show, season_data.id)
             if not season or season.data_timestamp != season_timestamp:
                 season = Season(
                     key=season_data.id,
@@ -98,7 +98,11 @@ class UpsertMixin(FileMixin, register=False):
         episode_timestamp = self.episode_data_timestamp("", season.key, season.show.key)
         episodes_data = self._episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):
-            existing_episode = Episode.get_from_memory(self.db, season, episode_data.id)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_data.id,
+            )
             if (
                 existing_episode
                 and existing_episode.data_timestamp == episode_timestamp

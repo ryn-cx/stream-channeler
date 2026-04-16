@@ -64,21 +64,21 @@ class FileMixin(BasePlugin, register=False):
         return self._get_weakref_cached_file(
             Series,
             show_key,
-            lambda: Series(self.db, self.plugin, show_key),
+            lambda: Series(self.session, self.plugin, show_key),
         )
 
     def _seasons_file(self, show_key: str) -> Seasons:
         return self._get_weakref_cached_file(
             Seasons,
             show_key,
-            lambda: Seasons(self.db, self.plugin, show_key),
+            lambda: Seasons(self.session, self.plugin, show_key),
         )
 
     def _episodes_file(self, season_key: str) -> Episodes:
         return self._get_weakref_cached_file(
             Episodes,
             season_key,
-            lambda: Episodes(self.db, self.plugin, season_key),
+            lambda: Episodes(self.session, self.plugin, season_key),
         )
 
     def _browse_file(self, browse_datetime: datetime | File) -> Browse:
@@ -89,7 +89,7 @@ class FileMixin(BasePlugin, register=False):
         return self._get_weakref_cached_file(
             Browse,
             str_datetime,
-            lambda: Browse(self.db, self.plugin, str_datetime),
+            lambda: Browse(self.session, self.plugin, str_datetime),
         )
 
     # endregion File Wrappers
@@ -161,7 +161,7 @@ class FileMixin(BasePlugin, register=False):
             )
             .order_by(col(File.data_timestamp).desc())
         )
-        return self.db.exec(statement).first()
+        return self.session.exec(statement).first()
 
     def _get_latest_browse_file(self) -> Browse:
         if file := self._preload_latest_browse_file():

@@ -97,7 +97,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel: Channel,
         show: Show | uuid.UUID,
         *,
@@ -117,7 +117,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
 
         """
         show_id = show.id if isinstance(show, Show) else show
-        return db.get(
+        return session.get(
             cls,
             (channel.id, show_id),
             options=options,
@@ -131,7 +131,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel: Channel,
         show: Show | uuid.UUID,
         *,
@@ -154,7 +154,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
 
         """
         show_id = show.id if isinstance(show, Show) else show
-        return db.get_one(
+        return session.get_one(
             cls,
             (channel.id, show_id),
             options=options,
@@ -189,7 +189,7 @@ class ChannelSeasonWhiteList(
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel_show: ChannelShow,
         season: Season | uuid.UUID,
         *,
@@ -209,7 +209,7 @@ class ChannelSeasonWhiteList(
 
         """
         season_id = season.id if isinstance(season, Season) else season
-        return db.get(
+        return session.get(
             cls,
             (channel_show.id, season_id),
             options=options,
@@ -223,7 +223,7 @@ class ChannelSeasonWhiteList(
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel_show: ChannelShow,
         season: Season | uuid.UUID,
         *,
@@ -247,7 +247,7 @@ class ChannelSeasonWhiteList(
 
         """
         season_id = season.id if isinstance(season, Season) else season
-        return db.get_one(
+        return session.get_one(
             cls,
             (channel_show.id, season_id),
             options=options,
@@ -282,7 +282,7 @@ class ChannelEpisodeWhiteList(
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel_show: ChannelShow,
         episode: Episode | uuid.UUID,
         *,
@@ -302,7 +302,7 @@ class ChannelEpisodeWhiteList(
 
         """
         episode_id = episode.id if isinstance(episode, Episode) else episode
-        return db.get(
+        return session.get(
             cls,
             (channel_show.id, episode_id),
             options=options,
@@ -316,7 +316,7 @@ class ChannelEpisodeWhiteList(
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         channel_show: ChannelShow,
         episode: Episode | uuid.UUID,
         *,
@@ -340,7 +340,7 @@ class ChannelEpisodeWhiteList(
 
         """
         episode_id = episode.id if isinstance(episode, Episode) else episode
-        return db.get_one(
+        return session.get_one(
             cls,
             (channel_show.id, episode_id),
             options=options,

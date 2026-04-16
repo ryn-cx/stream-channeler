@@ -21,12 +21,9 @@ from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
 
 from app.config import settings
-from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
 from app.plugins.plugins.utils.base_plugin import BasePlugin, JSONFile
 from app.plugins.plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
-from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 
@@ -48,14 +45,14 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     def __init__(
         self,
-        db: Session,
+        session: Session,
         plugin: Plugin,
         source_key: str,
         date: date,
     ) -> None:
         self.source_key = source_key
         self.date = date
-        super().__init__(db, plugin, f"{source_key}/{date}")
+        super().__init__(session, plugin, f"{source_key}/{date}")
 
     @override
     def _get(self) -> list[new_titles_models.NewTitlesResponse]:
@@ -72,9 +69,14 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     api_endpoint = just_scrape_client().new_title_buckets
 
-    def __init__(self, db: Session, plugin: Plugin, end_datetime: datetime) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        end_datetime: datetime,
+    ) -> None:
         self.end_datetime = end_datetime
-        super().__init__(db, plugin, str(end_datetime))
+        super().__init__(session, plugin, str(end_datetime))
 
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
@@ -87,9 +89,9 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
 
 
 class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
-    def __init__(self, db: Session, plugin: Plugin, locale: str) -> None:
+    def __init__(self, session: Session, plugin: Plugin, locale: str) -> None:
         self.unique_identifier = locale
-        super().__init__(db, plugin)
+        super().__init__(session, plugin)
 
     @override
     def _download(self) -> None:
@@ -153,38 +155,22 @@ class FileMixin(BasePlugin, register=False):
     # region File Cache
 
     @override
-    def __init__(
-        self,
-        db: Session,
-        *,
-        url: str | None = None,
-        source: Source | None = None,
-        show: Show | None = None,
-        season: Season | None = None,
-        episode: Episode | None = None,
-    ) -> None:
-        super().__init__(
-            db,
-            url=url,
-            source=source,
-            show=show,
-            season=season,
-            episode=episode,
-        )
+    def __init__(self, session: Session) -> None:
+        super().__init__(session)
         self._cached_media_type = None
 
     def _custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
         return self._get_weakref_cached_file(
             CustomBuyBoxOffers,
             episode_key,
-            lambda: CustomBuyBoxOffers(self.db, self.plugin, episode_key),
+            lambda: CustomBuyBoxOffers(self.session, self.plugin, episode_key),
         )
 
     def _url_title_details_file(self, show_key: str) -> UrlTitleDetails:
         return self._get_weakref_cached_file(
             UrlTitleDetails,
             show_key,
-            lambda: UrlTitleDetails(self.db, self.plugin, show_key),
+            lambda: UrlTitleDetails(self.session, self.plugin, show_key),
         )
 
     def _new_titles_file(self, source_key: str, date: datetime | date) -> NewTitles:
@@ -195,14 +181,14 @@ class FileMixin(BasePlugin, register=False):
         return self._get_weakref_cached_file(
             NewTitles,
             cache_key,
-            lambda: NewTitles(self.db, self.plugin, source_key, date),
+            lambda: NewTitles(self.session, self.plugin, source_key, date),
         )
 
     def _custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
         return self._get_weakref_cached_file(
             CustomSeasonEpisodes,
             season_key,
-            lambda: CustomSeasonEpisodes(self.db, self.plugin, season_key),
+            lambda: CustomSeasonEpisodes(self.session, self.plugin, season_key),
         )
 
     def _new_titles_bucket_file(
@@ -215,26 +201,26 @@ class FileMixin(BasePlugin, register=False):
         return self._get_weakref_cached_file(
             NewTitleBucket,
             end_datetime,
-            lambda: NewTitleBucket(self.db, self.plugin, end_datetime),
+            lambda: NewTitleBucket(self.session, self.plugin, end_datetime),
         )
 
     def _providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
         return self._get_weakref_cached_file(
             ProvidersLocale,
             locale,
-            lambda: ProvidersLocale(self.db, self.plugin, locale),
+            lambda: ProvidersLocale(self.session, self.plugin, locale),
         )
 
     def _search_titles_file(self, query: str) -> SearchTitles:
         return self._get_weakref_cached_file(
             SearchTitles,
             query,
-            lambda: SearchTitles(self.db, self.plugin, query),
+            lambda: SearchTitles(self.session, self.plugin, query),
         )
 
     # endregion File Cache
 
-    def _source_keys_from_buckets(self, db: Session, plugin: Plugin) -> set[str]:
+    def _source_keys_from_buckets(self, session: Session, plugin: Plugin) -> set[str]:
         """Get all source keys with new titles from unimported bucket files."""
         statement = select(File).where(
             File.plugin_id == plugin.id,
@@ -242,7 +228,7 @@ class FileMixin(BasePlugin, register=False):
             col(File.data_timestamp) > plugin.data_timestamp,
         )
         source_keys: set[str] = set()
-        for file in db.exec(statement).all():
+        for file in session.exec(statement).all():
             bucket = self._new_titles_bucket_file(file)
             for edge in bucket.parsed_edges():
                 source_keys.add(edge.key.package.short_name)
@@ -388,7 +374,7 @@ class FileMixin(BasePlugin, register=False):
             .order_by(col(File.data_timestamp).desc())
             .limit(1)
         )
-        return self.db.exec(statement)
+        return self.session.exec(statement)
 
     def minimum_new_titles_data_timestamp(self, file: NewTitles) -> datetime:
         # The data for a specific source changes throughout the day as new entries are

@@ -2,9 +2,8 @@
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime
-from typing import Any
 
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
@@ -16,7 +15,7 @@ from app.watches.models import Watch
 
 
 class WatchMixin(ABC):
-    db: Any
+    session: Session
     plugin: Plugin
 
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:
@@ -31,7 +30,7 @@ class WatchMixin(ABC):
             .where(Source.plugin_id == self.plugin.id)
             .where(col(Episode.key).in_(episode_keys))
         )
-        return {episode.key: episode for episode in self.db.exec(statement)}
+        return {episode.key: episode for episode in self.session.exec(statement)}
 
     def _get_watched_episode_dates(
         self,
@@ -48,6 +47,6 @@ class WatchMixin(ABC):
             ),
         )
         result: dict[str, list[datetime]] = defaultdict(list)
-        for episode_id, watch_date in self.db.exec(statement):
+        for episode_id, watch_date in self.session.exec(statement):
             result[str(episode_id)].append(watch_date)
         return result

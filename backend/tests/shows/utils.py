@@ -13,13 +13,13 @@ from tests.utils.utils import build_random_model
 
 
 def create_random_show(
-    db: Session,
+    session: Session,
     parent: Source | Plugin | User | CreatedUser | uuid.UUID | None = None,
     **kwargs: object,
 ) -> Show:
     if not isinstance(parent, Source):
-        parent = create_random_source(db, parent)
+        parent = create_random_source(session, parent)
     show = build_random_model(Show, source_id=parent.id, deleted_at=None, **kwargs)
-    db.add(show)
-    db.flush()  # Allows show.source and show.seasons to be accessed.
+    session.add(show)
+    session.flush()  # Allows show.source and show.seasons to be accessed.
     return show

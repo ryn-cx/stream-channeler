@@ -36,16 +36,16 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         return output
 
     @override
-    def update_plugin_validator(self, db: Session, plugin: Plugin) -> Validator:
-        validator = super().update_plugin_validator(db, plugin)
+    def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:
+        validator = super().update_plugin_validator(session, plugin)
         # Plugin.update_at is recalculated from file timestamps.
         validator.changed(plugin.id, "update_at")
         # All sources get re-upserted during update_plugin.
         validator.changed(Source, "data_timestamp")
         validator.ignore(Source, "modified_at")
         # Sources in the bucket will be marked as outdated.
-        just_watch = JustWatch(db)
-        source_keys = just_watch._source_keys_from_buckets(db, plugin)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        just_watch = JustWatch(session)
+        source_keys = just_watch._source_keys_from_buckets(session, plugin)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         for source_key in source_keys:
             validator.incremented(source_key, "modified_at")
             validator.populated(source_key, "update_at")
@@ -70,15 +70,15 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             validator.populated(source.id, "update_at")
         return validator
 
-    def test_update_plugin(self, db_with_url: Session) -> None:
+    def test_update_plugin(self, session_with_url: Session) -> None:
         """Update a random plugin and validate the data."""
         if self.invalid_url:
             pytest.skip()
 
-        plugin_instance = self.plugin_class(db_with_url, url=self.url)
+        plugin_instance = self.plugin_class(session_with_url)
         results = plugin_instance.import_url(self.url)
         plugin = results[0].show.source.plugin
-        original_plugin = self.get_detached_plugin(db_with_url)
+        original_plugin = self.get_detached_plugin(session_with_url)
 
         # Set the bucket file's data_timestamp to now so
         # _download_latest_new_titles_bucket considers it recent (within 1 day)
@@ -88,7 +88,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         bucket_file.data_timestamp = tz_datetime.now()
 
         self._update_and_validate(
-            db_with_url,
+            session_with_url,
             original_plugin,
             plugin,
         )
@@ -151,9 +151,9 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         )
         new_titles_file._write([])  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
 
-    def test_update_source(self, db_with_url: Session) -> None:
+    def test_update_source(self, session_with_url: Session) -> None:
         """Update a random source and validate the data."""
-        plugin_instance = self.plugin_class(db_with_url, url=self.url)
+        plugin_instance = self.plugin_class(session_with_url)
         results = plugin_instance.import_url(self.url)
 
         # Find the specific source that will have updates available for it.
@@ -178,10 +178,10 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         # NewTitles files, so we bypass it and write extra directly.
         source.extra = json.dumps([edge_date.isoformat()])
 
-        original_plugin = self.get_detached_plugin(db_with_url)
+        original_plugin = self.get_detached_plugin(session_with_url)
 
         self._update_and_validate(
-            db_with_url,
+            session_with_url,
             original_plugin,
             source,
         )
@@ -220,31 +220,34 @@ class TestMovie(StandardTests, BaseJustWatch):
             .episodes_share_season_file(episode)
         )
 
-    def test_import_single_source(self, db_with_files: Session) -> None:
+    def test_import_single_source(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video{self.url}"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert results[0].show.source.name == "Amazon Prime Video"
         assert not results[0].seasons
         assert not results[0].episodes
 
-    def test_import_single_source_with_space(self, db_with_files: Session) -> None:
+    def test_import_single_source_with_space(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video {self.url}"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert results[0].show.source.name == "Amazon Prime Video"
         assert not results[0].seasons
         assert not results[0].episodes
 
-    def test_import_single_source_fuzzy_match(self, db_with_files: Session) -> None:
+    def test_import_single_source_fuzzy_match(
+        self,
+        session_with_files: Session,
+    ) -> None:
         url = f"amazon prime video {self.url}"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert results[0].show.source.name == "Amazon Prime Video"
         assert not results[0].episodes
 
-    def test_import_everything(self, db_with_files: Session) -> None:
-        results = self._import_url(db_with_files)
+    def test_import_everything(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
         for result in results:
             assert not result.seasons
             assert not result.episodes
@@ -266,25 +269,25 @@ class TestMultipleSeasonTVShow(StandardTests, BaseJustWatch):
     class_key = "amp"
     search_query = "Mutant X"
 
-    def test_import_single_source(self, db_with_files: Session) -> None:
+    def test_import_single_source(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video{self.url}"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert results[0].show.source.name == "Amazon Prime Video"
         assert not results[0].seasons
         assert not results[0].episodes
 
-    def test_import_single_source_with_space(self, db_with_files: Session) -> None:
+    def test_import_single_source_with_space(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video {self.url}"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert results[0].show.source.name == "Amazon Prime Video"
         assert not results[0].seasons
         assert not results[0].episodes
 
-    def test_import_single_source_and_season(self, db_with_files: Session) -> None:
+    def test_import_single_source_and_season(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video {self.url}/season-2"
-        results = self._import_url(db_with_files, url)
+        results = self._import_url(session_with_files, url)
         assert len(results) == 1
         assert len(results[0].seasons) == 1
         assert isinstance(results[0].seasons[0], Season)

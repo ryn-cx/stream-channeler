@@ -100,17 +100,17 @@ class TestSortOptions:
     def test_sort_options(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
     ) -> None:
         headers = {}
         if user_is_authenticated:
-            user = create_random_user(session_scoped_db)
+            user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         result = assert_success_list(
             client=session_scoped_client,
@@ -147,7 +147,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
     def test_get_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -155,7 +155,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -180,7 +180,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
             }
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method=self.sub_http_method,
@@ -192,11 +192,11 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
     def test_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -236,17 +236,17 @@ class TestUpdateDefaultOrder:
     def test_update_default_order(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         initial_mode: Literal["minimal", "full"],
         update_mode: Literal["minimal", "full"],
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        channel = create_random_channel(session_scoped_db, user=user.id)
+        channel = create_random_channel(session_scoped_session, user=user.id)
 
         self.assert_update(
             session_scoped_client,
@@ -260,18 +260,18 @@ class TestUpdateDefaultOrder:
     def test_update_default_order_errors(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         user_type: str,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=owner.id)
+        owner = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=owner.id)
 
         if user_type == "normal_user":
-            other_user = create_random_user(session_scoped_db)
+            other_user = create_random_user(session_scoped_session)
             other_headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=other_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
             assert_forbidden(
                 client=session_scoped_client,
@@ -290,13 +290,13 @@ class TestUpdateDefaultOrder:
     def test_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         assert_not_found(
             client=session_scoped_client,
@@ -323,13 +323,13 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
 
     @staticmethod
     def create_channel_with_episodes(
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         user_id: uuid.UUID,
         *,
         public: bool,
     ) -> tuple[Channel, ChannelEpisodesOutput]:
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=user_id,
             public=public,
         )
@@ -345,15 +345,15 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         expected.channels[channel.id] = ChannelOutput.model_validate(channel)
 
         for _ in range(2):
-            plugin = create_random_plugin(session_scoped_db, user_id, public=True)
+            plugin = create_random_plugin(session_scoped_session, user_id, public=True)
             channel_show = create_random_channel_show(
-                session_scoped_db,
+                session_scoped_session,
                 channel,
                 plugin,
                 white_list_mode=False,
             )
             show = channel_show.show
-            create_random_episode(session_scoped_db, show)
+            create_random_episode(session_scoped_session, show)
             source = show.source
             plugin = source.plugin
             season = show.seasons[0]
@@ -390,20 +390,20 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
     def test_with_episodes(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         record_is_public: bool,
         user_is_authenticated: bool,
         user_is_owner: bool,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
+        owner = create_random_user(session_scoped_session)
         owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel, expected = self.create_channel_with_episodes(
-            session_scoped_db,
+            session_scoped_session,
             owner.id,
             public=record_is_public,
         )
@@ -416,11 +416,11 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             )
             return
         if user_is_authenticated and not user_is_owner and not record_is_public:
-            other_user = create_random_user(session_scoped_db)
+            other_user = create_random_user(session_scoped_session)
             other_headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=other_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
             assert_forbidden(
                 client=session_scoped_client,
@@ -434,11 +434,11 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         if user_is_owner:
             headers = owner_headers
         elif user_is_authenticated:
-            normal_user = create_random_user(session_scoped_db)
+            normal_user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=normal_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         else:
             headers = {}
@@ -457,20 +457,20 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
     def test_no_episodes(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         record_is_public: bool,
         user_is_authenticated: bool,
         user_is_owner: bool,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
+        owner = create_random_user(session_scoped_session)
         owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=owner.id,
             public=record_is_public,
         )
@@ -491,11 +491,11 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             )
             return
         if user_is_authenticated and not user_is_owner and not record_is_public:
-            other_user = create_random_user(session_scoped_db)
+            other_user = create_random_user(session_scoped_session)
             other_headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=other_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
             assert_forbidden(
                 client=session_scoped_client,
@@ -509,11 +509,11 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         if user_is_owner:
             headers = owner_headers
         elif user_is_authenticated:
-            normal_user = create_random_user(session_scoped_db)
+            normal_user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=normal_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         else:
             headers = {}
@@ -533,53 +533,53 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
     def test_private_plugin_visibility(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         user_type: str,
     ) -> None:
         """Episodes from private plugins should only be visible to the plugin owner."""
-        channel_owner = create_random_user(session_scoped_db)
+        channel_owner = create_random_user(session_scoped_session)
         channel_owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=channel_owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        plugin_owner = create_random_user(session_scoped_db)
+        plugin_owner = create_random_user(session_scoped_session)
         plugin_owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=plugin_owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=channel_owner.id,
             public=True,
         )
 
         # Add a show from a private plugin owned by plugin_owner
         private_plugin = create_random_plugin(
-            session_scoped_db,
+            session_scoped_session,
             plugin_owner.id,
             public=False,
         )
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             private_plugin,
             white_list_mode=False,
         )
         show = channel_show.show
-        create_random_episode(session_scoped_db, show)
+        create_random_episode(session_scoped_session, show)
 
         if user_type == "owner":
             headers = channel_owner_headers
         elif user_type == "plugin_owner":
             headers = plugin_owner_headers
         elif user_type == "normal_user":
-            normal_user = create_random_user(session_scoped_db)
+            normal_user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=normal_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         else:
             headers = {}
@@ -611,46 +611,46 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
     def test_public_plugin_visibility(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
     ) -> None:
         """Episodes from public plugins should be visible to all users."""
-        channel_owner = create_random_user(session_scoped_db)
+        channel_owner = create_random_user(session_scoped_session)
         channel_owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=channel_owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=channel_owner.id,
             public=True,
         )
 
         public_plugin = create_random_plugin(
-            session_scoped_db,
+            session_scoped_session,
             channel_owner.id,
             public=True,
         )
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             public_plugin,
             white_list_mode=False,
         )
         show = channel_show.show
-        create_random_episode(session_scoped_db, show)
+        create_random_episode(session_scoped_session, show)
 
         if user_is_owner:
             headers = channel_owner_headers
         elif user_is_authenticated:
-            normal_user = create_random_user(session_scoped_db)
+            normal_user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=normal_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         else:
             headers = {}
@@ -684,18 +684,18 @@ class TestListChannelShows:
     def test_list_shows_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         show_count: int,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
+        owner = create_random_user(session_scoped_session)
         owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        channel = create_random_channel(session_scoped_db, user=owner.id)
+        channel = create_random_channel(session_scoped_session, user=owner.id)
         for _ in range(show_count):
-            create_random_channel_show(session_scoped_db, channel, owner)
+            create_random_channel_show(session_scoped_session, channel, owner)
 
         result = assert_success(
             client=session_scoped_client,
@@ -713,35 +713,35 @@ class TestListChannelShows:
     def test_list_shows_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         record_is_public: bool,
         user_type: str,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
+        owner = create_random_user(session_scoped_session)
         owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=owner.id,
             public=record_is_public,
         )
         show = create_random_show(
-            session_scoped_db,
+            session_scoped_session,
             owner.id,
             name=random_lower_string(),
         )
-        create_random_channel_show(session_scoped_db, channel, show)
+        create_random_channel_show(session_scoped_session, channel, show)
 
         if user_type == "normal_user" and not record_is_public:
-            other_user = create_random_user(session_scoped_db)
+            other_user = create_random_user(session_scoped_session)
             other_headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=other_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
             assert_forbidden(
                 client=session_scoped_client,
@@ -762,11 +762,11 @@ class TestListChannelShows:
         if user_type == "owner":
             headers = owner_headers
         elif user_type == "normal_user":
-            normal_user = create_random_user(session_scoped_db)
+            normal_user = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
                 email=normal_user.email,
-                db=session_scoped_db,
+                session=session_scoped_session,
             )
         else:
             headers = {}
@@ -782,13 +782,13 @@ class TestListChannelShows:
     def test_list_shows_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         assert_not_found(
             client=session_scoped_client,
@@ -810,29 +810,29 @@ class TestDeleteChannelShow:
     def test_remove_show_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         record_is_public: bool,
         user_is_authenticated: bool,
         user_is_owner: bool,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
+        owner = create_random_user(session_scoped_session)
         owner_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=owner.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         channel = create_random_channel(
-            session_scoped_db,
+            session_scoped_session,
             user=owner.id,
             public=record_is_public,
         )
         show = create_random_show(
-            session_scoped_db,
+            session_scoped_session,
             owner.id,
             name=random_lower_string(),
         )
-        create_random_channel_show(session_scoped_db, channel, show)
+        create_random_channel_show(session_scoped_session, channel, show)
 
         if not user_is_authenticated:
             assert_not_authenticated(
@@ -851,11 +851,11 @@ class TestDeleteChannelShow:
             )
             return
 
-        other_user = create_random_user(session_scoped_db)
+        other_user = create_random_user(session_scoped_session)
         other_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=other_user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         assert_forbidden(
             client=session_scoped_client,
@@ -868,15 +868,15 @@ class TestDeleteChannelShow:
     def test_remove_show_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        channel = create_random_channel(session_scoped_db, user=user.id)
+        channel = create_random_channel(session_scoped_session, user=user.id)
 
         assert_not_found(
             client=session_scoped_client,
@@ -889,19 +889,19 @@ class TestDeleteChannelShow:
     def test_remove_show_not_in_channel(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        channel = create_random_channel(session_scoped_db, user=user.id)
+        channel = create_random_channel(session_scoped_session, user=user.id)
         # Create the show on a different channel.
-        other_channel = create_random_channel(session_scoped_db, user=user.id)
+        other_channel = create_random_channel(session_scoped_session, user=user.id)
         other_channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             other_channel,
         )
 
@@ -916,13 +916,13 @@ class TestDeleteChannelShow:
     def test_remove_show_channel_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
         assert_not_found(
             client=session_scoped_client,
@@ -971,11 +971,11 @@ class BaseChannelQueueTests(BaseChannelSubEndpointTests):
     def test_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -996,21 +996,21 @@ class TestQueueGet(BaseChannelQueueTests):
     def test_get_queue(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         queue_entry_1 = create_random_channel_queue(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
         )
         queue_entry_2 = create_random_channel_queue(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
         )
 
@@ -1024,11 +1024,11 @@ class TestQueueGet(BaseChannelQueueTests):
     def test_get_queue_empty(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -1077,20 +1077,23 @@ class TestQueueAddURL(BaseChannelQueueTests):
     def test_append_urls(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         initial_url_count: int,
         new_url_count: int,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
 
         initial_urls = [
-            create_random_channel_queue(session_scoped_db, initial_test_data.record).url
+            create_random_channel_queue(
+                session_scoped_session,
+                initial_test_data.record,
+            ).url
             for _ in range(initial_url_count)
         ]
 
@@ -1106,17 +1109,17 @@ class TestQueueAddURL(BaseChannelQueueTests):
     def test_append_existing_url(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         existing = create_random_channel_queue(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
         )
         self.assert_add_urls(
@@ -1130,11 +1133,11 @@ class TestQueueAddURL(BaseChannelQueueTests):
     def test_append_duplicate_urls(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -1151,17 +1154,17 @@ class TestQueueAddURL(BaseChannelQueueTests):
     def test_append_duplicate_existing_url(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         existing = create_random_channel_queue(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
         )
         self.assert_add_urls(
@@ -1185,17 +1188,20 @@ class TestQueueDeleteURL(BaseChannelQueueTests):
     def test_delete_url(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         queue_entries = [
-            create_random_channel_queue(session_scoped_db, initial_test_data.record)
+            create_random_channel_queue(
+                session_scoped_session,
+                initial_test_data.record,
+            )
             for _ in range(3)
         ]
 
@@ -1217,11 +1223,11 @@ class TestQueueDeleteURL(BaseChannelQueueTests):
     def test_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -1269,20 +1275,20 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
     def test_clear_completed(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         initial_statuses: list[URLStatus],
         expected_remaining: list[URLStatus],
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         records = [
             create_random_channel_queue(
-                session_scoped_db,
+                session_scoped_session,
                 initial_test_data.record,
                 status=s,
             )
@@ -1357,7 +1363,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
     def test_get_shows_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_owns_plugin: bool,
         plugin_is_public: bool,
@@ -1369,7 +1375,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         """
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=True,
@@ -1377,17 +1383,21 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         plugin_owner = (
             initial_test_data.user
             if user_owns_plugin
-            else create_random_user(session_scoped_db)
+            else create_random_user(session_scoped_session)
         )
         plugin = create_random_plugin(
-            session_scoped_db,
+            session_scoped_session,
             plugin_owner,
             public=plugin_is_public,
         )
 
-        show = create_random_show(session_scoped_db, plugin)
-        create_random_episode(session_scoped_db, show)
-        create_random_channel_show(session_scoped_db, initial_test_data.record, show)
+        show = create_random_show(session_scoped_session, plugin)
+        create_random_episode(session_scoped_session, show)
+        create_random_channel_show(
+            session_scoped_session,
+            initial_test_data.record,
+            show,
+        )
 
         url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/shows"
         result = assert_success(
@@ -1407,7 +1417,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
     def test_get_whitelist_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_owner: bool,
         plugin_is_public: bool,
@@ -1421,24 +1431,24 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         """
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=True,
             record_is_public=True,
         )
-        other_user = create_random_user(session_scoped_db)
+        other_user = create_random_user(session_scoped_session)
         plugin = create_random_plugin(
-            session_scoped_db,
+            session_scoped_session,
             other_user,
             public=plugin_is_public,
         )
-        show = create_random_show(session_scoped_db, plugin)
+        show = create_random_show(session_scoped_session, plugin)
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
             show,
         )
-        episode = create_random_episode(session_scoped_db, channel_show.show)
+        episode = create_random_episode(session_scoped_session, channel_show.show)
 
         url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/whitelist/{channel_show.show_id}"
         if user_is_owner and plugin_is_public:
@@ -1470,23 +1480,23 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
     def test_read_whitelist(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         episode_count: int,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
             initial_test_data.user,
         )
         episodes = [
-            create_random_episode(session_scoped_db, channel_show.show)
+            create_random_episode(session_scoped_session, channel_show.show)
             for _ in range(episode_count)
         ]
         self.assert_whitelist_success(
@@ -1566,24 +1576,24 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     def create_whitelist_test_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> WhitelistUpdateTestData:
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record,
             initial_test_data.user,
             white_list_mode=True,
         )
         episodes = [
-            create_random_episode(session_scoped_db, channel_show.show)
+            create_random_episode(session_scoped_session, channel_show.show)
             for _ in range(3)
         ]
         preserved_marked_episode = episodes[0]
@@ -1620,13 +1630,17 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     def test_update_whitelist_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         setup = self.create_whitelist_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
         )
-        update_whitelist(session_scoped_db, setup.channel_show, setup.initial_input)
+        update_whitelist(
+            session_scoped_session,
+            setup.channel_show,
+            setup.initial_input,
+        )
 
         update_input = WhitelistShowInput(
             whitelist_mode=True,

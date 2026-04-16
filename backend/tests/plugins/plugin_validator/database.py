@@ -59,7 +59,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     # region Select
 
-    def select_plugin_with_children(self, db: Session) -> Plugin:
+    def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return a plugin with all children selectinloaded."""
         select_statement = (
             select(Plugin)
@@ -71,22 +71,22 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
                 .selectinload(Season.episodes),  # type: ignore[arg-type]
             )
         )
-        return db.exec(select_statement).one()
+        return session.exec(select_statement).one()
 
     # endregion Select
 
     # region Export
 
-    def _export_all_files(self, db: Session) -> None:
+    def _export_all_files(self, session: Session) -> None:
         """Export all files from the database and the verification file for to disk."""
-        self._export_database_files(db)
-        self._export_verification_file(db)
+        self._export_database_files(session)
+        self._export_verification_file(session)
 
-    def _export_verification_file(self, db: Session) -> None:
+    def _export_verification_file(self, session: Session) -> None:
         """Export the verification file to disk if it does not already exist."""
         if self.verification_file_path().exists():
             return
-        plugin = self.select_plugin_with_children(db)
+        plugin = self.select_plugin_with_children(session)
         plugin_dict = self._dump_model(plugin)
         self.verification_file_path().parent.mkdir(parents=True, exist_ok=True)
         self.verification_file_path().write_text(
@@ -94,9 +94,9 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
-    def _export_database_files(self, db: Session) -> None:
+    def _export_database_files(self, session: Session) -> None:
         """Export all files from the database to disk."""
-        plugin = self.select_plugin_with_children(db)
+        plugin = self.select_plugin_with_children(session)
         all_file_dicts: list[dict[str, Any]] = []
         for file in plugin.files:
             file_dict = file.model_dump()
@@ -138,34 +138,34 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     def _import_url(
         self,
-        db: Session,
+        session: Session,
         url: str | None = None,
     ) -> list[URLImportResult]:
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
-        output = self.plugin_class(db, url=url).import_url(url)
+        output = self.plugin_class(session).import_url(url)
 
-        db.commit()  # Set the rollback point.
+        session.commit()  # Set the rollback point.
 
         return output
 
-    def _search(self, db: Session, query: str) -> PluginSearchResults:
+    def _search(self, session: Session, query: str) -> PluginSearchResults:
         """Search using the plugin. Files are pre-imported by the class fixture."""
-        return self.plugin_class(db).search(query)
+        return self.plugin_class(session).search(query)
 
-    def _import_files(self, db: Session) -> None:
+    def _import_files(self, session: Session) -> None:
         """Import all exported files into the database."""
         # Mock initialize_plugin to only run the BasePlugin implementation (creates the
         # database record) without running subclass logic that would try to download
         # files before the cached test data is loaded.
         original_initialize = self.plugin_class.initialize_plugin
         self.plugin_class.initialize_plugin = BasePlugin.initialize_plugin  # type: ignore[assignment]
-        plugin = self.plugin_class(db, url=self.url)
+        plugin = self.plugin_class(session)
 
-        plugin_user = get_or_create_plugin_user(session=db)
+        plugin_user = get_or_create_plugin_user(session=session)
         plugin_db_record = Plugin.get_one(
-            db,
+            session,
             plugin_user,
             self.plugin_class.plugin_key(),
         )
@@ -187,20 +187,20 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         # Files imported from JSON have raw Python types. Expiring forces SQLAlchemy to
         # re-read from the DB with proper type coercion. This is required to validate
         # datetime values.
-        db.expire_all()
+        session.expire_all()
 
         # Run the full initialize_plugin now that the files are imported.
         self.plugin_class.initialize_plugin = original_initialize  # type: ignore[assignment]
         plugin.initialize_plugin()
 
-        db.commit()  # Set the rollback point.
+        session.commit()  # Set the rollback point.
 
     # endregion Import
 
     # region Fixtures
 
     @pytest.fixture(scope="class")
-    def _db_with_files_connection(self) -> Generator[Connection]:
+    def _session_with_files_connection(self) -> Generator[Connection]:
         """Class-scoped connection with files pre-imported on its own database."""
         engine = create_test_engine("files")
         reset_tables(engine)
@@ -213,15 +213,15 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         engine.dispose()
 
     @pytest.fixture
-    def db_with_files(
+    def session_with_files(
         self,
-        _db_with_files_connection: Connection,
+        _session_with_files_connection: Connection,
     ) -> Generator[Session]:
         """Per-test session with files pre-imported, rolls back after each test."""
-        yield from savepoint_session(_db_with_files_connection)
+        yield from savepoint_session(_session_with_files_connection)
 
     @pytest.fixture(scope="class")
-    def _db_with_url_connection(self) -> Generator[Connection]:
+    def _session_with_url_connection(self) -> Generator[Connection]:
         """Class-scoped connection with files and URL pre-imported on its own database."""
         if self.invalid_url:
             pytest.skip("invalid_url is set")
@@ -244,8 +244,11 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         engine.dispose()
 
     @pytest.fixture
-    def db_with_url(self, _db_with_url_connection: Connection) -> Generator[Session]:
+    def session_with_url(
+        self,
+        _session_with_url_connection: Connection,
+    ) -> Generator[Session]:
         """Per-test session with files and URL imported, rolls back after."""
-        yield from savepoint_session(_db_with_url_connection)
+        yield from savepoint_session(_session_with_url_connection)
 
     # endregion Fixtures

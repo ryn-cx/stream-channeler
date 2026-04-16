@@ -23,9 +23,9 @@ class BaseFile[T](ABC):
 
     # region Initialization
 
-    def __init__(self, db: Session, plugin: Plugin) -> None:
+    def __init__(self, session: Session, plugin: Plugin) -> None:
         """Initialize the file."""
-        self.__db = db
+        self.__session = session
         self.__plugin = plugin
         self._cached_parsed: T | None = None
         self.__database_record: File | None | Sentinel = _UNLOADED
@@ -38,9 +38,9 @@ class BaseFile[T](ABC):
     def _existing_database_record(self) -> File | None:
         if isinstance(self.__database_record, Sentinel):
             key = self.file_key()
-            existing = File.get_from_memory(self.__db, self.__plugin, key)
+            existing = File.get_from_memory(self.__session, self.__plugin, key)
             self.__database_record = existing or File.get(
-                self.__db,
+                self.__session,
                 self.__plugin,
                 key,
             )
@@ -195,9 +195,14 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     acceptable_error: str | None = None
 
-    def __init__(self, db: Session, plugin: Plugin, unique_identifier: str) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
         self.unique_identifier = unique_identifier
-        super().__init__(db, plugin)
+        super().__init__(session, plugin)
 
     @override
     def _parse(self, raw: Any) -> T:

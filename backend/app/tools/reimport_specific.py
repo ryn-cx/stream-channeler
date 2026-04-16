@@ -14,7 +14,7 @@ def reimport_single_url(session: Session) -> None:
     url = "DUMMY URL"
 
     for plugin in plugins:
-        if plugin.is_valid_url_format(url):
+        if plugin.is_valid_url_format(url) and plugin.implements("import_url"):
             plugin_instance = plugin(session)
             plugin_instance.import_url(url)
 

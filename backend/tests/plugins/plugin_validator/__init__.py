@@ -45,20 +45,20 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     # region Validation
 
-    def get_detached_plugin(self, db: Session) -> Plugin:
+    def get_detached_plugin(self, session: Session) -> Plugin:
         """Return a detached copy of the plugin to use for validation."""
-        plugin = self.select_plugin_with_children(db)
+        plugin = self.select_plugin_with_children(session)
         dumped = self._dump_model(plugin)
         return self._load_model(Plugin, dumped)
 
     def validate_plugin(
         self,
-        db: Session,
+        session: Session,
         original_plugin: Plugin,
         config: Validator,
     ) -> None:
         """Validate that the current database state matches the original plugin."""
-        config.validate(original_plugin, self.get_detached_plugin(db))
+        config.validate(original_plugin, self.get_detached_plugin(session))
 
     def import_url_validator(self) -> Validator:
         return (
@@ -81,7 +81,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     ) -> Validator:
         return Validator().incremented(entity.id, "modified_at", "data_timestamp")
 
-    def update_plugin_validator(self, db: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
+    def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
         return self.generic_update_validator(plugin)
 
     def update_source_validator(self, source: Source) -> Validator:
@@ -147,37 +147,37 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def _get_update_function(
         self,
-        db: Session,
+        session: Session,
         entity: Plugin | Source | Show | Season | Episode,
     ) -> Callable[[], None]:
         """Return the appropriate plugin update function for the entity type."""
         match entity:
             case Plugin() as plugin:
-                return lambda: self.plugin_class(db).update_plugin(plugin=plugin)
+                return lambda: self.plugin_class(session).update_plugin(plugin=plugin)
             case Source() as source:
-                return lambda: self.plugin_class(db, source=source).update_source(
+                return lambda: self.plugin_class(session).update_source(
                     source=source,
                 )
             case Show() as show:
-                return lambda: self.plugin_class(db, show=show).update_show(show=show)
+                return lambda: self.plugin_class(session).update_show(show=show)
             case Season() as season:
-                return lambda: self.plugin_class(db, season=season).update_season(
+                return lambda: self.plugin_class(session).update_season(
                     season,
                 )
             case Episode() as episode:
-                return lambda: self.plugin_class(db, episode=episode).update_episode(
+                return lambda: self.plugin_class(session).update_episode(
                     episode,
                 )
 
     def _get_validator(
         self,
-        db: Session,
+        session: Session,
         entity: Plugin | Source | Show | Season | Episode,
     ) -> Validator:
         """Return the default validator for the given entity type."""
         match entity:
             case Plugin() as plugin:
-                return self.update_plugin_validator(db, plugin)
+                return self.update_plugin_validator(session, plugin)
             case Source() as source:
                 return self.update_source_validator(source)
             case Show() as show:
@@ -189,7 +189,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def _update_and_validate(
         self,
-        db: Session,
+        session: Session,
         original_plugin: Plugin,
         entity: Plugin | Source | Show | Season | Episode,
         validator: Validator | None = None,
@@ -201,8 +201,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         entity.update_at = entity.data_timestamp + timedelta(seconds=1)
         if isinstance(entity, (Show, Season, Episode)):
             entity.extra = "Outdated"
-        validator = validator or self._get_validator(db, entity)
-        update = self._get_update_function(db, entity)
+        validator = validator or self._get_validator(session, entity)
+        update = self._get_update_function(session, entity)
 
         maybe_mock_wrapper = (
             mock_update(self.files_directory_path())
@@ -212,11 +212,11 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         freeze_at = entity.data_timestamp + timedelta(minutes=2)
         with maybe_mock_wrapper, frozen_time(freeze_at), log_stats(self):
             update()
-            db.flush()
+            session.flush()
 
         msg = f"Failed updating: {entity}"
         try:
-            self.validate_plugin(db, original_plugin, validator)
+            self.validate_plugin(session, original_plugin, validator)
         except AssertionError as error:
             raise AssertionError(msg) from error
 
@@ -226,7 +226,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def _initialize_import_data(
         self,
-        db: Session,
+        session: Session,
         *,
         files_already_cached: bool,
     ) -> None:
@@ -235,21 +235,21 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             with track_downloads() as download_count:
                 if self.invalid_url:
                     with pytest.raises(InvalidURLError):
-                        self._import_url(db)
+                        self._import_url(session)
                 else:
-                    self._import_url(db)
+                    self._import_url(session)
         finally:
-            self._export_database_files(db)
+            self._export_database_files(session)
 
         if not self.invalid_url:
-            self._export_verification_file(db)
+            self._export_verification_file(session)
 
         if files_already_cached and download_count:
             pytest.fail(f"Files were downloaded during import: {download_count}")
 
     def _initialize_search_data(
         self,
-        db: Session,
+        session: Session,
         search_query: str,
         *,
         files_already_cached: bool,
@@ -257,16 +257,16 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         """Run a search query, always exporting files for analysis even on failure."""
         try:
             with track_downloads() as download_count:
-                self._search(db, search_query)
+                self._search(session, search_query)
         finally:
-            self._export_database_files(db)
+            self._export_database_files(session)
 
         if files_already_cached and download_count:
             pytest.fail(f"Files were downloaded during search: {download_count}")
 
     def test__initialize_test_data(
         self,
-        db_with_files: Session,
+        session_with_files: Session,
     ) -> None:
         """Downloads and saves all of the data required for the tests.
 
@@ -277,13 +277,13 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
         if self.url:
             self._initialize_import_data(
-                db_with_files,
+                session_with_files,
                 files_already_cached=files_already_cached,
             )
 
         if self.search_query:
             self._initialize_search_data(
-                db_with_files,
+                session_with_files,
                 self.search_query,
                 files_already_cached=files_already_cached,
             )
@@ -333,80 +333,80 @@ class ParseURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that importing a URL produces the expected plugin state."""
 
-    def test_import_url(self, db_with_files: Session) -> None:
+    def test_import_url(self, session_with_files: Session) -> None:
         if not self.url or self.invalid_url:
             pytest.skip()
 
         with block_downloads(), log_stats(self):
-            self.plugin_class(db_with_files, url=self.url).import_url(self.url)
+            self.plugin_class(session_with_files).import_url(self.url)
 
         verification_content = self.verification_file_path().read_text()
         verification_data = json.loads(verification_content)
 
         original_plugin = self._load_model(Plugin, verification_data)
         validator = self.import_url_validator()
-        self.validate_plugin(db_with_files, original_plugin, validator)
+        self.validate_plugin(session_with_files, original_plugin, validator)
 
 
 class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that importing an invalid URL raises InvalidURLError."""
 
-    def test_import_url(self, db_with_files: Session) -> None:
+    def test_import_url(self, session_with_files: Session) -> None:
         if not self.url:
             pytest.skip()
 
         with block_downloads(), log_stats(self), pytest.raises(InvalidURLError):
-            self.plugin_class(db_with_files, url=self.url).import_url(self.url)
+            self.plugin_class(session_with_files).import_url(self.url)
 
 
 class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that re-importing an existing URL doesn't change the data."""
 
-    def test_import_existing_url(self, db_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(db_with_url)
+    def test_import_existing_url(self, session_with_url: Session) -> None:
+        original_plugin = self.get_detached_plugin(session_with_url)
         with log_stats(self), block_downloads():
-            self.plugin_class(db_with_url, url=self.url).import_url(self.url)
+            self.plugin_class(session_with_url).import_url(self.url)
 
         validator = self.existing_url_validator()
-        self.validate_plugin(db_with_url, original_plugin, validator)
+        self.validate_plugin(session_with_url, original_plugin, validator)
 
 
 class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a show restores randomized data."""
 
-    def test_update_show(self, db_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(db_with_url)
-        results = self._import_url(db_with_url)
+    def test_update_show(self, session_with_url: Session) -> None:
+        original_plugin = self.get_detached_plugin(session_with_url)
+        results = self._import_url(session_with_url)
         entity = self.get_random_show(results)
-        self._update_and_validate(db_with_url, original_plugin, entity)
+        self._update_and_validate(session_with_url, original_plugin, entity)
 
 
 class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a season restores randomized data."""
 
-    def test_update_season(self, db_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(db_with_url)
-        results = self._import_url(db_with_url)
+    def test_update_season(self, session_with_url: Session) -> None:
+        original_plugin = self.get_detached_plugin(session_with_url)
+        results = self._import_url(session_with_url)
         entity = self.get_random_season(results)
-        self._update_and_validate(db_with_url, original_plugin, entity)
+        self._update_and_validate(session_with_url, original_plugin, entity)
 
 
 class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating an episode restores randomized data."""
 
-    def test_update_episode(self, db_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(db_with_url)
-        results = self._import_url(db_with_url)
+    def test_update_episode(self, session_with_url: Session) -> None:
+        original_plugin = self.get_detached_plugin(session_with_url)
+        results = self._import_url(session_with_url)
         entity = self.get_random_episode(results)
-        self._update_and_validate(db_with_url, original_plugin, entity)
+        self._update_and_validate(session_with_url, original_plugin, entity)
         # assert False
 
 
 class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake episode gets soft-deleted during update_season."""
 
-    def test_deleted_episode(self, db_with_url: Session) -> None:
-        results = self._import_url(db_with_url)
+    def test_deleted_episode(self, session_with_url: Session) -> None:
+        results = self._import_url(session_with_url)
         season = self.get_random_season(results)
 
         fake_episode = build_random_model(
@@ -416,18 +416,18 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             deleted_at=None,
         )
         season.episodes.append(fake_episode)
-        db_with_url.flush()
+        session_with_url.flush()
 
         fake_episode.soft_delete()
-        original_plugin = self.get_detached_plugin(db_with_url)
+        original_plugin = self.get_detached_plugin(session_with_url)
         fake_episode.soft_undelete()
 
         with block_downloads(), log_stats(self):
-            self.plugin_class(db_with_url, season=season).update_season(season)
-            db_with_url.flush()
+            self.plugin_class(session_with_url).update_season(season)
+            session_with_url.flush()
 
         self.validate_plugin(
-            db_with_url,
+            session_with_url,
             original_plugin,
             self.deleted_episode_validator(fake_episode),
         )
@@ -436,8 +436,8 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake season gets soft-deleted during update_show."""
 
-    def test_deleted_season(self, db_with_url: Session) -> None:
-        results = self._import_url(db_with_url)
+    def test_deleted_season(self, session_with_url: Session) -> None:
+        results = self._import_url(session_with_url)
         show = self.get_random_show(results)
 
         fake_season = build_random_model(
@@ -446,18 +446,18 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             deleted_at=None,
         )
         show.seasons.append(fake_season)
-        db_with_url.flush()
+        session_with_url.flush()
 
         fake_season.soft_delete()
-        original_plugin = self.get_detached_plugin(db_with_url)
+        original_plugin = self.get_detached_plugin(session_with_url)
         fake_season.soft_undelete()
 
         with block_downloads(), log_stats(self):
-            self.plugin_class(db_with_url, show=show).update_show(show=show)
-            db_with_url.flush()
+            self.plugin_class(session_with_url).update_show(show=show)
+            session_with_url.flush()
 
         self.validate_plugin(
-            db_with_url,
+            session_with_url,
             original_plugin,
             self.deleted_season_validator(fake_season),
         )
@@ -466,12 +466,12 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that searching returns results."""
 
-    def test_search(self, db_with_files: Session) -> None:
+    def test_search(self, session_with_files: Session) -> None:
         if not self.search_query:
             pytest.skip()
 
         with block_downloads(), log_stats(self):
-            result = self._search(db_with_files, self.search_query)
+            result = self._search(session_with_files, self.search_query)
 
         assert isinstance(result, PluginSearchResults)
         assert len(result.results) > 0
@@ -492,21 +492,25 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity individually."""
 
     @pytest.mark.skip(reason="Exhaustive test - run manually")
-    def test_all_updates(self, db_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(db_with_url)
-        plugin = self.select_plugin_with_children(db_with_url)
+    def test_all_updates(self, session_with_url: Session) -> None:
+        original_plugin = self.get_detached_plugin(session_with_url)
+        plugin = self.select_plugin_with_children(session_with_url)
 
         for source in plugin.sources:
             for show in source.shows:
                 if show.data_timestamp:
-                    self._update_and_validate(db_with_url, original_plugin, show)
-                    db_with_url.rollback()
+                    self._update_and_validate(session_with_url, original_plugin, show)
+                    session_with_url.rollback()
                 for season in show.seasons:
-                    self._update_and_validate(db_with_url, original_plugin, season)
-                    db_with_url.rollback()
+                    self._update_and_validate(session_with_url, original_plugin, season)
+                    session_with_url.rollback()
                     for episode in season.episodes:
-                        self._update_and_validate(db_with_url, original_plugin, episode)
-                        db_with_url.rollback()
+                        self._update_and_validate(
+                            session_with_url,
+                            original_plugin,
+                            episode,
+                        )
+                        session_with_url.rollback()
 
 
 # endregion Individual Test Mixins

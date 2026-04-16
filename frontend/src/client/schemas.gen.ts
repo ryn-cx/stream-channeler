@@ -1689,7 +1689,7 @@ export const PluginSearchResultSchema = {
     type: 'object',
     required: ['title', 'url'],
     title: 'PluginSearchResult',
-    description: 'A single result from a plugin search.'
+    description: 'Search result from a plugin.'
 } as const;
 
 export const PluginSearchResultSourceSchema = {
@@ -1713,7 +1713,9 @@ export const PluginSearchResultSourceSchema = {
     type: 'object',
     required: ['name'],
     title: 'PluginSearchResultSource',
-    description: 'A streaming source available for a search result.'
+    description: `Source information for a search result.
+
+Used for plugins that support multiple sources.`
 } as const;
 
 export const PluginSearchResultsSchema = {
@@ -1733,7 +1735,7 @@ export const PluginSearchResultsSchema = {
     type: 'object',
     required: ['has_source_selection', 'results'],
     title: 'PluginSearchResults',
-    description: 'Container for plugin search results.'
+    description: 'Results from a search query.'
 } as const;
 
 export const PrivateUserCreateSchema = {

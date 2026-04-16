@@ -44,8 +44,6 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             self.plugin.data_timestamp = self.plugin_data_timestamp()
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
-    supports_import_url = True
-
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -178,11 +176,11 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
             )
             .order_by(col(File.data_timestamp).asc())
         )
-        for file in self.db.exec(statement).all():
+        for file in self.session.exec(statement).all():
             bucket = self._new_titles_bucket_file(file)
             for edge in bucket.parsed_edges():
                 short_name = edge.key.package.short_name
-                source = Source.get_from_memory(self.db, self.plugin, short_name)
+                source = Source.get_from_memory(self.session, self.plugin, short_name)
                 if not source:
                     msg = f"Source with key {short_name!r} not found."
                     raise ValueError(msg)
@@ -243,7 +241,7 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
 
         for new_titles_date in dates:
             file = self._new_titles_file(source.key, new_titles_date)
-            source = Source.get_one(self.db, self.plugin, file.source_key)
+            source = Source.get_one(self.session, self.plugin, file.source_key)
             timestamp = file.database_record.data_timestamp
             _cache_sources = self._preload_sources(
                 file.source_key,
@@ -265,11 +263,11 @@ class JustWatch(SearchMixin, UpsertMixin, register=True):
 
                 # Need to match on show because if this is a new season looking up an
                 # existing season would fail.
-                if show := Show.get_from_memory(self.db, source, show_key):
+                if show := Show.get_from_memory(self.session, source, show_key):
                     logger.info("Matched show: {}", show.name or show_key)
                     _cache_seasons = show.seasons
                     # If the season was found only the season needs to be updated.
-                    if season := Season.get_from_memory(self.db, show, season_key):
+                    if season := Season.get_from_memory(self.session, show, season_key):
                         season.set_update_at(timestamp)
                     # If no season was found this contains a new episode so the show
                     # needs to be updated.

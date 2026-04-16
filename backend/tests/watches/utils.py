@@ -16,7 +16,7 @@ from tests.utils.utils import build_random_model
 
 
 def create_random_watch(
-    db: Session,
+    session: Session,
     parent: Episode
     | Season
     | Show
@@ -37,12 +37,15 @@ def create_random_watch(
     if isinstance(watch_user, (User, CreatedUser)):
         watch_user = watch_user.id
     if watch_user is None:
-        watch_user = create_random_user(db).id
+        watch_user = create_random_user(session).id
     if not isinstance(parent, Episode):
-        parent = create_random_episode(db, parent or watch_user)
+        parent = create_random_episode(session, parent or watch_user)
     watch = build_random_model(
-        Watch, user_id=watch_user, episode_id=parent.id, **kwargs
+        Watch,
+        user_id=watch_user,
+        episode_id=parent.id,
+        **kwargs,
     )
-    db.add(watch)
-    db.flush()  # Allows watch.episode and watch.user to be accessed.
+    session.add(watch)
+    session.flush()  # Allows watch.episode and watch.user to be accessed.
     return watch

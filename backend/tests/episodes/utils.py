@@ -15,7 +15,7 @@ from tests.utils.utils import build_random_model
 
 
 def create_random_episode(
-    db: Session,
+    session: Session,
     parent: Season
     | Show
     | Source
@@ -27,13 +27,13 @@ def create_random_episode(
     **kwargs: object,
 ) -> Episode:
     if not isinstance(parent, Season):
-        parent = create_random_season(db, parent)
+        parent = create_random_season(session, parent)
     episode = build_random_model(
         Episode,
         season_id=parent.id,
         deleted_at=None,
         **kwargs,
     )
-    db.add(episode)
-    db.flush()  # Allows episode.season and episode.watches to be accessed.
+    session.add(episode)
+    session.flush()  # Allows episode.season and episode.watches to be accessed.
     return episode

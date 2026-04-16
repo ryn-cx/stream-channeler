@@ -34,7 +34,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def assert_api_get_list_success(
         self,
         client: TestClient,
-        db: Session,
+        session: Session,
         parent_id: uuid.UUID,
         headers: dict[str, str],
     ) -> None:
@@ -49,7 +49,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         parent_column = getattr(self.database_model, self.parent_key_name)
         siblings_select = select(self.database_model).where(parent_column == parent_id)
-        database_records = db.exec(siblings_select).all()
+        database_records = session.exec(siblings_select).all()
 
         assert len(response) == len(database_records)
         response_by_id = {item.id: item for item in response}
@@ -84,7 +84,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_get_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -92,7 +92,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -106,7 +106,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             self.assert_api_get_success(session_scoped_client, initial_test_data)
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="get",
@@ -118,11 +118,11 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_get_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=True,
@@ -142,7 +142,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_list_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -153,7 +153,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -165,13 +165,13 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         ):
             self.assert_api_get_list_success(
                 session_scoped_client,
-                session_scoped_db,
+                session_scoped_session,
                 initial_test_data.record.parent.id,
                 initial_test_data.headers,
             )
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="get",
@@ -184,7 +184,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_list_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         record_count: int,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
@@ -192,7 +192,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -201,18 +201,18 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         # Delete all existing records under this parent to start clean.
         parent_column = getattr(self.database_model, self.parent_key_name)
-        for record in session_scoped_db.exec(
+        for record in session_scoped_session.exec(
             select(self.database_model).where(parent_column == parent.id),
         ).all():
-            session_scoped_db.delete(record)
-        session_scoped_db.flush()
+            session_scoped_session.delete(record)
+        session_scoped_session.flush()
 
         for _ in range(record_count):
-            self.create_record_function(session_scoped_db, parent)
+            self.create_record_function(session_scoped_session, parent)
 
         self.assert_api_get_list_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             parent.id,
             initial_test_data.headers,
         )
@@ -233,7 +233,7 @@ class UserOwnedGetMixin[T: SUPPORTED_MODELS](BaseGetTests[T]):
     def test_list_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -241,7 +241,7 @@ class UserOwnedGetMixin[T: SUPPORTED_MODELS](BaseGetTests[T]):
     ) -> None:
         super().test_list_permissions(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,

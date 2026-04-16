@@ -49,9 +49,9 @@ class TestStreamChannelerURLValidation:
 
 
 class TestImportShow:
-    def test_import_show(self, function_scoped_db: Session) -> None:
-        show = create_random_show(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_show(self, function_scoped_session: Session) -> None:
+        show = create_random_show(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/show/{show.id}/"
 
         results = plugin.import_url(url)
@@ -62,8 +62,8 @@ class TestImportShow:
         assert results[0].seasons == []
         assert results[0].episodes == []
 
-    def test_import_nonexistent_show(self, function_scoped_db: Session) -> None:
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_nonexistent_show(self, function_scoped_session: Session) -> None:
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/show/{uuid.uuid4()}/"
 
         with pytest.raises(InvalidURLError):
@@ -71,9 +71,9 @@ class TestImportShow:
 
 
 class TestImportSeason:
-    def test_import_season(self, function_scoped_db: Session) -> None:
-        season = create_random_season(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_season(self, function_scoped_session: Session) -> None:
+        season = create_random_season(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/season/{season.id}/"
 
         results = plugin.import_url(url)
@@ -85,8 +85,8 @@ class TestImportSeason:
         assert results[0].seasons[0].id == season.id
         assert results[0].episodes == []
 
-    def test_import_nonexistent_season(self, function_scoped_db: Session) -> None:
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_nonexistent_season(self, function_scoped_session: Session) -> None:
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/season/{uuid.uuid4()}/"
 
         with pytest.raises(InvalidURLError):
@@ -94,9 +94,9 @@ class TestImportSeason:
 
 
 class TestImportEpisode:
-    def test_import_episode(self, function_scoped_db: Session) -> None:
-        episode = create_random_episode(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_episode(self, function_scoped_session: Session) -> None:
+        episode = create_random_episode(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/episode/{episode.id}/"
 
         results = plugin.import_url(url)
@@ -108,8 +108,8 @@ class TestImportEpisode:
         assert len(results[0].episodes) == 1
         assert results[0].episodes[0].id == episode.id
 
-    def test_import_nonexistent_episode(self, function_scoped_db: Session) -> None:
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_nonexistent_episode(self, function_scoped_session: Session) -> None:
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/episode/{uuid.uuid4()}/"
 
         with pytest.raises(InvalidURLError):
@@ -117,11 +117,11 @@ class TestImportEpisode:
 
 
 class TestImportSource:
-    def test_import_source(self, function_scoped_db: Session) -> None:
-        source = create_random_source(function_scoped_db)
-        show_one = create_random_show(function_scoped_db, parent=source)
-        show_two = create_random_show(function_scoped_db, parent=source)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_source(self, function_scoped_session: Session) -> None:
+        source = create_random_source(function_scoped_session)
+        show_one = create_random_show(function_scoped_session, parent=source)
+        show_two = create_random_show(function_scoped_session, parent=source)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/source/{source.id}/"
 
         results = plugin.import_url(url)
@@ -132,8 +132,8 @@ class TestImportSource:
         assert show_two.id in result_show_ids
         assert all(result.whitelist_mode is False for result in results)
 
-    def test_import_nonexistent_source(self, function_scoped_db: Session) -> None:
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_nonexistent_source(self, function_scoped_session: Session) -> None:
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/source/{uuid.uuid4()}/"
 
         with pytest.raises(InvalidURLError):
@@ -141,13 +141,13 @@ class TestImportSource:
 
 
 class TestImportPlugin:
-    def test_import_plugin(self, function_scoped_db: Session) -> None:
-        db_plugin = create_random_plugin(function_scoped_db)
-        source_one = create_random_source(function_scoped_db, parent=db_plugin)
-        source_two = create_random_source(function_scoped_db, parent=db_plugin)
-        show_one = create_random_show(function_scoped_db, parent=source_one)
-        show_two = create_random_show(function_scoped_db, parent=source_two)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_plugin(self, function_scoped_session: Session) -> None:
+        db_plugin = create_random_plugin(function_scoped_session)
+        source_one = create_random_source(function_scoped_session, parent=db_plugin)
+        source_two = create_random_source(function_scoped_session, parent=db_plugin)
+        show_one = create_random_show(function_scoped_session, parent=source_one)
+        show_two = create_random_show(function_scoped_session, parent=source_two)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/plugin/{db_plugin.id}/"
 
         results = plugin.import_url(url)
@@ -158,8 +158,8 @@ class TestImportPlugin:
         assert show_two.id in result_show_ids
         assert all(result.whitelist_mode is False for result in results)
 
-    def test_import_nonexistent_plugin(self, function_scoped_db: Session) -> None:
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_nonexistent_plugin(self, function_scoped_session: Session) -> None:
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/plugin/{uuid.uuid4()}/"
 
         with pytest.raises(InvalidURLError):
@@ -167,15 +167,18 @@ class TestImportPlugin:
 
 
 class TestAddResultsToChannel:
-    def test_import_show_adds_to_channel(self, function_scoped_db: Session) -> None:
-        show = create_random_show(function_scoped_db)
-        channel = create_random_channel(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+    def test_import_show_adds_to_channel(
+        self,
+        function_scoped_session: Session,
+    ) -> None:
+        show = create_random_show(function_scoped_session)
+        channel = create_random_channel(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/show/{show.id}/"
 
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         assert len(channel.shows) == 1
         assert channel.shows[0].show_id == show.id
@@ -183,23 +186,23 @@ class TestAddResultsToChannel:
 
     def test_import_season_adds_to_channel_with_whitelist(
         self,
-        function_scoped_db: Session,
+        function_scoped_session: Session,
     ) -> None:
-        season = create_random_season(function_scoped_db)
-        channel = create_random_channel(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+        season = create_random_season(function_scoped_session)
+        channel = create_random_channel(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/season/{season.id}/"
 
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
         assert channel_show.show_id == season.show_id
         assert channel_show.white_list_mode is True
 
-        season_whitelist = function_scoped_db.exec(
+        season_whitelist = function_scoped_session.exec(
             select(ChannelSeasonWhiteList).where(
                 ChannelSeasonWhiteList.channel_show_id == channel_show.id,
             ),
@@ -209,23 +212,23 @@ class TestAddResultsToChannel:
 
     def test_import_episode_adds_to_channel_with_whitelist(
         self,
-        function_scoped_db: Session,
+        function_scoped_session: Session,
     ) -> None:
-        episode = create_random_episode(function_scoped_db)
-        channel = create_random_channel(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+        episode = create_random_episode(function_scoped_session)
+        channel = create_random_channel(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/episode/{episode.id}/"
 
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
         assert channel_show.show_id == episode.season.show_id
         assert channel_show.white_list_mode is True
 
-        episode_whitelist = function_scoped_db.exec(
+        episode_whitelist = function_scoped_session.exec(
             select(ChannelEpisodeWhiteList).where(
                 ChannelEpisodeWhiteList.channel_show_id == channel_show.id,
             ),
@@ -235,18 +238,18 @@ class TestAddResultsToChannel:
 
     def test_import_multiple_shows_from_source(
         self,
-        function_scoped_db: Session,
+        function_scoped_session: Session,
     ) -> None:
-        source = create_random_source(function_scoped_db)
-        show_one = create_random_show(function_scoped_db, parent=source)
-        show_two = create_random_show(function_scoped_db, parent=source)
-        channel = create_random_channel(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+        source = create_random_source(function_scoped_session)
+        show_one = create_random_show(function_scoped_session, parent=source)
+        show_two = create_random_show(function_scoped_session, parent=source)
+        channel = create_random_channel(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/source/{source.id}/"
 
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         channel_show_ids = {channel_show.show_id for channel_show in channel.shows}
         assert len(channel.shows) == 2
@@ -255,20 +258,20 @@ class TestAddResultsToChannel:
 
     def test_import_show_already_in_channel(
         self,
-        function_scoped_db: Session,
+        function_scoped_session: Session,
     ) -> None:
-        show = create_random_show(function_scoped_db)
-        channel = create_random_channel(function_scoped_db)
-        plugin = StreamChanneler(function_scoped_db)
+        show = create_random_show(function_scoped_session)
+        channel = create_random_channel(function_scoped_session)
+        plugin = StreamChanneler(function_scoped_session)
         url = f"streamchanneler.com/show/{show.id}/"
 
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         # Import the same show again
         results = plugin.import_url(url)
-        add_results_to_channel(function_scoped_db, results, channel)
-        function_scoped_db.flush()
+        add_results_to_channel(function_scoped_session, results, channel)
+        function_scoped_session.flush()
 
         assert len(channel.shows) == 1

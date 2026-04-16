@@ -101,7 +101,7 @@ class StreamChanneler(BasePlugin, register=True):
         plugin_id: uuid.UUID,
         url: str,
     ) -> list[URLImportResult]:
-        plugin_entity = self.db.exec(
+        plugin_entity = self.session.exec(
             select(PluginModel)
             .where(PluginModel.id == plugin_id)
             .options(joinedload(PluginModel.sources).joinedload(Source.shows)),  # type: ignore[arg-type]
@@ -120,7 +120,7 @@ class StreamChanneler(BasePlugin, register=True):
         source_id: uuid.UUID,
         url: str,
     ) -> list[URLImportResult]:
-        source = self.db.exec(
+        source = self.session.exec(
             select(Source)
             .where(Source.id == source_id)
             .options(
@@ -139,7 +139,9 @@ class StreamChanneler(BasePlugin, register=True):
         show_id: uuid.UUID,
         url: str,
     ) -> list[URLImportResult]:
-        show = self.db.exec(select(Show).where(Show.id == show_id)).unique().first()
+        show = (
+            self.session.exec(select(Show).where(Show.id == show_id)).unique().first()
+        )
 
         if not show:
             msg = f"Show not found: {url}"
@@ -151,7 +153,7 @@ class StreamChanneler(BasePlugin, register=True):
         season_id: uuid.UUID,
         url: str,
     ) -> list[URLImportResult]:
-        season = self.db.exec(
+        season = self.session.exec(
             select(Season)
             .where(Season.id == season_id)
             .options(joinedload(Season.show)),  # type: ignore[arg-type]
@@ -168,7 +170,7 @@ class StreamChanneler(BasePlugin, register=True):
         episode_id: uuid.UUID,
         url: str,
     ) -> list[URLImportResult]:
-        episode = self.db.exec(
+        episode = self.session.exec(
             select(Episode)
             .where(Episode.id == episode_id)
             .options(joinedload(Episode.season).joinedload(Season.show)),  # type: ignore[arg-type]

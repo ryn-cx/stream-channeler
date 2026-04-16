@@ -19,13 +19,13 @@ ENDPOINTS = [
 @pytest.fixture
 def normal_user_headers(
     session_scoped_client: TestClient,
-    session_scoped_db: Session,
+    session_scoped_session: Session,
 ) -> dict[str, str]:
-    user = create_random_user(session_scoped_db)
+    user = create_random_user(session_scoped_session)
     return authentication_token_from_email(
         client=session_scoped_client,
         email=user.email,
-        db=session_scoped_db,
+        session=session_scoped_session,
     )
 
 

@@ -41,13 +41,13 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     def create_parent(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         user: User,
     ) -> SUPPORTED_MODELS | None | User:
         """Create and return a parent record if possible."""
         if not hasattr(self.database_model, "parent"):
             return None
-        return self.create_parent_function(session_scoped_db, user)
+        return self.create_parent_function(session_scoped_session, user)
 
     def can_create_record(
         self,
@@ -61,11 +61,11 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     def assert_record_saved_to_db(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         record_id: uuid.UUID,
         expected: OUTPUT_MODELS,
     ) -> None:
-        record = session_scoped_db.exec(
+        record = session_scoped_session.exec(
             select(self.database_model).where(self.database_model.id == record_id),
         ).one()
         expected_dump = expected.model_dump()
@@ -75,13 +75,15 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def assert_create_record_success(
         self,
         client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         parent_id: uuid.UUID | None,
         headers: dict[str, str],
         parameters_model: INPUT_SCHEMAS,
     ) -> OUTPUT_MODELS:
         """Assert that a record was successfully created."""
-        original_records = session_scoped_db.exec(select(self.database_model)).all()
+        original_records = session_scoped_session.exec(
+            select(self.database_model),
+        ).all()
 
         # Watch return a list
         if self.returns_list:
@@ -133,10 +135,14 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 )
 
         # Check that the API response matches the database record.
-        self.assert_record_saved_to_db(session_scoped_db, result.id, result)
+        self.assert_record_saved_to_db(session_scoped_session, result.id, result)
 
         # Check that only the new record was added.
-        self.assert_only_records_added(session_scoped_db, [result.id], original_records)
+        self.assert_only_records_added(
+            session_scoped_session,
+            [result.id],
+            original_records,
+        )
 
         return result
 
@@ -146,7 +152,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -157,7 +163,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -169,7 +175,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         # Delete the initial record so this will only test creating for an empty parent,
         # this is done mostly to support watch better which has extra logic if there are
         # already existing records.
-        session_scoped_db.delete(initial_test_data.record)
+        session_scoped_session.delete(initial_test_data.record)
 
         if self.can_create_record(
             user_is_authenticated=user_is_authenticated,
@@ -178,14 +184,14 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         ):
             self.assert_create_record_success(
                 session_scoped_client,
-                session_scoped_db,
+                session_scoped_session,
                 parent.id,
                 initial_test_data.headers,
                 build_random_model(self.input_schema),
             )
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="post",
@@ -199,7 +205,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         mode: Literal["full", "minimal"],
     ) -> None:
         if not hasattr(self.database_model, "parent"):
@@ -207,19 +213,19 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
 
         parent = initial_test_data.record.parent
-        session_scoped_db.delete(initial_test_data.record)
+        session_scoped_session.delete(initial_test_data.record)
         parameters_model = build_random_model(self.input_schema, mode)
 
         self.assert_create_record_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             parent.id,
             initial_test_data.headers,
             parameters_model,
@@ -229,7 +235,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_with_existing_records(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         existing_record_count: int,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
@@ -237,7 +243,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -245,13 +251,13 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         parent = initial_test_data.record.parent
         for _ in range(existing_record_count - 1):
-            self.create_record_function(session_scoped_db, parent)
+            self.create_record_function(session_scoped_session, parent)
 
         parameters_model = build_random_model(self.input_schema)
 
         self.assert_create_record_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             parent.id,
             initial_test_data.headers,
             parameters_model,
@@ -260,7 +266,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_shared_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Test creating a record when another user has a record with the same key."""
         if not hasattr(self.database_model, "parent"):
@@ -270,15 +276,18 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=random_bool(),
         )
 
         parent = initial_test_data.record.parent
-        other_user = create_random_user(session_scoped_db)
-        existing_record = self.create_record_function(session_scoped_db, other_user.id)
+        other_user = create_random_user(session_scoped_session)
+        existing_record = self.create_record_function(
+            session_scoped_session,
+            other_user.id,
+        )
         parameters_model = build_random_model(
             self.input_schema,
             # union-attr - hasattr checks already ensure this attribute exists.
@@ -287,7 +296,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         self.assert_create_record_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             parent.id,
             initial_test_data.headers,
             parameters_model,
@@ -296,7 +305,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_duplicate_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
@@ -305,13 +314,13 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=random_bool(),
         )
         record = initial_test_data.record
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_conflict(
                 client=session_scoped_client,
                 method="post",
@@ -325,20 +334,20 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_parent_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=random_bool(),
         )
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_not_found(
                 client=session_scoped_client,
                 method="post",
@@ -351,7 +360,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_create_generates_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure a key is automatically generated when not provided."""
         if not hasattr(self.database_model, "key"):
@@ -359,14 +368,14 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=random_bool(),
         )
         result = self.assert_create_record_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record.parent.id,
             initial_test_data.headers,
             build_random_model(self.input_schema, "minimal"),
@@ -383,7 +392,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
 
     def create_parent(
         self,
-        session_scoped_db: Session,  # noqa: ARG002
+        session_scoped_session: Session,  # noqa: ARG002
         user: User,
     ) -> User:
         return user
@@ -394,7 +403,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     def test_create_parent_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         pass
 
@@ -406,7 +415,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     def test_create_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -414,7 +423,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     ) -> None:
         super().test_create_permissions(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
@@ -423,7 +432,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     def test_create_rejects_extra_fields(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Verify that POST endpoint rejects extra fields."""
         if not hasattr(self.database_model, "parent"):
@@ -431,18 +440,18 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
 
-        parent = self.create_parent(session_scoped_db, initial_test_data.user)
+        parent = self.create_parent(session_scoped_session, initial_test_data.user)
 
         parameters = dump_random_model(self.input_schema)
         parameters["id"] = str(uuid.uuid4())
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_unprocessable(
                 session_scoped_client,
                 "post",

@@ -18,7 +18,7 @@ class UpsertMixin(FileMixin, register=False):
     # region Upsert
 
     def _upsert_source(self) -> Source:
-        source = Source.get_from_memory(self.db, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
 
         data_timestamp = tz_datetime.now()
         if source and source.data_timestamp:
@@ -35,7 +35,7 @@ class UpsertMixin(FileMixin, register=False):
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
-        existing_show = Show.get_from_memory(self.db, source, show_key)
+        existing_show = Show.get_from_memory(self.session, source, show_key)
         channel_file = self._channel_by_channel_id_file(show_key)
         channel_item = channel_file.parsed().items[0]
 
@@ -67,7 +67,7 @@ class UpsertMixin(FileMixin, register=False):
             return
         uploads_key = self._get_channel_uploads_playlist_key(show.key)
         season_timestamp = self.season_data_timestamp(uploads_key, show_key)
-        season = Season.get_from_memory(self.db, show, uploads_key)
+        season = Season.get_from_memory(self.session, show, uploads_key)
         if not season or season.data_timestamp != season_timestamp:
             season = Season(
                 key=uploads_key,
@@ -94,7 +94,7 @@ class UpsertMixin(FileMixin, register=False):
         for season_key in playlist_season_keys:
             parsed_playlist = playlists_by_key[season_key]
             season_timestamp = self.season_data_timestamp(season_key, show_key)
-            season = Season.get_from_memory(self.db, show, season_key)
+            season = Season.get_from_memory(self.session, show, season_key)
             if not season or season.data_timestamp != season_timestamp:
                 season = Season(
                     key=season_key,
@@ -114,7 +114,11 @@ class UpsertMixin(FileMixin, register=False):
         # Loop through episode keys because duplicate and invalid videos have already
         # been removed.
         for sort_order, episode_key in enumerate(episode_keys):
-            existing_episode = Episode.get_from_memory(self.db, season, episode_key)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_key,
+            )
             episode_timestamp = self.episode_data_timestamp(
                 episode_key,
                 season.key,

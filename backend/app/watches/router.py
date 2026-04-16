@@ -71,6 +71,8 @@ def sync_watches(
 
 
 # TODO: Add tests
+# THis is under /watches and not /plugins because it does not use the plugin id for
+# identification because it relies on the plugin itself and not it's database entry.
 @router.post("/import")
 def import_watch_history(
     file: UploadFile,
@@ -86,7 +88,7 @@ def import_watch_history(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Plugin '{params.plugin_key}' not found.",
         )
-    if not plugin.supports_import_watch_history:
+    if not plugin.implements("import_watch_history_instructions"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Plugin '{params.plugin_key}' does not support watch history import.",
@@ -94,7 +96,7 @@ def import_watch_history(
 
     content = file.file.read().decode("utf-8")
 
-    plugin_instance = plugin(db=session)
+    plugin_instance = plugin(session=session)
     result = plugin_instance.import_watch_history(
         content=content,
         user=current_user,

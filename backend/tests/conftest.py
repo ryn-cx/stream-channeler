@@ -112,59 +112,61 @@ def session_scoped_connection() -> Generator[Connection]:
 
 
 @pytest.fixture
-def function_scoped_db(function_scoped_connection: Connection) -> Generator[Session]:
+def function_scoped_session(
+    function_scoped_connection: Connection,
+) -> Generator[Session]:
     """Function-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(function_scoped_connection)
 
 
 @pytest.fixture
-def class_scoped_db(class_scoped_connection: Connection) -> Generator[Session]:
+def class_scoped_session(class_scoped_connection: Connection) -> Generator[Session]:
     """Class-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(class_scoped_connection)
 
 
 @pytest.fixture
-def module_scoped_db(module_scoped_connection: Connection) -> Generator[Session]:
+def module_scoped_session(module_scoped_connection: Connection) -> Generator[Session]:
     """Module-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(module_scoped_connection)
 
 
 @pytest.fixture
-def session_scoped_db(session_scoped_connection: Connection) -> Generator[Session]:
+def session_scoped_session(session_scoped_connection: Connection) -> Generator[Session]:
     """Session-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(session_scoped_connection)
 
 
-def _create_client(db: Session) -> Generator[TestClient]:
+def _create_client(session: Session) -> Generator[TestClient]:
     """Provide a test client that shares the given database session."""
-    app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_db] = lambda: session
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def function_scoped_client(function_scoped_db: Session) -> Generator[TestClient]:
+def function_scoped_client(function_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a function-scoped database session."""
-    yield from _create_client(function_scoped_db)
+    yield from _create_client(function_scoped_session)
 
 
 @pytest.fixture
-def class_scoped_client(class_scoped_db: Session) -> Generator[TestClient]:
+def class_scoped_client(class_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a class-scoped database session."""
-    yield from _create_client(class_scoped_db)
+    yield from _create_client(class_scoped_session)
 
 
 @pytest.fixture
-def module_scoped_client(module_scoped_db: Session) -> Generator[TestClient]:
+def module_scoped_client(module_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a module-scoped database session."""
-    yield from _create_client(module_scoped_db)
+    yield from _create_client(module_scoped_session)
 
 
 @pytest.fixture
-def session_scoped_client(session_scoped_db: Session) -> Generator[TestClient]:
+def session_scoped_client(session_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a session-scoped database session."""
-    yield from _create_client(session_scoped_db)
+    yield from _create_client(session_scoped_session)
 
 
 @pytest.fixture
@@ -176,11 +178,11 @@ def superuser_token_headers(session_scoped_client: TestClient) -> dict[str, str]
 @pytest.fixture
 def normal_user_token_headers(
     session_scoped_client: TestClient,
-    session_scoped_db: Session,
+    session_scoped_session: Session,
 ) -> dict[str, str]:
     """Provide authentication headers for a normal test user."""
     return authentication_token_from_email(
         client=session_scoped_client,
         email=settings.EMAIL_TEST_USER,
-        db=session_scoped_db,
+        session=session_scoped_session,
     )

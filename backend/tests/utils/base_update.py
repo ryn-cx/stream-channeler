@@ -31,16 +31,16 @@ from tests.utils.utils import build_random_model, dump_random_model
 class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def assert_database_modified_at_updated(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         record_id: uuid.UUID,
         original_modified_at: datetime,
     ) -> None:
-        database_record = self.get_record_from_db(session_scoped_db, record_id)
+        database_record = self.get_record_from_db(session_scoped_session, record_id)
         assert database_record.modified_at >= original_modified_at
 
     def assert_database_matches_expected(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         original_record: T,
         patch_input: PATCH_MODELS,
     ) -> None:
@@ -49,7 +49,10 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         patch_dump = patch_input.model_dump(exclude_unset=True)
         expected_dump = original_dump | patch_dump
 
-        database_record = self.get_record_from_db(session_scoped_db, original_record.id)
+        database_record = self.get_record_from_db(
+            session_scoped_session,
+            original_record.id,
+        )
         database_dump = self.output_model.model_validate(database_record).model_dump()
 
         # modified_at will not match and is checked independently.
@@ -60,7 +63,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
     def assert_database_updated(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         patch_results: Sequence[OUTPUT_MODELS],
         patch_input: PATCH_MODELS,
         original_modified_at: datetime,
@@ -69,31 +72,33 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         original_records_by_id = {record.id: record for record in original_records}
         for patch_result in patch_results:
             self.assert_database_modified_at_updated(
-                session_scoped_db,
+                session_scoped_session,
                 patch_result.id,
                 original_modified_at,
             )
             self.assert_database_matches_expected(
-                session_scoped_db,
+                session_scoped_session,
                 original_records_by_id[patch_result.id],
                 patch_input,
             )
         self.assert_other_records_unchanged(
-            session_scoped_db,
+            session_scoped_session,
             patch_results,
             original_records,
         )
 
     def assert_api_update_success(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         client: TestClient,
         setup: CreatedTestData[T],
         patch_input: PATCH_MODELS,
     ) -> list[OUTPUT_MODELS]:
         record_id = setup.record.id
-        original_record = self.get_record_from_db(session_scoped_db, record_id)
-        original_records = session_scoped_db.exec(select(self.database_model)).all()
+        original_record = self.get_record_from_db(session_scoped_session, record_id)
+        original_records = session_scoped_session.exec(
+            select(self.database_model),
+        ).all()
 
         # Watch return a list of records.
         if self.returns_list:
@@ -119,7 +124,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         # Verify that the database matches the API input.
         self.assert_database_updated(
-            session_scoped_db,
+            session_scoped_session,
             [result],
             patch_input,
             original_record.modified_at,
@@ -127,7 +132,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
         # Verify that the database matches the API output.
-        database_record = self.get_record_from_db(session_scoped_db, result.id)
+        database_record = self.get_record_from_db(session_scoped_session, result.id)
         assert result.model_dump().items() <= database_record.model_dump().items()
 
         return [result]
@@ -138,7 +143,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -147,7 +152,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         """Ensure only the owner of a record can update it."""
         initial_test_data = self.create_test_data(
             client=session_scoped_client,
-            db=session_scoped_db,
+            session=session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -157,14 +162,14 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         if user_is_authenticated and user_is_owner:
             self.assert_api_update_success(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 initial_test_data,
                 patch_input,
             )
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="patch",
@@ -179,14 +184,14 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_data(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         create_mode: Literal["full", "minimal"],
         update_mode: Literal["full", "minimal"],
     ) -> None:
         """Ensure updating a record works correctly."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -197,11 +202,11 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         initial_test_data.record.sqlmodel_update(
             initial_model.model_dump(exclude_unset=True),
         )
-        session_scoped_db.flush()
+        session_scoped_session.flush()
 
         update_model = build_random_model(self.patch_model, update_mode)
         self.assert_api_update_success(
-            session_scoped_db,
+            session_scoped_session,
             session_scoped_client,
             initial_test_data,
             update_model,
@@ -210,19 +215,19 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure updating a non-existent record returns a 404 error."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=True,
         )
 
         parameters = dump_random_model(self.patch_model)
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_not_found(
                 client=session_scoped_client,
                 method="patch",
@@ -235,7 +240,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_shared_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure updating a record works when keys overlap between users."""
         if not hasattr(self.database_model, "key"):
@@ -243,7 +248,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -251,12 +256,12 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         # union-attr - hasattr checks already ensure this attribute exists.
         key = initial_test_data.record.key  # type: ignore[union-attr]
-        other_user = create_random_user(session_scoped_db)
-        self.create_record_function(session_scoped_db, other_user.id, key=key)
+        other_user = create_random_user(session_scoped_session)
+        self.create_record_function(session_scoped_session, other_user.id, key=key)
 
         update_model = build_random_model(self.patch_model)
         self.assert_api_update_success(
-            session_scoped_db,
+            session_scoped_session,
             session_scoped_client,
             initial_test_data,
             update_model,
@@ -265,7 +270,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_duplicate_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure updating a record's key to match a sibling's key fails."""
         if not hasattr(self.database_model, "key"):
@@ -277,17 +282,17 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         record = initial_test_data.record
-        sibling = self.create_record_function(session_scoped_db, record.parent)
+        sibling = self.create_record_function(session_scoped_session, record.parent)
 
         # union-attr - hasattr checks already ensure this attribute exists.
         parameters = dump_random_model(self.patch_model, key=sibling.key)  # type: ignore[union-attr]
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_conflict(
                 client=session_scoped_client,
                 method="patch",
@@ -300,7 +305,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_rejects_empty_key(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure updating a record's key to an empty string fails."""
         if not hasattr(self.database_model, "key"):
@@ -310,7 +315,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -320,7 +325,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         parameters = update_model.model_dump(mode="json", exclude_unset=True)
         parameters["key"] = ""
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_unprocessable(
                 session_scoped_client,
                 "patch",
@@ -332,12 +337,12 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_update_resists_injecting_id(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Ensure injecting an id does not change the record's id."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -347,7 +352,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         parameters = update_model.model_dump(mode="json", exclude_unset=True)
         parameters["id"] = str(uuid.uuid4())
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_unprocessable(
                 session_scoped_client,
                 "patch",

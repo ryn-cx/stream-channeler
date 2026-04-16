@@ -16,16 +16,12 @@ from not_yt_dlapi.video.models import VideoModel
 from sqlmodel import Session
 
 from app.config import settings
-from app.episodes.models import Episode
 from app.plugins.models import File
 from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.plugins.plugins.utils.base_plugin.files import (
     GAPIJSON,
     GAPIJSONNoGet,
 )
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
 
 
 @cache
@@ -91,24 +87,8 @@ class Videos(GAPIJSON[VideoModel]):
 
 class FileMixin(BasePlugin, register=False):
     @override
-    def __init__(
-        self,
-        db: Session,
-        *,
-        url: str | None = None,
-        source: Source | None = None,
-        show: Show | None = None,
-        season: Season | None = None,
-        episode: Episode | None = None,
-    ) -> None:
-        super().__init__(
-            db,
-            url=url,
-            source=source,
-            show=show,
-            season=season,
-            episode=episode,
-        )
+    def __init__(self, session: Session) -> None:
+        super().__init__(session)
 
     # region File Wrappers
 
@@ -116,35 +96,35 @@ class FileMixin(BasePlugin, register=False):
         return self._get_weakref_cached_file(
             ChannelByChannelId,
             show_key,
-            lambda: ChannelByChannelId(self.db, self.plugin, show_key),
+            lambda: ChannelByChannelId(self.session, self.plugin, show_key),
         )
 
     def _channel_by_handle_file(self, channel_name: str) -> ChannelByHandle:
         return self._get_weakref_cached_file(
             ChannelByHandle,
             channel_name,
-            lambda: ChannelByHandle(self.db, self.plugin, channel_name),
+            lambda: ChannelByHandle(self.session, self.plugin, channel_name),
         )
 
     def _channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
         return self._get_weakref_cached_file(
             ChannelPlaylists,
             show_key,
-            lambda: ChannelPlaylists(self.db, self.plugin, show_key),
+            lambda: ChannelPlaylists(self.session, self.plugin, show_key),
         )
 
     def _playlist_items_file(self, season_key: str) -> PlaylistItems:
         return self._get_weakref_cached_file(
             PlaylistItems,
             season_key,
-            lambda: PlaylistItems(self.db, self.plugin, season_key),
+            lambda: PlaylistItems(self.session, self.plugin, season_key),
         )
 
     def _videos_file(self, episode_key: str) -> Videos:
         return self._get_weakref_cached_file(
             Videos,
             episode_key,
-            lambda: Videos(self.db, self.plugin, episode_key),
+            lambda: Videos(self.session, self.plugin, episode_key),
         )
 
     # endregion File Wrappers

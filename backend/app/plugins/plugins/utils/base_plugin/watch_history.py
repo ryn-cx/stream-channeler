@@ -66,7 +66,7 @@ class WatchHistoryMixin(WatchMixin):
                 existing_watches.append(entry.import_result)
                 continue
 
-            self.db.add(
+            self.session.add(
                 Watch(
                     user_id=user.id,
                     episode_id=episode.id,

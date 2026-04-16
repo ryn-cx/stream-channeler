@@ -35,11 +35,10 @@ class UpsertMixin(FileMixin, register=False):
         """Format a JustWatch image URL with the correct base URL and profile."""
         if url is None:
             return None
-        return (
-            f"{self._images_base_url}{url}"
-            .replace("{profile}", f"s{profile}")
-            .replace("{format}", format)
-        )
+        return f"{self._images_base_url}{url}".replace(
+            "{profile}",
+            f"s{profile}",
+        ).replace("{format}", format)
 
     @staticmethod
     def _clean_external_url(url: str) -> str:
@@ -94,15 +93,23 @@ class UpsertMixin(FileMixin, register=False):
     def _upsert_sources(self, providers_file: ProvidersLocale) -> None:
         for provider in providers_file.parsed():
             source = Source.get_from_memory(
-                self.db,
+                self.session,
                 self.plugin,
                 provider["short_name"],
             )
+
             source = Source(
                 key=provider["short_name"],
                 name=provider["clear_name"],
-                # Resolution of 100 is used on https://www.justwatch.com/us/new
-                favicon_url=self._format_image_url(provider["icon_url"], profile=100),
+                # The format used in this API endpoint is sligthly different than the
+                # one used for other endpoints because it does not include a {format}
+                # placeholder or file name. {profile}=100 and {format}=jpeg are used on
+                # https://www.justwatch.com/us/new
+                favicon_url=(
+                    self._format_image_url(provider["icon_url"], profile=100)
+                    + provider["technical_name"]
+                    + ".jpeg"
+                ),
                 plugin_id=self.plugin.id,
             ).upsert(self.plugin, source)
 
@@ -118,13 +125,13 @@ class UpsertMixin(FileMixin, register=False):
     def _upsert_shows(self, show_key: str) -> list[Show]:
         shows: list[Show] = []
         for source_key, _ in self._sources_with_offers(show_key):
-            source = Source.get_one_from_memory(self.db, self.plugin, source_key)
+            source = Source.get_one_from_memory(self.session, self.plugin, source_key)
             shows.append(self._upsert_show(source, show_key))
         return shows
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
-        existing_show = Show.get_from_memory(self.db, source, show_key)
+        existing_show = Show.get_from_memory(self.session, source, show_key)
 
         parsed_json = self._url_title_details_file(show_key).parsed()
         offer = next(
@@ -167,7 +174,7 @@ class UpsertMixin(FileMixin, register=False):
             msg = f"No seasons found for show: {show_key}"
             raise ValueError(msg)
         for season_data in seasons_data:
-            existing_season = Season.get_from_memory(self.db, show, season_data.id)
+            existing_season = Season.get_from_memory(self.session, show, season_data.id)
             image_url = self._format_image_url(season_data.content.poster_url, 166)
             season = Season(
                 image_url=image_url,
@@ -184,7 +191,7 @@ class UpsertMixin(FileMixin, register=False):
     def _upsert_movie_season(self, show: Show, show_key: str) -> None:
         parsed_json = self._url_title_details_file(show_key).parsed()
         node_id = parsed_json.data.url_v2.node.id
-        existing_season = Season.get_from_memory(self.db, show, node_id)
+        existing_season = Season.get_from_memory(self.session, show, node_id)
         season = Season(
             key=node_id,
             name="Movie",
@@ -222,7 +229,7 @@ class UpsertMixin(FileMixin, register=False):
             custom_season_episodes_file.parsed_episodes(),
         ):
             existing_episode = Episode.get_from_memory(
-                self.db,
+                self.session,
                 season,
                 season_episode.id,
             )
@@ -284,7 +291,7 @@ class UpsertMixin(FileMixin, register=False):
             return None
 
         existing_episode = Episode.get_from_memory(
-            self.db,
+            self.session,
             season,
             episode_info.id,
         )

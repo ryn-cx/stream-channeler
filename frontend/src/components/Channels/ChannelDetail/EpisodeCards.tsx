@@ -422,107 +422,107 @@ export function EpisodeCard({
 
           {/* Burger menu in top right corner */}
           <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
                 onClick={(e) => e.stopPropagation()}
               >
-                {episode.watch_date &&
-                !episode.verified &&
-                episode.episode_watch_id ? (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      verifyMutation.mutate(undefined)
-                    }}
-                  >
-                    <BadgeCheck className="h-4 w-4" />
-                    Verify Watch
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      watchedMutation.mutate(episode.id)
-                    }}
-                  >
-                    <Check className="h-4 w-4" />
-                    Mark as Watched
-                  </DropdownMenuItem>
-                )}
-                {nextEpisodeId && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onNextEpisode?.(episode.id)
-                    }}
-                  >
-                    <SkipForward className="h-4 w-4" />
-                    Next Episode
-                  </DropdownMenuItem>
-                )}
-                {episode.watch_date && episode.episode_watch_id && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setConfirmDeleteWatch(true)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Last Watch
-                  </DropdownMenuItem>
-                )}
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {episode.watch_date &&
+              !episode.verified &&
+              episode.episode_watch_id ? (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    onHide?.(episode.id)
+                    verifyMutation.mutate(undefined)
                   }}
                 >
-                  <EyeOff className="h-4 w-4" />
-                  Temporarily Hide
+                  <BadgeCheck className="h-4 w-4" />
+                  Verify Watch
                 </DropdownMenuItem>
+              ) : (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    setConfirmBlacklist(true)
+                    watchedMutation.mutate(episode.id)
                   }}
                 >
-                  <ListX className="h-4 w-4" />
-                  Blacklist Episode
+                  <Check className="h-4 w-4" />
+                  Mark as Watched
                 </DropdownMenuItem>
+              )}
+              {nextEpisodeId && (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (episode.url) {
-                      window.open(episode.url, "_blank", "noopener,noreferrer")
-                    }
+                    onNextEpisode?.(episode.id)
                   }}
                 >
-                  <ExternalLink className="h-4 w-4" />
-                  Open URL
+                  <SkipForward className="h-4 w-4" />
+                  Next Episode
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    to="/channels/$channelId"
-                    params={{ channelId: episode.channel_id }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Radio className="h-4 w-4" />
-                    Go to Channel
-                  </Link>
+              )}
+              {episode.watch_date && episode.episode_watch_id && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setConfirmDeleteWatch(true)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Last Watch
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onHide?.(episode.id)
+                }}
+              >
+                <EyeOff className="h-4 w-4" />
+                Temporarily Hide
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setConfirmBlacklist(true)
+                }}
+              >
+                <ListX className="h-4 w-4" />
+                Blacklist Episode
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (episode.url) {
+                    window.open(episode.url, "_blank", "noopener,noreferrer")
+                  }
+                }}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open URL
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/channels/$channelId"
+                  params={{ channelId: episode.channel_id }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Radio className="h-4 w-4" />
+                  Go to Channel
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* px-2 pb-2 - Border area around the text to make easier to read */}

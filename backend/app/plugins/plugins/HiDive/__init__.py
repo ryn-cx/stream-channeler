@@ -132,7 +132,7 @@
 #                 msg = "Unable to get release date from schedule calendar"
 #                 raise TypeError(msg)
 
-#             if show := self.db.exec(
+#             if show := self.session.exec(
 #                 select(Show).where(
 #                     Show.source == source,
 #                     Show.name == episode_text.split(" - ")[1],
@@ -194,7 +194,7 @@
 #                 .where(File.plugin == self.plugin)
 #                 .where(col(File.key).in_(file_keys))
 #             )
-#             self.db.exec(file_select).all()
+#             self.session.exec(file_select).all()
 #             season_json = self._season_json(show_key)
 #             if season_json.database_record.content:
 #                 tv_show_key = str(season_json.parsed().metadata.series.series_id)
@@ -204,7 +204,7 @@
 #                     .where(File.plugin == self.plugin)
 #                     .where(col(File.key).in_(adj_keys))
 #                 )
-#                 self.db.exec(adj_select).all()
+#                 self.session.exec(adj_select).all()
 #         else:
 #             file_keys = [PlaylistJSON.file_key(show_key)]
 #             file_select = (
@@ -212,7 +212,7 @@
 #                 .where(File.plugin == self.plugin)
 #                 .where(col(File.key).in_(file_keys))
 #             )
-#             self.db.exec(file_select).all()
+#             self.session.exec(file_select).all()
 
 #     # endregion
 
@@ -290,13 +290,13 @@
 
 #     def _show_from_db(self, show_key: str) -> Show | None:
 #         existing_source = Source.get_from_memory(
-#             self.db,
+#             self.session,
 #             self.plugin,
 #             self._plugin_name(),
 #         )
 #         if existing_source:
 #             db_show_key = self._get_show_key_for_lookup(show_key)
-#             return Show.get_from_memory(self.db, existing_source, db_show_key)
+#             return Show.get_from_memory(self.session, existing_source, db_show_key)
 #         return None
 
 #     def _seasons_dict_from_db(self, show_key: str) -> dict[str, Season]:
@@ -345,7 +345,7 @@
 #     def __upsert_source(self, show_key: str) -> Show:
 #         logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
 #         existing_source = Source.get_from_memory(
-#             self.db,
+#             self.session,
 #             self.plugin,
 #             self._plugin_name(),
 #         )

@@ -35,17 +35,8 @@ class BasePlugin(
     # region Initialization
 
     @override
-    def __init__(
-        self,
-        db: Session,
-        *,
-        url: str | None = None,
-        source: Source | None = None,
-        show: Show | None = None,
-        season: Season | None = None,
-        episode: Episode | None = None,
-    ) -> None:
-        self.db = db
+    def __init__(self, session: Session) -> None:
+        self.session = session
         self._file_cache: dict[tuple[type, object], Any] = {}
         self._weakref_file_cache: dict[tuple[type, object], Any] = {}
         self.initialize_plugin()
@@ -53,9 +44,9 @@ class BasePlugin(
 
     @override
     def initialize_plugin(self) -> None:
-        plugin_user = get_or_create_plugin_user(session=self.db)
+        plugin_user = get_or_create_plugin_user(session=self.session)
         existing = Plugin.get(
-            self.db,
+            self.session,
             plugin_user,
             self.plugin_key(),
             options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
@@ -141,7 +132,7 @@ class BasePlugin(
         """Soft-delete seasons whose keys are not in the show's season file."""
         expected_keys = self._season_keys_from_file(show_key)
         source_ids = {source.id for source in self.plugin.sources}
-        for obj in list(self.db.identity_map.values()):
+        for obj in list(self.session.identity_map.values()):
             if (
                 isinstance(obj, Show)
                 and obj.key == show_key
@@ -155,10 +146,10 @@ class BasePlugin(
         source_ids = {source.id for source in self.plugin.sources}
         show_ids = {
             obj.id
-            for obj in self.db.identity_map.values()
+            for obj in self.session.identity_map.values()
             if isinstance(obj, Show) and obj.source_id in source_ids
         }
-        for obj in list(self.db.identity_map.values()):
+        for obj in list(self.session.identity_map.values()):
             if (
                 isinstance(obj, Season)
                 and obj.key == season_key

@@ -83,11 +83,11 @@ class PlaylistValidator(YouTubeValidator):
 
     def test_import_response(
         self,
-        db_with_url: Session,
+        session_with_url: Session,
         domain: str,
         playlist_path: str,
     ) -> None:
-        results = self._import_url(db_with_url, url=domain + playlist_path)
+        results = self._import_url(session_with_url, url=domain + playlist_path)
         result = results[0]
 
         assert len(results) == 1
@@ -114,12 +114,12 @@ class ChannelValidator(YouTubeValidator):
 
     def test_channel_import_response(
         self,
-        db_with_url: Session,
+        session_with_url: Session,
         domain: str,
         channel_path: str,
     ) -> None:
         url = domain + channel_path
-        results = self._import_url(db_with_url, url=url)
+        results = self._import_url(session_with_url, url=url)
         result = results[0]
 
         assert len(results) == 1
@@ -130,12 +130,12 @@ class ChannelValidator(YouTubeValidator):
 
     def test_channel_playlists_import_response(
         self,
-        db_with_url: Session,
+        session_with_url: Session,
         domain: str,
         base_channel_path: str,
     ) -> None:
         url = domain + base_channel_path + "/playlists"
-        results = self._import_url(db_with_url, url=url)
+        results = self._import_url(session_with_url, url=url)
         result = results[0]
 
         assert len(results) == 1
@@ -179,7 +179,9 @@ class Test32CharacterPlaylist(StandardTests, PlaylistValidator):
 
 
 class TestPlaylistWithDeletedVideos(
-    StandardTests, ChannelWithNoUploadsMixin, PlaylistValidator
+    StandardTests,
+    ChannelWithNoUploadsMixin,
+    PlaylistValidator,
 ):
     channel_key = "UCJ0cZ4i3wJU5OMVyRH_PxyQ"
     playlist_key = "PL1cA0ECqV9x-mC2Pxon9_YNDuM5PdyhyH"
@@ -191,9 +193,9 @@ class TestNamedChannel(StandardTests, ChannelValidator):
     channel_name = "jawed"
     url = f"youtube.com/{channel_name}"
 
-    def test_episode_in_multiple_seasons(self, db_with_url: Session) -> None:
+    def test_episode_in_multiple_seasons(self, session_with_url: Session) -> None:
         """Test that episodes that belong to multiple seasons works correctly."""
-        results = self._import_url(db_with_url)
+        results = self._import_url(session_with_url)
         result = results[0]
         show = result.show
         episode_count = 0
@@ -207,7 +209,9 @@ class TestNamedChannel(StandardTests, ChannelValidator):
 # A channel with no uploads can be imported because the channel may have playlists with
 # videos.
 class TestChannelWithoutUploads(
-    StandardTests, ChannelWithNoUploadsMixin, ChannelValidator
+    StandardTests,
+    ChannelWithNoUploadsMixin,
+    ChannelValidator,
 ):
     channel_key = "UCJ0cZ4i3wJU5OMVyRH_PxyQ"
     channel_name = "highballrider"
@@ -217,11 +221,15 @@ class TestChannelWithoutUploads(
     # playlists instead.
     def test_channel_import_response(
         self,
-        db_with_url: Session,
+        session_with_url: Session,
         domain: str,
         channel_path: str,
     ) -> None:
-        self.test_channel_playlists_import_response(db_with_url, domain, channel_path)
+        self.test_channel_playlists_import_response(
+            session_with_url,
+            domain,
+            channel_path,
+        )
 
 
 # A channel with no playlists can be imported because the channel may have uploads.

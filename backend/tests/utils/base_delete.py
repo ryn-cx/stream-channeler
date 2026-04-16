@@ -29,7 +29,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def assert_delete_success(
         self,
         client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         record: SUPPORTED_MODELS,
         headers: dict[str, str],
     ) -> None:
@@ -39,7 +39,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=headers,
             message=f"{self.model_name} deleted successfully",
         )
-        assert not session_scoped_db.exec(
+        assert not session_scoped_session.exec(
             select(self.database_model).where(self.database_model.id == record.id),
         ).first()
 
@@ -49,7 +49,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_delete_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -57,7 +57,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
@@ -70,13 +70,13 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         ):
             self.assert_delete_success(
                 session_scoped_client,
-                session_scoped_db,
+                session_scoped_session,
                 initial_test_data.record,
                 initial_test_data.headers,
             )
         else:
             self.assert_cannot_access(
-                session_scoped_db,
+                session_scoped_session,
                 session_scoped_client,
                 user_is_authenticated=user_is_authenticated,
                 method="delete",
@@ -88,15 +88,15 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
     def test_delete_not_found(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
+        user = create_random_user(session_scoped_session)
         user_headers = authentication_token_from_email(
             client=session_scoped_client,
             email=user.email,
-            db=session_scoped_db,
+            session=session_scoped_session,
         )
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_not_found(
                 client=session_scoped_client,
                 method="delete",

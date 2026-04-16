@@ -113,7 +113,7 @@ class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
         new_browse._write(BrowseSeries.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
-    def test_update_source(self, db_with_url: Session) -> None:
+    def test_update_source(self, session_with_url: Session) -> None:
         """Update a random source and validate the data."""
         if self.invalid_url:
             pytest.skip()
@@ -122,7 +122,7 @@ class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
             msg = "URL is required for update source test"
             raise ValueError(msg)
 
-        plugin_instance = self.plugin_class(db_with_url, url=self.url)
+        plugin_instance = self.plugin_class(session_with_url)
         results = plugin_instance.import_url(self.url)
         source = self.get_random_source(results)
 
@@ -140,8 +140,8 @@ class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
             if season.update_at:
                 season.update_at = new_browse_timestamp + timedelta(minutes=1)
 
-        original_plugin = self.get_detached_plugin(db_with_url)
-        self._update_and_validate(db_with_url, original_plugin, source)
+        original_plugin = self.get_detached_plugin(session_with_url)
+        self._update_and_validate(session_with_url, original_plugin, source)
 
 
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):

@@ -93,7 +93,7 @@ def test_recovery_password_user_not_exits(
 
 def test_reset_password(
     session_scoped_client: TestClient,
-    session_scoped_db: Session,
+    session_scoped_session: Session,
 ) -> None:
     email = random_email()
     password = random_lower_string()
@@ -106,7 +106,10 @@ def test_reset_password(
         is_active=True,
         is_superuser=False,
     )
-    user = user_service.create_user(session=session_scoped_db, user_create=user_create)
+    user = user_service.create_user(
+        session=session_scoped_session,
+        user_create=user_create,
+    )
     token = generate_password_reset_token(email=email)
     headers = user_authentication_headers(
         client=session_scoped_client,
@@ -124,7 +127,7 @@ def test_reset_password(
     assert r.status_code == status.HTTP_200_OK
     assert r.json() == {"message": "Password updated successfully"}
 
-    session_scoped_db.refresh(user)
+    session_scoped_session.refresh(user)
     verified, _ = verify_password(new_password, user.hashed_password)
     assert verified
 
@@ -148,7 +151,7 @@ def test_reset_password_invalid_token(
 
 def test_login_with_bcrypt_password_upgrades_to_argon2(
     session_scoped_client: TestClient,
-    session_scoped_db: Session,
+    session_scoped_session: Session,
 ) -> None:
     """Test that logging in with a bcrypt password hash upgrades it to argon2."""
     email = random_email()
@@ -160,9 +163,9 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     assert bcrypt_hash.startswith("$2")  # bcrypt hashes start with $2
 
     user = User(email=email, hashed_password=bcrypt_hash, is_active=True)
-    session_scoped_db.add(user)
-    session_scoped_db.commit()
-    session_scoped_db.refresh(user)
+    session_scoped_session.add(user)
+    session_scoped_session.commit()
+    session_scoped_session.refresh(user)
 
     assert user.hashed_password.startswith("$2")
 
@@ -175,7 +178,7 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     tokens = r.json()
     assert "access_token" in tokens
 
-    session_scoped_db.refresh(user)
+    session_scoped_session.refresh(user)
 
     # Verify the hash was upgraded to argon2
     assert user.hashed_password.startswith("$argon2")
@@ -188,7 +191,7 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
 
 def test_login_with_argon2_password_keeps_hash(
     session_scoped_client: TestClient,
-    session_scoped_db: Session,
+    session_scoped_session: Session,
 ) -> None:
     """Test that logging in with an argon2 password hash does not update it."""
     email = random_email()
@@ -200,9 +203,9 @@ def test_login_with_argon2_password_keeps_hash(
 
     # Create user with argon2 hash
     user = User(email=email, hashed_password=argon2_hash, is_active=True)
-    session_scoped_db.add(user)
-    session_scoped_db.commit()
-    session_scoped_db.refresh(user)
+    session_scoped_session.add(user)
+    session_scoped_session.commit()
+    session_scoped_session.refresh(user)
 
     original_hash = user.hashed_password
 
@@ -215,7 +218,7 @@ def test_login_with_argon2_password_keeps_hash(
     tokens = r.json()
     assert "access_token" in tokens
 
-    session_scoped_db.refresh(user)
+    session_scoped_session.refresh(user)
 
     assert user.hashed_password == original_hash
     assert user.hashed_password.startswith("$argon2")

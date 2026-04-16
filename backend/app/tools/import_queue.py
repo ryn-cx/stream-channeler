@@ -39,6 +39,8 @@ def import_queue(session: Session) -> None:
         logger.info(f"Importing URL: {queue_item.url}")
         for plugin in plugins:
             if plugin.is_valid_url_format(queue_item.url):
+                if not plugin.implements("import_url"):
+                    continue
                 try:
                     queue_item.status = URLStatus.IMPORTING
                     plugin_instance = plugin(session)

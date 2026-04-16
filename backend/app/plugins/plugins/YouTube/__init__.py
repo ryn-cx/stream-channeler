@@ -1,30 +1,36 @@
 # TODO: Validate
+import json
 import re
 from typing import Literal, override
 
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from app.plugins.plugins.utils.base_plugin.watch_history import (
+    ParsedWatchEntry,
+    WatchHistoryMixin,
+)
 from app.plugins.plugins.YouTube.files import (
     ChannelByChannelId,
     ChannelByHandle,
     PlaylistItems,
 )
-from app.plugins.plugins.YouTube.watch import WatchMixin
+from app.plugins.plugins.YouTube.upsert import UpsertMixin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from app.watches.schemas import WatchImportResult
 
 URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
 
 
-class YouTube(WatchMixin, register=True):
+class YouTube(WatchHistoryMixin, UpsertMixin, register=True):
     _VERSION = "0.0.1"
-    supports_import_url = True
+    import_watch_history_file_extension = ".json"
 
     @override
     def initialize_plugin(self) -> None:
         super().initialize_plugin()
-        if not Source.get_from_memory(self.db, self.plugin, self.plugin_key()):
+        if not Source.get_from_memory(self.session, self.plugin, self.plugin_key()):
             self._upsert_source()
 
     @classmethod
@@ -37,6 +43,52 @@ class YouTube(WatchMixin, register=True):
             "> [!TIP/Playlist ID]\n"
             "> `https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`"
         )
+
+    # region Watch Import
+
+    @classmethod
+    @override
+    def import_watch_history_instructions(cls) -> str:
+        return (
+            "1. Go to [takeout.google.com](https://takeout.google.com)\n"
+            "2. Deselect all products, then select only 'YouTube and YouTube Music'\n"
+            "3. Click 'All YouTube data included', then select only 'history'\n"
+            "4. Choose JSON format (not HTML)\n"
+            "5. Export and download the archive\n"
+            "6. Extract the archive and find "
+            "'watch-history.json'\n"
+            "7. Upload that file here"
+        )
+
+    @override
+    def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
+        """Parse YouTube watch history from Google Takeout JSON content."""
+        entries = json.loads(content)
+        parsed_entries: list[ParsedWatchEntry] = []
+        for entry in entries:
+            # TODO: Why do some entries have no titleUrl?
+            if "titleUrl" not in entry:
+                continue
+            # Ignore deleted videos
+            if "subtitles" not in entry:
+                continue
+
+            video_key = entry["titleUrl"].split("=", maxsplit=1)[-1]
+            parsed_entries.append(
+                ParsedWatchEntry(
+                    episode_key=video_key,
+                    watch_date=tz_datetime.fromisoformat(entry["time"]),
+                    import_result=WatchImportResult(
+                        show=entry["subtitles"][0]["name"],
+                        show_url=entry["titleUrl"],
+                        episode=entry["title"].removeprefix("Watched "),
+                        episode_url=entry["titleUrl"],
+                    ),
+                ),
+            )
+        return parsed_entries
+
+    # endregion Watch Import
 
     # region Import URL
 
@@ -91,7 +143,11 @@ class YouTube(WatchMixin, register=True):
         show = self._preload_show(show_key=show_key, preload_seasons=True).one_or_none()
         if not show:
             _cache = self._download_show_files(show_key)
-            source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
+            source = Source.get_one_from_memory(
+                self.session,
+                self.plugin,
+                self.plugin_key(),
+            )
             return self._upsert_show(source, show_key)
 
         if playlist_key == self._get_channel_uploads_playlist_key(show.key):
@@ -99,11 +155,15 @@ class YouTube(WatchMixin, register=True):
             if int(channel_item.statistics.video_count) == 0:
                 return show
 
-        if not Season.get_from_memory(self.db, show, playlist_key):
+        if not Season.get_from_memory(self.session, show, playlist_key):
             for show_file in self._show_files(show.key):
                 show_file.download_if_outdated(tz_datetime.now())
             self._download_show_files(show_key)
-            source = Source.get_one_from_memory(self.db, self.plugin, self.plugin_key())
+            source = Source.get_one_from_memory(
+                self.session,
+                self.plugin,
+                self.plugin_key(),
+            )
             return self._upsert_show(source, show_key)
 
         return show

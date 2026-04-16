@@ -43,11 +43,11 @@ def _sort_key(
 
 
 @pytest.fixture
-def episode_setup(session_scoped_db: Session) -> dict:
+def episode_setup(session_scoped_session: Session) -> dict:
     """Create a channel with 2 shows, each with 2 episodes (recent + old air dates)."""
-    user = create_random_user(session_scoped_db)
-    channel = create_random_channel(session_scoped_db, user=user.id)
-    plugin = create_random_plugin(session_scoped_db, user, public=True)
+    user = create_random_user(session_scoped_session)
+    channel = create_random_channel(session_scoped_session, user=user.id)
+    plugin = create_random_plugin(session_scoped_session, user, public=True)
 
     recent_date = tz_datetime.now() - timedelta(days=1)
     old_date = tz_datetime.now() - timedelta(days=60)
@@ -55,20 +55,20 @@ def episode_setup(session_scoped_db: Session) -> dict:
     shows = []
     for _ in range(2):
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
-        season = create_random_season(session_scoped_db, channel_show.show)
+        season = create_random_season(session_scoped_session, channel_show.show)
         recent_episode = create_random_episode(
-            session_scoped_db,
+            session_scoped_session,
             season,
             air_date=recent_date,
             duration=100,
         )
         old_episode = create_random_episode(
-            session_scoped_db,
+            session_scoped_session,
             season,
             air_date=old_date,
             duration=200,
@@ -82,14 +82,14 @@ def episode_setup(session_scoped_db: Session) -> dict:
             },
         )
 
-    session_scoped_db.flush()
+    session_scoped_session.flush()
 
     return {
         "channel": channel,
         "user": user,
         "plugin": plugin,
         "shows": shows,
-        "session": session_scoped_db,
+        "session": session_scoped_session,
     }
 
 
@@ -140,15 +140,15 @@ class TestBasicRetrieval:
 
     def test_empty_channel_returns_no_episodes(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=user.id)
+        user = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=user.id)
         episodes = _build(
             {
                 "channel": channel,
                 "user": user,
-                "session": session_scoped_db,
+                "session": session_scoped_session,
             },
         )
         assert len(episodes) == 0
@@ -522,54 +522,54 @@ class TestAirDateFilter:
 class TestPluginVisibility:
     def test_private_plugin_hidden_from_non_owner(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
-        viewer = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=viewer.id)
-        plugin = create_random_plugin(session_scoped_db, owner, public=False)
+        owner = create_random_user(session_scoped_session)
+        viewer = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=viewer.id)
+        plugin = create_random_plugin(session_scoped_session, owner, public=False)
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
-        season = create_random_season(session_scoped_db, channel_show.show)
-        create_random_episode(session_scoped_db, season)
-        session_scoped_db.flush()
+        season = create_random_season(session_scoped_session, channel_show.show)
+        create_random_episode(session_scoped_session, season)
+        session_scoped_session.flush()
 
         episodes = _build(
             {
                 "channel": channel,
                 "user": viewer,
-                "session": session_scoped_db,
+                "session": session_scoped_session,
             },
         )
         assert len(episodes) == 0
 
     def test_public_plugin_visible_to_non_owner(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        owner = create_random_user(session_scoped_db)
-        viewer = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=viewer.id)
-        plugin = create_random_plugin(session_scoped_db, owner, public=True)
+        owner = create_random_user(session_scoped_session)
+        viewer = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=viewer.id)
+        plugin = create_random_plugin(session_scoped_session, owner, public=True)
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
-        season = create_random_season(session_scoped_db, channel_show.show)
-        create_random_episode(session_scoped_db, season)
-        session_scoped_db.flush()
+        season = create_random_season(session_scoped_session, channel_show.show)
+        create_random_episode(session_scoped_session, season)
+        session_scoped_session.flush()
 
         episodes = _build(
             {
                 "channel": channel,
                 "user": viewer,
-                "session": session_scoped_db,
+                "session": session_scoped_session,
             },
         )
         assert len(episodes) == 1
@@ -1111,32 +1111,32 @@ class TestRecentlyAiredGroupByShow:
 
     def test_interleave_sequential_with_group_by_show_and_duration(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Interleaving by show with group_by_show recently_aired sort should:
         1. Group shows by recently aired status (not-recent first when ascending)
         2. Interleave episodes across shows within each group
         3. Sort by duration descending within each show's episodes
         """
-        user = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=user.id)
-        plugin = create_random_plugin(session_scoped_db, user, public=True)
+        user = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=user.id)
+        plugin = create_random_plugin(session_scoped_session, user, public=True)
 
         recent_date = tz_datetime.now() - timedelta(days=30)
         old_date = tz_datetime.now() - timedelta(days=400)
 
         # Recent Show 1: has a recently aired episode (within 365 days)
         recent_show_1 = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
         recent_show_1.show.name = "Recent 1"
-        season_r1 = create_random_season(session_scoped_db, recent_show_1.show)
+        season_r1 = create_random_season(session_scoped_session, recent_show_1.show)
         for duration in (3600, 2400, 1200):
             create_random_episode(
-                session_scoped_db,
+                session_scoped_session,
                 season_r1,
                 air_date=recent_date,
                 duration=duration,
@@ -1144,16 +1144,16 @@ class TestRecentlyAiredGroupByShow:
 
         # Recent Show 2: also recently aired
         recent_show_2 = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
         recent_show_2.show.name = "Recent 2"
-        season_r2 = create_random_season(session_scoped_db, recent_show_2.show)
+        season_r2 = create_random_season(session_scoped_session, recent_show_2.show)
         for duration in (3000, 2000, 1000):
             create_random_episode(
-                session_scoped_db,
+                session_scoped_session,
                 season_r2,
                 air_date=recent_date,
                 duration=duration,
@@ -1161,23 +1161,23 @@ class TestRecentlyAiredGroupByShow:
 
         # Old Show: no episodes in the past 365 days
         old_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
         old_show.show.name = "Old Show"
-        season_old = create_random_season(session_scoped_db, old_show.show)
+        season_old = create_random_season(session_scoped_session, old_show.show)
         for duration in (5000, 4000, 3000):
             create_random_episode(
-                session_scoped_db,
+                session_scoped_session,
                 season_old,
                 air_date=old_date,
                 duration=duration,
             )
 
-        session_scoped_db.flush()
-        setup = {"channel": channel, "user": user, "session": session_scoped_db}
+        session_scoped_session.flush()
+        setup = {"channel": channel, "user": user, "session": session_scoped_session}
 
         episodes = _build(
             setup,
@@ -1233,41 +1233,41 @@ class TestWhitelistWithEpisodeExclusion:
 
     def test_whitelisted_season_with_marked_episode_excludes_episode(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=user.id)
-        plugin = create_random_plugin(session_scoped_db, user, public=True)
+        user = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=user.id)
+        plugin = create_random_plugin(session_scoped_session, user, public=True)
 
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=True,
         )
         show = channel_show.show
-        season = create_random_season(session_scoped_db, show)
-        episode_included = create_random_episode(session_scoped_db, season)
-        episode_excluded = create_random_episode(session_scoped_db, season)
+        season = create_random_season(session_scoped_session, show)
+        episode_included = create_random_episode(session_scoped_session, season)
+        episode_excluded = create_random_episode(session_scoped_session, season)
 
         # Whitelist the season
-        session_scoped_db.add(
+        session_scoped_session.add(
             ChannelSeasonWhiteList(
                 channel_show_id=channel_show.id,
                 season_id=season.id,
             ),
         )
         # Also mark the episode — this should exclude it from the whitelisted season
-        session_scoped_db.add(
+        session_scoped_session.add(
             ChannelEpisodeWhiteList(
                 channel_show_id=channel_show.id,
                 episode_id=episode_excluded.id,
             ),
         )
-        session_scoped_db.flush()
+        session_scoped_session.flush()
 
         episodes = _build(
-            {"channel": channel, "user": user, "session": session_scoped_db},
+            {"channel": channel, "user": user, "session": session_scoped_session},
         )
         episode_ids = {ep.id for ep in episodes}
         assert episode_included.id in episode_ids
@@ -1280,41 +1280,41 @@ class TestBlacklistWithEpisodeInclusion:
 
     def test_blacklisted_season_with_marked_episode_includes_episode(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
-        user = create_random_user(session_scoped_db)
-        channel = create_random_channel(session_scoped_db, user=user.id)
-        plugin = create_random_plugin(session_scoped_db, user, public=True)
+        user = create_random_user(session_scoped_session)
+        channel = create_random_channel(session_scoped_session, user=user.id)
+        plugin = create_random_plugin(session_scoped_session, user, public=True)
 
         channel_show = create_random_channel_show(
-            session_scoped_db,
+            session_scoped_session,
             channel,
             plugin,
             white_list_mode=False,
         )
         show = channel_show.show
-        season = create_random_season(session_scoped_db, show)
-        episode_excluded = create_random_episode(session_scoped_db, season)
-        episode_included = create_random_episode(session_scoped_db, season)
+        season = create_random_season(session_scoped_session, show)
+        episode_excluded = create_random_episode(session_scoped_session, season)
+        episode_included = create_random_episode(session_scoped_session, season)
 
         # Blacklist the season
-        session_scoped_db.add(
+        session_scoped_session.add(
             ChannelSeasonWhiteList(
                 channel_show_id=channel_show.id,
                 season_id=season.id,
             ),
         )
         # Also mark the episode — this should include it despite the season blacklist
-        session_scoped_db.add(
+        session_scoped_session.add(
             ChannelEpisodeWhiteList(
                 channel_show_id=channel_show.id,
                 episode_id=episode_included.id,
             ),
         )
-        session_scoped_db.flush()
+        session_scoped_session.flush()
 
         episodes = _build(
-            {"channel": channel, "user": user, "session": session_scoped_db},
+            {"channel": channel, "user": user, "session": session_scoped_session},
         )
         episode_ids = {ep.id for ep in episodes}
         assert episode_included.id in episode_ids

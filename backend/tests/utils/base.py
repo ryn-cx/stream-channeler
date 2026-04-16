@@ -122,9 +122,13 @@ class BaseTests[T: SUPPORTED_MODELS]:
     create_record_function: Callable[..., T]
     returns_list: bool = False
 
-    def get_record_from_db(self, session_scoped_db: Session, record_id: uuid.UUID) -> T:
+    def get_record_from_db(
+        self,
+        session_scoped_session: Session,
+        record_id: uuid.UUID,
+    ) -> T:
         """Get the record with the given id from the database."""
-        return session_scoped_db.exec(
+        return session_scoped_session.exec(
             select(self.database_model).where(self.database_model.id == record_id),
         ).one()
 
@@ -167,22 +171,24 @@ class BaseTests[T: SUPPORTED_MODELS]:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{record_id}"
 
     @contextmanager
-    def assert_no_db_change(self, session_scoped_db: Session) -> Generator[None]:
+    def assert_no_db_change(self, session_scoped_session: Session) -> Generator[None]:
         """Assert that no records were added, removed, or modified."""
-        records_before = session_scoped_db.exec(select(self.database_model)).all()
+        records_before = session_scoped_session.exec(select(self.database_model)).all()
         yield
-        records_after = session_scoped_db.exec(select(self.database_model)).all()
+        records_after = session_scoped_session.exec(select(self.database_model)).all()
         assert records_before == records_after
 
     def assert_other_records_unchanged(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         updated_records: Sequence[OUTPUT_MODELS],
         records_before: Sequence[T],
     ) -> None:
         """Assert only the given records changed; all others are identical."""
         updated_record_ids = [record.id for record in updated_records]
-        all_records_after = session_scoped_db.exec(select(self.database_model)).all()
+        all_records_after = session_scoped_session.exec(
+            select(self.database_model),
+        ).all()
         unmodified_before = sorted(
             [
                 record
@@ -203,13 +209,13 @@ class BaseTests[T: SUPPORTED_MODELS]:
 
     def assert_only_records_added(
         self,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         new_record_ids: Sequence[uuid.UUID],
         records_before: Sequence[T],
     ) -> None:
         """Assert only the given records were added and all existing records are unchanged."""
         new_records = list(
-            session_scoped_db.exec(
+            session_scoped_session.exec(
                 select(self.database_model).where(
                     col(self.database_model.id).in_(new_record_ids),
                 ),
@@ -218,7 +224,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
 
         expected = sorted([*records_before, *new_records], key=lambda r: r.id)
         actual = sorted(
-            session_scoped_db.exec(select(self.database_model)).all(),
+            session_scoped_session.exec(select(self.database_model)).all(),
             key=lambda r: r.id,
         )
         assert expected == actual
@@ -250,31 +256,31 @@ class BaseTests[T: SUPPORTED_MODELS]:
     def create_test_data(
         self,
         client: TestClient,
-        db: Session,
+        session: Session,
         *,
         user_is_owner: bool,
         user_is_authenticated: bool,
         record_is_public: bool,
     ) -> CreatedTestData[T]:
         """Create a user and record with the given ownership and visibility."""
-        user = create_random_user(db)
-        other = create_random_user(db)
+        user = create_random_user(session)
+        other = create_random_user(session)
 
         if user_is_owner:
-            record = self.create_record_function(db, user.id)
+            record = self.create_record_function(session, user.id)
         else:
-            record = self.create_record_function(db, other.id)
+            record = self.create_record_function(session, other.id)
 
         # Populate with random dummy data to make sure filtering works correctly.
-        self.create_record_function(db, user.id)
-        self.create_record_function(db, other.id)
+        self.create_record_function(session, user.id)
+        self.create_record_function(session, other.id)
 
         self.set_visibility(record, record_is_public=record_is_public)
         headers = (
             authentication_token_from_email(
                 client=client,
                 email=user.email,
-                db=db,
+                session=session,
             )
             if user_is_authenticated
             else {}
@@ -283,7 +289,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
 
     def assert_cannot_access(  # noqa: PLR0913
         self,
-        db: Session,
+        session: Session,
         client: TestClient,
         *,
         user_is_authenticated: bool,
@@ -296,7 +302,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
         parameters = (
             parameters_model.model_dump(mode="json") if parameters_model else None
         )
-        with self.assert_no_db_change(db):
+        with self.assert_no_db_change(session):
             if not user_is_authenticated:
                 assert_not_authenticated(
                     client=client,

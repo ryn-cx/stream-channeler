@@ -11,7 +11,7 @@ from app.plugins.plugins.utils.base_plugin.files import BaseFile
 
 
 class DownloadMixin(ABC):
-    db: Session
+    session: Session
 
     # region File Groups
 
@@ -38,7 +38,7 @@ class DownloadMixin(ABC):
 
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the plugin."""
-        raise NotImplementedError("This plugin does not have plugin-level files.")
+        raise NotImplementedError("This plugin does not have plugin specific files.")
 
     # endregion File Groups
 
@@ -95,7 +95,7 @@ class DownloadMixin(ABC):
             all_files.extend(self._download_all_season_files(show_key))
             return all_files
         finally:
-            self.db.commit()
+            self.session.commit()
 
     def _download_season_files(
         self,
@@ -110,7 +110,7 @@ class DownloadMixin(ABC):
             all_files.extend(self._download_all_episode_files(season_key, show_key))
             return all_files
         finally:
-            self.db.commit()
+            self.session.commit()
 
     def _download_episode_files(
         self,
@@ -124,7 +124,7 @@ class DownloadMixin(ABC):
             episode_files = self._episode_files(episode_key, season_key, show_key)
             return self._download_outdated_files(episode_files, update_at)
         finally:
-            self.db.commit()
+            self.session.commit()
 
     def _download_all_season_files(
         self,
@@ -165,7 +165,7 @@ class DownloadMixin(ABC):
             .where(File.plugin == self.plugin)  # type: ignore[attr-defined]
             .where(col(File.key).in_(file_keys))
         )
-        return self.db.exec(statement).all()
+        return self.session.exec(statement).all()
 
     def _preload_show_files(
         self,

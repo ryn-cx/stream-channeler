@@ -39,7 +39,7 @@ def import_watch_history_information(
             instructions=plugin_cls.import_watch_history_instructions(),
         )
         for plugin_cls in sorted_plugins()
-        if plugin_cls.supports_import_watch_history
+        if plugin_cls.implements("import_watch_history")
     ]
 
 
@@ -54,7 +54,7 @@ def import_url_information(
             instructions=plugin_cls.import_url_instructions(),
         )
         for plugin_cls in sorted_plugins()
-        if plugin_cls.supports_import_url
+        if plugin_cls.implements("import_url")
     ]
 
 
@@ -69,7 +69,7 @@ def search_information(
             name=plugin_cls.plugin_key(),
         )
         for plugin_cls in sorted_plugins()
-        if plugin_cls.supports_search
+        if plugin_cls.implements("search")
     ]
 
 
@@ -86,7 +86,7 @@ def search_plugin(
     """Search for shows/movies on a plugin's platform."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
-            if not plugin_cls.supports_search:
+            if not plugin_cls.implements("search"):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=f"Plugin '{plugin_key}' does not support search.",

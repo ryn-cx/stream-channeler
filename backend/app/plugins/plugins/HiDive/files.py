@@ -145,7 +145,7 @@
 #             PlaylistJSON,
 #             season_key,
 #             lambda: PlaylistJSON(
-#                 self.db,
+#                 self.session,
 #                 self.plugin,
 #                 season_key,
 #             ),
@@ -160,7 +160,7 @@
 #             VodJSON,
 #             vod_key,
 #             lambda: VodJSON(
-#                 self.db,
+#                 self.session,
 #                 self.plugin,
 #                 vod_key,
 #             ),
@@ -175,7 +175,7 @@
 #             ScheduleJSON,
 #             cache_key,
 #             lambda: ScheduleJSON(
-#                 self.db,
+#                 self.session,
 #                 self.plugin,
 #                 input_date,
 #             ),
@@ -190,7 +190,7 @@
 #             SeasonJSON,
 #             season_key,
 #             lambda: SeasonJSON(
-#                 self.db,
+#                 self.session,
 #                 self.plugin,
 #                 season_key,
 #             ),
@@ -207,7 +207,7 @@
 #             AdjacentSeriesJSON,
 #             season_key,
 #             lambda: AdjacentSeriesJSON(
-#                 self.db,
+#                 self.session,
 #                 self.plugin,
 #                 series_key,
 #                 season_key,
@@ -434,7 +434,7 @@
 #                 .where(File.plugin == self.plugin)
 #                 .where(col(File.key).in_(all_file_keys))
 #             )
-#             self.db.exec(file_select).all()
+#             self.session.exec(file_select).all()
 
 #     def __preload_movie_files(self, show_key: str) -> None:
 #         playlist_file = self._playlist_json(show_key)
@@ -455,6 +455,6 @@
 #             .where(File.plugin == self.plugin)
 #             .where(col(File.key).in_(all_file_keys))
 #         )
-#         self.db.exec(file_select).all()
+#         self.session.exec(file_select).all()
 
 #     # endregion Preload

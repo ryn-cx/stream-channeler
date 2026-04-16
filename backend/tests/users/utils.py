@@ -25,31 +25,31 @@ def user_authentication_headers(
     return {"Authorization": f"Bearer {auth_token}"}
 
 
-def create_random_user(db: Session) -> User:
+def create_random_user(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password)
-    return user_service.create_user(session=db, user_create=user_in)
+    return user_service.create_user(session=session, user_create=user_in)
 
 
 def authentication_token_from_email(
     *,
     client: TestClient,
     email: str,
-    db: Session,
+    session: Session,
 ) -> dict[str, str]:
     password = random_lower_string()
-    user = user_service.get_user_by_email(session=db, email=email)
+    user = user_service.get_user_by_email(session=session, email=email)
     if not user:
         user_in_create = UserCreate(email=email, password=password)
-        user = user_service.create_user(session=db, user_create=user_in_create)
+        user = user_service.create_user(session=session, user_create=user_in_create)
     else:
         user_in_update = UserUpdate(password=password)
         if not user.id:
             msg = "User id not set"
             raise ValueError(msg)
         user = user_service.update_user(
-            session=db,
+            session=session,
             db_user=user,
             user_in=user_in_update,
         )
@@ -65,10 +65,10 @@ class CreatedUser(BaseModel):
 
 
 # TODO: Rename this or something.
-def create_random_user_alt(client: TestClient, db: Session) -> CreatedUser:
+def create_random_user_alt(client: TestClient, session: Session) -> CreatedUser:
     email = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=email, password=password)
-    user = user_service.create_user(session=db, user_create=user_in)
+    user = user_service.create_user(session=session, user_create=user_in)
     headers = user_authentication_headers(client=client, email=email, password=password)
     return CreatedUser(id=user.id, email=email, password=password, headers=headers)

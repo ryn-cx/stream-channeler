@@ -233,7 +233,7 @@ export type PluginSearchInformation = {
 };
 
 /**
- * A single result from a plugin search.
+ * Search result from a plugin.
  */
 export type PluginSearchResult = {
     title: string;
@@ -245,7 +245,7 @@ export type PluginSearchResult = {
 };
 
 /**
- * Container for plugin search results.
+ * Results from a search query.
  */
 export type PluginSearchResults = {
     has_source_selection: boolean;
@@ -253,7 +253,9 @@ export type PluginSearchResults = {
 };
 
 /**
- * A streaming source available for a search result.
+ * Source information for a search result.
+ *
+ * Used for plugins that support multiple sources.
  */
 export type PluginSearchResultSource = {
     name: string;

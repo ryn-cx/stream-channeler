@@ -15,7 +15,7 @@ from app.sources.models import Source
 
 
 class PreloadMixin(ABC):
-    db: Session
+    session: Session
     plugin: Plugin
 
     def _preload_sources(
@@ -44,7 +44,7 @@ class PreloadMixin(ABC):
             statement = statement.where(Source.key.in_(source_key))  # type: ignore[attr-defined]
         elif source_key is not None:
             statement = statement.where(Source.key == source_key)
-        return self.db.exec(statement.options(*options)).unique()
+        return self.session.exec(statement.options(*options)).unique()
 
     def _preload_show(  # noqa: PLR0913
         self,
@@ -76,7 +76,7 @@ class PreloadMixin(ABC):
         else:
             msg = "Either show_key or show_id must be provided"
             raise ValueError(msg)
-        return self.db.exec(statement.options(*options)).unique()
+        return self.session.exec(statement.options(*options)).unique()
 
     def _preload_season(
         self,
@@ -93,7 +93,7 @@ class PreloadMixin(ABC):
             options.append(joinedload(Season.show))  # type: ignore[arg-type]
         if preload_episodes:
             options.append(selectinload(Season.episodes))  # type: ignore[arg-type]
-        return self.db.exec(
+        return self.session.exec(
             select(Season).where(Season.id == season_id).options(*options),
         )
 
@@ -118,6 +118,6 @@ class PreloadMixin(ABC):
             )
         elif preload_season:
             options.append(joinedload(Episode.season))  # type: ignore[arg-type]
-        return self.db.exec(
+        return self.session.exec(
             select(Episode).where(Episode.id == episode_id).options(*options),
         )

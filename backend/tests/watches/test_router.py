@@ -83,7 +83,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     def test_create_with_existing_records(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         existing_record_count: int,
     ) -> None:
         pass
@@ -92,14 +92,14 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     def test_create_watch_creates_siblings(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         sibling_count: int,
     ) -> None:
         """Test that creating a watch creates watches for all matching episodes."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -108,10 +108,10 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         # Get values then delete existing watch so multiple will be created at once.
         plugin = initial_test_data.record.episode.season.show.source.plugin
         key = initial_test_data.record.episode.key
-        session_scoped_db.delete(initial_test_data.record)
+        session_scoped_session.delete(initial_test_data.record)
 
         sibling_episodes = [
-            create_random_episode(session_scoped_db, plugin, key=key)
+            create_random_episode(session_scoped_session, plugin, key=key)
             for _ in range(sibling_count)
         ]
 
@@ -124,7 +124,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             parameters=dump_random_model(WatchPostInput),
         )
 
-        watches = session_scoped_db.exec(
+        watches = session_scoped_session.exec(
             select(Watch)
             .join(Episode)
             .join(Season)
@@ -145,19 +145,19 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     def test_create_watch_rejects_when_unverified_exists(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Test that creating a watch fails if an unverified watch exists."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         initial_test_data.record.verified = False
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_conflict(
                 client=session_scoped_client,
                 method="post",
@@ -170,12 +170,12 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     def test_create_watch_rejects_when_sibling_has_unverified(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Test that creating a watch fails if a sibling has an unverified watch."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -183,12 +183,12 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         initial_test_data.record.verified = False
 
         sibling_episode = create_random_episode(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record.episode.season.show.source.plugin,
             key=initial_test_data.record.episode.key,
         )
 
-        with self.assert_no_db_change(session_scoped_db):
+        with self.assert_no_db_change(session_scoped_session):
             assert_conflict(
                 client=session_scoped_client,
                 method="post",
@@ -201,12 +201,12 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     def test_create_watch_allowed_after_verification(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Test that creating a watch succeeds after the existing one is verified."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -281,7 +281,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
     def assert_api_get_list_success(
         self,
         client: TestClient,
-        db: Session,
+        session: Session,
         parent_id: uuid.UUID,
         headers: dict[str, str],
         expected_count: int = 1,
@@ -294,7 +294,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             headers,
         )
         watch_ids = [watch.id for watch in output.watches]
-        all_watches = db.exec(
+        all_watches = session.exec(
             select(Watch).where(col(Watch.id).in_(watch_ids)),  # type: ignore[union-attr]
         ).all()
         expected = self.build_expected(*all_watches)
@@ -315,7 +315,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
     def test_get_permissions(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
@@ -323,7 +323,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
     ) -> None:
         super().test_get_permissions(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
@@ -332,25 +332,25 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
     def test_list_excludes_other_users_watches(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Other users' watches for the same episode should not appear."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         episode = initial_test_data.record.episode
-        other_user = create_random_user(session_scoped_db)
-        create_random_watch(session_scoped_db, episode, watch_user=other_user)
+        other_user = create_random_user(session_scoped_session)
+        create_random_watch(session_scoped_session, episode, watch_user=other_user)
 
         # This works because the number of expected results will be 1 so if both user's
         # watches are returned then the test will fail.
         self.assert_api_get_list_success(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.user.id,
             initial_test_data.headers,
         )
@@ -361,13 +361,13 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
     def test_update_watch_updates_siblings(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         sibling_count: int,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -375,12 +375,12 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
         plugin = initial_test_data.record.episode.season.show.source.plugin
         episode_key = initial_test_data.record.episode.key
         sibling_episodes = [
-            create_random_episode(session_scoped_db, plugin, key=episode_key)
+            create_random_episode(session_scoped_session, plugin, key=episode_key)
             for _ in range(sibling_count)
         ]
 
         # Delete existing watch because it is only for a single episode.
-        session_scoped_db.delete(initial_test_data.record)
+        session_scoped_session.delete(initial_test_data.record)
 
         # Create all of the watches with the same values so they will all by synced
         # together.
@@ -388,7 +388,7 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
         all_episodes = [initial_test_data.record.episode, *sibling_episodes]
         created_watches = [
             create_random_watch(
-                session_scoped_db,
+                session_scoped_session,
                 episode,
                 watch_user=initial_test_data.user,
                 watch_date=watch_template.watch_date,
@@ -419,18 +419,18 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
     def test_update_watch_does_not_edit_other_watches(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Updating a watch should not affect watches with a different date."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         other_watch = create_random_watch(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record.episode,
             watch_user=initial_test_data.user,
         )
@@ -448,7 +448,10 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
             parameters=update_model.model_dump(mode="json", exclude_unset=True),
         )
 
-        assert other_watch == self.get_record_from_db(session_scoped_db, other_watch.id)
+        assert other_watch == self.get_record_from_db(
+            session_scoped_session,
+            other_watch.id,
+        )
 
 
 class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
@@ -456,14 +459,14 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
     def test_delete_watch_deletes_siblings(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
         *,
         sibling_count: int,
     ) -> None:
         """Deleting a watch should delete all sibling watches with the same date."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
@@ -471,12 +474,12 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
         plugin = initial_test_data.record.episode.season.show.source.plugin
         episode_key = initial_test_data.record.episode.key
         sibling_episodes = [
-            create_random_episode(session_scoped_db, plugin, key=episode_key)
+            create_random_episode(session_scoped_session, plugin, key=episode_key)
             for _ in range(sibling_count)
         ]
 
         # Delete existing watch because it is only for a single episode.
-        session_scoped_db.delete(initial_test_data.record)
+        session_scoped_session.delete(initial_test_data.record)
 
         # Create all of the watches with the same values so they will all be synced
         # together.
@@ -484,7 +487,7 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
         all_episodes = [initial_test_data.record.episode, *sibling_episodes]
         created_watches = [
             create_random_watch(
-                session_scoped_db,
+                session_scoped_session,
                 episode,
                 watch_user=initial_test_data.user,
                 watch_date=watch_template.watch_date,
@@ -502,7 +505,7 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
         )
 
         for watch in created_watches:
-            result = session_scoped_db.exec(
+            result = session_scoped_session.exec(
                 select(Watch).where(Watch.id == watch.id),
             ).first()
             assert result is None
@@ -510,18 +513,18 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
     def test_delete_watch_does_not_delete_other_watches(
         self,
         session_scoped_client: TestClient,
-        session_scoped_db: Session,
+        session_scoped_session: Session,
     ) -> None:
         """Deleting a watch should not affect watches with a different date."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
-            session_scoped_db,
+            session_scoped_session,
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
         )
         other_watch = create_random_watch(
-            session_scoped_db,
+            session_scoped_session,
             initial_test_data.record.episode,
             watch_user=initial_test_data.user,
         )
@@ -534,7 +537,10 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
             headers=initial_test_data.headers,
         )
 
-        assert other_watch == self.get_record_from_db(session_scoped_db, other_watch.id)
+        assert other_watch == self.get_record_from_db(
+            session_scoped_session,
+            other_watch.id,
+        )
 
 
 class TestSyncWatches:

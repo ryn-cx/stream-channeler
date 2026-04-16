@@ -12,13 +12,13 @@ from tests.utils.utils import build_random_model
 
 
 def create_random_source(
-    db: Session,
+    session: Session,
     parent: Plugin | User | CreatedUser | uuid.UUID | None = None,
     **kwargs: object,
 ) -> Source:
     if not isinstance(parent, Plugin):
-        parent = create_random_plugin(db, parent)
+        parent = create_random_plugin(session, parent)
     source = build_random_model(Source, plugin_id=parent.id, deleted_at=None, **kwargs)
-    db.add(source)
-    db.flush()  # Allows source.plugin and source.shows to be accessed.
+    session.add(source)
+    session.flush()  # Allows source.plugin and source.shows to be accessed.
     return source

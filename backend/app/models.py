@@ -138,7 +138,7 @@ class MediaMixin[
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         parent: ParentT,
         key: str,
         *,
@@ -157,7 +157,7 @@ class MediaMixin[
             The record if found, else None.
 
         """
-        return db.get(
+        return session.get(
             cls,
             (parent.id, key),
             options=options,
@@ -171,7 +171,7 @@ class MediaMixin[
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
-        db: Session,
+        session: Session,
         parent: ParentT,
         key: str,
         *,
@@ -194,7 +194,7 @@ class MediaMixin[
             NoResultFound: If no matching record is found.
 
         """
-        return db.get_one(
+        return session.get_one(
             cls,
             (parent.id, key),
             options=options,
@@ -208,7 +208,7 @@ class MediaMixin[
     @classmethod
     def get_from_memory(
         cls,
-        db: Session,
+        session: Session,
         parent: ParentT,
         key: str,
     ) -> Self | None:
@@ -220,12 +220,12 @@ class MediaMixin[
             The record if found in the identity map, else None.
 
         """
-        return db.identity_map.get((cls, (parent.id, key), None))
+        return session.identity_map.get((cls, (parent.id, key), None))
 
     @classmethod
     def get_one_from_memory(
         cls,
-        db: Session,
+        session: Session,
         parent: ParentT,
         key: str,
     ) -> Self:
@@ -240,7 +240,7 @@ class MediaMixin[
             KeyError: If no matching record is found in the identity map.
 
         """
-        return db.identity_map[(cls, (parent.id, key), None)]
+        return session.identity_map[(cls, (parent.id, key), None)]
 
     # endregion get class methods
 

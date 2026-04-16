@@ -12,8 +12,6 @@ from app.utils import tz_datetime
 
 
 class SearchMixin(UpsertMixin, register=False):
-    supports_search = True
-
     # TODO: Consider caching this if it is slow.
     def _get_source_lookup(self) -> dict[str, dict[str, str]]:
         """Build a short_name -> {clear_name, icon_url} mapping from ProvidersLocale."""
