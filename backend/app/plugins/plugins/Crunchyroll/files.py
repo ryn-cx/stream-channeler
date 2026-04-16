@@ -1,4 +1,3 @@
-# TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
@@ -7,6 +6,7 @@ from typing import override
 from chirashi import Chirashi
 from chirashi.browse_series import models as browse_series_models
 from chirashi.episodes import models as episodes_models
+from chirashi.search import models as search_models
 from chirashi.seasons import models as seasons_models
 from chirashi.series import models as series_models
 from sqlmodel import col, select
@@ -24,7 +24,7 @@ def chirashi_client() -> Chirashi:
     password = settings.GET_AROUND_PASSWORD
     return Chirashi(
         get_around_server=None if server == "changethis" else server,
-        get_around_password=None if password == "changethis" else password,
+        get_around_password=None if password == "changethis" else password,  # noqa: S105
     )
 
 
@@ -46,6 +46,7 @@ class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
     IMMUTABLE = True
     api_endpoint = chirashi_client().browse_series
 
+    # Uses get_since_datetime instead of get
     @override
     def _get(self) -> list[browse_series_models.BrowseSeries]:
         return chirashi_client().browse_series.get_since_datetime(
@@ -53,29 +54,43 @@ class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
         )
 
     def datums(self) -> list[browse_series_models.Datum]:
-        """Flatten all pages into a single list of datum entries."""
+        """Extract all of the datum entries from the browse files."""
         return chirashi_client().browse_series.extract_entries(self.parsed())
+
+
+class Search(GAPIJSON[search_models.Search]):
+    api_endpoint = chirashi_client().search
+
+    # Use alternative search parameters that have more results.
+    @override
+    def _get(self) -> search_models.Search:
+        # Parameters from: https://www.crunchyroll.com/search?f=series&q=Query
+        return chirashi_client().search.get(
+            self.unique_identifier,
+            n=100,
+            type="series",
+        )
 
 
 class FileMixin(BasePlugin, register=False):
     # region File Wrappers
 
     def _series_file(self, show_key: str) -> Series:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             Series,
             show_key,
             lambda: Series(self.session, self.plugin, show_key),
         )
 
     def _seasons_file(self, show_key: str) -> Seasons:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             Seasons,
             show_key,
             lambda: Seasons(self.session, self.plugin, show_key),
         )
 
     def _episodes_file(self, season_key: str) -> Episodes:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             Episodes,
             season_key,
             lambda: Episodes(self.session, self.plugin, season_key),
@@ -86,10 +101,17 @@ class FileMixin(BasePlugin, register=False):
             str_datetime = Browse.file_key_to_unique_identifier(browse_datetime.key)
         else:
             str_datetime = str(browse_datetime)
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             Browse,
             str_datetime,
             lambda: Browse(self.session, self.plugin, str_datetime),
+        )
+
+    def _search_file(self, query: str) -> Search:
+        return self._get_cached_file(
+            Search,
+            query,
+            lambda: Search(self.session, self.plugin, query),
         )
 
     # endregion File Wrappers

@@ -52,6 +52,12 @@ def min() -> datetime:  # noqa: A001
     return datetime.min.replace(tzinfo=now().tzinfo)
 
 
+# A001 - This function name is copied directly from datetime.max.
+def max() -> datetime:  # noqa: A001
+    """Get the maximum timezone-aware datetime."""
+    return datetime.max.replace(tzinfo=now().tzinfo)
+
+
 import sys as _sys  # noqa: E402
 import types as _types  # noqa: E402
 

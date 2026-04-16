@@ -93,35 +93,35 @@ class FileMixin(BasePlugin, register=False):
     # region File Wrappers
 
     def _channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             ChannelByChannelId,
             show_key,
             lambda: ChannelByChannelId(self.session, self.plugin, show_key),
         )
 
     def _channel_by_handle_file(self, channel_name: str) -> ChannelByHandle:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             ChannelByHandle,
             channel_name,
             lambda: ChannelByHandle(self.session, self.plugin, channel_name),
         )
 
     def _channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             ChannelPlaylists,
             show_key,
             lambda: ChannelPlaylists(self.session, self.plugin, show_key),
         )
 
     def _playlist_items_file(self, season_key: str) -> PlaylistItems:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             PlaylistItems,
             season_key,
             lambda: PlaylistItems(self.session, self.plugin, season_key),
         )
 
     def _videos_file(self, episode_key: str) -> Videos:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             Videos,
             episode_key,
             lambda: Videos(self.session, self.plugin, episode_key),

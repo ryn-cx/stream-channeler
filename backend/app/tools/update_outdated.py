@@ -127,10 +127,17 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
                         updated_count += 1
 
                         session.commit()
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001 - This chould catch ALL exceptions.
                         logger.exception(
                             f"Failed to update {media_type_name}: {item.key}",
                         )
+                        # If any error occurs, roll back changes then set update_at at
+                        # the maximum possible value to avoid retrying the update until
+                        # the issue is resolved.
+                        session.rollback()
+                        session.refresh(item)
+                        item.update_at = tz_datetime.max()
+                        session.commit()
                     break
             else:
                 logger.error(

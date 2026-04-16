@@ -39,29 +39,28 @@ class BasePlugin(
         self.session = session
         self._file_cache: dict[tuple[type, object], Any] = {}
         self._weakref_file_cache: dict[tuple[type, object], Any] = {}
-        self.initialize_plugin()
+        self.initialize_database()
         self._validate_plugin_version()
 
-    @override
-    def initialize_plugin(self) -> None:
+    def initialize_database(self) -> None:
         plugin_user = get_or_create_plugin_user(session=self.session)
-        existing = Plugin.get(
+        existing_plugin = Plugin.get(
             self.session,
             plugin_user,
             self.plugin_key(),
             options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
         )
 
-        if not existing:
+        if not existing_plugin:
             self.plugin = Plugin(
                 key=self.plugin_key(),
                 name=self.plugin_key(),
                 version=self._VERSION,
                 public=True,
                 user_id=plugin_user.id,
-            ).upsert(plugin_user, existing)
+            ).upsert(plugin_user, existing_plugin)
         else:
-            self.plugin = existing
+            self.plugin = existing_plugin
 
     def _validate_plugin_version(self) -> None:
         if self.plugin.version != self._VERSION:
@@ -164,7 +163,7 @@ class BasePlugin(
     def plugin_key(cls) -> str:
         return cls.__name__
 
-    def _get_weakref_cached_file[T](
+    def _get_cached_file[T](
         self,
         file_type: type[T],
         key: object,

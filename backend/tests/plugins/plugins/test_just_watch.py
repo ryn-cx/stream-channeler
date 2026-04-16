@@ -29,7 +29,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
     @override
     def import_url_validator(self) -> Validator:
         output = super().import_url_validator()
-        # Plugin.data_timestamp and update_at are set during initialize_plugin based on
+        # Plugin.data_timestamp and update_at are set during initialize_database based on
         # the latest bucket and providers file timestamps which may differ from the
         # verification file.
         output.ignore(Plugin, "data_timestamp", "update_at")

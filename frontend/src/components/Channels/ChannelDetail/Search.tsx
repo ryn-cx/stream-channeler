@@ -80,6 +80,30 @@ function useAddToQueue(channelId: string) {
   })
 }
 
+function AddToQueueButton({
+  url,
+  channelId,
+}: {
+  url: string
+  channelId: string
+}) {
+  const addUrlMutation = useAddToQueue(channelId)
+  return (
+    <Button
+      size="sm"
+      className="mt-2 w-full"
+      onClick={(event) => {
+        event.stopPropagation()
+        addUrlMutation.mutate(url)
+      }}
+      disabled={addUrlMutation.isPending}
+    >
+      <Plus className="h-3 w-3 mr-1" />
+      Add
+    </Button>
+  )
+}
+
 function ExpandedSources({
   result,
   hasSourceSelection,
@@ -257,33 +281,52 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
       {results.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {results.map((result, index) => {
+            const hasSourceSelection =
+              searchResponse?.has_source_selection ?? false
             const isSelected = selectedIndex === index
+
+            const cardBody = (
+              <>
+                {result.image_url && (
+                  <img
+                    src={result.image_url}
+                    alt={result.title}
+                    className="w-full aspect-2/3 rounded object-cover mb-2"
+                  />
+                )}
+                <p className="font-medium text-sm leading-tight line-clamp-2">
+                  {result.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {result.media_type}
+                  {result.year && ` (${result.year})`}
+                </p>
+                {!hasSourceSelection && (
+                  <AddToQueueButton url={result.url} channelId={channelId} />
+                )}
+              </>
+            )
+
+            const cardClassName = `border rounded-lg flex flex-col items-center text-center p-3 w-36 shrink-0 ${
+              hasSourceSelection ? "hover:bg-accent/50 transition-colors" : ""
+            } ${isSelected ? "ring-2 ring-primary" : ""}`
 
             return (
               <div
                 key={`${result.url}-${index}`}
                 className={`flex gap-3 ${isSelected ? "w-full" : ""}`}
               >
-                <button
-                  type="button"
-                  className={`border rounded-lg flex flex-col items-center text-center p-3 hover:bg-accent/50 transition-colors w-36 shrink-0 ${isSelected ? "ring-2 ring-primary" : ""}`}
-                  onClick={() => setSelectedIndex(isSelected ? null : index)}
-                >
-                  {result.image_url && (
-                    <img
-                      src={result.image_url}
-                      alt={result.title}
-                      className="w-full aspect-2/3 rounded object-cover mb-2"
-                    />
-                  )}
-                  <p className="font-medium text-sm leading-tight line-clamp-2">
-                    {result.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {result.media_type}
-                    {result.year && ` (${result.year})`}
-                  </p>
-                </button>
+                {hasSourceSelection ? (
+                  <button
+                    type="button"
+                    className={cardClassName}
+                    onClick={() => setSelectedIndex(isSelected ? null : index)}
+                  >
+                    {cardBody}
+                  </button>
+                ) : (
+                  <div className={cardClassName}>{cardBody}</div>
+                )}
                 {isSelected && (
                   <div className="border rounded-lg flex-1 min-w-0">
                     <ExpandedSources

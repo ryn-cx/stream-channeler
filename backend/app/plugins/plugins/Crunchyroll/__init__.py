@@ -1,4 +1,3 @@
-# TODO: Add search support.
 # This plugin intentionally does not support movies from the movies page because it has
 # been unofficially deprecated as movies are now added as a series instead.
 
@@ -15,39 +14,45 @@ from typing import override
 from loguru import logger
 from sqlmodel import col, select
 
+from app.episodes.models import Episode
 from app.plugins.models import File
-from app.plugins.plugins.Crunchyroll.files import Browse
-from app.plugins.plugins.Crunchyroll.upsert import UpsertMixin
-from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from app.plugins.plugins.Crunchyroll.files import Browse, FileMixin, chirashi_client
+from app.plugins.plugins.utils.abstract_plugin import (
+    InvalidURLError,
+    PluginSearchResult,
+    PluginSearchResults,
+    URLImportResult,
+)
 from app.plugins.plugins.utils.base_plugin.watch_history import (
     ParsedWatchEntry,
     WatchHistoryMixin,
 )
+from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
 
 
-class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
+class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     _VERSION = "0.0.1"
     import_watch_history_file_extension = ".json"
 
     @override
-    def initialize_plugin(self) -> None:
-        super().initialize_plugin()
-        if not Source.get_from_memory(self.session, self.plugin, self.plugin_key()):
+    def initialize_database(self) -> None:
+        super().initialize_database()
+        # Source will be preloaded when the plugin is loaded.
+        if source := Source.get_from_memory(
+            self.session,
+            self.plugin,
+            self.plugin_key(),
+        ):
+            self.source = source
+        else:
             latest_browse_file = self._get_latest_browse_file()
-            self._upsert_source(latest_browse_file)
+            self.source = self._upsert_source(latest_browse_file)
 
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Series]\n"
-            "> `https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family`\n\n"
-        )
-
-    # region Watch Import
+    # region Import Watch History
 
     @classmethod
     @override
@@ -60,29 +65,32 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
 
     @override
     def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
-        entries = json.loads(content)
-        parsed_entries: list[ParsedWatchEntry] = []
-        for entry in entries:
-            episode_key = entry["id"]
-            panel = entry["panel"]
-            episode_metadata = panel["episode_metadata"]
-            parsed_entries.append(
-                ParsedWatchEntry(
-                    episode_key=episode_key,
-                    watch_date=tz_datetime.fromisoformat(entry["date_played"]),
-                    import_result=WatchImportResult(
-                        show=episode_metadata["series_title"],
-                        show_url=self._show_url(episode_metadata["series_id"]),
-                        episode=panel["title"],
-                        episode_url=self._episode_url(episode_key),
+        return [
+            ParsedWatchEntry(
+                episode_key=entry["id"],
+                watch_date=tz_datetime.fromisoformat(entry["date_played"]),
+                import_result=WatchImportResult(
+                    show=entry["panel"]["episode_metadata"]["series_title"],
+                    show_url=self._show_url(
+                        entry["panel"]["episode_metadata"]["series_id"],
                     ),
+                    episode=entry["panel"]["title"],
+                    episode_url=self._episode_url(entry["id"]),
                 ),
             )
-        return parsed_entries
+            for entry in json.loads(content)
+        ]
 
-    # endregion Watch Import
+    # endregion Import Watch History
 
     # region Import URL
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        return (
+            "> [!TIP/Series]\n"
+            "> `https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family`\n\n"
+        )
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
@@ -110,12 +118,7 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
             return show
 
         _cache = self._download_show_files(show_key)
-        source = Source.get_one_from_memory(
-            self.session,
-            self.plugin,
-            self.plugin_key(),
-        )
-        return self._upsert_show(source, show_key=show_key)
+        return self._upsert_show(self.source, show_key=show_key)
 
     # endregion Import URL
 
@@ -129,13 +132,6 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
         self._upsert_source(latest_browse_file)
 
     def _download_new_browse_json(self, source: Source, browse: Browse) -> Browse:
-        # Only download a Browse file at most once a day. This will protect against a
-        # failed source update downloading a Browse file over and over again.
-        browse_download_date = browse.database_record.data_timestamp
-        minimum_timestamp = browse_download_date + timedelta(days=1)
-        if minimum_timestamp > tz_datetime.now():
-            return browse
-
         # Use data_timestamp as the key so this import will download everything up
         # to the last import because data_timestamp represents when the file was
         # written and the key represents the end_datetime used to generate the file.
@@ -145,9 +141,10 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
 
     def _process_new_browse_files(self, source: Source) -> None:
         """Import existing browse files that have not been imported yet."""
+        # Preload up to seasons because seasons have their update_at values set.
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self._get_new_browse_files_from_db(source):
+        for browse_json in self._get_new_browse_files(source):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -156,13 +153,13 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
                     # was made to the show's data. There is no way to detect what
                     # season the update is for so both show and season need to be set
                     # to be updated because the season will detect new episodes for
-                    # existing seasons and the shows will detect episodes for new
-                    # seasons.
+                    # existing seasons and the shows will detect new seasons.
                     show.set_update_at(release.last_public)
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
 
-    def _get_new_browse_files_from_db(self, source: Source) -> list[Browse]:
+    def _get_new_browse_files(self, source: Source) -> list[Browse]:
+        """Return browse files that are newer than the source's data timestamp."""
         data_timestamp = source.data_timestamp or tz_datetime.fromtimestamp(0)
 
         statement = (
@@ -179,8 +176,6 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
 
     # endregion
 
-    # region URL
-
     @classmethod
     @override
     def domains(cls) -> list[str]:
@@ -194,3 +189,146 @@ class Crunchyroll(WatchHistoryMixin, UpsertMixin, register=True):
         #   https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
         regex_string = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
         return domain_regex + regex_string
+
+    # region Upsert
+
+    @classmethod
+    def _episode_url(cls, episode_key: str) -> str:
+        """Return the episode URL for the episode_key."""
+        return f"{cls._base_url()}watch/{episode_key}"
+
+    @classmethod
+    def _show_url(cls, show_key: str) -> str:
+        return f"{cls._base_url()}series/{show_key}"
+
+    def _upsert_source(self, latest_browse_file: Browse) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        timestamp = latest_browse_file.database_record.data_timestamp
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_key(),
+            # TODO: Don't hardcode the favicon URL
+            favicon_url=f"{self._base_url()}build/assets/img/favicons/favicon-v2-96x96.png",
+            update_at=timestamp + timedelta(days=1),
+            data_timestamp=timestamp,
+            plugin_id=self.plugin.id,
+        ).upsert(self.plugin, source)
+
+    @override
+    def _upsert_show(self, source: Source, show_key: str) -> Show:
+        existing_show = Show.get_from_memory(self.session, source, show_key)
+        series_data = self._series_file(show_key).parsed().data[0]
+        show = Show(
+            key=series_data.id,
+            name=series_data.title,
+            description=series_data.description,
+            url=self._show_url(series_data.id),
+            data_timestamp=self.show_data_timestamp(show_key),
+            source_id=source.id,
+            media_type=self._guess_media_type(show_key),
+        ).upsert(source, existing_show)
+
+        self._upsert_seasons(show, show_key)
+
+        self._set_update_at_from_episodes(show)
+
+        return show
+
+    def _guess_media_type(self, show_key: str) -> str:
+        """Guess media type based on the number of episodes and their release dates."""
+        release_dates = [
+            episode_data.premium_available_date
+            for season_key in self._season_keys_from_file(show_key)
+            for episode_data in self._episodes_file(season_key).parsed().data
+        ]
+        if len(release_dates) != 1:
+            return "TV Show"
+        latest_release = release_dates[0]
+        if self.show_data_timestamp(show_key) > latest_release + timedelta(days=7):
+            return "Movie"
+        return "TV Show"
+
+    @staticmethod
+    def _set_update_at_from_episodes(show: Show) -> None:
+        """Set update_at on the show and each season based on episode release dates."""
+        for season in show.active_seasons:
+            for episode in season.active_episodes:
+                if episode.release_date:
+                    update_at = episode.release_date + timedelta(days=7)
+                    season.set_update_at(update_at)
+                    show.set_update_at(update_at)
+
+    def _upsert_seasons(self, show: Show, show_key: str) -> None:
+        seasons_file = self._seasons_file(show_key)
+        for i, season_data in enumerate(seasons_file.parsed().data):
+            season_timestamp = self.season_data_timestamp(season_data.id, show.key)
+            season = Season.get_from_memory(self.session, show, season_data.id)
+            if not season or season.data_timestamp != season_timestamp:
+                season = Season(
+                    key=season_data.id,
+                    sort_order=i,
+                    name=season_data.title,
+                    season_number=season_data.season_number,
+                    data_timestamp=season_timestamp,
+                    show_id=show.id,
+                ).upsert(show, season)
+
+            self._upsert_episodes(season)
+
+        self.soft_delete_missing_seasons(show_key)
+
+    def _upsert_episodes(self, season: Season) -> None:
+        episode_timestamp = self.episode_data_timestamp("", season.key, season.show.key)
+        episodes_data = self._episodes_file(season.key).parsed()
+        for i, episode_data in enumerate(episodes_data.data):
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_data.id,
+            )
+            if (
+                existing_episode
+                and existing_episode.data_timestamp == episode_timestamp
+            ):
+                continue
+            Episode(
+                key=episode_data.id,
+                url=self._episode_url(episode_data.id),
+                sort_order=i,
+                description=episode_data.description,
+                image_url=episode_data.images.thumbnail[0][-1].source,
+                episode_number=episode_data.episode_number,
+                name=episode_data.title,
+                release_date=episode_data.premium_available_date,
+                air_date=episode_data.episode_air_date,
+                duration=episode_data.duration_ms // 1000,
+                data_timestamp=episode_timestamp,
+                season_id=season.id,
+            ).upsert(season, existing_episode)
+
+        self.soft_delete_missing_episodes(season.key)
+
+    # endregion Upsert
+
+    @override
+    def search(self, query: str) -> PluginSearchResults:
+        """Search Crunchyroll for series matching ``query``.
+
+        The underlying response is cached on disk; the file is re-downloaded
+        only if it's older than 30 days.
+        """
+        search_file = self._search_file(query)
+        minimum_timestamp = tz_datetime.now() - timedelta(days=7)
+        search_file.download_if_outdated(minimum_timestamp)
+        series = chirashi_client().search.extract_series(search_file.parsed())
+        results = [
+            PluginSearchResult(
+                title=item.title,
+                url=self._show_url(item.id),
+                year=item.series_metadata.series_launch_year,
+                image_url=item.images.poster_tall[0][1].source,
+                media_type="TV Show",
+            )
+            for item in series
+        ]
+        return PluginSearchResults(has_source_selection=False, results=results)

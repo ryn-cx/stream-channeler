@@ -160,14 +160,14 @@ class FileMixin(BasePlugin, register=False):
         self._cached_media_type = None
 
     def _custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             CustomBuyBoxOffers,
             episode_key,
             lambda: CustomBuyBoxOffers(self.session, self.plugin, episode_key),
         )
 
     def _url_title_details_file(self, show_key: str) -> UrlTitleDetails:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             UrlTitleDetails,
             show_key,
             lambda: UrlTitleDetails(self.session, self.plugin, show_key),
@@ -178,14 +178,14 @@ class FileMixin(BasePlugin, register=False):
             date = date.date()
 
         cache_key = f"{source_key}_{date}"
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             NewTitles,
             cache_key,
             lambda: NewTitles(self.session, self.plugin, source_key, date),
         )
 
     def _custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             CustomSeasonEpisodes,
             season_key,
             lambda: CustomSeasonEpisodes(self.session, self.plugin, season_key),
@@ -198,21 +198,21 @@ class FileMixin(BasePlugin, register=False):
         if isinstance(end_datetime, File):
             key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
             end_datetime = datetime.fromisoformat(key)
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             NewTitleBucket,
             end_datetime,
             lambda: NewTitleBucket(self.session, self.plugin, end_datetime),
         )
 
     def _providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             ProvidersLocale,
             locale,
             lambda: ProvidersLocale(self.session, self.plugin, locale),
         )
 
     def _search_titles_file(self, query: str) -> SearchTitles:
-        return self._get_weakref_cached_file(
+        return self._get_cached_file(
             SearchTitles,
             query,
             lambda: SearchTitles(self.session, self.plugin, query),
