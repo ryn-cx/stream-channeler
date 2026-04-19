@@ -1,609 +1,480 @@
-# # TODO: Validate
-# import re
-# from datetime import date, datetime, timedelta
-# from functools import cache
-# from typing import Any, override
-
-# from diving_board.exceptions import HTTPError
-# from diving_board.season.models import SeasonModel
-# from loguru import logger
-# from sqlmodel import Session, col, select
-
-# from app.episodes.models import Episode
-# from app.episodes.schemas import EpisodeInput
-# from app.plugins.models import File
-# from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-# from app.seasons.models import Season
-# from app.seasons.schemas import SeasonInput
-# from app.shows.models import Show
-# from app.shows.schemas import ShowInput
-# from app.sources.models import Source
-# from app.sources.schemas import SourceInput
-# from app.utils import tz_datetime
-
-# from .files import (
-#     AdjacentSeriesJSON,
-#     FileMixin,
-#     PlaylistJSON,
-#     SeasonJSON,
-# )
-
-
-# class HiDivePlugin(FileMixin, register=True):
-#     _VERSION = "0.0.1"
-
-#     # region Initialization
-
-#     @override
-#     def __init__(
-#         self,
-#         db: Session,
-#         *,
-#         url: str | None = None,
-#         source: Source | None = None,
-#         show: Show | None = None,
-#         season: Season | None = None,
-#         episode: Episode | None = None,
-#     ) -> None:
-#         self._media_type_value: str | None = None
-#         super().__init__(
-#             db,
-#             url=url,
-#             source=source,
-#             show=show,
-#             season=season,
-#             episode=episode,
-#         )
-
-#     @classmethod
-#     @cache
-#     @override
-#     def plugin_id(cls) -> str:
-#         return "HiDive"
-
-#     @classmethod
-#     @cache
-#     def _plugin_name(cls) -> str:
-#         return "HiDive"
-
-#     @classmethod
-#     @cache
-#     @override
-#     def domains(cls) -> list[str]:
-#         return ["hidive.com"]
-
-#     # endregion
-
-#     # region Import URL
-
-#     @override
-#     def import_url(self, url: str) -> list[URLImportResult]:
-#         if match := re.match(self._tv_series_url_regex(), url):
-#             show_key = match.group("season_key")
-#             self._media_type = "TV Show"
-#             self._validate_show_key(show_key)
-#         elif match := re.match(self._movie_url_regex(), url):
-#             show_key = match.group("movie_key")
-#             self._media_type = "Movie"
-#             self._validate_movie_key(show_key)
-#         else:
-#             msg = f"URL is not a valid {self._plugin_name()} URL: {url}"
-#             raise InvalidURLError(msg)
-
-#         self._preload_show_season_episode_files(show_key)
-#         self._download_initial_files(show_key)
-#         show = self.__upsert_source(show_key)
-#         return [URLImportResult(show=show, whitelist_mode=False)]
-
-#     # endregion
-
-#     # region Update Source
-
-#     @override
-#     def update_source(self, source: Source) -> None:
-#         schedule_calendar = self._schedule_json(source.data_timestamp)
-#         schedule_group_list = self.client.schedule.extract_group_list(
-#             schedule_calendar.parsed(),
-#         )
-
-#         for release in schedule_group_list.attributes.groups:
-#             episode_text = (
-#                 release.attributes.cards[0]
-#                 .attributes.content[0]
-#                 .attributes.elements[1]
-#                 .attributes.text
-#             )
-
-#             if not isinstance(episode_text, str):
-#                 msg = "Invalid episode text format in schedule calendar"
-#                 raise TypeError(msg)
-
-#             release_date = (
-#                 release.attributes.cards[0]
-#                 .attributes.content[0]
-#                 .attributes.elements[0]
-#                 .attributes.text
-#             )
-#             # TODO: There are some issues parsing here
-#             if isinstance(release_date, str):
-#                 release_date = datetime.fromisoformat(release_date).astimezone()
-
-#             if not release_date:
-#                 msg = "Unable to get release date from schedule calendar"
-#                 raise TypeError(msg)
-
-#             if show := self.session.exec(
-#                 select(Show).where(
-#                     Show.source == source,
-#                     Show.name == episode_text.split(" - ")[1],
-#                 ),
-#             ).first():
-#                 # There is no good way to know which season the episode belongs to so
-#                 # just update everything.
-#                 show.update_at = release_date
-#                 for season in show.seasons:
-#                     season.update_at = release_date
-
-#         source.data_timestamp = schedule_calendar.data_timestamp
-#         source.set_update_at(schedule_calendar.data_timestamp + timedelta(days=1))
-
-#     # endregion
-
-#     # region Update Media
-
-#     @override
-#     def update_show(self, show: Show) -> None:
-#         show_key = show.active_children()[0].key
-#         self._media_type = show.media_type
-#         self.__preload_update_media(show_key)
-#         for show_file in self._show_files(show_key):
-#             show_file.download_if_outdated(show.update_at)
-#         self.__upsert_source(show_key)
-
-#     @override
-#     def update_season(self, season: Season) -> None:
-#         show_key = season.show.active_children()[0].key
-#         self._media_type = season.show.media_type
-#         self.__preload_update_media(show_key)
-#         for season_file in self._season_files(int(season.key)):
-#             season_file.download_if_outdated(season.update_at)
-#         self.__upsert_source(show_key)
-
-#     @override
-#     def update_episode(self, episode: Episode) -> None:
-#         show_key = episode.season.show.active_children()[0].key
-#         self._media_type = episode.season.show.media_type
-#         self.__preload_update_media(show_key)
-#         for episode_file in self._episode_files(
-#             int(episode.season.key),
-#             int(episode.key),
-#         ):
-#             episode_file.download_if_outdated(episode.update_at)
-#         self.__upsert_source(show_key)
-
-#     def __preload_update_media(self, show_key: str) -> None:
-#         self.__bootstrap_preload(show_key)
-#         self._preload_show_season_episode_files(show_key)
-
-#     def __bootstrap_preload(self, show_key: str) -> None:
-#         """Preload initial files needed for _season_keys_from_json computation."""
-#         if self._media_type == "TV Show":
-#             file_keys = [SeasonJSON.file_key(show_key)]
-#             file_select = (
-#                 select(File)
-#                 .where(File.plugin == self.plugin)
-#                 .where(col(File.key).in_(file_keys))
-#             )
-#             self.session.exec(file_select).all()
-#             season_json = self._season_json(show_key)
-#             if season_json.database_record.content:
-#                 tv_show_key = str(season_json.parsed().metadata.series.series_id)
-#                 adj_keys = [AdjacentSeriesJSON.file_key(tv_show_key)]
-#                 adj_select = (
-#                     select(File)
-#                     .where(File.plugin == self.plugin)
-#                     .where(col(File.key).in_(adj_keys))
-#                 )
-#                 self.session.exec(adj_select).all()
-#         else:
-#             file_keys = [PlaylistJSON.file_key(show_key)]
-#             file_select = (
-#                 select(File)
-#                 .where(File.plugin == self.plugin)
-#                 .where(col(File.key).in_(file_keys))
-#             )
-#             self.session.exec(file_select).all()
-
-#     # endregion
-
-#     # region Regex
-
-#     @classmethod
-#     @cache
-#     def _url_regex(cls) -> str:
-#         return cls._tv_series_url_regex() + "|" + cls._movie_url_regex()
-
-#     @classmethod
-#     @cache
-#     def _tv_series_url_regex(cls) -> str:
-#         domain_regex = cls._domain_regex()
-#         # Example URLs:
-#         # https://www.hidive.com/series/1189
-#         regex_string = r"\/season\/(?P<season_key>\d+)"
-#         return domain_regex + regex_string
-
-#     @classmethod
-#     @cache
-#     def _movie_url_regex(cls) -> str:
-#         domain_regex = cls._domain_regex()
-#         # Example URLs:
-#         # https://www.hidive.com/playlist/20431
-#         regex_string = r"\/playlist\/(?P<movie_key>\d+)"
-#         return domain_regex + regex_string
-
-#     # endregion
-
-#     # region Class Methods
-
-#     @classmethod
-#     @cache
-#     def _domain(cls) -> str:
-#         return "hidive.com"
-
-#     @classmethod
-#     @cache
-#     def _tv_show_url(cls, show_key: str | int) -> str:
-#         # This will redirect to a season page
-#         return f"{cls._base_url()}series/{show_key}"
-
-#     @classmethod
-#     @cache
-#     def _movie_url(cls, movie_key: str | int) -> str:
-#         return f"{cls._base_url()}playlist/{movie_key}"
-
-#     @classmethod
-#     @cache
-#     def _episode_url(cls, episode_key: str | int) -> str:
-#         return f"{cls._base_url()}video/{episode_key}"
-
-#     # endregion
-
-#     # region Properties
-
-#     @property
-#     def _media_type(self) -> str:
-#         if not self._media_type_value:
-#             msg = "Media type has not been set yet."
-#             raise AttributeError(msg)
-#         return self._media_type_value
-
-#     @_media_type.setter
-#     def _media_type(self, media_type: str) -> None:
-#         if self._media_type_value and self._media_type_value != media_type:
-#             msg = "Media type has already been set and cannot be changed."
-#             raise AttributeError(msg)
-#         self._media_type_value = media_type
-
-#     # endregion
-
-#     # region Cached Properties
-
-#     def _show_from_db(self, show_key: str) -> Show | None:
-#         existing_source = Source.get_from_memory(
-#             self.session,
-#             self.plugin,
-#             self._plugin_name(),
-#         )
-#         if existing_source:
-#             db_show_key = self._get_show_key_for_lookup(show_key)
-#             return Show.get_from_memory(self.session, existing_source, db_show_key)
-#         return None
-
-#     def _seasons_dict_from_db(self, show_key: str) -> dict[str, Season]:
-#         """Return a dictionary of seasons keyed by season key."""
-#         if show := self._show_from_db(show_key):
-#             return {season.key: season for season in show.seasons}
-#         return {}
-
-#     def _episodes_dict_from_db(self, show_key: str) -> dict[str, Episode]:
-#         """Return a dictionary of episodes keyed by episode key."""
-#         if show := self._show_from_db(show_key):
-#             return {
-#                 episode.key: episode
-#                 for season in show.seasons
-#                 for episode in season.episodes
-#             }
-#         return {}
-
-#     def _season_episodes_dict_from_db(
-#         self,
-#         show_key: str,
-#     ) -> dict[str, dict[str, Episode]]:
-#         """Return a nested dictionary of episodes keyed by season key and episode key."""
-#         if show := self._show_from_db(show_key):
-#             return {
-#                 season.key: {episode.key: episode for episode in season.episodes}
-#                 for season in show.seasons
-#             }
-#         return {}
-
-#     def _get_show_key_for_lookup(self, show_key: str) -> str:
-#         """Get the show key based on media type."""
-#         if self._media_type == "TV Show":
-#             return self._get_show_key_from_season_key(show_key)
-#         return show_key
-
-#     def _get_show_key_from_season_key(self, season_key: str) -> str:
-#         first_season_key = self._get_first_season_key(season_key)
-#         first_season_file = self._season_json(first_season_key).parsed()
-#         return str(first_season_file.metadata.series.series_id)
-
-#     # endregion
-
-#     # region Upsert
-
-#     def __upsert_source(self, show_key: str) -> Show:
-#         logger.info(f"Upserting show: {self._pretty_show_name(show_key)}")
-#         existing_source = Source.get_from_memory(
-#             self.session,
-#             self.plugin,
-#             self._plugin_name(),
-#         )
-#         source = SourceInput(
-#             key=self._plugin_name(),
-#             name=self._plugin_name(),
-#             # TODO: Don't hardcode the favicon URL
-#             favicon_url="https://static.diceplatform.com/prod/original/dce.hidive/settings/HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356",
-#             update_at=tz_datetime.now() + timedelta(days=1),
-#             data_timestamp=existing_source.data_timestamp
-#             if existing_source
-#             else tz_datetime.now(),
-#         ).upsert(self.plugin, existing_source)
-#         return self.__upsert_show(source, show_key)
-
-#     def __upsert_show(self, source: Source, show_key: str) -> Show:
-#         if existing_show := self._show_from_db(show_key):
-#             existing_show.soft_delete()
-
-#         if self._media_type == "TV Show":
-#             show = self.__upsert_tv_show_show(source, show_key)
-#         else:
-#             show = self.__upsert_movie_show(source, show_key)
-
-#         self.__upsert_seasons(show, show_key)
-#         return show
-
-#     def __upsert_tv_show_show(self, source: Source, show_key: str) -> Show:
-#         first_season_file = self._season_json(
-#             self._first_season_key_from_file(show_key),
-#         ).parsed()
-
-#         return ShowInput(
-#             key=str(first_season_file.metadata.series.series_id),
-#             name=first_season_file.metadata.series.title,
-#             media_type="TV Show",
-#             url=self._tv_show_url(first_season_file.metadata.series.series_id),
-#             data_timestamp=self._show_timestamp(),
-#         ).upsert(source, self._show_from_db(show_key))
-
-#     def __upsert_movie_show(self, source: Source, show_key: str) -> Show:
-#         playlist_json = self._playlist_json(show_key).parsed()
-#         playlist_bucket = self.client.playlist.extract_bucket(
-#             playlist_json,
-#             "playlist",
-#         )
-#         movie_data = playlist_bucket.items[0]
-
-#         return ShowInput(
-#             key=show_key,
-#             data_timestamp=self._show_timestamp(),
-#             name=movie_data.title,
-#             media_type="Movie",
-#             description=movie_data.description,
-#             url=self._movie_url(playlist_bucket.id),
-#             image_url=movie_data.thumbnail_url,
-#         ).upsert(source, self._show_from_db(show_key))
-
-#     def __upsert_seasons(self, show: Show, show_key: str) -> None:
-#         seasons: list[Season] = []
-#         if self._media_type == "TV Show":
-#             seasons.extend(
-#                 self.__upsert_tv_show_season(show, season_key, show_key)
-#                 for season_key in self._season_keys_from_json(show_key)
-#             )
-#         else:
-#             seasons.append(self.__upsert_movie_season(show, show_key))
-#         self.__upsert_episodes(seasons, show_key)
-
-#     def __upsert_tv_show_season(
-#         self,
-#         show: Show,
-#         season_key: int,
-#         show_key: str,
-#     ) -> Season:
-#         season_json = self._season_json(season_key).parsed()
-
-#         series_data = self.client.season.extract_series(season_json)
-#         series_hero = self.client.season.extract_hero(season_json)
-#         season_data = series_data.attributes.seasons.items[0]
-
-#         sort_order = self._season_keys_from_json(show_key).index(season_key)
-
-#         seasons_dict = self._seasons_dict_from_db(show_key)
-#         season = SeasonInput(
-#             key=str(season_key),
-#             data_timestamp=self._season_timestamp(season_key),
-#             sort_order=sort_order,
-#             name=season_data.title,
-#             url=self._tv_show_url(season_key),
-#             image_url=series_hero.attributes.image.attributes.source,
-#             season_number=season_data.season_number,
-#         ).upsert(show, seasons_dict.get(str(season_key)))
-
-#         return season
-
-#     def __upsert_movie_season(self, show: Show, show_key: str) -> Season:
-#         playlist_json = self._playlist_json(show_key).parsed()
-#         playlist_bucket = self.client.playlist.extract_bucket(
-#             playlist_json,
-#             "playlist",
-#         )
-#         movie_data = playlist_bucket.items[0]
-
-#         seasons_dict = self._seasons_dict_from_db(show_key)
-#         season = SeasonInput(
-#             key=show_key,
-#             data_timestamp=self._show_timestamp(),
-#             sort_order=0,
-#             name=movie_data.title,
-#             season_number=0,
-#             url=self._movie_url(playlist_bucket.id),
-#             image_url=movie_data.thumbnail_url,
-#         ).upsert(show, seasons_dict.get(show_key))
-
-#         return season
-
-#     def __upsert_episodes(self, seasons: list[Season], show_key: str) -> None:
-#         if self._media_type == "TV Show":
-#             for season in seasons:
-#                 season_json = self._season_json(int(season.key)).parsed()
-#                 self.__upsert_tv_show_season_episodes(season, season_json, show_key)
-#                 self.__set_season_update_at_using_episode_release_date(season)
-#         else:
-#             for season in seasons:
-#                 self.__upsert_movie_episode(season, show_key)
-
-#     def __upsert_tv_show_season_episodes(
-#         self,
-#         season: Season,
-#         season_json: SeasonModel,
-#         show_key: str,
-#     ) -> None:
-#         season_bucket = self.client.season.extract_bucket(season_json, "season")
-#         for index, episode_data in enumerate(season_bucket.items):
-#             self.__upsert_tv_show_episode(season, episode_data, index, show_key)
-
-#     def __upsert_tv_show_episode(
-#         self,
-#         season: Season,
-#         episode_data: Any,
-#         sort_order: int,
-#         show_key: str,
-#     ) -> Episode:
-#         vod_data = self._vod_json(episode_data.id).parsed()
-#         # TODO: extract_vod_original_premiere was removed from diving_board.
-#         # Replace with the new method to extract the premiere date from VodModel.
-#         parsed_date = self.client.vod.extract_text_block(vod_data)
-#         episode_date = parsed_date.date() if parsed_date else None
-
-#         # Episode number needs to be parsed from the titles which seems to always be
-#         # in the format "E# - Title"
-#         episode_number = None
-#         if match := re.match(r"^E(\d+)", episode_data.title):
-#             episode_number = int(match.group(1))
-
-#         season_episodes = self._season_episodes_dict_from_db(show_key)
-#         episode = EpisodeInput(
-#             key=str(episode_data.id),
-#             data_timestamp=self._episode_timestamp(
-#                 int(season.key),
-#                 int(episode_data.id),
-#             ),
-#             url=self._episode_url(episode_data.id),
-#             sort_order=sort_order,
-#             description=episode_data.description,
-#             image_url=episode_data.thumbnail_url,
-#             episode_number=episode_number,
-#             name=episode_data.title,
-#             release_date=episode_date,
-#             air_date=episode_date,
-#             duration=episode_data.duration,
-#         ).upsert(
-#             season,
-#             season_episodes.get(season.key, {}).get(str(episode_data.id)),
-#         )
-
-#         return episode
-
-#     def __upsert_movie_episode(self, season: Season, show_key: str) -> Episode:
-#         playlist_json = self._playlist_json(show_key).parsed()
-#         playlist_bucket = self.client.playlist.extract_bucket(
-#             playlist_json,
-#             "playlist",
-#         )
-#         movie_data = playlist_bucket.items[0]
-
-#         vod_data = self._vod_json(movie_data.id).parsed()
-#         # TODO: extract_vod_original_premiere was removed from diving_board.
-#         # Replace with the new method to extract the premiere date from VodModel.
-#         parsed_date = self.client.vod.extract_text_block(vod_data)
-#         episode_date = parsed_date.date() if parsed_date else None
-
-#         season_episodes = self._season_episodes_dict_from_db(show_key)
-#         episode = EpisodeInput(
-#             key=str(movie_data.id),
-#             data_timestamp=self._episode_timestamp(show_key, int(movie_data.id)),
-#             url=self._episode_url(movie_data.id),
-#             sort_order=0,
-#             description=movie_data.description,
-#             image_url=movie_data.thumbnail_url,
-#             episode_number=0,
-#             name=movie_data.title,
-#             release_date=episode_date,
-#             air_date=episode_date,
-#             duration=int(movie_data.duration),
-#         ).upsert(
-#             season,
-#             season_episodes.get(season.key, {}).get(str(movie_data.id)),
-#         )
-
-#         return episode
-
-#     # endregion
-
-#     # region Validation
-
-#     def _validate_show_key(self, show_key: str) -> None:
-#         try:
-#             self._season_json(show_key)
-#         except HTTPError as e:
-#             raise InvalidURLError(e)
-
-#     def _validate_movie_key(self, show_key: str) -> None:
-#         try:
-#             self._playlist_json(show_key)
-#         except HTTPError as e:
-#             raise InvalidURLError(e)
-
-#     # endregion
-
-#     # region Other
-
-#     def __set_season_update_at_using_episode_release_date(
-#         self,
-#         season: Season,
-#     ) -> None:
-#         """Sets the season's update_at based on the latest episode release date.
-
-#         The date will be set to 7 days after the latest episode's release date if that
-#         date is newer than the current data_timestamp.
-#         """
-#         if not season.episodes:
-#             return
-
-#         latest_episode = max(
-#             season.episodes,
-#             key=lambda ep: ep.release_date or date.min,
-#         )
-
-#         if not (latest_episode and latest_episode.release_date):
-#             return
-
-#         time_delta = timedelta(days=7)
-#         update_at = tz_datetime.combine(
-#             latest_episode.release_date + time_delta,
-#             datetime.min.time(),
-#         )
-#         season.set_update_at(update_at)
-
-#     # endregion
+import re
+from datetime import datetime, timedelta
+from typing import ClassVar, override
+
+from diving_board.search import models as search_models
+from diving_board.vod import models as vod_models
+from loguru import logger
+
+from app.episodes.models import Episode
+from app.plugins.plugins.HiDive.files import (
+    FileMixin,
+    Playlist,
+    Schedule,
+    Season,
+    Series,
+    diving_board,
+)
+from app.plugins.plugins.utils.abstract_plugin import (
+    InvalidURLError,
+    PluginSearchResult,
+    PluginSearchResults,
+    URLImportResult,
+)
+from app.seasons.models import Season as SeasonModel
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
+
+
+class HiDive(FileMixin, register=True):
+    _VERSION = "0.0.1"
+
+    @override
+    def initialize_source(self) -> None:
+        if source := Source.get_from_memory(
+            self.session,
+            self.plugin,
+            self.plugin_key(),
+        ):
+            self.source = source
+        else:
+            latest_schedule_file = self._get_latest_schedule_file()
+            self.source = self._upsert_source(latest_schedule_file)
+
+    # region Import URL
+
+    @classmethod
+    def import_url_instructions(cls) -> str:
+        return (
+            "> [!TIP/Series]\n"
+            "> `https://www.hidive.com/series/1286`\n"
+            "> `https://www.hidive.com/season/20022`\n\n"
+            "> [!TIP/Movie]\n"
+            "> `https://www.hidive.com/playlist/19919`\n\n"
+        )
+
+    @override
+    def import_url(self, url: str) -> list[URLImportResult]:
+        self.set_media_type_from_url(url)
+        self._validate_url(url)
+        show_key = self._resolve_show_key(url)
+        show = self._import_show(show_key)
+        return [URLImportResult(show=show, whitelist_mode=False)]
+
+    def _resolve_show_key(self, url: str) -> str:
+        """Return the show key (series_id for TV, playlist_key for Movie)."""
+        key = self.parse_url(url)
+        if self._media_type == "Movie":
+            return key
+        if re.match(self._tv_series_url_regex(), url):
+            return key
+        # season/{id} — resolve the season_id to its series_id.
+        season_data = self._season_file(key).parsed()
+        return str(season_data.metadata.series.series_id)
+
+    def set_media_type_from_url(self, url: str) -> None:
+        if re.match(self._movie_url_regex(), url):
+            self._media_type_value = "Movie"
+        elif re.match(self._tv_series_url_regex(), url) or re.match(
+            self._season_url_regex(),
+            url,
+        ):
+            self._media_type_value = "TV Show"
+        else:
+            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            raise InvalidURLError(msg)
+
+    # This does not use _media_type because that would require this to be an instance
+    # method.
+    @classmethod
+    @override
+    def parse_url(cls, url: str) -> str:
+        if match := re.match(cls._tv_series_url_regex(), url):
+            return match.group("series_key")
+        if match := re.match(cls._season_url_regex(), url):
+            return match.group("season_key")
+        if match := re.match(cls._movie_url_regex(), url):
+            return match.group("movie_key")
+        msg = f"Invalid {cls.plugin_key()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    def _validate_url(self, url: str) -> None:
+        key = self.parse_url(url)
+        file: Series | Season | Playlist
+        if self._media_type == "Movie":
+            file = self._playlist_file(key)
+        elif re.match(self._tv_series_url_regex(), url):
+            file = self._series_file(key)
+        else:
+            file = self._season_file(key)
+
+        file.download_if_outdated()
+        self.raise_invalid_url_if_no_content(file, url)
+
+    def _import_show(self, key: str) -> Show:
+        if show := self._preload_show(show_key=key).one_or_none():
+            return show
+
+        _cache = self._download_show_files(key)
+        return self._upsert_show(self.source, show_key=key)
+
+    # endregion Import URL
+
+    # region Update Media
+
+    def set_media_type_from_show(self, show: Show) -> None:
+        if not show.media_type:
+            msg = "Show.media_type is not set."
+            raise AttributeError(msg)
+        self._media_type_value = show.media_type
+
+    @override
+    def update_show(self, show: Show) -> None:
+        self.set_media_type_from_show(show)
+        super().update_show(show)
+
+    @override
+    def update_season(self, season: SeasonModel) -> None:
+        self.set_media_type_from_show(season.show)
+        super().update_season(season)
+
+    @override
+    def update_episode(self, episode: Episode) -> None:
+        self.set_media_type_from_show(episode.season.show)
+        super().update_episode(episode)
+
+    # endregion Update Media
+
+    # region Update Source
+
+    @override
+    def update_source(self, source: Source) -> None:
+        latest_schedule_file = self._get_latest_schedule_file()
+        latest_schedule_file = self._schedule_file(
+            latest_schedule_file.database_record.data_timestamp,
+        )
+        latest_schedule_file.download_if_outdated(source.update_at)
+        self._process_new_schedule_files(source)
+        self._upsert_source(latest_schedule_file)
+
+    def _process_new_schedule_files(self, source: Source) -> None:
+        _cache = self._preload_sources(preload_seasons=True).all()
+        shows_by_name = {show.name: show for show in source.shows if show.name}
+
+        for schedule_file in self._get_new_files_since_source(
+            source,
+            Schedule,
+            self._schedule_file,
+        ):
+            logger.info(
+                "Processing schedule file: {}",
+                schedule_file.database_record.key,
+            )
+            for page in schedule_file.parsed():
+                group_list = diving_board().schedule.extract_group_list(page)
+                for group in group_list.attributes.groups:
+                    for card in group.attributes.cards:
+                        # Layout: content[0].elements[0] is the ISO release
+                        # date, elements[1] is "Show Name - Episode Title".
+                        elements = card.attributes.content[0].attributes.elements
+                        release_date = datetime.fromisoformat(
+                            elements[0].attributes.text,  # type: ignore[arg-type]
+                        ).astimezone()
+                        show_name = elements[1].attributes.text.split(" - ", 1)[0]  # type: ignore[union-attr]
+                        if show := shows_by_name.get(show_name):
+                            show.set_update_at(release_date)
+                            for season in show.seasons:
+                                season.set_update_at(release_date)
+
+    # endregion Update Source
+
+    # region URL
+
+    @classmethod
+    @override
+    def domains(cls) -> list[str]:
+        return ["hidive.com"]
+
+    @classmethod
+    @override
+    def _url_regex(cls) -> str:
+        return (
+            f"{cls._tv_series_url_regex()}"
+            f"|{cls._season_url_regex()}"
+            f"|{cls._movie_url_regex()}"
+        )
+
+    @classmethod
+    def _tv_series_url_regex(cls) -> str:
+        domain_regex = cls._domain_regex()
+        # Example URL: https://www.hidive.com/series/1286
+        regex_string = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
+        return domain_regex + regex_string
+
+    @classmethod
+    def _season_url_regex(cls) -> str:
+        domain_regex = cls._domain_regex()
+        # Example URL: https://www.hidive.com/season/20022
+        regex_string = r"\/season\/(?P<season_key>\d+)(?:\/|$)"
+        return domain_regex + regex_string
+
+    @classmethod
+    def _movie_url_regex(cls) -> str:
+        domain_regex = cls._domain_regex()
+        # Example URL: https://www.hidive.com/playlist/20431
+        regex_string = r"\/playlist\/(?P<movie_key>\d+)(?:\/|$)"
+        return domain_regex + regex_string
+
+    @classmethod
+    def _show_url(cls, key: str | int, media_type: str = "TV Show") -> str:
+        if media_type == "Movie":
+            return f"{cls._base_url()}playlist/{key}"
+        return f"{cls._base_url()}series/{key}"
+
+    @classmethod
+    def _season_url(cls, season_key: str | int) -> str:
+        return f"{cls._base_url()}season/{season_key}"
+
+    @classmethod
+    def _episode_url(cls, episode_key: str | int) -> str:
+        return f"{cls._base_url()}video/{episode_key}"
+
+    # endregion URL
+
+    # region Upsert
+
+    def _upsert_source(self, latest_schedule_file: Schedule) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        timestamp = latest_schedule_file.database_record.data_timestamp
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_key(),
+            # TODO: Don't hardcode the favicon URL
+            favicon_url=(
+                "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
+                "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
+            ),
+            update_at=timestamp + timedelta(days=1),
+            data_timestamp=timestamp,
+            plugin_id=self.plugin.id,
+        ).upsert(self.plugin, source)
+
+    @override
+    def _upsert_show(self, source: Source, show_key: str) -> Show:
+        if self._media_type == "Movie":
+            return self._upsert_movie_show(source, show_key)
+        return self._upsert_tv_show_show(source, show_key)
+
+    def _upsert_tv_show_show(self, source: Source, show_key: str) -> Show:
+        existing_show = Show.get_from_memory(self.session, source, show_key)
+        series_data = self._series_file(show_key).parsed()
+
+        show = Show(
+            key=show_key,
+            name=series_data.metadata.series.title,
+            url=self._show_url(show_key),
+            image_url=self._series_image_url(series_data),
+            media_type="TV Show",
+            data_timestamp=self.show_data_timestamp(show_key),
+            source_id=source.id,
+        ).upsert(source, existing_show)
+
+        self._upsert_tv_seasons(show, show_key)
+        self._set_weekly_updates_from_episodes(show)
+        return show
+
+    def _upsert_movie_show(self, source: Source, show_key: str) -> Show:
+        existing_show = Show.get_from_memory(self.session, source, show_key)
+        playlist_data = self._playlist_file(show_key).parsed()
+        playlist_bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
+        hero = diving_board().playlist.extract_hero(playlist_data)
+        movie_data = playlist_bucket.attributes.items[0]
+
+        show = Show(
+            key=show_key,
+            name=movie_data.title,
+            description=movie_data.description,
+            url=self._show_url(show_key, "Movie"),
+            image_url=hero.attributes.image.attributes.source,
+            media_type="Movie",
+            data_timestamp=self.show_data_timestamp(show_key),
+            source_id=source.id,
+        ).upsert(source, existing_show)
+
+        self._upsert_movie_seasons(show, show_key)
+        self._set_weekly_updates_from_episodes(show)
+        return show
+
+    def _upsert_tv_seasons(self, show: Show, show_key: str) -> None:
+        series_data = self._series_file(show_key).parsed()
+        season_items = self._series_season_items(series_data)
+        for sort_order, season_info in enumerate(season_items):
+            season_key = str(season_info.id)
+            season_data = self._season_file(season_key).parsed()
+            hero = diving_board().season.extract_hero(season_data)
+
+            new_timestamp = self.season_data_timestamp(season_key, show_key)
+            season = SeasonModel.get_from_memory(self.session, show, season_key)
+            if not season or season.data_timestamp != new_timestamp:
+                season = SeasonModel(
+                    key=season_key,
+                    name=season_info.title,
+                    season_number=season_info.season_number,
+                    sort_order=sort_order,
+                    url=self._season_url(season_key),
+                    image_url=hero.attributes.image.attributes.source,
+                    data_timestamp=new_timestamp,
+                    show_id=show.id,
+                ).upsert(show, season)
+
+            self._upsert_tv_episodes(season, show_key)
+
+        self.soft_delete_missing_seasons(show_key)
+
+    def _upsert_movie_seasons(self, show: Show, show_key: str) -> None:
+        for sort_order, season_key in enumerate(
+            self._season_keys_from_file(show_key),
+        ):
+            playlist_data = self._playlist_file(show_key).parsed()
+            bucket = diving_board().playlist.extract_bucket_playlist(
+                playlist_data,
+            )
+            hero = diving_board().playlist.extract_hero(playlist_data)
+            movie_data = bucket.attributes.items[0]
+
+            new_timestamp = self.season_data_timestamp(season_key, show_key)
+            season = SeasonModel.get_from_memory(self.session, show, season_key)
+            if not season or season.data_timestamp != new_timestamp:
+                season = SeasonModel(
+                    key=season_key,
+                    name=movie_data.title,
+                    season_number=0,
+                    sort_order=sort_order,
+                    url=self._show_url(show_key, "Movie"),
+                    image_url=hero.attributes.image.attributes.source,
+                    data_timestamp=new_timestamp,
+                    show_id=show.id,
+                ).upsert(show, season)
+
+            self._upsert_movie_episode(season, show_key)
+
+        self.soft_delete_missing_seasons(show_key)
+
+    def _upsert_tv_episodes(self, season: SeasonModel, show_key: str) -> None:
+        season_data = self._season_file(season.key).parsed()
+        bucket = diving_board().season.extract_bucket_season(season_data)
+        for sort_order, item in enumerate(bucket.attributes.items):
+            episode_key = str(item.id)
+            episode = Episode.get_from_memory(self.session, season, episode_key)
+            new_timestamp = self.episode_data_timestamp(
+                episode_key,
+                season.key,
+                show_key,
+            )
+            if episode and episode.data_timestamp == new_timestamp:
+                continue
+
+            vod_data = self._vod_file(episode_key).parsed()
+            release_date = self._extract_release_date(vod_data)
+            # HiDive puts the episode number as an E## prefix in the title.
+            episode_match = re.match(r"^E(\d+)", item.title) if item.title else None
+            episode_number = int(episode_match.group(1)) if episode_match else None
+
+            Episode(
+                key=episode_key,
+                name=item.title,
+                description=item.description,
+                url=self._episode_url(episode_key),
+                image_url=item.thumbnail_url,
+                episode_number=episode_number,
+                sort_order=sort_order,
+                duration=item.duration,
+                release_date=release_date,
+                air_date=release_date,
+                data_timestamp=new_timestamp,
+                season_id=season.id,
+            ).upsert(season, episode)
+
+        self.soft_delete_missing_episodes(season.key)
+
+    def _upsert_movie_episode(self, season: SeasonModel, show_key: str) -> None:
+        playlist_data = self._playlist_file(show_key).parsed()
+        bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
+        movie_data = bucket.attributes.items[0]
+        episode_key = str(movie_data.id)
+
+        episode = Episode.get_from_memory(self.session, season, episode_key)
+        new_timestamp = self.episode_data_timestamp(episode_key, season.key, show_key)
+        if not episode or episode.data_timestamp != new_timestamp:
+            vod_data = self._vod_file(episode_key).parsed()
+            release_date = self._extract_release_date(vod_data)
+
+            Episode(
+                key=episode_key,
+                name=movie_data.title,
+                description=movie_data.description,
+                url=self._episode_url(episode_key),
+                image_url=movie_data.thumbnail_url,
+                episode_number=0,
+                sort_order=0,
+                duration=int(movie_data.duration),
+                release_date=release_date,
+                air_date=release_date,
+                data_timestamp=new_timestamp,
+                season_id=season.id,
+            ).upsert(season, episode)
+
+        self.soft_delete_missing_episodes(season.key)
+
+    # endregion Upsert
+
+    _SEARCH_CARD_TYPES: ClassVar[dict[str, str]] = {
+        "SERIES": "TV Show",
+        "PLAYLIST": "Movie",
+    }
+
+    @override
+    def search(self, query: str) -> PluginSearchResults:
+        search_file = self._search_file(query)
+        minimum_timestamp = tz_datetime.now() - timedelta(days=7)
+        search_file.download_if_outdated(minimum_timestamp)
+
+        results: list[PluginSearchResult] = []
+        for element in search_file.parsed().elements:
+            for card in element.attributes.cards or []:
+                data = card.attributes.action.data
+                type_prefix, _, key = data.id.partition("#")
+                if not (media_type := self._SEARCH_CARD_TYPES.get(type_prefix)):
+                    continue
+                results.append(
+                    PluginSearchResult(
+                        title=data.title,
+                        url=self._show_url(key, media_type),
+                        image_url=self._search_card_image(card),
+                        media_type=media_type,
+                    ),
+                )
+        return PluginSearchResults(has_source_selection=False, results=results)
+
+    @staticmethod
+    def _search_card_image(card: search_models.Card) -> str:
+        for header in card.attributes.header:
+            if header.attributes.source:
+                return header.attributes.source
+        msg = "Search card has no image"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _extract_release_date(vod_data: vod_models.VodModel) -> datetime | None:
+        """Extract the release date from the "Original Premiere" tag in the VOD hero."""
+        hero = diving_board().vod.extract_hero(vod_data)
+        for content in hero.attributes.content:
+            if not content.attributes.tags:
+                continue
+            for tag in content.attributes.tags:
+                text = tag.attributes.text
+                if text and text.startswith("Original Premiere: "):
+                    date_string = text.removeprefix("Original Premiere: ")
+                    return datetime.strptime(date_string, "%B %d, %Y").astimezone()
+        return None

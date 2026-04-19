@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { ChannelOutput } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
+import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 
@@ -97,6 +98,7 @@ export const columns: ColumnDef<ChannelOutput>[] = [
     cell: ({ row }) => (
       <div className="flex justify-end">
         <EditChannel channel={row.original} />
+        <ManageShowsButton channelId={row.original.id} variant="icon" />
         <DeleteChannel id={row.original.id} />
       </div>
     ),

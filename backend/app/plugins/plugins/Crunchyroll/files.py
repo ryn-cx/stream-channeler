@@ -19,53 +19,54 @@ from app.utils import tz_datetime
 
 
 @cache
-def chirashi_client() -> Chirashi:
-    server = settings.GET_AROUND_SERVER
-    password = settings.GET_AROUND_PASSWORD
-    return Chirashi(
-        get_around_server=None if server == "changethis" else server,
-        get_around_password=None if password == "changethis" else password,  # noqa: S105
-    )
+def chirashi() -> Chirashi:
+    server: str | None = settings.GET_AROUND_SERVER
+    if server == "changethis":
+        server = None
+    password: str | None = settings.GET_AROUND_PASSWORD
+    if password == "changethis":  # noqa: S105
+        password = None
+    return Chirashi(get_around_server=server, get_around_password=password)
 
 
 class Series(GAPIJSON[series_models.Series]):
     # Occurs when a user puts in an invalid URL.
     acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = chirashi_client().series
+    api_endpoint = chirashi().series
 
 
 class Seasons(GAPIJSON[seasons_models.Seasons]):
-    api_endpoint = chirashi_client().seasons
+    api_endpoint = chirashi().seasons
 
 
 class Episodes(GAPIJSON[episodes_models.Episodes]):
-    api_endpoint = chirashi_client().episodes
+    api_endpoint = chirashi().episodes
 
 
 class Browse(GAPIListJSON[browse_series_models.BrowseSeries]):
     IMMUTABLE = True
-    api_endpoint = chirashi_client().browse_series
+    api_endpoint = chirashi().browse_series
 
     # Uses get_since_datetime instead of get
     @override
     def _get(self) -> list[browse_series_models.BrowseSeries]:
-        return chirashi_client().browse_series.get_since_datetime(
+        return chirashi().browse_series.get_since_datetime(
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
     def datums(self) -> list[browse_series_models.Datum]:
         """Extract all of the datum entries from the browse files."""
-        return chirashi_client().browse_series.extract_entries(self.parsed())
+        return chirashi().browse_series.extract_entries(self.parsed())
 
 
 class Search(GAPIJSON[search_models.Search]):
-    api_endpoint = chirashi_client().search
+    api_endpoint = chirashi().search
 
     # Use alternative search parameters that have more results.
     @override
     def _get(self) -> search_models.Search:
         # Parameters from: https://www.crunchyroll.com/search?f=series&q=Query
-        return chirashi_client().search.get(
+        return chirashi().search.get(
             self.unique_identifier,
             n=100,
             type="series",

@@ -156,11 +156,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     def _import_files(self, session: Session) -> None:
         """Import all exported files into the database."""
-        # Mock initialize_database to only run the BasePlugin implementation (creates the
-        # database record) without running subclass logic that would try to download
-        # files before the cached test data is loaded.
-        original_initialize = self.plugin_class.initialize_database
-        self.plugin_class.initialize_database = BasePlugin.initialize_database  # type: ignore[assignment]
+        # Do not initialize the source until after the files are imported because
+        # initializing the source often requires downloading files.
+        initialize_source = self.plugin_class.initialize_source
+        self.plugin_class.initialize_source = BasePlugin.initialize_source  # type: ignore[assignment]
         plugin = self.plugin_class(session)
 
         plugin_user = get_or_create_plugin_user(session=session)
@@ -189,9 +188,9 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         # datetime values.
         session.expire_all()
 
-        # Run the full initialize_database now that the files are imported.
-        self.plugin_class.initialize_database = original_initialize  # type: ignore[assignment]
-        plugin.initialize_database()
+        # Files are imported so now initialize_source can be run.
+        self.plugin_class.initialize_source = initialize_source  # type: ignore[assignment]
+        plugin.initialize_source()
 
         session.commit()  # Set the rollback point.
 

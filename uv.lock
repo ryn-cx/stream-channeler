@@ -330,7 +330,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#bf05f1a85ae1dd613889eb24ca175d5b6f5921b7" }
+source = { git = "https://github.com/ryn-cx/chirashi#cb2d83d95c446dd61ec3a71e15871ac0cc9db79e" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -494,10 +494,10 @@ source = { git = "https://github.com/ryn-cx/DeGenSON#0461782f9019773dafe059c7c65
 [[package]]
 name = "diving-board"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/diving-board#1d0bb875dc8b088a86ee6dae356b72027671ce27" }
+source = { git = "https://github.com/ryn-cx/diving-board#2028646350d6389aca732d45cb3b968fff233289" }
 dependencies = [
+    { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
-    { name = "requests" },
 ]
 
 [[package]]

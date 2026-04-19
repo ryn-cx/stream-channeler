@@ -31,17 +31,18 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
 
 @cache
-def just_scrape_client() -> JustScrape:
-    server = settings.GET_AROUND_SERVER
-    password = settings.GET_AROUND_PASSWORD
-    return JustScrape(
-        get_around_server=None if server == "changethis" else server,
-        get_around_password=None if password == "changethis" else password,
-    )
+def just_scrape() -> JustScrape:
+    server: str | None = settings.GET_AROUND_SERVER
+    if server == "changethis":
+        server = None
+    password: str | None = settings.GET_AROUND_PASSWORD
+    if password == "changethis":  # noqa: S105
+        password = None
+    return JustScrape(get_around_server=server, get_around_password=password)
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
-    api_endpoint = just_scrape_client().new_titles
+    api_endpoint = just_scrape().new_titles
 
     def __init__(
         self,
@@ -56,18 +57,18 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     @override
     def _get(self) -> list[new_titles_models.NewTitlesResponse]:
-        return just_scrape_client().new_titles.get_all_for_date(
+        return just_scrape().new_titles.get_all_for_date(
             available_to_packages=[self.source_key],
             filter_packages=[self.source_key],
             date=self.date,
         )
 
     def parsed_edges(self) -> list[new_titles_models.Edge]:
-        return just_scrape_client().new_titles.extract_edges(self.parsed())
+        return just_scrape().new_titles.extract_edges(self.parsed())
 
 
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
-    api_endpoint = just_scrape_client().new_title_buckets
+    api_endpoint = just_scrape().new_title_buckets
 
     def __init__(
         self,
@@ -80,12 +81,12 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
 
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
-        return just_scrape_client().new_title_buckets.get_all_since_date(
+        return just_scrape().new_title_buckets.get_all_since_date(
             end_date=self.end_datetime.date(),
         )
 
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
-        return just_scrape_client().new_title_buckets.extract_edges(self.parsed())
+        return just_scrape().new_title_buckets.extract_edges(self.parsed())
 
 
 class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
@@ -109,7 +110,7 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
-    api_endpoint = just_scrape_client().url_title_details
+    api_endpoint = just_scrape().url_title_details
 
     # TODO: Can this error be handled better?
     @override
@@ -127,16 +128,16 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
 class CustomSeasonEpisodes(
     GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
 ):
-    api_endpoint = just_scrape_client().custom_season_episodes
+    api_endpoint = just_scrape().custom_season_episodes
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
-        return just_scrape_client().custom_season_episodes.get_all(
+        return just_scrape().custom_season_episodes.get_all(
             node_id=self.unique_identifier,
         )
 
     def parsed_episodes(self) -> list[custom_season_episodes_models.Episode]:
-        return just_scrape_client().custom_season_episodes.extract_episodes(
+        return just_scrape().custom_season_episodes.extract_episodes(
             self.parsed(),
         )
 
@@ -144,11 +145,11 @@ class CustomSeasonEpisodes(
 class CustomBuyBoxOffers(
     GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
-    api_endpoint = just_scrape_client().custom_buy_box_offers
+    api_endpoint = just_scrape().custom_buy_box_offers
 
 
 class SearchTitles(GAPIJSON[search_models.SearchResponse]):
-    api_endpoint = just_scrape_client().search
+    api_endpoint = just_scrape().search
 
 
 class FileMixin(BasePlugin, register=False):

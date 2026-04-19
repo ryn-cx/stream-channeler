@@ -12,11 +12,9 @@ from datetime import timedelta
 from typing import override
 
 from loguru import logger
-from sqlmodel import col, select
 
 from app.episodes.models import Episode
-from app.plugins.models import File
-from app.plugins.plugins.Crunchyroll.files import Browse, FileMixin, chirashi_client
+from app.plugins.plugins.Crunchyroll.files import Browse, FileMixin, chirashi
 from app.plugins.plugins.utils.abstract_plugin import (
     InvalidURLError,
     PluginSearchResult,
@@ -39,16 +37,8 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     import_watch_history_file_extension = ".json"
 
     @override
-    def initialize_database(self) -> None:
-        super().initialize_database()
-        # Source will be preloaded when the plugin is loaded.
-        if source := Source.get_from_memory(
-            self.session,
-            self.plugin,
-            self.plugin_key(),
-        ):
-            self.source = source
-        else:
+    def initialize_source(self) -> None:
+        if not self.has_source:
             latest_browse_file = self._get_latest_browse_file()
             self.source = self._upsert_source(latest_browse_file)
 
@@ -127,24 +117,20 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @override
     def update_source(self, source: Source) -> None:
         latest_browse_file = self._get_latest_browse_file()
-        latest_browse_file = self._download_new_browse_json(source, latest_browse_file)
+        latest_browse_file.download_if_outdated(source.update_at)
         self._process_new_browse_files(source)
         self._upsert_source(latest_browse_file)
-
-    def _download_new_browse_json(self, source: Source, browse: Browse) -> Browse:
-        # Use data_timestamp as the key so this import will download everything up
-        # to the last import because data_timestamp represents when the file was
-        # written and the key represents the end_datetime used to generate the file.
-        new_browse = self._browse_file(browse.database_record.data_timestamp)
-        new_browse.download_if_outdated(source.update_at)
-        return new_browse
 
     def _process_new_browse_files(self, source: Source) -> None:
         """Import existing browse files that have not been imported yet."""
         # Preload up to seasons because seasons have their update_at values set.
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self._get_new_browse_files(source):
+        for browse_json in self._get_new_files_since_source(
+            source,
+            Browse,
+            self._browse_file,
+        ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -157,22 +143,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                     show.set_update_at(release.last_public)
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
-
-    def _get_new_browse_files(self, source: Source) -> list[Browse]:
-        """Return browse files that are newer than the source's data timestamp."""
-        data_timestamp = source.data_timestamp or tz_datetime.fromtimestamp(0)
-
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{Browse.__name__}/"),
-                col(File.data_timestamp) > data_timestamp,
-            )
-            .order_by(col(File.data_timestamp).asc())
-        )
-        browse_files = self.session.exec(statement)
-        return [self._browse_file(browse_file) for browse_file in browse_files]
 
     # endregion
 
@@ -230,7 +200,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
         self._upsert_seasons(show, show_key)
 
-        self._set_update_at_from_episodes(show)
+        self._set_weekly_updates_from_episodes(show)
 
         return show
 
@@ -247,16 +217,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         if self.show_data_timestamp(show_key) > latest_release + timedelta(days=7):
             return "Movie"
         return "TV Show"
-
-    @staticmethod
-    def _set_update_at_from_episodes(show: Show) -> None:
-        """Set update_at on the show and each season based on episode release dates."""
-        for season in show.active_seasons:
-            for episode in season.active_episodes:
-                if episode.release_date:
-                    update_at = episode.release_date + timedelta(days=7)
-                    season.set_update_at(update_at)
-                    show.set_update_at(update_at)
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
         seasons_file = self._seasons_file(show_key)
@@ -320,7 +280,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         search_file = self._search_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
-        series = chirashi_client().search.extract_series(search_file.parsed())
+        series = chirashi().search.extract_series(search_file.parsed())
         results = [
             PluginSearchResult(
                 title=item.title,

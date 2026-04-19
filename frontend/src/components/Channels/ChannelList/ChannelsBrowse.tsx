@@ -11,6 +11,7 @@ import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/col
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 
@@ -105,6 +106,7 @@ function ChannelRow({ channel, onEdit, onDelete }: ChannelRowProps) {
           >
             <Pencil className="size-4" />
           </Button>
+          <ManageShowsButton channelId={channel.id} variant="icon" />
           <Button
             variant="ghost"
             size="icon"

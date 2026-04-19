@@ -3,9 +3,10 @@ import json
 import random
 from collections.abc import Callable
 from contextlib import nullcontext
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
+from freezegun import freeze_time
 from sqlmodel import Session
 
 from app.episodes.models import Episode
@@ -19,11 +20,11 @@ from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
     block_downloads,
-    frozen_time,
     mock_update,
     track_downloads,
 )
@@ -38,6 +39,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     plugin_class: type[PluginT]
     url: str | None = None
+    search_url: str | None = None
     parse_url_response: object | None = None
     url_path_patterns: tuple[str, ...] = ()
     invalid_url = False
@@ -98,7 +100,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def generic_deleted_validator(
         self,
-        entity: Plugin | Source | Show | Season | Episode,
+        entity: Source | Show | Season | Episode,
     ) -> Validator:
         return (
             Validator()
@@ -209,8 +211,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             if use_mock_update
             else nullcontext()
         )
-        freeze_at = entity.data_timestamp + timedelta(minutes=2)
-        with maybe_mock_wrapper, frozen_time(freeze_at), log_stats(self):
+        with maybe_mock_wrapper, log_stats(self):
             update()
             session.flush()
 
@@ -402,35 +403,75 @@ class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         # assert False
 
 
+class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
+    """Tests that updating a source propagates upstream changes."""
+
+    def _create_source_update_entry(
+        self,
+        plugin_instance: PluginT,
+        source: Source,
+        timestamp: datetime,
+    ) -> None:
+        """Fabricate an upstream update signal for ``source`` at ``timestamp``.
+
+        Each plugin writes whatever fake file(s) make ``update_source`` see a
+        pending refresh for the given source keyed at the given timestamp.
+        """
+        raise NotImplementedError
+
+    def test_update_source(self, session_with_url: Session) -> None:
+        """Update a random source and validate the data."""
+        if self.invalid_url or not self.url:
+            pytest.skip()
+
+        plugin_instance = self.plugin_class(session_with_url)
+        results = plugin_instance.import_url(self.url)
+        source = self.get_random_source(results)
+
+        timestamp = tz_datetime.now() + timedelta(minutes=1)
+        self._create_source_update_entry(plugin_instance, source, timestamp)
+
+        # Seed update_at later than the pending release_date so set_update_at
+        # overwrites it with the earlier value — gives the validator a
+        # decrementing write to assert.
+        source.shows[0].update_at = timestamp + timedelta(minutes=1)
+        for season in source.shows[0].seasons:
+            if season.update_at:
+                season.update_at = timestamp + timedelta(minutes=1)
+
+        original_plugin = self.get_detached_plugin(session_with_url)
+        self._update_and_validate(session_with_url, original_plugin, source)
+
+
 class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake episode gets soft-deleted during update_season."""
 
     def test_deleted_episode(self, session_with_url: Session) -> None:
         results = self._import_url(session_with_url)
         season = self.get_random_season(results)
+        assert season.data_timestamp
 
-        fake_episode = build_random_model(
-            Episode,
-            "full",
-            season_id=season.id,
-            deleted_at=None,
-        )
+        freeze_at = season.data_timestamp + timedelta(seconds=1)
+
+        with freeze_time(freeze_at):
+            fake_episode = build_random_model(
+                Episode,
+                "full",
+                season_id=season.id,
+                deleted_at=tz_datetime.now(),
+            )
         season.episodes.append(fake_episode)
-        session_with_url.flush()
 
-        fake_episode.soft_delete()
         original_plugin = self.get_detached_plugin(session_with_url)
         fake_episode.soft_undelete()
+        session_with_url.flush()
 
-        with block_downloads(), log_stats(self):
-            self.plugin_class(session_with_url).update_season(season)
-            session_with_url.flush()
+        freeze_at = season.data_timestamp + timedelta(seconds=2)
+        with freeze_time(freeze_at), block_downloads(), log_stats(self):
+            self.plugin_class(session_with_url).update_season(season=season)
 
-        self.validate_plugin(
-            session_with_url,
-            original_plugin,
-            self.deleted_episode_validator(fake_episode),
-        )
+        validator = self.deleted_episode_validator(fake_episode)
+        self.validate_plugin(session_with_url, original_plugin, validator)
 
 
 class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -439,28 +480,29 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     def test_deleted_season(self, session_with_url: Session) -> None:
         results = self._import_url(session_with_url)
         show = self.get_random_show(results)
+        assert show.data_timestamp
 
-        fake_season = build_random_model(
-            Season,
-            show_id=show.id,
-            deleted_at=None,
-        )
+        freeze_at = show.data_timestamp + timedelta(seconds=1)
+
+        with freeze_time(freeze_at):
+            fake_season = build_random_model(
+                Season,
+                "full",
+                show_id=show.id,
+                deleted_at=tz_datetime.now(),
+            )
         show.seasons.append(fake_season)
-        session_with_url.flush()
 
-        fake_season.soft_delete()
         original_plugin = self.get_detached_plugin(session_with_url)
         fake_season.soft_undelete()
+        session_with_url.flush()
 
-        with block_downloads(), log_stats(self):
+        freeze_at = show.data_timestamp + timedelta(seconds=2)
+        with freeze_time(freeze_at), block_downloads(), log_stats(self):
             self.plugin_class(session_with_url).update_show(show=show)
-            session_with_url.flush()
 
-        self.validate_plugin(
-            session_with_url,
-            original_plugin,
-            self.deleted_season_validator(fake_season),
-        )
+        validator = self.deleted_season_validator(fake_season)
+        self.validate_plugin(session_with_url, original_plugin, validator)
 
 
 class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -476,16 +518,18 @@ class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         assert isinstance(result, PluginSearchResults)
         assert len(result.results) > 0
 
-        if self.url:
-            stripped_url = (
-                self.url.removeprefix("https://")
-                .removeprefix("http://")
-                .removeprefix("www.")
-                .removesuffix("/")
-            )
-            assert any(
-                stripped_url in search_result.url for search_result in result.results
-            )
+        url = self.search_url or self.url
+        assert url
+
+        stripped_url = (
+            url.removeprefix("https://")
+            .removeprefix("http://")
+            .removeprefix("www.")
+            .removesuffix("/")
+        )
+        assert any(
+            stripped_url in search_result.url for search_result in result.results
+        )
 
 
 class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):

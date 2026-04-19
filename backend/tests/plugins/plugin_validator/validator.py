@@ -13,7 +13,6 @@ from app.shows.models import Show
 from app.sources.models import Source
 
 ValidatorRuleType = Literal[
-    "Ignore",
     "Static",
     "Incremented",
     "Decremented",
@@ -39,11 +38,6 @@ class Validator:
             defaultdict(lambda: defaultdict(list))
         )
 
-    def ignore(self, key: ValidatorKey, *field_names: str) -> Self:
-        """Mark fields to be ignored during validation."""
-        self._rules[key]["Ignore"].extend(field_names)
-        return self
-
     def incremented(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must have increased in value."""
         self._rules[key]["Incremented"].extend(field_names)
@@ -67,12 +61,6 @@ class Validator:
     def populated(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must go from None to a non-None value."""
         self._rules[key]["Populated"].extend(field_names)
-        return self
-
-    def ignore_all(self, *field_names: str) -> Self:
-        """Mark fields to be ignored for all model types."""
-        for model in _ALL_MODELS:
-            self.ignore(model, *field_names)
         return self
 
     def static_all(self, *field_names: str) -> Self:
@@ -139,7 +127,7 @@ class Validator:
         """Mark overlapping entities as updated when seasons and episodes share a file.
 
         - Season: marks all episodes as updated.
-        - Episode: marks the parent season and all sibling episodes as updated.
+        - Episode: marks the parent season as updated.
         """
         match entity:
             case Season() as season:
@@ -151,8 +139,6 @@ class Validator:
                     "modified_at",
                     "data_timestamp",
                 )
-                for sibling in episode.season.episodes:
-                    self.incremented(sibling.id, "modified_at", "data_timestamp")
         return self
 
     def episodes_share_show_file(self, entity: Show | Episode) -> Self:
@@ -288,8 +274,6 @@ class Validator:
         validator_rule = self.get_rule(original_obj, field_name)
 
         match validator_rule:
-            case "Ignore":
-                return None
             case "Incremented":
                 # operator - The types are guaranteed to be the same so the comparison
                 # is safe to execute.

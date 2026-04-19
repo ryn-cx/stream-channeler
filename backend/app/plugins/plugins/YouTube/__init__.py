@@ -30,8 +30,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
     import_watch_history_file_extension = ".json"
 
     @override
-    def initialize_database(self) -> None:
-        super().initialize_database()
+    def initialize_source(self) -> None:
         if not Source.get_from_memory(self.session, self.plugin, self.plugin_key()):
             self._upsert_source()
 

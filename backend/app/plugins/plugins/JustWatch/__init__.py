@@ -37,8 +37,7 @@ class JustWatch(FileMixin, register=True):
     _VERSION = "0.0.1"
 
     @override
-    def initialize_database(self) -> None:
-        super().initialize_database()
+    def initialize_source(self) -> None:
         if self.plugin.data_timestamp is None:
             providers_file = self._providers_locale_file()
             providers_file.download_if_outdated()
@@ -453,6 +452,8 @@ class JustWatch(FileMixin, register=True):
 
         self.soft_delete_missing_seasons(show_key)
 
+        self._set_weekly_updates_from_episodes(show)
+
         return show
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
@@ -638,10 +639,6 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def search(self, query: str) -> PluginSearchResults:
-        """Search JustWatch for shows/movies.
-
-        The file is cached and only re-downloaded if older than 30 days.
-        """
         search_file = self._search_titles_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=30)
         search_file.download_if_outdated(minimum_timestamp)

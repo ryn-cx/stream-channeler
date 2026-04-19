@@ -45,7 +45,7 @@ import { WhitelistManager } from "./WhitelistManager"
 
 interface ManageShowsButtonProps {
   channelId: string
-  variant?: "button" | "menu"
+  variant?: "button" | "menu" | "icon"
 }
 
 interface Show {
@@ -331,6 +331,10 @@ export function ManageShowsButton({
               <Settings className="mr-2 size-4" />
               Manage Shows
             </DropdownMenuItem>
+          ) : variant === "icon" ? (
+            <Button variant="ghost" size="icon" title="Manage shows">
+              <Plus className="size-4" />
+            </Button>
           ) : (
             <Button className="mt-2 mb-4">
               <Settings className="mr-2" />

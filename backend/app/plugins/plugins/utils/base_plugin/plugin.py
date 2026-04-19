@@ -1,6 +1,7 @@
 # TODO: Validate
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any, override
 
 from loguru import logger
@@ -37,12 +38,34 @@ class BasePlugin(
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
+        self._source: Source | None = None
         self._file_cache: dict[tuple[type, object], Any] = {}
         self._weakref_file_cache: dict[tuple[type, object], Any] = {}
         self.initialize_database()
         self._validate_plugin_version()
 
+    @property
+    def source(self) -> Source:
+        if self._source is None:
+            msg = "Source has not been initialized."
+            raise AttributeError(msg)
+        return self._source
+
+    @source.setter
+    def source(self, value: Source) -> None:
+        self._source = value
+
+    @property
+    def has_source(self) -> bool:
+        return self._source is not None
+
     def initialize_database(self) -> None:
+        """Add the ``Plugin (class)`` to the database if it doesn't already exist.
+
+        This will always set ``self.plugin`` to the database record for the ``Plugin``, and
+        if there is only one ``Source`` for the plugin, it will set ``self.source`` to that
+        source.
+        """
         plugin_user = get_or_create_plugin_user(session=self.session)
         existing_plugin = Plugin.get(
             self.session,
@@ -61,6 +84,34 @@ class BasePlugin(
             ).upsert(plugin_user, existing_plugin)
         else:
             self.plugin = existing_plugin
+            if len(self.plugin.sources) == 1:
+                self._source = self.plugin.sources[0]
+
+        self.initialize_source()
+
+    def initialize_source(self) -> None:
+        """Hook for plugins to set up their source(s) after the plugin record exists."""
+
+    @staticmethod
+    def _set_weekly_updates_from_episodes(
+        show: Show,
+        *,
+        update_show: bool = True,
+        update_seasons: bool = True,
+    ) -> None:
+        """Set update_at on the show and/or seasons from episode release dates.
+
+        Each episode's release_date + 7 days is offered to ``set_update_at``
+        so the entity is re-checked roughly one week after the episode aired.
+        """
+        for season in show.active_seasons:
+            for episode in season.active_episodes:
+                if episode.release_date:
+                    update_at = episode.release_date + timedelta(days=7)
+                    if update_seasons:
+                        season.set_update_at(update_at)
+                    if update_show:
+                        show.set_update_at(update_at)
 
     def _validate_plugin_version(self) -> None:
         if self.plugin.version != self._VERSION:

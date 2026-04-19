@@ -1,14 +1,16 @@
 # TODO: Validate
 import uuid
 from abc import ABC
+from collections.abc import Callable
 from typing import Any
 
 from sqlalchemy.engine.result import ScalarResult
 from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.episodes.models import Episode
-from app.plugins.models import Plugin
+from app.plugins.models import File, Plugin
+from app.plugins.plugins.utils.base_plugin.files import BaseFile
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -121,3 +123,29 @@ class PreloadMixin(ABC):
         return self.session.exec(
             select(Episode).where(Episode.id == episode_id).options(*options),
         )
+
+    def _get_new_files_since_source[T: BaseFile[Any]](
+        self,
+        source: Source,
+        file_class: type[T],
+        factory: Callable[[File], T],
+    ) -> list[T]:
+        """Return files of ``file_class`` newer than ``source.data_timestamp``.
+
+        Ordered ascending by ``data_timestamp`` so callers can apply updates
+        in the sequence the files were written.
+        """
+        if not source.data_timestamp:
+            msg = "Source has no data timestamp."
+            raise ValueError(msg)
+
+        statement = (
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{file_class.__name__}/"),
+                col(File.data_timestamp) > source.data_timestamp,
+            )
+            .order_by(col(File.data_timestamp).asc())
+        )
+        return [factory(file) for file in self.session.exec(statement).all()]

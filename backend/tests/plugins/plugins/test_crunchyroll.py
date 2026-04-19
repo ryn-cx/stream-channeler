@@ -1,25 +1,19 @@
 # TODO: Validate
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import override
 
-import pytest
-
-try:
-    from typing import override
-except ImportError:
-    from typing import override
 from chirashi.browse_series import BrowseSeries
-from sqlmodel import Session
 
 from app.episodes.models import Episode
 from app.plugins.plugins.Crunchyroll import Crunchyroll
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
     StandardTests,
+    UpdateSourceTests,
 )
 from tests.plugins.plugin_validator.validator import Validator
 
@@ -36,14 +30,6 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     )
 
     @override
-    def update_show_validator(self, show: Show) -> Validator:
-        validator = super().update_show_validator(show)
-        # update_at is recalculated by _set_update_at_from_episodes. Whether it
-        # changes depends on episode release dates relative to data_timestamp.
-        validator.ignore(show.id, "update_at")
-        return validator
-
-    @override
     def update_season_validator(self, season: Season) -> Validator:
         return (
             super()
@@ -58,21 +44,15 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
             super()
             .update_episode_validator(episode)
             .episodes_share_season_file(episode)
+            .episodes_share_file(episode)
         )
-
-    @override
-    def deleted_season_validator(self, season: Season) -> Validator:
-        validator = super().deleted_season_validator(season)
-        # update_at is recalculated by _set_update_at_from_episodes.
-        validator.ignore(season.show.id, "update_at")
-        return validator
 
 
 class CrunchyrollStandardTests(StandardTests[Crunchyroll], CrunchyrollValidator):
     pass
 
 
-class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
+class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollValidator):
     @override
     def update_source_validator(self, source: Source) -> Validator:
         validator = super().update_source_validator(source)
@@ -113,35 +93,14 @@ class CrunchyrollUpdateSourceTest(CrunchyrollValidator):
         new_browse._write(BrowseSeries.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
-    def test_update_source(self, session_with_url: Session) -> None:
-        """Update a random source and validate the data."""
-        if self.invalid_url:
-            pytest.skip()
-
-        if not self.url:
-            msg = "URL is required for update source test"
-            raise ValueError(msg)
-
-        plugin_instance = self.plugin_class(session_with_url)
-        results = plugin_instance.import_url(self.url)
-        source = self.get_random_source(results)
-
-        new_browse_timestamp = tz_datetime.now() + timedelta(minutes=1)
-        self._create_fake_browse_file(
-            plugin_instance,
-            new_browse_timestamp,
-            source.shows[0].key,
-        )
-
-        # Manually set show.update_at and season.update_at values so they will
-        # always decrement.
-        source.shows[0].update_at = new_browse_timestamp + timedelta(minutes=1)
-        for season in source.shows[0].seasons:
-            if season.update_at:
-                season.update_at = new_browse_timestamp + timedelta(minutes=1)
-
-        original_plugin = self.get_detached_plugin(session_with_url)
-        self._update_and_validate(session_with_url, original_plugin, source)
+    @override
+    def _create_source_update_entry(
+        self,
+        plugin_instance: Crunchyroll,
+        source: Source,
+        timestamp: datetime,
+    ) -> None:
+        self._create_fake_browse_file(plugin_instance, timestamp, source.shows[0].key)
 
 
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):

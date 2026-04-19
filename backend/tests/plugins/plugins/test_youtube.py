@@ -59,15 +59,6 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output.incremented(episode.key, "modified_at", "data_timestamp")
         return output
 
-    @override
-    def deleted_episode_validator(self, episode: Episode) -> Validator:
-        output = super().deleted_episode_validator(episode)
-        # _set_season_update_at recalculates update_at from episode release dates.
-        # Whether it changes depends on whether the fake episode had the latest
-        # release date, so we ignore it.
-        output.ignore(episode.season.id, "update_at")
-        return output
-
 
 class PlaylistValidator(YouTubeValidator):
     @pytest.fixture(
@@ -151,19 +142,6 @@ class ChannelWithNoUploadsMixin(YouTubeValidator):
     def uploads_key(self) -> str:
         return "UU" + self.channel_key[2:]
 
-    @override
-    def import_url_validator(self) -> Validator:
-        output = super().import_url_validator()
-        output.ignore(self.uploads_key, "update_at")
-        return output
-
-    @override
-    def update_season_validator(self, season: Season) -> Validator:
-        output = super().update_season_validator(season)
-        if season.key == self.uploads_key:
-            output.changed(season.id, "update_at")
-        return output
-
 
 # This also ends up having a playlist with no videos PL2666A74DC50B1A76
 class Test16CharacterPlaylist(StandardTests, PlaylistValidator):
@@ -237,12 +215,6 @@ class TestChannelWithoutPlaylists(StandardTests, ChannelValidator):
     channel_key = "UCVlx-IvZ_TBWRKU0UQCaueQ"
     channel_name = "chad"
     url = f"youtube.com/{channel_name}"
-
-
-# class TestLargeChannel(ChannelValidator):
-#     channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
-#     channel_name = "MrBeast"
-#     url = f"youtube.com/{channel_name}"
 
 
 class InvalidYouTubeURLValidator(InvalidURLValidator[YouTube]):

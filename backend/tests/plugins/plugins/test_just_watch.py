@@ -27,27 +27,16 @@ class BaseJustWatch(PluginValidator[JustWatch]):
     class_key: str
 
     @override
-    def import_url_validator(self) -> Validator:
-        output = super().import_url_validator()
-        # Plugin.data_timestamp and update_at are set during initialize_database based on
-        # the latest bucket and providers file timestamps which may differ from the
-        # verification file.
-        output.ignore(Plugin, "data_timestamp", "update_at")
-        return output
-
-    @override
     def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:
         validator = super().update_plugin_validator(session, plugin)
-        # Plugin.update_at is recalculated from file timestamps.
-        validator.changed(plugin.id, "update_at")
+        validator.incremented(plugin.id, "update_at")
         # All sources get re-upserted during update_plugin.
-        validator.changed(Source, "data_timestamp")
-        validator.ignore(Source, "modified_at")
+        validator.incremented(Source, "data_timestamp")
         # Sources in the bucket will be marked as outdated.
         just_watch = JustWatch(session)
         source_keys = just_watch._source_keys_from_buckets(session, plugin)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        validator.incremented(Source, "modified_at")
         for source_key in source_keys:
-            validator.incremented(source_key, "modified_at")
             validator.populated(source_key, "update_at")
             validator.populated(source_key, "extra")
         return validator
@@ -61,18 +50,15 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             <= tz_datetime.now()
             for d in extra_dates
         )
-        show = source.shows[0]
         if all_complete:
             validator.changed(source.id, "extra")
-            validator.ignore(show.id, "modified_at", "update_at")
         else:
-            validator.ignore(show.id, "modified_at", "update_at")
             validator.populated(source.id, "update_at")
         return validator
 
     def test_update_plugin(self, session_with_url: Session) -> None:
         """Update a random plugin and validate the data."""
-        if self.invalid_url:
+        if self.invalid_url or not self.url:
             pytest.skip()
 
         plugin_instance = self.plugin_class(session_with_url)
@@ -94,30 +80,16 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         )
 
     @override
-    def update_show_validator(self, show: Show) -> Validator:
-        validator = super().update_show_validator(show).seasons_share_show_file(show)
-        for season in show.seasons:
-            validator.ignore(season.id, "modified_at", "data_timestamp")
-        return validator
-
-    @override
     def update_season_validator(self, season: Season) -> Validator:
-        validator = (
-            super().update_season_validator(season).seasons_share_show_file(season)
-        )
-        for sibling in season.show.seasons:
-            if sibling.id != season.id:
-                validator.ignore(sibling.id, "modified_at", "data_timestamp")
-        return validator
+        return super().update_season_validator(season).seasons_share_show_file(season)
 
     @override
     def update_episode_validator(self, episode: Episode) -> Validator:
-        validator = super().update_episode_validator(episode)
-        validator.incremented(episode.season.id, "modified_at", "data_timestamp")
-        for sibling in episode.season.episodes:
-            if sibling.id != episode.id:
-                validator.ignore(sibling.id, "modified_at", "data_timestamp")
-        return validator
+        return (
+            super()
+            .update_episode_validator(episode)
+            .episodes_share_season_file(episode)
+        )
 
     @staticmethod
     def _create_fake_bucket_file(
@@ -152,7 +124,9 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         new_titles_file._write([])  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
 
     def test_update_source(self, session_with_url: Session) -> None:
-        """Update a random source and validate the data."""
+        if self.invalid_url or not self.url:
+            pytest.skip()
+
         plugin_instance = self.plugin_class(session_with_url)
         results = plugin_instance.import_url(self.url)
 
@@ -200,7 +174,12 @@ class TestMovie(StandardTests, BaseJustWatch):
 
     @override
     def update_show_validator(self, show: Show) -> Validator:
-        return super().update_show_validator(show).episodes_share_show_file(show)
+        return (
+            super()
+            .update_show_validator(show)
+            .seasons_share_show_file(show)
+            .episodes_share_show_file(show)
+        )
 
     @override
     def update_season_validator(self, season: Season) -> Validator:
@@ -218,6 +197,7 @@ class TestMovie(StandardTests, BaseJustWatch):
             .update_episode_validator(episode)
             .episodes_share_show_file(episode)
             .episodes_share_season_file(episode)
+            .episodes_share_file(episode)
         )
 
     def test_import_single_source(self, session_with_files: Session) -> None:

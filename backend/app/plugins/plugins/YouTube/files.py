@@ -25,12 +25,12 @@ from app.plugins.plugins.utils.base_plugin.files import (
 
 
 @cache
-def not_yt_dlapi_client() -> NotYTDLAPI:
+def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(settings.YOUTUBE_API_KEY)
 
 
 class ChannelByChannelId(GAPIJSONNoGet[ChannelModel]):
-    api_endpoint = not_yt_dlapi_client().channels
+    api_endpoint = not_yt_dlapi().channels
 
     @override
     def _get(self) -> ChannelModel:
@@ -43,7 +43,7 @@ class ChannelByChannelId(GAPIJSONNoGet[ChannelModel]):
 
 
 class ChannelByHandle(GAPIJSONNoGet[ChannelModel]):
-    api_endpoint = not_yt_dlapi_client().channels
+    api_endpoint = not_yt_dlapi().channels
 
     @override
     def _get(self) -> ChannelModel:
@@ -56,7 +56,7 @@ class ChannelByHandle(GAPIJSONNoGet[ChannelModel]):
 
 
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistModel]):
-    api_endpoint = not_yt_dlapi_client().playlists
+    api_endpoint = not_yt_dlapi().playlists
 
     @override
     def _get(self) -> PlaylistModel:
@@ -69,7 +69,7 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistModel]):
 
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
-    api_endpoint = not_yt_dlapi_client().playlist_items
+    api_endpoint = not_yt_dlapi().playlist_items
 
     @override
     def _get(self) -> PlaylistItemModel:
@@ -82,7 +82,7 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
 
 
 class Videos(GAPIJSON[VideoModel]):
-    api_endpoint = not_yt_dlapi_client().videos
+    api_endpoint = not_yt_dlapi().videos
 
 
 class FileMixin(BasePlugin, register=False):
@@ -231,7 +231,7 @@ class FileMixin(BasePlugin, register=False):
 
         if outdated_ids:
             logger.info(f"Batch downloading {len(outdated_ids)} videos")
-            responses = not_yt_dlapi_client().videos.download_multiple(outdated_ids)
+            responses = not_yt_dlapi().videos.download_multiple(outdated_ids)
             for video_id, response in zip(outdated_ids, responses, strict=True):
                 video_file = self._videos_file(video_id)
                 content = json.dumps(response, default=str)
