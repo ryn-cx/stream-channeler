@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search } from "lucide-react"
 import { useState } from "react"
-import { ChannelsService } from "@/client"
+import { ChannelsService, PluginsService } from "@/client"
 import { OpenAPI } from "@/client/core/OpenAPI"
 import { request as apiRequest } from "@/client/core/request"
 import { Button } from "@/components/ui/button"
@@ -83,9 +83,11 @@ function useAddToQueue(channelId: string) {
 function AddToQueueButton({
   url,
   channelId,
+  onAdded,
 }: {
   url: string
   channelId: string
+  onAdded: () => void
 }) {
   const addUrlMutation = useAddToQueue(channelId)
   return (
@@ -94,7 +96,7 @@ function AddToQueueButton({
       className="mt-2 w-full"
       onClick={(event) => {
         event.stopPropagation()
-        addUrlMutation.mutate(url)
+        addUrlMutation.mutate(url, { onSuccess: onAdded })
       }}
       disabled={addUrlMutation.isPending}
     >
@@ -108,26 +110,31 @@ function ExpandedSources({
   result,
   hasSourceSelection,
   channelId,
+  onAdded,
 }: {
   result: SearchResult
   hasSourceSelection: boolean
   channelId: string
+  onAdded: () => void
 }) {
   const [customSource, setCustomSource] = useState("")
   const addUrlMutation = useAddToQueue(channelId)
 
   const handleAddSource = (sourceName: string) => {
-    addUrlMutation.mutate(`${sourceName} ${result.url}`)
+    addUrlMutation.mutate(`${sourceName} ${result.url}`, { onSuccess: onAdded })
   }
 
   const handleAddAllSources = () => {
-    addUrlMutation.mutate(result.url)
+    addUrlMutation.mutate(result.url, { onSuccess: onAdded })
   }
 
   const handleAddCustomSource = () => {
     if (!customSource.trim()) return
     addUrlMutation.mutate(`${customSource.trim()} ${result.url}`, {
-      onSuccess: () => setCustomSource(""),
+      onSuccess: () => {
+        setCustomSource("")
+        onAdded()
+      },
     })
   }
 
@@ -213,6 +220,7 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [pluginKey, setPluginKey] = useState("JustWatch")
   const { showErrorToast } = useCustomToast()
+  const addUrlMutation = useAddToQueue(channelId)
 
   const { data: searchablePlugins } = useQuery({
     queryKey: ["searchable-plugins"],
@@ -223,14 +231,34 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
       }),
   })
 
+  const clearSearch = () => {
+    setSearchQuery("")
+    setSearchResponse(null)
+    setSelectedIndex(null)
+  }
+
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return
+    const trimmed = searchQuery.trim()
+    if (!trimmed) return
+
     setIsSearching(true)
     setSearchResponse(null)
     setSelectedIndex(null)
 
     try {
-      const response = await searchBackend(pluginKey, searchQuery.trim())
+      // Ask the backend whether any plugin accepts the input as an importable
+      // URL. If so, skip search and queue it directly.
+      const match = await PluginsService.matchUrl({ url: trimmed })
+      if (match.matched) {
+        addUrlMutation.mutate(trimmed, {
+          onSuccess: () => {
+            setSearchQuery("")
+          },
+        })
+        return
+      }
+
+      const response = await searchBackend(pluginKey, trimmed)
       setSearchResponse(response)
     } catch {
       showErrorToast("Search failed")
@@ -253,7 +281,10 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
             if (event.key === "Enter") handleSearch()
           }}
         />
-        <Button onClick={handleSearch} disabled={isSearching}>
+        <Button
+          onClick={handleSearch}
+          disabled={isSearching || addUrlMutation.isPending}
+        >
           <Search className="h-4 w-4 mr-2" />
           {isSearching ? "Searching..." : "Search"}
         </Button>
@@ -302,7 +333,11 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
                   {result.year && ` (${result.year})`}
                 </p>
                 {!hasSourceSelection && (
-                  <AddToQueueButton url={result.url} channelId={channelId} />
+                  <AddToQueueButton
+                    url={result.url}
+                    channelId={channelId}
+                    onAdded={clearSearch}
+                  />
                 )}
               </>
             )
@@ -335,6 +370,7 @@ export function ShowSearch({ channelId }: ShowSearchProps) {
                         searchResponse?.has_source_selection ?? false
                       }
                       channelId={channelId}
+                      onAdded={clearSearch}
                     />
                   </div>
                 )}

@@ -17,7 +17,9 @@ import type { ChannelOutput, SortKeyInput } from "@/client"
 import { ChannelsService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -56,7 +58,8 @@ const SORT_PRESETS: SortPreset[] = [
     icon: <Waves className="h-10 w-10" />,
     sortBy: [
       sortKey("season.sequential", "ascending"),
-      sortKey("episode.sequential", "ascending", "randomize"),
+      sortKey("episode.sequential", "ascending"),
+      sortKey("episode.id", "ascending", "randomize"),
     ],
   },
   {
@@ -107,6 +110,8 @@ function OnboardingShell({
 
 export function OnboardingCreateName() {
   const [channelName, setChannelName] = useState("")
+  const [channelNumber, setChannelNumber] = useState<string>("")
+  const [isPublic, setIsPublic] = useState(false)
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -116,7 +121,9 @@ export function OnboardingCreateName() {
       ChannelsService.createChannel({
         requestBody: {
           name: channelName.trim(),
-          public: false,
+          channel_number:
+            channelNumber === "" ? null : Number.parseFloat(channelNumber),
+          public: isPublic,
         },
       }),
     onSuccess: (channel: ChannelOutput) => {
@@ -145,16 +152,50 @@ export function OnboardingCreateName() {
           A channel is an automatically updated curated playlist of shows and
           movies that you pick. Give it a name to get started.
         </p>
-        <div className="max-w-sm mx-auto space-y-4">
-          <Input
-            value={channelName}
-            onChange={(event) => setChannelName(event.target.value)}
-            placeholder="My Channel"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") handleSubmit()
-            }}
-            autoFocus
-          />
+        <div className="max-w-sm mx-auto space-y-4 text-left">
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-name">Name</Label>
+            <Input
+              id="channel-name"
+              value={channelName}
+              onChange={(event) => setChannelName(event.target.value)}
+              placeholder="My Channel"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleSubmit()
+              }}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-number">Channel Number</Label>
+            <Input
+              id="channel-number"
+              type="number"
+              value={channelNumber}
+              onChange={(event) => setChannelNumber(event.target.value)}
+              placeholder="Optional"
+            />
+            <p className="text-sm text-muted-foreground">
+              Used to determine the order channels are displayed in. Lower
+              numbers appear first. Leave blank to let it sort by name.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="channel-public"
+              checked={isPublic}
+              onCheckedChange={(checked) => setIsPublic(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="channel-public" className="font-normal">
+                Make this channel public
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Public channels can be viewed by anyone with the link. Private
+                channels are only visible to you.
+              </p>
+            </div>
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={createChannelMutation.isPending}
@@ -171,6 +212,8 @@ export function OnboardingCreateName() {
 
 export function OnboardingEditName({ channelId }: { channelId: string }) {
   const [channelName, setChannelName] = useState("")
+  const [channelNumber, setChannelNumber] = useState<string>("")
+  const [isPublic, setIsPublic] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -184,6 +227,12 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
   useEffect(() => {
     if (channelQuery.data && !initialized) {
       setChannelName(channelQuery.data.name ?? "")
+      setChannelNumber(
+        channelQuery.data.channel_number == null
+          ? ""
+          : String(channelQuery.data.channel_number),
+      )
+      setIsPublic(channelQuery.data.public ?? false)
       setInitialized(true)
     }
   }, [channelQuery.data, initialized])
@@ -192,7 +241,12 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     mutationFn: () =>
       ChannelsService.updateChannel({
         channelId,
-        requestBody: { name: channelName.trim() },
+        requestBody: {
+          name: channelName.trim(),
+          channel_number:
+            channelNumber === "" ? null : Number.parseFloat(channelNumber),
+          public: isPublic,
+        },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] })
@@ -215,20 +269,54 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
   return (
     <OnboardingShell currentStep={0}>
       <div className="space-y-6 text-center">
-        <h1 className="text-3xl font-bold">Edit Channel Name</h1>
+        <h1 className="text-3xl font-bold">Edit Channel</h1>
         <p className="text-muted-foreground">
-          Rename your channel before continuing.
+          Adjust your channel settings before continuing.
         </p>
-        <div className="max-w-sm mx-auto space-y-4">
-          <Input
-            value={channelName}
-            onChange={(event) => setChannelName(event.target.value)}
-            placeholder="My Channel"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") handleSubmit()
-            }}
-            autoFocus
-          />
+        <div className="max-w-sm mx-auto space-y-4 text-left">
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-name">Name</Label>
+            <Input
+              id="channel-name"
+              value={channelName}
+              onChange={(event) => setChannelName(event.target.value)}
+              placeholder="My Channel"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") handleSubmit()
+              }}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-number">Channel Number</Label>
+            <Input
+              id="channel-number"
+              type="number"
+              value={channelNumber}
+              onChange={(event) => setChannelNumber(event.target.value)}
+              placeholder="Optional"
+            />
+            <p className="text-sm text-muted-foreground">
+              Used to determine the order channels are displayed in. Lower
+              numbers appear first. Leave blank to let it sort by name.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="channel-public"
+              checked={isPublic}
+              onCheckedChange={(checked) => setIsPublic(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="channel-public" className="font-normal">
+                Make this channel public
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Public channels can be viewed by anyone with the link. Private
+                channels are only visible to you.
+              </p>
+            </div>
+          </div>
           <Button
             onClick={handleSubmit}
             disabled={updateChannelMutation.isPending}
@@ -304,10 +392,11 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
         // biome-ignore lint/suspicious/noExplicitAny: matches existing callsite
         requestBody: { sortBy } as any,
       }),
-    onSuccess: () => {
+    onSuccess: (_data, sortBy) => {
       navigate({
         to: "/onboarding/$channelId/done",
         params: { channelId },
+        search: { sortBy },
       })
     },
     onError: handleError.bind(showErrorToast),
@@ -389,7 +478,13 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
   )
 }
 
-export function OnboardingDone({ channelId }: { channelId: string }) {
+export function OnboardingDone({
+  channelId,
+  sortBy,
+}: {
+  channelId: string
+  sortBy?: SortKeyInput[]
+}) {
   const navigate = useNavigate()
 
   return (
@@ -418,7 +513,11 @@ export function OnboardingDone({ channelId }: { channelId: string }) {
             Back
           </Button>
           <Button asChild size="lg">
-            <Link to="/channels/$channelId" params={{ channelId }}>
+            <Link
+              to="/channels/$channelId"
+              params={{ channelId }}
+              search={sortBy ? { sortBy } : undefined}
+            >
               View Your Channel
               <ChevronRight className="h-4 w-4 ml-1" />
             </Link>

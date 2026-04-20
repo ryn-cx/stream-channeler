@@ -326,7 +326,7 @@ export function ManageShowsTabs({
             <Link2 className="h-4 w-4 mr-1" /> Add By URL
           </TabsTrigger>
           <TabsTrigger value="shows">
-            <List className="h-4 w-4 mr-1" /> Shows
+            <List className="h-4 w-4 mr-1" /> Edit Shows
             {showsList.length > 0 && ` (${showsList.length})`}
           </TabsTrigger>
           <TabsTrigger value="queue">

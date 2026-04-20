@@ -1,6 +1,15 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
-import { Check, Play, Tv, Users, X, Zap } from "lucide-react"
+import {
+  Check,
+  LayoutDashboard,
+  LogIn,
+  Play,
+  Tv,
+  Users,
+  X,
+  Zap,
+} from "lucide-react"
 
 import type { SortKeyInput } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +42,6 @@ const DEMO_SORT_BY: SortKeyInput[] = [
 
 export function InfoPage() {
   const { user } = useAuth()
-  const getStartedTo = user ? "/dashboard" : "/signup"
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -62,15 +70,29 @@ export function InfoPage() {
                 View Demo Channel
               </Link>
             </Button>
-            <Button asChild size="lg">
-              <Link to={getStartedTo}>
-                <Users className="mr-2" />
-                Sign Up
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/login">Sign In</Link>
-            </Button>
+            {user ? (
+              <Button asChild size="lg">
+                <Link to="/dashboard">
+                  <LayoutDashboard className="mr-2" />
+                  Go to Dashboard
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild size="lg">
+                  <Link to="/signup">
+                    <Users className="mr-2" />
+                    Sign Up
+                  </Link>
+                </Button>
+                <Button asChild size="lg">
+                  <Link to="/login">
+                    <LogIn className="mr-2" />
+                    Sign In
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -232,7 +254,7 @@ export function InfoPage() {
                 </li>
               </ul>
               <Button asChild size="lg" variant="outline" className="w-full">
-                <Link to={getStartedTo}>Get Started</Link>
+                <Link to={user ? "/dashboard" : "/signup"}>Get Started</Link>
               </Button>
             </Card>
 

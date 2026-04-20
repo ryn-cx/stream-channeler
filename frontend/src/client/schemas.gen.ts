@@ -1738,6 +1738,30 @@ export const PluginSearchResultsSchema = {
     description: 'Results from a search query.'
 } as const;
 
+export const PluginURLMatchSchema = {
+    properties: {
+        matched: {
+            type: 'boolean',
+            title: 'Matched'
+        },
+        plugin_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Key'
+        }
+    },
+    type: 'object',
+    required: ['matched'],
+    title: 'PluginURLMatch',
+    description: "Result of checking whether an input matches a plugin's URL format."
+} as const;
+
 export const PrivateUserCreateSchema = {
     properties: {
         email: {

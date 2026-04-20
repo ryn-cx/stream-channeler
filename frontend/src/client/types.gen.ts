@@ -262,6 +262,14 @@ export type PluginSearchResultSource = {
     icon_url?: (string | null);
 };
 
+/**
+ * Result of checking whether an input matches a plugin's URL format.
+ */
+export type PluginURLMatch = {
+    matched: boolean;
+    plugin_key?: (string | null);
+};
+
 export type PrivateUserCreate = {
     email: string;
     password: string;
@@ -789,6 +797,12 @@ export type LoginRecoverPasswordHtmlContentResponse = (string);
 export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
 
 export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
+
+export type PluginsMatchUrlData = {
+    url: string;
+};
+
+export type PluginsMatchUrlResponse = (PluginURLMatch);
 
 export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
 

@@ -1,7 +1,7 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { ChevronDown, ChevronUp, Plus, TvMinimal, X } from "lucide-react"
+import { Antenna, ChevronDown, ChevronUp, Plus, X } from "lucide-react"
 import { useState } from "react"
 
 import { getChannelEpisodes } from "@/api/channels"
@@ -159,13 +159,13 @@ export function ManageAdditionalChannels({
               e.preventDefault()
             }}
           >
-            <TvMinimal className="mr-2 size-4" />
-            Additional Channels
+            <Antenna className="mr-2 size-4" />
+            Combined Channels
           </DropdownMenuItem>
         ) : (
           <Button className="mt-2 mb-4">
-            <TvMinimal className="mr-2" />
-            Manage Additional Channels
+            <Antenna className="mr-2" />
+            Combined Channels
           </Button>
         )}
       </DialogTrigger>

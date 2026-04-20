@@ -34,3 +34,10 @@ class PluginImportURLInformation(BaseModel):
 class PluginSearchInformation(BaseModel):
     plugin_key: str
     name: str
+
+
+class PluginURLMatch(BaseModel):
+    """Result of checking whether an input matches a plugin's URL format."""
+
+    matched: bool
+    plugin_key: str | None = None

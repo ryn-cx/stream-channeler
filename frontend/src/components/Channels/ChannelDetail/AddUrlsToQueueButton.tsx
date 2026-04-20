@@ -1,5 +1,5 @@
 // TODO: Validate
-import { Plus, Settings } from "lucide-react"
+import { MonitorCog, Plus } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,8 +34,8 @@ export function ManageShowsButton({
               e.preventDefault()
             }}
           >
-            <Settings className="mr-2 size-4" />
-            Manage Shows
+            <MonitorCog className="mr-2 size-4" />
+            Shows
           </DropdownMenuItem>
         ) : variant === "icon" ? (
           <Button variant="ghost" size="icon" title="Manage shows">
@@ -43,8 +43,8 @@ export function ManageShowsButton({
           </Button>
         ) : (
           <Button className="mt-2 mb-4">
-            <Settings className="mr-2" />
-            Manage Shows
+            <MonitorCog className="mr-2" />
+            Shows
           </Button>
         )}
       </DialogTrigger>

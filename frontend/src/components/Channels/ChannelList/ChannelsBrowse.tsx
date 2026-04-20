@@ -1,7 +1,7 @@
 // TODO: Validate
 import { useQueries } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
@@ -17,11 +17,10 @@ import EditChannel from "./EditChannel"
 
 interface ChannelRowProps {
   channel: ChannelOutput
-  onEdit: (channel: ChannelOutput) => void
   onDelete: (channel: ChannelOutput) => void
 }
 
-function ChannelRow({ channel, onEdit, onDelete }: ChannelRowProps) {
+function ChannelRow({ channel, onDelete }: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -98,14 +97,7 @@ function ChannelRow({ channel, onEdit, onDelete }: ChannelRowProps) {
           {channel.name}
         </Link>
         <div className="flex">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit channel"
-            onClick={() => onEdit(channel)}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          <EditChannel channel={channel} />
           <ManageShowsButton channelId={channel.id} variant="icon" />
           <Button
             variant="ghost"
@@ -184,7 +176,6 @@ export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
     if (numA !== numB) return numA - numB
     return (a.name ?? "").localeCompare(b.name ?? "")
   })
-  const [editChannel, setEditChannel] = useState<ChannelOutput | null>(null)
   const [deleteChannel, setDeleteChannel] = useState<ChannelOutput | null>(null)
 
   return (
@@ -193,7 +184,6 @@ export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
         <ChannelRow
           key={channel.id}
           channel={channel}
-          onEdit={setEditChannel}
           onDelete={setDeleteChannel}
         />
       ))}
@@ -204,17 +194,6 @@ export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
       )}
 
       {/* Render dialogs in a portal to avoid Radix ref conflicts with episode cards */}
-      {editChannel &&
-        createPortal(
-          <EditChannel
-            key={editChannel.id}
-            channel={editChannel}
-            externalOpen
-            onExternalClose={() => setEditChannel(null)}
-          />,
-          document.body,
-        )}
-
       {deleteChannel &&
         createPortal(
           <DeleteChannel
