@@ -93,6 +93,7 @@ class EpisodeQueryBuilder:
         query = self._base_query()
         query = self._join_whitelist_tables(query)
         query = self._join_show_last_watched(query)
+        query = self._join_sequential_ranks(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
         query = self._filter_by_plugin_visibility(query)
@@ -218,6 +219,67 @@ class EpisodeQueryBuilder:
                 ChannelEpisodeWhiteList.episode_id == Episode.id,
             ),
         )
+
+    def _join_sequential_ranks(
+        self,
+        query: Select[tuple[Episode, Any]],
+    ) -> Select[tuple[Episode, Any]]:
+        """Join precomputed dense_rank subqueries for any sequential sort keys.
+
+        Computes rank in a single window-function pass over the unfiltered
+        (sans-deleted) base table, so ``hide_watched`` and other outer
+        filters don't shift ranks the way they would if we ranked the
+        post-filter rows. Replaces the per-row correlated subqueries that
+        previously dominated the query plan.
+        """
+        needs_episode_rank = any(
+            key.field == "sequential" and key.model == "episode"
+            for key in self._sort_keys
+        )
+        needs_season_rank = any(
+            key.field == "sequential" and key.model == "season"
+            for key in self._sort_keys
+        )
+
+        if needs_season_rank:
+            season_rank_sq = (
+                select(
+                    col(Season.id).label("season_id"),  # type: ignore[arg-type]
+                    func.dense_rank()
+                    .over(
+                        partition_by=col(Season.show_id),
+                        order_by=col(Season.season_number),
+                    )
+                    .label("rank"),
+                )
+                .where(col(Season.deleted_at).is_(None))
+                .subquery("season_rank")
+            )
+            query = query.outerjoin(  # type: ignore[assignment]
+                season_rank_sq,
+                col(Season.id) == season_rank_sq.c.season_id,
+            )
+
+        if needs_episode_rank:
+            episode_rank_sq = (
+                select(
+                    col(Episode.id).label("episode_id"),  # type: ignore[arg-type]
+                    func.dense_rank()
+                    .over(
+                        partition_by=col(Episode.season_id),
+                        order_by=col(Episode.episode_number),
+                    )
+                    .label("rank"),
+                )
+                .where(col(Episode.deleted_at).is_(None))
+                .subquery("episode_rank")
+            )
+            query = query.outerjoin(  # type: ignore[assignment]
+                episode_rank_sq,
+                col(Episode.id) == episode_rank_sq.c.episode_id,
+            )
+
+        return query
 
     def _join_show_last_watched(
         self,
@@ -606,36 +668,10 @@ class EpisodeQueryBuilder:
 
     @staticmethod
     def _sequential_rank(model: str) -> ColumnElement[Any]:
-        """Position (1-indexed) of the row among its siblings by ``sort_order``.
-
-        Uses a correlated scalar subquery so the rank counts every sibling,
-        not only rows that survive the outer WHERE. Otherwise ``hide_watched``
-        would shift season 4 to position 1 once earlier seasons filter out.
-        """
         if model == "episode":
-            sibling = aliased(Episode)
-            return (
-                select(func.count(func.distinct(sibling.sort_order)) + 1)
-                .where(
-                    sibling.season_id == col(Episode.season_id),
-                    col(sibling.sort_order) < col(Episode.sort_order),
-                    col(sibling.deleted_at).is_(None),
-                )
-                .correlate(Episode)
-                .scalar_subquery()
-            )
+            return literal_column("episode_rank.rank")
         if model == "season":
-            sibling = aliased(Season)
-            return (
-                select(func.count(func.distinct(sibling.sort_order)) + 1)
-                .where(
-                    sibling.show_id == col(Season.show_id),
-                    col(sibling.sort_order) < col(Season.sort_order),
-                    col(sibling.deleted_at).is_(None),
-                )
-                .correlate(Season)
-                .scalar_subquery()
-            )
+            return literal_column("season_rank.rank")
         msg = f"sequential is not supported for model '{model}'"
         raise ValueError(msg)
 
