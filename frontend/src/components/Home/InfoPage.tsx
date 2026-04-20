@@ -21,7 +21,7 @@ const DEMO_SORT_BY: SortKeyInput[] = [
     model: "episode",
     field: "sequential",
     direction: "ascending",
-    order: "randomize",
+    order: "sequential",
   },
 ]
 
