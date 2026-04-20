@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import useAuth from "@/hooks/useAuth"
 
-const DEMO_CHANNEL_ID = "3bedcb3a-91f7-4f44-aebe-05d94e28c9e7"
+const DEMO_CHANNEL_ID = "3d174ad5-41ed-4110-8ef1-5e7f1653f9d5"
 
 const DEMO_SORT_BY: SortKeyInput[] = [
   {
@@ -59,7 +59,7 @@ export function InfoPage() {
             <Button asChild size="lg">
               <Link to={getStartedTo}>
                 <Users className="mr-2" />
-                Get Started
+                Sign Up
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
