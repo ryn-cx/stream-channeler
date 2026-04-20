@@ -23,6 +23,12 @@ const DEMO_SORT_BY: SortKeyInput[] = [
     direction: "ascending",
     order: "sequential",
   },
+  {
+    model: "episode",
+    field: "id",
+    direction: "ascending",
+    order: "randomize",
+  },
 ]
 
 export function InfoPage() {
