@@ -21,6 +21,7 @@ import { Route as LayoutPluginsRouteImport } from './routes/_layout/plugins'
 import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboarding'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
 import { Route as LayoutAdminMediaIndexRouteImport } from './routes/_layout/admin-media.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
@@ -33,6 +34,10 @@ import { Route as LayoutAdminSourceSourceIdRouteImport } from './routes/_layout/
 import { Route as LayoutAdminShowShowIdRouteImport } from './routes/_layout/admin-show.$showId'
 import { Route as LayoutAdminSeasonSeasonIdRouteImport } from './routes/_layout/admin-season.$seasonId'
 import { Route as LayoutAdminPluginPluginIdRouteImport } from './routes/_layout/admin-plugin.$pluginId'
+import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
+import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
+import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
+import { Route as LayoutOnboardingChannelIdDoneRouteImport } from './routes/_layout/onboarding.$channelId.done'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -92,6 +97,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOnboardingIndexRoute = LayoutOnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutOnboardingRoute,
 } as any)
 const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
   id: '/channels/',
@@ -156,6 +166,30 @@ const LayoutAdminPluginPluginIdRoute =
     path: '/admin-plugin/$pluginId',
     getParentRoute: () => LayoutRoute,
   } as any)
+const LayoutOnboardingChannelIdSortRoute =
+  LayoutOnboardingChannelIdSortRouteImport.update({
+    id: '/$channelId/sort',
+    path: '/$channelId/sort',
+    getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
+const LayoutOnboardingChannelIdShowsRoute =
+  LayoutOnboardingChannelIdShowsRouteImport.update({
+    id: '/$channelId/shows',
+    path: '/$channelId/shows',
+    getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
+const LayoutOnboardingChannelIdNameRoute =
+  LayoutOnboardingChannelIdNameRouteImport.update({
+    id: '/$channelId/name',
+    path: '/$channelId/name',
+    getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
+const LayoutOnboardingChannelIdDoneRoute =
+  LayoutOnboardingChannelIdDoneRouteImport.update({
+    id: '/$channelId/done',
+    path: '/$channelId/done',
+    getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -165,7 +199,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
-  '/onboarding': typeof LayoutOnboardingRoute
+  '/onboarding': typeof LayoutOnboardingRouteWithChildren
   '/plugins': typeof LayoutPluginsRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
@@ -181,6 +215,11 @@ export interface FileRoutesByFullPath {
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
+  '/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
+  '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
+  '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
+  '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -189,7 +228,6 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/dashboard': typeof LayoutDashboardRoute
-  '/onboarding': typeof LayoutOnboardingRoute
   '/plugins': typeof LayoutPluginsRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
@@ -206,6 +244,11 @@ export interface FileRoutesByTo {
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-media': typeof LayoutAdminMediaIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
+  '/onboarding': typeof LayoutOnboardingIndexRoute
+  '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
+  '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
+  '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
+  '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -216,7 +259,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
-  '/_layout/onboarding': typeof LayoutOnboardingRoute
+  '/_layout/onboarding': typeof LayoutOnboardingRouteWithChildren
   '/_layout/plugins': typeof LayoutPluginsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/watches': typeof LayoutWatchesRoute
@@ -233,6 +276,11 @@ export interface FileRoutesById {
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
   '/_layout/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
+  '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
+  '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
+  '/_layout/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
+  '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -260,6 +308,11 @@ export interface FileRouteTypes {
     | '/watches/import'
     | '/admin-media/'
     | '/channels/'
+    | '/onboarding/'
+    | '/onboarding/$channelId/done'
+    | '/onboarding/$channelId/name'
+    | '/onboarding/$channelId/shows'
+    | '/onboarding/$channelId/sort'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -268,7 +321,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/dashboard'
-    | '/onboarding'
     | '/plugins'
     | '/settings'
     | '/watches'
@@ -285,6 +337,11 @@ export interface FileRouteTypes {
     | '/watches/import'
     | '/admin-media'
     | '/channels'
+    | '/onboarding'
+    | '/onboarding/$channelId/done'
+    | '/onboarding/$channelId/name'
+    | '/onboarding/$channelId/shows'
+    | '/onboarding/$channelId/sort'
   id:
     | '__root__'
     | '/_layout'
@@ -311,6 +368,11 @@ export interface FileRouteTypes {
     | '/_layout/watches_/import'
     | '/_layout/admin-media/'
     | '/_layout/channels/'
+    | '/_layout/onboarding/'
+    | '/_layout/onboarding/$channelId/done'
+    | '/_layout/onboarding/$channelId/name'
+    | '/_layout/onboarding/$channelId/shows'
+    | '/_layout/onboarding/$channelId/sort'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -407,6 +469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/onboarding/': {
+      id: '/_layout/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof LayoutOnboardingIndexRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
     '/_layout/channels/': {
       id: '/_layout/channels/'
       path: '/channels'
@@ -491,13 +560,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminPluginPluginIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/onboarding/$channelId/sort': {
+      id: '/_layout/onboarding/$channelId/sort'
+      path: '/$channelId/sort'
+      fullPath: '/onboarding/$channelId/sort'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdSortRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
+    '/_layout/onboarding/$channelId/shows': {
+      id: '/_layout/onboarding/$channelId/shows'
+      path: '/$channelId/shows'
+      fullPath: '/onboarding/$channelId/shows'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdShowsRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
+    '/_layout/onboarding/$channelId/name': {
+      id: '/_layout/onboarding/$channelId/name'
+      path: '/$channelId/name'
+      fullPath: '/onboarding/$channelId/name'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdNameRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
+    '/_layout/onboarding/$channelId/done': {
+      id: '/_layout/onboarding/$channelId/done'
+      path: '/$channelId/done'
+      fullPath: '/onboarding/$channelId/done'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdDoneRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
   }
 }
+
+interface LayoutOnboardingRouteChildren {
+  LayoutOnboardingIndexRoute: typeof LayoutOnboardingIndexRoute
+  LayoutOnboardingChannelIdDoneRoute: typeof LayoutOnboardingChannelIdDoneRoute
+  LayoutOnboardingChannelIdNameRoute: typeof LayoutOnboardingChannelIdNameRoute
+  LayoutOnboardingChannelIdShowsRoute: typeof LayoutOnboardingChannelIdShowsRoute
+  LayoutOnboardingChannelIdSortRoute: typeof LayoutOnboardingChannelIdSortRoute
+}
+
+const LayoutOnboardingRouteChildren: LayoutOnboardingRouteChildren = {
+  LayoutOnboardingIndexRoute: LayoutOnboardingIndexRoute,
+  LayoutOnboardingChannelIdDoneRoute: LayoutOnboardingChannelIdDoneRoute,
+  LayoutOnboardingChannelIdNameRoute: LayoutOnboardingChannelIdNameRoute,
+  LayoutOnboardingChannelIdShowsRoute: LayoutOnboardingChannelIdShowsRoute,
+  LayoutOnboardingChannelIdSortRoute: LayoutOnboardingChannelIdSortRoute,
+}
+
+const LayoutOnboardingRouteWithChildren =
+  LayoutOnboardingRoute._addFileChildren(LayoutOnboardingRouteChildren)
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
-  LayoutOnboardingRoute: typeof LayoutOnboardingRoute
+  LayoutOnboardingRoute: typeof LayoutOnboardingRouteWithChildren
   LayoutPluginsRoute: typeof LayoutPluginsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutWatchesRoute: typeof LayoutWatchesRoute
@@ -519,7 +635,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
-  LayoutOnboardingRoute: LayoutOnboardingRoute,
+  LayoutOnboardingRoute: LayoutOnboardingRouteWithChildren,
   LayoutPluginsRoute: LayoutPluginsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutWatchesRoute: LayoutWatchesRoute,
