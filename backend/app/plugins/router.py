@@ -64,11 +64,7 @@ def match_url(
     url: str,
     _current_user: CurrentUser,
 ) -> PluginURLMatch:
-    """Return whether any plugin accepts ``url`` as an importable URL.
-
-    Used by the frontend's search-vs-queue dispatch so the decision is made
-    against the actual plugin regexes rather than a loose client-side guess.
-    """
+    """Return whether any plugin can import ``url``."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.implements("import_url") and plugin_cls.is_valid_url_format(url):
             return PluginURLMatch(matched=True, plugin_key=plugin_cls.plugin_key())
