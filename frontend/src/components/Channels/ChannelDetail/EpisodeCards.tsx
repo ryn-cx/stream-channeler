@@ -19,7 +19,11 @@ import {
   Trash2,
 } from "lucide-react"
 import { lazy, Suspense, useEffect, useRef, useState } from "react"
-import { WatchesService } from "@/client"
+import {
+  type ChannelEpisodesOutput,
+  type EpisodeWithExtrasOutput,
+  WatchesService,
+} from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -186,22 +190,20 @@ export function EpisodeCard({
       })
 
       // Optimistically update all matching cache entries
-      queryClient.setQueriesData(
+      queryClient.setQueriesData<ChannelEpisodesOutput>(
         { queryKey: ["episodes", channelId] },
-        (oldData: any) => {
+        (oldData) => {
           if (!oldData) return oldData
           if (hideWatched) {
             // The episode is now verified-watched; remove it from the list.
             return {
               ...oldData,
-              episodes: oldData.episodes.filter(
-                (ep: any) => ep.id !== episode.id,
-              ),
+              episodes: oldData.episodes.filter((ep) => ep.id !== episode.id),
             }
           }
           return {
             ...oldData,
-            episodes: oldData.episodes.map((ep: any) =>
+            episodes: oldData.episodes.map((ep) =>
               ep.id === episode.id ? { ...ep, verified: true } : ep,
             ),
           }
@@ -238,11 +240,13 @@ export function EpisodeCard({
       const previousEntries = queryClient.getQueriesData({
         queryKey: ["episodes", channelId],
       })
-      const clearWatch = (oldData: any) => {
+      const clearWatch = (
+        oldData: ChannelEpisodesOutput | undefined,
+      ): ChannelEpisodesOutput | undefined => {
         if (!oldData) return oldData
         return {
           ...oldData,
-          episodes: oldData.episodes.map((ep: any) =>
+          episodes: oldData.episodes.map((ep) =>
             ep.id === episode.id
               ? {
                   ...ep,
@@ -254,11 +258,11 @@ export function EpisodeCard({
           ),
         }
       }
-      queryClient.setQueriesData(
+      queryClient.setQueriesData<ChannelEpisodesOutput>(
         { queryKey: ["episodes", channelId] },
         clearWatch,
       )
-      queryClient.setQueriesData(
+      queryClient.setQueriesData<ChannelEpisodesOutput>(
         { queryKey: ["episodes-preview", channelId] },
         clearWatch,
       )
@@ -567,6 +571,7 @@ export function EpisodeCards({
   editOrder,
 }: EpisodeCardsProps) {
   const queryClient = useQueryClient()
+  const { showErrorToast } = useCustomToast()
   const gridRef = useRef<HTMLDivElement>(null)
   const [columnCount, setColumnCount] = useState(1)
 
@@ -605,13 +610,13 @@ export function EpisodeCards({
   }
 
   const handleHide = (episodeId: string) => {
-    queryClient.setQueriesData(
+    queryClient.setQueriesData<ChannelEpisodesOutput>(
       { queryKey: ["episodes", channelId] },
-      (oldData: any) => {
+      (oldData) => {
         if (!oldData) return oldData
         return {
           ...oldData,
-          episodes: oldData.episodes.filter((ep: any) => ep.id !== episodeId),
+          episodes: oldData.episodes.filter((ep) => ep.id !== episodeId),
         }
       },
     )
@@ -621,34 +626,40 @@ export function EpisodeCards({
     const nextEpisodeId = nextEpisodeMap.get(currentEpisodeId)
     if (!nextEpisodeId) return
 
-    queryClient.setQueryData(["episodes", channelId], (oldData: any) => {
-      if (!oldData) return oldData
-      const eps = [...oldData.episodes]
-      const currentIndex = eps.findIndex(
-        (ep: any) => ep.id === currentEpisodeId,
-      )
-      const nextIndex = eps.findIndex((ep: any) => ep.id === nextEpisodeId)
-      if (currentIndex === -1 || nextIndex === -1) return oldData
+    let anyUpdated = false
+    queryClient.setQueriesData<ChannelEpisodesOutput>(
+      { queryKey: ["episodes", channelId] },
+      (oldData) => {
+        if (!oldData?.episodes) return oldData
+        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
+        const currentIndex = eps.findIndex((ep) => ep.id === currentEpisodeId)
+        const nextIndex = eps.findIndex((ep) => ep.id === nextEpisodeId)
 
-      // Remove the next episode from its current position
-      const [nextEp] = eps.splice(nextIndex, 1)
-      // Insert after the current episode (adjust index if next was before current)
-      const insertAt =
-        nextIndex < currentIndex ? currentIndex : currentIndex + 1
-      eps.splice(insertAt, 0, nextEp)
+        // Remove the next episode from its current position
+        const [nextEp] = eps.splice(nextIndex, 1)
+        // Insert after the current episode (adjust index if next was before current)
+        const insertAt =
+          nextIndex < currentIndex ? currentIndex : currentIndex + 1
+        eps.splice(insertAt, 0, nextEp)
 
-      return { ...oldData, episodes: eps }
-    })
+        anyUpdated = true
+        return { ...oldData, episodes: eps }
+      },
+    )
+
+    if (!anyUpdated) {
+      showErrorToast("Couldn't find the next episode in the current list")
+    }
   }
 
   // Swap two positions in every matching episodes cache entry.
   const swapEpisodes = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
-    queryClient.setQueriesData(
+    queryClient.setQueriesData<ChannelEpisodesOutput>(
       { queryKey: ["episodes", channelId] },
-      (oldData: any) => {
+      (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps = [...oldData.episodes]
+        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||
@@ -666,11 +677,11 @@ export function EpisodeCards({
   // Move a single item to a different position, shifting the rest.
   const moveEpisode = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
-    queryClient.setQueriesData(
+    queryClient.setQueriesData<ChannelEpisodesOutput>(
       { queryKey: ["episodes", channelId] },
-      (oldData: any) => {
+      (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps = [...oldData.episodes]
+        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||
