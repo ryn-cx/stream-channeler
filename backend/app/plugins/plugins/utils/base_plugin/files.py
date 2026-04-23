@@ -62,7 +62,7 @@ class BaseFile[T](ABC):
     @property
     def data_timestamp(self) -> datetime:
         """Return the timestamp of the data in the file."""
-        return self.data_timestamp
+        return self.database_record.data_timestamp
 
     # endregion Database Record
 
