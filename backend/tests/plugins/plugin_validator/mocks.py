@@ -37,7 +37,7 @@ def mock_update(files_directory: Path) -> Generator[None]:
     def _mock(self: BaseFile[Any]) -> None:
         key = self.database_record.key
         logger.debug(f"Mock Updating {key}")
-        self.database_record.data_timestamp += timedelta(minutes=1)
+        self.data_timestamp += timedelta(minutes=1)
 
     with _patch_download(_mock):
         yield

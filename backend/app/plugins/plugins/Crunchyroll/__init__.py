@@ -173,14 +173,13 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     def _upsert_source(self, latest_browse_file: Browse) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
-        timestamp = latest_browse_file.database_record.data_timestamp
         return Source(
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
             favicon_url=f"{self._base_url()}build/assets/img/favicons/favicon-v2-96x96.png",
-            update_at=timestamp + timedelta(days=1),
-            data_timestamp=timestamp,
+            update_at=latest_browse_file.data_timestamp + timedelta(days=1),
+            data_timestamp=latest_browse_file.data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 

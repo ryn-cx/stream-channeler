@@ -1,6 +1,7 @@
 # TODO: Validate
 import json
 from collections.abc import Sequence
+from datetime import timedelta
 from functools import cache
 from typing import override
 
@@ -22,11 +23,19 @@ from app.plugins.plugins.utils.base_plugin.files import (
     GAPIJSON,
     GAPIJSONNoGet,
 )
+from app.utils import tz_datetime
 
 
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(settings.YOUTUBE_API_KEY)
+
+
+def get_first_item[T](items: list[T] | None) -> T:
+    if not items:
+        msg = "Expected at least one item, got none"
+        raise ValueError(msg)
+    return items[0]
 
 
 class ChannelByChannelId(GAPIJSONNoGet[ChannelModel]):
@@ -55,6 +64,19 @@ class ChannelByHandle(GAPIJSONNoGet[ChannelModel]):
         return f"Channel '{self.unique_identifier}' not found."
 
 
+class ChannelByUsername(GAPIJSONNoGet[ChannelModel]):
+    api_endpoint = not_yt_dlapi().channels
+
+    @override
+    def _get(self) -> ChannelModel:
+        assert isinstance(self.api_endpoint, ChannelsEndpoint)  # noqa: S101
+        return self.api_endpoint.get(username=self.unique_identifier)
+
+    @override
+    def _get_acceptable_error(self) -> str:
+        return f"Channel '{self.unique_identifier}' not found."
+
+
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistModel]):
     api_endpoint = not_yt_dlapi().playlists
 
@@ -74,7 +96,34 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
     @override
     def _get(self) -> PlaylistItemModel:
         assert isinstance(self.api_endpoint, PlaylistItemsEndpoint)  # noqa: S101
-        return self.api_endpoint.get_all(self.unique_identifier)
+        if not self._existing_database_record:
+            return self.api_endpoint.get_all(self.unique_identifier)
+
+        # If the entry is over a year old download a fresh copy to clean out deleted
+        # videos.
+        year_ago_datetime = tz_datetime.now() - timedelta(days=365)
+        if self.parsed().not_yt_dlapi.timestamp < year_ago_datetime:
+            return self.api_endpoint.get_all(self.unique_identifier)
+
+        existing_items = self.parsed().items
+        existing_ids = {item.content_details.video_id for item in existing_items}
+
+        page = self.api_endpoint.get(self.unique_identifier)
+
+        # TODO: noy_yt_dlapi needs to support fetching a specific page, until then
+        # download all of the playlist videos if there are at least 50 new entries.
+        if not any(
+            item.content_details.video_id in existing_ids for item in page.items
+        ):
+            return self.api_endpoint.get_all(self.unique_identifier)
+
+        new_ids = {item.content_details.video_id for item in page.items}
+        page.items = list(page.items) + [
+            item
+            for item in existing_items
+            if item.content_details.video_id not in new_ids
+        ]
+        return page
 
     @override
     def _get_acceptable_error(self) -> str:
@@ -99,11 +148,18 @@ class FileMixin(BasePlugin, register=False):
             lambda: ChannelByChannelId(self.session, self.plugin, show_key),
         )
 
-    def _channel_by_handle_file(self, channel_name: str) -> ChannelByHandle:
+    def _channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
         return self._get_cached_file(
             ChannelByHandle,
-            channel_name,
-            lambda: ChannelByHandle(self.session, self.plugin, channel_name),
+            channel_handle,
+            lambda: ChannelByHandle(self.session, self.plugin, channel_handle),
+        )
+
+    def _channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
+        return self._get_cached_file(
+            ChannelByUsername,
+            channel_username,
+            lambda: ChannelByUsername(self.session, self.plugin, channel_username),
         )
 
     def _channel_playlists_file(self, show_key: str) -> ChannelPlaylists:

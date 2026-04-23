@@ -44,9 +44,7 @@ class JustWatch(FileMixin, register=True):
 
             self._upsert_sources(providers_file)
 
-            bucket = self._new_titles_bucket_file(
-                providers_file.database_record.data_timestamp,
-            )
+            bucket = self._new_titles_bucket_file(providers_file.data_timestamp)
             bucket.download_if_outdated()
 
             self._download_latest_new_titles_bucket()
@@ -225,7 +223,7 @@ class JustWatch(FileMixin, register=True):
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
             # The files should be downloaded again at a later date if there is a chance
             # new entries can be added to it in the future.
-            if minimum_timestamp > new_titles_file.database_record.data_timestamp:
+            if minimum_timestamp > new_titles_file.data_timestamp:
                 incomplete_dates.append(new_titles_date.isoformat())
 
         if incomplete_dates:
@@ -239,10 +237,7 @@ class JustWatch(FileMixin, register=True):
             source.update_at = None
 
         source.data_timestamp = max(
-            self._new_titles_file(
-                source.key,
-                new_titles_date,
-            ).database_record.data_timestamp
+            self._new_titles_file(source.key, new_titles_date).data_timestamp
             for new_titles_date in dates
         )
 
@@ -256,7 +251,6 @@ class JustWatch(FileMixin, register=True):
         for new_titles_date in dates:
             file = self._new_titles_file(source.key, new_titles_date)
             source = Source.get_one(self.session, self.plugin, file.source_key)
-            timestamp = file.database_record.data_timestamp
             _cache_sources = self._preload_sources(
                 file.source_key,
                 preload_seasons=True,
@@ -282,11 +276,11 @@ class JustWatch(FileMixin, register=True):
                     _cache_seasons = show.seasons
                     # If the season was found only the season needs to be updated.
                     if season := Season.get_from_memory(self.session, show, season_key):
-                        season.set_update_at(timestamp)
+                        season.set_update_at(file.data_timestamp)
                     # If no season was found this contains a new episode so the show
                     # needs to be updated.
                     else:
-                        show.set_update_at(timestamp)
+                        show.set_update_at(file.data_timestamp)
 
     # endregion
 
@@ -412,11 +406,10 @@ class JustWatch(FileMixin, register=True):
             ).upsert(self.plugin, source)
 
             # Only use the data timestamp from the providers file for the initial
-            # import. If the source already has a data_timestamp we want to keep it
-            # because it will be based on data from the new titles files which are
-            # more up to date.
+            # import. If the source already has a data_timestamp keep it because it will
+            # be based on data from the new titles files which are more up to date.
             if not source.data_timestamp:
-                source.data_timestamp = providers_file.database_record.data_timestamp
+                source.data_timestamp = providers_file.data_timestamp
 
     def _upsert_shows(self, show_key: str) -> list[Show]:
         shows: list[Show] = []

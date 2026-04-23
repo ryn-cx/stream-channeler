@@ -151,12 +151,10 @@ class HiDive(FileMixin, register=True):
     @override
     def update_source(self, source: Source) -> None:
         latest_schedule_file = self._get_latest_schedule_file()
-        latest_schedule_file = self._schedule_file(
-            latest_schedule_file.database_record.data_timestamp,
-        )
-        latest_schedule_file.download_if_outdated(source.update_at)
+        new_schedule_file = self._schedule_file(latest_schedule_file.data_timestamp)
+        new_schedule_file.download_if_outdated(source.update_at)
         self._process_new_schedule_files(source)
-        self._upsert_source(latest_schedule_file)
+        self._upsert_source(new_schedule_file)
 
     def _process_new_schedule_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
@@ -246,7 +244,6 @@ class HiDive(FileMixin, register=True):
 
     def _upsert_source(self, latest_schedule_file: Schedule) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
-        timestamp = latest_schedule_file.database_record.data_timestamp
         return Source(
             key=self.plugin_key(),
             name=self.plugin_key(),
@@ -255,8 +252,8 @@ class HiDive(FileMixin, register=True):
                 "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
                 "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
             ),
-            update_at=timestamp + timedelta(days=1),
-            data_timestamp=timestamp,
+            update_at=latest_schedule_file.data_timestamp + timedelta(days=1),
+            data_timestamp=latest_schedule_file.data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 

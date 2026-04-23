@@ -4,6 +4,8 @@ import re
 from datetime import timedelta
 from typing import Any, Literal, override
 
+from loguru import logger
+
 from app.episodes.models import Episode
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from app.plugins.plugins.utils.base_plugin.watch_history import (
@@ -13,8 +15,10 @@ from app.plugins.plugins.utils.base_plugin.watch_history import (
 from app.plugins.plugins.YouTube.files import (
     ChannelByChannelId,
     ChannelByHandle,
+    ChannelByUsername,
     FileMixin,
     PlaylistItems,
+    get_first_item,
 )
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -22,7 +26,12 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
 
-URLKeyType = Literal["playlist_key", "channel_key", "channel_name"]
+URLKeyType = Literal[
+    "playlist_key",
+    "channel_key",
+    "channel_handle",
+    "channel_username",
+]
 
 
 class YouTube(WatchHistoryMixin, FileMixin, register=True):
@@ -37,8 +46,10 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
-            "> [!TIP/Channel Name]\n"
+            "> [!TIP/Channel Handle]\n"
             "> `https://www.youtube.com/@jawed`\n\n"
+            "> [!TIP/Channel Username]\n"
+            "> `https://www.youtube.com/user/jawed`\n\n"
             "> [!TIP/Channel ID]\n"
             "> `https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A`\n\n"
             "> [!TIP/Playlist ID]\n"
@@ -102,8 +113,11 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         if match := re.match(cls.channel_key_regex(), url):
             return ("channel_key", match.group("channel_key"))
 
-        if match := re.match(cls.channel_name_regex(), url):
-            return ("channel_name", match.group("channel_name"))
+        if match := re.match(cls.channel_handle_regex(), url):
+            return ("channel_handle", match.group("channel_handle"))
+
+        if match := re.match(cls.channel_username_regex(), url):
+            return ("channel_username", match.group("channel_username"))
 
         msg = f"Invalid {cls.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
@@ -121,22 +135,28 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         elif key_type == "channel_key":
             show_key = key_value
             playlist_key = self._get_channel_uploads_playlist_key(key_value)
-        else:  # key_type == "channel_name":
+        elif key_type == "channel_handle":
             channel_data = self._channel_by_handle_file(key_value).parsed()
-            show_key = channel_data.items[0].id
+            show_key = get_first_item(channel_data.items).id
+            playlist_key = self._get_channel_uploads_playlist_key(show_key)
+        else:  # key_type == "channel_username":
+            channel_data = self._channel_by_username_file(key_value).parsed()
+            show_key = get_first_item(channel_data.items).id
             playlist_key = self._get_channel_uploads_playlist_key(show_key)
 
         show = self._import_show(show_key, playlist_key)
         return [self._build_import_result(url, show, show_key, key_type, playlist_key)]
 
     def _validate_url(self, url: str, key_type: URLKeyType, key_value: str) -> None:
-        file: PlaylistItems | ChannelByChannelId | ChannelByHandle
+        file: PlaylistItems | ChannelByChannelId | ChannelByHandle | ChannelByUsername
         if key_type == "playlist_key":
             file = self._playlist_items_file(key_value)
         elif key_type == "channel_key":
             file = self._channel_by_channel_id_file(key_value)
-        else:  # key_type == "channel_name"
+        elif key_type == "channel_handle":
             file = self._channel_by_handle_file(key_value)
+        else:  # key_type == "channel_username"
+            file = self._channel_by_username_file(key_value)
         file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
@@ -152,7 +172,8 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             return self._upsert_show(source, show_key)
 
         if playlist_key == self._get_channel_uploads_playlist_key(show.key):
-            channel_item = self._channel_by_channel_id_file(show.key).parsed().items[0]
+            parsed = self._channel_by_channel_id_file(show.key).parsed()
+            channel_item = get_first_item(parsed.items)
             if int(channel_item.statistics.video_count) == 0:
                 return show
 
@@ -217,14 +238,21 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         return "youtu.be"
 
     @classmethod
-    def channel_name_regex(cls) -> str:
-        # Valid channel URLs:
-        #   https://www.youtube.com/jawed
+    def channel_handle_regex(cls) -> str:
+        # Valid handle URLs:
         #   https://www.youtube.com/@jawed
         #   https://www.youtube.com/@jawed/videos
         #   https://www.youtube.com/@jawed/featured
+        regex_string = r"\/@(?P<channel_handle>.+?)(?:$|\/)"
+        return cls.__domain_regex() + regex_string
+
+    @classmethod
+    def channel_username_regex(cls) -> str:
+        # Valid username URLs:
+        #   https://www.youtube.com/jawed
         #   https://www.youtube.com/c/jawed
-        regex_string = r"\/(?:@|c\/)?(?P<channel_name>.+?)(?:$|\/)"
+        #   https://www.youtube.com/user/jawed
+        regex_string = r"\/(?:c\/|user\/)?(?!@)(?P<channel_username>.+?)(?:$|\/)"
         return cls.__domain_regex() + regex_string
 
     @classmethod
@@ -267,7 +295,8 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         regexes = [
             cls.channel_key_regex(),
             cls.playlist_key_regex(),
-            cls.channel_name_regex(),
+            cls.channel_handle_regex(),
+            cls.channel_username_regex(),
         ]
         return "|".join(regexes)
 
@@ -305,7 +334,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
     def _upsert_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
         channel_file = self._channel_by_channel_id_file(show_key)
-        channel_item = channel_file.parsed().items[0]
+        channel_item = get_first_item(channel_file.parsed().items)
 
         show = Show(
             key=channel_item.id,
@@ -314,7 +343,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             media_type="YouTube Channel",
             # Updating every 30 days is reasonable because this is only sued for
             # checking if information on the channel itself has changed.
-            update_at=channel_file.database_record.data_timestamp + timedelta(days=30),
+            update_at=channel_file.data_timestamp + timedelta(days=30),
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
         ).upsert(source, existing_show)
@@ -330,7 +359,8 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     def _upsert_channel_season(self, show: Show, show_key: str) -> None:
         """Upsert the uploads playlist."""
-        channel_item = self._channel_by_channel_id_file(show_key).parsed().items[0]
+        parsed = self._channel_by_channel_id_file(show_key).parsed()
+        channel_item = get_first_item(parsed.items)
         if int(channel_item.statistics.video_count) == 0:
             return
         uploads_key = self._get_channel_uploads_playlist_key(show.key)

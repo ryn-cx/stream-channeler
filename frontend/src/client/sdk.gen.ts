@@ -830,10 +830,7 @@ export class PluginsService {
     
     /**
      * Match Url
-     * Return whether any plugin accepts ``url`` as an importable URL.
-     *
-     * Used by the frontend's search-vs-queue dispatch so the decision is made
-     * against the actual plugin regexes rather than a loose client-side guess.
+     * Return whether any plugin can import ``url``.
      * @param data The data for the request.
      * @param data.url
      * @returns PluginURLMatch Successful Response

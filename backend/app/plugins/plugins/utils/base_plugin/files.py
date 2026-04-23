@@ -5,6 +5,7 @@ from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, ClassVar, Protocol, final, overload, override
+from xml.etree.ElementTree import Element, fromstring
 
 from good_ass_pydantic_integrator.constants import INPUT_TYPE
 from loguru import logger
@@ -57,6 +58,11 @@ class BaseFile[T](ABC):
             msg = "File has not been downloaded yet."
             raise ValueError(msg)
         return self._existing_database_record
+
+    @property
+    def data_timestamp(self) -> datetime:
+        """Return the timestamp of the data in the file."""
+        return self.data_timestamp
 
     # endregion Database Record
 
@@ -158,7 +164,7 @@ class BaseFile[T](ABC):
             return False
 
         # If the file is older than the minimum timestamp it is outdated.
-        return self.database_record.data_timestamp < minimum_timestamp
+        return self.data_timestamp < minimum_timestamp
 
 
 class JSONFile[T](BaseFile[T], ABC):
@@ -188,6 +194,22 @@ class JSONFile[T](BaseFile[T], ABC):
     @override
     def _identifier_suffix(cls) -> str:
         return ".json"
+
+
+class XMLFile(BaseFile[Element], ABC):
+    def parsed(self) -> Element:
+        """Return the parsed content of the file."""
+        if self._cached_parsed is None:
+            if not (content := self.database_record.content):
+                msg = "File content is empty, cannot parse."
+                raise ValueError(msg)
+            self._cached_parsed = fromstring(content)  # noqa: S314
+        return self._cached_parsed
+
+    @classmethod
+    @override
+    def _identifier_suffix(cls) -> str:
+        return ".xml"
 
 
 class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):

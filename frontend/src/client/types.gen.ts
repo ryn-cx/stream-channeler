@@ -262,9 +262,6 @@ export type PluginSearchResultSource = {
     icon_url?: (string | null);
 };
 
-/**
- * Result of checking whether an input matches a plugin's URL format.
- */
 export type PluginURLMatch = {
     matched: boolean;
     plugin_key?: (string | null);

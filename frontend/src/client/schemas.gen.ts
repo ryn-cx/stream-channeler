@@ -1758,8 +1758,7 @@ export const PluginURLMatchSchema = {
     },
     type: 'object',
     required: ['matched'],
-    title: 'PluginURLMatch',
-    description: "Result of checking whether an input matches a plugin's URL format."
+    title: 'PluginURLMatch'
 } as const;
 
 export const PrivateUserCreateSchema = {

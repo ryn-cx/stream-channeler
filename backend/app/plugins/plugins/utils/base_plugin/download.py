@@ -47,7 +47,7 @@ class DownloadMixin(ABC):
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:
         """Get the timestamp of the first file in the sequence."""
-        return files[0].database_record.data_timestamp
+        return files[0].data_timestamp
 
     def plugin_data_timestamp(self) -> datetime:
         """Return the data timestamp for the plugin's files."""

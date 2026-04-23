@@ -88,20 +88,20 @@ class PlaylistValidator(YouTubeValidator):
         assert result.whitelist_mode is False
 
 
-class ChannelValidator(YouTubeValidator):
-    @pytest.fixture(
-        params=["/{name}", "/@{name}", "/c/{name}", "/channel/{key}"],
-    )
-    def base_channel_path(self, request: pytest.FixtureRequest) -> str:
-        return request.param.format(name=self.channel_name, key=self.channel_key)
+class BaseChannelValidator(YouTubeValidator):
+    """Shared tests for importing a channel via any URL form.
+
+    Subclasses must define a ``base_path`` fixture that yields URL path strings
+    identifying the channel (e.g. ``/@jawed`` or ``/user/jawed``).
+    """
 
     @pytest.fixture(params=["", "/videos", "/featured"])
     def channel_path(
         self,
         request: pytest.FixtureRequest,
-        base_channel_path: str,
+        base_path: str,
     ) -> str:
-        return base_channel_path + request.param
+        return base_path + request.param
 
     def test_channel_import_response(
         self,
@@ -123,9 +123,9 @@ class ChannelValidator(YouTubeValidator):
         self,
         session_with_url: Session,
         domain: str,
-        base_channel_path: str,
+        base_path: str,
     ) -> None:
-        url = domain + base_channel_path + "/playlists"
+        url = domain + base_path + "/playlists"
         results = self._import_url(session_with_url, url=url)
         result = results[0]
 
@@ -137,6 +137,18 @@ class ChannelValidator(YouTubeValidator):
         assert result.whitelist_mode is False
 
 
+class ChannelValidator(BaseChannelValidator):
+    @pytest.fixture(params=["/@{name}", "/channel/{key}"])
+    def base_path(self, request: pytest.FixtureRequest) -> str:
+        return request.param.format(name=self.channel_name, key=self.channel_key)
+
+
+class UsernameValidator(BaseChannelValidator):
+    @pytest.fixture(params=["/{name}", "/c/{name}", "/user/{name}"])
+    def base_path(self, request: pytest.FixtureRequest) -> str:
+        return request.param.format(name=self.channel_name)
+
+
 class ChannelWithNoUploadsMixin(YouTubeValidator):
     @property
     def uploads_key(self) -> str:
@@ -144,20 +156,20 @@ class ChannelWithNoUploadsMixin(YouTubeValidator):
 
 
 # This also ends up having a playlist with no videos PL2666A74DC50B1A76
-class Test16CharacterPlaylist(StandardTests, PlaylistValidator):
+class Test16CharacterPlaylist(StandardTests[YouTube], PlaylistValidator):
     channel_key = "UCeAS7YuMOKpz39PD07O2p_w"
     playlist_key = "PL374F6CD60916C2C7"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-class Test32CharacterPlaylist(StandardTests, PlaylistValidator):
+class Test32CharacterPlaylist(StandardTests[YouTube], PlaylistValidator):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     playlist_key = "PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
 class TestPlaylistWithDeletedVideos(
-    StandardTests,
+    StandardTests[YouTube],
     ChannelWithNoUploadsMixin,
     PlaylistValidator,
 ):
@@ -166,10 +178,10 @@ class TestPlaylistWithDeletedVideos(
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-class TestNamedChannel(StandardTests, ChannelValidator):
+class TestNamedChannel(StandardTests[YouTube], ChannelValidator):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     channel_name = "jawed"
-    url = f"youtube.com/{channel_name}"
+    url = f"youtube.com/@{channel_name}"
 
     def test_episode_in_multiple_seasons(self, session_with_url: Session) -> None:
         """Test that episodes that belong to multiple seasons works correctly."""
@@ -187,7 +199,7 @@ class TestNamedChannel(StandardTests, ChannelValidator):
 # A channel with no uploads can be imported because the channel may have playlists with
 # videos.
 class TestChannelWithoutUploads(
-    StandardTests,
+    StandardTests[YouTube],
     ChannelWithNoUploadsMixin,
     ChannelValidator,
 ):
@@ -211,10 +223,16 @@ class TestChannelWithoutUploads(
 
 
 # A channel with no playlists can be imported because the channel may have uploads.
-class TestChannelWithoutPlaylists(StandardTests, ChannelValidator):
+class TestChannelWithoutPlaylists(StandardTests[YouTube], ChannelValidator):
     channel_key = "UCVlx-IvZ_TBWRKU0UQCaueQ"
     channel_name = "chad"
-    url = f"youtube.com/{channel_name}"
+    url = f"youtube.com/@{channel_name}"
+
+
+class TestUsernameChannel(StandardTests[YouTube], UsernameValidator):
+    channel_key = "UC4QobU6STFB0P71PMvOGN5A"
+    channel_name = "jawed"
+    url = f"youtube.com/user/{channel_name}"
 
 
 class InvalidYouTubeURLValidator(InvalidURLValidator[YouTube]):
