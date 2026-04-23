@@ -117,9 +117,10 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @override
     def update_source(self, source: Source) -> None:
         latest_browse_file = self._get_latest_browse_file()
-        latest_browse_file.download_if_outdated(source.update_at)
+        new_browse_file = self._browse_file(latest_browse_file.data_timestamp)
+        new_browse_file.download_if_outdated(source.update_at)
         self._process_new_browse_files(source)
-        self._upsert_source(latest_browse_file)
+        self._upsert_source(new_browse_file)
 
     def _process_new_browse_files(self, source: Source) -> None:
         """Import existing browse files that have not been imported yet."""
