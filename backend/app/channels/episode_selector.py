@@ -388,10 +388,18 @@ class EpisodeQueryBuilder:
             season_rank_sq = (
                 select(
                     col(Season.id).label("season_id"),  # type: ignore[arg-type]
-                    func.dense_rank()
+                    func.row_number()
                     .over(
                         partition_by=col(Season.show_id),
-                        order_by=col(Season.season_number),
+                        order_by=(
+                            col(Season.season_number),
+                            case(
+                                (
+                                    col(Season.season_number).is_not(None),
+                                    col(Season.sort_order),
+                                ),
+                            ),
+                        ),
                     )
                     .label(RANK_COLUMN),
                 )
