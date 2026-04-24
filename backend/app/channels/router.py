@@ -247,10 +247,14 @@ def update_channel_default_order(
     channel_options: ChannelOptions,
 ) -> Channel:
     """Update the default sort order for a ``Channel``."""
+    exclude: set[str] = set()
+    if "random_seed" not in channel_options.model_fields_set:
+        exclude.add("random_seed")
     channel.default_order = channel_options.model_dump_json(
         by_alias=True,
         exclude_defaults=True,
         exclude_unset=False,
+        exclude=exclude,
     )
     session.commit()
     session.refresh(channel)
