@@ -53,19 +53,43 @@ def _select_show_subset(
     started_count: int | None,
     new_count: int | None,
 ) -> set[UUID]:
-    selected: set[UUID] = set()
-    started_taken = 0
-    new_taken = 0
-    for show_id, is_started in show_order:
-        if total is not None and len(selected) >= total:
-            break
-        if is_started:
-            if started_count is None or started_taken < started_count:
-                selected.add(show_id)
-                started_taken += 1
-        elif new_count is None or new_taken < new_count:
-            selected.add(show_id)
-            new_taken += 1
+    started_in_order = [show_id for show_id, is_started in show_order if is_started]
+    new_in_order = [show_id for show_id, is_started in show_order if not is_started]
+
+    if total is not None and started_count is None and new_count is None:
+        return {show_id for show_id, _ in show_order[:total]}
+
+    selected_started: list[UUID] | None = (
+        started_in_order[:started_count] if started_count is not None else None
+    )
+    selected_new: list[UUID] | None = (
+        new_in_order[:new_count] if new_count is not None else None
+    )
+
+    if selected_started is None:
+        if total is None:
+            selected_started = started_in_order
+        else:
+            remaining = max(0, total - len(selected_new or []))
+            selected_started = started_in_order[:remaining]
+    if selected_new is None:
+        if total is None:
+            selected_new = new_in_order
+        else:
+            remaining = max(0, total - len(selected_started))
+            selected_new = new_in_order[:remaining]
+
+    selected = set(selected_started) | set(selected_new)
+
+    if total is not None and len(selected) > total:
+        trimmed: set[UUID] = set()
+        for show_id, _ in show_order:
+            if show_id in selected:
+                trimmed.add(show_id)
+                if len(trimmed) >= total:
+                    break
+        selected = trimmed
+
     return selected
 
 
