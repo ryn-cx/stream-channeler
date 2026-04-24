@@ -162,7 +162,14 @@ class PlaylistFeed(XMLFile):
                 "https://www.youtube.com/feeds/videos.xml",
                 params=params,
             )
-            response.raise_for_status()
+            # get_around returns a Response without a linked Request, so
+            # raise_for_status() can't run. Check the status code directly.
+            if not response.is_success:
+                msg = (
+                    f"PlaylistFeed fetch for {self.unique_identifier} "
+                    f"returned HTTP {response.status_code}"
+                )
+                raise RuntimeError(msg)
             self._write(response.text)
 
     def entries(self) -> list[str] | None:
