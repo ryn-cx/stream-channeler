@@ -35,9 +35,6 @@ MAX_EPISODES_RETURNED = 1000
 # being materialised with exactly these names; keep them in sync.
 SHOW_LAST_WATCHED_SUBQUERY = "show_last_watched"
 SHOW_LAST_WATCH_DATE_COLUMN = "show_last_watch_date"
-EPISODE_RANK_SUBQUERY = "episode_rank"
-SEASON_RANK_SUBQUERY = "season_rank"
-RANK_COLUMN = "rank"
 
 
 @dataclass
@@ -179,10 +176,31 @@ class _SortExpressionBuilder:
 
     @staticmethod
     def _sequential_rank(model: str) -> ColumnElement[Any]:
+        """Dense rank computed inline so filters like hide_watched shrink it.
+
+        Emitted as a window function in the post-filter subquery rather than
+        a pre-aggregated sibling query, which means the rank reflects
+        position within the visible set rather than position within the
+        full table.
+        """
         if model == "episode":
-            return literal_column(f"{EPISODE_RANK_SUBQUERY}.{RANK_COLUMN}")
+            return func.dense_rank().over(
+                partition_by=col(Episode.season_id),
+                order_by=col(Episode.episode_number),
+            )
         if model == "season":
-            return literal_column(f"{SEASON_RANK_SUBQUERY}.{RANK_COLUMN}")
+            return func.dense_rank().over(
+                partition_by=col(Season.show_id),
+                order_by=(
+                    col(Season.season_number),
+                    case(
+                        (
+                            col(Season.season_number).is_not(None),
+                            col(Season.sort_order),
+                        ),
+                    ),
+                ),
+            )
         msg = f"sequential is not supported for model '{model}'"
         raise ValueError(msg)
 
@@ -297,7 +315,6 @@ class EpisodeQueryBuilder:
         query = self._base_query()
         query = self._join_whitelist(query)
         query = self._join_show_last_watched(query)
-        query = self._join_sequential_ranks(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
         query = self._filter_by_plugin_visibility(query)
@@ -377,63 +394,6 @@ class EpisodeQueryBuilder:
             ),
         )
 
-    def _join_sequential_ranks(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        if any(
-            key.field == "sequential" and key.model == "season"
-            for key in self._channel_options.sort_by
-        ):
-            season_rank_sq = (
-                select(
-                    col(Season.id).label("season_id"),  # type: ignore[arg-type]
-                    func.row_number()
-                    .over(
-                        partition_by=col(Season.show_id),
-                        order_by=(
-                            col(Season.season_number),
-                            case(
-                                (
-                                    col(Season.season_number).is_not(None),
-                                    col(Season.sort_order),
-                                ),
-                            ),
-                        ),
-                    )
-                    .label(RANK_COLUMN),
-                )
-                .where(col(Season.deleted_at).is_(None))
-                .subquery(SEASON_RANK_SUBQUERY)
-            )
-            query = query.outerjoin(  # type: ignore[assignment]
-                season_rank_sq,
-                col(Season.id) == season_rank_sq.c.season_id,
-            )
-
-        if any(
-            key.field == "sequential" and key.model == "episode"
-            for key in self._channel_options.sort_by
-        ):
-            episode_rank_sq = (
-                select(
-                    col(Episode.id).label("episode_id"),  # type: ignore[arg-type]
-                    func.dense_rank()
-                    .over(
-                        partition_by=col(Episode.season_id),
-                        order_by=col(Episode.episode_number),
-                    )
-                    .label(RANK_COLUMN),
-                )
-                .where(col(Episode.deleted_at).is_(None))
-                .subquery(EPISODE_RANK_SUBQUERY)
-            )
-            query = query.outerjoin(  # type: ignore[assignment]
-                episode_rank_sq,
-                col(Episode.id) == episode_rank_sq.c.episode_id,
-            )
-
-        return query
 
     def _join_show_last_watched(
         self,
