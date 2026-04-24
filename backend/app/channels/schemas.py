@@ -146,7 +146,7 @@ class SortKeyInput(BaseInput):
         return self
 
 
-class ChannelMediaFilter(BaseInput):
+class ChannelOptions(BaseInput):
     model_config = ConfigDict(
         validate_by_name=True,
         extra="forbid",
@@ -179,8 +179,9 @@ class ChannelMediaFilter(BaseInput):
     maximum_air_date_relative: int | None = Field(default=None)
     minimum_release_date_relative: int | None = Field(default=None)
     maximum_release_date_relative: int | None = Field(default=None)
-    only_started_shows: bool = Field(default=False)
-    only_new_shows: bool = Field(default=False)
+    total_shows_count: int | None = Field(default=None, ge=0)
+    started_shows_count: int | None = Field(default=None, ge=0)
+    new_shows_count: int | None = Field(default=None, ge=0)
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
     limit: int | None = Field(default=None, ge=1)

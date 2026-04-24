@@ -18,7 +18,7 @@ from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelQueue
 from app.channels.schemas import (
     ChannelEpisodesOutput,
-    ChannelMediaFilter,
+    ChannelOptions,
     ChannelOutput,
     ChannelPatchInput,
     ChannelPostInput,
@@ -92,7 +92,7 @@ def get_channel(channel: ReadableChannel) -> Channel:
 @router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.
 def get_channel_episodes(
     channel: ReadableChannel,
-    media_filter: Annotated[ChannelMediaFilter, Query()],
+    channel_options: Annotated[ChannelOptions, Query()],
     user: OptionalUser,
     session: SessionDep,
 ) -> ChannelEpisodesOutput:
@@ -108,7 +108,7 @@ def get_channel_episodes(
 
     start = time.time()
 
-    builder = EpisodeQueryBuilder(session, channel, media_filter, user)
+    builder = EpisodeQueryBuilder(session, channel, channel_options, user)
     results = builder.get_episodes()
 
     unique_channel_ids = {result.channel_id for result in results}
@@ -244,10 +244,10 @@ def update_channel(
 def update_channel_default_order(
     session: SessionDep,
     channel: OwnedChannel,
-    media_filter: ChannelMediaFilter,
+    channel_options: ChannelOptions,
 ) -> Channel:
     """Update the default sort order for a ``Channel``."""
-    channel.default_order = media_filter.model_dump_json(
+    channel.default_order = channel_options.model_dump_json(
         by_alias=True,
         exclude_defaults=True,
         exclude_unset=False,

@@ -362,8 +362,9 @@ export class ChannelsService {
      * @param data.maximumAirDateRelative
      * @param data.minimumReleaseDateRelative
      * @param data.maximumReleaseDateRelative
-     * @param data.onlyStartedShows
-     * @param data.onlyNewShows
+     * @param data.totalShowsCount
+     * @param data.startedShowsCount
+     * @param data.newShowsCount
      * @param data.minimumDuration
      * @param data.maximumDuration
      * @param data.limit
@@ -393,8 +394,9 @@ export class ChannelsService {
                 maximumAirDateRelative: data.maximumAirDateRelative,
                 minimumReleaseDateRelative: data.minimumReleaseDateRelative,
                 maximumReleaseDateRelative: data.maximumReleaseDateRelative,
-                onlyStartedShows: data.onlyStartedShows,
-                onlyNewShows: data.onlyNewShows,
+                totalShowsCount: data.totalShowsCount,
+                startedShowsCount: data.startedShowsCount,
+                newShowsCount: data.newShowsCount,
                 minimumDuration: data.minimumDuration,
                 maximumDuration: data.maximumDuration,
                 limit: data.limit

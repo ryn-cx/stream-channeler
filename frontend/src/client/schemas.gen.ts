@@ -135,7 +135,7 @@ export const ChannelEpisodesOutputSchema = {
     title: 'ChannelEpisodesOutput'
 } as const;
 
-export const ChannelMediaFilterSchema = {
+export const ChannelOptionsSchema = {
     properties: {
         sortBy: {
             items: {
@@ -281,15 +281,41 @@ export const ChannelMediaFilterSchema = {
             ],
             title: 'Maximumreleasedaterelative'
         },
-        onlyStartedShows: {
-            type: 'boolean',
-            title: 'Onlystartedshows',
-            default: false
+        totalShowsCount: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Totalshowscount'
         },
-        onlyNewShows: {
-            type: 'boolean',
-            title: 'Onlynewshows',
-            default: false
+        startedShowsCount: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Startedshowscount'
+        },
+        newShowsCount: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Newshowscount'
         },
         minimumDuration: {
             anyOf: [
@@ -328,7 +354,7 @@ export const ChannelMediaFilterSchema = {
     },
     additionalProperties: false,
     type: 'object',
-    title: 'ChannelMediaFilter'
+    title: 'ChannelOptions'
 } as const;
 
 export const ChannelOutputSchema = {

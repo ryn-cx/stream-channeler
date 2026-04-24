@@ -13,7 +13,7 @@ from sqlmodel import Session
 from app.channels.models import Channel, ChannelShow, URLStatus
 from app.channels.schemas import (
     ChannelEpisodesOutput,
-    ChannelMediaFilter,
+    ChannelOptions,
     ChannelOutput,
     ChannelPatchInput,
     ChannelPostInput,
@@ -225,7 +225,7 @@ class TestUpdateDefaultOrder:
     ) -> ChannelOutput:
         response = session_scoped_client.patch(
             self.url(channel_id),
-            json=dump_random_model(ChannelMediaFilter, mode),
+            json=dump_random_model(ChannelOptions, mode),
             headers=headers,
         )
         assert response.status_code == status.HTTP_200_OK

@@ -53,8 +53,9 @@ type ChannelSearchParams = {
   hideUnwatched?: boolean
   sortBy?: Array<SortKeyInput>
   maximumWatchDate?: string
-  onlyStartedShows?: boolean
-  onlyNewShows?: boolean
+  totalShowsCount?: number
+  startedShowsCount?: number
+  newShowsCount?: number
   minimumAirDate?: string
   maximumAirDate?: string
   minimumReleaseDate?: string
@@ -86,8 +87,9 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       hideUnwatched: search.hideUnwatched as boolean | undefined,
       sortBy: search.sortBy as ChannelSearchParams["sortBy"],
       maximumWatchDate: search.maximumWatchDate as string | undefined,
-      onlyStartedShows: search.onlyStartedShows as boolean | undefined,
-      onlyNewShows: search.onlyNewShows as boolean | undefined,
+      totalShowsCount: search.totalShowsCount as number | undefined,
+      startedShowsCount: search.startedShowsCount as number | undefined,
+      newShowsCount: search.newShowsCount as number | undefined,
       minimumAirDate: search.minimumAirDate as string | undefined,
       maximumAirDate: search.maximumAirDate as string | undefined,
       minimumReleaseDate: search.minimumReleaseDate as string | undefined,
@@ -160,7 +162,8 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     const show = episodesData!.shows[season.show_id]
     const source = episodesData!.sources[show.source_id]
     const plugin = episodesData!.plugins[source.plugin_id]
-    return { ...episode, season, show, source, plugin }
+    const channel = episodesData!.channels[episode.channel_id]
+    return { ...episode, season, show, source, plugin, channel }
   })
 
   // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility

@@ -76,7 +76,8 @@ function ChannelRow({ channel, onDelete }: ChannelRowProps) {
       const show = data!.shows[season.show_id]
       const source = data!.sources[show.source_id]
       const plugin = data!.plugins[source.plugin_id]
-      return { ...episode, season, show, source, plugin }
+      const channel = data!.channels[episode.channel_id]
+      return { ...episode, season, show, source, plugin, channel }
     },
   )
 

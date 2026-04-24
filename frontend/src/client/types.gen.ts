@@ -32,7 +32,7 @@ export type ChannelEpisodesOutput = {
     };
 };
 
-export type ChannelMediaFilter = {
+export type ChannelOptions = {
     sortBy?: Array<SortKeyInput>;
     additionalChannels?: Array<(string)>;
     randomSeed?: number;
@@ -48,8 +48,9 @@ export type ChannelMediaFilter = {
     maximumAirDateRelative?: (number | null);
     minimumReleaseDateRelative?: (number | null);
     maximumReleaseDateRelative?: (number | null);
-    onlyStartedShows?: boolean;
-    onlyNewShows?: boolean;
+    totalShowsCount?: (number | null);
+    startedShowsCount?: (number | null);
+    newShowsCount?: (number | null);
     minimumDuration?: (number | null);
     maximumDuration?: (number | null);
     limit?: (number | null);
@@ -670,10 +671,11 @@ export type ChannelsGetChannelEpisodesData = {
     minimumDuration?: (number | null);
     minimumReleaseDateAbsolute?: (string | null);
     minimumReleaseDateRelative?: (number | null);
-    onlyNewShows?: boolean;
-    onlyStartedShows?: boolean;
+    newShowsCount?: (number | null);
     randomSeed?: number;
     sortBy?: Array<SortKeyInput>;
+    startedShowsCount?: (number | null);
+    totalShowsCount?: (number | null);
 };
 
 export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
@@ -701,7 +703,7 @@ export type ChannelsUpdateChannelWhitelistResponse = (WhitelistShowOutput);
 
 export type ChannelsUpdateChannelDefaultOrderData = {
     channelId: string;
-    requestBody: ChannelMediaFilter;
+    requestBody: ChannelOptions;
 };
 
 export type ChannelsUpdateChannelDefaultOrderResponse = (ChannelOutput);

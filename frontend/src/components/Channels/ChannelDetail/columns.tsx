@@ -3,6 +3,7 @@ import { useParams } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
+  ChannelOutput,
   EpisodeWithExtrasOutput,
   PluginOutput,
   SeasonOutput,
@@ -18,6 +19,7 @@ export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
   show: ShowOutput
   source: SourceOutput
   plugin: PluginOutput
+  channel: ChannelOutput
 }
 
 function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {

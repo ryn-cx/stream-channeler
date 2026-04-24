@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder, EpisodeResult
 from app.channels.models import ChannelEpisodeWhiteList, ChannelSeasonWhiteList
-from app.channels.schemas import ChannelMediaFilter
+from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.utils import tz_datetime
 from tests.channels.utils import create_random_channel, create_random_channel_show
@@ -94,11 +94,11 @@ def episode_setup(session_scoped_session: Session) -> dict:
 
 
 def _build_results(setup: dict, **filter_kwargs: object) -> list[EpisodeResult]:
-    media_filter = ChannelMediaFilter(**filter_kwargs)
+    channel_options = ChannelOptions(**filter_kwargs)
     builder = EpisodeQueryBuilder(
         setup["session"],
         setup["channel"],
-        media_filter,
+        channel_options,
         setup["user"],
     )
     return builder.get_episodes()
@@ -396,13 +396,13 @@ class TestLastWatchedSort:
         episode_setup: dict,
     ) -> None:
         """Last watched sort requires a user — silently dropped without one."""
-        media_filter = ChannelMediaFilter(
+        channel_options = ChannelOptions(
             sort_by=[_sort_key("episode.last_watched", "ascending")],
         )
         builder = EpisodeQueryBuilder(
             episode_setup["session"],
             episode_setup["channel"],
-            media_filter,
+            channel_options,
         )
         episodes = builder.get_episodes()
         assert len(episodes) == 4
@@ -465,7 +465,7 @@ class TestShowFilters:
             watch_user=episode_setup["user"],
             verified=True,
         )
-        episodes = _build(episode_setup, only_started_shows=True)
+        episodes = _build(episode_setup, new_shows_count=0)
         show_ids = {ep.season.show_id for ep in episodes}
         assert show_ids == {episode_setup["shows"][0]["show"].id}
 
@@ -477,7 +477,7 @@ class TestShowFilters:
             watch_user=episode_setup["user"],
             verified=True,
         )
-        episodes = _build(episode_setup, only_new_shows=True)
+        episodes = _build(episode_setup, started_shows_count=0)
         show_ids = {ep.season.show_id for ep in episodes}
         assert show_ids == {episode_setup["shows"][1]["show"].id}
 
@@ -590,13 +590,13 @@ class TestDeletedEpisodes:
 class TestInvalidSortKeys:
     def test_invalid_field_raises(self) -> None:
         with pytest.raises(ValidationError):
-            ChannelMediaFilter(
+            ChannelOptions(
                 sort_by=[_sort_key("episode.nonexistent_field")],
             )
 
     def test_invalid_mode_raises(self) -> None:
         with pytest.raises(ValidationError):
-            ChannelMediaFilter(
+            ChannelOptions(
                 sort_by=[
                     json.dumps(
                         {
@@ -609,7 +609,7 @@ class TestInvalidSortKeys:
 
     def test_invalid_direction_raises(self) -> None:
         with pytest.raises(ValidationError):
-            ChannelMediaFilter(
+            ChannelOptions(
                 sort_by=[
                     json.dumps(
                         {
@@ -622,7 +622,7 @@ class TestInvalidSortKeys:
 
     def test_invalid_json_raises(self) -> None:
         with pytest.raises(ValidationError):
-            ChannelMediaFilter(sort_by=["not valid json"])
+            ChannelOptions(sort_by=["not valid json"])
 
 
 class TestMultipleSortKeys:
@@ -750,7 +750,7 @@ class TestFilterCombinations:
         )
         episodes = _build(
             episode_setup,
-            only_started_shows=True,
+            new_shows_count=0,
             minimum_duration=150,
         )
         show_ids = {ep.season.show_id for ep in episodes}
@@ -881,7 +881,7 @@ class TestSortWithFilterCombinations:
                     display="randomize",
                 ),
             ],
-            only_started_shows=True,
+            new_shows_count=0,
             random_seed=42,
         )
         show_ids = {ep.season.show_id for ep in episodes}
@@ -1036,11 +1036,11 @@ class TestNoUser:
         episode_setup: dict,
     ) -> None:
         """Should return episodes even without an authenticated user."""
-        media_filter = ChannelMediaFilter()
+        channel_options = ChannelOptions()
         builder = EpisodeQueryBuilder(
             episode_setup["session"],
             episode_setup["channel"],
-            media_filter,
+            channel_options,
         )
         episodes = builder.get_episodes()
         assert len(episodes) == 4
@@ -1050,11 +1050,11 @@ class TestNoUser:
         episode_setup: dict,
     ) -> None:
         """Watch filters should be no-ops without a user."""
-        media_filter = ChannelMediaFilter(hide_watched=True, hide_unwatched=True)
+        channel_options = ChannelOptions(hide_watched=True, hide_unwatched=True)
         builder = EpisodeQueryBuilder(
             episode_setup["session"],
             episode_setup["channel"],
-            media_filter,
+            channel_options,
         )
         episodes = builder.get_episodes()
         assert len(episodes) == 4
@@ -1063,14 +1063,14 @@ class TestNoUser:
         self,
         episode_setup: dict,
     ) -> None:
-        media_filter = ChannelMediaFilter(
-            only_started_shows=True,
-            only_new_shows=True,
+        channel_options = ChannelOptions(
+            started_shows_count=0,
+            new_shows_count=0,
         )
         builder = EpisodeQueryBuilder(
             episode_setup["session"],
             episode_setup["channel"],
-            media_filter,
+            channel_options,
         )
         episodes = builder.get_episodes()
         assert len(episodes) == 4

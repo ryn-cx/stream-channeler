@@ -522,7 +522,11 @@ export function EpisodeCard({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Radio className="h-4 w-4" />
-                  Go to Channel
+                  {`Go to Channel ${
+                    episode.channel.channel_number != null
+                      ? `${episode.channel.channel_number}. `
+                      : ""
+                  }${episode.channel.name ?? ""}`}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

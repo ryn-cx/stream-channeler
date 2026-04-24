@@ -58,6 +58,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -80,8 +81,9 @@ const formSchema = z.object({
     .optional(),
   maximumWatchDateAbsolute: z.string().optional(),
   maximumWatchDateRelative: z.coerce.number().optional(),
-  onlyStartedShows: z.boolean().optional(),
-  onlyNewShows: z.boolean().optional(),
+  totalShowsCount: z.coerce.number().optional(),
+  startedShowsCount: z.coerce.number().optional(),
+  newShowsCount: z.coerce.number().optional(),
   minimumAirDateAbsolute: z.string().optional(),
   minimumAirDateRelative: z.coerce.number().optional(),
   maximumAirDateAbsolute: z.string().optional(),
@@ -373,8 +375,9 @@ export function EpisodeFilters({
       sortBy: filterParams.sortBy as FormValues["sortBy"],
       maximumWatchDateAbsolute: filterParams.maximumWatchDateAbsolute,
       maximumWatchDateRelative: filterParams.maximumWatchDateRelative,
-      onlyStartedShows: filterParams.onlyStartedShows,
-      onlyNewShows: filterParams.onlyNewShows,
+      totalShowsCount: filterParams.totalShowsCount,
+      startedShowsCount: filterParams.startedShowsCount,
+      newShowsCount: filterParams.newShowsCount,
       minimumAirDateAbsolute: filterParams.minimumAirDateAbsolute,
       minimumAirDateRelative: filterParams.minimumAirDateRelative,
       maximumAirDateAbsolute: filterParams.maximumAirDateAbsolute,
@@ -514,428 +517,450 @@ export function EpisodeFilters({
           {/* onSubmit is needed to manage additionalChannels and URL redirection */}
           <form
             onSubmit={form.handleSubmit((data) => onSubmit(data))}
-            className="grid gap-4 py-4 overflow-y-auto flex-1 min-h-0"
+            className="flex flex-col gap-4 py-4 overflow-y-auto flex-1 min-h-0"
           >
-            {/* grid - Use a grid layout */}
-            {/* md:grid-cols-2 - 2 column grid */}
-            {/* gap-4 - When the columns get stacked vertically this adds spacing between them */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* space-y-4 - Space between header and text */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h3>Show Status Filters</h3>
+            <Tabs defaultValue="filtering" className="flex-1 min-h-0 gap-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="filtering">Filtering</TabsTrigger>
+                <TabsTrigger value="sorting">Sorting</TabsTrigger>
+              </TabsList>
+              <TabsContent value="filtering" className="space-y-4">
+                {/* grid - Use a grid layout */}
+                {/* md:grid-cols-2 - 2 column grid */}
+                {/* gap-4 - When the columns get stacked vertically this adds spacing between them */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* space-y-4 - Space between header and text */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h3>Show Counts</h3>
 
-                  <FormField
-                    control={form.control}
-                    name="onlyStartedShows"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Only Started Shows
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="totalShowsCount"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormLabel className="font-normal w-28 shrink-0">
+                              Total Shows
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min={0} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="startedShowsCount"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormLabel className="font-normal w-28 shrink-0">
+                              Started Shows
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min={0} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="newShowsCount"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormLabel className="font-normal w-28 shrink-0">
+                              New Shows
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} type="number" min={0} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="onlyNewShows"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Only New Shows
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
+                  {/* space-y-4 - Space between header and text */}
+                  <div className="space-y-4">
+                    <h3>Watch Filters</h3>
+                    <div className="space-y-2">
+                      <FormField
+                        control={form.control}
+                        name="hideUnwatched"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Hide Unwatched Episodes
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hideWatched"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Hide Watched Episodes
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <RenderFormFieldInput
+                        baseName="maximumWatchDate"
+                        dateModeCategory="watchDate"
+                        control={form.control}
+                        label="Minimum Watch Date"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+                {/* space-y-4 - Space between header and text */}
+                <div className="space-y-4">
+                  <h3>Episode Filters</h3>
+                  {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
+                  <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
+                    <div />
+                    <Label className="text-sm font-medium">Minimum</Label>
+                    <Label className="text-sm font-medium">Maximum</Label>
+                  </div>
 
-              {/* space-y-4 - Space between header and text */}
-              <div className="space-y-4">
-                <h3>Watch Filters</h3>
-                <div className="space-y-2">
-                  <FormField
-                    control={form.control}
-                    name="hideUnwatched"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Hide Unwatched Episodes
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="hideWatched"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Hide Watched Episodes
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  <RenderFormFieldInput
-                    baseName="maximumWatchDate"
-                    dateModeCategory="watchDate"
-                    control={form.control}
-                    label="Minimum Watch Date"
-                  />
-                </div>
-              </div>
-            </div>
-            {/* space-y-4 - Space between header and text */}
-            <div className="space-y-4">
-              <h3>Episode Filters</h3>
-              {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
-              <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
-                <div />
-                <Label className="text-sm font-medium">Minimum</Label>
-                <Label className="text-sm font-medium">Maximum</Label>
-              </div>
-
-              {/* Airing Date */}
-              {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
-              <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
-                <FormLabel
-                  onClick={() => toggleDateMode("airDate")}
-                  className="text-sm font-medium cursor-pointer hover:text-primary underline decoration-dotted"
-                >
-                  Airing Date
-                </FormLabel>
-
-                <RenderFormFieldInput
-                  baseName="minimumAirDate"
-                  dateModeCategory="airDate"
-                  control={form.control}
-                />
-                <RenderFormFieldInput
-                  baseName="maximumAirDate"
-                  dateModeCategory="airDate"
-                  control={form.control}
-                />
-              </div>
-
-              {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
-              <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
-                <FormLabel
-                  onClick={() => toggleDateMode("releaseDate")}
-                  className="text-sm font-medium cursor-pointer hover:text-primary underline decoration-dotted"
-                >
-                  Release Date
-                </FormLabel>
-
-                <RenderFormFieldInput
-                  baseName="minimumReleaseDate"
-                  dateModeCategory="releaseDate"
-                  control={form.control}
-                />
-                <RenderFormFieldInput
-                  baseName="maximumReleaseDate"
-                  dateModeCategory="releaseDate"
-                  control={form.control}
-                />
-              </div>
-
-              {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
-              <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
-                <FormLabel className="text-sm font-medium">Duration</FormLabel>
-                <FormField
-                  control={form.control}
-                  name="minimumDuration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          placeholder="Min seconds"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="maximumDuration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          placeholder="Max seconds"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3>Sort Options</h3>
-              <div className="flex items-center gap-4">
-                <Label>Sort By</Label>
-                {/* Mostly copied from: https://ui.shadcn.com/docs/components/combobox */}
-                <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="flex-1 justify-start"
+                  {/* Airing Date */}
+                  {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
+                  <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
+                    <FormLabel
+                      onClick={() => toggleDateMode("airDate")}
+                      className="text-sm font-medium cursor-pointer hover:text-primary underline decoration-dotted"
                     >
-                      Select sort option
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[400px] p-0"
-                    align="start"
-                    onWheel={(e) => e.stopPropagation()}
-                  >
-                    <SortOptionsList
-                      setOpen={setFiltersOpen}
-                      sortOptions={sortOptions}
-                      setSortEntries={setSortEntries}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                      Airing Date
+                    </FormLabel>
 
-              {sortEntries.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Selected Sort Options (in order):
-                  </Label>
-                  {sortEntries.map((entry, index) => {
-                    const sortOption = sortOptions.find(
-                      (option) =>
-                        option.model === entry.model &&
-                        option.field === entry.field,
-                    )
-                    const label = sortOption?.label ?? entry.field
-                    const isRecentlyAired =
-                      entry.model === "episode" &&
-                      entry.field === "recently_aired"
-                    return (
-                      <div
-                        key={`${entry.model}.${entry.field}.${index}`}
-                        className="border rounded text-sm overflow-hidden"
+                    <RenderFormFieldInput
+                      baseName="minimumAirDate"
+                      dateModeCategory="airDate"
+                      control={form.control}
+                    />
+                    <RenderFormFieldInput
+                      baseName="maximumAirDate"
+                      dateModeCategory="airDate"
+                      control={form.control}
+                    />
+                  </div>
+
+                  {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
+                  <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
+                    <FormLabel
+                      onClick={() => toggleDateMode("releaseDate")}
+                      className="text-sm font-medium cursor-pointer hover:text-primary underline decoration-dotted"
+                    >
+                      Release Date
+                    </FormLabel>
+
+                    <RenderFormFieldInput
+                      baseName="minimumReleaseDate"
+                      dateModeCategory="releaseDate"
+                      control={form.control}
+                    />
+                    <RenderFormFieldInput
+                      baseName="maximumReleaseDate"
+                      dateModeCategory="releaseDate"
+                      control={form.control}
+                    />
+                  </div>
+
+                  {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
+                  <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
+                    <FormLabel className="text-sm font-medium">
+                      Duration
+                    </FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="minimumDuration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="Min seconds"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="maximumDuration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="Max seconds"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="sorting" className="space-y-4">
+                <div className="space-y-4">
+                  <h3>Sort Options</h3>
+                  <div className="flex items-center gap-4">
+                    <Label>Sort By</Label>
+                    {/* Mostly copied from: https://ui.shadcn.com/docs/components/combobox */}
+                    <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="flex-1 justify-start"
+                        >
+                          Select sort option
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[400px] p-0"
+                        align="start"
+                        onWheel={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-between p-2">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                updateEntry(index, {
-                                  direction:
+                        <SortOptionsList
+                          setOpen={setFiltersOpen}
+                          sortOptions={sortOptions}
+                          setSortEntries={setSortEntries}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {sortEntries.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Selected Sort Options (in order):
+                      </Label>
+                      {sortEntries.map((entry, index) => {
+                        const sortOption = sortOptions.find(
+                          (option) =>
+                            option.model === entry.model &&
+                            option.field === entry.field,
+                        )
+                        const label = sortOption?.label ?? entry.field
+                        const isRecentlyAired =
+                          entry.model === "episode" &&
+                          entry.field === "recently_aired"
+                        return (
+                          <div
+                            key={`${entry.model}.${entry.field}.${index}`}
+                            className="border rounded text-sm overflow-hidden"
+                          >
+                            <div className="flex items-center justify-between p-2">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    updateEntry(index, {
+                                      direction:
+                                        entry.direction === "ascending"
+                                          ? "descending"
+                                          : "ascending",
+                                    })
+                                  }
+                                  className="h-7 w-7 p-0"
+                                  title={
                                     entry.direction === "ascending"
-                                      ? "descending"
-                                      : "ascending",
-                                })
-                              }
-                              className="h-7 w-7 p-0"
-                              title={
-                                entry.direction === "ascending"
-                                  ? "Ascending"
-                                  : "Descending"
-                              }
-                            >
-                              {entry.direction === "ascending" ? (
-                                <ArrowUp className="h-3 w-3" />
-                              ) : (
-                                <ArrowDown className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <span className="text-xs font-medium">{label}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveSortOption(index, "up")}
-                              disabled={index === 0}
-                              className="h-7 w-7 p-0"
-                            >
-                              <ChevronUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => moveSortOption(index, "down")}
-                              disabled={index === sortEntries.length - 1}
-                              className="h-7 w-7 p-0"
-                            >
-                              <ChevronDown className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeSortOption(index)}
-                              className="h-7 w-7 p-0 text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
-                          <Select
-                            value={entry.order}
-                            onValueChange={(value) =>
-                              updateEntry(index, { order: value as Order })
-                            }
-                          >
-                            <SelectTrigger className="h-9 w-auto text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ORDER_OPTIONS.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
+                                      ? "Ascending"
+                                      : "Descending"
+                                  }
                                 >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={entry.aggregation ?? "__none__"}
-                            onValueChange={(value) =>
-                              updateEntry(index, {
-                                aggregation:
-                                  value === "__none__"
-                                    ? null
-                                    : (value as Aggregation),
-                              })
-                            }
-                          >
-                            <SelectTrigger className="h-9 w-auto text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">No Agg</SelectItem>
-                              {AGGREGATION_OPTIONS.map((agg) => (
-                                <SelectItem key={agg} value={agg}>
-                                  {agg.charAt(0).toUpperCase() + agg.slice(1)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {isRecentlyAired && (
-                            <>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
+                                  {entry.direction === "ascending" ? (
+                                    <ArrowUp className="h-3 w-3" />
+                                  ) : (
+                                    <ArrowDown className="h-3 w-3" />
+                                  )}
+                                </Button>
+                                <span className="text-xs font-medium">
+                                  {label}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => moveSortOption(index, "up")}
+                                  disabled={index === 0}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => moveSortOption(index, "down")}
+                                  disabled={index === sortEntries.length - 1}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeSortOption(index)}
+                                  className="h-7 w-7 p-0 text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 px-2 pb-2">
+                              <Select
+                                value={entry.order}
+                                onValueChange={(value) =>
+                                  updateEntry(index, { order: value as Order })
+                                }
+                              >
+                                <SelectTrigger className="h-9 w-auto text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ORDER_OPTIONS.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select
+                                value={entry.aggregation ?? "__none__"}
+                                onValueChange={(value) =>
                                   updateEntry(index, {
-                                    recentlyAiredMode:
-                                      entry.recentlyAiredMode === "relative"
-                                        ? "absolute"
-                                        : "relative",
+                                    aggregation:
+                                      value === "__none__"
+                                        ? null
+                                        : (value as Aggregation),
                                   })
                                 }
-                                className="h-9 px-3 text-sm"
                               >
-                                {entry.recentlyAiredMode === "relative"
-                                  ? "Days ago"
-                                  : "Since date"}
-                              </Button>
-                              {entry.recentlyAiredMode === "relative" ? (
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  placeholder="7"
-                                  value={entry.days ?? ""}
-                                  onChange={(event) =>
-                                    updateEntry(index, {
-                                      days: event.target.value
-                                        ? parseInt(event.target.value, 10)
-                                        : null,
-                                    })
-                                  }
-                                  className="h-9 w-20 text-sm"
-                                />
-                              ) : (
-                                <Input
-                                  type="date"
-                                  value={entry.recentlyAiredDate ?? ""}
-                                  onChange={(event) =>
-                                    updateEntry(index, {
-                                      recentlyAiredDate:
-                                        event.target.value || null,
-                                    })
-                                  }
-                                  className="h-9 w-36 text-sm"
-                                />
+                                <SelectTrigger className="h-9 w-auto text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">
+                                    No Agg
+                                  </SelectItem>
+                                  {AGGREGATION_OPTIONS.map((agg) => (
+                                    <SelectItem key={agg} value={agg}>
+                                      {agg.charAt(0).toUpperCase() +
+                                        agg.slice(1)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {isRecentlyAired && (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      updateEntry(index, {
+                                        recentlyAiredMode:
+                                          entry.recentlyAiredMode === "relative"
+                                            ? "absolute"
+                                            : "relative",
+                                      })
+                                    }
+                                    className="h-9 px-3 text-sm"
+                                  >
+                                    {entry.recentlyAiredMode === "relative"
+                                      ? "Days ago"
+                                      : "Since date"}
+                                  </Button>
+                                  {entry.recentlyAiredMode === "relative" ? (
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      placeholder="7"
+                                      value={entry.days ?? ""}
+                                      onChange={(event) =>
+                                        updateEntry(index, {
+                                          days: event.target.value
+                                            ? parseInt(event.target.value, 10)
+                                            : null,
+                                        })
+                                      }
+                                      className="h-9 w-20 text-sm"
+                                    />
+                                  ) : (
+                                    <Input
+                                      type="date"
+                                      value={entry.recentlyAiredDate ?? ""}
+                                      onChange={(event) =>
+                                        updateEntry(index, {
+                                          recentlyAiredDate:
+                                            event.target.value || null,
+                                        })
+                                      }
+                                      className="h-9 w-36 text-sm"
+                                    />
+                                  )}
+                                </>
                               )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="random-seed">Random Seed</Label>
+                    <Input
+                      id="random-seed"
+                      type="number"
+                      min={0}
+                      value={seedInputValue}
+                      onChange={(e) => setSeedInputValue(e.target.value)}
+                      className="w-36 h-8 text-sm"
+                      placeholder="Seed value"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      title="Generate a new random seed"
+                      onClick={() =>
+                        setSeedInputValue(
+                          String(Math.floor(Math.random() * 2 ** 31)),
+                        )
+                      }
+                    >
+                      <Shuffle className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Label htmlFor="random-seed">Random Seed</Label>
-                <Input
-                  id="random-seed"
-                  type="number"
-                  min={0}
-                  value={seedInputValue}
-                  onChange={(e) => setSeedInputValue(e.target.value)}
-                  className="w-36 h-8 text-sm"
-                  placeholder="Seed value"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  title="Generate a new random seed"
-                  onClick={() =>
-                    setSeedInputValue(
-                      String(Math.floor(Math.random() * 2 ** 31)),
-                    )
-                  }
-                >
-                  <Shuffle className="size-4" />
-                </Button>
-              </div>
-            </div>
-
+              </TabsContent>
+            </Tabs>
             <DialogFooter>
               <Button
                 type="button"
