@@ -8,6 +8,14 @@ import { getChannelEpisodes } from "@/api/channels"
 import { type ChannelOutput, ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,12 +28,10 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -47,6 +53,7 @@ export function ManageAdditionalChannels({
   variant = "button",
 }: ManageChannelsProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [channelPickerOpen, setChannelPickerOpen] = useState(false)
   const [manualChannelId, setManualChannelId] = useState<string>("")
   const [localAdditionalChannelIds, setLocalAdditionalChannelIds] = useState<
     string[]
@@ -170,7 +177,7 @@ export function ManageAdditionalChannels({
         )}
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Manage Additional Channels</DialogTitle>
           <DialogDescription>
@@ -178,7 +185,7 @@ export function ManageAdditionalChannels({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           <h3>Add Channels</h3>
           <div className="space-y-2">
             {isLoggedIn && (
@@ -193,25 +200,48 @@ export function ManageAdditionalChannels({
                     No additional channels available
                   </p>
                 ) : (
-                  <Select
-                    value=""
-                    onValueChange={(value) => {
-                      if (!localAdditionalChannelIds.includes(value)) {
-                        handleAddChannelFromSelect(value)
-                      }
-                    }}
+                  <Popover
+                    open={channelPickerOpen}
+                    onOpenChange={setChannelPickerOpen}
                   >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectableChannels.map((channel: ChannelOutput) => (
-                        <SelectItem key={channel.id} value={channel.id}>
-                          {channel.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="flex-1 justify-start"
+                      >
+                        Select a channel
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] p-0"
+                      align="start"
+                      onWheel={(e) => e.stopPropagation()}
+                    >
+                      <Command>
+                        <CommandInput placeholder="Filter channels..." />
+                        <CommandList>
+                          <CommandEmpty>No channels found.</CommandEmpty>
+                          <CommandGroup>
+                            {selectableChannels.map(
+                              (channel: ChannelOutput) => (
+                                <CommandItem
+                                  key={channel.id}
+                                  value={channel.name ?? channel.id}
+                                  keywords={[channel.id]}
+                                  onSelect={() => {
+                                    handleAddChannelFromSelect(channel.id)
+                                  }}
+                                >
+                                  {channel.name}
+                                </CommandItem>
+                              ),
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
             )}
@@ -289,25 +319,25 @@ export function ManageAdditionalChannels({
               </div>
             )}
           </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={mutation.isPending}
-            >
-              {mutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
         </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+            disabled={mutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
