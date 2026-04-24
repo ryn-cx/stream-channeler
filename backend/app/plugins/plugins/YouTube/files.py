@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
 from typing import override
+from xml.etree.ElementTree import tostring
 
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
@@ -22,13 +23,24 @@ from app.plugins.plugins.utils.base_plugin import BasePlugin
 from app.plugins.plugins.utils.base_plugin.files import (
     GAPIJSON,
     GAPIJSONNoGet,
+    XMLFile,
 )
 from app.utils import tz_datetime
 
 
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
-    return NotYTDLAPI(settings.YOUTUBE_API_KEY)
+    server: str | None = settings.GET_AROUND_SERVER
+    if server == "changethis":
+        server = None
+    password: str | None = settings.GET_AROUND_PASSWORD
+    if password == "changethis":  # noqa: S105
+        password = None
+    return NotYTDLAPI(
+        settings.YOUTUBE_API_KEY,
+        get_around_server=server,
+        get_around_password=password,
+    )
 
 
 def get_first_item[T](items: list[T] | None) -> T:
@@ -134,6 +146,39 @@ class Videos(GAPIJSON[VideoModel]):
     api_endpoint = not_yt_dlapi().videos
 
 
+class PlaylistFeed(XMLFile):
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            # A "UU..." key is a channel's auto-generated uploads playlist;
+            # YouTube's RSS feed exposes it as the channel itself via the
+            # corresponding "UC..." channel_id. Regular playlists use the
+            # playlist_id parameter.
+            if self.unique_identifier.startswith("UU"):
+                params = {"channel_id": "UC" + self.unique_identifier[2:]}
+            else:
+                params = {"playlist_id": self.unique_identifier}
+            response = not_yt_dlapi().get_around.get(
+                "https://www.youtube.com/feeds/videos.xml",
+                params=params,
+            )
+            response.raise_for_status()
+            self._write(response.text)
+
+    def entries(self) -> list[str] | None:
+        """Return each entry serialized as a string, or None if no content."""
+        if (
+            not self._existing_database_record
+            or not self._existing_database_record.content
+        ):
+            return None
+        namespaces = {"atom": "http://www.w3.org/2005/Atom"}
+        return [
+            tostring(entry, encoding="unicode")
+            for entry in self.parsed().findall("atom:entry", namespaces)
+        ]
+
+
 class FileMixin(BasePlugin, register=False):
     @override
     def __init__(self, session: Session) -> None:
@@ -181,6 +226,13 @@ class FileMixin(BasePlugin, register=False):
             Videos,
             episode_key,
             lambda: Videos(self.session, self.plugin, episode_key),
+        )
+
+    def _playlist_feed_file(self, season_key: str) -> PlaylistFeed:
+        return self._get_cached_file(
+            PlaylistFeed,
+            season_key,
+            lambda: PlaylistFeed(self.session, self.plugin, season_key),
         )
 
     # endregion File Wrappers

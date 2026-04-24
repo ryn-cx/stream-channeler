@@ -197,6 +197,15 @@ class JSONFile[T](BaseFile[T], ABC):
 
 
 class XMLFile(BaseFile[Element], ABC):
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
+        self.unique_identifier = unique_identifier
+        super().__init__(session, plugin)
+
     def parsed(self) -> Element:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
@@ -283,6 +292,7 @@ class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
         return self.api_endpoint.get(self.unique_identifier)
 
 
+# TODO: This may no longe be needed
 class GAPIJSONNoGet[T: BaseModel](PartialGAPIJSON[T], ABC):
     api_endpoint: ClassVar[APISerializerEndpoint[Any]]
 
