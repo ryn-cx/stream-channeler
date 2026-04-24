@@ -1,0 +1,47 @@
+# Generic runner for any module under ``app.tools``. Pick the script via the
+# TOOL env var, e.g.:
+#   TOOL=import_queue docker compose -f compose.tool.yml up
+#   TOOL=update_outdated docker compose -f compose.tool.yml up
+#   TOOL=youtube_rss_check docker compose -f compose.tool.yml up
+name: stream-channeler-${TOOL?Variable not set}
+
+services:
+  tool:
+    container_name: ${TOOL?Variable not set}
+    image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    networks:
+      - main-network
+    command: python -m app.tools.${TOOL?Variable not set}
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD?Variable not set}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - POSTGRES_SERVER=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY?Variable not set}
+      - GET_AROUND_SERVER=${GET_AROUND_SERVER}
+      - GET_AROUND_PASSWORD=${GET_AROUND_PASSWORD}
+      - LOGURU_COLORIZE=YES
+      - LOGLEVEL=INFO
+
+networks:
+  main-network:
+    name: stream-channeler_default
+    external: true
