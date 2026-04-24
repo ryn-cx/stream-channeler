@@ -47,6 +47,7 @@ def main() -> None:
             for season in seasons:
                 try:
                     feed = PlaylistFeed(session, youtube_plugin, season.key)
+                    feed.download_if_outdated()
                     if feed.data_timestamp > tz_datetime.now() - timedelta(hours=1):
                         continue
 
