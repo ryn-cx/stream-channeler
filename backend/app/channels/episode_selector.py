@@ -1,5 +1,4 @@
 # TODO: Validate
-import random
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -48,52 +47,26 @@ class EpisodeResult:
     latest_watch: Watch | None = None
 
 
-def _select_show_subset(  # noqa: PLR0913
-    *,
-    started_available: set[UUID],
-    new_available: set[UUID],
+def _select_show_subset(
+    show_order: list[tuple[UUID, bool]],
     total: int | None,
     started_count: int | None,
     new_count: int | None,
-    random_seed: int,
 ) -> set[UUID]:
-    rng = random.Random(random_seed)  # noqa: S311
-    started_list = list(started_available)
-    new_list = list(new_available)
-    rng.shuffle(started_list)
-    rng.shuffle(new_list)
-
-    if total is not None and started_count is None and new_count is None:
-        combined = started_list + new_list
-        rng.shuffle(combined)
-        return set(combined[:total])
-
-    selected_started: set[UUID] | None = (
-        set(started_list[:started_count]) if started_count is not None else None
-    )
-    selected_new: set[UUID] | None = (
-        set(new_list[:new_count]) if new_count is not None else None
-    )
-
-    if selected_started is None:
-        if total is None:
-            selected_started = set(started_list)
-        else:
-            remaining = max(0, total - len(selected_new or set()))
-            selected_started = set(started_list[:remaining])
-    if selected_new is None:
-        if total is None:
-            selected_new = set(new_list)
-        else:
-            remaining = max(0, total - len(selected_started))
-            selected_new = set(new_list[:remaining])
-
-    combined_set = selected_started | selected_new
-    if total is not None and len(combined_set) > total:
-        combined_list = list(combined_set)
-        rng.shuffle(combined_list)
-        combined_set = set(combined_list[:total])
-    return combined_set
+    selected: set[UUID] = set()
+    started_taken = 0
+    new_taken = 0
+    for show_id, is_started in show_order:
+        if total is not None and len(selected) >= total:
+            break
+        if is_started:
+            if started_count is None or started_taken < started_count:
+                selected.add(show_id)
+                started_taken += 1
+        elif new_count is None or new_taken < new_count:
+            selected.add(show_id)
+            new_taken += 1
+    return selected
 
 
 class _SortExpressionBuilder:
@@ -306,7 +279,6 @@ class EpisodeQueryBuilder:
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
-        query = self._filter_show_counts(query)
         query = self._filter_by_ranges(query)
         query = self._sort_episodes(query)
         query = self._apply_limit(query)
@@ -321,6 +293,8 @@ class EpisodeQueryBuilder:
                 continue
             channel_by_episode[episode.id] = channel_id
             ordered_episodes.append(episode)
+
+        ordered_episodes = self._apply_show_count_selection(ordered_episodes)
 
         watches = self._get_latest_watches(ordered_episodes)
         return [
@@ -591,86 +565,52 @@ class EpisodeQueryBuilder:
             .distinct()
         )
 
-    def _filter_show_counts(
+    def _apply_show_count_selection(
         self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        """Filter shows by total, started, and new counts."""
-        if not self._user:
-            return query
+        episodes: list[Episode],
+    ) -> list[Episode]:
+        total = self._channel_options.total_shows_count
+        started_count = self._channel_options.started_shows_count
+        new_count = self._channel_options.new_shows_count
+        if total is None and started_count is None and new_count is None:
+            return episodes
+        if not self._user or not episodes:
+            return episodes
 
-        if (
-            self._channel_options.total_shows_count is None
-            and self._channel_options.started_shows_count is None
-            and self._channel_options.new_shows_count is None
-        ):
-            return query
-        available_show_ids = self._reachable_show_ids()
-        started_show_ids = set(
+        season_ids = {episode.season_id for episode in episodes}
+        season_to_show: dict[UUID, UUID] = dict(
+            self._session.exec(
+                select(Season.id, Season.show_id).where(
+                    col(Season.id).in_(season_ids),
+                ),
+            ).all(),
+        )
+        started_show_ids: set[UUID] = set(
             self._session.exec(self._started_shows_subquery()).all(),
         )
-        available_started = available_show_ids & started_show_ids
-        available_new = available_show_ids - started_show_ids
+
+        show_order: list[tuple[UUID, bool]] = []
+        seen: set[UUID] = set()
+        for episode in episodes:
+            show_id = season_to_show[episode.season_id]
+            if show_id in seen:
+                continue
+            seen.add(show_id)
+            show_order.append((show_id, show_id in started_show_ids))
 
         selected = _select_show_subset(
-            started_available=available_started,
-            new_available=available_new,
-            total=self._channel_options.total_shows_count,
-            started_count=self._channel_options.started_shows_count,
-            new_count=self._channel_options.new_shows_count,
-            random_seed=self._channel_options.random_seed,
+            show_order,
+            total=total,
+            started_count=started_count,
+            new_count=new_count,
         )
-        return query.where(col(Show.id).in_(selected))
-
-    def _reachable_show_ids(self) -> set[UUID]:
-        """Show IDs with at least one episode that survives the episode filters.
-
-        Mirrors the channel-access predicate (whitelist/blacklist + channel
-        scope), the hide_watched/hide_unwatched predicates, and the
-        air/release/duration range filters so that shows whose only surviving
-        episodes would be filtered out do not occupy a selection slot in
-        ``_filter_show_counts``.
-        """
-        query = (
-            select(Show.id)
-            .select_from(Episode)
-            .join(Season)
-            .join(Show)
-            .join(ChannelShow)
-            .outerjoin(
-                ChannelSeasonWhiteList,
-                and_(
-                    ChannelSeasonWhiteList.channel_show_id == ChannelShow.id,
-                    ChannelSeasonWhiteList.season_id == Season.id,
-                ),
-            )
-            .outerjoin(
-                ChannelEpisodeWhiteList,
-                and_(
-                    ChannelEpisodeWhiteList.channel_show_id == ChannelShow.id,
-                    ChannelEpisodeWhiteList.episode_id == Episode.id,
-                ),
-            )
-            .where(col(Episode.deleted_at).is_(None))
-            .where(col(ChannelShow.channel_id).in_(self._channel_ids))
-            .where(self._channel_access_condition())
-            .distinct()
-        )
-        if (hide_watched := self._hide_watched_condition()) is not None:
-            query = query.where(hide_watched)
-        if (hide_unwatched := self._hide_unwatched_condition()) is not None:
-            query = query.where(hide_unwatched)
-        for condition in self._episode_range_conditions():
-            query = query.where(condition)
-        return set(self._session.exec(query).all())
+        return [
+            episode
+            for episode in episodes
+            if season_to_show[episode.season_id] in selected
+        ]
 
     def _episode_range_conditions(self) -> list[ColumnElement[bool]]:
-        """WHERE predicates for configured air-date / release-date / duration ranges.
-
-        Each range emits up to two predicates (min and max). Null values in
-        the column are allowed through so an episode with a missing
-        air_date/release_date/duration is never excluded purely by the range.
-        """
         conditions: list[ColumnElement[bool]] = []
 
         def add_range(
