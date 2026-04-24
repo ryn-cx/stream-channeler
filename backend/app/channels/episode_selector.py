@@ -50,16 +50,16 @@ class EpisodeResult:
 
 def _select_show_subset(  # noqa: PLR0913
     *,
-    started_avail: set[UUID],
-    new_avail: set[UUID],
+    started_available: set[UUID],
+    new_available: set[UUID],
     total: int | None,
     started_count: int | None,
     new_count: int | None,
     random_seed: int,
 ) -> set[UUID]:
     rng = random.Random(random_seed)  # noqa: S311
-    started_list = list(started_avail)
-    new_list = list(new_avail)
+    started_list = list(started_available)
+    new_list = list(new_available)
     rng.shuffle(started_list)
     rng.shuffle(new_list)
 
@@ -307,9 +307,7 @@ class EpisodeQueryBuilder:
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
         query = self._filter_show_counts(query)
-        query = self._filter_by_air_date(query)
-        query = self._filter_by_release_date(query)
-        query = self._filter_by_duration(query)
+        query = self._filter_by_ranges(query)
         query = self._sort_episodes(query)
         query = self._apply_limit(query)
 
@@ -541,31 +539,40 @@ class EpisodeQueryBuilder:
             ),
         )
 
-    def _filter_watched_episodes(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
+    def _hide_watched_condition(self) -> ColumnElement[bool] | None:
         if not (self._user and self._channel_options.hide_watched):
-            return query
-
+            return None
         watched_subquery = self._verified_watches_subquery()
-
         absolute_date = self._channel_options.maximum_watch_date_absolute
         relative_date = self._channel_options.maximum_watch_date_relative
         if max_watch_date := self._parse_date_filter(absolute_date, relative_date):
             watched_subquery = watched_subquery.where(
                 Watch.watch_date > max_watch_date,
             )
+        return col(Episode.id).not_in(watched_subquery)
 
-        return query.where(col(Episode.id).not_in(watched_subquery))
+    def _hide_unwatched_condition(self) -> ColumnElement[bool] | None:
+        if not (self._user and self._channel_options.hide_unwatched):
+            return None
+        return col(Episode.id).in_(self._verified_watches_subquery())
+
+    def _filter_watched_episodes(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        condition = self._hide_watched_condition()
+        if condition is None:
+            return query
+        return query.where(condition)
 
     def _filter_unwatched_episodes(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        if not (self._user and self._channel_options.hide_unwatched):
+        condition = self._hide_unwatched_condition()
+        if condition is None:
             return query
-        return query.where(col(Episode.id).in_(self._verified_watches_subquery()))
+        return query.where(condition)
 
     def _started_shows_subquery(self) -> SelectOfScalar[UUID]:
         user = self._require_user()
@@ -589,15 +596,15 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         """Filter shows by total, started, and new counts."""
-        total = self._channel_options.total_shows_count
-        started_count = self._channel_options.started_shows_count
-        new_count = self._channel_options.new_shows_count
-
-        if total is None and started_count is None and new_count is None:
-            return query
         if not self._user:
             return query
 
+        if (
+            self._channel_options.total_shows_count is None
+            and self._channel_options.started_shows_count is None
+            and self._channel_options.new_shows_count is None
+        ):
+            return query
         available_show_ids = self._reachable_show_ids()
         started_show_ids = set(
             self._session.exec(self._started_shows_subquery()).all(),
@@ -606,21 +613,23 @@ class EpisodeQueryBuilder:
         available_new = available_show_ids - started_show_ids
 
         selected = _select_show_subset(
-            started_avail=available_started,
-            new_avail=available_new,
-            total=total,
-            started_count=started_count,
-            new_count=new_count,
+            started_available=available_started,
+            new_available=available_new,
+            total=self._channel_options.total_shows_count,
+            started_count=self._channel_options.started_shows_count,
+            new_count=self._channel_options.new_shows_count,
             random_seed=self._channel_options.random_seed,
         )
         return query.where(col(Show.id).in_(selected))
 
     def _reachable_show_ids(self) -> set[UUID]:
-        """Show IDs with at least one episode that survives the channel filter.
+        """Show IDs with at least one episode that survives the episode filters.
 
-        Applies the same whitelist/blacklist predicate as
-        ``_filter_episodes_by_channels`` so fully-blacklisted shows never
-        occupy a selection slot in ``_filter_show_counts``.
+        Mirrors the channel-access predicate (whitelist/blacklist + channel
+        scope), the hide_watched/hide_unwatched predicates, and the
+        air/release/duration range filters so that shows whose only surviving
+        episodes would be filtered out do not occupy a selection slot in
+        ``_filter_show_counts``.
         """
         query = (
             select(Show.id)
@@ -647,27 +656,34 @@ class EpisodeQueryBuilder:
             .where(self._channel_access_condition())
             .distinct()
         )
+        if (hide_watched := self._hide_watched_condition()) is not None:
+            query = query.where(hide_watched)
+        if (hide_unwatched := self._hide_unwatched_condition()) is not None:
+            query = query.where(hide_unwatched)
+        for condition in self._episode_range_conditions():
+            query = query.where(condition)
         return set(self._session.exec(query).all())
 
-    def _apply_nullable_range_filter(
-        self,
-        query: Select[tuple[Episode, UUID]],
-        column: ColumnElement[Any] | Mapped[Any],
-        min_value: datetime | int | None,
-        max_value: datetime | int | None,
-    ) -> Select[tuple[Episode, UUID]]:
-        if min_value is not None:
-            query = query.where(or_(column >= min_value, column.is_(None)))
-        if max_value is not None:
-            query = query.where(or_(column <= max_value, column.is_(None)))
-        return query
+    def _episode_range_conditions(self) -> list[ColumnElement[bool]]:
+        """WHERE predicates for configured air-date / release-date / duration ranges.
 
-    def _filter_by_air_date(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        return self._apply_nullable_range_filter(
-            query,
+        Each range emits up to two predicates (min and max). Null values in
+        the column are allowed through so an episode with a missing
+        air_date/release_date/duration is never excluded purely by the range.
+        """
+        conditions: list[ColumnElement[bool]] = []
+
+        def add_range(
+            column: ColumnElement[Any] | Mapped[Any],
+            min_value: datetime | int | None,
+            max_value: datetime | int | None,
+        ) -> None:
+            if min_value is not None:
+                conditions.append(or_(column >= min_value, column.is_(None)))
+            if max_value is not None:
+                conditions.append(or_(column <= max_value, column.is_(None)))
+
+        add_range(
             col(Episode.air_date),
             self._parse_date_filter(
                 self._channel_options.minimum_air_date_absolute,
@@ -678,13 +694,7 @@ class EpisodeQueryBuilder:
                 self._channel_options.maximum_air_date_relative,
             ),
         )
-
-    def _filter_by_release_date(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        return self._apply_nullable_range_filter(
-            query,
+        add_range(
             col(Episode.release_date),
             self._parse_date_filter(
                 self._channel_options.minimum_release_date_absolute,
@@ -695,17 +705,20 @@ class EpisodeQueryBuilder:
                 self._channel_options.maximum_release_date_relative,
             ),
         )
-
-    def _filter_by_duration(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        return self._apply_nullable_range_filter(
-            query,
+        add_range(
             col(Episode.duration),
             self._channel_options.minimum_duration,
             self._channel_options.maximum_duration,
         )
+        return conditions
+
+    def _filter_by_ranges(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        for condition in self._episode_range_conditions():
+            query = query.where(condition)
+        return query
 
     def _apply_limit(
         self,
