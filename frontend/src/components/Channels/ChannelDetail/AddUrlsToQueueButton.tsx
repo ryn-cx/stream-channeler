@@ -1,6 +1,7 @@
 // TODO: Validate
 import { MonitorCog, Plus } from "lucide-react"
 import { useState } from "react"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { ManageShowsTabs } from "./ManageShowsTabs"
 
 interface ManageShowsButtonProps {
@@ -28,25 +28,13 @@ export function ManageShowsButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {variant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <MonitorCog className="mr-2 size-4" />
-            Shows
-          </DropdownMenuItem>
-        ) : variant === "icon" ? (
-          <Button variant="ghost" size="icon" title="Manage shows">
-            <Plus className="size-4" />
-          </Button>
-        ) : (
-          <Button className="mt-2 mb-4">
-            <MonitorCog className="mr-2" />
-            Shows
-          </Button>
-        )}
+        <VariantTrigger
+          variant={variant}
+          icon={MonitorCog}
+          iconVariantIcon={Plus}
+          label="Shows"
+          iconTitle="Manage shows"
+        />
       </DialogTrigger>
       <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader className="px-8">

@@ -6,6 +6,7 @@ import { useState } from "react"
 
 import { getChannelEpisodes } from "@/api/channels"
 import { type ChannelOutput, ChannelsService } from "@/client"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -24,7 +25,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -160,21 +160,11 @@ export function ManageAdditionalChannels({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {variant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <Antenna className="mr-2 size-4" />
-            Combined Channels
-          </DropdownMenuItem>
-        ) : (
-          <Button className="mt-2 mb-4">
-            <Antenna className="mr-2" />
-            Combined Channels
-          </Button>
-        )}
+        <VariantTrigger
+          variant={variant}
+          icon={Antenna}
+          label="Combined Channels"
+        />
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">

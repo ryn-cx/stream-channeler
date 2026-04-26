@@ -5,8 +5,7 @@ import { useState } from "react"
 
 import { ChannelsService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
-import { Button } from "@/components/ui/button"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -36,44 +35,24 @@ export function SaveDefaultButton({
     onError: handleError.bind(showErrorToast),
   })
 
-  if (variant === "menu") {
-    return (
-      <>
-        <DropdownMenuItem
-          onSelect={(e) => {
-            e.preventDefault()
-            setConfirmOpen(true)
-          }}
-          disabled={saveDefaultsMutation.isPending}
-        >
-          <Save className="mr-2 size-4" />
-          Save as Default
-        </DropdownMenuItem>
-        {confirmOpen && (
-          <ConfirmDialog
-            open={confirmOpen}
-            onOpenChange={setConfirmOpen}
-            title="Save as Default"
-            description="This will overwrite the current default order for this channel. Are you sure?"
-            confirmLabel="Save"
-            variant="default"
-            onConfirm={() => saveDefaultsMutation.mutate()}
-          />
-        )}
-      </>
-    )
-  }
+  const buttonLabel = saveDefaultsMutation.isPending
+    ? "Saving..."
+    : "Save as Default"
 
   return (
     <>
-      <Button
-        onClick={() => setConfirmOpen(true)}
+      <VariantTrigger
+        variant={variant}
+        icon={Save}
+        label={buttonLabel}
+        menuLabel="Save as Default"
         disabled={saveDefaultsMutation.isPending}
-        className="mt-2 mb-4"
-      >
-        <Save className="mr-2" />
-        {saveDefaultsMutation.isPending ? "Saving..." : "Save as Default"}
-      </Button>
+        onClick={() => setConfirmOpen(true)}
+        onSelect={(event) => {
+          event.preventDefault()
+          setConfirmOpen(true)
+        }}
+      />
       {confirmOpen && (
         <ConfirmDialog
           open={confirmOpen}

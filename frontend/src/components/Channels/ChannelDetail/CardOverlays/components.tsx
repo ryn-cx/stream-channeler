@@ -1,8 +1,8 @@
 // TODO: Validate
-import type { EpisodeWithDetails } from "../columns"
+import type { BaseEpisodeWithDetails } from "@/components/PlaylistChannelCommon/EpisodeCard"
 
 /** Props shared by all card overlay components. */
-export type CardOverlayProps = { episode: EpisodeWithDetails }
+export type CardOverlayProps = { episode: BaseEpisodeWithDetails }
 
 /** Wrapper that adds negative top margin to tighten the gap between the image and the text. */
 export function CardTextArea({ children }: { children: React.ReactNode }) {

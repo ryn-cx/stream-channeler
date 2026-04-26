@@ -1,5 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Info, Link2, List, Plus, Search, Settings, Trash2 } from "lucide-react"
+import {
+  Info,
+  Link2,
+  List,
+  Plus,
+  Search,
+  Settings,
+  Sparkles,
+  Trash2,
+} from "lucide-react"
 import { useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
@@ -35,6 +44,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { AISuggestions } from "./AISuggestions"
 import { ShowSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
 
@@ -87,6 +97,8 @@ export function ManageShowsTabs({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<string>("search")
+  const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
   // region Queries
 
@@ -118,6 +130,10 @@ export function ManageShowsTabs({
   })
 
   const queueEntries = queueData ?? []
+  const pendingQueueCount = queueEntries.filter(
+    (entry: ChannelQueueOutput) =>
+      entry.status !== "Imported" && entry.status !== "Failed",
+  ).length
   const showsList = (showsData?.shows ?? []).sort((a, b) =>
     (a.name ?? "").localeCompare(b.name ?? ""),
   )
@@ -317,7 +333,11 @@ export function ManageShowsTabs({
 
   return (
     <>
-      <Tabs defaultValue="search" className="flex-1 min-h-0 flex flex-col">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 min-h-0 flex flex-col"
+      >
         <TabsList className={tabsListClassName}>
           <TabsTrigger value="search">
             <Search className="h-4 w-4 mr-1" /> Search
@@ -330,12 +350,15 @@ export function ManageShowsTabs({
             {showsList.length > 0 && ` (${showsList.length})`}
           </TabsTrigger>
           <TabsTrigger value="queue">
-            Queue{queueEntries.length > 0 && ` (${queueEntries.length})`}
+            Queue{pendingQueueCount > 0 && ` (${pendingQueueCount})`}
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            <Sparkles className="h-4 w-4 mr-1" /> AI Suggestions
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="search" className={contentClassName}>
-          <ShowSearch channelId={channelId} />
+          <ShowSearch channelId={channelId} initialQuery={searchQuery} />
         </TabsContent>
 
         <TabsContent value="url" className={contentClassName}>
@@ -523,6 +546,20 @@ export function ManageShowsTabs({
               </Table>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent
+          value="ai"
+          forceMount
+          className={`${contentClassName} data-[state=inactive]:hidden`}
+        >
+          <AISuggestions
+            channelId={channelId}
+            onRequestSearch={(title) => {
+              setSearchQuery(title)
+              setActiveTab("search")
+            }}
+          />
         </TabsContent>
       </Tabs>
 

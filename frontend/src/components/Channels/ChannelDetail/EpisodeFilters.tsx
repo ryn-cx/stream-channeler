@@ -17,6 +17,7 @@ import { z } from "zod"
 
 import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -36,7 +37,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -488,21 +488,12 @@ export function EpisodeFilters({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {variant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <Filter className="mr-2 size-4" />
-            Filters
-          </DropdownMenuItem>
-        ) : (
-          <Button className="mt-2 mb-4">
-            <Filter className="mr-2" />
-            Channel Options
-          </Button>
-        )}
+        <VariantTrigger
+          variant={variant}
+          icon={Filter}
+          label="Channel Options"
+          menuLabel="Filters"
+        />
       </DialogTrigger>
       {/* Large max width looks nicer than medium. */}
       <DialogContent className="sm:max-w-lrg max-h-[85vh] flex flex-col">

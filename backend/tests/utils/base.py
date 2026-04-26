@@ -26,6 +26,12 @@ from app.episodes.schemas import (
     EpisodePatchInput,
     EpisodePostInput,
 )
+from app.playlists.models import Playlist
+from app.playlists.schemas import (
+    PlaylistOutput,
+    PlaylistPatchInput,
+    PlaylistPostInput,
+)
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginOutput,
@@ -59,7 +65,9 @@ from tests.users.utils import (
 )
 from tests.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
-SUPPORTED_MODELS = Channel | Episode | Season | Show | Source | Plugin | Watch
+SUPPORTED_MODELS = (
+    Channel | Episode | Season | Show | Source | Plugin | Watch | Playlist
+)
 PARENT_MODELS = SUPPORTED_MODELS | User
 
 INPUT_SCHEMAS = (
@@ -70,6 +78,7 @@ INPUT_SCHEMAS = (
     | ShowPostInput
     | SourcePostInput
     | WatchPostInput
+    | PlaylistPostInput
 )
 OUTPUT_MODELS = (
     ChannelOutput
@@ -79,6 +88,7 @@ OUTPUT_MODELS = (
     | ShowOutput
     | SourceOutput
     | WatchOutput
+    | PlaylistOutput
 )
 LIST_OUTPUT_MODELS = (
     list[ChannelOutput]
@@ -87,6 +97,7 @@ LIST_OUTPUT_MODELS = (
     | list[SeasonOutput]
     | list[ShowOutput]
     | list[SourceOutput]
+    | list[PlaylistOutput]
 )
 PATCH_MODELS = (
     ChannelPatchInput
@@ -96,6 +107,7 @@ PATCH_MODELS = (
     | ShowPatchInput
     | SourcePatchInput
     | WatchPatchInput
+    | PlaylistPatchInput
 )
 
 

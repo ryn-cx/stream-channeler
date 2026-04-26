@@ -5,29 +5,27 @@ import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { LayoutGrid, Table as TableIcon } from "lucide-react"
 import { useState } from "react"
-import { ChannelsService } from "@/client"
-import AddChannel from "@/components/Channels/ChannelList/AddChannel"
-import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
-import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
-import { columns } from "@/components/Channels/ChannelList/columns"
+
+import { PlaylistsService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
-import PendingChannelList from "@/components/Pending/PendingChannelList"
+import { columns } from "@/components/Playlists/PlaylistList/columns"
+import { PlaylistsBrowse } from "@/components/Playlists/PlaylistList/PlaylistsBrowse"
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
 import { usePersistedState } from "@/hooks/usePersistedState"
 
-function getChannelsQueryOptions() {
+function getPlaylistsQueryOptions() {
   return {
-    queryFn: () => ChannelsService.getChannels(),
-    queryKey: ["channels"],
+    queryFn: () => PlaylistsService.getPlaylists(),
+    queryKey: ["playlists"],
     refetchOnWindowFocus: false,
     placeholderData: (previousData: any) => previousData,
   }
 }
 
-export const Route = createFileRoute("/_layout/channels/")({
-  component: Channels,
+export const Route = createFileRoute("/_layout/playlists/")({
+  component: Playlists,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
@@ -36,7 +34,7 @@ export const Route = createFileRoute("/_layout/channels/")({
   head: () => ({
     meta: [
       {
-        title: "Channels - Stream Channeler",
+        title: "Playlists - Stream Channeler",
       },
     ],
   }),
@@ -44,12 +42,12 @@ export const Route = createFileRoute("/_layout/channels/")({
 
 type ViewMode = "table" | "browse"
 
-function ChannelsContent() {
-  const { data: channels, isPlaceholderData } = useQuery(
-    getChannelsQueryOptions(),
+function PlaylistsContent() {
+  const { data: playlists, isPlaceholderData } = useQuery(
+    getPlaylistsQueryOptions(),
   )
   const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    "channels-list-view",
+    "playlists-list-view",
     "browse",
   )
 
@@ -57,7 +55,7 @@ function ChannelsContent() {
     id: false,
   })
 
-  const tableData = channels ?? []
+  const tableData = playlists ?? []
 
   const table = useReactTable({
     data: tableData,
@@ -69,8 +67,6 @@ function ChannelsContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
-  if (!channels) return <PendingChannelList />
-
   return (
     <div
       className={
@@ -80,7 +76,7 @@ function ChannelsContent() {
       }
     >
       <div className="flex flex-wrap items-center gap-2 px-[4%] pt-4 pb-2">
-        <h1 className="text-2xl font-bold tracking-tight mr-2">Channels</h1>
+        <h1 className="text-2xl font-bold tracking-tight mr-2">Playlists</h1>
         {viewMode === "browse" ? (
           <Button
             variant="outline"
@@ -102,8 +98,6 @@ function ChannelsContent() {
             Browse
           </Button>
         )}
-        <AddChannel />
-        <BulkImport />
         {viewMode === "table" && <ColumnVisibilityButton table={table} />}
       </div>
 
@@ -117,16 +111,16 @@ function ChannelsContent() {
           />
         </div>
       ) : (
-        <ChannelsBrowse channels={tableData} />
+        <PlaylistsBrowse playlists={tableData} />
       )}
     </div>
   )
 }
 
-function Channels() {
+function Playlists() {
   return (
     <div className="flex flex-col gap-6">
-      <ChannelsContent />
+      <PlaylistsContent />
     </div>
   )
 }

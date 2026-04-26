@@ -3,13 +3,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import {
-  Check,
-  EllipsisVertical,
-  LayoutGrid,
-  Move,
-  Table as TableIcon,
-} from "lucide-react"
+import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
@@ -20,14 +14,15 @@ import {
 } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
-import { HeroBillboard } from "@/components/Channels/ChannelDetail/HeroBillboard"
 import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
 import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
+import { EditOrderButton } from "@/components/PlaylistChannelCommon/EditOrderButton"
+import { HeroBillboard } from "@/components/PlaylistChannelCommon/HeroBillboard"
+import { SaveAsPlaylistButton } from "@/components/Playlists/PlaylistDetail/SaveAsPlaylistButton"
 import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
+import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { usePersistedState } from "@/hooks/usePersistedState"
 
 function getChannelQueryOptions(channelId: string) {
@@ -130,6 +126,7 @@ type ViewMode = "table" | "cards"
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
   const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
+  const watchedMutation = useMarkWatched(channelId)
 
   useEffect(() => {
     document.title = `${channel.name} - Stream Channeler`
@@ -149,7 +146,12 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     "channel-detail-view",
     "cards",
   )
-  const [editOrder, setEditOrder] = useState(false)
+  const [editOrderFlag, setEditOrderFlag] = usePersistedState<"on" | "off">(
+    `channel-detail-edit-order:${channelId}`,
+    "off",
+  )
+  const editOrder = editOrderFlag === "on"
+  const setEditOrder = (next: boolean) => setEditOrderFlag(next ? "on" : "off")
 
   const currentChannelIds = search.additionalChannels
     ? [channelId, ...search.additionalChannels]
@@ -191,8 +193,11 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
       {showHero && heroEpisode && (
         <HeroBillboard
           episode={heroEpisode}
-          channelId={channelId}
           onPlay={() => {
+            watchedMutation.mutate(heroEpisode.id)
+            if (heroEpisode.url) {
+              window.open(heroEpisode.url, "_blank", "noopener,noreferrer")
+            }
             if (hasNextHero) setHeroIndex(heroIndex + 1)
           }}
           onSkip={() => {
@@ -221,14 +226,17 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => setViewMode("cards")}>
-                <LayoutGrid className="mr-2 size-4" />
-                Card View
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("table")}>
-                <TableIcon className="mr-2 size-4" />
-                Table View
-              </DropdownMenuItem>
+              {viewMode === "cards" ? (
+                <DropdownMenuItem onClick={() => setViewMode("table")}>
+                  <TableIcon className="mr-2 size-4" />
+                  Table View
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setViewMode("cards")}>
+                  <LayoutGrid className="mr-2 size-4" />
+                  Card View
+                </DropdownMenuItem>
+              )}
 
               {viewMode === "table" && (
                 <>
@@ -268,32 +276,37 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                   variant="menu"
                 />
               )}
+              <SaveAsPlaylistButton
+                episodes={episodesData?.episodes ?? []}
+                variant="menu"
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         {/* Larger screens: Show all buttons */}
         <div className="hidden xl:flex flex-wrap gap-2">
-          <ButtonGroup>
+          {viewMode === "cards" ? (
             <Button
-              variant={viewMode === "cards" ? "default" : "outline"}
-              onClick={() => setViewMode("cards")}
-              title="Card view"
-              className="mt-2 mb-4"
-            >
-              <LayoutGrid />
-              Cards
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "outline"}
+              variant="outline"
               onClick={() => setViewMode("table")}
-              title="Table view"
+              title="Switch to table view"
               className="mt-2 mb-4"
             >
               <TableIcon />
               Table
             </Button>
-          </ButtonGroup>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setViewMode("cards")}
+              title="Switch to card view"
+              className="mt-2 mb-4"
+            >
+              <LayoutGrid />
+              Cards
+            </Button>
+          )}
           {isOwner && <ManageShowsButton channelId={channelId} />}
           <ManageAdditionalChannels
             channelId={channelId}
@@ -311,15 +324,12 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {isOwner && (
             <SaveDefaultButton channelId={channelId} searchParams={search} />
           )}
+          <SaveAsPlaylistButton episodes={episodesData?.episodes ?? []} />
           {viewMode === "cards" && (
-            <Button
-              onClick={() => setEditOrder((value) => !value)}
-              title={editOrder ? "Finish reordering" : "Reorder episodes"}
-              className="mt-2 mb-4"
-            >
-              {editOrder ? <Check /> : <Move />}
-              {editOrder ? "Done" : "Edit Order"}
-            </Button>
+            <EditOrderButton
+              editOrder={editOrder}
+              onToggle={() => setEditOrder(!editOrder)}
+            />
           )}
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>

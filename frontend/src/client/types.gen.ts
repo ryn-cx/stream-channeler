@@ -183,6 +183,81 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type PlaylistDetailOutput = {
+    name?: (string | null);
+    public?: boolean;
+    id: string;
+    user_id: string;
+    created_at: string;
+    modified_at: string;
+    episodes: Array<PlaylistEpisodeOutput>;
+};
+
+export type PlaylistEpisodeOutput = {
+    position: number;
+    episode_id: string;
+};
+
+export type PlaylistEpisodesOutput = {
+    episodes: Array<PlaylistEpisodeWithExtrasOutput>;
+    seasons: {
+        [key: string]: SeasonOutput;
+    };
+    shows: {
+        [key: string]: ShowOutput;
+    };
+    sources: {
+        [key: string]: SourceOutput;
+    };
+    plugins: {
+        [key: string]: PluginOutput;
+    };
+};
+
+export type PlaylistEpisodeWithExtrasOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    url?: (string | null);
+    sort_order?: (number | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    duration?: (number | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    id: string;
+    season_id: string;
+    position: number;
+    watch_date?: (string | null);
+    verified?: (boolean | null);
+    episode_watch_id?: (string | null);
+};
+
+export type PlaylistOutput = {
+    name?: (string | null);
+    public?: boolean;
+    id: string;
+    user_id: string;
+    created_at: string;
+    modified_at: string;
+};
+
+export type PlaylistPatchInput = {
+    name?: (string | null);
+    public?: (boolean | null);
+    episode_ids?: (Array<(string)> | null);
+};
+
+export type PlaylistPostInput = {
+    name?: (string | null);
+    public?: boolean;
+    episode_ids?: Array<(string)>;
+};
+
 export type PluginImportURLInformation = {
     name: string;
     instructions: string;
@@ -792,6 +867,39 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type PlaylistsGetPlaylistsResponse = (Array<PlaylistOutput>);
+
+export type PlaylistsCreatePlaylistData = {
+    requestBody: PlaylistPostInput;
+};
+
+export type PlaylistsCreatePlaylistResponse = (PlaylistDetailOutput);
+
+export type PlaylistsGetPlaylistData = {
+    playlistId: string;
+};
+
+export type PlaylistsGetPlaylistResponse = (PlaylistDetailOutput);
+
+export type PlaylistsUpdatePlaylistData = {
+    playlistId: string;
+    requestBody: PlaylistPatchInput;
+};
+
+export type PlaylistsUpdatePlaylistResponse = (PlaylistDetailOutput);
+
+export type PlaylistsDeletePlaylistData = {
+    playlistId: string;
+};
+
+export type PlaylistsDeletePlaylistResponse = (Message);
+
+export type PlaylistsGetPlaylistEpisodesData = {
+    playlistId: string;
+};
+
+export type PlaylistsGetPlaylistEpisodesResponse = (PlaylistEpisodesOutput);
 
 export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
 

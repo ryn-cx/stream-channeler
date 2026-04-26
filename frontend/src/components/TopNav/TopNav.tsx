@@ -4,6 +4,7 @@ import {
   Database,
   Eye,
   LayoutDashboard,
+  ListMusic,
   LogIn,
   LogOut,
   Menu,
@@ -46,6 +47,7 @@ interface NavItem {
 const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "Channels", path: "/channels" },
+  { icon: ListMusic, title: "Playlists", path: "/playlists" },
   { icon: Eye, title: "Watches", path: "/watches" },
   { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]

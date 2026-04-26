@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel
 
 from app.channels.models import Channel
 from app.episodes.models import Episode
+from app.playlists.models import Playlist
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -24,7 +25,7 @@ class BaseInput(SQLModel):
     model_config = ConfigDict(extra="forbid")  # type: ignore[assignment]
 
 
-MediaModel = Episode | Season | Show | Source | Plugin | Channel | Watch
+MediaModel = Episode | Season | Show | Source | Plugin | Channel | Watch | Playlist
 
 
 class BasePostInputWithChild[

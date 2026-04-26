@@ -12,6 +12,7 @@ import {
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { formatDuration } from "@/components/PlaylistChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,7 +26,6 @@ import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import type { EpisodeWithDetails } from "./columns"
-import { formatDuration } from "./EpisodeCards"
 
 // Reuse card overlay system from EpisodeCards
 const allModules = import.meta.glob<{ default: React.ComponentType<any> }>(

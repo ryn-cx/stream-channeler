@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaForcePluginUpdateData, AdminMediaForcePluginUpdateResponse, AdminMediaForceSourceUpdateData, AdminMediaForceSourceUpdateResponse, AdminMediaForceShowUpdateData, AdminMediaForceShowUpdateResponse, AdminMediaForceSeasonUpdateData, AdminMediaForceSeasonUpdateResponse, AdminMediaForceEpisodeUpdateData, AdminMediaForceEpisodeUpdateResponse, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginsResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginSourcesData, PluginsGetPluginSourcesResponse, PluginsCreateSourceData, PluginsCreateSourceResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsGetEpisodesData, SeasonsGetEpisodesResponse, SeasonsCreateEpisodeData, SeasonsCreateEpisodeResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsGetSeasonsData, ShowsGetSeasonsResponse, ShowsCreateSeasonData, ShowsCreateSeasonResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesGetShowsData, SourcesGetShowsResponse, SourcesCreateShowData, SourcesCreateShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
+import type { AdminMediaListAllPluginsResponse, AdminMediaListPluginSourcesData, AdminMediaListPluginSourcesResponse, AdminMediaListSourceShowsData, AdminMediaListSourceShowsResponse, AdminMediaListShowSeasonsData, AdminMediaListShowSeasonsResponse, AdminMediaListSeasonEpisodesData, AdminMediaListSeasonEpisodesResponse, AdminMediaForcePluginUpdateData, AdminMediaForcePluginUpdateResponse, AdminMediaForceSourceUpdateData, AdminMediaForceSourceUpdateResponse, AdminMediaForceShowUpdateData, AdminMediaForceShowUpdateResponse, AdminMediaForceSeasonUpdateData, AdminMediaForceSeasonUpdateResponse, AdminMediaForceEpisodeUpdateData, AdminMediaForceEpisodeUpdateResponse, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PlaylistsGetPlaylistsResponse, PlaylistsCreatePlaylistData, PlaylistsCreatePlaylistResponse, PlaylistsGetPlaylistData, PlaylistsGetPlaylistResponse, PlaylistsUpdatePlaylistData, PlaylistsUpdatePlaylistResponse, PlaylistsDeletePlaylistData, PlaylistsDeletePlaylistResponse, PlaylistsGetPlaylistEpisodesData, PlaylistsGetPlaylistEpisodesResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginsResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginSourcesData, PluginsGetPluginSourcesResponse, PluginsCreateSourceData, PluginsCreateSourceResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsGetEpisodesData, SeasonsGetEpisodesResponse, SeasonsCreateEpisodeData, SeasonsCreateEpisodeResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsGetSeasonsData, ShowsGetSeasonsResponse, ShowsCreateSeasonData, ShowsCreateSeasonResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesGetShowsData, SourcesGetShowsResponse, SourcesCreateShowData, SourcesCreateShowResponse, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
 
 export class AdminMediaService {
     /**
@@ -795,6 +795,135 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class PlaylistsService {
+    /**
+     * Get Playlists
+     * List all ``Playlist``s owned by the current ``User``.
+     * @returns PlaylistOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPlaylists(): CancelablePromise<PlaylistsGetPlaylistsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/playlists'
+        });
+    }
+    
+    /**
+     * Create Playlist
+     * Create a ``Playlist`` with all of its episodes in one shot.
+     *
+     * The order of ``episode_ids`` defines the saved order. After creation the
+     * episode list cannot be modified — to change it, create a new playlist.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PlaylistDetailOutput Successful Response
+     * @throws ApiError
+     */
+    public static createPlaylist(data: PlaylistsCreatePlaylistData): CancelablePromise<PlaylistsCreatePlaylistResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/playlists',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Playlist
+     * Get a ``Playlist`` with its ordered episode list.
+     * @param data The data for the request.
+     * @param data.playlistId
+     * @returns PlaylistDetailOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPlaylist(data: PlaylistsGetPlaylistData): CancelablePromise<PlaylistsGetPlaylistResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/playlists/{playlist_id}',
+            path: {
+                playlist_id: data.playlistId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Playlist
+     * Update a ``Playlist``'s metadata and optionally replace its episodes.
+     *
+     * Individual ``PlaylistEpisode`` rows are never modified in place — when
+     * ``episode_ids`` is supplied, every existing entry is deleted and a fresh
+     * ordered set is inserted in one transaction.
+     * @param data The data for the request.
+     * @param data.playlistId
+     * @param data.requestBody
+     * @returns PlaylistDetailOutput Successful Response
+     * @throws ApiError
+     */
+    public static updatePlaylist(data: PlaylistsUpdatePlaylistData): CancelablePromise<PlaylistsUpdatePlaylistResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/playlists/{playlist_id}',
+            path: {
+                playlist_id: data.playlistId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Playlist
+     * Delete a ``Playlist`` owned by the current ``User``.
+     * @param data The data for the request.
+     * @param data.playlistId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deletePlaylist(data: PlaylistsDeletePlaylistData): CancelablePromise<PlaylistsDeletePlaylistResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/playlists/{playlist_id}',
+            path: {
+                playlist_id: data.playlistId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Playlist Episodes
+     * Read the episodes for a playlist with hydrated season/show/source/plugin data.
+     * @param data The data for the request.
+     * @param data.playlistId
+     * @returns PlaylistEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPlaylistEpisodes(data: PlaylistsGetPlaylistEpisodesData): CancelablePromise<PlaylistsGetPlaylistEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/playlists/{playlist_id}/episodes',
+            path: {
+                playlist_id: data.playlistId
             },
             errors: {
                 422: 'Validation Error'

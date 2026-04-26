@@ -1,5 +1,5 @@
 // TODO: Validate
-import { formatDuration } from "../../EpisodeCards"
+import { formatDuration } from "@/components/PlaylistChannelCommon/formatters"
 import {
   CardMetaLines,
   type CardOverlayProps,

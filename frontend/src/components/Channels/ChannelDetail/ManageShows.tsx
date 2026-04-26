@@ -6,6 +6,7 @@ import { useState } from "react"
 import { ChannelsService } from "@/client"
 import { OpenAPI } from "@/client/core/OpenAPI"
 import { request as apiRequest } from "@/client/core/request"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,7 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -159,21 +159,7 @@ export function ManageShows({
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          {variant === "menu" ? (
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault()
-              }}
-            >
-              <List className="mr-2 size-4" />
-              Manage Shows
-            </DropdownMenuItem>
-          ) : (
-            <Button className="mt-2 mb-4">
-              <List className="mr-2" />
-              Manage Shows
-            </Button>
-          )}
+          <VariantTrigger variant={variant} icon={List} label="Manage Shows" />
         </DialogTrigger>
 
         <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">

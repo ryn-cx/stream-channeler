@@ -1,7 +1,7 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChannelsService, PluginsService } from "@/client"
 import { OpenAPI } from "@/client/core/OpenAPI"
 import { request as apiRequest } from "@/client/core/request"
@@ -209,10 +209,17 @@ function ExpandedSources({
 
 interface ShowSearchProps {
   channelId: string
+  initialQuery?: string
 }
 
-export function ShowSearch({ channelId }: ShowSearchProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
+  const [searchQuery, setSearchQuery] = useState(initialQuery ?? "")
+
+  useEffect(() => {
+    if (initialQuery !== undefined) {
+      setSearchQuery(initialQuery)
+    }
+  }, [initialQuery])
   const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(
     null,
   )

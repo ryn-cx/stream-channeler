@@ -3,12 +3,11 @@ import type { useReactTable } from "@tanstack/react-table"
 import { Columns } from "lucide-react"
 import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -29,21 +28,7 @@ export function ColumnVisibilityButton<TData>({
     // From: https://ui.shadcn.com/docs/components/dropdown-menu
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        {variant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <Columns className="mr-2 size-4" />
-            Columns
-          </DropdownMenuItem>
-        ) : (
-          <Button className="mt-2 mb-4">
-            <Columns />
-            Columns
-          </Button>
-        )}
+        <VariantTrigger variant={variant} icon={Columns} label="Columns" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
