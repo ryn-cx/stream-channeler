@@ -17,7 +17,7 @@ export function CardSourceRow({
   episode,
   details,
 }: {
-  episode: EpisodeWithDetails
+  episode: BaseEpisodeWithDetails
   details: (string | null)[]
 }) {
   return (

@@ -7,7 +7,8 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 export type TriggerVariant = "button" | "menu" | "icon"
 
-interface VariantTriggerProps extends React.HTMLAttributes<HTMLElement> {
+interface VariantTriggerProps
+  extends Omit<React.HTMLAttributes<HTMLElement>, "onSelect"> {
   variant: TriggerVariant
   icon: LucideIcon
   /** Used in place of `icon` when `variant === "icon"`. Defaults to `icon`. */
