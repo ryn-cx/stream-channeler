@@ -4,8 +4,8 @@ from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
 from typing import override
-from xml.etree.ElementTree import tostring
 
+import httpx
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel import Channels as ChannelsEndpoint
@@ -150,40 +150,28 @@ class PlaylistFeed(XMLFile):
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            # A "UU..." key is a channel's auto-generated uploads playlist;
-            # YouTube's RSS feed exposes it as the channel itself via the
-            # corresponding "UC..." channel_id. Regular playlists use the
-            # playlist_id parameter.
             if self.unique_identifier.startswith("UU"):
                 params = {"channel_id": "UC" + self.unique_identifier[2:]}
             else:
                 params = {"playlist_id": self.unique_identifier}
-            response = not_yt_dlapi().get_around.get(
+            response = httpx.get(
                 "https://www.youtube.com/feeds/videos.xml",
                 params=params,
             )
-            # get_around returns a Response without a linked Request, so
-            # raise_for_status() can't run. Check the status code directly.
-            if not response.is_success:
-                msg = (
-                    f"PlaylistFeed fetch for {self.unique_identifier} "
-                    f"returned HTTP {response.status_code}"
-                )
-                raise RuntimeError(msg)
+            response.raise_for_status()
             self._write(response.text)
 
-    def entries(self) -> list[str] | None:
-        """Return each entry serialized as a string, or None if no content."""
-        if (
-            not self._existing_database_record
-            or not self._existing_database_record.content
-        ):
-            return None
-        namespaces = {"atom": "http://www.w3.org/2005/Atom"}
-        return [
-            tostring(entry, encoding="unicode")
-            for entry in self.parsed().findall("atom:entry", namespaces)
-        ]
+    def video_ids(self) -> list[str]:
+        namespaces = {
+            "atom": "http://www.w3.org/2005/Atom",
+            "yt": "http://www.youtube.com/xml/schemas/2015",
+        }
+        result: list[str] = []
+        for entry in self.parsed().findall("atom:entry", namespaces):
+            video_id = entry.find("yt:videoId", namespaces)
+            if video_id is not None and video_id.text:
+                result.append(video_id.text)
+        return result
 
 
 class FileMixin(BasePlugin, register=False):
