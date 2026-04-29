@@ -31,7 +31,7 @@ export function HeroBillboard({
     ""
 
   return (
-    <div className="relative w-full aspect-video">
+    <div className="relative w-full md:aspect-video md:max-h-[65vh]">
       {imageUrl && (
         <img
           src={imageUrl}
@@ -45,19 +45,19 @@ export function HeroBillboard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
 
       <div className="relative h-full flex flex-col">
-        <div className="flex-1" />
-        <div className="sticky bottom-0 p-6 md:p-12 lg:p-16 flex flex-col gap-4 max-w-[66%]">
+        <div className="hidden md:block flex-1" />
+        <div className="p-4 md:p-12 lg:p-16 flex flex-col gap-3 md:gap-4 max-w-full md:max-w-[66%]">
           <div className="flex flex-col gap-2">
-            <p className="text-base md:text-lg font-medium text-zinc-300">
+            <p className="text-sm md:text-lg font-medium text-zinc-300 line-clamp-1">
               {episode.show.name}
               {episode.season.name ? ` - ${episode.season.name}` : ""}
             </p>
-            <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+            <h2 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white leading-tight line-clamp-2">
               {episode.name || `Episode ${episode.episode_number || ""}`}
             </h2>
           </div>
 
-          <div className="flex items-center gap-3 text-base text-zinc-300">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm md:text-base text-zinc-300">
             {episode.duration != null && episode.duration > 0 && (
               <span>{formatDuration(episode.duration)}</span>
             )}
@@ -67,18 +67,12 @@ export function HeroBillboard({
             {episode.source.name && <span>{episode.source.name}</span>}
           </div>
 
-          {episode.description && (
-            <p className="text-sm text-zinc-300 line-clamp-3 whitespace-pre-line">
-              {episode.description}
-            </p>
-          )}
-
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1 md:mt-2">
             {hasPrev && (
               <Button
-                size="lg"
+                size="default"
                 variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2"
+                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
                 onClick={onBack}
               >
                 <ChevronLeft className="size-5" />
@@ -86,8 +80,8 @@ export function HeroBillboard({
               </Button>
             )}
             <Button
-              size="lg"
-              className="bg-white text-black hover:bg-white/80 font-semibold gap-2"
+              size="default"
+              className="bg-white text-black hover:bg-white/80 font-semibold gap-2 md:h-10 md:px-4"
               onClick={onPlay}
             >
               <Play className="size-5 fill-current" />
@@ -95,9 +89,9 @@ export function HeroBillboard({
             </Button>
             {episode.url && (
               <Button
-                size="lg"
+                size="default"
                 variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2"
+                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
                 onClick={() =>
                   window.open(episode.url!, "_blank", "noopener,noreferrer")
                 }
@@ -108,9 +102,9 @@ export function HeroBillboard({
             )}
             {hasNext && (
               <Button
-                size="lg"
+                size="default"
                 variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2"
+                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
                 onClick={onSkip}
               >
                 <SkipForward className="size-5" />
