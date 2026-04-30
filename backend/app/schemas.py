@@ -1,3 +1,4 @@
+# TODO: Validate
 from fastapi import HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Session, SQLModel
@@ -28,7 +29,7 @@ class BaseInput(SQLModel):
 MediaModel = Episode | Season | Show | Source | Plugin | Channel | Watch | Playlist
 
 
-class BasePostInputWithChild[
+class BaseCreateWithChild[
     ModelT: Source | Show | Season | Episode,
     ParentT: Plugin | Source | Show | Season,
 ](BaseInput):

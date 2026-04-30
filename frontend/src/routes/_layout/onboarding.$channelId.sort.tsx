@@ -1,3 +1,4 @@
+// TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { OnboardingSort } from "@/components/Onboarding/Onboarding"
 import { isLoggedIn } from "@/hooks/useAuth"

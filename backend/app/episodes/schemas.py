@@ -1,9 +1,10 @@
+# TODO: Validate
 import uuid
 
 from sqlmodel import Field
 
 from app.episodes.models import BaseEpisode, Episode
-from app.schemas import BasePatchInputWithKey, BasePostInputWithChild
+from app.schemas import BasePatchInputWithKey, BaseCreateWithChild
 from app.seasons.models import Season
 
 
@@ -12,7 +13,7 @@ class EpisodeOutput(BaseEpisode):
     season_id: uuid.UUID
 
 
-class EpisodePostInput(BasePostInputWithChild[Episode, Season], BaseEpisode):
+class EpisodePostInput(BaseCreateWithChild[Episode, Season], BaseEpisode):
     pass
 
 

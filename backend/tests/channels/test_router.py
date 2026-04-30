@@ -31,8 +31,8 @@ from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 from app.users.models import User
 from tests.channels.utils import (
     create_random_channel,
@@ -363,8 +363,8 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
                 EpisodeWithExtrasOutput(**episode.model_dump(), channel_id=channel.id),
             )
             expected.seasons[season.id] = SeasonOutput.model_validate(season)
-            expected.shows[show.id] = ShowOutput.model_validate(show)
-            expected.sources[source.id] = SourceOutput.model_validate(source)
+            expected.shows[show.id] = ShowPublic.model_validate(show)
+            expected.sources[source.id] = SourcePublic.model_validate(source)
             expected.plugins[plugin.id] = PluginOutput.model_validate(plugin)
 
         return channel, expected
@@ -675,9 +675,9 @@ class TestListChannelShows:
         for channel_show in channel.shows:
             show = channel_show.show
             source = show.source
-            expected.shows.append(ShowOutput.model_validate(show))
+            expected.shows.append(ShowPublic.model_validate(show))
             if source.id not in expected.sources:
-                expected.sources[source.id] = SourceOutput.model_validate(source)
+                expected.sources[source.id] = SourcePublic.model_validate(source)
         return expected
 
     @pytest.mark.parametrize("show_count", [0, 1, 2])

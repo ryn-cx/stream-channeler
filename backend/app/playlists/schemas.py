@@ -10,8 +10,8 @@ from app.playlists.models import BasePlaylist, BasePlaylistEpisode
 from app.plugins.schemas import PluginOutput
 from app.schemas import BaseInput
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 
 
 class PlaylistOutput(BasePlaylist):
@@ -39,8 +39,8 @@ class PlaylistEpisodeWithExtrasOutput(EpisodeOutput):
 class PlaylistEpisodesOutput(BaseModel):
     episodes: list[PlaylistEpisodeWithExtrasOutput]
     seasons: dict[uuid.UUID, SeasonOutput]
-    shows: dict[uuid.UUID, ShowOutput]
-    sources: dict[uuid.UUID, SourceOutput]
+    shows: dict[uuid.UUID, ShowPublic]
+    sources: dict[uuid.UUID, SourcePublic]
     plugins: dict[uuid.UUID, PluginOutput]
 
 

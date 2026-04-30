@@ -45,12 +45,12 @@ from app.seasons.schemas import (
     SeasonPostInput,
 )
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput, ShowPatchInput, ShowPostInput
+from app.shows.schemas import ShowPublic, ShowUpdate, ShowCreate
 from app.sources.models import Source
 from app.sources.schemas import (
-    SourceOutput,
-    SourcePatchInput,
-    SourcePostInput,
+    SourcePublic,
+    SourceUpdate,
+    SourceCreate,
 )
 from app.users.models import User
 from app.watches.models import Watch
@@ -75,8 +75,8 @@ INPUT_SCHEMAS = (
     | EpisodePostInput
     | PluginPostInput
     | SeasonPostInput
-    | ShowPostInput
-    | SourcePostInput
+    | ShowCreate
+    | SourceCreate
     | WatchPostInput
     | PlaylistPostInput
 )
@@ -85,8 +85,8 @@ OUTPUT_MODELS = (
     | EpisodeOutput
     | PluginOutput
     | SeasonOutput
-    | ShowOutput
-    | SourceOutput
+    | ShowPublic
+    | SourcePublic
     | WatchOutput
     | PlaylistOutput
 )
@@ -95,8 +95,8 @@ LIST_OUTPUT_MODELS = (
     | list[EpisodeOutput]
     | list[PluginOutput]
     | list[SeasonOutput]
-    | list[ShowOutput]
-    | list[SourceOutput]
+    | list[ShowPublic]
+    | list[SourcePublic]
     | list[PlaylistOutput]
 )
 PATCH_MODELS = (
@@ -104,8 +104,8 @@ PATCH_MODELS = (
     | EpisodePatchInput
     | PluginPatchInput
     | SeasonPatchInput
-    | ShowPatchInput
-    | SourcePatchInput
+    | ShowUpdate
+    | SourceUpdate
     | WatchPatchInput
     | PlaylistPatchInput
 )

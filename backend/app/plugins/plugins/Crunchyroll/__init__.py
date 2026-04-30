@@ -1,3 +1,4 @@
+# TODO: Validate
 # This plugin intentionally does not support movies from the movies page because it has
 # been unofficially deprecated as movies are now added as a series instead.
 

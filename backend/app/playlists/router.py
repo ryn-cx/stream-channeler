@@ -20,8 +20,8 @@ from app.playlists.schemas import (
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 from app.watches.models import Watch
 
@@ -95,9 +95,9 @@ def get_playlist_episodes(
         if episode.season_id not in output.seasons:
             output.seasons[episode.season_id] = SeasonOutput.model_validate(season)
         if season.show_id not in output.shows:
-            output.shows[season.show_id] = ShowOutput.model_validate(show)
+            output.shows[season.show_id] = ShowPublic.model_validate(show)
         if show.source_id not in output.sources:
-            output.sources[show.source_id] = SourceOutput.model_validate(source)
+            output.sources[show.source_id] = SourcePublic.model_validate(source)
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 

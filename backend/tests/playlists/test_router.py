@@ -20,8 +20,8 @@ from app.playlists.schemas import (
 )
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 from app.watches.models import Watch
 from tests.episodes.utils import create_random_episode
 from tests.playlists.utils import (
@@ -265,8 +265,8 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
                 ),
             )
             expected.seasons[season.id] = SeasonOutput.model_validate(season)
-            expected.shows[show.id] = ShowOutput.model_validate(show)
-            expected.sources[source.id] = SourceOutput.model_validate(source)
+            expected.shows[show.id] = ShowPublic.model_validate(show)
+            expected.sources[source.id] = SourcePublic.model_validate(source)
             expected.plugins[plugin.id] = PluginOutput.model_validate(plugin)
 
         session_scoped_session.refresh(playlist)

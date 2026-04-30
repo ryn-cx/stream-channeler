@@ -9,8 +9,8 @@ from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
 from app.schemas import BaseInput, BasePatchInputWithoutKey
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 from app.watches.models import BaseWatch, Watch
 
 
@@ -56,8 +56,8 @@ class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
     episodes: dict[uuid.UUID, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
-    shows: dict[uuid.UUID, ShowOutput] = Field()
-    sources: dict[uuid.UUID, SourceOutput] = Field()
+    shows: dict[uuid.UUID, ShowPublic] = Field()
+    sources: dict[uuid.UUID, SourcePublic] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
 
 

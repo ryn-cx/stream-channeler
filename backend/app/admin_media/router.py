@@ -1,3 +1,4 @@
+# TODO: Validate
 from collections.abc import Sequence
 
 from fastapi import APIRouter, Depends
@@ -17,10 +18,10 @@ from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.dependencies import ReadableShow
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput
+from app.shows.schemas import ShowPublic
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput
+from app.sources.schemas import SourcePublic
 from app.users.service import get_or_create_plugin_user
 
 router = APIRouter(
@@ -38,13 +39,13 @@ def list_all_plugins(session: SessionDep) -> Sequence[Plugin]:
     return session.exec(plugin_select).all()
 
 
-@router.get("/plugins/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
+@router.get("/plugins/{plugin_id}/sources", response_model=list[SourcePublic])  # noqa: FAST003 - Used by ReadablePlugin
 def list_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
     """List all sources for a plugin."""
     return list(plugin.sources)
 
 
-@router.get("/sources/{source_id}/shows", response_model=list[ShowOutput])  # noqa: FAST003 - Used by ReadableSource
+@router.get("/sources/{source_id}/shows", response_model=list[ShowPublic])  # noqa: FAST003 - Used by ReadableSource
 def list_source_shows(source: ReadableSource) -> list[Show]:
     """List all shows for a source."""
     return list(source.shows)

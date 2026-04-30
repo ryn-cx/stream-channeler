@@ -1,3 +1,4 @@
+# TODO: Validate
 from fastapi import APIRouter
 
 from app.auth.dependencies import SessionDep
@@ -11,14 +12,14 @@ from app.seasons.schemas import (
 from app.shows.dependencies import OwnedShow, ReadableShow
 from app.shows.models import Show
 from app.shows.schemas import (
-    ShowOutput,
-    ShowPatchInput,
+    ShowPublic,
+    ShowUpdate,
 )
 
 router = APIRouter(prefix="/shows", tags=["shows"])
 
 
-@router.get("/{show_id}", response_model=ShowOutput)  # noqa: FAST003 - Used by ReadableShow
+@router.get("/{show_id}", response_model=ShowPublic)  # noqa: FAST003 - Used by ReadableShow
 def get_show(show: ReadableShow) -> Show:
     """Get a ``Show`` if it's readable by the current ``User``."""
     return show
@@ -40,11 +41,11 @@ def create_season(
     return season_input.create(session, Season, show)
 
 
-@router.patch("/{show_id}", response_model=ShowOutput)  # noqa: FAST003 - Used by OwnedShow
+@router.patch("/{show_id}", response_model=ShowPublic)  # noqa: FAST003 - Used by OwnedShow
 def update_show(
     session: SessionDep,
     show: OwnedShow,
-    show_input: ShowPatchInput,
+    show_input: ShowUpdate,
 ) -> Show:
     """Update and return a ``Show`` if it's owned by the current ``User``."""
     return show_input.update(session, show)

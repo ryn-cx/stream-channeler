@@ -18,9 +18,9 @@ from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput
+from app.shows.schemas import ShowPublic
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput
+from app.sources.schemas import SourcePublic
 from app.users.service import get_or_create_plugin_user
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -63,8 +63,8 @@ def _format_watched_episodes_data(
 ) -> WatchesListOutput:
     episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
-    shows_dict: dict[uuid.UUID, ShowOutput] = {}
-    sources_dict: dict[uuid.UUID, SourceOutput] = {}
+    shows_dict: dict[uuid.UUID, ShowPublic] = {}
+    sources_dict: dict[uuid.UUID, SourcePublic] = {}
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
 
@@ -80,9 +80,9 @@ def _format_watched_episodes_data(
         if season.id not in seasons_dict:
             seasons_dict[season.id] = SeasonOutput.model_validate(season)
         if show.id not in shows_dict:
-            shows_dict[show.id] = ShowOutput.model_validate(show)
+            shows_dict[show.id] = ShowPublic.model_validate(show)
         if source.id not in sources_dict:
-            sources_dict[source.id] = SourceOutput.model_validate(source)
+            sources_dict[source.id] = SourcePublic.model_validate(source)
         if plugin.id not in plugins_dict:
             plugins_dict[plugin.id] = PluginOutput.model_validate(plugin)
 

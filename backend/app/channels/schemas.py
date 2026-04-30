@@ -24,9 +24,9 @@ from app.schemas import BaseInput, BasePatchInputWithoutKey
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput
+from app.shows.schemas import ShowPublic
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput
+from app.sources.schemas import SourcePublic
 
 
 class ChannelPostInput(BaseInput, BaseChannel):
@@ -58,15 +58,15 @@ class EpisodeWithExtrasOutput(EpisodeOutput):
 class ChannelEpisodesOutput(BaseModel):
     episodes: list[EpisodeWithExtrasOutput]
     seasons: dict[uuid.UUID, SeasonOutput]
-    shows: dict[uuid.UUID, ShowOutput]
-    sources: dict[uuid.UUID, SourceOutput]
+    shows: dict[uuid.UUID, ShowPublic]
+    sources: dict[uuid.UUID, SourcePublic]
     plugins: dict[uuid.UUID, PluginOutput]
     channels: dict[uuid.UUID, ChannelOutput]
 
 
 class ChannelShowsOutput(BaseModel):
-    shows: list[ShowOutput] = Field(default_factory=list)
-    sources: dict[uuid.UUID, SourceOutput] = Field(default_factory=dict)
+    shows: list[ShowPublic] = Field(default_factory=list)
+    sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
 
 
 class WhitelistEntryInput(BaseInput):
@@ -80,7 +80,7 @@ class WhitelistShowInput(BaseInput):
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
 
 
-class WhitelistShowOutput(ShowOutput):
+class WhitelistShowOutput(ShowPublic):
     whitelist_mode: bool
     enabled_season_ids: list[uuid.UUID]
     enabled_episode_ids: list[uuid.UUID]

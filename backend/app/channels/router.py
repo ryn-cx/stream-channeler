@@ -35,8 +35,8 @@ from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput
-from app.sources.schemas import SourceOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 
 router = APIRouter(prefix="/channels", tags=["channels"])
@@ -138,9 +138,9 @@ def get_channel_episodes(
         if episode.season_id not in output.seasons:
             output.seasons[episode.season_id] = SeasonOutput.model_validate(season)
         if season.show_id not in output.shows:
-            output.shows[season.show_id] = ShowOutput.model_validate(show)
+            output.shows[season.show_id] = ShowPublic.model_validate(show)
         if show.source_id not in output.sources:
-            output.sources[show.source_id] = SourceOutput.model_validate(source)
+            output.sources[show.source_id] = SourcePublic.model_validate(source)
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
@@ -165,10 +165,10 @@ def get_channel_shows(
         if not plugin.public and (not user or user.id != plugin.user_id):
             continue
 
-        output.shows.append(ShowOutput.model_validate(show))
+        output.shows.append(ShowPublic.model_validate(show))
 
         if source.id not in output.sources:
-            output.sources[source.id] = SourceOutput.model_validate(source)
+            output.sources[source.id] = SourcePublic.model_validate(source)
 
     return output
 

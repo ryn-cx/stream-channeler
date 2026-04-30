@@ -14,9 +14,9 @@ from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
-from app.shows.schemas import ShowOutput
+from app.shows.schemas import ShowPublic
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput
+from app.sources.schemas import SourcePublic
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchesListOutput,
@@ -252,8 +252,8 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             expected.watches.append(WatchItem.model_validate(watch))
             expected.episodes[episode.id] = EpisodeOutput.model_validate(episode)
             expected.seasons[season.id] = SeasonOutput.model_validate(season)
-            expected.shows[show.id] = ShowOutput.model_validate(show)
-            expected.sources[source.id] = SourceOutput.model_validate(source)
+            expected.shows[show.id] = ShowPublic.model_validate(show)
+            expected.sources[source.id] = SourcePublic.model_validate(source)
             expected.plugins[plugin.id] = PluginOutput.model_validate(plugin)
         return expected
 

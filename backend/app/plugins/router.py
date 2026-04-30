@@ -1,3 +1,4 @@
+# TODO: Validate
 from fastapi import APIRouter, HTTPException, status
 
 from app.auth.dependencies import CurrentUser, SessionDep
@@ -20,7 +21,7 @@ from app.plugins.schemas import (
 )
 from app.schemas import Message
 from app.sources.models import Source
-from app.sources.schemas import SourceOutput, SourcePostInput
+from app.sources.schemas import SourcePublic, SourceCreate
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 
@@ -135,17 +136,17 @@ def create_plugin(
     return plugin
 
 
-@router.get("/{plugin_id}/sources", response_model=list[SourceOutput])  # noqa: FAST003 - Used by ReadablePlugin
+@router.get("/{plugin_id}/sources", response_model=list[SourcePublic])  # noqa: FAST003 - Used by ReadablePlugin
 def get_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
     """List all ``Source``s for a ``Plugin`` if it is public or owned by the current ``User``."""
     return plugin.sources
 
 
-@router.post("/{plugin_id}/sources", response_model=SourceOutput)  # noqa: FAST003 - Used by OwnedPlugin
+@router.post("/{plugin_id}/sources", response_model=SourcePublic)  # noqa: FAST003 - Used by OwnedPlugin
 def create_source(
     session: SessionDep,
     plugin: OwnedPlugin,
-    source_input: SourcePostInput,
+    source_input: SourceCreate,
 ) -> Source:
     """Create a ``Source`` if the ``Plugin`` is owned by the current ``User``."""
     return source_input.create(session, Source, plugin)

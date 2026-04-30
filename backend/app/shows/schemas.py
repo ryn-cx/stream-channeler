@@ -1,20 +1,21 @@
+# TODO: Validate
 import uuid
 
 from sqlmodel import Field
 
-from app.schemas import BasePatchInputWithKey, BasePostInputWithChild
+from app.schemas import BasePatchInputWithKey, BaseCreateWithChild
 from app.shows.models import BaseShow, Show
 from app.sources.models import Source
 
 
-class ShowOutput(BaseShow):
-    source_id: uuid.UUID
-    id: uuid.UUID
-
-
-class ShowPostInput(BasePostInputWithChild[Show, Source], BaseShow):
+class ShowCreate(BaseCreateWithChild[Show, Source], BaseShow):
     pass
 
 
-class ShowPatchInput(BasePatchInputWithKey[Show], BaseShow):
+class ShowUpdate(BasePatchInputWithKey[Show], BaseShow):
     key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment] # Patch input can ignore required values.
+
+
+class ShowPublic(BaseShow):
+    source_id: uuid.UUID
+    id: uuid.UUID
