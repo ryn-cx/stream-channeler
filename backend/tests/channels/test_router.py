@@ -12,14 +12,14 @@ from sqlmodel import Session
 
 from app.channels.models import Channel, ChannelShow, URLStatus
 from app.channels.schemas import (
+    ChannelCreate,
     ChannelEpisodesOutput,
     ChannelOptions,
     ChannelOutput,
-    ChannelPatchInput,
-    ChannelPostInput,
     ChannelQueueOutput,
     ChannelShowsOutput,
-    EpisodeWithExtrasOutput,
+    ChannelUpdate,
+    EpisodeWithDetails,
     SortOptionOutput,
     WhitelistEntryInput,
     WhitelistShowInput,
@@ -29,6 +29,7 @@ from app.channels.service import update_whitelist
 from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
+from app.models import Visibility
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowPublic
@@ -63,20 +64,20 @@ from tests.utils.utils import dump_random_model, random_lower_string
 SKIP_REASON = "Channels use /channels, not /users/{id}/channels"
 SORT_OPTIONS_URL = f"{settings.API_V1_STR}/channels/sort-options"
 
-# region Validated
-
 
 class ChannelTestMixin(BaseTests[Channel]):
     database_model = Channel
-    input_schema = ChannelPostInput
-    output_model = ChannelOutput
-    patch_model = ChannelPatchInput
+    create_schema = ChannelCreate
+    output_schema = ChannelOutput
+    update_schema = ChannelUpdate
     create_record_function = staticmethod(create_random_channel)
 
-    # Channels do not rely on plugins for visibility and instead have their own public
-    # field.
+    # Channels do not rely on plugins for visibility and instead have their own
+    # visibility column.
     def set_visibility(self, record: Channel, *, record_is_public: bool) -> None:
-        record.public = record_is_public
+        record.visibility = (
+            Visibility.public if record_is_public else Visibility.private
+        )
 
 
 class TestCreateChannel(ChannelTestMixin, UserOwnedCreateMixin[Channel]):
@@ -116,13 +117,10 @@ class TestSortOptions:
             client=session_scoped_client,
             method="get",
             url=SORT_OPTIONS_URL,
-            output_model=SortOptionOutput,
+            output_schema=SortOptionOutput,
             headers=headers,
         )
         assert len(result) > 0
-
-
-# endregion Validated
 
 
 class BaseChannelSubEndpointTests(ChannelTestMixin):
@@ -326,12 +324,12 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         session_scoped_session: Session,
         user_id: uuid.UUID,
         *,
-        public: bool,
+        is_public: bool,
     ) -> tuple[Channel, ChannelEpisodesOutput]:
         channel = create_random_channel(
             session_scoped_session,
             user=user_id,
-            public=public,
+            is_public=is_public,
         )
 
         expected = ChannelEpisodesOutput(
@@ -345,12 +343,14 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         expected.channels[channel.id] = ChannelOutput.model_validate(channel)
 
         for _ in range(2):
-            plugin = create_random_plugin(session_scoped_session, user_id, public=True)
+            plugin = create_random_plugin(
+                session_scoped_session, user_id, visibility=Visibility.public
+            )
             channel_show = create_random_channel_show(
                 session_scoped_session,
                 channel,
                 plugin,
-                white_list_mode=False,
+                is_whitelist=False,
             )
             show = channel_show.show
             create_random_episode(session_scoped_session, show)
@@ -360,7 +360,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             episode = season.episodes[0]
 
             expected.episodes.append(
-                EpisodeWithExtrasOutput(**episode.model_dump(), channel_id=channel.id),
+                EpisodeWithDetails(**episode.model_dump(), channel_id=channel.id),
             )
             expected.seasons[season.id] = SeasonOutput.model_validate(season)
             expected.shows[show.id] = ShowPublic.model_validate(show)
@@ -405,7 +405,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         channel, expected = self.create_channel_with_episodes(
             session_scoped_session,
             owner.id,
-            public=record_is_public,
+            is_public=record_is_public,
         )
 
         if not user_is_authenticated and not record_is_public:
@@ -472,7 +472,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         channel = create_random_channel(
             session_scoped_session,
             user=owner.id,
-            public=record_is_public,
+            is_public=record_is_public,
         )
         expected = ChannelEpisodesOutput(
             episodes=[],
@@ -552,20 +552,20 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         channel = create_random_channel(
             session_scoped_session,
             user=channel_owner.id,
-            public=True,
+            is_public=True,
         )
 
         # Add a show from a private plugin owned by plugin_owner
         private_plugin = create_random_plugin(
             session_scoped_session,
             plugin_owner.id,
-            public=False,
+            visibility=Visibility.private,
         )
         channel_show = create_random_channel_show(
             session_scoped_session,
             channel,
             private_plugin,
-            white_list_mode=False,
+            is_whitelist=False,
         )
         show = channel_show.show
         create_random_episode(session_scoped_session, show)
@@ -626,19 +626,19 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         channel = create_random_channel(
             session_scoped_session,
             user=channel_owner.id,
-            public=True,
+            is_public=True,
         )
 
         public_plugin = create_random_plugin(
             session_scoped_session,
             channel_owner.id,
-            public=True,
+            visibility=Visibility.public,
         )
         channel_show = create_random_channel_show(
             session_scoped_session,
             channel,
             public_plugin,
-            white_list_mode=False,
+            is_whitelist=False,
         )
         show = channel_show.show
         create_random_episode(session_scoped_session, show)
@@ -701,7 +701,7 @@ class TestListChannelShows:
             client=session_scoped_client,
             method="get",
             url=self.url(channel),
-            output_model=ChannelShowsOutput,
+            output_schema=ChannelShowsOutput,
             headers=owner_headers,
         )
         expected = self.build_expected(channel)
@@ -727,7 +727,7 @@ class TestListChannelShows:
         channel = create_random_channel(
             session_scoped_session,
             user=owner.id,
-            public=record_is_public,
+            is_public=record_is_public,
         )
         show = create_random_show(
             session_scoped_session,
@@ -775,7 +775,7 @@ class TestListChannelShows:
             client=session_scoped_client,
             method="get",
             url=self.url(channel),
-            output_model=ChannelShowsOutput,
+            output_schema=ChannelShowsOutput,
             headers=headers,
         )
 
@@ -825,7 +825,7 @@ class TestDeleteChannelShow:
         channel = create_random_channel(
             session_scoped_session,
             user=owner.id,
-            public=record_is_public,
+            is_public=record_is_public,
         )
         show = create_random_show(
             session_scoped_session,
@@ -963,7 +963,7 @@ class BaseChannelQueueTests(BaseChannelSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=self.queue_url(channel.id),
-            output_model=ChannelQueueOutput,
+            output_schema=ChannelQueueOutput,
             headers=headers,
         )
         assert [record.url for record in result] == expected_urls
@@ -1061,7 +1061,7 @@ class TestQueueAddURL(BaseChannelQueueTests):
             client=session_scoped_client,
             method="post",
             url=self.queue_url(channel.id),
-            output_model=ChannelQueueOutput,
+            output_schema=ChannelQueueOutput,
             headers=headers,
             parameters=urls,
         )
@@ -1306,7 +1306,7 @@ class TestClearCompletedQueue(BaseChannelSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/import-queue",
-            output_model=ChannelQueueOutput,
+            output_schema=ChannelQueueOutput,
             headers=initial_test_data.headers,
         )
         remaining_urls = {record.url for record in result}
@@ -1348,13 +1348,15 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=f"{settings.API_V1_STR}/channels/{channel.id}/whitelist/{channel_show.show_id}",
-            output_model=WhitelistShowOutput,
+            output_schema=WhitelistShowOutput,
             headers=headers,
         )
-        assert result.whitelist_mode == channel_show.white_list_mode
-        assert result.enabled_season_ids == (expected_season_ids or [])
-        assert result.enabled_episode_ids == (expected_episode_ids or [])
-        assert result.episodes == [
+        assert result.is_whitelist == channel_show.is_whitelist
+        actual_season_ids = [s.id for s in result.seasons if s.filtered]
+        actual_episode_ids = [e.id for e in result.episodes if e.filtered]
+        assert actual_season_ids == (expected_season_ids or [])
+        assert actual_episode_ids == (expected_episode_ids or [])
+        assert [EpisodeOutput.model_validate(e) for e in result.episodes] == [
             EpisodeOutput.model_validate(episode) for episode in episodes
         ]
 
@@ -1388,7 +1390,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         plugin = create_random_plugin(
             session_scoped_session,
             plugin_owner,
-            public=plugin_is_public,
+            visibility=Visibility.public if plugin_is_public else Visibility.private,
         )
 
         show = create_random_show(session_scoped_session, plugin)
@@ -1404,7 +1406,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=url,
-            output_model=ChannelShowsOutput,
+            output_schema=ChannelShowsOutput,
             headers=initial_test_data.headers,
         )
         if plugin_is_public or user_owns_plugin:
@@ -1440,7 +1442,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         plugin = create_random_plugin(
             session_scoped_session,
             other_user,
-            public=plugin_is_public,
+            visibility=Visibility.public if plugin_is_public else Visibility.private,
         )
         show = create_random_show(session_scoped_session, plugin)
         channel_show = create_random_channel_show(
@@ -1522,7 +1524,7 @@ class WhitelistUpdateTestData:
 
 class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     sub_http_method = "patch"
-    sub_parameters = WhitelistShowInput(whitelist_mode=True).model_dump(mode="json")
+    sub_parameters = WhitelistShowInput(is_whitelist=True).model_dump(mode="json")
 
     def can_access_sub_endpoint(
         self,
@@ -1544,9 +1546,9 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         expected_episode_ids: set[uuid.UUID],
         expected_season_ids: set[uuid.UUID],
     ) -> None:
-        assert result.whitelist_mode is expected_mode
-        assert set(result.enabled_episode_ids) == expected_episode_ids
-        assert set(result.enabled_season_ids) == expected_season_ids
+        assert result.is_whitelist is expected_mode
+        assert {e.id for e in result.episodes if e.filtered} == expected_episode_ids
+        assert {s.id for s in result.seasons if s.filtered} == expected_season_ids
 
     def assert_update_result(
         self,
@@ -1562,7 +1564,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             client=session_scoped_client,
             method="patch",
             url=f"{settings.API_V1_STR}/channels/{setup.channel.id}/whitelist/{setup.channel_show.show_id}",
-            output_model=WhitelistShowOutput,
+            output_schema=WhitelistShowOutput,
             headers=setup.user_headers,
             parameters=update_input.model_dump(mode="json"),
         )
@@ -1590,7 +1592,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             session_scoped_session,
             initial_test_data.record,
             initial_test_data.user,
-            white_list_mode=True,
+            is_whitelist=True,
         )
         episodes = [
             create_random_episode(session_scoped_session, channel_show.show)
@@ -1611,7 +1613,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         seasons.append(WhitelistEntryInput(id=target_episode.season.id, marked=True))
         episodes_input.append(WhitelistEntryInput(id=target_episode.id, marked=True))
         initial_input = WhitelistShowInput(
-            whitelist_mode=True,
+            is_whitelist=True,
             seasons=seasons,
             episodes=episodes_input,
         )
@@ -1643,7 +1645,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         )
 
         update_input = WhitelistShowInput(
-            whitelist_mode=True,
+            is_whitelist=True,
             seasons=[
                 WhitelistEntryInput(
                     id=setup.preserved_unmarked_episode.season.id,

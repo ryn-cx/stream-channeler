@@ -9,7 +9,6 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
-    select,
 )
 
 from app.models import BaseMediaMixin, MediaMixin
@@ -35,6 +34,7 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
         Index("Source-deleted_at-index", "deleted_at"),
     )
 
+    # Direct fields.
     SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
@@ -42,18 +42,8 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     shows: list[Show] = Relationship(back_populates="source", cascade_delete=True)
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID | None:
-        return session.exec(
-            select(Plugin.user_id).where(Plugin.id == self.plugin_id),
-        ).first()
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return bool(
-            session.exec(
-                select(Plugin.public).where(Plugin.id == self.plugin_id),
-            ).first(),
-        )
+    def _root_record(self, session: Session) -> Plugin:
+        return self.plugin
 
     @property
     @override

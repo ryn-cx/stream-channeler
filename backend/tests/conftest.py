@@ -57,8 +57,10 @@ def create_test_engine(db_suffix: str) -> Engine:
 
 
 def reset_tables(engine: Engine) -> None:
-    """Drop and recreate all tables on the given engine."""
-    SQLModel.metadata.drop_all(engine)
+    """Drop everything in the test DB and recreate tables from current metadata."""
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
     SQLModel.metadata.create_all(engine)
 
 

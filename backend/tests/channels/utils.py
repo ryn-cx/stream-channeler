@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.channels.schemas import ChannelOutput
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
@@ -17,12 +18,16 @@ from tests.utils.utils import build_random_model
 def create_random_channel(
     session: Session,
     user: User | CreatedUser | uuid.UUID | None = None,
+    *,
+    is_public: bool | None = None,
     **kwargs: object,
 ) -> Channel:
     if user is None:
         user = create_random_user(session)
     if isinstance(user, (User, CreatedUser)):
         user = user.id
+    if is_public is not None and "visibility" not in kwargs:
+        kwargs["visibility"] = Visibility.public if is_public else Visibility.private
     channel = build_random_model(Channel, user_id=user, **kwargs)
     session.add(channel)
     session.flush()  #   Allows channel.shows and channel.queue to be accessed.

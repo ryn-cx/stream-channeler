@@ -44,12 +44,14 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     SORTABLE_FIELDS: ClassVar[list[str]] = [
+        # Direct fields.
         "id",
-        "name",
         "media_type",
-        "started",
+        "name",
+        # Indirect fields.
         "episode_count",
         "random",
+        "started",
     ]
 
     source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
@@ -66,24 +68,13 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID | None:
+    def _root_record(self, session: Session) -> Plugin:
         return session.exec(
-            select(Plugin.user_id)
+            select(Plugin)
             .select_from(Source)
             .join(Plugin)
             .where(Source.id == self.source_id),
-        ).first()
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return bool(
-            session.exec(
-                select(Plugin.public)
-                .select_from(Source)
-                .join(Plugin)
-                .where(Source.id == self.source_id),
-            ).first(),
-        )
+        ).one()
 
     @property
     @override

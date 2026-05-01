@@ -43,8 +43,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             latest_browse_file = self._get_latest_browse_file()
             self.source = self._upsert_source(latest_browse_file)
 
-    # region Import Watch History
-
     @classmethod
     @override
     def import_watch_history_instructions(cls) -> str:
@@ -72,10 +70,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             for entry in json.loads(content)
         ]
 
-    # endregion Import Watch History
-
-    # region Import URL
-
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -88,7 +82,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         show_key = self.parse_url(url)
         self._validate_url(show_key, url)
         show = self._import_show(show_key)
-        return [URLImportResult(show=show, whitelist_mode=False)]
+        return [URLImportResult(show=show, is_whitelist=False)]
 
     @classmethod
     @override
@@ -110,10 +104,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
         _cache = self._download_show_files(show_key)
         return self._upsert_show(self.source, show_key=show_key)
-
-    # endregion Import URL
-
-    # region Update Source
 
     @override
     def update_source(self, source: Source) -> None:
@@ -146,8 +136,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
 
-    # endregion
-
     @classmethod
     @override
     def domains(cls) -> list[str]:
@@ -161,8 +149,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         #   https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
         regex_string = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
         return domain_regex + regex_string
-
-    # region Upsert
 
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
@@ -269,11 +255,9 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
         self.soft_delete_missing_episodes(season.key)
 
-    # endregion Upsert
-
     @override
     def search(self, query: str) -> PluginSearchResults:
-        """Search Crunchyroll for series matching ``query``.
+        """Search Crunchyroll for series matching `query`.
 
         The underlying response is cached on disk; the file is re-downloaded
         only if it's older than 30 days.

@@ -14,8 +14,8 @@ import type {
   EpisodeOutput,
   PluginOutput,
   SeasonOutput,
-  ShowOutput,
-  SourceOutput,
+  ShowPublic,
+  SourcePublic,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -28,8 +28,8 @@ import {
 /** Episode shape required by the shared card layout and overlays. */
 export type BaseEpisodeWithDetails = EpisodeOutput & {
   season: SeasonOutput
-  show: ShowOutput
-  source: SourceOutput
+  show: ShowPublic
+  source: SourcePublic
   plugin: PluginOutput
 }
 

@@ -1,4 +1,5 @@
-# TODO: Validate
+"""Episode models."""
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, override
@@ -19,8 +20,14 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 
+if TYPE_CHECKING:
+    from app.channels.models import ChannelEpisodeFilter
+    from app.watches.models import Watch
+
 
 class BaseEpisode(BaseMediaMixin):
+    """Base model representing an Episode."""
+
     url: str | None = Field(default=None)
     sort_order: int | None = Field(default=None)
     description: str | None = Field(default=None)
@@ -32,74 +39,58 @@ class BaseEpisode(BaseMediaMixin):
     air_date: datetime | None = DateTimeField(default=None)
 
 
-if TYPE_CHECKING:
-    from app.channels.models import ChannelEpisodeWhiteList
-    from app.watches.models import Watch
-
-
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
+    """Model representing an Episode."""
+
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
         # Included in SORTABLE_FIELDS.
-        Index("Episode-sort_order-index", "sort_order"),
+        Index("Episode-air_date-index", "air_date"),
+        Index("Episode-duration-index", "duration"),
         Index("Episode-episode_number-index", "episode_number"),
         Index("Episode-name-index", "name"),
         Index("Episode-release_date-index", "release_date"),
-        Index("Episode-air_date-index", "air_date"),
-        Index("Episode-duration-index", "duration"),
+        Index("Episode-sort_order-index", "sort_order"),
+        # Used to filter out deleted episodes.
         Index("Episode-deleted_at-index", "deleted_at"),
     )
 
     SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "id",
-        "sort_order",
-        "sequential",
-        "episode_number",
-        "name",
-        "duration",
-        "release_date",
+        # Direct fields.
         "air_date",
-        "recently_aired",
+        "duration",
+        "episode_number",
+        "id",
+        "name",
+        "release_date",
+        "sort_order",
+        # Indirect fields.
         "last_watched",
         "random",
+        "recently_aired",
+        "sequential",
     ]
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
 
-    white_lists: list[ChannelEpisodeWhiteList] = Relationship(
+    channel_filters: list[ChannelEpisodeFilter] = Relationship(
         back_populates="episode",
         cascade_delete=True,
     )
-    watches: list[Watch] = Relationship(
-        back_populates="episode",
-        cascade_delete=True,
-    )
+    watches: list[Watch] = Relationship(back_populates="episode", cascade_delete=True)
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID | None:
+    def _root_record(self, session: Session) -> Plugin:
         return session.exec(
-            select(Plugin.user_id)
+            select(Plugin)
             .select_from(Season)
             .join(Show)
             .join(Source)
             .join(Plugin)
             .where(Season.id == self.season_id),
-        ).first()
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return bool(
-            session.exec(
-                select(Plugin.public)
-                .select_from(Season)
-                .join(Show)
-                .join(Source)
-                .join(Plugin)
-                .where(Season.id == self.season_id),
-            ).first(),
-        )
+        ).one()
 
     @property
     @override

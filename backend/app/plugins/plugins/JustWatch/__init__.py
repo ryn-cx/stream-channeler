@@ -52,8 +52,6 @@ class JustWatch(FileMixin, register=True):
             self.plugin.data_timestamp = self.plugin_data_timestamp()
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
-    # region Import URL
-
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -113,7 +111,7 @@ class JustWatch(FileMixin, register=True):
         # If no season was specified all shows should be returned.
         if not season_key:
             return [
-                URLImportResult(show=show, whitelist_mode=False)
+                URLImportResult(show=show, is_whitelist=False)
                 for show in filtered_shows
             ]
 
@@ -123,7 +121,7 @@ class JustWatch(FileMixin, register=True):
         # to match a season is by using the actual season number.
         season_number = int(season_key.split("-")[-1])
         return [
-            URLImportResult(show=show, seasons=[season], whitelist_mode=True)
+            URLImportResult(show=show, seasons=[season], is_whitelist=True)
             for show in filtered_shows
             if (
                 season := next(
@@ -144,6 +142,7 @@ class JustWatch(FileMixin, register=True):
         - If source_name is None or empty, all shows are returned.
         - If source_name is a valid string, the show with the closest matching name is
         returned.
+
         """
         if not source_name or not shows:
             return shows
@@ -154,10 +153,6 @@ class JustWatch(FileMixin, register=True):
         }
         best_match = get_close_matches(source_name, sources, n=1, cutoff=0.0)
         return [sources[best_match[0]]]
-
-    # endregion
-
-    # region Update Plugin
 
     @override
     def update_plugin(self, plugin: Plugin) -> None:
@@ -177,9 +172,9 @@ class JustWatch(FileMixin, register=True):
             for edge in bucket.parsed_edges():
                 short_name = edge.key.package.short_name
                 source = Source.get_from_memory(self.session, self.plugin, short_name)
+                # TODO: This is just bypassing a serious error.
                 if not source:
-                    msg = f"Source with key {short_name!r} not found."
-                    raise ValueError(msg)
+                    continue
 
                 extra: set[str] = set(json.loads(source.extra or "[]"))
                 extra.add(edge.key.date.isoformat())
@@ -201,10 +196,6 @@ class JustWatch(FileMixin, register=True):
             self._new_titles_bucket_file(file)
             for file in self.session.exec(statement).all()
         ]
-
-    # endregion
-
-    # region Update Source
 
     @override
     def update_source(self, source: Source) -> None:
@@ -282,10 +273,6 @@ class JustWatch(FileMixin, register=True):
                     else:
                         show.set_update_at(file.data_timestamp)
 
-    # endregion
-
-    # region Regex
-
     @classmethod
     def _url_regex(cls) -> str:
         # Example URLs:
@@ -302,18 +289,10 @@ class JustWatch(FileMixin, register=True):
 
         return source_name_regex + domain_regex + url_string
 
-    # endregion
-
-    # region Class Methods
-
     @classmethod
     @override
     def domains(cls) -> list[str]:
         return ["justwatch.com"]
-
-    # endregion
-
-    # region Upsert
 
     @property
     def _images_base_url(self) -> str:
@@ -610,10 +589,6 @@ class JustWatch(FileMixin, register=True):
         ).upsert(season, existing_episode)
         return episode_info.id
 
-    # endregion Upsert
-
-    # region Search
-
     # TODO: Consider caching this if it is slow.
     def _get_source_lookup(self) -> dict[str, dict[str, str]]:
         """Build a short_name -> {clear_name, icon_url} mapping from ProvidersLocale."""
@@ -675,5 +650,3 @@ class JustWatch(FileMixin, register=True):
             has_source_selection=True,
             results=results,
         )
-
-    # endregion Search

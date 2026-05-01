@@ -1,7 +1,7 @@
 # TODO: Validate
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.schemas import Message
@@ -12,7 +12,7 @@ from app.watches.schemas import (
     WatchImportInput,
     WatchImportResults,
     WatchOutput,
-    WatchPatchInput,
+    WatchUpdate,
 )
 from app.watches.services import (
     delete_watches,
@@ -23,8 +23,6 @@ from app.watches.services import (
 )
 
 router = APIRouter(prefix="/watches", tags=["watches"])
-
-# region CRUD
 
 
 @router.get("")
@@ -46,7 +44,7 @@ def get_watch(watch: OwnedWatch) -> Watch:
 def update_watch(
     session: SessionDep,
     watch: OwnedWatch,
-    watch_input: WatchPatchInput,
+    watch_input: WatchUpdate,
 ) -> list[WatchOutput]:
     """Update a watch and all matching sibling watches."""
     return update_watches(session, watch, watch_input)
@@ -56,9 +54,6 @@ def update_watch(
 def delete_watch(session: SessionDep, watch: OwnedWatch) -> Message:
     """Delete a watch and all sibling watches by its id."""
     return delete_watches(session, watch)
-
-
-# endregion CRUD
 
 
 @router.post("/sync")
@@ -85,12 +80,12 @@ def import_watch_history(
     plugin = get_installed_plugin(session, params.plugin_key)
     if not plugin:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Plugin '{params.plugin_key}' not found.",
         )
     if not plugin.implements("import_watch_history_instructions"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail=f"Plugin '{params.plugin_key}' does not support watch history import.",
         )
 

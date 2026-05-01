@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
-import { ChannelsService, type ShowOutput } from "@/client"
+import { ChannelsService, type ShowPublic } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -158,7 +158,7 @@ async function enrichWithImages(
   return results
 }
 
-function buildPrompt(showsByType: Record<string, ShowOutput[]>): string {
+function buildPrompt(showsByType: Record<string, ShowPublic[]>): string {
   const groupedSections = Object.entries(showsByType)
     .map(([type, shows]) => {
       const uniqueNames = Array.from(
@@ -173,7 +173,7 @@ function buildPrompt(showsByType: Record<string, ShowOutput[]>): string {
 }
 
 function buildMorePrompt(
-  showsByType: Record<string, ShowOutput[]>,
+  showsByType: Record<string, ShowPublic[]>,
   alreadySuggested: Suggestion[],
 ): string {
   const groupedSections = Object.entries(showsByType)
@@ -238,8 +238,8 @@ ${groupedSections}
 `
 }
 
-function groupShows(shows: ShowOutput[]): Record<string, ShowOutput[]> {
-  const groups: Record<string, ShowOutput[]> = {}
+function groupShows(shows: ShowPublic[]): Record<string, ShowPublic[]> {
+  const groups: Record<string, ShowPublic[]> = {}
   for (const show of shows) {
     const key = show.media_type || "Other"
     if (!groups[key]) groups[key] = []

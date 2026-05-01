@@ -75,8 +75,6 @@ class Search(GAPIJSON[search_models.Search]):
 
 
 class FileMixin(BasePlugin, register=False):
-    # region File Wrappers
-
     def _series_file(self, show_key: str) -> Series:
         return self._get_cached_file(
             Series,
@@ -116,10 +114,6 @@ class FileMixin(BasePlugin, register=False):
             lambda: Search(self.session, self.plugin, query),
         )
 
-    # endregion File Wrappers
-
-    # region File Groups
-
     @override
     def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
         return [
@@ -151,10 +145,6 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[Episodes]:
         return [self._episodes_file(season_key)]
 
-    # endregion File Groups
-
-    # region File Data
-
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         return [
@@ -173,8 +163,6 @@ class FileMixin(BasePlugin, register=False):
             for season_key in season_keys
             for episode in self._episodes_file(season_key).parsed().data
         ]
-
-    # endregion File Data
 
     def _preload_latest_browse_file(self) -> File | None:
         statement = (

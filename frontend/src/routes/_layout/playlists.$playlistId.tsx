@@ -8,6 +8,7 @@ import {
   EpisodesService,
   type PlaylistEpisodesOutput,
   PlaylistsService,
+  type Visibility,
 } from "@/client"
 import { EditOrderButton } from "@/components/PlaylistChannelCommon/EditOrderButton"
 import type {
@@ -178,11 +179,11 @@ function PlaylistDetail() {
     },
   })
 
-  const togglePublicMutation = useMutation({
-    mutationFn: (next: boolean) =>
+  const cycleVisibilityMutation = useMutation({
+    mutationFn: (next: Visibility) =>
       PlaylistsService.updatePlaylist({
         playlistId,
-        requestBody: { public: next },
+        requestBody: { visibility: next },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playlist", playlistId] })
@@ -193,6 +194,12 @@ function PlaylistDetail() {
       showErrorToast(`Could not change visibility: ${message}`)
     },
   })
+
+  const nextVisibility = (current: Visibility): Visibility => {
+    if (current === "public") return "unlisted"
+    if (current === "unlisted") return "private"
+    return "public"
+  }
 
   const playHeroMutation = useMutation({
     mutationFn: (episodeId: string) =>
@@ -275,15 +282,25 @@ function PlaylistDetail() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => togglePublicMutation.mutate(!playlist.public)}
-              disabled={togglePublicMutation.isPending}
+              onClick={() =>
+                cycleVisibilityMutation.mutate(
+                  nextVisibility(playlist.visibility ?? "private"),
+                )
+              }
+              disabled={cycleVisibilityMutation.isPending}
               className="mt-2 mb-4"
             >
-              {playlist.public ? (
+              {playlist.visibility === "public" && (
                 <>
                   <Globe className="mr-1 size-4" /> Public
                 </>
-              ) : (
+              )}
+              {playlist.visibility === "unlisted" && (
+                <>
+                  <Globe className="mr-1 size-4" /> Unlisted
+                </>
+              )}
+              {playlist.visibility === "private" && (
                 <>
                   <Lock className="mr-1 size-4" /> Private
                 </>

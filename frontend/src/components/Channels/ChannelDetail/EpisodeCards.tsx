@@ -12,11 +12,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRef, useState } from "react"
-import {
-  type ChannelEpisodesOutput,
-  type EpisodeWithExtrasOutput,
-  WatchesService,
-} from "@/client"
+import { type ChannelEpisodesOutput, WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import {
   type MoveDirection,
@@ -374,7 +370,7 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [...oldData.episodes]
         const currentIndex = eps.findIndex((ep) => ep.id === currentEpisodeId)
         const nextIndex = eps.findIndex((ep) => ep.id === nextEpisodeId)
 
@@ -399,7 +395,7 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [...oldData.episodes]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||
@@ -420,7 +416,7 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithExtrasOutput[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [...oldData.episodes]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||

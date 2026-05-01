@@ -1,30 +1,11 @@
-# TODO: Validate
-import uuid
+"""Source dependencies."""
+
 from typing import Annotated
 
-from fastapi import Depends, Path
+from fastapi import Depends
 
-from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import get_owned_record, get_readable_record
+from app.media.service import owned_record, readable_record
 from app.sources.models import Source
-from app.users.dependencies import OptionalUser
 
-
-def require_owned_source(
-    session: SessionDep,
-    current_user: CurrentUser,
-    source_id: Annotated[uuid.UUID, Path()],
-) -> Source:
-    return get_owned_record(session, Source, source_id, current_user.id)
-
-
-def require_readable_source(
-    session: SessionDep,
-    optional_user: OptionalUser,
-    source_id: Annotated[uuid.UUID, Path()],
-) -> Source:
-    return get_readable_record(session, Source, source_id, optional_user)
-
-
-ReadableSource = Annotated[Source, Depends(require_readable_source)]
-OwnedSource = Annotated[Source, Depends(require_owned_source)]
+ReadableSource = Annotated[Source, Depends(readable_record(Source, "source_id"))]
+OwnedSource = Annotated[Source, Depends(owned_record(Source, "source_id"))]

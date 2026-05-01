@@ -17,19 +17,20 @@ from app.channels.dependencies import (
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelQueue
 from app.channels.schemas import (
+    ChannelCreate,
     ChannelEpisodesOutput,
     ChannelOptions,
     ChannelOutput,
-    ChannelPatchInput,
-    ChannelPostInput,
     ChannelQueueOutput,
     ChannelShowsOutput,
-    EpisodeWithExtrasOutput,
+    ChannelUpdate,
+    EpisodeWithDetails,
     SortOptionOutput,
+    WhitelistEpisodeOutput,
+    WhitelistSeasonOutput,
     WhitelistShowInput,
     WhitelistShowOutput,
 )
-from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
@@ -44,8 +45,21 @@ router = APIRouter(prefix="/channels", tags=["channels"])
 
 @router.get("", response_model=list[ChannelOutput])
 def get_channels(current_user: CurrentUser) -> list[Channel]:
-    """List all ``Channel``s owned by the current ``User``."""
+    """List all `Channel`s owned by the current `User`."""
     return current_user.channels
+
+
+@router.post("", response_model=ChannelOutput)
+def create_channel(
+    session: SessionDep,
+    current_user: CurrentUser,
+    channel_in: ChannelCreate,
+) -> Channel:
+    """Create a `Channel` owned by the current `User`."""
+    channel = Channel.model_validate(channel_in, update={"user_id": current_user.id})
+    session.add(channel)
+    session.commit()
+    return channel
 
 
 @router.get("/sort-options")
@@ -85,8 +99,24 @@ def bulk_import_queue_urls(
 
 @router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by ReadableChannel
 def get_channel(channel: ReadableChannel) -> Channel:
-    """Get a channel by its id."""
+    """Get a `Channel` if it's readable by the current `User`."""
     return channel
+
+
+@router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by OwnedChannel.
+def update_channel(
+    session: SessionDep,
+    channel: OwnedChannel,
+    channel_in: ChannelUpdate,
+) -> Channel:
+    """Update a `Channel` if it's owned by the current `User`."""
+    return channel_in.update(session, channel)
+
+
+@router.delete("/{channel_id}")  # noqa: FAST003 - Used by OwnedChannel.
+def delete_channel(session: SessionDep, channel: OwnedChannel) -> Message:
+    """Delete a `Channel` if it's owned by the current `User`."""
+    return delete_record(session, channel)
 
 
 @router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.
@@ -132,7 +162,7 @@ def get_channel_episodes(
             extras["episode_watch_id"] = result.latest_watch.id
 
         output.episodes.append(
-            EpisodeWithExtrasOutput(**episode.model_dump(), **extras),
+            EpisodeWithDetails(**episode.model_dump(), **extras),
         )
 
         if episode.season_id not in output.seasons:
@@ -153,6 +183,7 @@ def get_channel_episodes(
 def get_channel_shows(
     channel: ReadableChannel,
     user: OptionalUser,
+    session: SessionDep,
 ) -> ChannelShowsOutput:
     """Read all shows for a channel."""
     output = ChannelShowsOutput()
@@ -162,7 +193,9 @@ def get_channel_shows(
         source = show.source
         plugin = source.plugin
 
-        if not plugin.public and (not user or user.id != plugin.user_id):
+        if not plugin.is_publically_readable(session) and (
+            not user or user.id != plugin.user_id
+        ):
             continue
 
         output.shows.append(ShowPublic.model_validate(show))
@@ -179,24 +212,31 @@ def get_channel_whitelist(
     channel_show: OwnedChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Read the whitelist for a show in a channel."""
-    seasons: list[SeasonOutput] = []
-    episodes: list[EpisodeOutput] = []
+    enabled_season_ids = {x.season_id for x in channel_show.season_filters}
+    enabled_episode_ids = {x.episode_id for x in channel_show.episode_filters}
+
+    seasons: list[WhitelistSeasonOutput] = []
+    episodes: list[WhitelistEpisodeOutput] = []
 
     for season in channel_show.show.seasons:
-        seasons.append(SeasonOutput.model_validate(season))
-
+        seasons.append(
+            WhitelistSeasonOutput.model_validate(
+                season,
+                update={"filtered": season.id in enabled_season_ids},
+            ),
+        )
         episodes.extend(
-            EpisodeOutput.model_validate(episode) for episode in season.episodes
+            WhitelistEpisodeOutput.model_validate(
+                episode,
+                update={"filtered": episode.id in enabled_episode_ids},
+            )
+            for episode in season.episodes
         )
 
     return WhitelistShowOutput.model_validate(
         channel_show.show,
         update={
-            "whitelist_mode": channel_show.white_list_mode,
-            "enabled_season_ids": [x.season_id for x in channel_show.season_white_list],
-            "enabled_episode_ids": [
-                x.episode_id for x in channel_show.episode_white_list
-            ],
+            "is_whitelist": channel_show.is_whitelist,
             "seasons": seasons,
             "episodes": episodes,
         },
@@ -215,30 +255,6 @@ def update_channel_whitelist(
     return get_channel_whitelist(channel_show)
 
 
-@router.post("", response_model=ChannelOutput)
-def create_channel(
-    session: SessionDep,
-    current_user: CurrentUser,
-    channel_in: ChannelPostInput,
-) -> Channel:
-    """Create a ``Channel`` owned by the current ``User``."""
-    channel = Channel.model_validate(channel_in, update={"user_id": current_user.id})
-    session.add(channel)
-    session.commit()
-    return channel
-
-
-# FAST003 - Parameter is used by UserChannel.
-@router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003
-def update_channel(
-    session: SessionDep,
-    channel: OwnedChannel,
-    channel_in: ChannelPatchInput,
-) -> Channel:
-    """Update a ``Channel`` owned by the current ``User``."""
-    return channel_in.update(session, channel)
-
-
 # FAST003 - Parameter is used by UserChannel.
 @router.patch("/{channel_id}/default-order", response_model=ChannelOutput)  # noqa: FAST003
 def update_channel_default_order(
@@ -246,7 +262,7 @@ def update_channel_default_order(
     channel: OwnedChannel,
     channel_options: ChannelOptions,
 ) -> Channel:
-    """Update the default sort order for a ``Channel``."""
+    """Update the default sort order for a `Channel`."""
     exclude: set[str] = set()
     if "random_seed" not in channel_options.model_fields_set:
         exclude.add("random_seed")
@@ -262,20 +278,13 @@ def update_channel_default_order(
 
 
 # FAST003 - Parameter is used by UserChannel.
-@router.delete("/{channel_id}")  # noqa: FAST003
-def delete_channel(session: SessionDep, channel: OwnedChannel) -> Message:
-    """Delete a ``Channel`` owned by the current ``User``."""
-    return delete_record(session, channel)
-
-
-# FAST003 - Parameter is used by UserChannel.
 @router.delete("/{channel_id}/remove-show/{show_id}")  # noqa: FAST003
 def delete_channel_show(
     channel: OwnedChannel,
     session: SessionDep,
     show_id: str,
 ) -> Message:
-    """Remove a ``Show`` from a ``Channel``."""
+    """Remove a `Show` from a `Channel`."""
     if not (show := session.exec(select(Show).where(Show.id == show_id)).first()):
         raise HTTPException(status_code=404, detail="Show not found")
 

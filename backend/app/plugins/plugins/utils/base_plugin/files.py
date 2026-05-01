@@ -22,18 +22,12 @@ _UNLOADED = Sentinel("DATABASE_RECORD")
 class BaseFile[T](ABC):
     IMMUTABLE: bool = False
 
-    # region Initialization
-
     def __init__(self, session: Session, plugin: Plugin) -> None:
         """Initialize the file."""
         self.__session = session
         self.__plugin = plugin
         self._cached_parsed: T | None = None
         self.__database_record: File | None | Sentinel = _UNLOADED
-
-    # endregion Initialization
-
-    # region Database Record
 
     @property
     def _existing_database_record(self) -> File | None:
@@ -64,9 +58,6 @@ class BaseFile[T](ABC):
         """Return the timestamp of the data in the file."""
         return self.database_record.data_timestamp
 
-    # endregion Database Record
-
-    # region Key/Identifier
     unique_identifier: str
 
     def file_key(self) -> str:
@@ -89,10 +80,6 @@ class BaseFile[T](ABC):
 
         This is a file extension like .json, .xml, .html, etc.
         """
-
-    # endregion Key/Identifier
-
-    # region Download
 
     @contextmanager
     def _log_download(self, identifier: str) -> Generator[None]:
@@ -131,8 +118,6 @@ class BaseFile[T](ABC):
         """Download the file."""
         msg = f"{type(self).__name__} does not implement _download"
         raise NotImplementedError(msg)
-
-    # endregion Download
 
     def _write(self, content: str | None) -> None:
         """Write content to the file without committing to the database."""

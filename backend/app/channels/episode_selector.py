@@ -14,12 +14,13 @@ from sqlmodel.sql.expression import Select, SelectOfScalar
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channels.models import (
     Channel,
-    ChannelEpisodeWhiteList,
-    ChannelSeasonWhiteList,
+    ChannelEpisodeFilter,
+    ChannelSeasonFilter,
     ChannelShow,
 )
 from app.channels.schemas import ChannelOptions, SortKeyInput
 from app.episodes.models import Episode
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -124,10 +125,12 @@ class _SortExpressionBuilder:
         field = sort_key.field
 
         if field == "random":
-            random_ids: dict[str, Mapped[UUID]] = {
-                "episode": Episode.id,  # type: ignore[dict-item]
-                "season": Season.id,  # type: ignore[dict-item]
-                "show": Show.id,  # type: ignore[dict-item]
+            random_ids: dict[str, UUID] = {
+                "episode": Episode.id,
+                "season": Season.id,
+                "show": Show.id,
+                "source": Source.id,
+                "plugin": Plugin.id,
             }
             return self.random_hash(random_ids[sort_key.model])
         if field == "sequential":
@@ -298,15 +301,13 @@ class EpisodeQueryBuilder:
             return [main_channel.id]
 
         query = select(Channel.id).where(col(Channel.id).in_(additional_channel_ids))
+        readable = col(Channel.visibility).in_(
+            (Visibility.public, Visibility.unlisted),
+        )
         if self._user is None:
-            query = query.where(col(Channel.public).is_(True))
+            query = query.where(readable)
         elif not self._user.is_superuser:
-            query = query.where(
-                or_(
-                    col(Channel.public).is_(True),
-                    col(Channel.user_id) == self._user.id,
-                ),
-            )
+            query = query.where(or_(readable, col(Channel.user_id) == self._user.id))
 
         return [main_channel.id, *self._session.exec(query).all()]
 
@@ -381,19 +382,18 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         return query.outerjoin(
-            ChannelSeasonWhiteList,
+            ChannelSeasonFilter,
             and_(
-                ChannelSeasonWhiteList.channel_show_id == ChannelShow.id,
-                ChannelSeasonWhiteList.season_id == Season.id,
+                ChannelSeasonFilter.channel_show_id == ChannelShow.id,
+                ChannelSeasonFilter.season_id == Season.id,
             ),
         ).outerjoin(
-            ChannelEpisodeWhiteList,
+            ChannelEpisodeFilter,
             and_(
-                ChannelEpisodeWhiteList.channel_show_id == ChannelShow.id,
-                ChannelEpisodeWhiteList.episode_id == Episode.id,
+                ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
+                ChannelEpisodeFilter.episode_id == Episode.id,
             ),
         )
-
 
     def _join_show_last_watched(
         self,
@@ -448,7 +448,9 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         """Filter out episodes from private plugins the viewer doesn't own."""
-        conditions = [col(Plugin.public).is_(True)]
+        conditions: list[ColumnElement[bool]] = [
+            col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
+        ]
         if self._user:
             conditions.append(col(Plugin.user_id) == self._user.id)  # type: ignore[arg-type]
         return (
@@ -461,28 +463,28 @@ class EpisodeQueryBuilder:
     def _channel_access_condition() -> ColumnElement[bool]:
         return or_(
             and_(
-                col(ChannelShow.white_list_mode).is_(True),
+                col(ChannelShow.is_whitelist).is_(True),
                 or_(
                     and_(
-                        col(ChannelSeasonWhiteList.season_id).is_not(None),
-                        col(ChannelEpisodeWhiteList.episode_id).is_(None),
+                        col(ChannelSeasonFilter.season_id).is_not(None),
+                        col(ChannelEpisodeFilter.episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonWhiteList.season_id).is_(None),
-                        col(ChannelEpisodeWhiteList.episode_id).is_not(None),
+                        col(ChannelSeasonFilter.season_id).is_(None),
+                        col(ChannelEpisodeFilter.episode_id).is_not(None),
                     ),
                 ),
             ),
             and_(
-                col(ChannelShow.white_list_mode).is_(False),
+                col(ChannelShow.is_whitelist).is_(False),
                 or_(
                     and_(
-                        col(ChannelSeasonWhiteList.season_id).is_(None),
-                        col(ChannelEpisodeWhiteList.episode_id).is_(None),
+                        col(ChannelSeasonFilter.season_id).is_(None),
+                        col(ChannelEpisodeFilter.episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonWhiteList.season_id).is_not(None),
-                        col(ChannelEpisodeWhiteList.episode_id).is_not(None),
+                        col(ChannelSeasonFilter.season_id).is_not(None),
+                        col(ChannelEpisodeFilter.episode_id).is_not(None),
                     ),
                 ),
             ),

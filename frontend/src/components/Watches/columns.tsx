@@ -5,8 +5,8 @@ import type {
   EpisodeOutput,
   PluginOutput,
   SeasonOutput,
-  ShowOutput,
-  SourceOutput,
+  ShowPublic,
+  SourcePublic,
   WatchItem,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
@@ -18,8 +18,8 @@ import VerifyWatch from "./VerifyWatch"
 interface WatchWithDetails extends WatchItem {
   episode: EpisodeOutput
   season: SeasonOutput
-  show: ShowOutput
-  source: SourceOutput
+  show: ShowPublic
+  source: SourcePublic
   plugin: PluginOutput
 }
 

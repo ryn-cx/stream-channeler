@@ -1,9 +1,9 @@
 # TODO: Validate
 from app.shows.models import Show
 from app.shows.schemas import (
+    ShowCreate,
     ShowPublic,
     ShowUpdate,
-    ShowCreate,
 )
 from tests.shows.utils import create_random_show
 from tests.sources.utils import create_random_source
@@ -16,9 +16,9 @@ from tests.utils.base_update import BaseUpdateTests
 
 class ShowTestMixin(BaseTests[Show]):
     database_model = Show
-    input_schema = ShowCreate
-    output_model = ShowPublic
-    patch_model = ShowUpdate
+    create_schema = ShowCreate
+    output_schema = ShowPublic
+    update_schema = ShowUpdate
     create_parent_function = staticmethod(create_random_source)
     create_record_function = staticmethod(create_random_show)
 

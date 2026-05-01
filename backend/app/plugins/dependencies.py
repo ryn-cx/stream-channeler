@@ -1,30 +1,11 @@
-# TODO: Validate
-import uuid
+"""Plugin dependencies."""
+
 from typing import Annotated
 
-from fastapi import Depends, Path
+from fastapi import Depends
 
-from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import get_owned_record, get_readable_record
+from app.media.service import owned_record, readable_record
 from app.plugins.models import Plugin
-from app.users.dependencies import OptionalUser
 
-
-def require_readable_plugin(
-    session: SessionDep,
-    optional_user: OptionalUser,
-    plugin_id: Annotated[uuid.UUID, Path()],
-) -> Plugin:
-    return get_readable_record(session, Plugin, plugin_id, optional_user)
-
-
-def require_owned_plugin(
-    session: SessionDep,
-    current_user: CurrentUser,
-    plugin_id: Annotated[uuid.UUID, Path()],
-) -> Plugin:
-    return get_owned_record(session, Plugin, plugin_id, current_user.id)
-
-
-ReadablePlugin = Annotated[Plugin, Depends(require_readable_plugin)]
-OwnedPlugin = Annotated[Plugin, Depends(require_owned_plugin)]
+ReadablePlugin = Annotated[Plugin, Depends(readable_record(Plugin, "plugin_id"))]
+OwnedPlugin = Annotated[Plugin, Depends(owned_record(Plugin, "plugin_id"))]

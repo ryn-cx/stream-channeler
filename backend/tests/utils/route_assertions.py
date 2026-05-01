@@ -117,7 +117,7 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     client: TestClient,
     method: Method,
     url: str,
-    output_model: type[T],
+    output_schema: type[T],
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> T:
@@ -125,14 +125,14 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     assert response.status_code == status.HTTP_200_OK
     response_json: dict[str, object] = response.json()
     assert not isinstance(response_json, list)
-    return output_model.model_validate(response_json)
+    return output_schema.model_validate(response_json)
 
 
 def assert_success_list[T: BaseModel](  # noqa: PLR0913
     client: TestClient,
     method: Method,
     url: str,
-    output_model: type[T],
+    output_schema: type[T],
     headers: dict[str, str] | None = None,
     parameters: dict[str, Any] | list[Any] | None = None,
 ) -> list[T]:
@@ -140,4 +140,4 @@ def assert_success_list[T: BaseModel](  # noqa: PLR0913
     assert response.status_code == status.HTTP_200_OK
     response_json: list[dict[str, object]] = response.json()
     assert isinstance(response_json, list)
-    return [output_model.model_validate(item) for item in response_json]
+    return [output_schema.model_validate(item) for item in response_json]

@@ -12,7 +12,7 @@ from sqlmodel import (
     UniqueConstraint,
 )
 
-from app.models import BaseMediaMixin, DateTimeField, MediaMixin
+from app.models import BaseMediaMixin, DateTimeField, MediaMixin, Visibility
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class BasePlugin(BaseMediaMixin):
     name: str | None = Field(default=None)
     version: str | None = Field(default=None)
-    public: bool
+    visibility: Visibility = Field()
 
 
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
@@ -32,7 +32,8 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
-    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "public"]
+    # Direct fields.
+    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "visibility"]
 
     user_id: uuid.UUID = Field(
         foreign_key="user.id",
@@ -56,12 +57,8 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
             self.sources.append(child)
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID:
-        return self.user_id
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return self.public
+    def _root_record(self, _session: Session) -> Plugin:
+        return self
 
     @property
     @override
@@ -106,12 +103,8 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
         return []
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID | None:
-        return self.plugin.get_user_id(session)
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return self.plugin.is_public(session)
+    def _root_record(self, _session: Session) -> Plugin:
+        return self.plugin
 
     def __str__(self) -> str:
         """Return a string representation of the File."""

@@ -13,14 +13,21 @@ import {
 } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelOutput, SortKeyInput } from "@/client"
+import type { ChannelOutput, SortKeyInput, Visibility } from "@/client"
 import { ChannelsService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
+import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
 
 const TOTAL_STEPS = 4
@@ -111,7 +118,7 @@ function OnboardingShell({
 export function OnboardingCreateName() {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
-  const [isPublic, setIsPublic] = useState(false)
+  const [visibility, setVisibility] = useState<Visibility>("private")
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -123,7 +130,7 @@ export function OnboardingCreateName() {
           name: channelName.trim(),
           channel_number:
             channelNumber === "" ? null : Number.parseFloat(channelNumber),
-          public: isPublic,
+          visibility,
         },
       }),
     onSuccess: (channel: ChannelOutput) => {
@@ -180,21 +187,28 @@ export function OnboardingCreateName() {
               numbers appear first. Leave blank to let it sort by name.
             </p>
           </div>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="channel-public"
-              checked={isPublic}
-              onCheckedChange={(checked) => setIsPublic(checked === true)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="channel-public" className="font-normal">
-                Make this channel public
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Public channels can be viewed by anyone with the link. Private
-                channels are only visible to you.
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-visibility">Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(value) => setVisibility(value as Visibility)}
+            >
+              <SelectTrigger id="channel-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {visibilityLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Public channels are listed for anyone. Unlisted channels are only
+              accessible via direct link. Private channels are only visible to
+              you.
+            </p>
           </div>
           <Button
             onClick={handleSubmit}
@@ -213,7 +227,7 @@ export function OnboardingCreateName() {
 export function OnboardingEditName({ channelId }: { channelId: string }) {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
-  const [isPublic, setIsPublic] = useState(false)
+  const [visibility, setVisibility] = useState<Visibility>("private")
   const [initialized, setInitialized] = useState(false)
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -232,7 +246,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
           ? ""
           : String(channelQuery.data.channel_number),
       )
-      setIsPublic(channelQuery.data.public ?? false)
+      setVisibility(channelQuery.data.visibility ?? "private")
       setInitialized(true)
     }
   }, [channelQuery.data, initialized])
@@ -245,7 +259,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
           name: channelName.trim(),
           channel_number:
             channelNumber === "" ? null : Number.parseFloat(channelNumber),
-          public: isPublic,
+          visibility,
         },
       }),
     onSuccess: () => {
@@ -301,21 +315,28 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
               numbers appear first. Leave blank to let it sort by name.
             </p>
           </div>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="channel-public"
-              checked={isPublic}
-              onCheckedChange={(checked) => setIsPublic(checked === true)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="channel-public" className="font-normal">
-                Make this channel public
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Public channels can be viewed by anyone with the link. Private
-                channels are only visible to you.
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="channel-visibility">Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(value) => setVisibility(value as Visibility)}
+            >
+              <SelectTrigger id="channel-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {visibilityLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Public channels are listed for anyone. Unlisted channels are only
+              accessible via direct link. Private channels are only visible to
+              you.
+            </p>
           </div>
           <Button
             onClick={handleSubmit}

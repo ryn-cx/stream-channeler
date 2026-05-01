@@ -2,7 +2,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from sqlmodel import col, select
 
 from app.auth.dependencies import CurrentUser, SessionDep
@@ -10,12 +10,12 @@ from app.episodes.models import Episode
 from app.playlists.dependencies import OwnedPlaylist, ReadablePlaylist
 from app.playlists.models import Playlist, PlaylistEpisode
 from app.playlists.schemas import (
+    PlaylistCreate,
     PlaylistDetailOutput,
     PlaylistEpisodesOutput,
     PlaylistEpisodeWithExtrasOutput,
     PlaylistOutput,
-    PlaylistPatchInput,
-    PlaylistPostInput,
+    PlaylistUpdate,
 )
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
@@ -30,14 +30,14 @@ router = APIRouter(prefix="/playlists", tags=["playlists"])
 
 @router.get("", response_model=list[PlaylistOutput])
 def get_playlists(current_user: CurrentUser) -> list[Playlist]:
-    """List all ``Playlist``s owned by the current ``User``."""
+    """List all `Playlist`s owned by the current `User`."""
     return current_user.playlists
 
 
 # FAST003 - Parameter is used by ReadablePlaylist.
 @router.get("/{playlist_id}", response_model=PlaylistDetailOutput)  # noqa: FAST003
 def get_playlist(playlist: ReadablePlaylist) -> Playlist:
-    """Get a ``Playlist`` with its ordered episode list."""
+    """Get a `Playlist` with its ordered episode list."""
     return playlist
 
 
@@ -108,11 +108,11 @@ def get_playlist_episodes(
 def create_playlist(
     session: SessionDep,
     current_user: CurrentUser,
-    playlist_in: PlaylistPostInput,
+    playlist_in: PlaylistCreate,
 ) -> Playlist:
-    """Create a ``Playlist`` with all of its episodes in one shot.
+    """Create a `Playlist` with all of its episodes in one shot.
 
-    The order of ``episode_ids`` defines the saved order. After creation the
+    The order of `episode_ids` defines the saved order. After creation the
     episode list cannot be modified — to change it, create a new playlist.
     """
     episode_ids = playlist_in.episode_ids
@@ -125,13 +125,13 @@ def create_playlist(
         missing = [str(eid) for eid in episode_ids if eid not in existing]
         if missing:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail=f"Unknown episode ids: {missing}",
             )
 
     playlist = Playlist(
         name=playlist_in.name,
-        public=playlist_in.public,
+        visibility=playlist_in.visibility,
         user_id=current_user.id,
     )
     session.add(playlist)
@@ -156,12 +156,12 @@ def create_playlist(
 def update_playlist(
     session: SessionDep,
     playlist: OwnedPlaylist,
-    playlist_in: PlaylistPatchInput,
+    playlist_in: PlaylistUpdate,
 ) -> Playlist:
-    """Update a ``Playlist``'s metadata and optionally replace its episodes.
+    """Update a `Playlist`'s metadata and optionally replace its episodes.
 
-    Individual ``PlaylistEpisode`` rows are never modified in place — when
-    ``episode_ids`` is supplied, every existing entry is deleted and a fresh
+    Individual `PlaylistEpisode` rows are never modified in place — when
+    `episode_ids` is supplied, every existing entry is deleted and a fresh
     ordered set is inserted in one transaction.
     """
     metadata = playlist_in.model_dump(
@@ -182,7 +182,7 @@ def update_playlist(
             missing = [str(eid) for eid in episode_ids if eid not in existing]
             if missing:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail=f"Unknown episode ids: {missing}",
                 )
 
@@ -206,7 +206,7 @@ def update_playlist(
 # FAST003 - Parameter is used by OwnedPlaylist.
 @router.delete("/{playlist_id}")  # noqa: FAST003
 def delete_playlist(session: SessionDep, playlist: OwnedPlaylist) -> Message:
-    """Delete a ``Playlist`` owned by the current ``User``."""
+    """Delete a `Playlist` owned by the current `User`."""
     session.delete(playlist)
     session.commit()
     return Message(message="Playlist deleted successfully")

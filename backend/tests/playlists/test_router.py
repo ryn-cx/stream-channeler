@@ -9,14 +9,15 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.config import settings
+from app.models import Visibility
 from app.playlists.models import Playlist, PlaylistEpisode
 from app.playlists.schemas import (
+    PlaylistCreate,
     PlaylistDetailOutput,
     PlaylistEpisodesOutput,
     PlaylistEpisodeWithExtrasOutput,
     PlaylistOutput,
-    PlaylistPatchInput,
-    PlaylistPostInput,
+    PlaylistUpdate,
 )
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
@@ -30,8 +31,8 @@ from tests.playlists.utils import (
 )
 from tests.users.utils import authentication_token_from_email, create_random_user
 from tests.utils.base import (
-    INPUT_SCHEMAS,
-    OUTPUT_MODELS,
+    CREATE_SCHEMAS,
+    OUTPUT_SCHEMAS,
     BaseTests,
     CreatedTestData,
 )
@@ -50,10 +51,10 @@ from tests.utils.route_assertions import (
 from tests.utils.utils import random_lower_string
 
 
-def _scrub_episode_ids[T: PlaylistPostInput | PlaylistPatchInput](model: T) -> T:
-    """Drop ``episode_ids`` from a randomly-built playlist input.
+def _scrub_episode_ids[T: PlaylistCreate | PlaylistUpdate](model: T) -> T:
+    """Drop `episode_ids` from a randomly-built playlist input.
 
-    ``build_random_model`` populates this list with random UUIDs that do not
+    `build_random_model` populates this list with random UUIDs that do not
     correspond to any episode, which the API rejects with 400. The base test
     framework has no awareness of FK-validated list fields, so playlist-specific
     create/update assertions strip this field before sending the request.
@@ -62,20 +63,19 @@ def _scrub_episode_ids[T: PlaylistPostInput | PlaylistPatchInput](model: T) -> T
     return model
 
 
-# region Validated
-
-
 class PlaylistTestMixin(BaseTests[Playlist]):
     database_model = Playlist
-    input_schema = PlaylistPostInput
-    output_model = PlaylistOutput
-    patch_model = PlaylistPatchInput
+    create_schema = PlaylistCreate
+    output_schema = PlaylistOutput
+    update_schema = PlaylistUpdate
     create_record_function = staticmethod(create_random_playlist)
 
     # Playlists do not rely on plugins for visibility and instead have their own public
     # field.
     def set_visibility(self, record: Playlist, *, record_is_public: bool) -> None:
-        record.public = record_is_public
+        record.visibility = (
+            Visibility.public if record_is_public else Visibility.private
+        )
 
 
 class TestCreatePlaylist(PlaylistTestMixin, UserOwnedCreateMixin[Playlist]):
@@ -85,9 +85,9 @@ class TestCreatePlaylist(PlaylistTestMixin, UserOwnedCreateMixin[Playlist]):
         session_scoped_session: Session,
         parent_id: uuid.UUID | None,
         headers: dict[str, str],
-        parameters_model: INPUT_SCHEMAS,
-    ) -> OUTPUT_MODELS:
-        assert isinstance(parameters_model, PlaylistPostInput)
+        parameters_model: CREATE_SCHEMAS,
+    ) -> OUTPUT_SCHEMAS:
+        assert isinstance(parameters_model, PlaylistCreate)
         return super().assert_create_record_success(
             client,
             session_scoped_session,
@@ -107,7 +107,7 @@ class TestUpdatePlaylist(PlaylistTestMixin, BaseUpdateTests[Playlist]):
         session_scoped_session: Session,
         client: TestClient,
         setup: CreatedTestData[Playlist],
-        patch_input: PlaylistPatchInput,  # type: ignore[override]
+        patch_input: PlaylistUpdate,  # type: ignore[override]
     ) -> list[PlaylistOutput]:
         return super().assert_api_update_success(
             session_scoped_session,
@@ -119,9 +119,6 @@ class TestUpdatePlaylist(PlaylistTestMixin, BaseUpdateTests[Playlist]):
 
 class TestDeletePlaylist(PlaylistTestMixin, BaseDeleteTests[Playlist]):
     pass
-
-
-# endregion Validated
 
 
 class BasePlaylistSubEndpointTests(PlaylistTestMixin):
@@ -234,7 +231,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
         playlist = create_random_playlist(
             session_scoped_session,
             user_id,
-            public=public,
+            visibility=Visibility.public if public else Visibility.private,
         )
 
         expected = PlaylistEpisodesOutput(
@@ -374,7 +371,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
         playlist = create_random_playlist(
             session_scoped_session,
             owner.id,
-            public=record_is_public,
+            visibility=Visibility.public if record_is_public else Visibility.private,
         )
         expected = PlaylistEpisodesOutput(
             episodes=[],
@@ -437,7 +434,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
         playlist = create_random_playlist(
             session_scoped_session,
             owner.id,
-            public=True,
+            visibility=Visibility.public,
         )
         episode = create_random_episode(session_scoped_session)
         create_random_playlist_episode(
@@ -465,7 +462,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=self.generic_record_url(playlist.id),
-            output_model=PlaylistEpisodesOutput,
+            output_schema=PlaylistEpisodesOutput,
             headers=viewer_headers,
         )
         assert result.episodes[0].watch_date is None
@@ -484,7 +481,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
             client=session_scoped_client,
             method="get",
             url=self.generic_record_url(playlist.id),
-            output_model=PlaylistEpisodesOutput,
+            output_schema=PlaylistEpisodesOutput,
             headers=viewer_headers,
         )
         assert result.episodes[0].watch_date is not None
@@ -493,7 +490,7 @@ class TestPlaylistEpisodes(BasePlaylistSubEndpointTests):
 
 
 class TestCreatePlaylistWithEpisodes(PlaylistTestMixin):
-    """Custom create-path tests that exercise the ``episode_ids`` body field."""
+    """Custom create-path tests that exercise the `episode_ids` body field."""
 
     @staticmethod
     def url() -> str:
@@ -516,9 +513,12 @@ class TestCreatePlaylistWithEpisodes(PlaylistTestMixin):
             client=session_scoped_client,
             method="post",
             url=self.url(),
-            output_model=PlaylistDetailOutput,
+            output_schema=PlaylistDetailOutput,
             headers=headers,
-            parameters={"episode_ids": [str(episode.id) for episode in episodes]},
+            parameters={
+                "visibility": Visibility.private,
+                "episode_ids": [str(episode.id) for episode in episodes],
+            },
         )
 
         assert result.user_id == user.id
@@ -542,14 +542,17 @@ class TestCreatePlaylistWithEpisodes(PlaylistTestMixin):
         response = session_scoped_client.post(
             self.url(),
             headers=headers,
-            json={"episode_ids": [str(uuid.uuid4())]},
+            json={
+                "visibility": Visibility.private,
+                "episode_ids": [str(uuid.uuid4())],
+            },
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Unknown episode ids" in response.json()["detail"]
 
 
 class TestUpdatePlaylistEpisodes(PlaylistTestMixin):
-    """Custom update-path tests for the atomic ``episode_ids`` replacement."""
+    """Custom update-path tests for the atomic `episode_ids` replacement."""
 
     @staticmethod
     def url(playlist_id: uuid.UUID) -> str:
@@ -585,7 +588,7 @@ class TestUpdatePlaylistEpisodes(PlaylistTestMixin):
             client=session_scoped_client,
             method="patch",
             url=self.url(playlist.id),
-            output_model=PlaylistDetailOutput,
+            output_schema=PlaylistDetailOutput,
             headers=headers,
             parameters={"episode_ids": [str(eid) for eid in ordered_ids]},
         )
@@ -625,7 +628,7 @@ class TestUpdatePlaylistEpisodes(PlaylistTestMixin):
             client=session_scoped_client,
             method="patch",
             url=self.url(playlist.id),
-            output_model=PlaylistDetailOutput,
+            output_schema=PlaylistDetailOutput,
             headers=headers,
             parameters={"name": random_lower_string()},
         )
@@ -656,7 +659,7 @@ class TestUpdatePlaylistEpisodes(PlaylistTestMixin):
 
 
 class TestDeletePlaylistCascades(PlaylistTestMixin):
-    """Verify that deleting a playlist removes its ``PlaylistEpisode`` rows."""
+    """Verify that deleting a playlist removes its `PlaylistEpisode` rows."""
 
     def test_delete_removes_join_rows(
         self,

@@ -1,9 +1,9 @@
 # TODO: Validate
 from app.episodes.models import Episode
 from app.episodes.schemas import (
+    EpisodeCreate,
     EpisodeOutput,
-    EpisodePatchInput,
-    EpisodePostInput,
+    EpisodeUpdate,
 )
 from tests.episodes.utils import create_random_episode
 from tests.seasons.utils import create_random_season
@@ -16,9 +16,9 @@ from tests.utils.base_update import BaseUpdateTests
 
 class EpisodeTestMixin(BaseTests[Episode]):
     database_model = Episode
-    input_schema = EpisodePostInput
-    output_model = EpisodeOutput
-    patch_model = EpisodePatchInput
+    create_schema = EpisodeCreate
+    output_schema = EpisodeOutput
+    update_schema = EpisodeUpdate
     create_parent_function = staticmethod(create_random_season)
     create_record_function = staticmethod(create_random_episode)
 

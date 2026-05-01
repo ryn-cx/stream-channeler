@@ -19,11 +19,11 @@ class ParsedWatchEntry:
 
 
 class WatchHistoryMixin(WatchMixin):
-    """Base mixin providing the shared ``import_watch_history`` workflow.
+    """Base mixin providing the shared `import_watch_history` workflow.
 
     Subclasses only need to implement :meth:`_parse_watch_history`, which
     turns the raw uploaded content into a list of :class:`ParsedWatchEntry`.
-    The base class handles episode lookups, deduplication, ``new_only``
+    The base class handles episode lookups, deduplication, `new_only`
     filtering, and result aggregation.
     """
 

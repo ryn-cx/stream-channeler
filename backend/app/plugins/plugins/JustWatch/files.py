@@ -153,8 +153,6 @@ class SearchTitles(GAPIJSON[search_models.SearchResponse]):
 
 
 class FileMixin(BasePlugin, register=False):
-    # region File Cache
-
     @override
     def __init__(self, session: Session) -> None:
         super().__init__(session)
@@ -219,8 +217,6 @@ class FileMixin(BasePlugin, register=False):
             lambda: SearchTitles(self.session, self.plugin, query),
         )
 
-    # endregion File Cache
-
     def _source_keys_from_buckets(self, session: Session, plugin: Plugin) -> set[str]:
         """Get all source keys with new titles from unimported bucket files."""
         statement = select(File).where(
@@ -234,8 +230,6 @@ class FileMixin(BasePlugin, register=False):
             for edge in bucket.parsed_edges():
                 source_keys.add(edge.key.package.short_name)
         return source_keys
-
-    # region File Groups
 
     @override
     def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
@@ -284,10 +278,6 @@ class FileMixin(BasePlugin, register=False):
             self._custom_season_episodes_file(season_key),
         ]
 
-    # endregion File Groups
-
-    # region Download
-
     def _download_new_titles_files(
         self,
         source: Source,
@@ -315,8 +305,6 @@ class FileMixin(BasePlugin, register=False):
         # All other situations a new bucket should be downloaded.
         bucket = self._new_titles_bucket_file(latest_bucket.data_timestamp)
         bucket.download_if_outdated()
-
-    # endregion Download
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:

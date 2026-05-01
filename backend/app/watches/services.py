@@ -5,12 +5,13 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlmodel import Session, col, or_, select
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
 from app.plugins.schemas import PluginOutput
@@ -24,12 +25,11 @@ from app.sources.schemas import SourcePublic
 from app.users.service import get_or_create_plugin_user
 from app.watches.models import Watch
 from app.watches.schemas import (
-    WatchCreateInput,
+    WatchCreate,
     WatchesListOutput,
     WatchItem,
     WatchOutput,
-    WatchPatchInput,
-    WatchPostInput,
+    WatchUpdate,
 )
 
 if TYPE_CHECKING:
@@ -45,7 +45,10 @@ def _episode_watch_select_statement(
     )
     statement = statement.where(Watch.user_id == user_id)
     statement = statement.where(
-        or_(col(Plugin.public).is_(True), col(Plugin.user_id) == user_id),
+        or_(
+            col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
+            col(Plugin.user_id) == user_id,
+        ),
     )
     return session.exec(statement).all()
 
@@ -109,7 +112,7 @@ def create_watches(
     session: Session,
     user_id: uuid.UUID,
     episode: Episode,
-    watch_input: WatchPostInput,
+    watch_input: WatchCreate,
 ) -> list[WatchOutput]:
     """Create watches for all episodes with the same key in the same plugin.
 
@@ -126,16 +129,15 @@ def create_watches(
     ).first()
     if existing_unverified:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail="Episode already has an unverified watch. Verify or delete it first.",
         )
 
     created: list[Watch] = []
     for target_episode in all_episodes:
-        create_input = WatchCreateInput(user_id=user_id, **watch_input.model_dump())
         watch = Watch.model_validate(
-            create_input,
-            update={"episode_id": target_episode.id},
+            watch_input,
+            update={"episode_id": target_episode.id, "user_id": user_id},
         )
         session.add(watch)
         created.append(watch)
@@ -180,7 +182,7 @@ def get_matching_watches(session: Session, watch: Watch) -> list[Watch]:
 def update_watches(
     session: Session,
     input_watch: Watch,
-    watch_input: WatchPatchInput,
+    watch_input: WatchUpdate,
 ) -> list[WatchOutput]:
     """Update a watch and all matching watches."""
     all_watches = get_matching_watches(session, input_watch)

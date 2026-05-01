@@ -27,7 +27,7 @@ class BaseSeason(BaseMediaMixin):
 
 
 if TYPE_CHECKING:
-    from app.channels.models import ChannelSeasonWhiteList
+    from app.channels.models import ChannelSeasonFilter
     from app.episodes.models import Episode
 
 
@@ -43,19 +43,21 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     )
 
     SORTABLE_FIELDS: ClassVar[list[str]] = [
+        # Direct fields.
         "id",
-        "sort_order",
-        "sequential",
         "name",
         "season_number",
+        "sort_order",
+        # Indirect fields.
         "random",
+        "sequential",
     ]
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")
 
     episodes: list[Episode] = Relationship(back_populates="season", cascade_delete=True)
-    channel_white_list: list[ChannelSeasonWhiteList] = Relationship(
+    channel_filters: list[ChannelSeasonFilter] = Relationship(
         back_populates="season",
         cascade_delete=True,
     )
@@ -75,26 +77,14 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         return [episode for episode in self.episodes if not episode.deleted_at]
 
     @override
-    def get_user_id(self, session: Session) -> uuid.UUID | None:
+    def _root_record(self, session: Session) -> Plugin:
         return session.exec(
-            select(Plugin.user_id)
+            select(Plugin)
             .select_from(Show)
             .join(Source)
             .join(Plugin)
             .where(Show.id == self.show_id),
-        ).first()
-
-    @override
-    def is_public(self, session: Session) -> bool:
-        return bool(
-            session.exec(
-                select(Plugin.public)
-                .select_from(Show)
-                .join(Source)
-                .join(Plugin)
-                .where(Show.id == self.show_id),
-            ).first(),
-        )
+        ).one()
 
     def __str__(self) -> str:
         """Return a string representation of the Season."""

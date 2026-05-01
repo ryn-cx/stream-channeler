@@ -43,8 +43,6 @@ class HiDive(FileMixin, register=True):
             latest_schedule_file = self._get_latest_schedule_file()
             self.source = self._upsert_source(latest_schedule_file)
 
-    # region Import URL
-
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -61,7 +59,7 @@ class HiDive(FileMixin, register=True):
         self._validate_url(url)
         show_key = self._resolve_show_key(url)
         show = self._import_show(show_key)
-        return [URLImportResult(show=show, whitelist_mode=False)]
+        return [URLImportResult(show=show, is_whitelist=False)]
 
     def _resolve_show_key(self, url: str) -> str:
         """Return the show key (series_id for TV, playlist_key for Movie)."""
@@ -120,10 +118,6 @@ class HiDive(FileMixin, register=True):
         _cache = self._download_show_files(key)
         return self._upsert_show(self.source, show_key=key)
 
-    # endregion Import URL
-
-    # region Update Media
-
     def set_media_type_from_show(self, show: Show) -> None:
         if not show.media_type:
             msg = "Show.media_type is not set."
@@ -144,10 +138,6 @@ class HiDive(FileMixin, register=True):
     def update_episode(self, episode: Episode) -> None:
         self.set_media_type_from_show(episode.season.show)
         super().update_episode(episode)
-
-    # endregion Update Media
-
-    # region Update Source
 
     @override
     def update_source(self, source: Source) -> None:
@@ -185,10 +175,6 @@ class HiDive(FileMixin, register=True):
                             show.set_update_at(release_date)
                             for season in show.seasons:
                                 season.set_update_at(release_date)
-
-    # endregion Update Source
-
-    # region URL
 
     @classmethod
     @override
@@ -238,10 +224,6 @@ class HiDive(FileMixin, register=True):
     @classmethod
     def _episode_url(cls, episode_key: str | int) -> str:
         return f"{cls._base_url()}video/{episode_key}"
-
-    # endregion URL
-
-    # region Upsert
 
     def _upsert_source(self, latest_schedule_file: Schedule) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -424,8 +406,6 @@ class HiDive(FileMixin, register=True):
             ).upsert(season, episode)
 
         self.soft_delete_missing_episodes(season.key)
-
-    # endregion Upsert
 
     _SEARCH_CARD_TYPES: ClassVar[dict[str, str]] = {
         "SERIES": "TV Show",

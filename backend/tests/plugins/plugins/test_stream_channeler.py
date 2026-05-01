@@ -5,8 +5,8 @@ import pytest
 from sqlmodel import Session, select
 
 from app.channels.models import (
-    ChannelEpisodeWhiteList,
-    ChannelSeasonWhiteList,
+    ChannelEpisodeFilter,
+    ChannelSeasonFilter,
 )
 from app.plugins.plugins.StreamChanneler import StreamChanneler
 from app.plugins.plugins.utils.abstract_plugin import InvalidURLError
@@ -58,7 +58,7 @@ class TestImportShow:
 
         assert len(results) == 1
         assert results[0].show.id == show.id
-        assert results[0].whitelist_mode is False
+        assert results[0].is_whitelist is False
         assert results[0].seasons == []
         assert results[0].episodes == []
 
@@ -80,7 +80,7 @@ class TestImportSeason:
 
         assert len(results) == 1
         assert results[0].show.id == season.show_id
-        assert results[0].whitelist_mode is True
+        assert results[0].is_whitelist is True
         assert len(results[0].seasons) == 1
         assert results[0].seasons[0].id == season.id
         assert results[0].episodes == []
@@ -103,7 +103,7 @@ class TestImportEpisode:
 
         assert len(results) == 1
         assert results[0].show.id == episode.season.show_id
-        assert results[0].whitelist_mode is True
+        assert results[0].is_whitelist is True
         assert results[0].seasons == []
         assert len(results[0].episodes) == 1
         assert results[0].episodes[0].id == episode.id
@@ -130,7 +130,7 @@ class TestImportSource:
         assert len(results) == 2
         assert show_one.id in result_show_ids
         assert show_two.id in result_show_ids
-        assert all(result.whitelist_mode is False for result in results)
+        assert all(result.is_whitelist is False for result in results)
 
     def test_import_nonexistent_source(self, function_scoped_session: Session) -> None:
         plugin = StreamChanneler(function_scoped_session)
@@ -156,7 +156,7 @@ class TestImportPlugin:
         assert len(results) == 2
         assert show_one.id in result_show_ids
         assert show_two.id in result_show_ids
-        assert all(result.whitelist_mode is False for result in results)
+        assert all(result.is_whitelist is False for result in results)
 
     def test_import_nonexistent_plugin(self, function_scoped_session: Session) -> None:
         plugin = StreamChanneler(function_scoped_session)
@@ -182,7 +182,7 @@ class TestAddResultsToChannel:
 
         assert len(channel.shows) == 1
         assert channel.shows[0].show_id == show.id
-        assert channel.shows[0].white_list_mode is False
+        assert channel.shows[0].is_whitelist is False
 
     def test_import_season_adds_to_channel_with_whitelist(
         self,
@@ -200,11 +200,11 @@ class TestAddResultsToChannel:
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
         assert channel_show.show_id == season.show_id
-        assert channel_show.white_list_mode is True
+        assert channel_show.is_whitelist is True
 
         season_whitelist = function_scoped_session.exec(
-            select(ChannelSeasonWhiteList).where(
-                ChannelSeasonWhiteList.channel_show_id == channel_show.id,
+            select(ChannelSeasonFilter).where(
+                ChannelSeasonFilter.channel_show_id == channel_show.id,
             ),
         ).all()
         assert len(season_whitelist) == 1
@@ -226,11 +226,11 @@ class TestAddResultsToChannel:
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
         assert channel_show.show_id == episode.season.show_id
-        assert channel_show.white_list_mode is True
+        assert channel_show.is_whitelist is True
 
         episode_whitelist = function_scoped_session.exec(
-            select(ChannelEpisodeWhiteList).where(
-                ChannelEpisodeWhiteList.channel_show_id == channel_show.id,
+            select(ChannelEpisodeFilter).where(
+                ChannelEpisodeFilter.channel_show_id == channel_show.id,
             ),
         ).all()
         assert len(episode_whitelist) == 1

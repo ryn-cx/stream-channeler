@@ -15,49 +15,50 @@ from sqlmodel import Session, SQLModel, col, select
 
 from app.channels.models import Channel
 from app.channels.schemas import (
+    ChannelCreate,
     ChannelOutput,
-    ChannelPatchInput,
-    ChannelPostInput,
+    ChannelUpdate,
 )
 from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import (
+    EpisodeCreate,
     EpisodeOutput,
-    EpisodePatchInput,
-    EpisodePostInput,
+    EpisodeUpdate,
 )
+from app.models import Visibility
 from app.playlists.models import Playlist
 from app.playlists.schemas import (
+    PlaylistCreate,
     PlaylistOutput,
-    PlaylistPatchInput,
-    PlaylistPostInput,
+    PlaylistUpdate,
 )
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
+    PluginCreate,
     PluginOutput,
-    PluginPatchInput,
-    PluginPostInput,
+    PluginUpdate,
 )
 from app.seasons.models import Season
 from app.seasons.schemas import (
+    SeasonCreate,
     SeasonOutput,
-    SeasonPatchInput,
-    SeasonPostInput,
+    SeasonUpdate,
 )
 from app.shows.models import Show
-from app.shows.schemas import ShowPublic, ShowUpdate, ShowCreate
+from app.shows.schemas import ShowCreate, ShowPublic, ShowUpdate
 from app.sources.models import Source
 from app.sources.schemas import (
+    SourceCreate,
     SourcePublic,
     SourceUpdate,
-    SourceCreate,
 )
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import (
+    WatchCreate,
     WatchOutput,
-    WatchPatchInput,
-    WatchPostInput,
+    WatchUpdate,
 )
 from tests.users.utils import (
     authentication_token_from_email,
@@ -70,17 +71,17 @@ SUPPORTED_MODELS = (
 )
 PARENT_MODELS = SUPPORTED_MODELS | User
 
-INPUT_SCHEMAS = (
-    ChannelPostInput
-    | EpisodePostInput
-    | PluginPostInput
-    | SeasonPostInput
+CREATE_SCHEMAS = (
+    ChannelCreate
+    | EpisodeCreate
+    | PluginCreate
+    | SeasonCreate
     | ShowCreate
     | SourceCreate
-    | WatchPostInput
-    | PlaylistPostInput
+    | WatchCreate
+    | PlaylistCreate
 )
-OUTPUT_MODELS = (
+OUTPUT_SCHEMAS = (
     ChannelOutput
     | EpisodeOutput
     | PluginOutput
@@ -90,7 +91,7 @@ OUTPUT_MODELS = (
     | WatchOutput
     | PlaylistOutput
 )
-LIST_OUTPUT_MODELS = (
+LIST_OUTPUT_SCHEMAS = (
     list[ChannelOutput]
     | list[EpisodeOutput]
     | list[PluginOutput]
@@ -99,15 +100,15 @@ LIST_OUTPUT_MODELS = (
     | list[SourcePublic]
     | list[PlaylistOutput]
 )
-PATCH_MODELS = (
-    ChannelPatchInput
-    | EpisodePatchInput
-    | PluginPatchInput
-    | SeasonPatchInput
+UPDATE_SCHEMAS = (
+    ChannelUpdate
+    | EpisodeUpdate
+    | PluginUpdate
+    | SeasonUpdate
     | ShowUpdate
     | SourceUpdate
-    | WatchPatchInput
-    | PlaylistPatchInput
+    | WatchUpdate
+    | PlaylistUpdate
 )
 
 
@@ -126,10 +127,9 @@ class CreatedTestData[T]:
 
 class BaseTests[T: SUPPORTED_MODELS]:
     database_model: type[T]
-    input_schema: type[INPUT_SCHEMAS]
-    output_model: type[OUTPUT_MODELS]
-    list_output_model: None = None
-    patch_model: type[PATCH_MODELS]
+    create_schema: type[CREATE_SCHEMAS]
+    output_schema: type[OUTPUT_SCHEMAS]
+    update_schema: type[UPDATE_SCHEMAS]
     create_parent_function: Callable[..., Plugin | Source | Show | Season | Episode]
     create_record_function: Callable[..., T]
     returns_list: bool = False
@@ -193,7 +193,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
     def assert_other_records_unchanged(
         self,
         session_scoped_session: Session,
-        updated_records: Sequence[OUTPUT_MODELS],
+        updated_records: Sequence[OUTPUT_SCHEMAS],
         records_before: Sequence[T],
     ) -> None:
         """Assert only the given records changed; all others are identical."""
@@ -263,7 +263,9 @@ class BaseTests[T: SUPPORTED_MODELS]:
         record_is_public: bool,
     ) -> None:
         plugin = self.get_plugin(record)
-        plugin.public = record_is_public
+        plugin.visibility = (
+            Visibility.public if record_is_public else Visibility.private
+        )
 
     def create_test_data(
         self,

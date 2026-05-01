@@ -4,20 +4,19 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
   ChannelOutput,
-  EpisodeWithExtrasOutput,
   PluginOutput,
   SeasonOutput,
-  ShowOutput,
-  SourceOutput,
+  ShowPublic,
+  SourcePublic,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { cn } from "@/lib/utils"
 
-export type EpisodeWithDetails = EpisodeWithExtrasOutput & {
+export type EpisodeWithDetails = EpisodeWithDetails & {
   season: SeasonOutput
-  show: ShowOutput
-  source: SourceOutput
+  show: ShowPublic
+  source: SourcePublic
   plugin: PluginOutput
   channel: ChannelOutput
 }

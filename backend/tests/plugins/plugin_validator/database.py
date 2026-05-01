@@ -37,8 +37,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     search_query: str | None = None
     invalid_url: bool
 
-    # region File paths
-
     def files_directory_path(self) -> Path:
         """Path to the directory where all files for the test class are stored."""
         return TEST_FILES_FOLDER / self.plugin_class.plugin_key() / type(self).__name__
@@ -55,10 +53,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         """Path to the combined file containing all exported database files."""
         return self.files_directory_path() / "all_files.json"
 
-    # endregion File paths
-
-    # region Select
-
     def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return a plugin with all children selectinloaded."""
         select_statement = (
@@ -72,10 +66,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             )
         )
         return session.exec(select_statement).one()
-
-    # endregion Select
-
-    # region Export
 
     def _export_all_files(self, session: Session) -> None:
         """Export all files from the database and the verification file for to disk."""
@@ -131,10 +121,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             with suppress(json.JSONDecodeError):
                 file_content = json.dumps(json.loads(file_content or ""), indent=2)
         content_path.write_text(file_content or "", encoding="utf-8")
-
-    # endregion Export
-
-    # region Import
 
     def _import_url(
         self,
@@ -194,10 +180,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         session.commit()  # Set the rollback point.
 
-    # endregion Import
-
-    # region Fixtures
-
     @pytest.fixture(scope="class")
     def _session_with_files_connection(self) -> Generator[Connection]:
         """Class-scoped connection with files pre-imported on its own database."""
@@ -249,5 +231,3 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     ) -> Generator[Session]:
         """Per-test session with files and URL imported, rolls back after."""
         yield from savepoint_session(_session_with_url_connection)
-
-    # endregion Fixtures

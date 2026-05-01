@@ -7,9 +7,9 @@ from sqlmodel import Session, col, select
 
 from app.channels.models import (
     Channel,
-    ChannelEpisodeWhiteList,
+    ChannelEpisodeFilter,
     ChannelQueue,
-    ChannelSeasonWhiteList,
+    ChannelSeasonFilter,
     ChannelShow,
     URLStatus,
 )
@@ -88,13 +88,13 @@ def add_results_to_channel(
         channel_show = ChannelShow(
             channel_id=channel.id,
             show_id=result.show.id,
-            white_list_mode=result.whitelist_mode,
+            is_whitelist=result.is_whitelist,
         )
         channel.shows.append(channel_show)
 
         for season in result.seasons:
             session.add(
-                ChannelSeasonWhiteList(
+                ChannelSeasonFilter(
                     channel_show_id=channel_show.id,
                     season_id=season.id,
                 ),
@@ -102,7 +102,7 @@ def add_results_to_channel(
 
         for episode in result.episodes:
             session.add(
-                ChannelEpisodeWhiteList(
+                ChannelEpisodeFilter(
                     channel_show_id=channel_show.id,
                     episode_id=episode.id,
                 ),

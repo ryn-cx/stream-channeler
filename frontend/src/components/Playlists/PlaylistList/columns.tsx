@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { PlaylistOutput } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
+import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import DeletePlaylist from "./DeletePlaylist"
 import EditPlaylist from "./EditPlaylist"
 
@@ -31,22 +32,27 @@ export const columns: ColumnDef<PlaylistOutput>[] = [
     },
   },
   {
-    accessorFn: (row) => (row.public ? "Public" : "Private"),
-    id: "public",
+    accessorFn: (row) => visibilityLabel(row.visibility),
+    id: "visibility",
     header: "Visibility",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "size-2 rounded-full",
-            row.original.public ? "bg-green-500" : "bg-gray-400",
-          )}
-        />
-        <span className={row.original.public ? "" : "text-muted-foreground"}>
-          {row.original.public ? "Public" : "Private"}
-        </span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const visibility = row.original.visibility
+      return (
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              visibilityDotClass(visibility),
+            )}
+          />
+          <span
+            className={visibility === "private" ? "text-muted-foreground" : ""}
+          >
+            {visibilityLabel(visibility)}
+          </span>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "created_at",

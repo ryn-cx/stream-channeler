@@ -85,14 +85,14 @@ class PlaylistValidator(YouTubeValidator):
         assert result.show.key == self.channel_key
         assert len(result.seasons) == 1
         assert result.seasons[0].key == self.playlist_key
-        assert result.whitelist_mode is False
+        assert result.is_whitelist is False
 
 
 class BaseChannelValidator(YouTubeValidator):
     """Shared tests for importing a channel via any URL form.
 
-    Subclasses must define a ``base_path`` fixture that yields URL path strings
-    identifying the channel (e.g. ``/@jawed`` or ``/user/jawed``).
+    Subclasses must define a `base_path` fixture that yields URL path strings
+    identifying the channel (e.g. `/@jawed` or `/user/jawed`).
     """
 
     @pytest.fixture(params=["", "/videos", "/featured"])
@@ -117,7 +117,7 @@ class BaseChannelValidator(YouTubeValidator):
         assert result.show.key == self.channel_key
         assert len(result.seasons) == 1
         assert result.seasons[0].key == "UU" + self.channel_key[2:]
-        assert result.whitelist_mode
+        assert result.is_whitelist
 
     def test_channel_playlists_import_response(
         self,
@@ -134,7 +134,7 @@ class BaseChannelValidator(YouTubeValidator):
         assert sorted(season.key for season in result.seasons) == sorted(
             season.key for season in result.show.seasons
         )
-        assert result.whitelist_mode is False
+        assert result.is_whitelist is False
 
 
 class ChannelValidator(BaseChannelValidator):

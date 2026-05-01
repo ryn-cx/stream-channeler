@@ -3,9 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 
-import { type PlaylistOutput, PlaylistsService } from "@/client"
+import {
+  type PlaylistOutput,
+  PlaylistsService,
+  type Visibility,
+} from "@/client"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -17,7 +20,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
+import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
 
 interface EditPlaylistProps {
@@ -27,7 +38,9 @@ interface EditPlaylistProps {
 const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState(playlist.name ?? "")
-  const [isPublic, setIsPublic] = useState(playlist.public)
+  const [visibility, setVisibility] = useState<Visibility>(
+    playlist.visibility ?? "private",
+  )
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
@@ -37,7 +50,7 @@ const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
         playlistId: playlist.id,
         requestBody: {
           name: name.trim() || null,
-          public: isPublic,
+          visibility,
         },
       }),
     onSuccess: () => {
@@ -55,7 +68,7 @@ const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
     setIsOpen(open)
     if (open) {
       setName(playlist.name ?? "")
-      setIsPublic(playlist.public)
+      setVisibility(playlist.visibility ?? "private")
     }
   }
 
@@ -94,18 +107,25 @@ const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
                 placeholder="(untitled)"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`playlist-public-${playlist.id}`}
-                checked={isPublic}
-                onCheckedChange={(checked) => setIsPublic(checked === true)}
-              />
-              <Label
-                htmlFor={`playlist-public-${playlist.id}`}
-                className="cursor-pointer"
-              >
-                Public
+            <div className="space-y-1">
+              <Label htmlFor={`playlist-visibility-${playlist.id}`}>
+                Visibility
               </Label>
+              <Select
+                value={visibility}
+                onValueChange={(value) => setVisibility(value as Visibility)}
+              >
+                <SelectTrigger id={`playlist-visibility-${playlist.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISIBILITY_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {visibilityLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

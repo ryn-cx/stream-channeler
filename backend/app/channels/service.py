@@ -7,9 +7,9 @@ from sqlmodel import Session
 
 from app.channels.models import (
     Channel,
-    ChannelEpisodeWhiteList,
+    ChannelEpisodeFilter,
     ChannelQueue,
-    ChannelSeasonWhiteList,
+    ChannelSeasonFilter,
     ChannelShow,
     URLStatus,
 )
@@ -30,7 +30,6 @@ def add_urls_to_channel_import_queue(
     urls: Sequence[str],
 ) -> list[ChannelQueue]:
     """Add URLs to a channel's import queue."""
-
     output: list[ChannelQueue] = []
     # Remove duplicates without changing the order allowing the output order to match
     # the input order.
@@ -63,13 +62,11 @@ def update_whitelist(
     config: WhitelistShowInput,
 ) -> None:
     """Update whitelist records for a channel show."""
-    if config.whitelist_mode is not None:
-        channel_show.white_list_mode = config.whitelist_mode
+    if config.is_whitelist is not None:
+        channel_show.is_whitelist = config.is_whitelist
 
-    existing_seasons = {season.season_id for season in channel_show.season_white_list}
-    existing_episodes = {
-        episode.episode_id for episode in channel_show.episode_white_list
-    }
+    existing_seasons = {season.season_id for season in channel_show.season_filters}
+    existing_episodes = {episode.episode_id for episode in channel_show.episode_filters}
 
     for season in config.seasons:
         toggle_season_whitelist(
@@ -100,14 +97,14 @@ def toggle_season_whitelist(
     marked: bool,
 ) -> None:
     if marked and season_id not in existing:
-        channel_show.season_white_list.append(
-            ChannelSeasonWhiteList(
+        channel_show.season_filters.append(
+            ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
                 season_id=season_id,
             ),
         )
     elif not marked and season_id in existing:
-        existing_season = ChannelSeasonWhiteList.get(session, channel_show, season_id)
+        existing_season = ChannelSeasonFilter.get(session, channel_show, season_id)
         if existing_season:
             session.delete(existing_season)
 
@@ -121,14 +118,14 @@ def toggle_episode_whitelist(
     marked: bool,
 ) -> None:
     if marked and episode_id not in existing:
-        channel_show.episode_white_list.append(
-            ChannelEpisodeWhiteList(
+        channel_show.episode_filters.append(
+            ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
                 episode_id=episode_id,
             ),
         )
     elif not marked and episode_id in existing:
-        existing_episode = ChannelEpisodeWhiteList.get(
+        existing_episode = ChannelEpisodeFilter.get(
             session,
             channel_show,
             episode_id,

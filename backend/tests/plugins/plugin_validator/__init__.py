@@ -31,8 +31,6 @@ from tests.plugins.plugin_validator.mocks import (
 from tests.plugins.plugin_validator.validator import Validator
 from tests.utils.utils import build_random_model
 
-# region Base
-
 
 class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     """Base class with shared configuration, validation helpers, and data initialization."""
@@ -44,8 +42,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     url_path_patterns: tuple[str, ...] = ()
     invalid_url = False
     search_query: str | None = None
-
-    # region Validation
 
     def get_detached_plugin(self, session: Session) -> Plugin:
         """Return a detached copy of the plugin to use for validation."""
@@ -114,10 +110,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     def deleted_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_deleted_validator(episode)
 
-    # endregion Validation
-
-    # region Get Random
-
     @staticmethod
     def get_random_source(results: list[URLImportResult]) -> Source:
         sources = [result.show.source for result in results]
@@ -142,10 +134,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             for episode in season.episodes
         ]
         return random.choice(episodes)  # noqa: S311
-
-    # endregion Get Random
-
-    # region Update Helpers
 
     def _get_update_function(
         self,
@@ -221,10 +209,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         except AssertionError as error:
             raise AssertionError(msg) from error
 
-    # endregion Update Helpers
-
-    # region Data Initialization
-
     def _initialize_import_data(
         self,
         session: Session,
@@ -288,13 +272,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
                 self.search_query,
                 files_already_cached=files_already_cached,
             )
-
-    # endregion Data Initialization
-
-
-# endregion Base
-
-# region Individual Test Mixins
 
 
 class ParseURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -412,9 +389,9 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         source: Source,
         timestamp: datetime,
     ) -> None:
-        """Fabricate an upstream update signal for ``source`` at ``timestamp``.
+        """Fabricate an upstream update signal for `source` at `timestamp`.
 
-        Each plugin writes whatever fake file(s) make ``update_source`` see a
+        Each plugin writes whatever fake file(s) make `update_source` see a
         pending refresh for the given source keyed at the given timestamp.
         """
         raise NotImplementedError
@@ -557,11 +534,6 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                         session_with_url.rollback()
 
 
-# endregion Individual Test Mixins
-
-# region Grouped Mixins
-
-
 class URLTests[PluginT: BasePlugin](
     ParseURLTests[PluginT],
     ParseURLVariantTests[PluginT],
@@ -603,6 +575,3 @@ class InvalidURLValidator[PluginT: BasePlugin](
     """Validator for plugins with invalid URLs that should raise errors."""
 
     invalid_url = True
-
-
-# endregion Grouped Mixins

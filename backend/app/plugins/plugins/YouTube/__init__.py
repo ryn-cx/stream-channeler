@@ -56,8 +56,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             "> `https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`"
         )
 
-    # region Watch Import
-
     @classmethod
     @override
     def import_watch_history_instructions(cls) -> str:
@@ -99,10 +97,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 ),
             )
         return parsed_entries
-
-    # endregion Watch Import
-
-    # region Import URL
 
     @classmethod
     @override
@@ -201,28 +195,24 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         seasons = [season for season in show.seasons if season.key == playlist_key]
         if key_type != "playlist_key":
             # The user is importing a channel so whitelist new playlists by default.
-            whitelist_mode = True
+            is_whitelist = True
             uploads_key = self._get_channel_uploads_playlist_key(show_key)
             show_season_keys = {season.key for season in show.seasons}
             # If the URL ends with playlists or a channel has no uploads return all
             # of the playlists for the channel.
             if url.endswith("/playlists") or uploads_key not in show_season_keys:
-                whitelist_mode = False
+                is_whitelist = False
                 seasons = list(show.seasons)
         else:
             # The user specifically wants just this playlist so ignore any new
             # playlists.
-            whitelist_mode = False
+            is_whitelist = False
 
         return URLImportResult(
             show=show,
             seasons=seasons,
-            whitelist_mode=whitelist_mode,
+            is_whitelist=is_whitelist,
         )
-
-    # endregion Import URL
-
-    # region URL
 
     @classmethod
     @override
@@ -305,10 +295,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         long = cls._escape_domain(cls.__long_domain())
         short = cls._escape_domain(cls.__short_domain())
         return rf"(?:{long}|{short})"
-
-    # endregion URL
-
-    # region Upsert
 
     @classmethod
     def _playlist_url(cls, playlist_key: str) -> str:
@@ -494,5 +480,3 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             if thumb := getattr(thumbnails, quality, None):
                 return thumb.url
         return None
-
-    # endregion Upsert

@@ -43,7 +43,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             client,
             "get",
             self.get_record_list_url(parent_id),
-            self.output_model,
+            self.output_schema,
             headers,
         )
 
@@ -54,7 +54,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         assert len(response) == len(database_records)
         response_by_id = {item.id: item for item in response}
         for record in database_records:
-            expected_dump = self.output_model.model_validate(record).model_dump()
+            expected_dump = self.output_schema.model_validate(record).model_dump()
             # This works as a check to make sure the responses are not empty
             response_dump = response_by_id[record.id].model_dump()
             assert expected_dump.items() <= response_dump.items()
@@ -69,12 +69,12 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             client=client,
             method="get",
             url=self.generic_record_url(initial_test_data.record.id),
-            output_model=self.output_model,
+            output_schema=self.output_schema,
             headers=initial_test_data.headers,
         )
         # Make sure the response is not completely empty
         assert response.id
-        database_record = self.output_model.model_validate(initial_test_data.record)
+        database_record = self.output_schema.model_validate(initial_test_data.record)
         # Make sure returned data matches the datbase record
         assert database_record.model_dump().items() <= response.model_dump().items()
 

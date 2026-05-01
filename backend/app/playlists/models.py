@@ -1,5 +1,6 @@
 # TODO: Validate
 import uuid
+from typing import override
 
 from sqlmodel import (
     Field,
@@ -11,16 +12,16 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import TimestampIdAndHashMixin
+from app.models import RootRecordMixin, TimestampIdAndHashMixin, Visibility
 from app.users.models import User
 
 
 class BasePlaylist(SQLModel):
     name: str | None = Field(default=None)
-    public: bool = Field(default=False)
+    visibility: Visibility = Field()
 
 
-class Playlist(BasePlaylist, TimestampIdAndHashMixin, table=True):
+class Playlist(BasePlaylist, TimestampIdAndHashMixin, RootRecordMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id"),
         # Used to list all playlists owned by a user.
@@ -36,13 +37,9 @@ class Playlist(BasePlaylist, TimestampIdAndHashMixin, table=True):
         sa_relationship_kwargs={"order_by": "PlaylistEpisode.position"},
     )
 
-    def get_user_id(self, _session: Session) -> uuid.UUID:
-        """Return the id of the user that owns this playlist."""
-        return self.user_id
-
-    def is_public(self, _session: Session) -> bool:
-        """Return whether this playlist is publicly accessible."""
-        return self.public
+    @override
+    def _root_record(self, session: Session) -> Playlist:
+        return self
 
 
 class BasePlaylistEpisode(SQLModel):

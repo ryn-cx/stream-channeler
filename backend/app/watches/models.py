@@ -59,3 +59,6 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
 
     def is_public(self, _session: Session) -> bool:
         return False
+
+    def is_publically_readable(self, _session: Session) -> bool:
+        return False

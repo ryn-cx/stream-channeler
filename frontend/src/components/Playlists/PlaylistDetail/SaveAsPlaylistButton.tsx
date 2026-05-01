@@ -4,10 +4,13 @@ import { useNavigate } from "@tanstack/react-router"
 import { ListPlus } from "lucide-react"
 import { useState } from "react"
 
-import { type EpisodeWithExtrasOutput, PlaylistsService } from "@/client"
+import {
+  type EpisodeWithDetails,
+  PlaylistsService,
+  type Visibility,
+} from "@/client"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -19,10 +22,18 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
+import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 
 interface SaveAsPlaylistButtonProps {
-  episodes: EpisodeWithExtrasOutput[]
+  episodes: EpisodeWithDetails[]
   variant?: "button" | "menu" | "icon"
 }
 
@@ -35,14 +46,14 @@ export function SaveAsPlaylistButton({
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState("")
-  const [isPublic, setIsPublic] = useState(false)
+  const [visibility, setVisibility] = useState<Visibility>("private")
 
   const mutation = useMutation({
     mutationFn: () =>
       PlaylistsService.createPlaylist({
         requestBody: {
           name: name.trim() || null,
-          public: isPublic,
+          visibility,
           episode_ids: episodes.map((episode) => episode.id),
         },
       }),
@@ -51,7 +62,7 @@ export function SaveAsPlaylistButton({
       queryClient.invalidateQueries({ queryKey: ["playlists"] })
       setIsOpen(false)
       setName("")
-      setIsPublic(false)
+      setVisibility("private")
       navigate({
         to: "/playlists/$playlistId",
         params: { playlistId: playlist.id },
@@ -67,7 +78,7 @@ export function SaveAsPlaylistButton({
     setIsOpen(open)
     if (!open) {
       setName("")
-      setIsPublic(false)
+      setVisibility("private")
     }
   }
 
@@ -106,15 +117,23 @@ export function SaveAsPlaylistButton({
               placeholder="Optional name for the playlist"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="playlist-public"
-              checked={isPublic}
-              onCheckedChange={(checked) => setIsPublic(checked === true)}
-            />
-            <Label htmlFor="playlist-public" className="cursor-pointer">
-              Make this playlist public
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="playlist-visibility">Visibility</Label>
+            <Select
+              value={visibility}
+              onValueChange={(value) => setVisibility(value as Visibility)}
+            >
+              <SelectTrigger id="playlist-visibility">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {visibilityLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button

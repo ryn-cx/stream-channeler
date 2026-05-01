@@ -5,7 +5,7 @@ from datetime import timedelta
 from functools import cache
 from typing import override
 
-import httpx
+from get_around import GetAround
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel import Channels as ChannelsEndpoint
@@ -40,6 +40,20 @@ def not_yt_dlapi() -> NotYTDLAPI:
         settings.YOUTUBE_API_KEY,
         get_around_server=server,
         get_around_password=password,
+    )
+
+
+@cache
+def get_around_client() -> GetAround:
+    get_around_server: str | None = settings.GET_AROUND_SERVER
+    if get_around_server == "changethis":
+        get_around_server = None
+    get_around_password: str | None = settings.GET_AROUND_PASSWORD
+    if get_around_password == "changethis":  # noqa: S105
+        get_around_password = None
+    return GetAround(
+        server=get_around_server,
+        password=get_around_password,
     )
 
 
@@ -154,11 +168,16 @@ class PlaylistFeed(XMLFile):
                 params = {"channel_id": "UC" + self.unique_identifier[2:]}
             else:
                 params = {"playlist_id": self.unique_identifier}
-            response = httpx.get(
+            response = get_around_client().get(
                 "https://www.youtube.com/feeds/videos.xml",
                 params=params,
             )
-            response.raise_for_status()
+            if not response.is_success:
+                msg = (
+                    f"PlaylistFeed fetch for {self.unique_identifier} "
+                    f"returned HTTP {response.status_code}"
+                )
+                raise RuntimeError(msg)
             self._write(response.text)
 
     def video_ids(self) -> list[str]:
@@ -178,8 +197,6 @@ class FileMixin(BasePlugin, register=False):
     @override
     def __init__(self, session: Session) -> None:
         super().__init__(session)
-
-    # region File Wrappers
 
     def _channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         return self._get_cached_file(
@@ -230,10 +247,6 @@ class FileMixin(BasePlugin, register=False):
             lambda: PlaylistFeed(self.session, self.plugin, season_key),
         )
 
-    # endregion File Wrappers
-
-    # region File Groups
-
     @override
     def _show_files(
         self,
@@ -269,8 +282,6 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[Videos]:
         # Required to detect changes to the episode (video).
         return [self._videos_file(episode_key)]
-
-    # endregion File Groups
 
     def _video_is_valid(self, video_title: str) -> bool:
         """Check if a video is valid for importing."""

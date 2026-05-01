@@ -1,8 +1,9 @@
-# TODO: Validate
+"""Channel models."""
+
 import uuid
 from collections.abc import Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import util
 from sqlmodel import (
@@ -15,7 +16,7 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import TimestampIdAndHashMixin
+from app.models import RootRecordMixin, TimestampIdAndHashMixin, Visibility
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
@@ -27,14 +28,19 @@ if TYPE_CHECKING:
 
 
 class BaseChannel(SQLModel):
+    """Base model representing a Channel."""
+
     name: str | None = Field(default=None)
     channel_number: float | None = Field(default=None)
-    public: bool = Field(default=False)
+    visibility: Visibility = Field()
     default_order: str | None = Field(default=None)
 
 
-class Channel(BaseChannel, TimestampIdAndHashMixin, table=True):
+class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
+    """Model representing a Channel."""
+
     __table_args__ = (
+        # Used to lookup a channel by its id.
         PrimaryKeyConstraint("id"),
         # Used to list all channels owned by a user.
         Index("Channel-user_id-index", "user_id"),
@@ -53,44 +59,41 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, table=True):
 
     @property
     def parent(self) -> User:
-        """Return the user that owns this channel."""
+        """Return the `User` that owns this `Channel`."""
         return self.user
 
-    def get_user_id(self, _session: Session) -> uuid.UUID:
-        """Return the id of the user that owns this channel."""
-        return self.user_id
-
-    def is_public(self, _session: Session) -> bool:
-        """Return whether this channel is publicly accessible."""
-        return self.public
+    @override
+    def _root_record(self, session: Session) -> Channel:
+        return self
 
 
 class BaseChannelShow(SQLModel):
+    """Base model representing the `Shows` that belong to a `Channel`."""
+
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
-    white_list_mode: bool = Field()
+    is_whitelist: bool = Field()
 
 
 class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
+    """Model representing the `Shows` that belong to a `Channel`."""
+
     __table_args__ = (
-        # Used in _filter_episodes_by_channels to filter episodes by channel.
+        # Used to ensure each show is unique within a channel.
+        # Used by cascade deletions when a channel is deleted.
         PrimaryKeyConstraint("channel_id", "show_id"),
-        # Used to cascade deletions when a show is deleted.
+        # Used by cascade deletions when a show is deleted.
         Index("ChannelShow-show_id-index", "show_id"),
     )
 
-    channel: Channel = Relationship(
-        back_populates="shows",
-    )
-    show: Show = Relationship(
-        back_populates="channels",
-    )
+    channel: Channel = Relationship(back_populates="shows")
+    show: Show = Relationship(back_populates="channels")
 
-    season_white_list: list[ChannelSeasonWhiteList] = Relationship(
+    season_filters: list[ChannelSeasonFilter] = Relationship(
         back_populates="channel_show",
         cascade_delete=True,
     )
-    episode_white_list: list[ChannelEpisodeWhiteList] = Relationship(
+    episode_filters: list[ChannelEpisodeFilter] = Relationship(
         back_populates="channel_show",
         cascade_delete=True,
     )
@@ -100,7 +103,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        show: Show | uuid.UUID,
+        show: Show,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -109,18 +112,17 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
     ) -> ChannelShow | None:
-        """Get the ChannelShow if it exists.
+        """Get the `ChannelShow` if it exists.
 
-        This is a wrapper around ``db.get``.
+        This is a wrapper around `db.get`.
 
         Returns:
-            The matching ChannelShow if found, else None.
+            The matching `ChannelShow` if found, else `None`.
 
         """
-        show_id = show.id if isinstance(show, Show) else show
         return session.get(
             cls,
-            (channel.id, show_id),
+            (channel.id, show.id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -134,7 +136,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        show: Show | uuid.UUID,
+        show: Show,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -143,21 +145,20 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
     ) -> ChannelShow:
-        """Get the ChannelShow, raising if not found.
+        """Get the `ChannelShow`, raising if not found.
 
-        This is a wrapper around ``db.get_one``.
+        This is a wrapper around `db.get_one`.
 
         Returns:
-            The matching ChannelShow.
+            The matching `ChannelShow`.
 
         Raises:
-            NoResultFound: If no ChannelShow links the given channel and show.
+            NoResultFound: If no `ChannelShow` links the given channel and show.
 
         """
-        show_id = show.id if isinstance(show, Show) else show
         return session.get_one(
             cls,
-            (channel.id, show_id),
+            (channel.id, show.id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -167,25 +168,26 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         )
 
 
-class BaseChannelSeasonWhiteList(SQLModel):
+class BaseChannelSeasonFilter(SQLModel):
+    """Base model representing the `Seasons` that are filtered for a `ChannelShow`."""
+
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
 
 
-class ChannelSeasonWhiteList(
-    BaseChannelSeasonWhiteList,
-    TimestampIdAndHashMixin,
-    table=True,
-):
+class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, table=True):
+    """Model representing the `Seasons` that are filtered for a `ChannelShow`."""
+
     __table_args__ = (
+        # Used to ensure each Season is unique within a ChannelShow.
         # Used to cascade deletions when a channel show is deleted.
         PrimaryKeyConstraint("channel_show_id", "season_id"),
         # Used to cascade deletions when a season is deleted.
-        Index("ChannelSeasonWhiteList-season_id-index", "season_id"),
+        Index("ChannelSeasonFilter-season_id-index", "season_id"),
     )
 
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
-    channel_show: ChannelShow = Relationship(back_populates="season_white_list")
-    season: Season = Relationship(back_populates="channel_white_list")
+    channel_show: ChannelShow = Relationship(back_populates="season_filters")
+    season: Season = Relationship(back_populates="channel_filters")
 
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
@@ -200,13 +202,13 @@ class ChannelSeasonWhiteList(
         identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
-    ) -> ChannelSeasonWhiteList | None:
-        """Get the ChannelSeasonWhiteList if it exists.
+    ) -> ChannelSeasonFilter | None:
+        """Get the `ChannelSeasonFilter` if it exists.
 
-        This is a wrapper around ``db.get``.
+        This is a wrapper around `db.get`.
 
         Returns:
-            The matching ChannelSeasonWhiteList if found, else None.
+            The matching `ChannelSeasonFilter` if found, else `None`.
 
         """
         season_id = season.id if isinstance(season, Season) else season
@@ -234,17 +236,17 @@ class ChannelSeasonWhiteList(
         identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
-    ) -> ChannelSeasonWhiteList:
-        """Get the ChannelSeasonWhiteList, raising if not found.
+    ) -> ChannelSeasonFilter:
+        """Get the `ChannelSeasonFilter`, raising if not found.
 
-        This is a wrapper around ``db.get_one``.
+        This is a wrapper around `db.get_one`.
 
         Returns:
-            The matching ChannelSeasonWhiteList.
+            The matching `ChannelSeasonFilter`.
 
         Raises:
-            NoResultFound: If no ChannelSeasonWhiteList links the given channel show
-                and season.
+            NoResultFound: If no `ChannelSeasonFilter` links the given `ChannelShow`
+                and `Season`.
 
         """
         season_id = season.id if isinstance(season, Season) else season
@@ -260,25 +262,30 @@ class ChannelSeasonWhiteList(
         )
 
 
-class BaseChannelEpisodeWhiteList(SQLModel):
+class BaseChannelEpisodeFilter(SQLModel):
+    """Base model representing the `Episodes` that are filtered for a `ChannelShow`."""
+
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
 
 
-class ChannelEpisodeWhiteList(
-    BaseChannelEpisodeWhiteList,
+class ChannelEpisodeFilter(
+    BaseChannelEpisodeFilter,
     TimestampIdAndHashMixin,
     table=True,
 ):
+    """Model representing the `Episodes` that are filtered for a `ChannelShow`."""
+
     __table_args__ = (
+        # Used to ensure each Episode is unique within a ChannelShow.
         # Used to cascade deletions when a channel show is deleted.
         PrimaryKeyConstraint("channel_show_id", "episode_id"),
         # Used to cascade deletions when an episode is deleted.
-        Index("ChannelEpisodeWhiteList-episode_id-index", "episode_id"),
+        Index("ChannelEpisodeFilter-episode_id-index", "episode_id"),
     )
 
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
-    channel_show: ChannelShow = Relationship(back_populates="episode_white_list")
-    episode: Episode = Relationship(back_populates="white_lists")
+    channel_show: ChannelShow = Relationship(back_populates="episode_filters")
+    episode: Episode = Relationship(back_populates="channel_filters")
 
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
@@ -293,13 +300,13 @@ class ChannelEpisodeWhiteList(
         identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
-    ) -> ChannelEpisodeWhiteList | None:
-        """Get the ChannelEpisodeWhiteList if it exists.
+    ) -> ChannelEpisodeFilter | None:
+        """Get the ChannelEpisodeFilter if it exists.
 
-        This is a wrapper around ``db.get``.
+        This is a wrapper around `db.get`.
 
         Returns:
-            The matching ChannelEpisodeWhiteList if found, else None.
+            The matching ChannelEpisodeFilter if found, else None.
 
         """
         episode_id = episode.id if isinstance(episode, Episode) else episode
@@ -327,17 +334,17 @@ class ChannelEpisodeWhiteList(
         identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
         execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
         bind_arguments: dict[str, Any] | None = None,
-    ) -> ChannelEpisodeWhiteList:
-        """Get the ChannelEpisodeWhiteList, raising if not found.
+    ) -> ChannelEpisodeFilter:
+        """Get the `ChannelEpisodeFilter`, raising if not found.
 
-        This is a wrapper around ``db.get_one``.
+        This is a wrapper around `db.get_one`.
 
         Returns:
-            The matching ChannelEpisodeWhiteList.
+            The matching `ChannelEpisodeFilter`.
 
         Raises:
-            NoResultFound: If no ChannelEpisodeWhiteList links the given channel show
-                and episode.
+            NoResultFound: If no `ChannelEpisodeFilter` links the given `ChannelShow`
+                and `Episode`.
 
         """
         episode_id = episode.id if isinstance(episode, Episode) else episode
@@ -354,6 +361,8 @@ class ChannelEpisodeWhiteList(
 
 
 class URLStatus(Enum):
+    """Enum representing the status of a URL in the channel queue."""
+
     PENDING = "Pending"
     FAILED = "Failed"
     IMPORTED = "Imported"
@@ -361,12 +370,16 @@ class URLStatus(Enum):
 
 
 class BaseChannelQueue(SQLModel):
+    """Base model representing a URL in a channel's import queue."""
+
     url: str = Field()
     status: URLStatus = Field()
     note: str | None = Field(default=None)
 
 
 class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
+    """Model representing a URL in a channel's import queue."""
+
     # Used to lookup the queue for a specific channel.
     __table_args__ = (PrimaryKeyConstraint("channel_id", "url"),)
 

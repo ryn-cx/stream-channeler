@@ -110,7 +110,7 @@ class StreamChanneler(BasePlugin, register=True):
             msg = f"Plugin not found: {url}"
             raise InvalidURLError(msg)
         return [
-            URLImportResult(show=show, whitelist_mode=False)
+            URLImportResult(show=show, is_whitelist=False)
             for source in plugin_entity.sources
             for show in source.shows
         ]
@@ -130,9 +130,7 @@ class StreamChanneler(BasePlugin, register=True):
         if not source:
             msg = f"Source not found: {url}"
             raise InvalidURLError(msg)
-        return [
-            URLImportResult(show=show, whitelist_mode=False) for show in source.shows
-        ]
+        return [URLImportResult(show=show, is_whitelist=False) for show in source.shows]
 
     def _import_show(
         self,
@@ -146,7 +144,7 @@ class StreamChanneler(BasePlugin, register=True):
         if not show:
             msg = f"Show not found: {url}"
             raise InvalidURLError(msg)
-        return [URLImportResult(show=show, whitelist_mode=False)]
+        return [URLImportResult(show=show, is_whitelist=False)]
 
     def _import_season(
         self,
@@ -162,7 +160,7 @@ class StreamChanneler(BasePlugin, register=True):
             msg = f"Season not found: {url}"
             raise InvalidURLError(msg)
         return [
-            URLImportResult(show=season.show, seasons=[season], whitelist_mode=True),
+            URLImportResult(show=season.show, seasons=[season], is_whitelist=True),
         ]
 
     def _import_episode(
@@ -182,6 +180,6 @@ class StreamChanneler(BasePlugin, register=True):
             URLImportResult(
                 show=episode.season.show,
                 episodes=[episode],
-                whitelist_mode=True,
+                is_whitelist=True,
             ),
         ]

@@ -122,8 +122,6 @@ class FileMixin(BasePlugin, register=False):
             raise AttributeError(msg)
         return self._media_type_value
 
-    # region File Wrappers
-
     def _season_file(self, season_key: str | int) -> Season:
         key = str(season_key)
         return self._get_cached_file(
@@ -192,10 +190,6 @@ class FileMixin(BasePlugin, register=False):
         schedule.download_if_outdated()
         return schedule
 
-    # endregion File Wrappers
-
-    # region File Groups
-
     @override
     def _show_files(
         self,
@@ -236,10 +230,6 @@ class FileMixin(BasePlugin, register=False):
             self._season_file(season_key),
         ]
 
-    # endregion File Groups
-
-    # region File Data
-
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         # TODO: Is this seperate check needed?
@@ -268,8 +258,6 @@ class FileMixin(BasePlugin, register=False):
             bucket = diving_board().season.extract_bucket_season(season_data)
             episode_keys.extend(str(item.id) for item in bucket.attributes.items)
         return episode_keys
-
-    # endregion File Data
 
     @staticmethod
     def _series_season_items(

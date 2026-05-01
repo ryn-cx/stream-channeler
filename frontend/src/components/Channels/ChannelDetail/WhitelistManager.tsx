@@ -2,7 +2,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
-import type { EpisodeOutput, SeasonOutput, WhitelistShowInput } from "@/client"
+import type {
+  WhitelistEpisodeOutput,
+  WhitelistSeasonOutput,
+  WhitelistShowInput,
+} from "@/client"
 import { ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +36,7 @@ export function WhitelistManager({
   isOpen,
   onClose,
 }: WhitelistManagerProps) {
-  const [whitelistMode, setWhitelistMode] = useState(false)
+  const [isWhitelist, setIsWhitelist] = useState(false)
   const [enabledSeasonIds, setEnabledSeasonIds] = useState<Set<string>>(
     new Set(),
   )
@@ -52,9 +56,21 @@ export function WhitelistManager({
 
   useEffect(() => {
     if (whitelistData) {
-      setWhitelistMode(whitelistData.whitelist_mode ?? false)
-      setEnabledSeasonIds(new Set(whitelistData.enabled_season_ids ?? []))
-      setEnabledEpisodeIds(new Set(whitelistData.enabled_episode_ids ?? []))
+      setIsWhitelist(whitelistData.is_whitelist ?? false)
+      setEnabledSeasonIds(
+        new Set(
+          whitelistData.seasons
+            .filter((season) => season.filtered)
+            .map((season) => season.id),
+        ),
+      )
+      setEnabledEpisodeIds(
+        new Set(
+          whitelistData.episodes
+            .filter((episode) => episode.filtered)
+            .map((episode) => episode.id),
+        ),
+      )
     }
   }, [whitelistData])
 
@@ -76,8 +92,8 @@ export function WhitelistManager({
     onError: handleError.bind(showErrorToast),
   })
 
-  const toggleWhitelistMode = () => {
-    setWhitelistMode(!whitelistMode)
+  const toggleIsWhitelist = () => {
+    setIsWhitelist(!isWhitelist)
   }
 
   const toggleSeasonExpanded = (seasonId: string) => {
@@ -114,12 +130,12 @@ export function WhitelistManager({
     if (!whitelistData) return
 
     const input: WhitelistShowInput = {
-      whitelist_mode: whitelistMode,
-      seasons: whitelistData.seasons.map((season: SeasonOutput) => ({
+      is_whitelist: isWhitelist,
+      seasons: whitelistData.seasons.map((season) => ({
         id: season.id,
         marked: enabledSeasonIds.has(season.id),
       })),
-      episodes: whitelistData.episodes.map((episode: EpisodeOutput) => ({
+      episodes: whitelistData.episodes.map((episode) => ({
         id: episode.id,
         marked: enabledEpisodeIds.has(episode.id),
       })),
@@ -127,19 +143,19 @@ export function WhitelistManager({
     saveMutation.mutate(input)
   }
 
-  const getSeasonLabel = (season: SeasonOutput) => {
+  const getSeasonLabel = (season: WhitelistSeasonOutput) => {
     const seasonNum = season.season_number ?? "?"
     const seasonName = season.name ? ` - ${season.name}` : ""
     return `Season ${seasonNum}${seasonName}`
   }
 
-  const getEpisodeLabel = (episode: EpisodeOutput) => {
+  const getEpisodeLabel = (episode: WhitelistEpisodeOutput) => {
     const episodeName = episode.name ? ` - ${episode.name}` : ""
     return `Episode ${episode.sort_order ?? "?"}${episodeName}`
   }
 
   const getSeasonActionLabel = (enabled: boolean) => {
-    if (whitelistMode) {
+    if (isWhitelist) {
       return enabled ? "Remove from Whitelist" : "Add to Whitelist"
     }
     return enabled ? "Remove from Blacklist" : "Add to Blacklist"
@@ -151,10 +167,10 @@ export function WhitelistManager({
   ) => {
     // When a season is whitelisted, its episodes are included by default.
     // Toggling an individual episode removes/adds it from the whitelist.
-    if (whitelistMode && seasonEnabled) {
+    if (isWhitelist && seasonEnabled) {
       return episodeEnabled ? "Add to Whitelist" : "Remove from Whitelist"
     }
-    if (whitelistMode) {
+    if (isWhitelist) {
       return episodeEnabled ? "Remove from Whitelist" : "Add to Whitelist"
     }
     return episodeEnabled ? "Remove from Blacklist" : "Add to Blacklist"
@@ -164,7 +180,7 @@ export function WhitelistManager({
   if (!whitelistData) return
   const episodesBySeason = new Map<string, typeof whitelistData.episodes>()
   if (whitelistData) {
-    whitelistData.episodes.forEach((episode: EpisodeOutput) => {
+    whitelistData.episodes.forEach((episode) => {
       const seasonEpisodes = episodesBySeason.get(episode.season_id) || []
       seasonEpisodes.push(episode)
       episodesBySeason.set(episode.season_id, seasonEpisodes)
@@ -177,7 +193,7 @@ export function WhitelistManager({
         <DialogHeader>
           <DialogTitle>Manage Whitelist - {showName}</DialogTitle>
           <DialogDescription>
-            {whitelistMode
+            {isWhitelist
               ? "Only selected seasons and episodes will appear. New episodes are not automatically added."
               : "All episodes are shown by default. New episodes are automatically added."}
           </DialogDescription>
@@ -194,16 +210,16 @@ export function WhitelistManager({
                 <div>
                   <h3 className="font-semibold">
                     Current Mode:{" "}
-                    {whitelistMode ? "Whitelist Mode" : "Blacklist Mode"}
+                    {isWhitelist ? "Whitelist Mode" : "Blacklist Mode"}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {whitelistMode
+                    {isWhitelist
                       ? "Only whitelisted episodes will be shown"
                       : "All episodes except blacklisted ones will be shown"}
                   </p>
                 </div>
-                <Button onClick={toggleWhitelistMode} variant="outline">
-                  Switch to {whitelistMode ? "Blacklist" : "Whitelist"} Mode
+                <Button onClick={toggleIsWhitelist} variant="outline">
+                  Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
                 </Button>
               </div>
 
@@ -215,7 +231,7 @@ export function WhitelistManager({
                       No seasons found for this show
                     </p>
                   ) : (
-                    whitelistData.seasons.map((season: SeasonOutput) => {
+                    whitelistData.seasons.map((season) => {
                       const seasonEnabled = enabledSeasonIds.has(season.id)
                       return (
                         <div key={season.id} className="border rounded">
@@ -253,7 +269,7 @@ export function WhitelistManager({
                               ) : (
                                 episodesBySeason
                                   .get(season.id)!
-                                  .map((episode: EpisodeOutput) => {
+                                  .map((episode) => {
                                     const episodeEnabled =
                                       enabledEpisodeIds.has(episode.id)
                                     return (

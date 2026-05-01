@@ -1,24 +1,33 @@
+"""Plugin schemas."""
+
 # TODO: Validate
 import uuid
 
 from pydantic import BaseModel
 from sqlmodel import Field
 
+from app.models import Visibility
 from app.plugins.models import BasePlugin, Plugin
-from app.schemas import BaseInput, BasePatchInputWithKey
+from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.users.models import User
+
+
+class PluginCreate(BaseCreateWithParentAndKey[Plugin, User], BasePlugin):
+    """Schema for creating a `Plugin`."""
+
+
+class PluginUpdate(BaseUpdateWithKey[Plugin], BasePlugin):
+    """Schema for updating a `Plugin`."""
+
+    # Update requests use PATCH endpoints so all required fields must be made optional.
+    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
+    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
 
 
 class PluginOutput(BasePlugin):
+    """Schema for returning a `Plugin`."""
+
     id: uuid.UUID
-
-
-class PluginPostInput(BaseInput, BasePlugin):
-    pass
-
-
-class PluginPatchInput(BasePatchInputWithKey[Plugin], BasePlugin):
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment] # Patch input can ignore required values.
-    public: bool | None = Field(default=None)  # type: ignore[assignment]
 
 
 class PluginImportWatchHistoryInformation(BaseModel):

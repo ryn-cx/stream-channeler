@@ -18,9 +18,10 @@ from app.channels.models import (
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
-from app.schemas import BaseInput, BasePatchInputWithoutKey
+from app.schemas import BaseInput, BaseUpdateWithoutKey
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
@@ -29,16 +30,20 @@ from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 
 
-class ChannelPostInput(BaseInput, BaseChannel):
-    pass
+class ChannelCreate(BaseInput, BaseChannel):
+    """Schema for creating a `Channel`."""
 
 
-class ChannelPatchInput(BasePatchInputWithoutKey[Channel], BaseChannel):
-    public: bool | None = Field(default=None)  # type: ignore[assignment]
-    default_order: str | None = Field(default=None)
+class ChannelUpdate(BaseUpdateWithoutKey[Channel], BaseChannel):
+    """Schema for updating a `Channel`."""
+
+    # Update requests use PATCH endpoints so all required fields must be made optional.
+    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
 
 
 class ChannelOutput(BaseChannel):
+    """Schema for returning a `Channel`."""
+
     id: uuid.UUID
     user_id: uuid.UUID
 
@@ -48,7 +53,7 @@ class ChannelQueueOutput(BaseChannelQueue):
     channel_id: uuid.UUID
 
 
-class EpisodeWithExtrasOutput(EpisodeOutput):
+class EpisodeWithDetails(EpisodeOutput):
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
     episode_watch_id: uuid.UUID | None = Field(default=None)
@@ -56,7 +61,7 @@ class EpisodeWithExtrasOutput(EpisodeOutput):
 
 
 class ChannelEpisodesOutput(BaseModel):
-    episodes: list[EpisodeWithExtrasOutput]
+    episodes: list[EpisodeWithDetails]
     seasons: dict[uuid.UUID, SeasonOutput]
     shows: dict[uuid.UUID, ShowPublic]
     sources: dict[uuid.UUID, SourcePublic]
@@ -75,20 +80,23 @@ class WhitelistEntryInput(BaseInput):
 
 
 class WhitelistShowInput(BaseInput):
-    whitelist_mode: bool | None = Field(default=None)
+    is_whitelist: bool | None = Field(default=None)
     seasons: list[WhitelistEntryInput] = Field(default_factory=list)
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
 
 
+class WhitelistSeasonOutput(SeasonOutput):
+    filtered: bool
+
+
+class WhitelistEpisodeOutput(EpisodeOutput):
+    filtered: bool
+
+
 class WhitelistShowOutput(ShowPublic):
-    whitelist_mode: bool
-    enabled_season_ids: list[uuid.UUID]
-    enabled_episode_ids: list[uuid.UUID]
-    seasons: list[SeasonOutput]
-    episodes: list[EpisodeOutput]
-
-
-# region Episode Configuration
+    is_whitelist: bool
+    seasons: list[WhitelistSeasonOutput]
+    episodes: list[WhitelistEpisodeOutput]
 
 
 class SortOptionOutput(BaseModel):
@@ -98,8 +106,6 @@ class SortOptionOutput(BaseModel):
 
 
 class SortKeyInput(BaseInput):
-    # Redeclaring model_config replaces (not merges with) BaseInput's config, so
-    # both settings have to be listed here.
     model_config = ConfigDict(
         validate_by_name=True,
         extra="forbid",
@@ -117,14 +123,7 @@ class SortKeyInput(BaseInput):
     model: Literal["episode", "season", "show", "source", "plugin"]
     field: str
     direction: Literal["ascending", "descending"]
-    # order controls how this key contributes to the final ordering:
-    # - "sequential": standard ORDER BY contribution using the value itself.
-    # - "interleave": partition rows by this value and spread them across the
-    #   output using row_number, so rows with distinct values alternate.
-    # - "randomize": like interleave but partitions play in a random order.
-    order: Literal["sequential", "interleave", "randomize"] = Field(
-        default="sequential",
-    )
+    order: Literal["sequential", "interleave", "randomize"] = Field()
     aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
     days: int | None = Field(default=None)
     recently_aired_date: datetime | None = Field(default=None)
@@ -135,15 +134,11 @@ class SortKeyInput(BaseInput):
 
     @model_validator(mode="after")
     def validate_and_resolve(self) -> SortKeyInput:
-        # "random" is the default sort fallback in episode_selector and is not
-        # exposed as a user-facing option, so it is allowed but not declared in
-        # any model's SORTABLE_FIELDS.
-        if self.field == "random":
+        if self.field == "random" or self.field in self.model_class.SORTABLE_FIELDS:
             return self
-        if self.field not in self.model_class.SORTABLE_FIELDS:
-            msg = f"Invalid field '{self.field}' for model '{self.model}'"
-            raise ValueError(msg)
-        return self
+
+        msg = f"Invalid field '{self.field}' for model '{self.model}'"
+        raise ValueError(msg)
 
 
 class ChannelOptions(BaseInput):
@@ -185,6 +180,3 @@ class ChannelOptions(BaseInput):
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
     limit: int | None = Field(default=None, ge=1)
-
-
-# endregion Episode Configuration

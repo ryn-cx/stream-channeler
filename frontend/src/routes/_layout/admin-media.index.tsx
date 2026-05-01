@@ -5,12 +5,13 @@ import type { ColumnDef, VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { useState } from "react"
 
-import { OpenAPI, UsersService } from "@/client"
+import { OpenAPI, UsersService, type Visibility } from "@/client"
 import { request } from "@/client/core/request"
 import ForceUpdateButton from "@/components/AdminMedia/ForceUpdateButton"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingPlugins from "@/components/Pending/PendingPlugins"
+import { visibilityLabel } from "@/lib/visibility"
 
 interface AdminPluginTableData {
   key: string
@@ -21,7 +22,7 @@ interface AdminPluginTableData {
   data_timestamp: string | null
   update_at: string | null
   deleted_at: string | null
-  public: boolean
+  visibility: Visibility
 }
 
 const queryKey = ["admin-media", "plugins"]
@@ -87,12 +88,16 @@ const adminPluginColumns: ColumnDef<AdminPluginTableData>[] = [
     ),
   },
   {
-    accessorFn: (row) => (row.public ? "Public" : "Private"),
-    id: "public",
+    accessorFn: (row) => visibilityLabel(row.visibility),
+    id: "visibility",
     header: "Visibility",
     cell: ({ row }) => (
-      <span className={row.original.public ? "" : "text-muted-foreground"}>
-        {row.original.public ? "Public" : "Private"}
+      <span
+        className={
+          row.original.visibility === "private" ? "text-muted-foreground" : ""
+        }
+      >
+        {visibilityLabel(row.original.visibility)}
       </span>
     ),
   },

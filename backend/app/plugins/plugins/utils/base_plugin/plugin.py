@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from sqlmodel import Session
 
 from app.episodes.models import Episode
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.plugins.plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from app.plugins.plugins.utils.base_plugin.download import DownloadMixin
@@ -32,8 +33,6 @@ class BasePlugin(
     register=False,
 ):
     _VERSION: str
-
-    # region Initialization
 
     @override
     def __init__(self, session: Session) -> None:
@@ -60,10 +59,10 @@ class BasePlugin(
         return self._source is not None
 
     def initialize_database(self) -> None:
-        """Add the ``Plugin (class)`` to the database if it doesn't already exist.
+        """Add the `Plugin (class)` to the database if it doesn't already exist.
 
-        This will always set ``self.plugin`` to the database record for the ``Plugin``, and
-        if there is only one ``Source`` for the plugin, it will set ``self.source`` to that
+        This will always set `self.plugin` to the database record for the `Plugin`, and
+        if there is only one `Source` for the plugin, it will set `self.source` to that
         source.
         """
         plugin_user = get_or_create_plugin_user(session=self.session)
@@ -79,7 +78,7 @@ class BasePlugin(
                 key=self.plugin_key(),
                 name=self.plugin_key(),
                 version=self._VERSION,
-                public=True,
+                visibility=Visibility.public,
                 user_id=plugin_user.id,
             ).upsert(plugin_user, existing_plugin)
         else:
@@ -101,7 +100,7 @@ class BasePlugin(
     ) -> None:
         """Set update_at on the show and/or seasons from episode release dates.
 
-        Each episode's release_date + 7 days is offered to ``set_update_at``
+        Each episode's release_date + 7 days is offered to `set_update_at`
         so the entity is re-checked roughly one week after the episode aired.
         """
         for season in show.active_seasons:
@@ -121,10 +120,6 @@ class BasePlugin(
                 f"The database record needs to be migrated."
             )
             raise RuntimeError(msg)
-
-    # endregion
-
-    # region Update
 
     @override
     def update_show(self, show: Show) -> None:
@@ -206,8 +201,6 @@ class BasePlugin(
                 and obj.show_id in show_ids
             ):
                 obj.soft_delete_missing_children(expected_keys)
-
-    # endregion
 
     @classmethod
     @override

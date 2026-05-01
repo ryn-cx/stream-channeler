@@ -130,9 +130,9 @@ class PreloadMixin(ABC):
         file_class: type[T],
         factory: Callable[[File], T],
     ) -> list[T]:
-        """Return files of ``file_class`` newer than ``source.data_timestamp``.
+        """Return files of `file_class` newer than `source.data_timestamp`.
 
-        Ordered ascending by ``data_timestamp`` so callers can apply updates
+        Ordered ascending by `data_timestamp` so callers can apply updates
         in the sequence the files were written.
         """
         if not source.data_timestamp:

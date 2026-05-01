@@ -13,8 +13,6 @@ from app.plugins.plugins.utils.base_plugin.files import BaseFile
 class DownloadMixin(ABC):
     session: Session
 
-    # region File Groups
-
     @abstractmethod
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the show."""
@@ -39,10 +37,6 @@ class DownloadMixin(ABC):
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the plugin."""
         raise NotImplementedError("This plugin does not have plugin specific files.")
-
-    # endregion File Groups
-
-    # region Data timestamps
 
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:
@@ -71,8 +65,6 @@ class DownloadMixin(ABC):
         return self._file_timestamp(
             self._episode_files(episode_key, season_key, show_key),
         )
-
-    # endregion Data timestamps
 
     @staticmethod
     def _download_outdated_files(
@@ -154,8 +146,6 @@ class DownloadMixin(ABC):
             all_files.extend(self._download_outdated_files(episode_files))
         return all_files
 
-    # region Preload
-
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:
         if not file_keys:
             return []
@@ -223,8 +213,6 @@ class DownloadMixin(ABC):
             for file in self._episode_files(episode_key, season_key, show_key)
         ]
         return self._get_files_by_keys(file_keys)
-
-    # endregion Preload
 
     @abstractmethod
     def _season_keys_from_file(self, show_key: str) -> list[str]: ...

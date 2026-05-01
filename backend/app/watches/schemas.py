@@ -7,28 +7,29 @@ from sqlmodel import Field, SQLModel
 
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
-from app.schemas import BaseInput, BasePatchInputWithoutKey
+from app.schemas import BaseInput, BaseUpdateWithoutKey
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from app.watches.models import BaseWatch, Watch
 
 
-class WatchPostInput(BaseInput, BaseWatch):
-    pass
+class WatchCreate(BaseInput, BaseWatch):
+    """Schema for creating a `Watch`."""
 
 
-class WatchCreateInput(WatchPostInput):
-    user_id: uuid.UUID
+class WatchUpdate(BaseUpdateWithoutKey[Watch], BaseWatch):
+    """Schema for updating a `Watch`."""
 
-
-class WatchPatchInput(BasePatchInputWithoutKey[Watch], BaseWatch):
+    # Update requests use PATCH endpoints so all required fields must be made optional.
     watch_date: datetime | None = None  # type: ignore[assignment]
     verified: bool | None = None  # type: ignore[assignment]
 
 
 # TODO: This class may be redundant
 class WatchOutput(BaseWatch):
+    """Schema for returning a `Watch`."""
+
     id: uuid.UUID
     episode_id: uuid.UUID
     user_id: uuid.UUID

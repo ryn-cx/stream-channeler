@@ -79,9 +79,16 @@ function PlaylistRow({ playlist }: PlaylistRowProps) {
         >
           {playlist.name ?? "(untitled)"}
         </Link>
-        {playlist.public ? (
+        {playlist.visibility === "public" && (
           <Globe className="size-4 text-muted-foreground" aria-label="Public" />
-        ) : (
+        )}
+        {playlist.visibility === "unlisted" && (
+          <Globe
+            className="size-4 text-muted-foreground"
+            aria-label="Unlisted"
+          />
+        )}
+        {playlist.visibility === "private" && (
           <Lock className="size-4 text-muted-foreground" aria-label="Private" />
         )}
         <div className="flex">

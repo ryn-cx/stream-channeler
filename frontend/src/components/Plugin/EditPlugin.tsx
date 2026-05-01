@@ -9,7 +9,6 @@ import { z } from "zod"
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogClose,
@@ -31,11 +30,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
+import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
 
 import type { PluginTableData } from "./columns"
@@ -47,7 +54,7 @@ const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
   version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
-  public: z.boolean(),
+  visibility: z.enum(["public", "unlisted", "private"]),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -70,7 +77,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       name: plugin.name ?? "",
       version: plugin.version ?? "",
       data_timestamp: plugin.data_timestamp?.slice(0, 16) ?? "",
-      public: plugin.public ?? false,
+      visibility: plugin.visibility ?? "private",
     },
   })
 
@@ -192,16 +199,25 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
               />
               <FormField
                 control={form.control}
-                name="public"
+                name="visibility"
                 render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is public?</FormLabel>
+                  <FormItem>
+                    <FormLabel>Visibility</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {VISIBILITY_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {visibilityLabel(option)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

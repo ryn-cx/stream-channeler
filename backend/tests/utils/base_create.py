@@ -12,8 +12,8 @@ from app.config import settings
 from app.users.models import User
 from tests.users.utils import create_random_user
 from tests.utils.base import (
-    INPUT_SCHEMAS,
-    OUTPUT_MODELS,
+    CREATE_SCHEMAS,
+    OUTPUT_SCHEMAS,
     SUPPORTED_MODELS,
     BaseTests,
 )
@@ -63,7 +63,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         self,
         session_scoped_session: Session,
         record_id: uuid.UUID,
-        expected: OUTPUT_MODELS,
+        expected: OUTPUT_SCHEMAS,
     ) -> None:
         record = session_scoped_session.exec(
             select(self.database_model).where(self.database_model.id == record_id),
@@ -78,8 +78,8 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         session_scoped_session: Session,
         parent_id: uuid.UUID | None,
         headers: dict[str, str],
-        parameters_model: INPUT_SCHEMAS,
-    ) -> OUTPUT_MODELS:
+        parameters_model: CREATE_SCHEMAS,
+    ) -> OUTPUT_SCHEMAS:
         """Assert that a record was successfully created."""
         original_records = session_scoped_session.exec(
             select(self.database_model),
@@ -91,7 +91,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 client=client,
                 method="post",
                 url=self.create_record_url(parent_id),
-                output_model=self.output_model,
+                output_schema=self.output_schema,
                 headers=headers,
                 parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
             )
@@ -102,7 +102,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 client=client,
                 method="post",
                 url=self.create_record_url(parent_id),
-                output_model=self.output_model,
+                output_schema=self.output_schema,
                 headers=headers,
                 parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
             )
@@ -121,7 +121,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             - set(self.get_foreign_keys(self.database_model))
         )
         for key in extra_keys:
-            info = self.output_model.model_fields.get(key)
+            info = self.output_schema.model_fields.get(key)
             if not info or info.is_required():
                 # Required fields not in the input are server-generated (e.g. key).
                 continue
@@ -187,7 +187,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 session_scoped_session,
                 parent.id,
                 initial_test_data.headers,
-                build_random_model(self.input_schema),
+                build_random_model(self.create_schema),
             )
         else:
             self.assert_cannot_access(
@@ -198,7 +198,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(parent.id),
                 model_name=self.parent_name,
                 headers=initial_test_data.headers,
-                parameters_model=build_random_model(self.input_schema),
+                parameters_model=build_random_model(self.create_schema),
             )
 
     @pytest.mark.parametrize("mode", ["full", "minimal"])
@@ -221,7 +221,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         parent = initial_test_data.record.parent
         session_scoped_session.delete(initial_test_data.record)
-        parameters_model = build_random_model(self.input_schema, mode)
+        parameters_model = build_random_model(self.create_schema, mode)
 
         self.assert_create_record_success(
             session_scoped_client,
@@ -253,7 +253,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         for _ in range(existing_record_count - 1):
             self.create_record_function(session_scoped_session, parent)
 
-        parameters_model = build_random_model(self.input_schema)
+        parameters_model = build_random_model(self.create_schema)
 
         self.assert_create_record_success(
             session_scoped_client,
@@ -289,7 +289,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             other_user.id,
         )
         parameters_model = build_random_model(
-            self.input_schema,
+            self.create_schema,
             # union-attr - hasattr checks already ensure this attribute exists.
             key=existing_record.key,  # type: ignore[union-attr]
         )
@@ -328,7 +328,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 detail=f"{self.model_name} with this key already exists",
                 headers=initial_test_data.headers,
                 # union-attr - hasattr checks already ensure this attribute exists.
-                parameters=dump_random_model(self.input_schema, key=record.key),  # type: ignore[union-attr]
+                parameters=dump_random_model(self.create_schema, key=record.key),  # type: ignore[union-attr]
             )
 
     def test_create_parent_not_found(
@@ -354,7 +354,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(str(uuid.uuid4())),
                 detail=f"{self.parent_name} not found",
                 headers=initial_test_data.headers,
-                parameters=dump_random_model(self.input_schema),
+                parameters=dump_random_model(self.create_schema),
             )
 
     def test_create_generates_key(
@@ -378,7 +378,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             session_scoped_session,
             initial_test_data.record.parent.id,
             initial_test_data.headers,
-            build_random_model(self.input_schema, "minimal"),
+            build_random_model(self.create_schema, "minimal"),
         )
         # union-attr - hasattr checks already ensure this attribute exists.
         assert result.key  # type: ignore[union-attr]
@@ -448,7 +448,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
 
         parent = self.create_parent(session_scoped_session, initial_test_data.user)
 
-        parameters = dump_random_model(self.input_schema)
+        parameters = dump_random_model(self.create_schema)
         parameters["id"] = str(uuid.uuid4())
 
         with self.assert_no_db_change(session_scoped_session):

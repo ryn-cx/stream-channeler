@@ -19,11 +19,11 @@ from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 from app.watches.models import Watch
 from app.watches.schemas import (
+    WatchCreate,
     WatchesListOutput,
     WatchItem,
     WatchOutput,
-    WatchPatchInput,
-    WatchPostInput,
+    WatchUpdate,
 )
 from tests.episodes.utils import create_random_episode
 from tests.users.utils import create_random_user
@@ -43,9 +43,9 @@ from tests.watches.utils import create_random_watch
 
 class WatchTestMixin(BaseTests[Watch]):
     database_model = Watch
-    input_schema = WatchPostInput
-    output_model = WatchOutput
-    patch_model = WatchPatchInput
+    create_schema = WatchCreate
+    output_schema = WatchOutput
+    update_schema = WatchUpdate
     create_parent_function = staticmethod(create_random_episode)
     create_record_function = staticmethod(create_random_watch)
     returns_list = True
@@ -119,9 +119,9 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             client=session_scoped_client,
             method="post",
             url=self.create_record_url(initial_test_data.record.episode.id),
-            output_model=WatchOutput,
+            output_schema=WatchOutput,
             headers=initial_test_data.headers,
-            parameters=dump_random_model(WatchPostInput),
+            parameters=dump_random_model(WatchCreate),
         )
 
         watches = session_scoped_session.exec(
@@ -164,7 +164,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 url=self.create_record_url(initial_test_data.record.episode.id),
                 detail="Episode already has an unverified watch. Verify or delete it first.",
                 headers=initial_test_data.headers,
-                parameters=dump_random_model(WatchPostInput),
+                parameters=dump_random_model(WatchCreate),
             )
 
     def test_create_watch_rejects_when_sibling_has_unverified(
@@ -195,7 +195,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 url=self.create_record_url(sibling_episode.id),
                 detail="Episode already has an unverified watch. Verify or delete it first.",
                 headers=initial_test_data.headers,
-                parameters=dump_random_model(WatchPostInput),
+                parameters=dump_random_model(WatchCreate),
             )
 
     def test_create_watch_allowed_after_verification(
@@ -217,9 +217,9 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             client=session_scoped_client,
             method="post",
             url=self.create_record_url(initial_test_data.record.episode.id),
-            output_model=WatchOutput,
+            output_schema=WatchOutput,
             headers=initial_test_data.headers,
-            parameters=dump_random_model(WatchPostInput),
+            parameters=dump_random_model(WatchCreate),
         )
 
 
@@ -290,7 +290,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             client,
             "get",
             self.get_record_list_url(),
-            self.real_list_output_model,
+            WatchesListOutput,
             headers,
         )
         watch_ids = [watch.id for watch in output.watches]
@@ -397,7 +397,7 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
             for episode in all_episodes
         ]
 
-        update_model = WatchPatchInput(
+        update_model = WatchUpdate(
             watch_date=build_random_model(Watch).watch_date,
             verified=not watch_template.verified,
         )
@@ -405,7 +405,7 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
             client=session_scoped_client,
             method="patch",
             url=self.generic_record_url(created_watches[0].id),
-            output_model=WatchOutput,
+            output_schema=WatchOutput,
             headers=initial_test_data.headers,
             parameters=update_model.model_dump(mode="json", exclude_unset=True),
         )
@@ -435,7 +435,7 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
             watch_user=initial_test_data.user,
         )
 
-        update_model = WatchPatchInput(
+        update_model = WatchUpdate(
             watch_date=build_random_model(Watch).watch_date,
             verified=not initial_test_data.record.verified,
         )
@@ -443,7 +443,7 @@ class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
             client=session_scoped_client,
             method="patch",
             url=self.generic_record_url(initial_test_data.record.id),
-            output_model=WatchOutput,
+            output_schema=WatchOutput,
             headers=initial_test_data.headers,
             parameters=update_model.model_dump(mode="json", exclude_unset=True),
         )
@@ -500,7 +500,7 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
             client=session_scoped_client,
             method="delete",
             url=self.generic_record_url(created_watches[0].id),
-            output_model=Message,
+            output_schema=Message,
             headers=initial_test_data.headers,
         )
 
@@ -533,7 +533,7 @@ class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
             client=session_scoped_client,
             method="delete",
             url=self.generic_record_url(initial_test_data.record.id),
-            output_model=Message,
+            output_schema=Message,
             headers=initial_test_data.headers,
         )
 
