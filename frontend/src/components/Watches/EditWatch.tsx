@@ -10,7 +10,7 @@ import {
   WatchesService,
   type WatchItem,
   type WatchOutput,
-  type WatchPatchInput,
+  type WatchUpdate,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -68,7 +68,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: WatchPatchInput) =>
+    mutationFn: (data: WatchUpdate) =>
       WatchesService.updateWatch({
         watchId: watch.id,
         requestBody: data,
@@ -132,7 +132,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   })
 
   const onSubmit = (data: FormData) => {
-    const payload: WatchPatchInput = {
+    const payload: WatchUpdate = {
       watch_date: data.watch_date,
       verified: data.verified,
     }

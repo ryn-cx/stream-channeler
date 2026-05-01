@@ -370,7 +370,9 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithDetails[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [
+          ...(oldData.episodes as EpisodeWithDetails[]),
+        ]
         const currentIndex = eps.findIndex((ep) => ep.id === currentEpisodeId)
         const nextIndex = eps.findIndex((ep) => ep.id === nextEpisodeId)
 
@@ -395,7 +397,9 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithDetails[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [
+          ...(oldData.episodes as EpisodeWithDetails[]),
+        ]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||
@@ -416,7 +420,9 @@ export function EpisodeCards({
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithDetails[] = [...oldData.episodes]
+        const eps: EpisodeWithDetails[] = [
+          ...(oldData.episodes as EpisodeWithDetails[]),
+        ]
         if (
           fromIndex < 0 ||
           toIndex < 0 ||
