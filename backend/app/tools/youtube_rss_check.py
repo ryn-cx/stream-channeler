@@ -25,8 +25,6 @@ logger.add(sys.stdout, level="INFO", colorize=True)
 import_plugins()
 load_models()
 
-CHECK_INTERVAL_SECONDS = 60 * 60
-
 
 def _seasons_needing_check(
     session: Session,
@@ -115,9 +113,6 @@ def main() -> None:
             youtube_plugin_id = YouTube(session).plugin.id
             _initial_import(session, youtube_plugin_id)
             _check_for_updates(session, youtube_plugin_id)
-
-        logger.info(f"Sleeping {CHECK_INTERVAL_SECONDS}s until next cycle")
-        time.sleep(CHECK_INTERVAL_SECONDS)
 
 
 if __name__ == "__main__":
