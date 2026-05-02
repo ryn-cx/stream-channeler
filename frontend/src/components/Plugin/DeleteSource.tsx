@@ -1,29 +1,13 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
-import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
+import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
+import { Dialog } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -39,7 +23,7 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
   const { pluginId } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
+  const queryKey = ["plugins", pluginId, "sources"]
 
   const mutation = useMutation({
     mutationFn: (sourceId: string) =>
@@ -49,7 +33,6 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
         path: { source_id: sourceId },
       }),
     onMutate: async (_sourceKey, context) => {
-      const queryKey = ["plugins", pluginId, "sources"]
       await context.client.cancelQueries({ queryKey })
       const previous = context.client.getQueryData<SourcesData>(queryKey)
 
@@ -64,63 +47,28 @@ const DeleteSource = ({ source }: DeleteSourceProps) => {
       setIsOpen(false)
     },
     onError: (error, _sourceKey, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["plugins", pluginId, "sources"],
-        onMutateResult?.previous,
-      )
+      context.client.setQueryData(queryKey, onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({
-        queryKey: ["plugins", pluginId, "sources"],
-      }),
+      context.client.invalidateQueries({ queryKey }),
   })
-
-  const onSubmit = () => {
-    mutation.mutate(source.id)
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Trash2 className="text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete source</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Source</DialogTitle>
-            <DialogDescription>
-              All data associated with this source will be{" "}
-              <strong>permanently deleted.</strong> Are you sure? You will not
-              be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <DeleteIconTrigger tooltip="Delete source" />
+      <DeleteConfirmContent
+        title="Delete Source"
+        description={
+          <>
+            All data associated with this source will be{" "}
+            <strong>permanently deleted.</strong> Are you sure? You will not be
+            able to undo this action.
+          </>
+        }
+        isPending={mutation.isPending}
+        onSubmit={() => mutation.mutate(source.id)}
+      />
     </Dialog>
   )
 }

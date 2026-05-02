@@ -35,7 +35,6 @@ from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
-from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
@@ -75,25 +74,28 @@ def bulk_import_queue_urls(
     entries: dict[uuid.UUID, list[str]],
 ) -> Message:
     """Add URLs to multiple channels' import queues at once."""
+    channels_by_id = {
+        channel.id: channel
+        for channel in session.exec(
+            select(Channel)
+            .where(col(Channel.id).in_(entries.keys()))
+            .where(Channel.user_id == current_user.id),
+        ).all()
+    }
     total_urls = 0
     for channel_id, urls in entries.items():
-        channel = session.exec(
-            select(Channel).where(
-                Channel.id == channel_id,
-                Channel.user_id == current_user.id,
-            ),
-        ).first()
-        if not channel:
+        if channel := channels_by_id.get(channel_id):
+            service.add_urls_to_channel_import_queue(
+                session=session,
+                urls=urls,
+                channel=channel,
+            )
+            total_urls += len(urls)
+        else:
             raise HTTPException(
                 status_code=404,
                 detail=f"Channel {channel_id} not found",
             )
-        service.add_urls_to_channel_import_queue(
-            session=session,
-            urls=urls,
-            channel=channel,
-        )
-        total_urls += len(urls)
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
 
 
@@ -277,25 +279,18 @@ def update_channel_default_order(
     return channel
 
 
-# FAST003 - Parameter is used by UserChannel.
+# FAST003 - Parameters are used by OwnedChannelReadableShow.
 @router.delete("/{channel_id}/remove-show/{show_id}")  # noqa: FAST003
 def delete_channel_show(
-    channel: OwnedChannel,
     session: SessionDep,
-    show_id: str,
+    channel_show: OwnedChannelReadableShow,
 ) -> Message:
     """Remove a `Show` from a `Channel`."""
-    if not (show := session.exec(select(Show).where(Show.id == show_id)).first()):
-        raise HTTPException(status_code=404, detail="Show not found")
-
-    # TODO: Benchmark performance options.
-    for channel_show in channel.shows:
-        if channel_show.show == show:
-            session.delete(channel_show)
-            session.commit()
-            return Message(message=f"{show.name} removed from channel successfully")
-
-    raise HTTPException(status_code=404, detail="Show not found in channel")
+    session.delete(channel_show)
+    session.commit()
+    return Message(
+        message=f"{channel_show.show.name} removed from channel successfully",
+    )
 
 
 # FAST003 - Parameter is used by UserChannel.
@@ -342,14 +337,17 @@ def delete_channel_queue_url(
     url_id: uuid.UUID,
 ) -> Message:
     """Delete url from a channel's import queue."""
-    for existing_record in channel.queue:
-        if existing_record.id == url_id:
-            url = existing_record.url
-            session.delete(existing_record)
-            session.commit()
-            return Message(message=f"{url} removed from import queue successfully")
-
-    raise HTTPException(status_code=404, detail="URL not found")
+    queue_entry = session.exec(
+        select(ChannelQueue)
+        .where(ChannelQueue.channel_id == channel.id)
+        .where(ChannelQueue.id == url_id),
+    ).first()
+    if not queue_entry:
+        raise HTTPException(status_code=404, detail="URL not found")
+    url = queue_entry.url
+    session.delete(queue_entry)
+    session.commit()
+    return Message(message=f"{url} removed from import queue successfully")
 
 
 @router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003 - Used by UserChannel.

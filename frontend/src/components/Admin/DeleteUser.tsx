@@ -1,27 +1,11 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { type UserPublic, type UsersPublic, UsersService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
+import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
+import { Dialog } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -32,14 +16,9 @@ interface DeleteUserProps {
 const DeleteUser = ({ user }: DeleteUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
-
-  const deleteUser = async (id: string) => {
-    await UsersService.deleteUser({ userId: id })
-  }
 
   const mutation = useMutation({
-    mutationFn: deleteUser,
+    mutationFn: (id: string) => UsersService.deleteUser({ userId: id }),
     // When mutate is called:
     onMutate: async (_userId, context) => {
       // Cancel any outgoing refetches
@@ -73,51 +52,21 @@ const DeleteUser = ({ user }: DeleteUserProps) => {
       context.client.invalidateQueries({ queryKey: ["users"] }),
   })
 
-  const onSubmit = async () => {
-    mutation.mutate(user.id)
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Trash2 className="text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete user</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              All items associated with this user will also be{" "}
-              <strong>permanently deleted.</strong> Are you sure? You will not
-              be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <DeleteIconTrigger tooltip="Delete user" />
+      <DeleteConfirmContent
+        title="Delete User"
+        description={
+          <>
+            All items associated with this user will also be{" "}
+            <strong>permanently deleted.</strong> Are you sure? You will not be
+            able to undo this action.
+          </>
+        }
+        isPending={mutation.isPending}
+        onSubmit={() => mutation.mutate(user.id)}
+      />
     </Dialog>
   )
 }

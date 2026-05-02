@@ -1,28 +1,12 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
+import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
+import { Dialog } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -37,7 +21,6 @@ interface DeletePluginProps {
 const DeletePlugin = ({ plugin }: DeletePluginProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
 
   const mutation = useMutation({
     mutationFn: (pluginId: string) =>
@@ -68,51 +51,21 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
       context.client.invalidateQueries({ queryKey: ["plugins"] }),
   })
 
-  const onSubmit = () => {
-    mutation.mutate(plugin.id)
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Trash2 className="text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete plugin</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Plugin</DialogTitle>
-            <DialogDescription>
-              All data associated with this plugin will be{" "}
-              <strong>permanently deleted.</strong> Are you sure? You will not
-              be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <DeleteIconTrigger tooltip="Delete plugin" />
+      <DeleteConfirmContent
+        title="Delete Plugin"
+        description={
+          <>
+            All data associated with this plugin will be{" "}
+            <strong>permanently deleted.</strong> Are you sure? You will not be
+            able to undo this action.
+          </>
+        }
+        isPending={mutation.isPending}
+        onSubmit={() => mutation.mutate(plugin.id)}
+      />
     </Dialog>
   )
 }

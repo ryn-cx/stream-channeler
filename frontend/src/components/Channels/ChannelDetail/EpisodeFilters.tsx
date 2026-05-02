@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { type Resolver, useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { getChannelEpisodes } from "@/api/channels"
@@ -365,8 +365,7 @@ export function EpisodeFilters({
   })
 
   const form = useForm<FormValues>({
-    // TODO: Fix this as any cast
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema) as Resolver<FormValues>,
     mode: "onChange",
     criteriaMode: "all",
     defaultValues: {

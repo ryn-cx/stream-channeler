@@ -1,29 +1,13 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
-import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
+import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
+import { Dialog } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -39,7 +23,6 @@ const DeleteShow = ({ show }: DeleteShowProps) => {
   const { sourceKey } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
   const queryKey = ["sources", sourceKey, "shows"]
 
   const mutation = useMutation({
@@ -71,51 +54,21 @@ const DeleteShow = ({ show }: DeleteShowProps) => {
       context.client.invalidateQueries({ queryKey }),
   })
 
-  const onSubmit = () => {
-    mutation.mutate(show.id)
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Trash2 className="text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete show</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Show</DialogTitle>
-            <DialogDescription>
-              All data associated with this show will be{" "}
-              <strong>permanently deleted.</strong> Are you sure? You will not
-              be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+      <DeleteIconTrigger tooltip="Delete show" />
+      <DeleteConfirmContent
+        title="Delete Show"
+        description={
+          <>
+            All data associated with this show will be{" "}
+            <strong>permanently deleted.</strong> Are you sure? You will not be
+            able to undo this action.
+          </>
+        }
+        isPending={mutation.isPending}
+        onSubmit={() => mutation.mutate(show.id)}
+      />
     </Dialog>
   )
 }

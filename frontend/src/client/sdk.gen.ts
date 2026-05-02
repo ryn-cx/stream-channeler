@@ -505,8 +505,8 @@ export class ChannelsService {
      * Delete Channel Show
      * Remove a `Show` from a `Channel`.
      * @param data The data for the request.
-     * @param data.showId
      * @param data.channelId
+     * @param data.showId
      * @returns Message Successful Response
      * @throws ApiError
      */
@@ -515,8 +515,8 @@ export class ChannelsService {
             method: 'DELETE',
             url: '/api/v1/channels/{channel_id}/remove-show/{show_id}',
             path: {
-                show_id: data.showId,
-                channel_id: data.channelId
+                channel_id: data.channelId,
+                show_id: data.showId
             },
             errors: {
                 422: 'Validation Error'
