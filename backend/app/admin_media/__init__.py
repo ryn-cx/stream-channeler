@@ -1,1 +1,1 @@
-# TODO: Validate
+"""Admin media."""
