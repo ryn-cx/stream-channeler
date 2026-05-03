@@ -234,7 +234,6 @@ class _SortExpressionBuilder:
                 and_(
                     col(Season.show_id) == col(Show.id),
                     Watch.user_id == self._user.id,
-                    col(Watch.verified).is_(True),
                 ),
             )
             .correlate(Show)
