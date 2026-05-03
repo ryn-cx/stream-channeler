@@ -554,7 +554,6 @@ class EpisodeQueryBuilder:
                     Watch.user_id == user.id,
                 ),
             )
-            .where(col(Watch.verified).is_(True))
             .distinct()
         )
 
