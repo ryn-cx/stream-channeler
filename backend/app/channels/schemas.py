@@ -127,6 +127,7 @@ class SortKeyInput(BaseInput):
     aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
     days: int | None = Field(default=None)
     recently_aired_date: datetime | None = Field(default=None)
+    fuzziness: int | None = Field(default=None, ge=0)
 
     @property
     def model_class(self) -> type[Episode | Season | Show | Source | Plugin]:

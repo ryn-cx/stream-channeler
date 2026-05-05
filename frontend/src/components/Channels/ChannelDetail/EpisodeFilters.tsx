@@ -76,6 +76,7 @@ const formSchema = z.object({
         order: z.string().optional(),
         aggregation: z.string().optional(),
         days: z.number().nullable().optional(),
+        fuzziness: z.number().nullable().optional(),
       }),
     )
     .optional(),
@@ -126,6 +127,7 @@ type SortEntry = {
   days: number | null
   recentlyAiredDate: string | null
   recentlyAiredMode: RecentlyAiredMode
+  fuzziness: number
 }
 
 // Oringally copied from: https://ui.shadcn.com/docs/components/combobox
@@ -161,6 +163,7 @@ function SortOptionsList({
                     days: null,
                     recentlyAiredDate: null,
                     recentlyAiredMode: "relative",
+                    fuzziness: 0,
                   },
                 ])
                 setOpen(false)
@@ -328,6 +331,8 @@ export function EpisodeFilters({
     if (!sortBy) return []
 
     return sortBy.map((input) => {
+      const fuzziness =
+        (input as SortKeyInput & { fuzziness?: number | null }).fuzziness ?? 0
       return {
         model: input.model ?? "episode",
         field: input.field ?? "",
@@ -343,6 +348,7 @@ export function EpisodeFilters({
         recentlyAiredMode: (input.recentlyAiredDate
           ? "absolute"
           : "relative") as RecentlyAiredMode,
+        fuzziness,
       }
     })
   }
@@ -447,6 +453,7 @@ export function EpisodeFilters({
         isRecentlyAired(entry) && entry.recentlyAiredMode === "absolute"
           ? entry.recentlyAiredDate
           : undefined,
+      fuzziness: entry.fuzziness > 0 ? entry.fuzziness : undefined,
     }))
 
     // additionalChannels is managed from a different form so the value needs to be
@@ -917,6 +924,28 @@ export function EpisodeFilters({
                                   )}
                                 </>
                               )}
+                              <div className="flex items-center gap-2">
+                                <Label
+                                  htmlFor={`fuzziness-${index}`}
+                                  className="text-xs"
+                                >
+                                  Fuzziness
+                                </Label>
+                                <Input
+                                  id={`fuzziness-${index}`}
+                                  type="number"
+                                  min={0}
+                                  value={entry.fuzziness}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      fuzziness: event.target.value
+                                        ? parseInt(event.target.value, 10)
+                                        : 0,
+                                    })
+                                  }
+                                  className="h-9 w-24 text-sm"
+                                />
+                              </div>
                             </div>
                           </div>
                         )

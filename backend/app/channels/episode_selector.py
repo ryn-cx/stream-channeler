@@ -668,14 +668,14 @@ class EpisodeQueryBuilder:
             return query
         expressions = self._sort_expressions
         labeled_values: list[ColumnElement[Any]] = [
-            expressions.expression(sort_key).label(f"sv_{index}")
+            expressions.expression(sort_key).label(f"sort_value_{index}")
             for index, sort_key in enumerate(self._channel_options.sort_by)
         ]
         labeled_values.append(Season.show_id.label("show_id"))  # type: ignore[arg-type]
-        inner = query.add_columns(*labeled_values).subquery()
+        subquery = query.add_columns(*labeled_values).subquery()
 
         raws = [
-            getattr(inner.c, f"sv_{i}")
+            getattr(subquery.c, f"sort_value_{i}")
             for i in range(len(self._channel_options.sort_by))
         ]
         directeds = [
@@ -683,27 +683,77 @@ class EpisodeQueryBuilder:
             for i, key in enumerate(self._channel_options.sort_by)
         ]
 
+        fuzzy_indexes = [
+            index
+            for index, key in enumerate(self._channel_options.sort_by)
+            if key.fuzziness
+        ]
+        fuzzy_labels = {index: f"fuzzy_{index}" for index in fuzzy_indexes}
+
+        if fuzzy_indexes:
+            extra_columns: list[ColumnElement[Any]] = [
+                func.dense_rank()
+                .over(order_by=directeds[index])
+                .label(fuzzy_labels[index])
+                for index in fuzzy_indexes
+            ]
+            subquery = (
+                select(aliased(Episode, subquery), subquery.c.channel_id)
+                .add_columns(
+                    subquery.c.show_id,
+                    *(
+                        getattr(subquery.c, f"sort_value_{i}")
+                        for i in range(len(raws))
+                    ),
+                    *extra_columns,
+                )
+                .subquery()
+            )
+            raws = [
+                getattr(subquery.c, f"sort_value_{i}")
+                for i in range(len(self._channel_options.sort_by))
+            ]
+            directeds = [
+                expressions.apply_direction(raws[i], key)
+                for i, key in enumerate(self._channel_options.sort_by)
+            ]
+
+        def fuzzy_expression(index: int) -> ColumnElement[Any]:
+            sort_key = self._channel_options.sort_by[index]
+            rank_column = getattr(subquery.c, fuzzy_labels[index])
+            fuzziness = sort_key.fuzziness or 0
+            jitter: ColumnElement[Any] = expressions.random_hash(subquery.c.id) * (
+                fuzziness / float(2**31)
+            )
+            return rank_column + jitter
+
         order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
         for index, sort_key in enumerate(self._channel_options.sort_by):
             if sort_key.order == "sequential":
-                order_by.append(directeds[index])
+                if sort_key.fuzziness:
+                    order_by.append(fuzzy_expression(index))
+                else:
+                    order_by.append(directeds[index])
                 continue
 
             row_num = func.row_number().over(
                 partition_by=raws[: index + 1],
                 order_by=directeds[index + 1 :] or [directeds[index]],
             )
-            partition_order = (
-                expressions.random_hash(raws[index])
-                if sort_key.order == "randomize"
-                else directeds[index]
-            )
+            if sort_key.order == "randomize":
+                partition_order: ColumnElement[Any] = expressions.random_hash(
+                    raws[index],
+                )
+            elif sort_key.fuzziness:
+                partition_order = fuzzy_expression(index)
+            else:
+                partition_order = directeds[index]
             order_by.extend([row_num, partition_order])
 
-        order_by.extend([inner.c.show_id, inner.c.id])
+        order_by.extend([subquery.c.show_id, subquery.c.id])
 
         outer: Select[tuple[Episode, UUID]] = select(  # type: ignore[assignment]
-            aliased(Episode, inner),
-            inner.c.channel_id,
+            aliased(Episode, subquery),
+            subquery.c.channel_id,
         )
         return outer.order_by(*order_by)

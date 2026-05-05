@@ -497,6 +497,7 @@ export type SortKeyInput = {
     aggregation?: ('max' | 'min' | 'avg' | null);
     days?: (number | null);
     recentlyAiredDate?: (string | null);
+    fuzziness?: (number | null);
 };
 
 export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
