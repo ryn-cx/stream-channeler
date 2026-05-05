@@ -3051,6 +3051,18 @@ export const SortKeyInputSchema = {
                 }
             ],
             title: 'Recentlyaireddate'
+        },
+        fuzziness: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fuzziness'
         }
     },
     additionalProperties: false,
