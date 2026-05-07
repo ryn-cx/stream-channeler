@@ -107,12 +107,11 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
 
 
 def main() -> None:
-    while True:
-        logger.info("Starting YouTube RSS check cycle")
-        with Session(engine) as session:
-            youtube_plugin_id = YouTube(session).plugin.id
-            _initial_import(session, youtube_plugin_id)
-            _check_for_updates(session, youtube_plugin_id)
+    logger.info("Starting YouTube RSS check cycle")
+    with Session(engine) as session:
+        youtube_plugin_id = YouTube(session).plugin.id
+        _initial_import(session, youtube_plugin_id)
+        _check_for_updates(session, youtube_plugin_id)
 
 
 if __name__ == "__main__":
