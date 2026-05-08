@@ -1,5 +1,6 @@
 # TODO: Validate
 import json
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
@@ -85,10 +86,15 @@ class BaseFile[T](ABC):
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).__name__
-        action = "Updating" if self._existing_database_record else "Downloading"
-        logger.info(f"{action} {class_name} for {identifier}")
+        action = "updated" if self._existing_database_record else "initial"
+        # This log is useful when a download fails.
+        logger.info(f"Downloading {action} {class_name} ({identifier})")
+        start = time.monotonic()
         yield
-        logger.info(f"Finished {action.lower()} {class_name} for {identifier}")
+        elapsed_time = time.monotonic() - start
+        logger.info(
+            f"Downloaded {action} {class_name} ({identifier}) in {elapsed_time:.2f}s",
+        )
 
     @final  # Makes mocking downloads easier.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:

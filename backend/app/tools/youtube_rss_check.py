@@ -102,8 +102,7 @@ def _download_initial_files(session: Session, youtube_plugin_id: object) -> None
         # TODO: Better error detection which must be done while the RSS feed is broken.
         except Exception:  # noqa: BLE001
             logger.exception(f"{season.key}: Failed to download initial RSS feed.")
-        else:
-            logger.info(f"{season.key}: Downloaded initial RSS feed.")
+
         new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
         playlist_feed.database_record.set_update_at(new_update_at)
         session.commit()
@@ -114,15 +113,20 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
     logger.info(f"Updating {len(outdated_seasons)} outdated RSS feeds.")
     for season in outdated_seasons:
         playlist_feed = YouTube(session).playlist_feed_file(season.key)
-        old_video_ids = set(playlist_feed.video_ids())
+
+        # The initial file is allowed to be blank so check if it has content before
+        # calling video_ids.
+        if playlist_feed.database_record.content:
+            old_video_ids = set(playlist_feed.video_ids())
+        else:
+            old_video_ids: set[str] = set()
+
         try:
             playlist_feed.download_if_outdated(tz_datetime.now())
         # TODO: Better error detection which must be done while the RSS feed is broken.
         except Exception:  # noqa: BLE001
             logger.exception(f"{season.key}: Failed to download updated RSS feed.")
         else:
-            logger.info(f"{season.key}: Downloaded updated RSS feed.")
-
             # Do not check for equality because this is checking only for new videos,
             # if a video is removed no update needs to be done.
             if new_video_ids := set(playlist_feed.video_ids()) - old_video_ids:
