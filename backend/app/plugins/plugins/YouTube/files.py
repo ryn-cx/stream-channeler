@@ -302,17 +302,22 @@ class FileMixin(BasePlugin, register=False):
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         channel_playlists_file = self.channel_playlists_file(show_key)
         season_keys: list[str] = []
+
+        # If the channel has uploads also include that as a season. Generally, most
+        # playlists consist of uploads from the channel so the channel should be the
+        # first season_key listed so when the episodes are downloaded the channel
+        # uploads are downloaded first because that will maximize the batch sizes and
+        # minimize the number of API calls.
+        item = get_first_item(self.channel_by_channel_id_file(show_key).parsed().items)
+        if int(item.statistics.video_count) > 0:
+            season_keys.append(self._get_channel_uploads_playlist_key(show_key))
+
         if channel_playlists_file.database_record.content:
             season_keys = [
                 item.id
                 for item in channel_playlists_file.parsed().items
                 if item.content_details.item_count > 0
             ]
-
-        # If the channel has uploads also include that as a season.
-        channel_item = self.channel_by_channel_id_file(show_key).parsed().items[0]
-        if int(channel_item.statistics.video_count) > 0:
-            season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
         return season_keys
 
