@@ -1,7 +1,5 @@
 """Shared models."""
 
-from __future__ import annotations
-
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence

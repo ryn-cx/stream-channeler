@@ -75,9 +75,9 @@ ignore = [
   # "D",  # Existing code does not contain docstrings
 
   # # Too many false positives
-  # "TC001",
-  # "TC002",
-  # "TC003",
+  "TC001",
+  "TC002",
+  "TC003",
 
   # Allow all TODO comments
   "TD",

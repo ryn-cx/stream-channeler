@@ -1,5 +1,5 @@
 # TODO: Validate
-from __future__ import annotations
+
 
 import uuid
 from typing import Literal, Protocol, runtime_checkable

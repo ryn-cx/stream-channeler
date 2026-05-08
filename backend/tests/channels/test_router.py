@@ -1,5 +1,5 @@
 # TODO: Validate
-from __future__ import annotations
+
 
 import uuid
 from dataclasses import dataclass
@@ -344,7 +344,9 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
 
         for _ in range(2):
             plugin = create_random_plugin(
-                session_scoped_session, user_id, visibility=Visibility.public
+                session_scoped_session,
+                user_id,
+                visibility=Visibility.public,
             )
             channel_show = create_random_channel_show(
                 session_scoped_session,
