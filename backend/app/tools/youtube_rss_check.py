@@ -47,6 +47,12 @@ def _new_seasons(
     session: Session,
     youtube_plugin_id: object,
 ) -> list[Season]:
+    # Unlike _outdated_seasons, it does not matter if a season exists in a channel
+    # because an initial file needs to exist to support a user adding an existing
+    # season to a channel properly. The initial file will allow this script to
+    # immediately detect any new videos that were adding to the playlist. Without this
+    # the user would have to wait until a new video is added to the playlist for the
+    # season to be updated.
     return list(
         session.exec(
             _playlist_feed_base_query(youtube_plugin_id).where(
@@ -101,6 +107,8 @@ def _download_initial_files(session: Session, youtube_plugin_id: object) -> None
             playlist_feed.download_if_outdated()
         # TODO: Better error detection which must be done while the RSS feed is broken.
         except Exception:  # noqa: BLE001
+            # Initial files are allowed to be blank due to the unreliability of
+            # YouTube's RSS feeds.
             logger.exception(f"{season.key}: Failed to download initial RSS feed.")
 
         new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
