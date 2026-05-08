@@ -1,114 +1,150 @@
-# TODO: Validate
-# YouTube feeds are extremely flaky so they are not used as the main method for setting
-# update_at values, but when they are functional they can be used to detect new episodes
-# much faster than using the API because it requires no API calls.
+"""Set Season.update_at values based on new videos found in YouTube's RSS feeds.
+
+YouTube RSS feeds are extremely flaky so they should not be used as the only method for
+setting update_at values because they might be deprecated at some point in the future.
+"""
+
 import sys
-import time
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from loguru import logger
+from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
+from app.channels.models import ChannelSeasonFilter, ChannelShow
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 from app.database import engine, load_models
 from app.plugins.models import File
 from app.plugins.plugins.utils.manage_plugins import import_plugins
 from app.plugins.plugins.YouTube import YouTube
-from app.plugins.plugins.YouTube.files import PlaylistFeed
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 
-logger.remove()
-logger.add(sys.stdout, level="INFO", colorize=True)
 
-import_plugins()
-load_models()
+def _playlist_feed_base_query(youtube_plugin_id: object) -> SelectOfScalar[Season]:
+    return (
+        select(Season)
+        .join(Show)
+        .join(Source)
+        .outerjoin(
+            File,
+            (col(File.plugin_id) == youtube_plugin_id)
+            & (col(File.key) == func.concat("PlaylistFeed/", col(Season.key), ".xml")),
+        )
+        .where(
+            Source.plugin_id == youtube_plugin_id,
+            col(Season.deleted_at).is_(None),
+        )
+    )
 
 
-def _seasons_needing_check(
+def _new_seasons(
     session: Session,
     youtube_plugin_id: object,
-    *,
-    has_existing_file: bool,
-) -> list[str]:
-    one_hour_ago = tz_datetime.now() - timedelta(hours=1)
-    playlist_feed_key = func.concat("PlaylistFeed/", col(Season.key), ".xml")
-    join_condition = (col(File.plugin_id) == youtube_plugin_id) & (
-        col(File.key) == playlist_feed_key
-    )
-    file_condition = (
-        col(File.data_timestamp) < one_hour_ago
-        if has_existing_file
-        else col(File.id).is_(None)
-    )
+) -> list[Season]:
     return list(
         session.exec(
-            select(Season.key)
-            .join(Show)
-            .join(Source)
-            .outerjoin(File, join_condition)
-            .where(
-                Source.plugin_id == youtube_plugin_id,
-                col(Season.deleted_at).is_(None),
-                file_condition,
+            _playlist_feed_base_query(youtube_plugin_id).where(
+                col(File.id).is_(None),
             ),
         ).all(),
     )
 
 
-def _initial_import(session: Session, youtube_plugin_id: object) -> None:
-    season_keys = _seasons_needing_check(
-        session,
-        youtube_plugin_id,
-        has_existing_file=False,
+def _outdated_seasons(
+    session: Session,
+    youtube_plugin_id: object,
+) -> list[Season]:
+    return list(
+        session.exec(
+            _playlist_feed_base_query(youtube_plugin_id).where(
+                col(File.update_at) < tz_datetime.now(),
+                # Only select seasons that are in a channel because there is no reason
+                # to update unused seasons.
+                (
+                    select(ChannelShow.id)
+                    .outerjoin(
+                        ChannelSeasonFilter,
+                        (
+                            col(ChannelSeasonFilter.channel_show_id)
+                            == col(ChannelShow.id)
+                        )
+                        & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+                    )
+                    .where(
+                        col(ChannelShow.show_id) == col(Season.show_id),
+                        or_(
+                            col(ChannelShow.is_whitelist).is_(True)
+                            & col(ChannelSeasonFilter.season_id).is_not(None),
+                            col(ChannelShow.is_whitelist).is_(False)
+                            & col(ChannelSeasonFilter.season_id).is_(None),
+                        ),
+                    )
+                    .exists()
+                ),
+            ),
+        ).all(),
     )
-    logger.info(f"Initial-import pass: {len(season_keys)} seasons")
-    for season_key in season_keys:
+
+
+def _download_initial_files(session: Session, youtube_plugin_id: object) -> None:
+    new_seasons = _new_seasons(session, youtube_plugin_id)
+    logger.info(f"Downloading {len(new_seasons)} initial RSS feeds.")
+    for season in new_seasons:
+        playlist_feed = YouTube(session).playlist_feed_file(season.key)
         try:
-            youtube_plugin = YouTube(session).plugin
-            feed = PlaylistFeed(session, youtube_plugin, season_key)
-            feed.download_if_outdated()
-            logger.info(f"Initial feed download for {season_key}")
+            playlist_feed.download_if_outdated()
         # TODO: Better error detection which must be done while the RSS feed is broken.
-        except Exception:
-            logger.exception(f"Failed initial RSS fetch for {season_key}")
-        finally:
-            session.commit()
+        except Exception:  # noqa: BLE001
+            logger.exception(f"{season.key}: Failed to download initial RSS feed.")
+        else:
+            logger.info(f"{season.key}: Downloaded initial RSS feed.")
+        new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
+        playlist_feed.database_record.set_update_at(new_update_at)
+        session.commit()
 
 
 def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
-    season_keys = _seasons_needing_check(
-        session,
-        youtube_plugin_id,
-        has_existing_file=True,
-    )
-    logger.info(f"Update pass: {len(season_keys)} stale seasons")
-    for season_key in season_keys:
+    outdated_seasons = _outdated_seasons(session, youtube_plugin_id)
+    logger.info(f"Updating {len(outdated_seasons)} outdated RSS feeds.")
+    for season in outdated_seasons:
+        playlist_feed = YouTube(session).playlist_feed_file(season.key)
+        old_video_ids = set(playlist_feed.video_ids())
         try:
-            youtube_plugin = YouTube(session).plugin
-            feed = PlaylistFeed(session, youtube_plugin, season_key)
-            old_video_ids = set(feed.video_ids())
-            feed.download_if_outdated(tz_datetime.now())
-
-            if not (new_video_ids := set(feed.video_ids()) - old_video_ids):
-                logger.info(f"Skipping {season_key}: no new video IDs")
-                continue
-
-            logger.info(
-                f"New videos detected for season {season_key} "
-                f"(+{len(new_video_ids)}):\n  " + "\n  ".join(new_video_ids),
-            )
+            playlist_feed.download_if_outdated(tz_datetime.now())
         # TODO: Better error detection which must be done while the RSS feed is broken.
         except Exception:  # noqa: BLE001
-            logger.exception(f"Failed to check RSS for season {season_key}")
-        finally:
-            session.commit()
+            logger.exception(f"{season.key}: Failed to download updated RSS feed.")
+        else:
+            logger.info(f"{season.key}: Downloaded updated RSS feed.")
+
+            # Do not check for equality because this is checking only for new videos,
+            # if a video is removed no update needs to be done.
+            if new_video_ids := set(playlist_feed.video_ids()) - old_video_ids:
+                logger.info(
+                    f"{season.key}: {len(new_video_ids)} new videos detected "
+                    f"({', '.join(new_video_ids)})",
+                )
+                season.set_update_at(tz_datetime.now())
+
+        new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
+        playlist_feed.database_record.set_update_at(new_update_at)
+        session.commit()
 
 
 if __name__ == "__main__":
-    logger.info("Starting YouTube RSS check cycle")
+    logger.remove()
+    logger.add(sys.stdout, level="INFO", colorize=True)
+
+    import_plugins()
+    load_models()
+
     with Session(engine) as session:
         youtube_plugin_id = YouTube(session).plugin.id
-        _initial_import(session, youtube_plugin_id)
+        _download_initial_files(session, youtube_plugin_id)
         _check_for_updates(session, youtube_plugin_id)

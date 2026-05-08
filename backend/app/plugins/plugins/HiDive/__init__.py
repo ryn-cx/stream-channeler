@@ -40,7 +40,7 @@ class HiDive(FileMixin, register=True):
         ):
             self.source = source
         else:
-            latest_schedule_file = self._get_latest_schedule_file()
+            latest_schedule_file = self.get_latest_schedule_file()
             self.source = self._upsert_source(latest_schedule_file)
 
     @classmethod
@@ -69,7 +69,7 @@ class HiDive(FileMixin, register=True):
         if re.match(self._tv_series_url_regex(), url):
             return key
         # season/{id} — resolve the season_id to its series_id.
-        season_data = self._season_file(key).parsed()
+        season_data = self.season_file(key).parsed()
         return str(season_data.metadata.series.series_id)
 
     def set_media_type_from_url(self, url: str) -> None:
@@ -102,11 +102,11 @@ class HiDive(FileMixin, register=True):
         key = self.parse_url(url)
         file: Series | Season | Playlist
         if self._media_type == "Movie":
-            file = self._playlist_file(key)
+            file = self.playlist_file(key)
         elif re.match(self._tv_series_url_regex(), url):
-            file = self._series_file(key)
+            file = self.series_file(key)
         else:
-            file = self._season_file(key)
+            file = self.season_file(key)
 
         file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
@@ -141,8 +141,8 @@ class HiDive(FileMixin, register=True):
 
     @override
     def update_source(self, source: Source) -> None:
-        latest_schedule_file = self._get_latest_schedule_file()
-        new_schedule_file = self._schedule_file(latest_schedule_file.data_timestamp)
+        latest_schedule_file = self.get_latest_schedule_file()
+        new_schedule_file = self.schedule_file(latest_schedule_file.data_timestamp)
         new_schedule_file.download_if_outdated(source.update_at)
         self._process_new_schedule_files(source)
         self._upsert_source(new_schedule_file)
@@ -154,7 +154,7 @@ class HiDive(FileMixin, register=True):
         for schedule_file in self._get_new_files_since_source(
             source,
             Schedule,
-            self._schedule_file,
+            self.schedule_file,
         ):
             logger.info(
                 "Processing schedule file: {}",
@@ -248,7 +248,7 @@ class HiDive(FileMixin, register=True):
 
     def _upsert_tv_show_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
-        series_data = self._series_file(show_key).parsed()
+        series_data = self.series_file(show_key).parsed()
 
         show = Show(
             key=show_key,
@@ -266,7 +266,7 @@ class HiDive(FileMixin, register=True):
 
     def _upsert_movie_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
-        playlist_data = self._playlist_file(show_key).parsed()
+        playlist_data = self.playlist_file(show_key).parsed()
         playlist_bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
         hero = diving_board().playlist.extract_hero(playlist_data)
         movie_data = playlist_bucket.attributes.items[0]
@@ -287,11 +287,11 @@ class HiDive(FileMixin, register=True):
         return show
 
     def _upsert_tv_seasons(self, show: Show, show_key: str) -> None:
-        series_data = self._series_file(show_key).parsed()
+        series_data = self.series_file(show_key).parsed()
         season_items = self._series_season_items(series_data)
         for sort_order, season_info in enumerate(season_items):
             season_key = str(season_info.id)
-            season_data = self._season_file(season_key).parsed()
+            season_data = self.season_file(season_key).parsed()
             hero = diving_board().season.extract_hero(season_data)
 
             new_timestamp = self.season_data_timestamp(season_key, show_key)
@@ -316,7 +316,7 @@ class HiDive(FileMixin, register=True):
         for sort_order, season_key in enumerate(
             self._season_keys_from_file(show_key),
         ):
-            playlist_data = self._playlist_file(show_key).parsed()
+            playlist_data = self.playlist_file(show_key).parsed()
             bucket = diving_board().playlist.extract_bucket_playlist(
                 playlist_data,
             )
@@ -342,7 +342,7 @@ class HiDive(FileMixin, register=True):
         self.soft_delete_missing_seasons(show_key)
 
     def _upsert_tv_episodes(self, season: SeasonModel, show_key: str) -> None:
-        season_data = self._season_file(season.key).parsed()
+        season_data = self.season_file(season.key).parsed()
         bucket = diving_board().season.extract_bucket_season(season_data)
         for sort_order, item in enumerate(bucket.attributes.items):
             episode_key = str(item.id)
@@ -355,7 +355,7 @@ class HiDive(FileMixin, register=True):
             if episode and episode.data_timestamp == new_timestamp:
                 continue
 
-            vod_data = self._vod_file(episode_key).parsed()
+            vod_data = self.vod_file(episode_key).parsed()
             release_date = self._extract_release_date(vod_data)
             # HiDive puts the episode number as an E## prefix in the title.
             episode_match = re.match(r"^E(\d+)", item.title) if item.title else None
@@ -379,7 +379,7 @@ class HiDive(FileMixin, register=True):
         self.soft_delete_missing_episodes(season.key)
 
     def _upsert_movie_episode(self, season: SeasonModel, show_key: str) -> None:
-        playlist_data = self._playlist_file(show_key).parsed()
+        playlist_data = self.playlist_file(show_key).parsed()
         bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
         movie_data = bucket.attributes.items[0]
         episode_key = str(movie_data.id)
@@ -387,7 +387,7 @@ class HiDive(FileMixin, register=True):
         episode = Episode.get_from_memory(self.session, season, episode_key)
         new_timestamp = self.episode_data_timestamp(episode_key, season.key, show_key)
         if not episode or episode.data_timestamp != new_timestamp:
-            vod_data = self._vod_file(episode_key).parsed()
+            vod_data = self.vod_file(episode_key).parsed()
             release_date = self._extract_release_date(vod_data)
 
             Episode(
@@ -414,7 +414,7 @@ class HiDive(FileMixin, register=True):
 
     @override
     def search(self, query: str) -> PluginSearchResults:
-        search_file = self._search_file(query)
+        search_file = self.search_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
 

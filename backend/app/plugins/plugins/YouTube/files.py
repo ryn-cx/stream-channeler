@@ -198,49 +198,56 @@ class FileMixin(BasePlugin, register=False):
     def __init__(self, session: Session) -> None:
         super().__init__(session)
 
-    def _channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
+    def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
+        """Return a cached channel-by-channel-id file for the given show key."""
         return self._get_cached_file(
             ChannelByChannelId,
             show_key,
             lambda: ChannelByChannelId(self.session, self.plugin, show_key),
         )
 
-    def _channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
+    def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
+        """Return a cached channel-by-handle file for the given channel handle."""
         return self._get_cached_file(
             ChannelByHandle,
             channel_handle,
             lambda: ChannelByHandle(self.session, self.plugin, channel_handle),
         )
 
-    def _channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
+    def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
+        """Return a cached channel-by-username file for the given channel username."""
         return self._get_cached_file(
             ChannelByUsername,
             channel_username,
             lambda: ChannelByUsername(self.session, self.plugin, channel_username),
         )
 
-    def _channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
+    def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
+        """Return a cached channel playlists file for the given show key."""
         return self._get_cached_file(
             ChannelPlaylists,
             show_key,
             lambda: ChannelPlaylists(self.session, self.plugin, show_key),
         )
 
-    def _playlist_items_file(self, season_key: str) -> PlaylistItems:
+    def playlist_items_file(self, season_key: str) -> PlaylistItems:
+        """Return a cached playlist items file for the given season key."""
         return self._get_cached_file(
             PlaylistItems,
             season_key,
             lambda: PlaylistItems(self.session, self.plugin, season_key),
         )
 
-    def _videos_file(self, episode_key: str) -> Videos:
+    def videos_file(self, episode_key: str) -> Videos:
+        """Return a cached videos file for the given episode key."""
         return self._get_cached_file(
             Videos,
             episode_key,
             lambda: Videos(self.session, self.plugin, episode_key),
         )
 
-    def _playlist_feed_file(self, season_key: str) -> PlaylistFeed:
+    def playlist_feed_file(self, season_key: str) -> PlaylistFeed:
+        """Return a cached playlist feed file for the given season key."""
         return self._get_cached_file(
             PlaylistFeed,
             season_key,
@@ -254,10 +261,10 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[ChannelByChannelId | ChannelPlaylists]:
         return [
             # Required to detect new seasons (playlists).
-            self._channel_playlists_file(show_key),
+            self.channel_playlists_file(show_key),
             # ChannelByHandle is only used to get ChannelByChannelId so it is not used.
             # Required to detect changes to the show (channel).
-            self._channel_by_channel_id_file(show_key),
+            self.channel_by_channel_id_file(show_key),
         ]
 
     @override
@@ -268,9 +275,9 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[ChannelPlaylists | PlaylistItems]:
         return [
             # Required to detect new episodes (videos).
-            self._playlist_items_file(season_key),
+            self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
-            self._channel_playlists_file(show_key),
+            self.channel_playlists_file(show_key),
         ]
 
     @override
@@ -281,7 +288,7 @@ class FileMixin(BasePlugin, register=False):
         show_key: str,
     ) -> Sequence[Videos]:
         # Required to detect changes to the episode (video).
-        return [self._videos_file(episode_key)]
+        return [self.videos_file(episode_key)]
 
     def _video_is_valid(self, video_title: str) -> bool:
         """Check if a video is valid for importing."""
@@ -293,7 +300,7 @@ class FileMixin(BasePlugin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        channel_playlists_file = self._channel_playlists_file(show_key)
+        channel_playlists_file = self.channel_playlists_file(show_key)
         season_keys: list[str] = []
         if channel_playlists_file.database_record.content:
             season_keys = [
@@ -303,7 +310,7 @@ class FileMixin(BasePlugin, register=False):
             ]
 
         # If the channel has uploads also include that as a season.
-        channel_item = self._channel_by_channel_id_file(show_key).parsed().items[0]
+        channel_item = self.channel_by_channel_id_file(show_key).parsed().items[0]
         if int(channel_item.statistics.video_count) > 0:
             season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
@@ -319,7 +326,7 @@ class FileMixin(BasePlugin, register=False):
         seen: set[str] = set()
         video_keys: list[str] = []
         for season_key in season_keys:
-            playlist_items_file = self._playlist_items_file(season_key)
+            playlist_items_file = self.playlist_items_file(season_key)
             for item in playlist_items_file.parsed().items:
                 video_id = item.content_details.video_id
                 if self._video_is_valid(item.snippet.title) and video_id not in seen:
@@ -340,17 +347,17 @@ class FileMixin(BasePlugin, register=False):
         outdated_ids = [
             video_id
             for video_id in video_keys
-            if self._videos_file(video_id).is_outdated()
+            if self.videos_file(video_id).is_outdated()
         ]
 
         if outdated_ids:
             logger.info(f"Batch downloading {len(outdated_ids)} videos")
             responses = not_yt_dlapi().videos.download_multiple(outdated_ids)
             for video_id, response in zip(outdated_ids, responses, strict=True):
-                video_file = self._videos_file(video_id)
+                video_file = self.videos_file(video_id)
                 content = json.dumps(response, default=str)
                 # This is one of the few places where using _write directly is required
                 # because of the way the files are batch downloaded.
                 video_file._write(content)  # noqa: SLF001 # type: ignore[reportPrivateUsage]
 
-        return [self._videos_file(video_id).database_record for video_id in video_keys]
+        return [self.videos_file(video_id).database_record for video_id in video_keys]

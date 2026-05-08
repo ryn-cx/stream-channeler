@@ -158,21 +158,24 @@ class FileMixin(BasePlugin, register=False):
         super().__init__(session)
         self._cached_media_type = None
 
-    def _custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
+    def custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
+        """Return a cached custom buy box offers file for the given episode key."""
         return self._get_cached_file(
             CustomBuyBoxOffers,
             episode_key,
             lambda: CustomBuyBoxOffers(self.session, self.plugin, episode_key),
         )
 
-    def _url_title_details_file(self, show_key: str) -> UrlTitleDetails:
+    def url_title_details_file(self, show_key: str) -> UrlTitleDetails:
+        """Return a cached url title details file for the given show key."""
         return self._get_cached_file(
             UrlTitleDetails,
             show_key,
             lambda: UrlTitleDetails(self.session, self.plugin, show_key),
         )
 
-    def _new_titles_file(self, source_key: str, date: datetime | date) -> NewTitles:
+    def new_titles_file(self, source_key: str, date: datetime | date) -> NewTitles:
+        """Return a cached new titles file for the given source key and date."""
         if isinstance(date, datetime):
             date = date.date()
 
@@ -183,17 +186,19 @@ class FileMixin(BasePlugin, register=False):
             lambda: NewTitles(self.session, self.plugin, source_key, date),
         )
 
-    def _custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
+    def custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
+        """Return a cached custom season episodes file for the given season key."""
         return self._get_cached_file(
             CustomSeasonEpisodes,
             season_key,
             lambda: CustomSeasonEpisodes(self.session, self.plugin, season_key),
         )
 
-    def _new_titles_bucket_file(
+    def new_titles_bucket_file(
         self,
         end_datetime: datetime | File,
     ) -> NewTitleBucket:
+        """Return a cached new titles bucket file for the given datetime or File."""
         if isinstance(end_datetime, File):
             key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
             end_datetime = datetime.fromisoformat(key)
@@ -203,14 +208,16 @@ class FileMixin(BasePlugin, register=False):
             lambda: NewTitleBucket(self.session, self.plugin, end_datetime),
         )
 
-    def _providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
+    def providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
+        """Return a cached providers locale file for the given locale."""
         return self._get_cached_file(
             ProvidersLocale,
             locale,
             lambda: ProvidersLocale(self.session, self.plugin, locale),
         )
 
-    def _search_titles_file(self, query: str) -> SearchTitles:
+    def search_titles_file(self, query: str) -> SearchTitles:
+        """Return a cached search titles file for the given query."""
         return self._get_cached_file(
             SearchTitles,
             query,
@@ -226,7 +233,7 @@ class FileMixin(BasePlugin, register=False):
         )
         source_keys: set[str] = set()
         for file in session.exec(statement).all():
-            bucket = self._new_titles_bucket_file(file)
+            bucket = self.new_titles_bucket_file(file)
             for edge in bucket.parsed_edges():
                 source_keys.add(edge.key.package.short_name)
         return source_keys
@@ -235,15 +242,15 @@ class FileMixin(BasePlugin, register=False):
     def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
         # Doesn't actually return all of the files, only the latest versions,
         return [
-            self._providers_locale_file(),
-            self._new_titles_bucket_file(self._get_latest_new_titles_bucket().one()),
+            self.providers_locale_file(),
+            self.new_titles_bucket_file(self._get_latest_new_titles_bucket().one()),
         ]
 
     @override
     def _show_files(self, show_key: str) -> Sequence[UrlTitleDetails]:
         # Movies - Required to detect changes to the show (there are no new seasons).
         # TV Show - Required to detect changes to the show and new seasons.
-        return [self._url_title_details_file(show_key)]
+        return [self.url_title_details_file(show_key)]
 
     @override
     def _season_files(
@@ -253,12 +260,12 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[UrlTitleDetails | CustomSeasonEpisodes]:
         if self._media_type(show_key) == "Movie":
             # Required to detect changes to the season.
-            return [self._url_title_details_file(show_key)]
+            return [self.url_title_details_file(show_key)]
         return [
             # Required to detect new episodes.
-            self._custom_season_episodes_file(season_key),
+            self.custom_season_episodes_file(season_key),
             # Required to detect changes to the season.
-            self._url_title_details_file(show_key),
+            self.url_title_details_file(show_key),
         ]
 
     @override
@@ -270,12 +277,12 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[UrlTitleDetails | CustomSeasonEpisodes | CustomBuyBoxOffers]:
         if self._media_type(show_key) == "Movie":
             # Required to detect changes to the episode.
-            return [self._url_title_details_file(show_key)]
+            return [self.url_title_details_file(show_key)]
 
         return [
             # Required to detect changes to the episode.
-            self._custom_buy_box_offers_file(episode_key),
-            self._custom_season_episodes_file(season_key),
+            self.custom_buy_box_offers_file(episode_key),
+            self.custom_season_episodes_file(season_key),
         ]
 
     def _download_new_titles_files(
@@ -284,7 +291,7 @@ class FileMixin(BasePlugin, register=False):
         dates: list[date],
     ) -> None:
         for new_titles_date in dates:
-            new_titles_file = self._new_titles_file(source.key, new_titles_date)
+            new_titles_file = self.new_titles_file(source.key, new_titles_date)
             new_titles_file.download_if_outdated()
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
             if minimum_timestamp <= tz_datetime.now():
@@ -295,7 +302,7 @@ class FileMixin(BasePlugin, register=False):
         # If no buckets exist download the initial one with a 1 day buffer worth of
         # data.
         if not latest_bucket:
-            bucket = self._new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
+            bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
             return
         # If the bucket was last updated within a day nothing needs to be done.
@@ -303,12 +310,12 @@ class FileMixin(BasePlugin, register=False):
             return
 
         # All other situations a new bucket should be downloaded.
-        bucket = self._new_titles_bucket_file(latest_bucket.data_timestamp)
+        bucket = self.new_titles_bucket_file(latest_bucket.data_timestamp)
         bucket.download_if_outdated()
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        url_title_details = self._url_title_details_file(show_key).parsed()
+        url_title_details = self.url_title_details_file(show_key).parsed()
         node = url_title_details.data.url_v2.node
         if seasons := node.seasons:
             return [season.id for season in seasons]
@@ -328,14 +335,14 @@ class FileMixin(BasePlugin, register=False):
         return [
             episode.id
             for season_key in season_keys
-            for episode in self._custom_season_episodes_file(
+            for episode in self.custom_season_episodes_file(
                 season_key,
             ).parsed_episodes()
         ]
 
     def _media_type(self, show_key: str) -> str:
         if not self._cached_media_type:
-            url_title_details = self._url_title_details_file(show_key).parsed()
+            url_title_details = self.url_title_details_file(show_key).parsed()
             raw_media_type = url_title_details.data.url_v2.node.object_type
             self._cached_media_type = _MEDIA_TYPE_MAP[raw_media_type]  # type: ignore[assignment]
         return self._cached_media_type  # type: ignore[return-value]
@@ -346,7 +353,7 @@ class FileMixin(BasePlugin, register=False):
     ) -> list[tuple[str, url_title_details_models.Offer]]:
         """Get all unique sources with their first corresponding offer."""
         seen: dict[str, url_title_details_models.Offer] = {}
-        url_title_details = self._url_title_details_file(show_key).parsed()
+        url_title_details = self.url_title_details_file(show_key).parsed()
         for offer in url_title_details.data.url_v2.node.offers:
             # If a website offers multiple different plans the data will be duplicated
             # for each plan so only use the first offer for each source.

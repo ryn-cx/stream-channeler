@@ -39,12 +39,12 @@ class JustWatch(FileMixin, register=True):
     @override
     def initialize_source(self) -> None:
         if self.plugin.data_timestamp is None:
-            providers_file = self._providers_locale_file()
+            providers_file = self.providers_locale_file()
             providers_file.download_if_outdated()
 
             self._upsert_sources(providers_file)
 
-            bucket = self._new_titles_bucket_file(providers_file.data_timestamp)
+            bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
             bucket.download_if_outdated()
 
             self._download_latest_new_titles_bucket()
@@ -94,7 +94,7 @@ class JustWatch(FileMixin, register=True):
         }
 
     def _validate_show_key(self, show_key: str, url: str) -> None:
-        series_json = self._url_title_details_file(show_key)
+        series_json = self.url_title_details_file(show_key)
         series_json.download_if_outdated()
         self.raise_invalid_url_if_no_content(series_json, url)
 
@@ -156,7 +156,7 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def update_plugin(self, plugin: Plugin) -> None:
-        providers_file = self._providers_locale_file()
+        providers_file = self.providers_locale_file()
         providers_file.download_if_outdated(self.plugin.update_at)
         self._upsert_sources(providers_file)
 
@@ -193,7 +193,7 @@ class JustWatch(FileMixin, register=True):
             .order_by(col(File.data_timestamp).asc())
         )
         return [
-            self._new_titles_bucket_file(file)
+            self.new_titles_bucket_file(file)
             for file in self.session.exec(statement).all()
         ]
 
@@ -210,7 +210,7 @@ class JustWatch(FileMixin, register=True):
 
         incomplete_dates: list[str] = []
         for new_titles_date in dates:
-            new_titles_file = self._new_titles_file(source.key, new_titles_date)
+            new_titles_file = self.new_titles_file(source.key, new_titles_date)
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
             # The files should be downloaded again at a later date if there is a chance
             # new entries can be added to it in the future.
@@ -220,7 +220,7 @@ class JustWatch(FileMixin, register=True):
         if incomplete_dates:
             source.extra = json.dumps(incomplete_dates)
             _date = date.fromisoformat(incomplete_dates[0])
-            earliest_file = self._new_titles_file(source.key, _date)
+            earliest_file = self.new_titles_file(source.key, _date)
             minimum_timestamp = self.minimum_new_titles_data_timestamp(earliest_file)
             source.set_update_at(minimum_timestamp)
         else:
@@ -228,7 +228,7 @@ class JustWatch(FileMixin, register=True):
             source.update_at = None
 
         source.data_timestamp = max(
-            self._new_titles_file(source.key, new_titles_date).data_timestamp
+            self.new_titles_file(source.key, new_titles_date).data_timestamp
             for new_titles_date in dates
         )
 
@@ -240,7 +240,7 @@ class JustWatch(FileMixin, register=True):
         _cache = source.shows
 
         for new_titles_date in dates:
-            file = self._new_titles_file(source.key, new_titles_date)
+            file = self.new_titles_file(source.key, new_titles_date)
             source = Source.get_one(self.session, self.plugin, file.source_key)
             _cache_sources = self._preload_sources(
                 file.source_key,
@@ -348,7 +348,7 @@ class JustWatch(FileMixin, register=True):
         show_key: str,
     ) -> list[tuple[str, custom_buy_box_offers_models.Offer]]:
         """Return (source_key, offer) pairs for all sources that have offers."""
-        parsed_json = self._url_title_details_file(show_key).parsed()
+        parsed_json = self.url_title_details_file(show_key).parsed()
         results: list[tuple[str, custom_buy_box_offers_models.Offer]] = []
         if not parsed_json.data.url_v2.node.offers:
             return results
@@ -401,7 +401,7 @@ class JustWatch(FileMixin, register=True):
     def _upsert_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
 
-        parsed_json = self._url_title_details_file(show_key).parsed()
+        parsed_json = self.url_title_details_file(show_key).parsed()
         offer = next(
             offer
             for source_key, offer in self._sources_with_offers(show_key)
@@ -437,7 +437,7 @@ class JustWatch(FileMixin, register=True):
     def _upsert_show_seasons(self, show: Show, show_key: str) -> None:
         # TODO: Upstream in JustScrape, add the ability to parse specific types so there
         # is less need for checking for None.
-        parsed_json = self._url_title_details_file(show_key).parsed()
+        parsed_json = self.url_title_details_file(show_key).parsed()
         seasons_data = parsed_json.data.url_v2.node.seasons
         # TODO: Eventually this should be able to be removed once JustScrape is updated.
         if seasons_data is None:
@@ -459,7 +459,7 @@ class JustWatch(FileMixin, register=True):
             self.soft_delete_missing_episodes(season.key)
 
     def _upsert_movie_season(self, show: Show, show_key: str) -> None:
-        parsed_json = self._url_title_details_file(show_key).parsed()
+        parsed_json = self.url_title_details_file(show_key).parsed()
         node_id = parsed_json.data.url_v2.node.id
         existing_season = Season.get_from_memory(self.session, show, node_id)
         season = Season(
@@ -487,11 +487,11 @@ class JustWatch(FileMixin, register=True):
         show_key: str,
     ) -> None:
         source_key = show.source.key
-        custom_season_episodes_file = self._custom_season_episodes_file(
+        custom_season_episodes_file = self.custom_season_episodes_file(
             season_data.id,
         )
         backdrops = (
-            self._url_title_details_file(show_key)
+            self.url_title_details_file(show_key)
             .parsed()
             .data.url_v2.node.content.full_backdrops
         )
@@ -514,7 +514,7 @@ class JustWatch(FileMixin, register=True):
             ):
                 continue
 
-            buy_box_offers = self._custom_buy_box_offers_file(season_episode.id)
+            buy_box_offers = self.custom_buy_box_offers_file(season_episode.id)
             episode_info = self._find_matching_episode(
                 source_key,
                 buy_box_offers.parsed().data.node,
@@ -552,7 +552,7 @@ class JustWatch(FileMixin, register=True):
         show_key: str,
     ) -> str | None:
         source_key = show.source.key
-        parsed_data = self._url_title_details_file(show_key).parsed()
+        parsed_data = self.url_title_details_file(show_key).parsed()
         episode_info = self._find_matching_episode(
             source_key,
             parsed_data.data.url_v2.node,
@@ -592,7 +592,7 @@ class JustWatch(FileMixin, register=True):
     # TODO: Consider caching this if it is slow.
     def _get_source_lookup(self) -> dict[str, dict[str, str]]:
         """Build a short_name -> {clear_name, icon_url} mapping from ProvidersLocale."""
-        providers_file = self._providers_locale_file()
+        providers_file = self.providers_locale_file()
         providers_file.download_if_outdated()
         return {
             provider["short_name"]: {
@@ -607,7 +607,7 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def search(self, query: str) -> PluginSearchResults:
-        search_file = self._search_titles_file(query)
+        search_file = self.search_titles_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=30)
         search_file.download_if_outdated(minimum_timestamp)
         parsed = search_file.parsed()

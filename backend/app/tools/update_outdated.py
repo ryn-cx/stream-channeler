@@ -5,10 +5,13 @@ import sys
 from collections.abc import Callable
 
 from loguru import logger
+from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
+from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
+from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
@@ -81,6 +84,50 @@ MODEL_VALUES: dict[
 }
 
 
+def _channel_inclusion_clause() -> ColumnElement[bool]:
+    return or_(
+        col(ChannelShow.is_whitelist).is_(True)
+        & col(ChannelSeasonFilter.season_id).is_not(None),
+        col(ChannelShow.is_whitelist).is_(False)
+        & col(ChannelSeasonFilter.season_id).is_(None),
+    )
+
+
+def _season_in_channel_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring the outer Season to be included in some channel."""
+    return (
+        select(ChannelShow.id)
+        .outerjoin(
+            ChannelSeasonFilter,
+            (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
+            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+        )
+        .where(
+            col(ChannelShow.show_id) == col(Season.show_id),
+            _channel_inclusion_clause(),
+        )
+        .exists()
+    )
+
+
+def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring the outer Show to have a Season included in a channel."""
+    return (
+        select(Season.id)
+        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .outerjoin(
+            ChannelSeasonFilter,
+            (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
+            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+        )
+        .where(
+            col(Season.show_id) == col(Show.id),
+            _channel_inclusion_clause(),
+        )
+        .exists()
+    )
+
+
 def _process_outdated_items(media_class: type[MediaModel]) -> None:
     join_chain, load_options, get_plugin_key = MODEL_VALUES[media_class]
     media_type_name = media_class.__name__.lower()
@@ -98,6 +145,12 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
         )
         for model in join_chain:
             statement = statement.join(model)
+        # Skip items whose Season is not included in any channel. Source is
+        # exempt because updating a Source is how new Shows are discovered.
+        if media_class is Show:
+            statement = statement.where(_show_has_season_in_channel_exists())
+        elif media_class in (Season, Episode):
+            statement = statement.where(_season_in_channel_exists())
         statement = (
             statement.join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
             .where(User.email == PLUGIN_USER_EMAIL)

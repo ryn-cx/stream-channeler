@@ -127,7 +127,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         parsed: list[ScheduleModel],
         timestamp: datetime,
     ) -> None:
-        new_schedule = plugin_instance._schedule_file(timestamp)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_schedule = plugin_instance.schedule_file(timestamp)
         dumped = diving_board().schedule.dump_response(parsed)
         new_schedule._write(dumped)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_schedule._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
@@ -141,7 +141,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
     ) -> None:
         show_name = source.shows[0].name
         assert show_name is not None
-        parsed = plugin_instance._get_latest_schedule_file().parsed()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        parsed = plugin_instance.get_latest_schedule_file().parsed()
         self.add_show_to_schedule(parsed, timestamp, show_name)
         self.export_schedule_file(plugin_instance, parsed, timestamp)
 
@@ -161,7 +161,8 @@ class TestMultipleSeasonsShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
 
 
 class TestMultipleSeasonsShowSecondSeasonURL(
-    HiDiveStandardTests, HiDiveUpdateSourceTest
+    HiDiveStandardTests,
+    HiDiveUpdateSourceTest,
 ):
     parse_url_response = "19426"
     url = f"hidive.com/season/{parse_url_response}"

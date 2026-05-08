@@ -75,28 +75,32 @@ class Search(GAPIJSON[search_models.Search]):
 
 
 class FileMixin(BasePlugin, register=False):
-    def _series_file(self, show_key: str) -> Series:
+    def series_file(self, show_key: str) -> Series:
+        """Return a cached series file for the given show key."""
         return self._get_cached_file(
             Series,
             show_key,
             lambda: Series(self.session, self.plugin, show_key),
         )
 
-    def _seasons_file(self, show_key: str) -> Seasons:
+    def seasons_file(self, show_key: str) -> Seasons:
+        """Return a cached seasons file for the given show key."""
         return self._get_cached_file(
             Seasons,
             show_key,
             lambda: Seasons(self.session, self.plugin, show_key),
         )
 
-    def _episodes_file(self, season_key: str) -> Episodes:
+    def episodes_file(self, season_key: str) -> Episodes:
+        """Return a cached episodes file for the given season key."""
         return self._get_cached_file(
             Episodes,
             season_key,
             lambda: Episodes(self.session, self.plugin, season_key),
         )
 
-    def _browse_file(self, browse_datetime: datetime | File) -> Browse:
+    def browse_file(self, browse_datetime: datetime | File) -> Browse:
+        """Return a cached browse file for the given datetime or existing File."""
         if isinstance(browse_datetime, File):
             str_datetime = Browse.file_key_to_unique_identifier(browse_datetime.key)
         else:
@@ -107,7 +111,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Browse(self.session, self.plugin, str_datetime),
         )
 
-    def _search_file(self, query: str) -> Search:
+    def search_file(self, query: str) -> Search:
+        """Return a cached search file for the given query."""
         return self._get_cached_file(
             Search,
             query,
@@ -118,9 +123,9 @@ class FileMixin(BasePlugin, register=False):
     def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
         return [
             # Required to detect new seasons.
-            self._seasons_file(show_key),
+            self.seasons_file(show_key),
             # Required to detect changes to the show.
-            self._series_file(show_key),
+            self.series_file(show_key),
         ]
 
     @override
@@ -131,9 +136,9 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[Seasons | Episodes]:
         return [
             # Required to detect new episodes.
-            self._episodes_file(season_key),
+            self.episodes_file(season_key),
             # Required to detect changes to the season.
-            self._seasons_file(show_key),
+            self.seasons_file(show_key),
         ]
 
     @override
@@ -143,12 +148,12 @@ class FileMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[Episodes]:
-        return [self._episodes_file(season_key)]
+        return [self.episodes_file(season_key)]
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         return [
-            season_data.id for season_data in self._seasons_file(show_key).parsed().data
+            season_data.id for season_data in self.seasons_file(show_key).parsed().data
         ]
 
     @override
@@ -161,10 +166,11 @@ class FileMixin(BasePlugin, register=False):
         return [
             episode.id
             for season_key in season_keys
-            for episode in self._episodes_file(season_key).parsed().data
+            for episode in self.episodes_file(season_key).parsed().data
         ]
 
-    def _preload_latest_browse_file(self) -> File | None:
+    def preload_latest_browse_file(self) -> File | None:
+        """Return the most recent browse File from the database, or None."""
         statement = (
             select(File)
             .where(
@@ -175,9 +181,10 @@ class FileMixin(BasePlugin, register=False):
         )
         return self.session.exec(statement).first()
 
-    def _get_latest_browse_file(self) -> Browse:
-        if file := self._preload_latest_browse_file():
-            return self._browse_file(file)
-        browse = self._browse_file(tz_datetime.now())
+    def get_latest_browse_file(self) -> Browse:
+        """Return the latest browse file, downloading a fresh one if none exist."""
+        if file := self.preload_latest_browse_file():
+            return self.browse_file(file)
+        browse = self.browse_file(tz_datetime.now())
         browse.download_if_outdated()
         return browse

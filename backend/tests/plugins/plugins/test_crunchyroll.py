@@ -83,13 +83,13 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
         show_key: str,
     ) -> None:
         """Create a fake Browse file with updated last_public for the given show."""
-        existing_browse = plugin_instance._get_latest_browse_file()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        existing_browse = plugin_instance.get_latest_browse_file()
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]
         assert first_entry is not None, "Browse file has no entries"
         first_entry.id = show_key
         first_entry.last_public = timestamp
-        new_browse = plugin_instance._browse_file(timestamp)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_browse = plugin_instance.browse_file(timestamp)
         new_browse._write(BrowseSeries.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 

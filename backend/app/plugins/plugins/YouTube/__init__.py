@@ -123,18 +123,18 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         self._validate_url(url, key_type, key_value)
 
         if key_type == "playlist_key":
-            playlist_items = self._playlist_items_file(key_value).parsed()
+            playlist_items = self.playlist_items_file(key_value).parsed()
             show_key = playlist_items.items[0].snippet.channel_id
             playlist_key = key_value
         elif key_type == "channel_key":
             show_key = key_value
             playlist_key = self._get_channel_uploads_playlist_key(key_value)
         elif key_type == "channel_handle":
-            channel_data = self._channel_by_handle_file(key_value).parsed()
+            channel_data = self.channel_by_handle_file(key_value).parsed()
             show_key = get_first_item(channel_data.items).id
             playlist_key = self._get_channel_uploads_playlist_key(show_key)
         else:  # key_type == "channel_username":
-            channel_data = self._channel_by_username_file(key_value).parsed()
+            channel_data = self.channel_by_username_file(key_value).parsed()
             show_key = get_first_item(channel_data.items).id
             playlist_key = self._get_channel_uploads_playlist_key(show_key)
 
@@ -144,13 +144,13 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
     def _validate_url(self, url: str, key_type: URLKeyType, key_value: str) -> None:
         file: PlaylistItems | ChannelByChannelId | ChannelByHandle | ChannelByUsername
         if key_type == "playlist_key":
-            file = self._playlist_items_file(key_value)
+            file = self.playlist_items_file(key_value)
         elif key_type == "channel_key":
-            file = self._channel_by_channel_id_file(key_value)
+            file = self.channel_by_channel_id_file(key_value)
         elif key_type == "channel_handle":
-            file = self._channel_by_handle_file(key_value)
+            file = self.channel_by_handle_file(key_value)
         else:  # key_type == "channel_username"
-            file = self._channel_by_username_file(key_value)
+            file = self.channel_by_username_file(key_value)
         file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
@@ -166,7 +166,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             return self._upsert_show(source, show_key)
 
         if playlist_key == self._get_channel_uploads_playlist_key(show.key):
-            parsed = self._channel_by_channel_id_file(show.key).parsed()
+            parsed = self.channel_by_channel_id_file(show.key).parsed()
             channel_item = get_first_item(parsed.items)
             if int(channel_item.statistics.video_count) == 0:
                 return show
@@ -319,7 +319,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
-        channel_file = self._channel_by_channel_id_file(show_key)
+        channel_file = self.channel_by_channel_id_file(show_key)
         channel_item = get_first_item(channel_file.parsed().items)
 
         show = Show(
@@ -345,7 +345,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     def _upsert_channel_season(self, show: Show, show_key: str) -> None:
         """Upsert the uploads playlist."""
-        parsed = self._channel_by_channel_id_file(show_key).parsed()
+        parsed = self.channel_by_channel_id_file(show_key).parsed()
         channel_item = get_first_item(parsed.items)
         if int(channel_item.statistics.video_count) == 0:
             return
@@ -373,7 +373,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             return
         playlists_by_key = {
             parsed_playlist.id: parsed_playlist
-            for parsed_playlist in self._channel_playlists_file(show_key).parsed().items
+            for parsed_playlist in self.channel_playlists_file(show_key).parsed().items
         }
         for season_key in playlist_season_keys:
             parsed_playlist = playlists_by_key[season_key]
@@ -414,7 +414,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             ):
                 continue
 
-            video_data = self._videos_file(episode_key).parsed()
+            video_data = self.videos_file(episode_key).parsed()
             video_item = video_data.items[0]
             video_snippet = video_item.snippet
 

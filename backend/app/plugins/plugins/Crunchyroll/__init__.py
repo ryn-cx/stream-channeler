@@ -40,7 +40,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @override
     def initialize_source(self) -> None:
         if not self.has_source:
-            latest_browse_file = self._get_latest_browse_file()
+            latest_browse_file = self.get_latest_browse_file()
             self.source = self._upsert_source(latest_browse_file)
 
     @classmethod
@@ -94,7 +94,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         raise InvalidURLError(msg)
 
     def _validate_url(self, show_key: str, url: str) -> None:
-        series_json = self._series_file(show_key)
+        series_json = self.series_file(show_key)
         series_json.download_if_outdated()
         self.raise_invalid_url_if_no_content(series_json, url)
 
@@ -107,8 +107,8 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def update_source(self, source: Source) -> None:
-        latest_browse_file = self._get_latest_browse_file()
-        new_browse_file = self._browse_file(latest_browse_file.data_timestamp)
+        latest_browse_file = self.get_latest_browse_file()
+        new_browse_file = self.browse_file(latest_browse_file.data_timestamp)
         new_browse_file.download_if_outdated(source.update_at)
         self._process_new_browse_files(source)
         self._upsert_source(new_browse_file)
@@ -121,7 +121,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         for browse_json in self._get_new_files_since_source(
             source,
             Browse,
-            self._browse_file,
+            self.browse_file,
         ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
@@ -174,7 +174,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
-        series_data = self._series_file(show_key).parsed().data[0]
+        series_data = self.series_file(show_key).parsed().data[0]
         show = Show(
             key=series_data.id,
             name=series_data.title,
@@ -196,7 +196,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         release_dates = [
             episode_data.premium_available_date
             for season_key in self._season_keys_from_file(show_key)
-            for episode_data in self._episodes_file(season_key).parsed().data
+            for episode_data in self.episodes_file(season_key).parsed().data
         ]
         if len(release_dates) != 1:
             return "TV Show"
@@ -206,7 +206,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         return "TV Show"
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
-        seasons_file = self._seasons_file(show_key)
+        seasons_file = self.seasons_file(show_key)
         for i, season_data in enumerate(seasons_file.parsed().data):
             season_timestamp = self.season_data_timestamp(season_data.id, show.key)
             season = Season.get_from_memory(self.session, show, season_data.id)
@@ -226,7 +226,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     def _upsert_episodes(self, season: Season) -> None:
         episode_timestamp = self.episode_data_timestamp("", season.key, season.show.key)
-        episodes_data = self._episodes_file(season.key).parsed()
+        episodes_data = self.episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):
             existing_episode = Episode.get_from_memory(
                 self.session,
@@ -262,7 +262,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         The underlying response is cached on disk; the file is re-downloaded
         only if it's older than 30 days.
         """
-        search_file = self._search_file(query)
+        search_file = self.search_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
         series = chirashi().search.extract_series(search_file.parsed())

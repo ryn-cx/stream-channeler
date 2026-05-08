@@ -100,13 +100,13 @@ class BaseJustWatch(PluginValidator[JustWatch]):
     ) -> None:
         """Create a fake NewTitleBucket file pointing the first edge at the source."""
         existing_bucket_file = plugin_instance._get_latest_new_titles_bucket().one()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-        existing_bucket = plugin_instance._new_titles_bucket_file(existing_bucket_file)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        existing_bucket = plugin_instance.new_titles_bucket_file(existing_bucket_file)
         parsed = existing_bucket.parsed()
         first_edge = parsed[0].data.new_title_buckets.edges[0]
         assert first_edge is not None, "Bucket file has no edges"
         first_edge.key.package.short_name = source_key
         first_edge.key.date = edge_date
-        new_bucket = plugin_instance._new_titles_bucket_file(timestamp)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_bucket = plugin_instance.new_titles_bucket_file(timestamp)
         new_bucket._write(NewTitleBuckets.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_bucket._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
@@ -117,7 +117,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         new_titles_date: date,
     ) -> None:
         """Create an empty NewTitles file so update_source doesn't try to download."""
-        new_titles_file = plugin_instance._new_titles_file(  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_titles_file = plugin_instance.new_titles_file(
             source_key,
             new_titles_date,
         )

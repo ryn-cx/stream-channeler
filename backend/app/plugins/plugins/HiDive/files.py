@@ -122,7 +122,8 @@ class FileMixin(BasePlugin, register=False):
             raise AttributeError(msg)
         return self._media_type_value
 
-    def _season_file(self, season_key: str | int) -> Season:
+    def season_file(self, season_key: str | int) -> Season:
+        """Return a cached season file for the given season key."""
         key = str(season_key)
         return self._get_cached_file(
             Season,
@@ -130,7 +131,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Season(self.session, self.plugin, key),
         )
 
-    def _vod_file(self, vod_key: str | int) -> Vod:
+    def vod_file(self, vod_key: str | int) -> Vod:
+        """Return a cached vod file for the given vod key."""
         key = str(vod_key)
         return self._get_cached_file(
             Vod,
@@ -138,7 +140,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Vod(self.session, self.plugin, key),
         )
 
-    def _playlist_file(self, playlist_key: str | int) -> Playlist:
+    def playlist_file(self, playlist_key: str | int) -> Playlist:
+        """Return a cached playlist file for the given playlist key."""
         key = str(playlist_key)
         return self._get_cached_file(
             Playlist,
@@ -146,7 +149,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Playlist(self.session, self.plugin, key),
         )
 
-    def _series_file(self, series_key: str | int) -> Series:
+    def series_file(self, series_key: str | int) -> Series:
+        """Return a cached series file for the given series key."""
         key = str(series_key)
         return self._get_cached_file(
             Series,
@@ -154,7 +158,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Series(self.session, self.plugin, key),
         )
 
-    def _schedule_file(self, input_date: datetime | File) -> Schedule:
+    def schedule_file(self, input_date: datetime | File) -> Schedule:
+        """Return a cached schedule file for the given datetime or existing File."""
         if isinstance(input_date, File):
             input_date = datetime.fromisoformat(
                 Schedule.file_key_to_unique_identifier(input_date.key),
@@ -165,14 +170,16 @@ class FileMixin(BasePlugin, register=False):
             lambda: Schedule(self.session, self.plugin, input_date),
         )
 
-    def _search_file(self, query: str) -> Search:
+    def search_file(self, query: str) -> Search:
+        """Return a cached search file for the given query."""
         return self._get_cached_file(
             Search,
             query,
             lambda: Search(self.session, self.plugin, query),
         )
 
-    def _preload_latest_schedule_file(self) -> File | None:
+    def preload_latest_schedule_file(self) -> File | None:
+        """Return the most recent schedule File from the database, or None."""
         statement = (
             select(File)
             .where(
@@ -183,10 +190,11 @@ class FileMixin(BasePlugin, register=False):
         )
         return self.session.exec(statement).first()
 
-    def _get_latest_schedule_file(self) -> Schedule:
-        if file := self._preload_latest_schedule_file():
-            return self._schedule_file(file)
-        schedule = self._schedule_file(tz_datetime.now())
+    def get_latest_schedule_file(self) -> Schedule:
+        """Return the latest schedule file, downloading a fresh one if none exist."""
+        if file := self.preload_latest_schedule_file():
+            return self.schedule_file(file)
+        schedule = self.schedule_file(tz_datetime.now())
         schedule.download_if_outdated()
         return schedule
 
@@ -196,8 +204,8 @@ class FileMixin(BasePlugin, register=False):
         show_key: str,
     ) -> Sequence[Season | Series | Playlist]:
         if self._media_type == "Movie":
-            return [self._playlist_file(show_key)]
-        return [self._series_file(show_key)]
+            return [self.playlist_file(show_key)]
+        return [self.series_file(show_key)]
 
     @override
     def _season_files(
@@ -206,10 +214,10 @@ class FileMixin(BasePlugin, register=False):
         show_key: str,
     ) -> Sequence[Season | Playlist]:
         if self._media_type == "Movie":
-            return [self._playlist_file(season_key)]
+            return [self.playlist_file(season_key)]
         return [
             # Required to detect new episodes and changes to the season.
-            self._season_file(season_key),
+            self.season_file(season_key),
         ]
 
     @override
@@ -221,13 +229,13 @@ class FileMixin(BasePlugin, register=False):
     ) -> Sequence[Season | Vod | Playlist]:
         if self._media_type == "Movie":
             return [
-                self._playlist_file(show_key),
-                self._vod_file(episode_key),
+                self.playlist_file(show_key),
+                self.vod_file(episode_key),
             ]
         return [
             # Required to detect changes to the episode information.
-            self._vod_file(episode_key),
-            self._season_file(season_key),
+            self.vod_file(episode_key),
+            self.season_file(season_key),
         ]
 
     @override
@@ -235,7 +243,7 @@ class FileMixin(BasePlugin, register=False):
         # TODO: Is this seperate check needed?
         if self._media_type == "Movie":
             return [show_key]
-        series_data = self._series_file(show_key).parsed()
+        series_data = self.series_file(show_key).parsed()
         return [str(item.id) for item in self._series_season_items(series_data)]
 
     @override
@@ -248,13 +256,13 @@ class FileMixin(BasePlugin, register=False):
         episode_keys: list[str] = []
         for season_key in season_keys:
             if self._media_type == "Movie":
-                playlist_data = self._playlist_file(season_key).parsed()
+                playlist_data = self.playlist_file(season_key).parsed()
                 bucket = diving_board().playlist.extract_bucket_playlist(
                     playlist_data,
                 )
                 episode_keys.extend(str(item.id) for item in bucket.attributes.items)
                 continue
-            season_data = self._season_file(season_key).parsed()
+            season_data = self.season_file(season_key).parsed()
             bucket = diving_board().season.extract_bucket_season(season_data)
             episode_keys.extend(str(item.id) for item in bucket.attributes.items)
         return episode_keys
