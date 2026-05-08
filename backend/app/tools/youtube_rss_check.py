@@ -13,9 +13,6 @@ from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-
-if TYPE_CHECKING:
-    from sqlmodel.sql.expression import SelectOfScalar
 from app.database import engine, load_models
 from app.plugins.models import File
 from app.plugins.plugins.utils.manage_plugins import import_plugins
@@ -24,6 +21,9 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+
+if TYPE_CHECKING:
+    from sqlmodel.sql.expression import SelectOfScalar
 
 
 def _playlist_feed_base_query(youtube_plugin_id: object) -> SelectOfScalar[Season]:
@@ -43,10 +43,7 @@ def _playlist_feed_base_query(youtube_plugin_id: object) -> SelectOfScalar[Seaso
     )
 
 
-def _new_seasons(
-    session: Session,
-    youtube_plugin_id: object,
-) -> list[Season]:
+def _new_seasons(session: Session, youtube_plugin_id: object) -> list[Season]:
     # Unlike _outdated_seasons, it does not matter if a season exists in a channel
     # because an initial file needs to exist to support a user adding an existing
     # season to a channel properly. The initial file will allow this script to
@@ -62,10 +59,7 @@ def _new_seasons(
     )
 
 
-def _outdated_seasons(
-    session: Session,
-    youtube_plugin_id: object,
-) -> list[Season]:
+def _outdated_seasons(session: Session, youtube_plugin_id: object) -> list[Season]:
     return list(
         session.exec(
             _playlist_feed_base_query(youtube_plugin_id).where(
