@@ -42,7 +42,6 @@ def not_yt_dlapi() -> NotYTDLAPI:
         get_around_password=password,
     )
 
-
 @cache
 def get_around_client() -> GetAround:
     get_around_server: str | None = settings.GET_AROUND_SERVER
@@ -313,11 +312,11 @@ class FileMixin(BasePlugin, register=False):
             season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
         if channel_playlists_file.database_record.content:
-            season_keys = [
+            season_keys.extend(
                 item.id
                 for item in channel_playlists_file.parsed().items
                 if item.content_details.item_count > 0
-            ]
+            )
 
         return season_keys
 
