@@ -511,6 +511,7 @@ class JustWatch(FileMixin, register=True):
             if (
                 existing_episode
                 and existing_episode.data_timestamp == episode_timestamp
+                and existing_episode.deleted_at is None
             ):
                 continue
 
@@ -570,7 +571,11 @@ class JustWatch(FileMixin, register=True):
             season.key,
             show_key,
         )
-        if existing_episode and existing_episode.data_timestamp == episode_timestamp:
+        if (
+            existing_episode
+            and existing_episode.data_timestamp == episode_timestamp
+            and existing_episode.deleted_at is None
+        ):
             return episode_info.id
 
         node = parsed_data.data.url_v2.node

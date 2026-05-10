@@ -352,7 +352,11 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         uploads_key = self._get_channel_uploads_playlist_key(show.key)
         season_timestamp = self.season_data_timestamp(uploads_key, show_key)
         season = Season.get_from_memory(self.session, show, uploads_key)
-        if not season or season.data_timestamp != season_timestamp:
+        if (
+            not season
+            or season.data_timestamp != season_timestamp
+            or season.deleted_at is not None
+        ):
             season = Season(
                 key=uploads_key,
                 name=f"Uploads from {show.name}",
@@ -379,7 +383,11 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             parsed_playlist = playlists_by_key[season_key]
             season_timestamp = self.season_data_timestamp(season_key, show_key)
             season = Season.get_from_memory(self.session, show, season_key)
-            if not season or season.data_timestamp != season_timestamp:
+            if (
+                not season
+                or season.data_timestamp != season_timestamp
+                or season.deleted_at is not None
+            ):
                 season = Season(
                     key=season_key,
                     name=parsed_playlist.snippet.title,
@@ -411,6 +419,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             if (
                 existing_episode
                 and existing_episode.data_timestamp == episode_timestamp
+                and existing_episode.deleted_at is None
             ):
                 continue
 

@@ -296,7 +296,11 @@ class HiDive(FileMixin, register=True):
 
             new_timestamp = self.season_data_timestamp(season_key, show_key)
             season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if not season or season.data_timestamp != new_timestamp:
+            if (
+                not season
+                or season.data_timestamp != new_timestamp
+                or season.deleted_at is not None
+            ):
                 season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
@@ -325,7 +329,11 @@ class HiDive(FileMixin, register=True):
 
             new_timestamp = self.season_data_timestamp(season_key, show_key)
             season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if not season or season.data_timestamp != new_timestamp:
+            if (
+                not season
+                or season.data_timestamp != new_timestamp
+                or season.deleted_at is not None
+            ):
                 season = SeasonModel(
                     key=season_key,
                     name=movie_data.title,
@@ -352,7 +360,11 @@ class HiDive(FileMixin, register=True):
                 season.key,
                 show_key,
             )
-            if episode and episode.data_timestamp == new_timestamp:
+            if (
+                episode
+                and episode.data_timestamp == new_timestamp
+                and episode.deleted_at is None
+            ):
                 continue
 
             vod_data = self.vod_file(episode_key).parsed()

@@ -210,7 +210,11 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         for i, season_data in enumerate(seasons_file.parsed().data):
             season_timestamp = self.season_data_timestamp(season_data.id, show.key)
             season = Season.get_from_memory(self.session, show, season_data.id)
-            if not season or season.data_timestamp != season_timestamp:
+            if (
+                not season
+                or season.data_timestamp != season_timestamp
+                or season.deleted_at is not None
+            ):
                 season = Season(
                     key=season_data.id,
                     sort_order=i,
@@ -236,6 +240,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             if (
                 existing_episode
                 and existing_episode.data_timestamp == episode_timestamp
+                and existing_episode.deleted_at is None
             ):
                 continue
             Episode(
