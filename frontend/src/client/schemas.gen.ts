@@ -198,6 +198,19 @@ export const ChannelOptionsSchema = {
             type: 'array',
             title: 'Additionalchannels'
         },
+        sourceIds: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Sourceids'
+        },
+        sourceIdsIsBlacklist: {
+            type: 'boolean',
+            title: 'Sourceidsisblacklist',
+            default: false
+        },
         randomSeed: {
             type: 'integer',
             title: 'Randomseed'

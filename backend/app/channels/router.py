@@ -195,9 +195,7 @@ def get_channel_shows(
         source = show.source
         plugin = source.plugin
 
-        if not plugin.is_publically_readable(session) and (
-            not user or user.id != plugin.user_id
-        ):
+        if not plugin.is_readable(session, user):
             continue
 
         output.shows.append(ShowPublic.model_validate(show))
@@ -206,6 +204,28 @@ def get_channel_shows(
             output.sources[source.id] = SourcePublic.model_validate(source)
 
     return output
+
+
+# FAST003 - Parameter is used by ReadableChannel.
+@router.get("/{channel_id}/sources")  # noqa: FAST003
+def get_channel_sources(
+    channel: ReadableChannel,
+    user: OptionalUser,
+    session: SessionDep,
+) -> list[SourcePublic]:
+    """Read all unique sources for a channel."""
+    sources: dict[uuid.UUID, SourcePublic] = {}
+    for channel_show in channel.shows:
+        source = channel_show.show.source
+        plugin = source.plugin
+
+        if not plugin.is_readable(session, user):
+            continue
+
+        if source.id not in sources:
+            sources[source.id] = SourcePublic.model_validate(source)
+
+    return list(sources.values())
 
 
 # FAST003 - Parameter is used by UserChannelShow.

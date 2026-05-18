@@ -162,6 +162,8 @@ class ChannelOptions(BaseInput):
         ]
 
     additional_channels: list[uuid.UUID] = Field(default_factory=list)
+    source_ids: list[uuid.UUID] = Field(default_factory=list)
+    source_ids_is_blacklist: bool = Field(default=False)
     random_seed: int = Field(default_factory=lambda: random.randint(0, 2**31))
     hide_watched: bool = Field(default=False)
     hide_unwatched: bool = Field(default=False)

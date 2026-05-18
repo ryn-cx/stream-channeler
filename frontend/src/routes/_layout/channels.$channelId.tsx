@@ -59,6 +59,8 @@ type ChannelSearchParams = {
   minimumDuration?: number
   maximumDuration?: number
   additionalChannels?: string[]
+  sourceIds?: string[]
+  sourceIdsIsBlacklist?: boolean
   randomSeed?: number
 }
 
@@ -93,6 +95,8 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
       additionalChannels: search.additionalChannels as string[] | undefined,
+      sourceIds: search.sourceIds as string[] | undefined,
+      sourceIdsIsBlacklist: search.sourceIdsIsBlacklist as boolean | undefined,
       randomSeed: search.randomSeed as number | undefined,
     }
   },

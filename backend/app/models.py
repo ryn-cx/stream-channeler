@@ -59,6 +59,15 @@ class RootRecordMixin(ABC):
             Visibility.unlisted,
         )
 
+    def is_readable(self, session: Session, user: User | None) -> bool:
+        """Return whether `user` can read this record.
+
+        Readable if the record is publicly readable, or if `user` owns it.
+        """
+        if self.is_publically_readable(session):
+            return True
+        return user is not None and user.id == self.get_user_id(session)
+
 
 if TYPE_CHECKING:
     from sqlalchemy import Table

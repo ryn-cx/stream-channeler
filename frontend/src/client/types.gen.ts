@@ -45,6 +45,8 @@ export type ChannelEpisodesOutput = {
 export type ChannelOptions = {
     sortBy?: Array<SortKeyInput>;
     additionalChannels?: Array<(string)>;
+    sourceIds?: Array<(string)>;
+    sourceIdsIsBlacklist?: boolean;
     randomSeed?: number;
     hideWatched?: boolean;
     hideUnwatched?: boolean;
@@ -867,6 +869,8 @@ export type ChannelsGetChannelEpisodesData = {
     newShowsCount?: (number | null);
     randomSeed?: number;
     sortBy?: Array<SortKeyInput>;
+    sourceIds?: Array<(string)>;
+    sourceIdsIsBlacklist?: boolean;
     startedShowsCount?: (number | null);
     totalShowsCount?: (number | null);
 };
@@ -878,6 +882,12 @@ export type ChannelsGetChannelShowsData = {
 };
 
 export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+
+export type ChannelsGetChannelSourcesData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelSourcesResponse = (Array<SourcePublic>);
 
 export type ChannelsGetChannelWhitelistData = {
     channelId: string;

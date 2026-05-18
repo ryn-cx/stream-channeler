@@ -1,6 +1,11 @@
 // TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDown,
@@ -16,7 +21,7 @@ import { type Resolver, useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { getChannelEpisodes } from "@/api/channels"
-import { ChannelsService, type SortKeyInput } from "@/client"
+import { ChannelsService, type SortKeyInput, type SourcePublic } from "@/client"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -96,6 +101,8 @@ const formSchema = z.object({
   minimumDuration: z.coerce.number().optional(),
   maximumDuration: z.coerce.number().optional(),
   additionalChannels: z.array(z.string()).optional(),
+  sourceIds: z.array(z.string()).optional(),
+  sourceIdsIsBlacklist: z.boolean().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -205,6 +212,8 @@ interface EpisodeFiltersProps {
   filterParams: Omit<FormValues, "sortBy"> & {
     sortBy?: SortKeyInput[]
     additionalChannels?: string[]
+    sourceIds?: string[]
+    sourceIdsIsBlacklist?: boolean
   }
   routeFullPath: string
   channelId: string
@@ -393,8 +402,36 @@ export function EpisodeFilters({
       maximumReleaseDateRelative: filterParams.maximumReleaseDateRelative,
       minimumDuration: filterParams.minimumDuration,
       maximumDuration: filterParams.maximumDuration,
+      sourceIds: filterParams.sourceIds,
+      sourceIdsIsBlacklist: filterParams.sourceIdsIsBlacklist,
     },
   })
+
+  const sourceChannelIds = [
+    channelId,
+    ...(filterParams.additionalChannels ?? []),
+  ]
+
+  const sourcesQueries = useQueries({
+    queries: sourceChannelIds.map((id) => ({
+      queryKey: ["channel-sources", id],
+      queryFn: () => ChannelsService.getChannelSources({ channelId: id }),
+      enabled: isOpen,
+      refetchOnWindowFocus: false,
+    })),
+  })
+
+  const availableSources = (() => {
+    const merged: Record<string, SourcePublic> = {}
+    for (const query of sourcesQueries) {
+      for (const source of query.data ?? []) {
+        merged[source.id] = source
+      }
+    }
+    return Object.values(merged).sort((a, b) =>
+      (a.name ?? "").localeCompare(b.name ?? ""),
+    )
+  })()
 
   const mutation = useMutation({
     mutationFn: (newSearch: Record<string, any>) =>
@@ -520,6 +557,7 @@ export function EpisodeFilters({
               <TabsList className="w-full">
                 <TabsTrigger value="filtering">Filtering</TabsTrigger>
                 <TabsTrigger value="sorting">Sorting</TabsTrigger>
+                <TabsTrigger value="sources">Sources</TabsTrigger>
               </TabsList>
               <TabsContent value="filtering" className="space-y-4">
                 {/* grid - Use a grid layout */}
@@ -978,6 +1016,129 @@ export function EpisodeFilters({
                     </Button>
                   </div>
                 </div>
+              </TabsContent>
+              <TabsContent value="sources" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="sourceIds"
+                  render={({ field }) => {
+                    const selected = new Set(field.value ?? [])
+                    const isLoading = sourcesQueries.some(
+                      (query) => query.isLoading,
+                    )
+                    const allIds = availableSources.map((source) => source.id)
+                    const allSelected =
+                      allIds.length > 0 &&
+                      allIds.every((id) => selected.has(id))
+                    const isBlacklist = !!form.watch("sourceIdsIsBlacklist")
+
+                    const toggle = (id: string) => {
+                      const next = new Set(selected)
+                      if (next.has(id)) {
+                        next.delete(id)
+                      } else {
+                        next.add(id)
+                      }
+                      field.onChange(Array.from(next))
+                    }
+
+                    return (
+                      <FormItem className="space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <FormLabel>Filter by Source</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormField
+                              control={form.control}
+                              name="sourceIdsIsBlacklist"
+                              render={({ field: modeField }) => (
+                                <div className="inline-flex rounded-md border overflow-hidden">
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      isBlacklist ? "ghost" : "secondary"
+                                    }
+                                    size="sm"
+                                    className="rounded-none"
+                                    onClick={() => modeField.onChange(false)}
+                                  >
+                                    Whitelist
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      isBlacklist ? "secondary" : "ghost"
+                                    }
+                                    size="sm"
+                                    className="rounded-none"
+                                    onClick={() => modeField.onChange(true)}
+                                  >
+                                    Blacklist
+                                  </Button>
+                                </div>
+                              )}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                field.onChange(allSelected ? [] : allIds)
+                              }
+                              disabled={allIds.length === 0}
+                            >
+                              {allSelected ? "Clear All" : "Select All"}
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {isBlacklist
+                            ? "Episodes from the selected sources will be hidden. Select none to include all sources."
+                            : "Episodes are limited to the selected sources. Select none to include all sources."}
+                        </p>
+                        {isLoading ? (
+                          <p className="text-sm text-muted-foreground">
+                            Loading sources...
+                          </p>
+                        ) : availableSources.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No sources found.
+                          </p>
+                        ) : (
+                          <div className="border rounded-lg divide-y">
+                            {availableSources.map((source) => {
+                              const checkboxId = `source-${source.id}`
+                              return (
+                                <div
+                                  key={source.id}
+                                  className="flex items-center gap-3 p-2 hover:bg-muted/50"
+                                >
+                                  <Checkbox
+                                    id={checkboxId}
+                                    checked={selected.has(source.id)}
+                                    onCheckedChange={() => toggle(source.id)}
+                                  />
+                                  {source.favicon_url && (
+                                    <img
+                                      src={source.favicon_url}
+                                      alt={`${source.name} favicon`}
+                                      className="size-4"
+                                    />
+                                  )}
+                                  <Label
+                                    htmlFor={checkboxId}
+                                    className="text-sm font-normal cursor-pointer flex-1"
+                                  >
+                                    {source.name ?? source.id}
+                                  </Label>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </FormItem>
+                    )
+                  }}
+                />
               </TabsContent>
             </Tabs>
             <DialogFooter>

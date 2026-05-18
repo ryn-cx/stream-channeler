@@ -452,11 +452,21 @@ class EpisodeQueryBuilder:
         ]
         if self._user:
             conditions.append(col(Plugin.user_id) == self._user.id)  # type: ignore[arg-type]
-        return (
+        query = (
             query.join(Source, col(Show.source_id) == Source.id)
             .join(Plugin, col(Source.plugin_id) == Plugin.id)
             .where(or_(*conditions))
         )
+        if self._channel_options.source_ids:
+            if self._channel_options.source_ids_is_blacklist:
+                query = query.where(
+                    col(Source.id).not_in(self._channel_options.source_ids),
+                )
+            else:
+                query = query.where(
+                    col(Source.id).in_(self._channel_options.source_ids),
+                )
+        return query
 
     @staticmethod
     def _channel_access_condition() -> ColumnElement[bool]:
@@ -701,10 +711,7 @@ class EpisodeQueryBuilder:
                 select(aliased(Episode, subquery), subquery.c.channel_id)
                 .add_columns(
                     subquery.c.show_id,
-                    *(
-                        getattr(subquery.c, f"sort_value_{i}")
-                        for i in range(len(raws))
-                    ),
+                    *(getattr(subquery.c, f"sort_value_{i}") for i in range(len(raws))),
                     *extra_columns,
                 )
                 .subquery()
