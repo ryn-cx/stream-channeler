@@ -755,62 +755,6 @@ export type WhitelistShowOutput = {
     episodes: Array<WhitelistEpisodeOutput>;
 };
 
-export type AdminMediaListAllPluginsResponse = (Array<PluginOutput>);
-
-export type AdminMediaListPluginSourcesData = {
-    pluginId: string;
-};
-
-export type AdminMediaListPluginSourcesResponse = (Array<SourcePublic>);
-
-export type AdminMediaListSourceShowsData = {
-    sourceId: string;
-};
-
-export type AdminMediaListSourceShowsResponse = (Array<ShowPublic>);
-
-export type AdminMediaListShowSeasonsData = {
-    showId: string;
-};
-
-export type AdminMediaListShowSeasonsResponse = (Array<SeasonOutput>);
-
-export type AdminMediaListSeasonEpisodesData = {
-    seasonId: string;
-};
-
-export type AdminMediaListSeasonEpisodesResponse = (Array<EpisodeOutput>);
-
-export type AdminMediaForcePluginUpdateData = {
-    pluginId: string;
-};
-
-export type AdminMediaForcePluginUpdateResponse = (Message);
-
-export type AdminMediaForceSourceUpdateData = {
-    sourceId: string;
-};
-
-export type AdminMediaForceSourceUpdateResponse = (Message);
-
-export type AdminMediaForceShowUpdateData = {
-    showId: string;
-};
-
-export type AdminMediaForceShowUpdateResponse = (Message);
-
-export type AdminMediaForceSeasonUpdateData = {
-    seasonId: string;
-};
-
-export type AdminMediaForceSeasonUpdateResponse = (Message);
-
-export type AdminMediaForceEpisodeUpdateData = {
-    episodeId: string;
-};
-
-export type AdminMediaForceEpisodeUpdateResponse = (Message);
-
 export type ChannelsGetChannelsResponse = (Array<ChannelOutput>);
 
 export type ChannelsCreateChannelData = {

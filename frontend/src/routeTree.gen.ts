@@ -24,7 +24,6 @@ import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutPlaylistsIndexRouteImport } from './routes/_layout/playlists.index'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
-import { Route as LayoutAdminMediaIndexRouteImport } from './routes/_layout/admin-media.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutSourceSourceKeyRouteImport } from './routes/_layout/source.$sourceKey'
 import { Route as LayoutShowShowKeyRouteImport } from './routes/_layout/show.$showKey'
@@ -32,10 +31,6 @@ import { Route as LayoutSeasonSeasonKeyRouteImport } from './routes/_layout/seas
 import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugin.$pluginId'
 import { Route as LayoutPlaylistsPlaylistIdRouteImport } from './routes/_layout/playlists.$playlistId'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
-import { Route as LayoutAdminSourceSourceIdRouteImport } from './routes/_layout/admin-source.$sourceId'
-import { Route as LayoutAdminShowShowIdRouteImport } from './routes/_layout/admin-show.$showId'
-import { Route as LayoutAdminSeasonSeasonIdRouteImport } from './routes/_layout/admin-season.$seasonId'
-import { Route as LayoutAdminPluginPluginIdRouteImport } from './routes/_layout/admin-plugin.$pluginId'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
 import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
 import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
@@ -115,11 +110,6 @@ const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
   path: '/channels/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminMediaIndexRoute = LayoutAdminMediaIndexRouteImport.update({
-  id: '/admin-media/',
-  path: '/admin-media/',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
   id: '/watches_/import',
   path: '/watches/import',
@@ -156,29 +146,6 @@ const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
   path: '/channels/$channelId',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminSourceSourceIdRoute =
-  LayoutAdminSourceSourceIdRouteImport.update({
-    id: '/admin-source/$sourceId',
-    path: '/admin-source/$sourceId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
-const LayoutAdminShowShowIdRoute = LayoutAdminShowShowIdRouteImport.update({
-  id: '/admin-show/$showId',
-  path: '/admin-show/$showId',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutAdminSeasonSeasonIdRoute =
-  LayoutAdminSeasonSeasonIdRouteImport.update({
-    id: '/admin-season/$seasonId',
-    path: '/admin-season/$seasonId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
-const LayoutAdminPluginPluginIdRoute =
-  LayoutAdminPluginPluginIdRouteImport.update({
-    id: '/admin-plugin/$pluginId',
-    path: '/admin-plugin/$pluginId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
 const LayoutOnboardingChannelIdSortRoute =
   LayoutOnboardingChannelIdSortRouteImport.update({
     id: '/$channelId/sort',
@@ -216,10 +183,6 @@ export interface FileRoutesByFullPath {
   '/plugins': typeof LayoutPluginsRoute
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
-  '/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
-  '/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
-  '/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
-  '/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/playlists/$playlistId': typeof LayoutPlaylistsPlaylistIdRoute
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
@@ -227,7 +190,6 @@ export interface FileRoutesByFullPath {
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
-  '/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
   '/playlists/': typeof LayoutPlaylistsIndexRoute
@@ -247,10 +209,6 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
-  '/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
-  '/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
-  '/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
-  '/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/playlists/$playlistId': typeof LayoutPlaylistsPlaylistIdRoute
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
@@ -258,7 +216,6 @@ export interface FileRoutesByTo {
   '/show/$showKey': typeof LayoutShowShowKeyRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
-  '/admin-media': typeof LayoutAdminMediaIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
   '/playlists': typeof LayoutPlaylistsIndexRoute
@@ -281,10 +238,6 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/_layout/admin-plugin/$pluginId': typeof LayoutAdminPluginPluginIdRoute
-  '/_layout/admin-season/$seasonId': typeof LayoutAdminSeasonSeasonIdRoute
-  '/_layout/admin-show/$showId': typeof LayoutAdminShowShowIdRoute
-  '/_layout/admin-source/$sourceId': typeof LayoutAdminSourceSourceIdRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/playlists/$playlistId': typeof LayoutPlaylistsPlaylistIdRoute
   '/_layout/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
@@ -292,7 +245,6 @@ export interface FileRoutesById {
   '/_layout/show/$showKey': typeof LayoutShowShowKeyRoute
   '/_layout/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
-  '/_layout/admin-media/': typeof LayoutAdminMediaIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
   '/_layout/playlists/': typeof LayoutPlaylistsIndexRoute
@@ -315,10 +267,6 @@ export interface FileRouteTypes {
     | '/plugins'
     | '/settings'
     | '/watches'
-    | '/admin-plugin/$pluginId'
-    | '/admin-season/$seasonId'
-    | '/admin-show/$showId'
-    | '/admin-source/$sourceId'
     | '/channels/$channelId'
     | '/playlists/$playlistId'
     | '/plugin/$pluginId'
@@ -326,7 +274,6 @@ export interface FileRouteTypes {
     | '/show/$showKey'
     | '/source/$sourceKey'
     | '/watches/import'
-    | '/admin-media/'
     | '/channels/'
     | '/onboarding/'
     | '/playlists/'
@@ -346,10 +293,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/watches'
     | '/'
-    | '/admin-plugin/$pluginId'
-    | '/admin-season/$seasonId'
-    | '/admin-show/$showId'
-    | '/admin-source/$sourceId'
     | '/channels/$channelId'
     | '/playlists/$playlistId'
     | '/plugin/$pluginId'
@@ -357,7 +300,6 @@ export interface FileRouteTypes {
     | '/show/$showKey'
     | '/source/$sourceKey'
     | '/watches/import'
-    | '/admin-media'
     | '/channels'
     | '/onboarding'
     | '/playlists'
@@ -379,10 +321,6 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/watches'
     | '/_layout/'
-    | '/_layout/admin-plugin/$pluginId'
-    | '/_layout/admin-season/$seasonId'
-    | '/_layout/admin-show/$showId'
-    | '/_layout/admin-source/$sourceId'
     | '/_layout/channels/$channelId'
     | '/_layout/playlists/$playlistId'
     | '/_layout/plugin/$pluginId'
@@ -390,7 +328,6 @@ export interface FileRouteTypes {
     | '/_layout/show/$showKey'
     | '/_layout/source/$sourceKey'
     | '/_layout/watches_/import'
-    | '/_layout/admin-media/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
     | '/_layout/playlists/'
@@ -515,13 +452,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/admin-media/': {
-      id: '/_layout/admin-media/'
-      path: '/admin-media'
-      fullPath: '/admin-media/'
-      preLoaderRoute: typeof LayoutAdminMediaIndexRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/watches_/import': {
       id: '/_layout/watches_/import'
       path: '/watches/import'
@@ -569,34 +499,6 @@ declare module '@tanstack/react-router' {
       path: '/channels/$channelId'
       fullPath: '/channels/$channelId'
       preLoaderRoute: typeof LayoutChannelsChannelIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin-source/$sourceId': {
-      id: '/_layout/admin-source/$sourceId'
-      path: '/admin-source/$sourceId'
-      fullPath: '/admin-source/$sourceId'
-      preLoaderRoute: typeof LayoutAdminSourceSourceIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin-show/$showId': {
-      id: '/_layout/admin-show/$showId'
-      path: '/admin-show/$showId'
-      fullPath: '/admin-show/$showId'
-      preLoaderRoute: typeof LayoutAdminShowShowIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin-season/$seasonId': {
-      id: '/_layout/admin-season/$seasonId'
-      path: '/admin-season/$seasonId'
-      fullPath: '/admin-season/$seasonId'
-      preLoaderRoute: typeof LayoutAdminSeasonSeasonIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin-plugin/$pluginId': {
-      id: '/_layout/admin-plugin/$pluginId'
-      path: '/admin-plugin/$pluginId'
-      fullPath: '/admin-plugin/$pluginId'
-      preLoaderRoute: typeof LayoutAdminPluginPluginIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/onboarding/$channelId/sort': {
@@ -657,10 +559,6 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
-  LayoutAdminPluginPluginIdRoute: typeof LayoutAdminPluginPluginIdRoute
-  LayoutAdminSeasonSeasonIdRoute: typeof LayoutAdminSeasonSeasonIdRoute
-  LayoutAdminShowShowIdRoute: typeof LayoutAdminShowShowIdRoute
-  LayoutAdminSourceSourceIdRoute: typeof LayoutAdminSourceSourceIdRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
   LayoutPlaylistsPlaylistIdRoute: typeof LayoutPlaylistsPlaylistIdRoute
   LayoutPluginPluginIdRoute: typeof LayoutPluginPluginIdRoute
@@ -668,7 +566,6 @@ interface LayoutRouteChildren {
   LayoutShowShowKeyRoute: typeof LayoutShowShowKeyRoute
   LayoutSourceSourceKeyRoute: typeof LayoutSourceSourceKeyRoute
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
-  LayoutAdminMediaIndexRoute: typeof LayoutAdminMediaIndexRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
   LayoutPlaylistsIndexRoute: typeof LayoutPlaylistsIndexRoute
 }
@@ -681,10 +578,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
-  LayoutAdminPluginPluginIdRoute: LayoutAdminPluginPluginIdRoute,
-  LayoutAdminSeasonSeasonIdRoute: LayoutAdminSeasonSeasonIdRoute,
-  LayoutAdminShowShowIdRoute: LayoutAdminShowShowIdRoute,
-  LayoutAdminSourceSourceIdRoute: LayoutAdminSourceSourceIdRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,
   LayoutPlaylistsPlaylistIdRoute: LayoutPlaylistsPlaylistIdRoute,
   LayoutPluginPluginIdRoute: LayoutPluginPluginIdRoute,
@@ -692,7 +585,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutShowShowKeyRoute: LayoutShowShowKeyRoute,
   LayoutSourceSourceKeyRoute: LayoutSourceSourceKeyRoute,
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
-  LayoutAdminMediaIndexRoute: LayoutAdminMediaIndexRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
   LayoutPlaylistsIndexRoute: LayoutPlaylistsIndexRoute,
 }

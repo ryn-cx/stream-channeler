@@ -57,7 +57,7 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
             self.sources.append(child)
 
     @override
-    def _root_record(self, _session: Session) -> Plugin:
+    def _root_record(self, session: Session) -> Plugin:
         return self
 
     @property

@@ -1,7 +1,6 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import {
-  Database,
   Eye,
   Home,
   LayoutDashboard,
@@ -42,7 +41,6 @@ const unauthenticatedItems: Item[] = [{ icon: Home, title: "Home", path: "/" }]
 
 const adminItems: Item[] = [
   ...baseItems,
-  { icon: Database, title: "Admin Media", path: "/admin-media" },
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 

@@ -21,6 +21,7 @@ from app.plugins.schemas import (
 from app.schemas import Message
 from app.sources.models import Source
 from app.sources.schemas import SourceCreate, SourcePublic
+from app.users.service import get_or_create_plugin_user
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 
@@ -104,8 +105,16 @@ def search_plugin(
 
 
 @router.get("", response_model=list[PluginOutput])
-def get_plugins(current_user: CurrentUser) -> list[Plugin]:
-    """Get all `Plugin`s owned by the current `User`."""
+def get_plugins(session: SessionDep, current_user: CurrentUser) -> list[Plugin]:
+    """Get all `Plugin`s owned by the current `User`.
+
+    Superusers also see all `Plugin`s owned by the plugin user (official media),
+    listed after the user's own plugins.
+    """
+    if current_user.is_superuser:
+        plugin_user = get_or_create_plugin_user(session=session)
+        return current_user.plugins + plugin_user.plugins
+
     return current_user.plugins
 
 

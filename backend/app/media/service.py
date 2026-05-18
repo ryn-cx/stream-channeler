@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.schemas import MEDIA_MODELS, Message
 from app.users.dependencies import OptionalUser
+from app.users.service import get_or_create_plugin_user
 
 
 def readable_record[T: MEDIA_MODELS](
@@ -28,12 +29,16 @@ def readable_record[T: MEDIA_MODELS](
                 return result
             if optional_user is None:
                 raise HTTPException(status_code=401, detail="Not authenticated")
-            if optional_user.id != result.get_user_id(session):
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Not authorized to access this {model.__name__}",
-                )
-            return result
+            record_user_id = result.get_user_id(session)
+            plugin_user_id = get_or_create_plugin_user(session=session).id
+            if optional_user.id == record_user_id:
+                return result
+            if optional_user.is_superuser and record_user_id == plugin_user_id:
+                return result
+            raise HTTPException(
+                status_code=403,
+                detail=f"Not authorized to access this {model.__name__}",
+            )
         raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
 
     return dependency
@@ -51,12 +56,16 @@ def owned_record[T: MEDIA_MODELS](
         record_id: Annotated[uuid.UUID, Path(alias=path_name)],
     ) -> T:
         if record := session.exec(select(model).where(model.id == record_id)).first():
-            if current_user.id != record.get_user_id(session):
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Not authorized to access this {model.__name__}",
-                )
-            return record
+            record_user_id = record.get_user_id(session)
+            if current_user.id == record_user_id:
+                return record
+            plugin_user_id = get_or_create_plugin_user(session=session).id
+            if current_user.is_superuser and record_user_id == plugin_user_id:
+                return record
+            raise HTTPException(
+                status_code=403,
+                detail=f"Not authorized to access this {model.__name__}",
+            )
         raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
 
     return dependency

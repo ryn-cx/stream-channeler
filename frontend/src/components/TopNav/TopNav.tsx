@@ -1,7 +1,6 @@
 // TODO: Validate
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
-  Database,
   Eye,
   LayoutDashboard,
   ListMusic,
@@ -54,7 +53,6 @@ const baseItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   ...baseItems,
-  { icon: Database, title: "Admin Media", path: "/admin-media" },
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 
