@@ -103,8 +103,8 @@ class BasePlugin(
         Each episode's release_date + 7 days is offered to `set_update_at`
         so the entity is re-checked roughly one week after the episode aired.
         """
-        for season in show.active_seasons:
-            for episode in season.active_episodes:
+        for season in show.active_children:
+            for episode in season.active_children:
                 if episode.release_date:
                     update_at = episode.release_date + timedelta(days=7)
                     if update_seasons:

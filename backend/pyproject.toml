@@ -72,7 +72,7 @@ ignore = [
   "B904",  # Allow raising exceptions without from e, for HTTPException
 
   # # Additional ignores
-  # "D",  # Existing code does not contain docstrings
+  "D",  # Existing code does not contain docstrings
 
   # # Too many false positives
   "TC001",

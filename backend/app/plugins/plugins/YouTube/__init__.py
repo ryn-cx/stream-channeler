@@ -458,7 +458,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             msg = f"Season {season.key} is missing data_timestamp"
             raise ValueError(msg)
 
-        if not (active_episodes := season.active_episodes):
+        if not (active_episodes := season.active_children):
             season.set_update_at(season.data_timestamp + timedelta(days=36500))
             return
 

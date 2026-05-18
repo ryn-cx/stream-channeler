@@ -14,6 +14,9 @@ from sqlmodel import (
 from app.models import BaseMediaMixin, MediaMixin
 from app.plugins.models import Plugin
 
+if TYPE_CHECKING:
+    from app.shows.models import Show
+
 
 class BaseSource(BaseMediaMixin):
     name: str | None = Field(default=None)
@@ -21,20 +24,14 @@ class BaseSource(BaseMediaMixin):
     image_url: str | None = Field(default=None)
 
 
-if TYPE_CHECKING:
-    from app.shows.models import Show
-
-
 class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("plugin_id", "key"),
         UniqueConstraint("id"),
-        # Included in SORTABLE_FIELDS.
-        Index("Source-name-index", "name"),
+        Index("Source-name-index", "name"),  # Included in SORTABLE_FIELDS.
         Index("Source-deleted_at-index", "deleted_at"),
     )
 
-    # Direct fields.
     SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
@@ -54,10 +51,6 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     @override
     def children(self) -> list[Show]:
         return self.shows
-
-    @property
-    def active_shows(self) -> list[Show]:
-        return [show for show in self.shows if not show.deleted_at]
 
     def __str__(self) -> str:
         """Return a string representation of the Source."""
