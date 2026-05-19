@@ -911,7 +911,7 @@ class TestDeleteChannelShow:
             client=session_scoped_client,
             method="delete",
             url=self.url(channel, other_channel_show.show_id),
-            detail="Show not found in channel",
+            detail="Show was not found on channel",
             headers=user_headers,
         )
 

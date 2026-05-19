@@ -9,9 +9,26 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 from sqlalchemy import util
-from sqlmodel import DateTime, Field, Session, SQLModel
+from sqlmodel import DateTime, Field, Index, Session, SQLModel
 
 from app.utils import tz_datetime
+
+
+def sortable_field_indexes(
+    model_name: str,
+    direct_sortable_fields: Iterable[str],
+) -> tuple[Index, ...]:
+    """Build an ``Index`` for each direct sortable field on the model's table.
+
+    ``id`` is skipped because the model's ``UniqueConstraint`` already indexes
+    it. Pass only direct (column-backed) sortable fields — synthetic sort keys
+    have no column to index.
+    """
+    return tuple(
+        Index(f"{model_name}-{field}-index", field)
+        for field in direct_sortable_fields
+        if field != "id"
+    )
 
 
 class Visibility(StrEnum):

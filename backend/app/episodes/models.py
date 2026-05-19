@@ -14,7 +14,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, DateTimeField, MediaMixin
+from app.models import BaseMediaMixin, DateTimeField, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -42,22 +42,7 @@ class BaseEpisode(BaseMediaMixin):
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     """Model representing an Episode."""
 
-    __table_args__ = (
-        PrimaryKeyConstraint("season_id", "key"),
-        UniqueConstraint("id"),
-        # Included in SORTABLE_FIELDS.
-        Index("Episode-air_date-index", "air_date"),
-        Index("Episode-duration-index", "duration"),
-        Index("Episode-episode_number-index", "episode_number"),
-        Index("Episode-name-index", "name"),
-        Index("Episode-release_date-index", "release_date"),
-        Index("Episode-sort_order-index", "sort_order"),
-        # Used to filter out deleted episodes.
-        Index("Episode-deleted_at-index", "deleted_at"),
-    )
-
-    SORTABLE_FIELDS: ClassVar[list[str]] = [
-        # Direct fields.
+    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "air_date",
         "duration",
         "episode_number",
@@ -65,12 +50,24 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         "name",
         "release_date",
         "sort_order",
-        # Indirect fields.
+    ]
+    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "last_watched",
         "random",
         "recently_aired",
         "sequential",
     ]
+    SORTABLE_FIELDS: ClassVar[list[str]] = (
+        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("season_id", "key"),
+        UniqueConstraint("id"),
+        *sortable_field_indexes("Episode", DIRECT_SORTABLE_FIELDS),
+        # Used to filter out deleted episodes.
+        Index("Episode-deleted_at-index", "deleted_at"),
+    )
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")

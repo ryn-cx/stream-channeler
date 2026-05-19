@@ -12,7 +12,7 @@ from sqlmodel import (
     select,
 )
 
-from app.models import BaseMediaMixin, MediaMixin
+from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
@@ -32,26 +32,23 @@ if TYPE_CHECKING:
 
 
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
-    __table_args__ = (
-        PrimaryKeyConstraint("show_id", "key"),
-        UniqueConstraint("id"),
-        # Included in SORTABLE_FIELDS.
-        Index("Season-sort_order-index", "sort_order"),
-        Index("Season-season_number-index", "season_number"),
-        Index("Season-name-index", "name"),
-        Index("Season-deleted_at-index", "deleted_at"),
-    )
-
-    SORTABLE_FIELDS: ClassVar[list[str]] = [
-        # Direct fields.
+    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "id",
         "name",
         "season_number",
         "sort_order",
-        # Indirect fields.
-        "random",
-        "sequential",
     ]
+    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["random", "sequential"]
+    SORTABLE_FIELDS: ClassVar[list[str]] = (
+        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("show_id", "key"),
+        UniqueConstraint("id"),
+        *sortable_field_indexes("Season", DIRECT_SORTABLE_FIELDS),
+        Index("Season-deleted_at-index", "deleted_at"),
+    )
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")

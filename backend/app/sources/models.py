@@ -11,7 +11,7 @@ from sqlmodel import (
     UniqueConstraint,
 )
 
-from app.models import BaseMediaMixin, MediaMixin
+from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 
 if TYPE_CHECKING:
@@ -25,14 +25,18 @@ class BaseSource(BaseMediaMixin):
 
 
 class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
+    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
+    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
+    SORTABLE_FIELDS: ClassVar[list[str]] = (
+        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+    )
+
     __table_args__ = (
         PrimaryKeyConstraint("plugin_id", "key"),
         UniqueConstraint("id"),
-        Index("Source-name-index", "name"),  # Included in SORTABLE_FIELDS.
+        *sortable_field_indexes("Source", DIRECT_SORTABLE_FIELDS),
         Index("Source-deleted_at-index", "deleted_at"),
     )
-
-    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="sources")

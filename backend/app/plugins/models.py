@@ -12,7 +12,13 @@ from sqlmodel import (
     UniqueConstraint,
 )
 
-from app.models import BaseMediaMixin, DateTimeField, MediaMixin, Visibility
+from app.models import (
+    BaseMediaMixin,
+    DateTimeField,
+    MediaMixin,
+    Visibility,
+    sortable_field_indexes,
+)
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -26,14 +32,18 @@ class BasePlugin(BaseMediaMixin):
 
 
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
+    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "visibility"]
+    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
+    SORTABLE_FIELDS: ClassVar[list[str]] = (
+        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+    )
+
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "key"),
         UniqueConstraint("id"),
+        *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS),
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
-
-    # Direct fields.
-    SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "visibility"]
 
     user_id: uuid.UUID = Field(
         foreign_key="user.id",
