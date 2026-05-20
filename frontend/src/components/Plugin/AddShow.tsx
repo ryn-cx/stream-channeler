@@ -44,6 +44,7 @@ const formSchema = z.object({
   url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -56,6 +57,7 @@ const makeDefaults = (): FormData => ({
   url: "",
   image_url: "",
   data_timestamp: "",
+  update_at: "",
 })
 
 interface AddShowProps {
@@ -98,6 +100,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
           url: null,
           image_url: null,
           data_timestamp: null,
+          update_at: newShow.update_at ?? null,
         },
       ])
 
@@ -121,6 +124,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
       ...data,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -217,6 +221,19 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

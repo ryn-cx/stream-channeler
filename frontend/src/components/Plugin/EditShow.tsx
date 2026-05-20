@@ -50,6 +50,7 @@ const formSchema = z.object({
   url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -76,6 +77,7 @@ const EditShow = ({ show }: EditShowProps) => {
       url: show.url ?? "",
       image_url: show.image_url ?? "",
       data_timestamp: show.data_timestamp?.slice(0, 16) ?? "",
+      update_at: show.update_at?.slice(0, 16) ?? "",
     },
   })
 
@@ -115,6 +117,7 @@ const EditShow = ({ show }: EditShowProps) => {
       ...data,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -217,6 +220,19 @@ const EditShow = ({ show }: EditShowProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

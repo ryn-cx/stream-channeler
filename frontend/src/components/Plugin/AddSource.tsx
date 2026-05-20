@@ -42,6 +42,7 @@ const formSchema = z.object({
   favicon_url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -52,6 +53,7 @@ const makeDefaults = (): FormData => ({
   favicon_url: "",
   image_url: "",
   data_timestamp: "",
+  update_at: "",
 })
 
 interface AddSourceProps {
@@ -92,6 +94,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
           favicon_url: null,
           image_url: null,
           data_timestamp: null,
+          update_at: newSource.update_at ?? null,
         },
       ])
 
@@ -120,6 +123,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
       ...data,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -186,6 +190,19 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

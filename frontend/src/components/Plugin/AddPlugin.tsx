@@ -49,6 +49,7 @@ const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
   version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
   visibility: z.enum(["public", "unlisted", "private"]),
 })
 
@@ -59,6 +60,7 @@ const makeDefaults = (): FormData => ({
   name: "",
   version: "",
   data_timestamp: "",
+  update_at: "",
   visibility: "private",
 })
 
@@ -94,6 +96,7 @@ const AddPlugin = () => {
           id: crypto.randomUUID(),
           user_id: null,
           data_timestamp: null,
+          update_at: newPlugin.update_at ?? null,
           deleted_at: null,
           visibility: newPlugin.visibility as Visibility,
         },
@@ -120,6 +123,7 @@ const AddPlugin = () => {
       name: data.name || undefined,
       version: data.version || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -173,6 +177,19 @@ const AddPlugin = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

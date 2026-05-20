@@ -47,6 +47,7 @@ const formSchema = z.object({
   duration: z.union([z.literal(""), z.coerce.number().int().min(0)]).optional(),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
   key: z.string().min(1).max(255),
 })
 
@@ -63,6 +64,7 @@ const makeDefaults = (): FormData => ({
   duration: "",
   sort_order: "",
   data_timestamp: "",
+  update_at: "",
   key: crypto.randomUUID(),
 })
 
@@ -110,6 +112,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
           duration: null,
           sort_order: null,
           data_timestamp: null,
+          update_at: newEpisode.update_at ?? null,
         },
       ])
 
@@ -138,6 +141,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
       release_date: data.release_date || undefined,
       air_date: data.air_date || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -286,6 +290,19 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

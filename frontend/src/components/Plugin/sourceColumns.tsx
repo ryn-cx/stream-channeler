@@ -13,6 +13,7 @@ export interface SourceTableData {
   favicon_url: string | null
   image_url: string | null
   data_timestamp: string | null
+  update_at: string | null
 }
 
 export const sourceColumns: ColumnDef<SourceTableData>[] = [
@@ -54,6 +55,17 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
       <span className="text-muted-foreground text-sm">
         {row.original.data_timestamp
           ? new Date(row.original.data_timestamp).toLocaleString()
+          : "-"}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "update_at",
+    header: "Update At",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.update_at
+          ? new Date(row.original.update_at).toLocaleString()
           : "-"}
       </span>
     ),

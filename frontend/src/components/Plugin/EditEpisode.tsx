@@ -53,6 +53,7 @@ const formSchema = z.object({
   duration: z.union([z.literal(""), z.coerce.number().int().min(0)]).optional(),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
   key: z.string().min(1, "Key is required").max(255),
 })
 
@@ -83,6 +84,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       duration: episode.duration ?? "",
       sort_order: episode.sort_order ?? "",
       data_timestamp: episode.data_timestamp?.slice(0, 16) ?? "",
+      update_at: episode.update_at?.slice(0, 16) ?? "",
       key: episode.key ?? "",
     },
   })
@@ -130,6 +132,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       release_date: data.release_date || undefined,
       air_date: data.air_date || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -284,6 +287,19 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

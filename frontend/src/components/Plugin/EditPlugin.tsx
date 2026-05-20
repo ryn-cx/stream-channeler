@@ -54,6 +54,7 @@ const formSchema = z.object({
   name: z.string().max(255).optional().or(z.literal("")),
   version: z.string().max(255).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
   visibility: z.enum(["public", "unlisted", "private"]),
 })
 
@@ -77,6 +78,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       name: plugin.name ?? "",
       version: plugin.version ?? "",
       data_timestamp: plugin.data_timestamp?.slice(0, 16) ?? "",
+      update_at: plugin.update_at?.slice(0, 16) ?? "",
       visibility: plugin.visibility ?? "private",
     },
   })
@@ -118,6 +120,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       name: data.name || undefined,
       version: data.version || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -190,6 +193,19 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

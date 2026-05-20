@@ -48,6 +48,7 @@ const formSchema = z.object({
   favicon_url: z.string().max(2048).optional().or(z.literal("")),
   image_url: z.string().max(2048).optional().or(z.literal("")),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -72,6 +73,7 @@ const EditSource = ({ source }: EditSourceProps) => {
       favicon_url: source.favicon_url ?? "",
       image_url: source.image_url ?? "",
       data_timestamp: source.data_timestamp?.slice(0, 16) ?? "",
+      update_at: source.update_at?.slice(0, 16) ?? "",
     },
   })
 
@@ -111,6 +113,7 @@ const EditSource = ({ source }: EditSourceProps) => {
       ...data,
       name: data.name || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -183,6 +186,19 @@ const EditSource = ({ source }: EditSourceProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>

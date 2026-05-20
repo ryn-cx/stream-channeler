@@ -49,6 +49,7 @@ const formSchema = z.object({
   image_url: z.string().max(2048).optional().or(z.literal("")),
   sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
   data_timestamp: z.string().optional().or(z.literal("")),
+  update_at: z.string().optional().or(z.literal("")),
   key: z.string().min(1, "Key is required").max(255),
 })
 
@@ -75,6 +76,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       image_url: season.image_url ?? "",
       sort_order: season.sort_order ?? "",
       data_timestamp: season.data_timestamp?.slice(0, 16) ?? "",
+      update_at: season.update_at?.slice(0, 16) ?? "",
       key: season.key ?? "",
     },
   })
@@ -119,6 +121,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       season_number: data.season_number || undefined,
       sort_order: data.sort_order || undefined,
       data_timestamp: data.data_timestamp || undefined,
+      update_at: data.update_at || undefined,
     })
   }
 
@@ -217,6 +220,19 @@ const EditSeason = ({ season }: EditSeasonProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data Timestamp</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="update_at"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Update At</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>
