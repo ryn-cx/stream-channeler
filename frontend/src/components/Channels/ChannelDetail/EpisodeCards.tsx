@@ -1,6 +1,5 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
 import {
   BadgeCheck,
   Check,
@@ -14,6 +13,7 @@ import {
 import { useRef, useState } from "react"
 import { type ChannelEpisodesOutput, WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import {
   type MoveDirection,
   EpisodeCard as SharedEpisodeCard,
@@ -24,7 +24,6 @@ import {
   useColumnCount,
 } from "@/components/PlaylistChannelCommon/episodeGrid"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
@@ -193,96 +192,91 @@ export function EpisodeCard({
     </Badge>
   ) : null
 
-  const menuItems = (
-    <>
-      {episode.watch_date && !episode.verified && episode.episode_watch_id ? (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            verifyMutation.mutate(undefined)
-          }}
-        >
-          <BadgeCheck className="h-4 w-4" />
-          Verify Watch
-        </DropdownMenuItem>
-      ) : (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            watchedMutation.mutate(episode.id)
-          }}
-        >
-          <Check className="h-4 w-4" />
-          Mark as Watched
-        </DropdownMenuItem>
-      )}
-      {nextEpisodeId && (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            onNextEpisode?.(episode.id)
-          }}
-        >
-          <SkipForward className="h-4 w-4" />
-          Next Episode
-        </DropdownMenuItem>
-      )}
-      {episode.watch_date && episode.episode_watch_id && (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            setConfirmDeleteWatch(true)
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete Last Watch
-        </DropdownMenuItem>
-      )}
-      <DropdownMenuItem
-        onClick={(event) => {
-          event.stopPropagation()
-          onHide?.(episode.id)
-        }}
-      >
-        <EyeOff className="h-4 w-4" />
-        Temporarily Hide
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onClick={(event) => {
-          event.stopPropagation()
-          setConfirmBlacklist(true)
-        }}
-      >
-        <ListX className="h-4 w-4" />
-        Blacklist Episode
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onClick={(event) => {
-          event.stopPropagation()
-          if (episode.url) {
-            window.open(episode.url, "_blank", "noopener,noreferrer")
-          }
-        }}
-      >
-        <ExternalLink className="h-4 w-4" />
-        Open URL
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <Link
-          to="/channels/$channelId"
-          params={{ channelId: episode.channel_id }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Radio className="h-4 w-4" />
-          {`Go to Channel ${
-            episode.channel.channel_number != null
-              ? `${episode.channel.channel_number}. `
-              : ""
-          }${episode.channel.name ?? ""}`}
-        </Link>
-      </DropdownMenuItem>
-    </>
-  )
+  const menuItems: ActionMenuItem[] = []
+  if (episode.watch_date && !episode.verified && episode.episode_watch_id) {
+    menuItems.push({
+      key: "verify",
+      icon: <BadgeCheck />,
+      label: "Verify Watch",
+      onClick: (event) => {
+        event.stopPropagation()
+        verifyMutation.mutate(undefined)
+      },
+    })
+  } else {
+    menuItems.push({
+      key: "watched",
+      icon: <Check />,
+      label: "Mark as Watched",
+      onClick: (event) => {
+        event.stopPropagation()
+        watchedMutation.mutate(episode.id)
+      },
+    })
+  }
+  if (nextEpisodeId) {
+    menuItems.push({
+      key: "next",
+      icon: <SkipForward />,
+      label: "Next Episode",
+      onClick: (event) => {
+        event.stopPropagation()
+        onNextEpisode?.(episode.id)
+      },
+    })
+  }
+  if (episode.watch_date && episode.episode_watch_id) {
+    menuItems.push({
+      key: "delete-watch",
+      icon: <Trash2 />,
+      label: "Delete Last Watch",
+      onClick: (event) => {
+        event.stopPropagation()
+        setConfirmDeleteWatch(true)
+      },
+    })
+  }
+  menuItems.push({
+    key: "hide",
+    icon: <EyeOff />,
+    label: "Temporarily Hide",
+    onClick: (event) => {
+      event.stopPropagation()
+      onHide?.(episode.id)
+    },
+  })
+  menuItems.push({
+    key: "blacklist",
+    icon: <ListX />,
+    label: "Blacklist Episode",
+    onClick: (event) => {
+      event.stopPropagation()
+      setConfirmBlacklist(true)
+    },
+  })
+  menuItems.push({
+    key: "open-url",
+    icon: <ExternalLink />,
+    label: "Open URL",
+    onClick: (event) => {
+      event.stopPropagation()
+      if (episode.url) {
+        window.open(episode.url, "_blank", "noopener,noreferrer")
+      }
+    },
+  })
+  menuItems.push({
+    key: "go-to-channel",
+    icon: <Radio />,
+    label: `Go to Channel ${
+      episode.channel.channel_number != null
+        ? `${episode.channel.channel_number}. `
+        : ""
+    }${episode.channel.name ?? ""}`,
+    to: "/channels/$channelId",
+    params: { channelId: episode.channel_id },
+    onClick: (event) => event.stopPropagation(),
+  })
 
   return (
     <>

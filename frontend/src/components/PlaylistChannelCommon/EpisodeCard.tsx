@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  MoreVertical,
 } from "lucide-react"
 import { lazy, Suspense } from "react"
 
@@ -17,13 +16,11 @@ import type {
   ShowPublic,
   SourcePublic,
 } from "@/client"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  type ActionMenuItem,
+  ResponsiveActionMenu,
+} from "@/components/Common/ResponsiveActionMenu"
+import { Card } from "@/components/ui/card"
 
 /** Episode shape required by the shared card layout and overlays. */
 export type BaseEpisodeWithDetails = EpisodeOutput & {
@@ -100,8 +97,8 @@ function EpisodeCardOverlay({ episode }: { episode: BaseEpisodeWithDetails }) {
 
 interface EpisodeCardProps {
   episode: BaseEpisodeWithDetails
-  /** Items rendered inside the top-right dropdown menu. */
-  menuItems: React.ReactNode
+  /** Actions shown in the top-right responsive menu. */
+  menuItems: ActionMenuItem[]
   /** Optional content shown as a top-left overlay (e.g. "Last Watched"). */
   topLeftBadge?: React.ReactNode
   /** Click handler for the card itself. Ignored when in edit-order mode. */
@@ -235,25 +232,12 @@ export function EpisodeCard({
           <div className="absolute top-0 left-0 z-10">{topLeftBadge}</div>
         ) : null}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 z-10 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {menuItems}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="absolute top-2 right-2 z-10">
+          <ResponsiveActionMenu
+            items={menuItems}
+            onTriggerClick={(event) => event.stopPropagation()}
+          />
+        </div>
       </div>
 
       <div className="px-2 pb-2">

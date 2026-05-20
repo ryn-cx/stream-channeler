@@ -9,13 +9,13 @@ import {
   WatchesService,
 } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import {
   type BaseEpisodeWithDetails,
   EpisodeCard,
   type MoveDirection,
 } from "@/components/PlaylistChannelCommon/EpisodeCard"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -179,65 +179,62 @@ export function PlaylistEpisodeCard({
     </Badge>
   ) : null
 
-  const menuItems = (
-    <>
-      {episode.watch_date && !episode.verified && episode.episode_watch_id ? (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            verifyMutation.mutate()
-          }}
-        >
-          <BadgeCheck className="h-4 w-4" />
-          Verify Watch
-        </DropdownMenuItem>
-      ) : (
-        <DropdownMenuItem
-          disabled={!playlistId}
-          onClick={(event) => {
-            event.stopPropagation()
-            if (playlistId) markWatchedMutation.mutate(episode.id)
-          }}
-        >
-          <Check className="h-4 w-4" />
-          Mark as Watched
-        </DropdownMenuItem>
-      )}
-      {episode.watch_date && episode.episode_watch_id && (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            setConfirmDeleteWatch(true)
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete Last Watch
-        </DropdownMenuItem>
-      )}
-      {onHide && (
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            onHide(episode.id)
-          }}
-        >
-          <EyeOff className="h-4 w-4" />
-          Temporarily Hide
-        </DropdownMenuItem>
-      )}
-      <DropdownMenuItem
-        onClick={(event) => {
-          event.stopPropagation()
-          if (episode.url) {
-            window.open(episode.url, "_blank", "noopener,noreferrer")
-          }
-        }}
-      >
-        <ExternalLink className="h-4 w-4" />
-        Open URL
-      </DropdownMenuItem>
-    </>
-  )
+  const menuItems: ActionMenuItem[] = []
+  if (episode.watch_date && !episode.verified && episode.episode_watch_id) {
+    menuItems.push({
+      key: "verify",
+      icon: <BadgeCheck />,
+      label: "Verify Watch",
+      onClick: (event) => {
+        event.stopPropagation()
+        verifyMutation.mutate()
+      },
+    })
+  } else {
+    menuItems.push({
+      key: "watched",
+      icon: <Check />,
+      label: "Mark as Watched",
+      disabled: !playlistId,
+      onClick: (event) => {
+        event.stopPropagation()
+        if (playlistId) markWatchedMutation.mutate(episode.id)
+      },
+    })
+  }
+  if (episode.watch_date && episode.episode_watch_id) {
+    menuItems.push({
+      key: "delete-watch",
+      icon: <Trash2 />,
+      label: "Delete Last Watch",
+      onClick: (event) => {
+        event.stopPropagation()
+        setConfirmDeleteWatch(true)
+      },
+    })
+  }
+  if (onHide) {
+    menuItems.push({
+      key: "hide",
+      icon: <EyeOff />,
+      label: "Temporarily Hide",
+      onClick: (event) => {
+        event.stopPropagation()
+        onHide(episode.id)
+      },
+    })
+  }
+  menuItems.push({
+    key: "open-url",
+    icon: <ExternalLink />,
+    label: "Open URL",
+    onClick: (event) => {
+      event.stopPropagation()
+      if (episode.url) {
+        window.open(episode.url, "_blank", "noopener,noreferrer")
+      }
+    },
+  })
 
   return (
     <>

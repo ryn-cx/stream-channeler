@@ -12,14 +12,12 @@ import {
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import {
+  type ActionMenuItem,
+  ResponsiveActionMenu,
+} from "@/components/Common/ResponsiveActionMenu"
 import { formatDuration } from "@/components/PlaylistChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
@@ -158,6 +156,27 @@ export function EpisodeTile({
     episode.show.image_url ||
     ""
 
+  const tileMenuItems: ActionMenuItem[] = [
+    {
+      key: "blacklist",
+      icon: <ListX />,
+      label: "Blacklist Episode",
+      onClick: () => setConfirmBlacklist(true),
+    },
+  ]
+  if (episode.url) {
+    tileMenuItems.push({
+      key: "open-url",
+      icon: <ExternalLink />,
+      label: "Open URL",
+      onClick: () => {
+        if (episode.url) {
+          window.open(episode.url, "_blank", "noopener,noreferrer")
+        }
+      },
+    })
+  }
+
   return (
     <>
       {/* biome-ignore lint/a11y/noStaticElementInteractions: hover tracking only, not interactive */}
@@ -262,43 +281,20 @@ export function EpisodeTile({
                 )}
 
                 <div className="ml-auto">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  <ResponsiveActionMenu
+                    items={tileMenuItems}
+                    onTriggerClick={(event) => event.stopPropagation()}
+                    trigger={
                       <Button
                         variant="outline"
                         size="icon"
                         className="size-8 rounded-full border-zinc-500 bg-transparent hover:border-white"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
                       >
                         <MoreVertical className="size-4" />
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenuItem
-                        onClick={() => setConfirmBlacklist(true)}
-                      >
-                        <ListX className="size-4" />
-                        Blacklist Episode
-                      </DropdownMenuItem>
-                      {episode.url && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            window.open(
-                              episode.url!,
-                              "_blank",
-                              "noopener,noreferrer",
-                            )
-                          }
-                        >
-                          <ExternalLink className="size-4" />
-                          Open URL
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    }
+                  />
                 </div>
               </div>
 

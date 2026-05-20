@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsNarrowViewport } from "@/hooks/useMobile"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -65,7 +65,7 @@ function SidebarProvider({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
-  const isMobile = useIsMobile()
+  const isMobile = useIsNarrowViewport()
   const [openMobile, setOpenMobile] = React.useState(false)
 
   const getInitialOpen = () => {
