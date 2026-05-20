@@ -5,7 +5,7 @@ import dataclasses
 import uuid
 from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from tests.utils.route_assertions import Method
@@ -54,6 +54,7 @@ from app.sources.schemas import (
     SourceUpdate,
 )
 from app.users.models import User
+from app.users.service import get_or_create_plugin_user
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
@@ -62,6 +63,7 @@ from app.watches.schemas import (
 )
 from tests.users.utils import (
     authentication_token_from_email,
+    create_random_superuser,
     create_random_user,
 )
 from tests.utils.route_assertions import assert_forbidden, assert_not_authenticated
@@ -267,7 +269,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
             Visibility.public if record_is_public else Visibility.private
         )
 
-    def create_test_data(
+    def create_test_data(  # noqa: PLR0913 - test setup needs all of these kwargs
         self,
         client: TestClient,
         session: Session,
@@ -275,10 +277,25 @@ class BaseTests[T: SUPPORTED_MODELS]:
         user_is_owner: bool,
         user_is_authenticated: bool,
         record_is_public: bool,
+        user_is_superuser: bool = False,
+        record_is_owned_by_plugin_user: bool = False,
     ) -> CreatedTestData[T]:
-        """Create a user and record with the given ownership and visibility."""
-        user = create_random_user(session)
-        other = create_random_user(session)
+        """Create a user and record with the given ownership and visibility.
+
+        When ``record_is_owned_by_plugin_user`` is true and ``user_is_owner`` is
+        false, the record's owner is the plugin user (the superuser carve-out
+        target); otherwise it's a freshly created unrelated user.
+        """
+        user = (
+            create_random_superuser(session)
+            if user_is_superuser
+            else create_random_user(session)
+        )
+        other = (
+            get_or_create_plugin_user(session=session)
+            if record_is_owned_by_plugin_user
+            else create_random_user(session)
+        )
 
         if user_is_owner:
             record = self.create_record_function(session, user.id)
@@ -300,6 +317,41 @@ class BaseTests[T: SUPPORTED_MODELS]:
             else {}
         )
         return CreatedTestData(record=record, user=user, headers=headers)
+
+    def create_admin_test_data(
+        self,
+        client: TestClient,
+        session: Session,
+        *,
+        owner: Literal["self", "plugin_user", "other"],
+    ) -> CreatedTestData[T]:
+        """Create a superuser and a private record with the given owner.
+
+        - ``"self"`` — the superuser owns the record (parity with a regular
+          user accessing data they own).
+        - ``"plugin_user"`` — the record belongs to the plugin user (the
+          superuser-only carve-out for official media).
+        - ``"other"`` — the record belongs to an unrelated regular user (the
+          superuser should be denied).
+
+        Visibility is forced to private so the auth check actually runs;
+        public records bypass ownership entirely.
+        """
+        superuser = create_random_superuser(session)
+        if owner == "self":
+            record_owner: User = superuser
+        elif owner == "plugin_user":
+            record_owner = get_or_create_plugin_user(session=session)
+        else:
+            record_owner = create_random_user(session)
+        record = self.create_record_function(session, record_owner.id)
+        self.set_visibility(record, record_is_public=False)
+        headers = authentication_token_from_email(
+            client=client,
+            email=superuser.email,
+            session=session,
+        )
+        return CreatedTestData(record=record, user=superuser, headers=headers)
 
     def assert_cannot_access(  # noqa: PLR0913
         self,

@@ -74,8 +74,14 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> bool:
-        return user_is_authenticated and (user_is_owner or record_is_public)
+        if not user_is_authenticated:
+            return False
+        if user_is_owner or record_is_public:
+            return True
+        return user_is_superuser and record_is_owned_by_plugin_user
 
     # Watches have different properties if unverified siblings exist that are tested
     # independently.
@@ -306,10 +312,18 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,  # noqa: ARG002
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> bool:
-        return user_is_authenticated and user_is_owner
+        if not user_is_authenticated:
+            return False
+        if user_is_owner:
+            return True
+        return user_is_superuser and record_is_owned_by_plugin_user
 
     @override
+    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
+    @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
     def test_get_permissions(
@@ -319,6 +333,8 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         *,
         user_is_authenticated: bool,
         user_is_owner: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
         record_is_public: bool = True,  # noqa: PT028
     ) -> None:
         super().test_get_permissions(
@@ -327,6 +343,8 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
     def test_list_excludes_other_users_watches(

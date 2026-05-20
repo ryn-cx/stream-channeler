@@ -23,8 +23,14 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_owner: bool,
         # ARG002 - Child implementations may need this value
         record_is_public: bool,  # noqa: ARG002
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> bool:
-        return user_is_authenticated and user_is_owner
+        if not user_is_authenticated:
+            return False
+        if user_is_owner:
+            return True
+        return user_is_superuser and record_is_owned_by_plugin_user
 
     def assert_delete_success(
         self,
@@ -43,10 +49,12 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             select(self.database_model).where(self.database_model.id == record.id),
         ).first()
 
+    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
+    @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
-    def test_delete_permissions(
+    def test_delete_permissions(  # noqa: PLR0913 - parametrize axes
         self,
         session_scoped_client: TestClient,
         session_scoped_session: Session,
@@ -54,6 +62,8 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
@@ -61,12 +71,16 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
         if self._can_delete_record(
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         ):
             self.assert_delete_success(
                 session_scoped_client,

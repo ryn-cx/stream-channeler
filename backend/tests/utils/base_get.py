@@ -27,9 +27,17 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> bool:
-        """Return if the user can get a specific record based on itspermissions."""
-        return (user_is_authenticated and user_is_owner) or record_is_public
+        """Return if the user can get a specific record based on its permissions."""
+        if record_is_public:
+            return True
+        if not user_is_authenticated:
+            return False
+        if user_is_owner:
+            return True
+        return user_is_superuser and record_is_owned_by_plugin_user
 
     def assert_api_get_list_success(
         self,
@@ -78,10 +86,12 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         # Make sure returned data matches the datbase record
         assert database_record.model_dump().items() <= response.model_dump().items()
 
+    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
+    @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
-    def test_get_permissions(
+    def test_get_permissions(  # noqa: PLR0913 - parametrize axes
         self,
         session_scoped_client: TestClient,
         session_scoped_session: Session,
@@ -89,6 +99,8 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> None:
         initial_test_data = self.create_test_data(
             session_scoped_client,
@@ -96,12 +108,16 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
         if self.can_get_record(
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         ):
             self.assert_api_get_success(session_scoped_client, initial_test_data)
         else:
@@ -136,10 +152,12 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=initial_test_data.headers,
         )
 
+    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
+    @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
-    def test_list_permissions(
+    def test_list_permissions(  # noqa: PLR0913 - parametrize axes
         self,
         session_scoped_client: TestClient,
         session_scoped_session: Session,
@@ -147,6 +165,8 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
@@ -157,11 +177,15 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_owner=user_is_owner,
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
         if self.can_get_record(
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         ):
             self.assert_api_get_list_success(
                 session_scoped_client,
@@ -224,13 +248,14 @@ class UserOwnedGetMixin[T: SUPPORTED_MODELS](BaseGetTests[T]):
     def get_record_list_url(self, parent_id: uuid.UUID | str) -> str:  # noqa: ARG002
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
-    @pytest.mark.parametrize("user_is_authenticated", [True, False])
-    # Always true because the user id is taken from the authenticated user so there is
-    # no way to get the records without being the owner.
-    @pytest.mark.parametrize("user_is_owner", [True])
-    # Always false because there is no way to try to access another user's records.
+    # The list endpoint is /{endpoint} (no parent path). Only the cases that
+    # match "the authenticated user listing their own records" are expressible.
+    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [False])
+    @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [False])
-    def test_list_permissions(
+    @pytest.mark.parametrize("user_is_authenticated", [True, False])
+    @pytest.mark.parametrize("user_is_owner", [True])
+    def test_list_permissions(  # noqa: PLR0913 - parametrize axes
         self,
         session_scoped_client: TestClient,
         session_scoped_session: Session,
@@ -238,11 +263,21 @@ class UserOwnedGetMixin[T: SUPPORTED_MODELS](BaseGetTests[T]):
         user_is_authenticated: bool,
         user_is_owner: bool,
         record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
     ) -> None:
+        # Superusers see their own + plugin-user records mixed, so the
+        # per-parent assertion in `assert_api_get_list_success` doesn't apply.
+        if user_is_superuser:
+            pytest.skip(
+                "List endpoint is /{endpoint}; admins see own + plugin user records.",
+            )
         super().test_list_permissions(
             session_scoped_client,
             session_scoped_session,
             user_is_authenticated=user_is_authenticated,
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )

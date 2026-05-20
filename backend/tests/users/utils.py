@@ -32,6 +32,13 @@ def create_random_user(session: Session) -> User:
     return user_service.create_user(session=session, user_create=user_in)
 
 
+def create_random_superuser(session: Session) -> User:
+    email = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(email=email, password=password, is_superuser=True)
+    return user_service.create_user(session=session, user_create=user_in)
+
+
 def authentication_token_from_email(
     *,
     client: TestClient,
