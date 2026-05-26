@@ -77,7 +77,7 @@ def import_watch_history(
     current_user: CurrentUser,
 ) -> WatchImportResults:
     """Import watch history from an uploaded file for a specific plugin."""
-    plugin = get_installed_plugin(session, params.plugin_key)
+    plugin = get_installed_plugin(params.plugin_key)
     if not plugin:
         raise HTTPException(
             status_code=404,

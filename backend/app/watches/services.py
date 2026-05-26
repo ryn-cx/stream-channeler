@@ -299,15 +299,9 @@ def get_plugins_with_import_watch_history(
     ]
 
 
-def get_installed_plugin(
-    session: Session,
-    plugin_key: str,
-) -> type[AbstractPlugin] | None:
-    """Find an importable plugin class by its plugin_key.
-
-    Only returns the plugin if it exists in the database and is owned by the official
-    plugin user.
-    """
+def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
+    """Find an importable plugin class by its plugin_key."""
+    import_plugins()
     for plugin_cls in plugins:
         if plugin_cls.plugin_key() == plugin_key:
             return plugin_cls
