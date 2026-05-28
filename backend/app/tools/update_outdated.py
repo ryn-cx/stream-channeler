@@ -15,7 +15,7 @@ from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from app.plugins.plugins.utils.manage_plugins import import_plugins, plugins
+from plugins.utils.manage_plugins import import_plugins, plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source

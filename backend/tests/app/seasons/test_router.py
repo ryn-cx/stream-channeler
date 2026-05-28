@@ -1,0 +1,40 @@
+# TODO: Validate
+from app.seasons.models import Season
+from app.seasons.schemas import (
+    SeasonCreate,
+    SeasonOutput,
+    SeasonUpdate,
+)
+from tests.app.seasons.utils import create_random_season
+from tests.app.shows.utils import create_random_show
+from tests.app.utils.base import BaseTests
+from tests.app.utils.base_create import BaseCreateTests
+from tests.app.utils.base_delete import BaseDeleteTests
+from tests.app.utils.base_get import BaseGetTests
+from tests.app.utils.base_update import BaseUpdateTests
+
+
+class SeasonTestMixin(BaseTests[Season]):
+    database_model = Season
+    create_schema = SeasonCreate
+    output_schema = SeasonOutput
+    update_schema = SeasonUpdate
+
+    create_parent_function = staticmethod(create_random_show)
+    create_record_function = staticmethod(create_random_season)
+
+
+class TestCreateSeason(SeasonTestMixin, BaseCreateTests[Season]):
+    pass
+
+
+class TestGetSeason(SeasonTestMixin, BaseGetTests[Season]):
+    pass
+
+
+class TestUpdateSeason(SeasonTestMixin, BaseUpdateTests[Season]):
+    pass
+
+
+class TestDeleteSeason(SeasonTestMixin, BaseDeleteTests[Season]):
+    pass

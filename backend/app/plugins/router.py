@@ -7,8 +7,8 @@ from app.media.service import (
 )
 from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
 from app.plugins.models import Plugin
-from app.plugins.plugins.utils.abstract_plugin import PluginSearchResults
-from app.plugins.plugins.utils.manage_plugins import sorted_plugins
+from plugins.utils.abstract_plugin import PluginSearchResults
+from plugins.utils.manage_plugins import sorted_plugins
 from app.plugins.schemas import (
     PluginCreate,
     PluginImportURLInformation,

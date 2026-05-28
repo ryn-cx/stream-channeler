@@ -12,12 +12,12 @@ from sqlmodel import Session
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from app.plugins.plugins.utils.abstract_plugin import (
+from plugins.utils.abstract_plugin import (
     InvalidURLError,
     PluginSearchResults,
     URLImportResult,
 )
-from app.plugins.plugins.utils.base_plugin import BasePlugin
+from plugins.utils.base_plugin import BasePlugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -30,7 +30,7 @@ from tests.plugins.plugin_validator.mocks import (
     track_downloads,
 )
 from tests.plugins.plugin_validator.validator import Validator
-from tests.utils.utils import build_random_model
+from tests.app.utils.utils import build_random_model
 
 
 class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):

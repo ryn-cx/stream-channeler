@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from loguru import logger
 
-from app.plugins.plugins.utils.base_plugin import BaseFile
+from plugins.utils.base_plugin import BaseFile
 
 
 def _all_subclasses(cls: type) -> list[type]:

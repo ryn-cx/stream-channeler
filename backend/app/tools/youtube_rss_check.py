@@ -15,8 +15,8 @@ from sqlmodel import Session, col, func, select
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.plugins.models import File
-from app.plugins.plugins.utils.manage_plugins import import_plugins
-from app.plugins.plugins.YouTube import YouTube
+from plugins.utils.manage_plugins import import_plugins
+from plugins.YouTube import YouTube
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
