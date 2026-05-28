@@ -8,6 +8,10 @@ from diving_board.vod import models as vod_models
 from loguru import logger
 
 from app.episodes.models import Episode
+from app.seasons.models import Season as SeasonModel
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.HiDive.files import (
     FileMixin,
     Playlist,
@@ -22,10 +26,6 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResults,
     URLImportResult,
 )
-from app.seasons.models import Season as SeasonModel
-from app.shows.models import Show
-from app.sources.models import Source
-from app.utils import tz_datetime
 
 
 class HiDive(FileMixin, register=True):

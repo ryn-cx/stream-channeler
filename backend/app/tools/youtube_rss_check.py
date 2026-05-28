@@ -15,12 +15,12 @@ from sqlmodel import Session, col, func, select
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.plugins.models import File
-from plugins.utils.manage_plugins import import_plugins
-from plugins.YouTube import YouTube
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.utils.manage_plugins import import_plugins
+from plugins.YouTube import YouTube
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -118,10 +118,11 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
 
         # The initial file is allowed to be blank so check if it has content before
         # calling video_ids.
+        old_video_ids: set[str]
         if playlist_feed.database_record.content:
             old_video_ids = set(playlist_feed.video_ids())
         else:
-            old_video_ids: set[str] = set()
+            old_video_ids = set()
 
         try:
             playlist_feed.download_if_outdated(tz_datetime.now())

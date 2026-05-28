@@ -8,9 +8,9 @@ from app.channels.models import (
     ChannelEpisodeFilter,
     ChannelSeasonFilter,
 )
+from app.tools.import_queue import add_results_to_channel
 from plugins.StreamChanneler import StreamChanneler
 from plugins.utils.abstract_plugin import InvalidURLError
-from app.tools.import_queue import add_results_to_channel
 from tests.app.channels.utils import create_random_channel
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
@@ -127,7 +127,7 @@ class TestImportSource:
         results = plugin.import_url(url)
 
         result_show_ids = {result.show.id for result in results}
-        assert len(results) == 2
+        assert len(results) == 2  # noqa: PLR2004
         assert show_one.id in result_show_ids
         assert show_two.id in result_show_ids
         assert all(result.is_whitelist is False for result in results)
@@ -153,7 +153,7 @@ class TestImportPlugin:
         results = plugin.import_url(url)
 
         result_show_ids = {result.show.id for result in results}
-        assert len(results) == 2
+        assert len(results) == 2  # noqa: PLR2004
         assert show_one.id in result_show_ids
         assert show_two.id in result_show_ids
         assert all(result.is_whitelist is False for result in results)
@@ -252,7 +252,7 @@ class TestAddResultsToChannel:
         function_scoped_session.flush()
 
         channel_show_ids = {channel_show.show_id for channel_show in channel.shows}
-        assert len(channel.shows) == 2
+        assert len(channel.shows) == 2  # noqa: PLR2004
         assert show_one.id in channel_show_ids
         assert show_two.id in channel_show_ids
 

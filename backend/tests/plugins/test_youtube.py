@@ -5,10 +5,10 @@ import pytest
 from sqlmodel import Session
 
 from app.episodes.models import Episode
-from plugins.YouTube import YouTube
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.YouTube import YouTube
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,

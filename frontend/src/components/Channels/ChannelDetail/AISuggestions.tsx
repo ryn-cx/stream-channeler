@@ -132,6 +132,7 @@ async function enrichWithImages(
 
       // 2. Try Wikipedia by exact title.
       let image_url = await fetchWikipediaThumbnail(s.title)
+      let url = s.url
 
       // 3. If that failed and the url is a Wikipedia link, try the page title from the URL.
       if (!image_url && s.url && isWikipediaUrl(s.url)) {
@@ -145,14 +146,11 @@ async function enrichWithImages(
         // fall back to a Google search so the "More info" link stays useful.
         if (!image_url) {
           const query = [s.title, s.year].filter(Boolean).join(" ")
-          s = {
-            ...s,
-            url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-          }
+          url = `https://www.google.com/search?q=${encodeURIComponent(query)}`
         }
       }
 
-      return { ...s, image_url }
+      return { ...s, url, image_url }
     }),
   )
   return results
@@ -643,6 +641,7 @@ export function AISuggestions({
                 : false
               const isAdding = addingTitle === suggestion.title
               return (
+                // biome-ignore lint/a11y/useSemanticElements: card contains a nested <a> link, so it cannot be a <button>
                 <div
                   key={`${suggestion.title}-${index}`}
                   onClick={() => !isAdding && onSuggestionClick(suggestion)}

@@ -7,8 +7,6 @@ from app.media.service import (
 )
 from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
 from app.plugins.models import Plugin
-from plugins.utils.abstract_plugin import PluginSearchResults
-from plugins.utils.manage_plugins import sorted_plugins
 from app.plugins.schemas import (
     PluginCreate,
     PluginImportURLInformation,
@@ -22,6 +20,8 @@ from app.schemas import Message
 from app.sources.models import Source
 from app.sources.schemas import SourceCreate, SourcePublic
 from app.users.service import get_or_create_plugin_user
+from plugins.utils.abstract_plugin import PluginSearchResults
+from plugins.utils.manage_plugins import sorted_plugins
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
 

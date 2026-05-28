@@ -1,5 +1,4 @@
 # TODO: Validate
-# ruff: noqa: S311 - These are just random strings for testing and nothing needs to be
 # cryptographically secure.
 import random
 import string
@@ -19,7 +18,7 @@ from app.utils import tz_datetime
 
 
 def random_lower_string() -> str:
-    return "".join(random.choices(string.ascii_lowercase, k=32))
+    return "".join(random.choices(string.ascii_lowercase, k=32))  # noqa: S311
 
 
 def random_email() -> str:
@@ -28,12 +27,12 @@ def random_email() -> str:
 
 def random_integer(min_value: int = 0, max_value: int = 2**16) -> int:
     """Get a random integer between min_value and max_value."""
-    return random.randint(min_value, max_value)
+    return random.randint(min_value, max_value)  # noqa: S311
 
 
 def random_bool() -> bool:
     """Get a random boolean value."""
-    return random.choice([True, False])
+    return random.choice([True, False])  # noqa: S311
 
 
 def random_past_timestamp(maximum_distance: int = 31536000) -> datetime:
@@ -50,7 +49,7 @@ def random_past_timestamp(maximum_distance: int = 31536000) -> datetime:
     # a timezone-aware datetime.
     past_timestamp_minimum = max(past_timestamp_minimum, 86400)
 
-    random_timestamp = random.randint(86400, current_timestamp)
+    random_timestamp = random.randint(86400, current_timestamp)  # noqa: S311
     return tz_datetime.fromtimestamp(random_timestamp)
 
 
@@ -63,7 +62,7 @@ def random_future_timestamp(maximum_distance: int = 31536000) -> datetime:
     """
     current_timestamp = int(tz_datetime.now().timestamp())
     future_timestamp_max = current_timestamp + maximum_distance
-    random_timestamp = random.randint(current_timestamp, future_timestamp_max)
+    random_timestamp = random.randint(current_timestamp, future_timestamp_max)  # noqa: S311
     return tz_datetime.fromtimestamp(random_timestamp)
 
 
@@ -89,15 +88,15 @@ def random_optional_future_timestamp() -> datetime | None:
 
 def _random_sort_key_input() -> SortKeyInput:
     model_map = SortKeyInput._MODEL_MAP  # noqa: SLF001
-    model_name: str = random.choice(list(model_map))
+    model_name: str = random.choice(list(model_map))  # noqa: S311
     model_class = model_map[model_name]
     return SortKeyInput(
         model=model_name,  # type: ignore[arg-type]
-        field=random.choice(model_class.SORTABLE_FIELDS),
-        direction=random.choice(
+        field=random.choice(model_class.SORTABLE_FIELDS),  # noqa: S311
+        direction=random.choice(  # noqa: S311
             get_args(SortKeyInput.model_fields["direction"].annotation),
         ),
-        order=random.choice(
+        order=random.choice(  # noqa: S311
             get_args(SortKeyInput.model_fields["order"].annotation),
         ),
     )
@@ -110,7 +109,7 @@ _TYPE_GENERATORS: dict[type, Callable[[], object]] = {
     datetime: random_past_timestamp,
     date: lambda: random_past_timestamp().date(),
     bool: random_bool,
-    float: lambda: random.uniform(0, 1000),
+    float: lambda: random.uniform(0, 1000),  # noqa: S311
     SortKeyInput: _random_sort_key_input,
 }
 
@@ -135,13 +134,13 @@ def _random_value(object_type: type) -> object:
     if origin is Annotated:
         return _random_value(get_args(object_type)[0])
     if origin is Literal:
-        return random.choice(get_args(object_type))
+        return random.choice(get_args(object_type))  # noqa: S311
     if origin is list:
         inner_args = get_args(object_type)
         inner_type = inner_args[0] if inner_args else str
-        return [_random_value(inner_type) for _ in range(random.randint(1, 3))]
+        return [_random_value(inner_type) for _ in range(random.randint(1, 3))]  # noqa: S311
     if issubclass(object_type, Enum):
-        return random.choice(list(object_type))
+        return random.choice(list(object_type))  # noqa: S311
     if issubclass(object_type, BaseModel):
         return build_random_model(object_type)
     msg = f"No random generator for type: {object_type}"

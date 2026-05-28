@@ -15,6 +15,11 @@ from typing import override
 from loguru import logger
 
 from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
+from app.watches.schemas import WatchImportResult
 from plugins.Crunchyroll.files import Browse, FileMixin, chirashi
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -26,11 +31,6 @@ from plugins.utils.base_plugin.watch_history import (
     ParsedWatchEntry,
     WatchHistoryMixin,
 )
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.utils import tz_datetime
-from app.watches.schemas import WatchImportResult
 
 
 class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):

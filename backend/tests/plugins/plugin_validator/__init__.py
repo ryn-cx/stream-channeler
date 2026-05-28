@@ -12,16 +12,17 @@ from sqlmodel import Session
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
     PluginSearchResults,
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.utils import tz_datetime
+from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
@@ -30,7 +31,6 @@ from tests.plugins.plugin_validator.mocks import (
     track_downloads,
 )
 from tests.plugins.plugin_validator.validator import Validator
-from tests.app.utils.utils import build_random_model
 
 
 class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):

@@ -36,7 +36,7 @@ class DownloadMixin(ABC):
 
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the plugin."""
-        raise NotImplementedError("This plugin does not have plugin specific files.")
+        raise NotImplementedError("This plugin does not have plugin specific files.")  # noqa: EM101 - TODO: Assign message to a variable
 
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:

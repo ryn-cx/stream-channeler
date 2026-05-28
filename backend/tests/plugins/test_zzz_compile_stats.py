@@ -1,12 +1,12 @@
 # TODO: Validate
 import csv
 import json
-from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
 
 from app.constants import TEST_FILES_FOLDER
+from app.utils import tz_datetime
 
 STAT_KEYS = ["sql_statements", "execution_time", "peak_memory_bytes"]
 
@@ -64,7 +64,7 @@ def write_csv(rows: list[dict[str, str]], output_path: Path) -> None:
 def test_compile_stats() -> None:
     """Compile stats from test runs into a CSV file."""
     rows = compile_stats()
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = tz_datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_path = TEST_FILES_FOLDER / f"compiled_stats_{timestamp}.csv"
     write_csv(rows, output_path)
     logger.info(f"Compiled stats written to {output_path}")

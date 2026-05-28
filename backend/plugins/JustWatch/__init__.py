@@ -16,6 +16,10 @@ from sqlmodel import col, select
 
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import strict_re, tz_datetime
 from plugins.JustWatch.files import (
     FileMixin,
     NewTitleBucket,
@@ -27,10 +31,6 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResultSource,
     URLImportResult,
 )
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.utils import strict_re, tz_datetime
 
 
 class JustWatch(FileMixin, register=True):
@@ -303,7 +303,7 @@ class JustWatch(FileMixin, register=True):
         self,
         url: str | None,
         profile: int = 100,
-        format: str = "jpeg",
+        format: str = "jpeg",  # noqa: A002 - TODO: Rename argument shadowing builtin
     ) -> str | None:
         """Format a JustWatch image URL with the correct base URL and profile."""
         if url is None:

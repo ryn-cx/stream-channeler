@@ -4,9 +4,14 @@ import re
 from datetime import timedelta
 from typing import Any, Literal, override
 
-from loguru import logger
+from loguru import logger  # noqa: F401 - TODO: Remove unused import
 
 from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.utils import tz_datetime
+from app.watches.schemas import WatchImportResult
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.watch_history import (
     ParsedWatchEntry,
@@ -20,11 +25,6 @@ from plugins.YouTube.files import (
     PlaylistItems,
     get_first_item,
 )
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.utils import tz_datetime
-from app.watches.schemas import WatchImportResult
 
 URLKeyType = Literal[
     "playlist_key",
@@ -484,7 +484,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         season.set_update_at(update_at)
 
     @staticmethod
-    def _best_thumbnail_url(thumbnails: Any) -> str | None:
+    def _best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
         for quality in ("maxres", "standard", "high", "medium", "default"):
             if thumb := getattr(thumbnails, quality, None):
                 return thumb.url

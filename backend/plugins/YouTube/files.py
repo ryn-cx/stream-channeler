@@ -19,13 +19,13 @@ from sqlmodel import Session
 
 from app.config import settings
 from app.plugins.models import File
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
     GAPIJSONNoGet,
     XMLFile,
 )
-from app.utils import tz_datetime
 
 
 @cache
@@ -41,6 +41,7 @@ def not_yt_dlapi() -> NotYTDLAPI:
         get_around_server=server,
         get_around_password=password,
     )
+
 
 @cache
 def get_around_client() -> GetAround:

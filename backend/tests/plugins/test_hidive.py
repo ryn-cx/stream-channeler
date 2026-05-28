@@ -5,11 +5,11 @@ from typing import override
 from diving_board.schedule.models import ScheduleModel
 
 from app.episodes.models import Episode
-from plugins.HiDive import HiDive
-from plugins.HiDive.files import diving_board
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.HiDive import HiDive
+from plugins.HiDive.files import diving_board
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,

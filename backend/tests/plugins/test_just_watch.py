@@ -9,11 +9,11 @@ from sqlmodel import Session
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from plugins.JustWatch import JustWatch
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.JustWatch import JustWatch
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,

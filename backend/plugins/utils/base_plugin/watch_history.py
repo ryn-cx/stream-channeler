@@ -3,10 +3,10 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
-from plugins.utils.base_plugin.watch import WatchMixin
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
+from plugins.utils.base_plugin.watch import WatchMixin
 
 
 @dataclass

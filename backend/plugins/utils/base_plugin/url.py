@@ -16,7 +16,7 @@ class URLMixin(ABC):
 
     @classmethod
     @abstractmethod
-    def parse_url(cls, url: str) -> Any:
+    def parse_url(cls, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.
 
         Args:

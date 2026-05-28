@@ -9,11 +9,11 @@ from pydantic import BaseModel, Field
 
 from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
-from plugins.utils.manage_plugins import register_plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.watches.schemas import WatchImportResults
+from plugins.utils.manage_plugins import register_plugins
 
 if TYPE_CHECKING:
     from sqlmodel import Session

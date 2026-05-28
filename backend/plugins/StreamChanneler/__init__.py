@@ -9,12 +9,12 @@ from sqlmodel import select
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin as PluginModel
-from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.base_plugin.files import BaseFile
 
 
 class StreamChanneler(BasePlugin, register=True):

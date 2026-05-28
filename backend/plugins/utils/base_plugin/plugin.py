@@ -11,16 +11,16 @@ from sqlmodel import Session
 from app.episodes.models import Episode
 from app.models import Visibility
 from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.download import DownloadMixin
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 
 
 class BasePlugin(

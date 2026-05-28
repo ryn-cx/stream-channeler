@@ -22,10 +22,10 @@ from sqlmodel import Session, col, select
 
 from app.config import settings
 from app.plugins.models import File, Plugin
-from plugins.utils.base_plugin import BasePlugin, JSONFile
-from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.utils.base_plugin import BasePlugin, JSONFile
+from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 

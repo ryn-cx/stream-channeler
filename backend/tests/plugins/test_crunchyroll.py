@@ -5,10 +5,10 @@ from typing import override
 from chirashi.browse_series import BrowseSeries
 
 from app.episodes.models import Episode
-from plugins.Crunchyroll import Crunchyroll
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.Crunchyroll import Crunchyroll
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,

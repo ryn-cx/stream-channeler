@@ -125,7 +125,7 @@ class _SortExpressionBuilder:
         field = sort_key.field
 
         if field == "random":
-            random_ids: dict[str, UUID] = {
+            random_ids: dict[str, Any] = {
                 "episode": Episode.id,
                 "season": Season.id,
                 "show": Show.id,
@@ -681,7 +681,7 @@ class EpisodeQueryBuilder:
             expressions.expression(sort_key).label(f"sort_value_{index}")
             for index, sort_key in enumerate(self._channel_options.sort_by)
         ]
-        labeled_values.append(Season.show_id.label("show_id"))  # type: ignore[arg-type]
+        labeled_values.append(col(Season.show_id).label("show_id"))
         subquery = query.add_columns(*labeled_values).subquery()
 
         raws = [

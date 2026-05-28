@@ -13,7 +13,6 @@ from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record
 from app.models import Visibility
 from app.plugins.models import Plugin
-from plugins.utils.manage_plugins import import_plugins, plugins
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.models import Season
@@ -31,6 +30,7 @@ from app.watches.schemas import (
     WatchOutput,
     WatchUpdate,
 )
+from plugins.utils.manage_plugins import import_plugins, plugins
 
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
@@ -124,7 +124,7 @@ def create_watches(
         select(Watch).where(
             Watch.user_id == user_id,
             col(Watch.episode_id).in_(all_episode_ids),
-            col(Watch.verified) == False,
+            col(Watch.verified) == False,  # noqa: E712 - TODO: SQLAlchemy comparison requires == False
         ),
     ).first()
     if existing_unverified:

@@ -12,15 +12,15 @@ from sqlmodel import Session, select
 
 from app.constants import TEST_FILES_FOLDER
 from app.plugins.models import File, Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     PluginSearchResults,
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 from tests.app.conftest import (
     create_test_engine,
     init_db,

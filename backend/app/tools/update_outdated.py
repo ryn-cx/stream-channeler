@@ -15,13 +15,13 @@ from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from plugins.utils.manage_plugins import import_plugins, plugins
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
+from plugins.utils.manage_plugins import import_plugins, plugins
 
 logger.remove()
 logger.add(sys.stdout, level="INFO", colorize=True)
