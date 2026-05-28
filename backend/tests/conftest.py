@@ -1,6 +1,7 @@
 # TODO: Validate
 
 
+import os
 import sys
 from collections.abc import Generator
 
@@ -73,6 +74,28 @@ def create_test_database() -> None:
     """Load models and create all tables in the default test database."""
     load_models()
     reset_tables(test_engine)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def block_downloads_on_ci() -> Generator[None]:
+    """CI must never hit the network; make any file download raise loudly.
+
+    Recording fixtures legitimately download locally, but on CI (GITHUB_ACTIONS)
+    every download is a bug. Importing the plugins first ensures all file
+    subclasses exist so the patch covers them.
+    """
+    if "GITHUB_ACTIONS" not in os.environ:
+        yield
+        return
+
+    # Imported lazily to avoid a circular import at conftest load time (the
+    # plugin_validator package imports back from this module).
+    from app.plugins.plugins.utils.manage_plugins import import_plugins  # noqa: PLC0415
+    from tests.plugins.plugin_validator.mocks import block_downloads  # noqa: PLC0415
+
+    import_plugins()
+    with block_downloads():
+        yield
 
 
 def savepoint_session(connection: Connection) -> Generator[Session]:
