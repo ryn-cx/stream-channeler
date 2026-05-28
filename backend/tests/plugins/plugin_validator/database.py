@@ -21,7 +21,7 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from tests.app.conftest import (
+from tests.conftest import (
     create_test_engine,
     init_db,
     reset_tables,
