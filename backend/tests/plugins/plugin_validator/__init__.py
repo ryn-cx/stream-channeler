@@ -195,11 +195,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         validator = validator or self._get_validator(session, entity)
         update = self._get_update_function(session, entity)
 
-        maybe_mock_wrapper = (
-            mock_update(self.files_directory_path())
-            if use_mock_update
-            else nullcontext()
-        )
+        maybe_mock_wrapper = mock_update() if use_mock_update else nullcontext()
         with maybe_mock_wrapper, log_stats(self):
             update()
             session.flush()
