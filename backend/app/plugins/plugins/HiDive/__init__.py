@@ -427,7 +427,7 @@ class HiDive(FileMixin, register=True):
     @override
     def search(self, query: str) -> PluginSearchResults:
         search_file = self.search_file(query)
-        minimum_timestamp = tz_datetime.now() - timedelta(days=7)
+        minimum_timestamp = tz_datetime.now() - timedelta(days=30)
         search_file.download_if_outdated(minimum_timestamp)
 
         results: list[PluginSearchResult] = []

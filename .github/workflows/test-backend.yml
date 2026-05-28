@@ -15,27 +15,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          path: stream-channeler
+      - name: Checkout test files
+        uses: actions/checkout@v6
+        with:
+          repository: ryn-cx/stream-channeler-test-files
+          ssh-key: ${{ secrets.TEST_FILES_DEPLOY_KEY }}
+          path: stream-channeler-test-files
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.14"
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - run: docker compose down -v --remove-orphans
+        working-directory: stream-channeler
       - run: docker compose up -d db mailcatcher
+        working-directory: stream-channeler
       - name: Migrate DB
         run: uv run bash scripts/prestart.sh
-        working-directory: backend
+        working-directory: stream-channeler/backend
       - name: Run tests
         run: uv run bash scripts/tests-start.sh "Coverage for ${{ github.sha }}"
-        working-directory: backend
+        working-directory: stream-channeler/backend
       - run: docker compose down -v --remove-orphans
+        working-directory: stream-channeler
       - name: Store coverage files
         uses: actions/upload-artifact@v6
         with:
           name: coverage-html
-          path: backend/htmlcov
+          path: stream-channeler/backend/htmlcov
           include-hidden-files: true
       - name: Coverage report
         run: uv run coverage report --fail-under=90
-        working-directory: backend
+        working-directory: stream-channeler/backend
