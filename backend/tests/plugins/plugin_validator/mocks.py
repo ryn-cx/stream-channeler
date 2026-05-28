@@ -2,13 +2,12 @@
 from collections.abc import Generator
 from contextlib import ExitStack, contextmanager
 from datetime import timedelta
-from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 from loguru import logger
 
-from app.plugins.plugins.utils.base_plugin import BaseFile
+from plugins.utils.base_plugin import BaseFile
 
 
 def _all_subclasses(cls: type) -> list[type]:
@@ -31,7 +30,7 @@ def _patch_download(replacement: object) -> Generator[None]:
 
 
 @contextmanager
-def mock_update(files_directory: Path) -> Generator[None]:
+def mock_update() -> Generator[None]:
     """Mock _download to increment data_timestamp instead of actually downloading."""
 
     def _mock(self: BaseFile[Any]) -> None:

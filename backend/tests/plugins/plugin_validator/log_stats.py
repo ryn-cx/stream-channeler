@@ -35,10 +35,11 @@ def _log_sql_statement_count(label: str, stats: dict[str, Any]) -> Generator[Non
             if ".venv" not in frame.filename
             # and "plugin_validator" not in frame.filename
         ]
-        callers_str: str = "\n  ".join(callers)
-
-        # logger.info(f"SQL #{stats['sql_statements']}")
-        # logger.trace(f"Stack trace:\n {callers_str}")
+        # Commenting code out without ruff errors basically
+        if False:
+            callers_str: str = "\n  ".join(callers)
+            logger.info(f"SQL #{stats['sql_statements']}")
+            logger.trace(f"Stack trace:\n {callers_str}")
 
     event.listen(Engine, "before_cursor_execute", count_queries)
     event.listen(Engine, "before_cursor_execute", log_queries)

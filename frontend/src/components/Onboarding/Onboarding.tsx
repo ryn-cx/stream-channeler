@@ -101,7 +101,6 @@ function OnboardingShell({
         <div className="flex items-center justify-center gap-2 mb-8">
           {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
             <div
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length progress bar
               key={index}
               className={`h-2 w-12 rounded-full transition-colors ${
                 currentStep >= index ? "bg-primary" : "bg-muted"
@@ -410,7 +409,6 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
     mutationFn: (sortBy: SortKeyInput[]) =>
       ChannelsService.updateChannelDefaultOrder({
         channelId,
-        // biome-ignore lint/suspicious/noExplicitAny: matches existing callsite
         requestBody: { sortBy } as any,
       }),
     onSuccess: (_data, sortBy) => {

@@ -347,7 +347,7 @@ def create_channel_queue_urls(
         urls=urls,
         channel=channel,
     )
-    return data
+    return data  # noqa: RET504 - TODO: Remove unnecessary assignment before return
 
 
 @router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003 - Used by UserChannel.

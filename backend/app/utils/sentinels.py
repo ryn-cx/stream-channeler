@@ -45,14 +45,14 @@ class Sentinel:
     _repr: str
     _module_name: str
 
-    def __new__(
+    def __new__(  # noqa: ANN204
         cls,
         name: str,
-        repr: str | None = None,
+        repr: str | None = None,  # noqa: A002
         module_name: str | None = None,
     ):
         name = str(name)
-        repr = str(repr) if repr else f"<{name.split('.')[-1]}>"
+        repr = str(repr) if repr else f"<{name.split('.')[-1]}>"  # noqa: A001
         if not module_name:
             parent_frame = _get_parent_frame()
             module_name = (
@@ -76,10 +76,10 @@ class Sentinel:
         with _lock:
             return _registry.setdefault(registry_key, sentinel)
 
-    def __repr__(self):
+    def __repr__(self):  # noqa: ANN204
         return self._repr
 
-    def __reduce__(self):
+    def __reduce__(self):  # noqa: ANN204
         return (
             self.__class__,
             (
@@ -103,25 +103,25 @@ _registry: dict[str, Sentinel] = {}
 #
 # For reference, see the implementation of namedtuple:
 # https://github.com/python/cpython/blob/67444902a0f10419a557d0a2d3b8675c31b075a9/Lib/collections/__init__.py#L503
-def _get_parent_frame():
+def _get_parent_frame():  # noqa: ANN202
     """Return the frame object for the caller's parent stack frame."""
     try:
         # Two frames up = the parent of the function which called this.
-        return _sys._getframe(2)
+        return _sys._getframe(2)  # noqa: SLF001
     except AttributeError, ValueError:
-        global _get_parent_frame
+        global _get_parent_frame  # noqa: PLW0603
 
-        def _get_parent_frame():
+        def _get_parent_frame():  # noqa: ANN202
             """Return the frame object for the caller's parent stack frame."""
             try:
-                raise Exception
-            except Exception:
+                raise Exception  # noqa: TRY002, TRY301
+            except Exception:  # noqa: BLE001
                 try:
                     return _sys.exc_info()[2].tb_frame.f_back.f_back
-                except Exception:
-                    global _get_parent_frame
+                except Exception:  # noqa: BLE001
+                    global _get_parent_frame  # noqa: PLW0603
 
-                    def _get_parent_frame():
+                    def _get_parent_frame():  # noqa: ANN202
                         """Return the frame object for the caller's parent stack frame."""
                         return
 
