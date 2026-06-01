@@ -273,7 +273,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         On first run this will download files and export them. Subsequent runs
         verify that all files are served from cache (no downloads occur).
         """
-        pytest.skip("TEMP: JUST IN CASE")
         files_already_cached = self.combined_files_path().exists()
 
         if self.url:

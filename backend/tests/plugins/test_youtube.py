@@ -235,6 +235,42 @@ class TestUsernameChannel(StandardTests[YouTube], UsernameValidator):
     url = f"youtube.com/user/{channel_name}"
 
 
+class TestVideoFromChannel(StandardTests[YouTube], YouTubeValidator):
+    channel_key = "UC4QobU6STFB0P71PMvOGN5A"
+    channel_name = "jawed"
+    video_key = "jNQXAC9IVRw"
+    url = f"youtube.com/watch?v={video_key}"
+
+    @pytest.fixture(
+        params=[
+            "youtube.com/watch?v={key}",
+            "youtube.com/watch?v={key}&t=120s",
+            "youtube.com/shorts/{key}",
+            "youtu.be/{key}",
+            "youtu.be/{key}?t=120",
+        ],
+    )
+    def video_url(self, request: pytest.FixtureRequest) -> str:
+        return request.param.format(key=self.video_key)
+
+    def test_video_import_response(
+        self,
+        session_with_url: Session,
+        video_url: str,
+    ) -> None:
+        results = self._import_url(session_with_url, url=video_url)
+        result = results[0]
+
+        assert len(results) == 1
+        assert result.show.key == self.channel_key
+        assert len(result.episodes) == 1
+        assert result.episodes[0].key == self.video_key
+        assert result.is_whitelist is True
+        # Only the specific episode is whitelisted; the rest of the channel is
+        # in the DB but not added to the user's channel.
+        assert result.seasons == []
+
+
 class InvalidYouTubeURLValidator(InvalidURLValidator[YouTube]):
     plugin_class = YouTube
 
