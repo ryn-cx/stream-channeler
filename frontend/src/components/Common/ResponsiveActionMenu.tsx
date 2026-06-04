@@ -101,26 +101,33 @@ export function ResponsiveActionMenu({
 
   if (isTouch) {
     return (
-      <Sheet>
-        <SheetTrigger asChild>{triggerNode}</SheetTrigger>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-xl pt-3 pb-[env(safe-area-inset-bottom)]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div
-            aria-hidden
-            className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted"
-          />
-          <div className="flex flex-col gap-1 px-2 pb-4">
-            {items.map((item) => (
-              <SheetClose key={item.key} asChild>
-                <MenuRow item={item} />
-              </SheetClose>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
+      // Sheet portals its overlay/content to the body, but React synthetic
+      // events still bubble through this component tree to the host card. This
+      // wrapper swallows every click from the portal — including the overlay
+      // (tap-to-close) — so it never reaches the card underneath.
+      // biome-ignore lint/a11y/noStaticElementInteractions: transparent event guard, not an interactive control
+      // biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only; no keyboard interaction to mirror
+      <div className="contents" onClick={(event) => event.stopPropagation()}>
+        <Sheet>
+          <SheetTrigger asChild>{triggerNode}</SheetTrigger>
+          <SheetContent
+            side="bottom"
+            className="rounded-t-xl pt-3 pb-[env(safe-area-inset-bottom)]"
+          >
+            <div
+              aria-hidden
+              className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted"
+            />
+            <div className="flex flex-col gap-1 px-2 pb-4">
+              {items.map((item) => (
+                <SheetClose key={item.key} asChild>
+                  <MenuRow item={item} />
+                </SheetClose>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     )
   }
 
