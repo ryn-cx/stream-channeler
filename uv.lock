@@ -330,7 +330,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#cb2d83d95c446dd61ec3a71e15871ac0cc9db79e" }
+source = { git = "https://github.com/ryn-cx/chirashi#d6c97f022790775a8ca85d0235570a6f66fefe83" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -489,7 +489,7 @@ wheels = [
 [[package]]
 name = "degenson"
 version = "1.3.0"
-source = { git = "https://github.com/ryn-cx/DeGenSON#0461782f9019773dafe059c7c654eec216edb50e" }
+source = { git = "https://github.com/ryn-cx/DeGenSON#c30fa61c8f79de15e1eeda1a87546cac88aceb77" }
 
 [[package]]
 name = "diving-board"
@@ -614,7 +614,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#a7296370b7b8f934bb9c1600578bb8bc977c3886" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#43384d15981fcac5566b88cb0eb7bd57b75abd7d" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -1033,7 +1033,7 @@ wheels = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#b89c5914f9d885d519a0eea4d1842f918d495081" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#8db1996e314b51a3de2634085a7949eaff6e7fb9" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
