@@ -1,15 +1,9 @@
-// TODO: Validate
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type { UserPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import DeleteUser from "./DeleteUser"
-import EditUser from "./EditUser"
-
-export type UserTableData = UserPublic & {
-  isCurrentUser: boolean
-}
+import type { UserTableData } from "./types"
+import { UserActionsMenu } from "./UserActionsMenu"
 
 export const columns: ColumnDef<UserTableData>[] = [
   {
@@ -41,40 +35,57 @@ export const columns: ColumnDef<UserTableData>[] = [
     ),
   },
   {
-    accessorFn: (row) => (row.is_superuser ? "Superuser" : "User"),
     id: "is_superuser",
+    accessorFn: (row) => (row.is_superuser ? "Superuser" : "User"),
     header: "Role",
-    cell: ({ row }) => (
-      <Badge variant={row.original.is_superuser ? "default" : "secondary"}>
-        {row.original.is_superuser ? "Superuser" : "User"}
-      </Badge>
-    ),
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="text-muted-foreground">
+          {row.original.is_superuser ? "Superuser" : "User"}
+        </span>
+      ) : (
+        <Badge variant={row.original.is_superuser ? "default" : "secondary"}>
+          {row.original.is_superuser ? "Superuser" : "User"}
+        </Badge>
+      ),
   },
   {
-    accessorFn: (row) => (row.is_active ? "Active" : "Inactive"),
     id: "is_active",
+    accessorFn: (row) => (row.is_active ? "Active" : "Inactive"),
     header: "Status",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "size-2 rounded-full",
-            row.original.is_active ? "bg-green-500" : "bg-gray-400",
-          )}
-        />
-        <span className={row.original.is_active ? "" : "text-muted-foreground"}>
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="text-muted-foreground">
           {row.original.is_active ? "Active" : "Inactive"}
         </span>
-      </div>
-    ),
+      ) : (
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              row.original.is_active ? "bg-green-500" : "bg-gray-400",
+            )}
+          />
+          <span
+            className={row.original.is_active ? "" : "text-muted-foreground"}
+          >
+            {row.original.is_active ? "Active" : "Inactive"}
+          </span>
+        </div>
+      ),
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditUser user={row.original} />
-        <DeleteUser user={row.original} />
+        {row.original.pending ? null : <UserActionsMenu user={row.original} />}
       </div>
     ),
   },

@@ -85,9 +85,7 @@ test.describe("Admin user management", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible()
 
     const userRow = page.getByRole("row").filter({ hasText: email })
-    await userRow.getByRole("button").click()
-
-    await page.getByRole("menuitem", { name: "Edit User" }).click()
+    await userRow.getByRole("button", { name: "Edit User" }).click()
 
     await page.getByPlaceholder("Full name").fill(updatedName)
     await page.getByRole("button", { name: "Save" }).click()
@@ -113,9 +111,7 @@ test.describe("Admin user management", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible()
 
     const userRow = page.getByRole("row").filter({ hasText: email })
-    await userRow.getByRole("button").click()
-
-    await page.getByRole("menuitem", { name: "Delete User" }).click()
+    await userRow.getByRole("button", { name: "Delete User" }).click()
 
     await page.getByRole("button", { name: "Delete" }).click()
 

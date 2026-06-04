@@ -34,16 +34,21 @@ if settings.all_cors_origins:
     )
 
 
-api_router = APIRouter()
+def automatically_import_routers() -> APIRouter:
+    api_router = APIRouter()
+    for router_file in APP_PATH.glob("*/router.py"):
+        module_name = router_file.parent.name
+        router = import_module(f"app.{module_name}.router").router
 
-for model_files in APP_PATH.glob("*/router.py"):
-    module_name = model_files.parent.name
-    router = import_module(f"app.{module_name}.router").router
-
-    if module_name == "private":
-        if settings.ENVIRONMENT == "local":
+        if module_name == "private":
+            if settings.ENVIRONMENT == "local":
+                api_router.include_router(router)
+        else:
             api_router.include_router(router)
-    else:
-        api_router.include_router(router)
+
+    return api_router
+
+
+api_router = automatically_import_routers()
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

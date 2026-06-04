@@ -7,35 +7,12 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { OpenAPI } from "@/client"
-import { request } from "@/client/core/request"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { ShowsService, type ShowUpdate } from "@/client"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./showColumns"
@@ -43,17 +20,18 @@ import type { ShowTableData } from "./showColumns"
 type ShowsData = Array<ShowTableData>
 
 const formSchema = z.object({
-  key: z.string().min(1, "Key is required").max(255),
-  name: z.string().max(255).optional().or(z.literal("")),
-  media_type: z.string().max(255).optional().or(z.literal("")),
-  description: z.string().optional().or(z.literal("")),
-  url: z.string().max(2048).optional().or(z.literal("")),
-  image_url: z.string().max(2048).optional().or(z.literal("")),
-  data_timestamp: z.string().optional().or(z.literal("")),
-  update_at: z.string().optional().or(z.literal("")),
+  key: requiredKey,
+  name: optionalString,
+  media_type: optionalString,
+  description: optionalString,
+  url: optionalString,
+  image_url: optionalString,
+  data_timestamp: optionalString,
+  update_at: optionalString,
 })
 
-type FormData = z.infer<typeof formSchema>
+type FormInput = z.input<typeof formSchema>
+type FormOutput = z.output<typeof formSchema>
 
 interface EditShowProps {
   show: ShowTableData
@@ -65,7 +43,7 @@ const EditShow = ({ show }: EditShowProps) => {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryKey = ["sources", sourceKey, "shows"]
 
-  const form = useForm<FormData>({
+  const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
     mode: "onBlur",
     criteriaMode: "all",
@@ -82,193 +60,106 @@ const EditShow = ({ show }: EditShowProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      request(OpenAPI, {
-        method: "PATCH",
-        url: "/api/v1/shows/{show_id}",
-        path: { show_id: show.id },
-        body: data,
-        mediaType: "application/json",
-      }),
+    mutationFn: (data: ShowUpdate) =>
+      ShowsService.updateShow({ showId: show.id, requestBody: data }),
+    // When mutate is called:
     onMutate: async (newData, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
+      // Snapshot the previous value
       const previous = context.client.getQueryData<ShowsData>(queryKey)
 
+      // Optimistically update to the new value
       context.client.setQueryData<ShowsData>(queryKey, (old) =>
-        old!.map((s) => (s.id === show.id ? { ...s, ...newData } : s)),
+        old!.map((s) =>
+          s.id === show.id
+            ? ({ ...s, ...newData, pending: true } as ShowTableData)
+            : s,
+        ),
       )
 
+      // Return a result with the snapshotted value
       return { previous }
     },
     onSuccess: () => {
       showSuccessToast("Show updated successfully")
-      setIsOpen(false)
     },
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
     onError: (error, _newData, onMutateResult, context) => {
       context.client.setQueryData(queryKey, onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey }),
   })
 
-  const onSubmit = (data: FormData) => {
-    mutation.mutate({
-      ...data,
-      name: data.name || undefined,
-      data_timestamp: data.data_timestamp || undefined,
-      update_at: data.update_at || undefined,
-    })
+  const onSubmit = (data: FormOutput) => {
+    setIsOpen(false)
+    mutation.mutate(data)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Pencil />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit show</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit Show</DialogTitle>
-              <DialogDescription>
-                Update the show details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Show name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="media_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Media Type</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g. anime, series"
-                        type="text"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Description" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." type="url" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="image_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." type="url" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="data_timestamp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data Timestamp</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="update_at"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Update At</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="key"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Key</FormLabel>
-                    <FormControl>
-                      <Input type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <FormModal
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      trigger={
+        <TooltipIconButton
+          label="Edit Show"
+          icon={<Pencil />}
+          onClick={() => setIsOpen(true)}
+        />
+      }
+      title="Edit Show"
+      description="Update the show details below."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Name"
+        placeholder="Show name"
+        type="text"
+      />
+      <FormTextField
+        control={form.control}
+        label="Media Type"
+        placeholder="e.g. anime, series"
+        type="text"
+      />
+      <FormTextField
+        control={form.control}
+        label="Description"
+        placeholder="Description"
+        type="text"
+      />
+      <FormTextField
+        control={form.control}
+        label="URL"
+        placeholder="https://..."
+        type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="Image URL"
+        placeholder="https://..."
+        type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="Data Timestamp"
+        type="datetime-local"
+      />
+      <FormTextField
+        control={form.control}
+        label="Update At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Key" type="text" />
+    </FormModal>
   )
 }
 

@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from datetime import datetime
 
@@ -38,3 +37,4 @@ class UserPublic(UserBase):
 
 class UsersPublic(SQLModel):
     data: list[UserPublic]
+    count: int

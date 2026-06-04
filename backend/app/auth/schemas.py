@@ -1,4 +1,3 @@
-# TODO: Validate
 from sqlmodel import Field, SQLModel
 
 

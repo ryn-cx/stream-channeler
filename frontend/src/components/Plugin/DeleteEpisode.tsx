@@ -1,13 +1,12 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
+import { Trash2 } from "lucide-react"
 import { useState } from "react"
 
-import { OpenAPI } from "@/client"
-import { request } from "@/client/core/request"
-import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
-import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
-import { Dialog } from "@/components/ui/dialog"
+import { EpisodesService } from "@/client"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -27,37 +26,51 @@ const DeleteEpisode = ({ episode }: DeleteEpisodeProps) => {
 
   const mutation = useMutation({
     mutationFn: (episodeId: string) =>
-      request(OpenAPI, {
-        method: "DELETE",
-        url: "/api/v1/episodes/{episode_id}",
-        path: { episode_id: episodeId },
-      }),
+      EpisodesService.deleteEpisode({ episodeId }),
+    // When mutate is called:
     onMutate: async (_episodeKey, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
+      // Snapshot the previous value
       const previous = context.client.getQueryData<EpisodesData>(queryKey)
 
+      // Optimistically update to the new value
       context.client.setQueryData<EpisodesData>(queryKey, (old) =>
-        old!.filter((e) => e.key !== episode.key),
+        old!.map((e) => (e.id === episode.id ? { ...e, pending: true } : e)),
       )
 
+      // Return a result with the snapshotted value
       return { previous }
     },
-    onSuccess: () => {
+    onSuccess: (_data, _variables, _onMutateResult, context) => {
       showSuccessToast("Episode deleted successfully")
-      setIsOpen(false)
+      context.client.setQueryData<EpisodesData>(queryKey, (old) =>
+        old?.filter((e) => e.id !== episode.id),
+      )
     },
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
     onError: (error, _episodeKey, onMutateResult, context) => {
       context.client.setQueryData(queryKey, onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey }),
   })
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DeleteIconTrigger tooltip="Delete episode" />
-      <DeleteConfirmContent
+    <>
+      <TooltipIconButton
+        label="Delete Episode"
+        icon={<Trash2 />}
+        className="text-destructive hover:text-destructive"
+        onClick={() => setIsOpen(true)}
+      />
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
         title="Delete Episode"
         description={
           <>
@@ -66,10 +79,10 @@ const DeleteEpisode = ({ episode }: DeleteEpisodeProps) => {
             able to undo this action.
           </>
         }
-        isPending={mutation.isPending}
-        onSubmit={() => mutation.mutate(episode.id)}
+        confirmLabel="Delete"
+        onConfirm={() => mutation.mutate(episode.id)}
       />
-    </Dialog>
+    </>
   )
 }
 

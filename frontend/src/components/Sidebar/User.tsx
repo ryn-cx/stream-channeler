@@ -1,4 +1,3 @@
-// TODO: Validate
 import { Link as RouterLink } from "@tanstack/react-router"
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react"
 

@@ -1,4 +1,5 @@
 # TODO: Validate
+# TODO: Remove once Python 3.15 is released.
 # Copied from https://github.com/taleinat/python-stdlib-sentinels/blob/main/sentinels/sentinels.py
 import sys as _sys
 from threading import Lock as _Lock

@@ -2,20 +2,11 @@
 import { useMutation } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
-import { type PlaylistOutput, PlaylistsService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
+import { PlaylistsService } from "@/client"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import type { PlaylistTableData } from "@/components/Playlists/PlaylistList/columns"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -42,26 +33,38 @@ const DeletePlaylist = ({
     }
   }
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
 
   const mutation = useMutation({
     mutationFn: (playlistId: string) =>
       PlaylistsService.deletePlaylist({ playlistId }),
+    // When mutate is called:
     onMutate: async (_playlistId, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey: ["playlists"] })
+      // Snapshot the previous value
       const previousPlaylists = context.client.getQueryData<
-        Array<PlaylistOutput>
+        Array<PlaylistTableData>
       >(["playlists"])
-      context.client.setQueryData<Array<PlaylistOutput>>(["playlists"], (old) =>
-        (old ?? []).filter((p) => p.id !== id),
+      // Optimistically update to the new value
+      context.client.setQueryData<Array<PlaylistTableData>>(
+        ["playlists"],
+        (old) =>
+          (old ?? []).map((p) => (p.id === id ? { ...p, pending: true } : p)),
       )
+      // Return a result with the snapshotted value
       return { previousPlaylists }
     },
-    onSuccess: () => {
+    onSuccess: (_data, _playlistId, _onMutateResult, context) => {
       showSuccessToast("The playlist was deleted successfully")
-      setIsOpen(false)
       onSuccess()
+      context.client.setQueryData<Array<PlaylistTableData>>(
+        ["playlists"],
+        (old) => old?.filter((p) => p.id !== id),
+      )
     },
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
     onError: (error, _playlistId, onMutateResult, context) => {
       context.client.setQueryData(
         ["playlists"],
@@ -69,56 +72,29 @@ const DeletePlaylist = ({
       )
       handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey: ["playlists"] }),
   })
 
-  const onSubmit = async () => {
-    mutation.mutate(id)
-  }
-
   return (
     <>
       {externalOpen === undefined && (
-        <Button
-          variant="ghost"
-          size="icon"
-          title="Delete playlist"
+        <TooltipIconButton
+          label="Delete Playlist"
+          icon={<Trash2 />}
+          className="text-destructive hover:text-destructive"
           onClick={() => setIsOpen(true)}
-        >
-          <Trash2 className="size-4 text-destructive" />
-        </Button>
+        />
       )}
-      {isOpen && (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="sm:max-w-md">
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <DialogHeader>
-                <DialogTitle>Delete Playlist</DialogTitle>
-                <DialogDescription>
-                  This playlist will be permanently deleted. Are you sure? You
-                  will not be able to undo this action.
-                </DialogDescription>
-              </DialogHeader>
-
-              <DialogFooter className="mt-4">
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={mutation.isPending}>
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <LoadingButton
-                  variant="destructive"
-                  type="submit"
-                  loading={mutation.isPending}
-                >
-                  Delete
-                </LoadingButton>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        title="Delete Playlist"
+        description="This playlist will be permanently deleted. Are you sure? You will not be able to undo this action."
+        confirmLabel="Delete"
+        onConfirm={() => mutation.mutate(id)}
+      />
     </>
   )
 }

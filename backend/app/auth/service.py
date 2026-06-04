@@ -1,5 +1,4 @@
-# TODO: Validate
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -32,7 +31,7 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 
 def generate_password_reset_token(email: str) -> str:
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     expires = now + delta
     exp = expires.timestamp()
     return jwt.encode(

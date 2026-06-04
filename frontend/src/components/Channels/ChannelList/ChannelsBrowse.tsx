@@ -103,7 +103,7 @@ function ChannelRow({ channel, onDelete }: ChannelRowProps) {
           <Button
             variant="ghost"
             size="icon"
-            title="Delete channel"
+            title="Delete Channel"
             onClick={() => onDelete(channel)}
           >
             <Trash2 className="size-4 text-destructive" />

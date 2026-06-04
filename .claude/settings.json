@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -nE 'interface .*Props|^\\(const|function\\) [A-Z].*=|: React.FC|Props \\\\{|^  [a-z_]+: ' __TRACKED_VAR__.tsx)",
+      "Bash(grep -nE 'makeDefaults|onSuccess|form.reset|setIsOpen\\\\\\(false\\\\\\)|const onSubmit|mutation.mutate|defaultValues' __TRACKED_VAR__.tsx)",
+      "Bash(npx biome *)"
+    ]
+  }
+}

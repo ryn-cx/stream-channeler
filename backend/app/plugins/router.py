@@ -111,6 +111,9 @@ def get_plugins(session: SessionDep, current_user: CurrentUser) -> list[Plugin]:
     Superusers also see all `Plugin`s owned by the plugin user (official media),
     listed after the user's own plugins.
     """
+    # Sleep for 3 seconds
+    from time import sleep
+    sleep(3)
     if current_user.is_superuser:
         plugin_user = get_or_create_plugin_user(session=session)
         return current_user.plugins + plugin_user.plugins

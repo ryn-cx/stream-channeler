@@ -6,11 +6,11 @@ import type { ChannelOutput } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
-import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
-import DeleteChannel from "./DeleteChannel"
-import EditChannel from "./EditChannel"
+import { ChannelActionsMenu } from "./ChannelActionsMenu"
 
-export const columns: ColumnDef<ChannelOutput>[] = [
+export type ChannelTableData = ChannelOutput & { pending?: boolean }
+
+export const columns: ColumnDef<ChannelTableData>[] = [
   {
     accessorKey: "id",
     header: "ID",
@@ -29,6 +29,12 @@ export const columns: ColumnDef<ChannelOutput>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => {
+      if (row.original.pending) {
+        return (
+          <span className="text-muted-foreground">{row.original.name}</span>
+        )
+      }
+
       let searchParams = {}
       if (row.original.default_order) {
         searchParams = JSON.parse(row.original.default_order)
@@ -53,6 +59,8 @@ export const columns: ColumnDef<ChannelOutput>[] = [
     accessorFn: (row) => visibilityLabel(row.visibility),
     id: "visibility",
     header: "Visibility",
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
     cell: ({ row }) => {
       const visibility = row.original.visibility
       return (
@@ -100,12 +108,14 @@ export const columns: ColumnDef<ChannelOutput>[] = [
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditChannel channel={row.original} />
-        <ManageShowsButton channelId={row.original.id} variant="icon" />
-        <DeleteChannel id={row.original.id} />
+        {row.original.pending ? null : (
+          <ChannelActionsMenu channel={row.original} />
+        )}
       </div>
     ),
   },

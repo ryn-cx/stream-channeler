@@ -1,39 +1,23 @@
-// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserPublic, type UsersPublic, UsersService } from "@/client"
-import { Button } from "@/components/ui/button"
+import type { ApiError } from "@/client"
+import { type UserPublic, UsersService } from "@/client"
+import type { UsersPublicWithPending } from "@/components/Admin/types"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -63,6 +47,7 @@ interface EditUserProps {
 
 const EditUser = ({ user }: EditUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
@@ -78,194 +63,146 @@ const EditUser = ({ user }: EditUserProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
+    mutationFn: (data: Omit<FormData, "confirm_password">) =>
       UsersService.updateUser({ userId: user.id, requestBody: data }),
     // When mutate is called:
-    onMutate: async (newData, context) => {
+    onMutate: async (data) => {
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey: ["users"] })
+      await queryClient.cancelQueries({ queryKey: ["users"] })
 
       // Snapshot the previous value
-      const previousUsers = context.client.getQueryData<UsersPublic>(["users"])
+      const previousUsers = queryClient.getQueryData<UsersPublicWithPending>([
+        "users",
+      ])
 
       // Optimistically update to the new value
-      context.client.setQueryData<UsersPublic>(["users"], (old) => ({
-        ...old!,
-        data: old!.data.map((u) =>
-          u.id === user.id ? { ...u, ...newData } : u,
-        ),
-      }))
+      queryClient.setQueryData<UsersPublicWithPending>(["users"], (old) =>
+        old
+          ? {
+              ...old,
+              data: old.data.map((existingUser) =>
+                existingUser.id === user.id
+                  ? { ...existingUser, ...data, pending: true }
+                  : existingUser,
+              ),
+            }
+          : old,
+      )
 
       // Return a result with the snapshotted value
       return { previousUsers }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       showSuccessToast("User updated successfully")
-      setIsOpen(false)
+      queryClient.setQueryData<UsersPublicWithPending>(["users"], (old) =>
+        old
+          ? {
+              ...old,
+              data: old.data.map((existingUser) =>
+                existingUser.id === data.id ? data : existingUser,
+              ),
+            }
+          : old,
+      )
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
-    onError: (error, _newData, onMutateResult, context) => {
-      context.client.setQueryData(["users"], onMutateResult?.previousUsers)
-      handleError.call(showErrorToast, error as any)
+    onError: (err, _variables, context) => {
+      queryClient.setQueryData(["users"], context?.previousUsers)
+      handleError.call(showErrorToast, err as ApiError)
     },
     // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey: ["users"] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   })
 
   const onSubmit = (data: FormData) => {
     // exclude confirm_password from submission data and remove password if empty
-    const { confirm_password: _, ...submitData } = data
-    if (!submitData.password) {
-      delete submitData.password
-    }
-    mutation.mutate(submitData)
+    const { confirm_password: _, ...userUpdate } = data
+    if (!userUpdate.password) delete userUpdate.password
+    setIsOpen(false)
+    mutation.mutate(userUpdate)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Pencil />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit user</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update the user details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Email <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <FormModal
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      trigger={
+        <TooltipIconButton
+          label="Edit User"
+          icon={<Pencil />}
+          onClick={() => setIsOpen(true)}
+        />
+      }
+      title="Edit User"
+      description="Update the user details below."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Email"
+        placeholder="Email"
+        type="email"
+        required
+      />
 
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        label="Full Name"
+        placeholder="Full name"
+        type="text"
+      />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Set Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        name="password"
+        label="Set Password"
+        placeholder="Password"
+        type="password"
+      />
 
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        label="Confirm Password"
+        placeholder="Password"
+        type="password"
+      />
 
-              <FormField
-                control={form.control}
-                name="is_superuser"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is superuser?</FormLabel>
-                  </FormItem>
-                )}
+      <FormField
+        control={form.control}
+        name="is_superuser"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            </FormControl>
+            <FormLabel className="font-normal">Is superuser?</FormLabel>
+          </FormItem>
+        )}
+      />
 
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is active?</FormLabel>
-                  </FormItem>
-                )}
+      <FormField
+        control={form.control}
+        name="is_active"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </FormControl>
+            <FormLabel className="font-normal">Is active?</FormLabel>
+          </FormItem>
+        )}
+      />
+    </FormModal>
   )
 }
 

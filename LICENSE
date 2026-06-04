@@ -1,24 +1,8 @@
-Stream Channeler
-Copyright (C) 2025 ryn-cx
+This project is based on the Full Stack FastAPI Template, which is licensed 
+under the MIT License. All modifications to the template are licensed under the 
+GNU Affero General Public License v3
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
----
-
-This project is based on the Full Stack FastAPI Template by Sebastián Ramírez,
-originally licensed under the MIT License. The original MIT License is
-preserved below for attribution purposes:
+================================================================================
 
 MIT License
 

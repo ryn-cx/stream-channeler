@@ -21,7 +21,7 @@ MEDIA_MODELS = Episode | Season | Show | Source | Plugin | Channel | Watch | Pla
 
 
 class Message(BaseModel):
-    """Schema for returning a message."""
+    """Generic message."""
 
     message: str
 

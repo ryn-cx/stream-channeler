@@ -123,6 +123,7 @@
   }
 }
 
+/* TODO: Validate (Below this comment) */
 /* Hide scrollbar for horizontal scroll rows */
 .scrollbar-hide {
   scrollbar-width: none;

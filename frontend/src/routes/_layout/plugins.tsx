@@ -3,16 +3,19 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { useState } from "react"
+import { Puzzle } from "lucide-react"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
-import PendingPlugins from "@/components/Pending/PendingPlugins"
+import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import { EmptyState } from "@/components/Common/EmptyState"
+import { PageHeader } from "@/components/Common/PageHeader"
 import AddPlugin from "@/components/Plugin/AddPlugin"
 import { columns, type PluginTableData } from "@/components/Plugin/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 function getPluginsQueryOptions() {
   return {
@@ -43,10 +46,11 @@ function PluginsTableContent() {
   const { data: plugins, isPlaceholderData } = useQuery(
     getPluginsQueryOptions(),
   )
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    key: false,
-    id: false,
-  })
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>("plugins-column-visibility", {
+      key: false,
+      id: false,
+    })
 
   const table = useReactTable({
     data: plugins ?? [],
@@ -58,8 +62,6 @@ function PluginsTableContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
-  if (!plugins) return <PendingPlugins />
-
   return (
     <div
       className={
@@ -68,22 +70,30 @@ function PluginsTableContent() {
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Plugins</h1>
-          <p className="text-muted-foreground">Manage your plugins</p>
+      <PageHeader title="Plugins">
+        <AddPlugin />
+        <ColumnVisibilityButton table={table} />
+      </PageHeader>
+      {!plugins ? (
+        <div className="px-[4%]">
+          <DataTableSkeleton table={table} />
         </div>
-        <div className="flex gap-2">
-          <AddPlugin />
-          <ColumnVisibilityButton table={table} />
+      ) : plugins.length === 0 ? (
+        <EmptyState
+          icon={Puzzle}
+          title="You don't have any plugins yet"
+          description="Add a plugin to get started"
+        />
+      ) : (
+        <div className="px-[4%]">
+          <DataTable
+            columns={columns}
+            data={plugins}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
         </div>
-      </div>
-      <DataTable
-        columns={columns}
-        data={plugins}
-        columnVisibility={columnVisibility}
-        onColumnVisibilityChange={setColumnVisibility}
-      />
+      )}
     </div>
   )
 }

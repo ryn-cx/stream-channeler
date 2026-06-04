@@ -1,6 +1,5 @@
 # TODO: Validate
-
-
+# TODO: Compare this to the upstream implemenation
 import sys
 from collections.abc import Generator
 

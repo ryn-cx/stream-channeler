@@ -1,25 +1,24 @@
 // TODO: Validate
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
 
-import {
-  type PlaylistOutput,
-  PlaylistsService,
-  type Visibility,
-} from "@/client"
+import { type PlaylistOutput, PlaylistsService } from "@/client"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
+import type { PlaylistTableData } from "@/components/Playlists/PlaylistList/columns"
 import { Button } from "@/components/ui/button"
+import { DialogTrigger } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { LoadingButton } from "@/components/ui/loading-button"
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import {
   Select,
   SelectContent,
@@ -27,9 +26,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
+import { visibilityEnum } from "@/lib/formSchemas"
 import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
+
+const formSchema = z.object({
+  name: z.string(),
+  visibility: visibilityEnum,
+})
+
+type FormData = z.infer<typeof formSchema>
 
 interface EditPlaylistProps {
   playlist: PlaylistOutput
@@ -37,29 +49,62 @@ interface EditPlaylistProps {
 
 const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [name, setName] = useState(playlist.name ?? "")
-  const [visibility, setVisibility] = useState<Visibility>(
-    playlist.visibility ?? "private",
-  )
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    mode: "onBlur",
+    criteriaMode: "all",
+    defaultValues: {
+      name: playlist.name ?? "",
+      visibility: playlist.visibility ?? "private",
+    },
+  })
+
   const mutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (data: FormData) =>
       PlaylistsService.updatePlaylist({
         playlistId: playlist.id,
         requestBody: {
-          name: name.trim() || null,
-          visibility,
+          name: data.name.trim() || null,
+          visibility: data.visibility,
         },
       }),
+    // When mutate is called:
+    onMutate: async (data) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["playlists"] })
+      // Snapshot the previous value
+      const previous = queryClient.getQueryData<Array<PlaylistTableData>>([
+        "playlists",
+      ])
+      // Optimistically update to the new value
+      queryClient.setQueryData<Array<PlaylistTableData>>(["playlists"], (old) =>
+        old?.map((p) =>
+          p.id === playlist.id
+            ? {
+                ...p,
+                name: data.name.trim() || null,
+                visibility: data.visibility,
+                pending: true,
+              }
+            : p,
+        ),
+      )
+      // Return a result with the snapshotted value
+      return { previous }
+    },
     onSuccess: () => {
       showSuccessToast("Playlist updated")
       queryClient.invalidateQueries({ queryKey: ["playlists"] })
       queryClient.invalidateQueries({ queryKey: ["playlist", playlist.id] })
-      setIsOpen(false)
     },
-    onError: (error) => {
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
+    onError: (error, _vars, context) => {
+      queryClient.setQueryData(["playlists"], context?.previous)
       handleError.call(showErrorToast, error as any)
     },
   })
@@ -67,84 +112,74 @@ const EditPlaylist = ({ playlist }: EditPlaylistProps) => {
   const onOpenChange = (open: boolean) => {
     setIsOpen(open)
     if (open) {
-      setName(playlist.name ?? "")
-      setVisibility(playlist.visibility ?? "private")
+      form.reset({
+        name: playlist.name ?? "",
+        visibility: playlist.visibility ?? "private",
+      })
     }
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Edit playlist"
-        onClick={() => setIsOpen(true)}
-      >
-        <Pencil className="size-4" />
-      </Button>
-      <DialogContent className="sm:max-w-md">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            mutation.mutate()
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription>
-              Rename the playlist or change who can see it.
-            </DialogDescription>
-          </DialogHeader>
+  const onSubmit = (data: FormData) => {
+    setIsOpen(false)
+    mutation.mutate(data)
+  }
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-1">
-              <Label htmlFor={`playlist-name-${playlist.id}`}>Name</Label>
-              <Input
-                id={`playlist-name-${playlist.id}`}
-                autoFocus
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="(untitled)"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={`playlist-visibility-${playlist.id}`}>
-                Visibility
-              </Label>
-              <Select
-                value={visibility}
-                onValueChange={(value) => setVisibility(value as Visibility)}
-              >
-                <SelectTrigger id={`playlist-visibility-${playlist.id}`}>
+  return (
+    <FormModal
+      open={isOpen}
+      onOpenChange={onOpenChange}
+      trigger={
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Pencil className="size-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit Playlist</p>
+          </TooltipContent>
+        </Tooltip>
+      }
+      title="Edit Playlist"
+      description="Rename the playlist or change who can see it."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Name"
+        placeholder="(untitled)"
+        type="text"
+      />
+
+      <FormField
+        control={form.control}
+        name="visibility"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Visibility</FormLabel>
+            <Select value={field.value} onValueChange={field.onChange}>
+              <FormControl>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {VISIBILITY_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {visibilityLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </Button>
-            <LoadingButton type="submit" loading={mutation.isPending}>
-              Save
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              </FormControl>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {visibilityLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </FormModal>
   )
 }
 

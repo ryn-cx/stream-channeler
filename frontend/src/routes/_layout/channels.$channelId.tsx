@@ -295,7 +295,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               variant="outline"
               onClick={() => setViewMode("table")}
               title="Switch to table view"
-              className="mt-2 mb-4"
+              className="my-4"
             >
               <TableIcon />
               Table
@@ -305,7 +305,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               variant="outline"
               onClick={() => setViewMode("cards")}
               title="Switch to card view"
-              className="mt-2 mb-4"
+              className="my-4"
             >
               <LayoutGrid />
               Cards

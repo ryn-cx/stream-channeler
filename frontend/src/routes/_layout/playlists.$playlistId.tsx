@@ -288,7 +288,7 @@ function PlaylistDetail() {
                 )
               }
               disabled={cycleVisibilityMutation.isPending}
-              className="mt-2 mb-4"
+              className="my-4"
             >
               {playlist.visibility === "public" && (
                 <>
@@ -317,7 +317,7 @@ function PlaylistDetail() {
             <Button
               onClick={() => saveOrderMutation.mutate()}
               disabled={!isDirty || saveOrderMutation.isPending}
-              className="mt-2 mb-4"
+              className="my-4"
             >
               <Save />
               {saveOrderMutation.isPending ? "Saving…" : "Save Order"}

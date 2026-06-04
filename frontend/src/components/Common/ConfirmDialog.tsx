@@ -1,9 +1,9 @@
-// TODO: Validate
+import type { ReactNode } from "react"
 
+import { ModalContent } from "@/components/Common/ModalContent"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
-  description: string
+  description: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: "default" | "destructive"
@@ -33,7 +33,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <ModalContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -52,7 +52,7 @@ export function ConfirmDialog({
             {confirmLabel}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ModalContent>
     </Dialog>
   )
 }

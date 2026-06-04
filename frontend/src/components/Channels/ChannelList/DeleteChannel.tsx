@@ -2,20 +2,11 @@
 import { useMutation } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
-import { type ChannelOutput, ChannelsService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
+import { ChannelsService } from "@/client"
+import type { ChannelTableData } from "@/components/Channels/ChannelList/columns"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -42,7 +33,6 @@ const DeleteChannel = ({
     }
   }
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
 
   const mutation = useMutation({
     mutationFn: (channelId: string) =>
@@ -55,21 +45,25 @@ const DeleteChannel = ({
 
       // Snapshot the previous value
       const previousChannels = context.client.getQueryData<
-        Array<ChannelOutput>
+        Array<ChannelTableData>
       >(["channels"])
 
-      // Optimistically update to the new value
-      context.client.setQueryData<Array<ChannelOutput>>(["channels"], (old) =>
-        old!.filter((c: { id: string }) => c.id !== id),
+      // Optimistically mark as pending
+      context.client.setQueryData<Array<ChannelTableData>>(
+        ["channels"],
+        (old) => old!.map((c) => (c.id === id ? { ...c, pending: true } : c)),
       )
 
       // Return a result with the snapshotted value
       return { previousChannels }
     },
-    onSuccess: () => {
+    onSuccess: (_data, _channelId, _onMutateResult, context) => {
       showSuccessToast("The channel was deleted successfully")
-      setIsOpen(false)
       onSuccess()
+      context.client.setQueryData<Array<ChannelTableData>>(
+        ["channels"],
+        (old) => old?.filter((c) => c.id !== id),
+      )
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
@@ -85,52 +79,24 @@ const DeleteChannel = ({
       context.client.invalidateQueries({ queryKey: ["channels"] }),
   })
 
-  const onSubmit = async () => {
-    mutation.mutate(id)
-  }
-
   return (
     <>
       {externalOpen === undefined && (
-        <Button
-          variant="ghost"
-          size="icon"
-          title="Delete channel"
+        <TooltipIconButton
+          label="Delete Channel"
+          icon={<Trash2 />}
+          className="text-destructive hover:text-destructive"
           onClick={() => setIsOpen(true)}
-        >
-          <Trash2 className="size-4 text-destructive" />
-        </Button>
+        />
       )}
-      {isOpen && (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="sm:max-w-md">
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <DialogHeader>
-                <DialogTitle>Delete Channel</DialogTitle>
-                <DialogDescription>
-                  This channel will be permanently deleted. Are you sure? You
-                  will not be able to undo this action.
-                </DialogDescription>
-              </DialogHeader>
-
-              <DialogFooter className="mt-4">
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={mutation.isPending}>
-                    Cancel
-                  </Button>
-                </DialogClose>
-                <LoadingButton
-                  variant="destructive"
-                  type="submit"
-                  loading={mutation.isPending}
-                >
-                  Delete
-                </LoadingButton>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        title="Delete Channel"
+        description="This channel will be permanently deleted. Are you sure? You will not be able to undo this action."
+        confirmLabel="Delete"
+        onConfirm={() => mutation.mutate(id)}
+      />
     </>
   )
 }

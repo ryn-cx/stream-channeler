@@ -12,28 +12,17 @@ import {
   type WatchOutput,
   type WatchUpdate,
 } from "@/client"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DialogTrigger } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
 import {
   Tooltip,
   TooltipContent,
@@ -104,7 +93,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
             const show = old.shows[season.show_id]
             const source = old.sources[show.source_id]
             if (source.plugin_id !== editedSource.plugin_id) return w
-            return { ...w, ...data } as WatchItem
+            return { ...w, ...data, pending: true } as WatchItem
           }),
         }
       })
@@ -118,7 +107,6 @@ const EditWatch = ({ watch }: EditWatchProps) => {
           ? `${result.length} watches updated successfully`
           : "Watch updated successfully"
       showSuccessToast(message)
-      setIsOpen(false)
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
@@ -132,6 +120,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   })
 
   const onSubmit = (data: FormData) => {
+    setIsOpen(false)
     const payload: WatchUpdate = {
       watch_date: data.watch_date,
       verified: data.verified,
@@ -140,74 +129,52 @@ const EditWatch = ({ watch }: EditWatchProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Pencil className="size-4" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit watch</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit Watch</DialogTitle>
-              <DialogDescription>
-                Update the watch entry details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="watch_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Watch Date</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" step="0.001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <FormModal
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      trigger={
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Pencil className="size-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit watch</p>
+          </TooltipContent>
+        </Tooltip>
+      }
+      title="Edit Watch"
+      description="Update the watch entry details below."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Watch Date"
+        type="datetime-local"
+        step="0.001"
+      />
 
-              <FormField
-                control={form.control}
-                name="verified"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Verified?</FormLabel>
-                  </FormItem>
-                )}
+      <FormField
+        control={form.control}
+        name="verified"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </FormControl>
+            <FormLabel className="font-normal">Verified?</FormLabel>
+          </FormItem>
+        )}
+      />
+    </FormModal>
   )
 }
 

@@ -1,8 +1,8 @@
-# TODO: Validate
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import col, delete, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import col, delete, func, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -32,13 +32,24 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
-def read_users(session: SessionDep) -> UsersPublic:
+def read_users(
+    session: SessionDep,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1)] = 100_000,
+) -> UsersPublic:
     """
     Retrieve users.
     """
-    users = session.exec(select(User)).all()
+    count_statement = select(func.count()).select_from(User)
+    count = session.exec(count_statement).one()
 
-    return UsersPublic(data=users)  # pyright: ignore[reportArgumentType] - Pydantic casting
+    statement = (
+        select(User).order_by(col(User.created_at).desc()).offset(skip).limit(limit)
+    )
+    users = session.exec(statement).all()
+
+    users_public = [UserPublic.model_validate(user) for user in users]
+    return UsersPublic(data=users_public, count=count)
 
 
 @router.post(
@@ -82,7 +93,6 @@ def update_user_me(
     """
     Update own user.
     """
-
     if user_in.email:
         existing_user = user_service.get_user_by_email(
             session=session,
@@ -206,7 +216,6 @@ def update_user(
     """
     Update a user.
     """
-
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(
