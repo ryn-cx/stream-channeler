@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
@@ -7,61 +7,7 @@ import { ChannelsService, type ShowPublic } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
-
-type Provider = "anthropic" | "openai"
-
-interface ModelOption {
-  id: string
-  /** Approximate per-1M-token input/output rate. Provider pricing may have
-   * shifted — treat as a relative-cost hint, not an authoritative quote. */
-  cost: string
-}
-
-interface ProviderConfig {
-  label: string
-  models: ModelOption[]
-  apiKeyHint: string
-}
-
-const PROVIDERS: Record<Provider, ProviderConfig> = {
-  anthropic: {
-    label: "Claude (Anthropic)",
-    models: [
-      { id: "claude-opus-4-7", cost: "$15 / $75 per 1M (most capable)" },
-      { id: "claude-opus-4-6", cost: "$15 / $75 per 1M" },
-      { id: "claude-sonnet-4-6", cost: "$3 / $15 per 1M (balanced)" },
-      { id: "claude-sonnet-4-5", cost: "$3 / $15 per 1M" },
-      {
-        id: "claude-haiku-4-5-20251001",
-        cost: "$1 / $5 per 1M (fast / cheap)",
-      },
-    ],
-    apiKeyHint: "starts with sk-ant-",
-  },
-  openai: {
-    label: "OpenAI",
-    models: [
-      { id: "gpt-5", cost: "$1.25 / $10 per 1M (flagship)" },
-      { id: "gpt-5-mini", cost: "~$0.25 / $2 per 1M" },
-      { id: "gpt-4o", cost: "$2.50 / $10 per 1M" },
-      { id: "gpt-4o-mini", cost: "$0.15 / $0.60 per 1M (cheapest)" },
-      { id: "o3", cost: "$2 / $8 per 1M (reasoning)" },
-      { id: "o3-mini", cost: "$1.10 / $4.40 per 1M (reasoning, cheaper)" },
-      { id: "o1", cost: "$15 / $60 per 1M (reasoning, premium)" },
-      { id: "o1-mini", cost: "$1.10 / $4.40 per 1M (reasoning, cheaper)" },
-    ],
-    apiKeyHint: "starts with sk-",
-  },
-}
 
 interface Suggestion {
   title: string
@@ -81,12 +27,7 @@ function isYouTubeUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     const host = parsed.hostname.toLowerCase()
-    return (
-      host === "youtube.com" ||
-      host.endsWith(".youtube.com") ||
-      host === "youtu.be" ||
-      host === "www.youtu.be"
-    )
+    return host.endsWith("youtube.com") || host.endsWith("youtu.be")
   } catch {
     return false
   }
@@ -116,88 +57,73 @@ async function fetchWikipediaThumbnail(
   }
 }
 
-async function enrichWithImages(
+async function findMissingImages(
   suggestions: Suggestion[],
 ): Promise<Suggestion[]> {
   const results = await Promise.all(
     suggestions.map(async (s) => {
-      // 1. If the AI provided an image_url, try it first (validated via onError in the UI).
-      //    We still run the Wikipedia lookup in parallel so we have a fallback ready
-      //    if the AI image turns out to be broken at render time — but we only use it
-      //    when the AI didn't supply one.
       if (s.image_url) {
-        // AI gave us something — trust it and skip the Wikipedia lookup.
         return s
       }
 
-      // 2. Try Wikipedia by exact title.
-      let image_url = await fetchWikipediaThumbnail(s.title)
-      let url = s.url
-
-      // 3. If that failed and the url is a Wikipedia link, try the page title from the URL.
-      if (!image_url && s.url && isWikipediaUrl(s.url)) {
+      let image_url: string | undefined
+      if (s.url && isWikipediaUrl(s.url)) {
         const match = s.url.match(/wikipedia\.org\/wiki\/([^#?]+)/)
         if (match) {
           const pageTitle = decodeURIComponent(match[1]).replace(/_/g, " ")
           image_url = await fetchWikipediaThumbnail(pageTitle)
         }
-
-        // Wikipedia URL was provided but we still couldn't get an image —
-        // fall back to a Google search so the "More info" link stays useful.
-        if (!image_url) {
-          const query = [s.title, s.year].filter(Boolean).join(" ")
-          url = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-        }
       }
 
-      return { ...s, url, image_url }
+      return { ...s, image_url }
     }),
   )
   return results
 }
 
-function buildPrompt(showsByType: Record<string, ShowPublic[]>): string {
-  const groupedSections = Object.entries(showsByType)
-    .map(([type, shows]) => {
-      const uniqueNames = Array.from(
-        new Set(shows.map((show) => show.name ?? "(untitled)")),
-      ).sort((a, b) => a.localeCompare(b))
-      const lines = uniqueNames.map((name) => `- ${name}`).join("\n")
-      return `## ${type}\n${lines}`
-    })
-    .join("\n\n")
-
-  return buildPromptBody(groupedSections, "")
-}
-
-function buildMorePrompt(
+function buildGroupedSections(
   showsByType: Record<string, ShowPublic[]>,
-  alreadySuggested: Suggestion[],
 ): string {
-  const groupedSections = Object.entries(showsByType)
+  return Object.entries(showsByType)
     .map(([type, shows]) => {
       const uniqueNames = Array.from(
-        new Set(shows.map((show) => show.name ?? "(untitled)")),
+        new Set(
+          shows
+            .map((show) => show.name)
+            .filter((name): name is string => Boolean(name)),
+        ),
       ).sort((a, b) => a.localeCompare(b))
+      // Skip a whole section if every show in it was untitled.
+      if (uniqueNames.length === 0) return null
       const lines = uniqueNames.map((name) => `- ${name}`).join("\n")
       return `## ${type}\n${lines}`
     })
+    .filter(Boolean)
     .join("\n\n")
-
-  const alreadyLines = alreadySuggested
-    .map((s) => `- ${s.title}${s.year ? ` (${s.year})` : ""}`)
-    .join("\n")
-
-  const exclusionSection = `# Already suggested — do not repeat these\n\n${alreadyLines}`
-
-  return buildPromptBody(groupedSections, exclusionSection)
 }
 
-function buildPromptBody(
-  groupedSections: string,
-  exclusionSection: string,
+function buildPrompt(
+  showsByType: Record<string, ShowPublic[]>,
+  alreadySuggested: Suggestion[] = [],
 ): string {
-  return `You are recommending shows / movies / Youtube channels to add to a media channel based on what is already there.
+  const groupedSections = buildGroupedSections(showsByType)
+
+  // Describe the channel using the media types it actually contains — only the
+  // types that have at least one titled show, matching the sections below.
+  const mediaTypes = Object.entries(showsByType)
+    .filter(([, shows]) => shows.some((show) => Boolean(show.name)))
+    .map(([type]) => type)
+  const mediaTypesPhrase =
+    mediaTypes.length > 0 ? mediaTypes.join(" / ") : "content"
+
+  const exclusionSection =
+    alreadySuggested.length > 0
+      ? `# Already suggested — do not repeat these\n\n${alreadySuggested
+          .map((s) => `- ${s.title}${s.year ? ` (${s.year})` : ""}`)
+          .join("\n")}`
+      : ""
+
+  return `You are recommending ${mediaTypesPhrase} to add to a media channel based on what is already there.
 
 The user already follows the items below, grouped by type. Suggest 10 new items that are similar in theme, tone, or genre. Do not repeat anything from the existing list. There should be at least one type of suggestion for each of the different types in the existing list.
 
@@ -246,88 +172,10 @@ function groupShows(shows: ShowPublic[]): Record<string, ShowPublic[]> {
   return groups
 }
 
-async function callAnthropic(
-  apiKey: string,
-  model: string,
-  prompt: string,
-): Promise<string> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  })
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`Anthropic ${response.status}: ${text}`)
-  }
-  const data = await response.json()
-  const block = data?.content?.[0]
-  if (!block || block.type !== "text") {
-    throw new Error("Unexpected Anthropic response shape")
-  }
-  return block.text as string
-}
-
-async function callOpenAI(
-  apiKey: string,
-  model: string,
-  prompt: string,
-): Promise<string> {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  })
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`OpenAI ${response.status}: ${text}`)
-  }
-  const data = await response.json()
-  const content = data?.choices?.[0]?.message?.content
-  if (typeof content !== "string") {
-    throw new Error("Unexpected OpenAI response shape")
-  }
-  return content
-}
-
 function parseSuggestions(raw: string): Suggestion[] {
-  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  const jsonText = (fence?.[1] ?? raw).trim()
-  const arrayMatch = jsonText.match(/\[[\s\S]*\]/)
-  if (!arrayMatch) throw new Error("No JSON array found in response")
-  const parsed = JSON.parse(arrayMatch[0])
+  const parsed = JSON.parse(raw.trim())
   if (!Array.isArray(parsed)) throw new Error("Response was not an array")
-  return parsed.map((item) => {
-    let similarTo: string[] | undefined
-    if (Array.isArray(item.similar_to)) {
-      similarTo = item.similar_to.map((entry: unknown) => String(entry))
-    } else if (typeof item.similar_to === "string" && item.similar_to.trim()) {
-      similarTo = [item.similar_to]
-    }
-    return {
-      title: String(item.title ?? "(unknown)"),
-      similar_to: similarTo,
-      description: item.description ? String(item.description) : undefined,
-      year: item.year,
-      url: item.url ? String(item.url) : undefined,
-      image_url: item.image_url ? String(item.image_url) : undefined,
-    }
-  })
+  return parsed as Suggestion[]
 }
 
 export function AISuggestions({
@@ -336,9 +184,6 @@ export function AISuggestions({
 }: AISuggestionsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
-  const [provider, setProvider] = useState<Provider>("anthropic")
-  const [model, setModel] = useState<string>(PROVIDERS.anthropic.models[0].id)
-  const [apiKey, setApiKey] = useState<string>("")
   const storageKey = `ai-suggestions-${channelId}`
 
   const [suggestions, setSuggestionsRaw] = useState<Suggestion[] | null>(() => {
@@ -369,7 +214,6 @@ export function AISuggestions({
   }
   const [copied, setCopied] = useState(false)
   const [copiedMore, setCopiedMore] = useState(false)
-  const [activeTab, setActiveTab] = useState<"builtin" | "own">("builtin")
   const [addingTitle, setAddingTitle] = useState<string | null>(null)
 
   const { data: channelShows, isLoading: isLoadingShows } = useQuery({
@@ -382,57 +226,10 @@ export function AISuggestions({
   const grouped = shows.length > 0 ? groupShows(shows) : null
   const prompt = grouped ? buildPrompt(grouped) : ""
 
-  const mutation = useMutation({
-    mutationFn: async () => {
-      if (!apiKey.trim()) throw new Error("Enter an API key first.")
-      if (!grouped) throw new Error("This channel has no shows to learn from.")
-      const raw =
-        provider === "anthropic"
-          ? await callAnthropic(apiKey.trim(), model, prompt)
-          : await callOpenAI(apiKey.trim(), model, prompt)
-      return enrichWithImages(parseSuggestions(raw))
-    },
-    onSuccess: (data) => {
-      setSuggestions((prev) => [...(prev ?? []), ...data])
-      showSuccessToast(`Got ${data.length} suggestions`)
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error)
-      showErrorToast(`AI request failed: ${message}`)
-    },
-  })
-
-  const moreMutation = useMutation({
-    mutationFn: async () => {
-      if (!apiKey.trim()) throw new Error("Enter an API key first.")
-      if (!grouped) throw new Error("This channel has no shows to learn from.")
-      const morePrompt = buildMorePrompt(grouped, suggestions ?? [])
-      const raw =
-        provider === "anthropic"
-          ? await callAnthropic(apiKey.trim(), model, morePrompt)
-          : await callOpenAI(apiKey.trim(), model, morePrompt)
-      return enrichWithImages(parseSuggestions(raw))
-    },
-    onSuccess: (data) => {
-      setSuggestions((prev) => [...(prev ?? []), ...data])
-      showSuccessToast(`Got ${data.length} more suggestions`)
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error)
-      showErrorToast(`AI request failed: ${message}`)
-    },
-  })
-
-  const onProviderChange = (next: Provider) => {
-    setProvider(next)
-    setModel(PROVIDERS[next].models[0].id)
-    setApiKey("")
-  }
-
   const onReadFromClipboard = async (text: string) => {
     if (!text.trim()) return
     try {
-      const parsed = await enrichWithImages(parseSuggestions(text))
+      const parsed = await findMissingImages(parseSuggestions(text))
       setSuggestions((prev) => [...(prev ?? []), ...parsed])
       showSuccessToast(`Parsed ${parsed.length} suggestions`)
     } catch (error) {
@@ -444,7 +241,7 @@ export function AISuggestions({
   const onCopyMorePrompt = async () => {
     if (!grouped) return
     try {
-      const morePrompt = buildMorePrompt(grouped, suggestions ?? [])
+      const morePrompt = buildPrompt(grouped, suggestions ?? [])
       await navigator.clipboard.writeText(morePrompt)
       setCopiedMore(true)
       setTimeout(() => setCopiedMore(false), 1500)
@@ -495,129 +292,50 @@ export function AISuggestions({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Get show recommendations based on what's already in this channel. Your
-        API key is held only while this view is open and is sent directly from
-        your browser to the provider — it is never stored or forwarded through
-        this server.
+        Get show recommendations based on what's already in this channel. Copy
+        the prompt below, run it in whatever AI you like, then paste the JSON
+        response back to see the suggestions. Nothing is sent through this
+        server.
       </p>
 
-      <Tabs
-        defaultValue="builtin"
-        className="w-full"
-        onValueChange={(v) => setActiveTab(v as "builtin" | "own")}
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="builtin">Use built-in client</TabsTrigger>
-          <TabsTrigger value="own">Use my own model</TabsTrigger>
-        </TabsList>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCopyPrompt}
+          disabled={!grouped}
+        >
+          {copied ? (
+            <>
+              <Check className="mr-2 size-4" /> Copied
+            </>
+          ) : (
+            <>
+              <Copy className="mr-2 size-4" /> Copy prompt
+            </>
+          )}
+        </Button>
+      </div>
 
-        <TabsContent value="builtin" className="space-y-4 pt-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Provider</Label>
-              <Select
-                value={provider}
-                onValueChange={(value) => onProviderChange(value as Provider)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PROVIDERS).map(([key, info]) => (
-                    <SelectItem key={key} value={key}>
-                      {info.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Model</Label>
-              <Select value={model} onValueChange={setModel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROVIDERS[provider].models.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      <span className="font-mono">{m.id}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {m.cost}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label>
-              API key{" "}
-              <span className="text-muted-foreground text-xs">
-                ({PROVIDERS[provider].apiKeyHint}, not stored)
-              </span>
-            </Label>
-            <Input
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Required for built-in run"
-            />
-          </div>
-
-          <Button
-            type="button"
-            onClick={() => mutation.mutate()}
-            disabled={
-              mutation.isPending || isLoadingShows || !grouped || !apiKey.trim()
-            }
-          >
-            {mutation.isPending ? "Asking…" : "Run"}
-          </Button>
-        </TabsContent>
-
-        <TabsContent value="own" className="space-y-4 pt-4">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCopyPrompt}
-              disabled={!grouped}
-            >
-              {copied ? (
-                <>
-                  <Check className="mr-2 size-4" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 size-4" /> Copy prompt
-                </>
-              )}
-            </Button>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-sm">Paste response</Label>
-            <Input
-              placeholder="Paste the model's JSON response here…"
-              onPaste={(e) => {
-                const text = e.clipboardData.getData("text")
-                onReadFromClipboard(text)
-              }}
-              onChange={() => {
-                /* controlled via onPaste */
-              }}
-              value=""
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              Copy the prompt, run it in your model of choice, then paste the
-              response into the box above.
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className="space-y-1">
+        <Label className="text-sm">Paste response</Label>
+        <Input
+          placeholder="Paste the model's JSON response here…"
+          onPaste={(e) => {
+            const text = e.clipboardData.getData("text")
+            onReadFromClipboard(text)
+          }}
+          onChange={() => {
+            /* controlled via onPaste */
+          }}
+          value=""
+          className="font-mono text-xs"
+        />
+        <p className="text-xs text-muted-foreground">
+          Copy the prompt, run it in your AI of choice, then paste the response
+          into the box above.
+        </p>
+      </div>
 
       {!grouped && !isLoadingShows && (
         <p className="text-sm text-muted-foreground">
@@ -655,23 +373,13 @@ export function AISuggestions({
                   aria-disabled={isAdding}
                   className="flex flex-col border rounded overflow-hidden cursor-pointer hover:border-primary hover:bg-accent/40 transition-colors aria-disabled:opacity-60 aria-disabled:pointer-events-none"
                 >
-                  {/* Poster */}
                   <div className="relative aspect-[2/3] bg-muted shrink-0">
                     {suggestion.image_url ? (
                       <img
                         src={suggestion.image_url}
                         alt={suggestion.title}
-                        onError={async (e) => {
+                        onError={(e) => {
                           const img = e.currentTarget
-                          // AI-supplied URL broke — try Wikipedia API as fallback
-                          const wikiUrl = await fetchWikipediaThumbnail(
-                            suggestion.title,
-                          )
-                          if (wikiUrl) {
-                            img.src = wikiUrl
-                            return
-                          }
-                          // Nothing worked — show text fallback
                           img.style.display = "none"
                           const fallback =
                             img.nextElementSibling as HTMLElement | null
@@ -680,7 +388,6 @@ export function AISuggestions({
                         className="w-full h-full object-cover"
                       />
                     ) : null}
-                    {/* Text-only fallback — always rendered, hidden when image loads */}
                     <div
                       className="absolute inset-0 flex flex-col items-center justify-center p-2 bg-muted text-center"
                       style={{
@@ -696,7 +403,6 @@ export function AISuggestions({
                     </div>
                   </div>
 
-                  {/* Content */}
                   <div className="p-2 flex flex-col gap-1 flex-1">
                     <div className="flex items-start justify-between gap-1">
                       <div className="min-w-0">
@@ -758,46 +464,24 @@ export function AISuggestions({
               )
             })}
           </div>
-          {activeTab === "builtin" && apiKey.trim() ? (
-            <div className="flex justify-center pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => moreMutation.mutate()}
-                disabled={moreMutation.isPending || mutation.isPending}
-              >
-                {moreMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" /> Getting
-                    more…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 size-4" /> More results
-                  </>
-                )}
-              </Button>
-            </div>
-          ) : activeTab === "own" ? (
-            <div className="flex justify-center pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCopyMorePrompt}
-                disabled={!grouped}
-              >
-                {copiedMore ? (
-                  <>
-                    <Check className="mr-2 size-4" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 size-4" /> Copy "more results" prompt
-                  </>
-                )}
-              </Button>
-            </div>
-          ) : null}
+          <div className="flex justify-center pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCopyMorePrompt}
+              disabled={!grouped}
+            >
+              {copiedMore ? (
+                <>
+                  <Check className="mr-2 size-4" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-2 size-4" /> Copy "more results" prompt
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -6,22 +6,24 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 const PendingChannelList = () => (
   <div className="flex flex-col gap-6">
-    <div className="flex flex-wrap items-center gap-2 px-[4%] pt-4 pb-2">
-      <h1 className="text-2xl font-bold tracking-tight mr-2">Channels</h1>
-      <ButtonGroup>
-        <Button variant="default" disabled className="opacity-50 mt-2 mb-4">
-          <LayoutGrid />
-          Browse
+    <div className="flex flex-wrap items-center justify-between gap-2 px-[4%] pt-4 pb-2">
+      <h1 className="text-2xl font-bold tracking-tight">Channels</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <ButtonGroup>
+          <Button variant="default" disabled className="opacity-50 my-4">
+            <LayoutGrid />
+            Browse
+          </Button>
+          <Button variant="outline" disabled className="opacity-50 my-4">
+            <TableIcon />
+            Table
+          </Button>
+        </ButtonGroup>
+        <Button disabled className="opacity-50 my-4">
+          <Plus />
+          New Channel
         </Button>
-        <Button variant="outline" disabled className="opacity-50 mt-2 mb-4">
-          <TableIcon />
-          Table
-        </Button>
-      </ButtonGroup>
-      <Button disabled className="opacity-50 mt-2 mb-4">
-        <Plus />
-        New Channel
-      </Button>
+      </div>
     </div>
 
     {/* Channel row skeletons */}

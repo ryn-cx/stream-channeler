@@ -9,11 +9,11 @@ import {
   PlaylistsService,
   type Visibility,
 } from "@/client"
+import { ModalContent } from "@/components/Common/ModalContent"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -92,7 +92,7 @@ export function SaveAsPlaylistButton({
           iconTitle="Save as Playlist"
         />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <ModalContent>
         <DialogHeader>
           <DialogTitle>Save as Playlist</DialogTitle>
           <DialogDescription>
@@ -152,7 +152,7 @@ export function SaveAsPlaylistButton({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </ModalContent>
     </Dialog>
   )
 }

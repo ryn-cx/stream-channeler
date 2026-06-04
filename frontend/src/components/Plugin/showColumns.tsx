@@ -1,9 +1,9 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 
-import DeleteShow from "./DeleteShow"
-import EditShow from "./EditShow"
+import { ShowActionsMenu } from "./ShowActionsMenu"
 
 export interface ShowTableData {
   key: string
@@ -16,21 +16,27 @@ export interface ShowTableData {
   image_url: string | null
   data_timestamp: string | null
   update_at: string | null
+  pending?: boolean
 }
 
 export const showColumns: ColumnDef<ShowTableData>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <Link
-        to="/show/$showKey"
-        params={{ showKey: row.original.id }}
-        className="font-medium text-primary hover:underline"
-      >
-        {row.original.name || `No Name (${row.original.key})`}
-      </Link>
-    ),
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="font-medium text-muted-foreground">
+          {row.original.name || `No Name (${row.original.key})`}
+        </span>
+      ) : (
+        <Link
+          to="/show/$showKey"
+          params={{ showKey: row.original.id }}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.name || `No Name (${row.original.key})`}
+        </Link>
+      ),
   },
   {
     accessorKey: "media_type",
@@ -44,78 +50,46 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
   {
     accessorKey: "description",
     header: "Description",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.description ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.description} />,
   },
   {
     accessorKey: "url",
     header: "URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.url} />,
   },
   {
     accessorKey: "image_url",
     header: "Image URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.image_url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.data_timestamp
-          ? new Date(row.original.data_timestamp).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.update_at
-          ? new Date(row.original.update_at).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {
     accessorKey: "key",
     header: "Key",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.key}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
     accessorKey: "id",
     header: "ID",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.id}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.id} />,
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
-    enableHiding: false,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditShow show={row.original} />
-        <DeleteShow show={row.original} />
+        {row.original.pending ? null : <ShowActionsMenu show={row.original} />}
       </div>
     ),
   },

@@ -2,24 +2,26 @@
 import {
   keepPreviousData,
   useMutation,
+  useQuery,
   useQueryClient,
-  useSuspenseQuery,
 } from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { RefreshCw, Upload } from "lucide-react"
-import { Suspense, useState } from "react"
+import { Eye, RefreshCw, Upload } from "lucide-react"
 
 import { WatchesService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
-import PendingWatches from "@/components/Pending/PendingWatches"
+import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import { EmptyState } from "@/components/Common/EmptyState"
+import { PageHeader } from "@/components/Common/PageHeader"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { columns } from "@/components/Watches/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import { handleError } from "@/utils"
 
 function getWatchesQueryOptions() {
@@ -63,7 +65,7 @@ function SyncEpisodeWatchesButton() {
     <LoadingButton
       loading={syncMutation.isPending}
       onClick={() => syncMutation.mutate()}
-      className="mt-2 mb-4"
+      className="my-4"
     >
       <RefreshCw />
       Sync Episode Watches
@@ -73,7 +75,7 @@ function SyncEpisodeWatchesButton() {
 
 function ImportWatchesButton() {
   return (
-    <Button className="mt-2 mb-4" asChild>
+    <Button className="my-4" asChild>
       <Link to="/watches/import">
         <Upload />
         Import
@@ -83,20 +85,23 @@ function ImportWatchesButton() {
 }
 
 function WatchesTableContent() {
-  const { data: watches } = useSuspenseQuery(getWatchesQueryOptions())
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    id: false,
-    plugin: false,
-  })
+  const { data: watches } = useQuery(getWatchesQueryOptions())
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>("watches-column-visibility", {
+      id: false,
+      plugin: false,
+    })
 
-  const watchesWithDetails = watches.watches.map((watch) => {
-    const episode = watches.episodes[watch.episode_id]
-    const season = watches.seasons[episode.season_id]
-    const show = watches.shows[season.show_id]
-    const source = watches.sources[show.source_id]
-    const plugin = watches.plugins[source.plugin_id]
-    return { ...watch, episode, season, show, source, plugin }
-  })
+  const watchesWithDetails = watches
+    ? watches.watches.map((watch) => {
+        const episode = watches.episodes[watch.episode_id]
+        const season = watches.seasons[episode.season_id]
+        const show = watches.shows[season.show_id]
+        const source = watches.sources[show.source_id]
+        const plugin = watches.plugins[source.plugin_id]
+        return { ...watch, episode, season, show, source, plugin }
+      })
+    : []
 
   const table = useReactTable({
     data: watchesWithDetails,
@@ -108,38 +113,43 @@ function WatchesTableContent() {
 
   return (
     <>
-      {/* flex - Line up text and button on the same row */}
-      {/* Vertically center the text */}
-      {/* gap-4 - Space between buttons */}
-      <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold">Watches</h1>
+      <PageHeader title="Watches">
         <SyncEpisodeWatchesButton />
         <ImportWatchesButton />
         <ColumnVisibilityButton table={table} />
-      </div>
-      <DataTable
-        columns={columns}
-        data={watchesWithDetails}
-        columnVisibility={columnVisibility}
-        onColumnVisibilityChange={setColumnVisibility}
-        sortingStorageKey="watches-sorting"
-      />
+      </PageHeader>
+      {!watches ? (
+        <div className="px-[4%]">
+          <DataTableSkeleton table={table} />
+        </div>
+      ) : watchesWithDetails.length === 0 ? (
+        <EmptyState
+          icon={Eye}
+          title="You don't have any watches yet"
+          description="Sync or import watches to get started"
+        />
+      ) : (
+        <div className="px-[4%]">
+          <DataTable
+            columns={columns}
+            data={watchesWithDetails}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+            storageKey="watches"
+          />
+        </div>
+      )}
     </>
   )
 }
 
 function WatchesTable() {
-  return (
-    <Suspense fallback={<PendingWatches />}>
-      <WatchesTableContent />
-    </Suspense>
-  )
+  return <WatchesTableContent />
 }
 
 function Watches() {
   return (
-    // px-4 - Border around the table.
-    <div className="px-4">
+    <div className="flex flex-col gap-6">
       <WatchesTable />
     </div>
   )

@@ -6,10 +6,11 @@ import type { PlaylistOutput } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
-import DeletePlaylist from "./DeletePlaylist"
-import EditPlaylist from "./EditPlaylist"
+import { PlaylistActionsMenu } from "./PlaylistActionsMenu"
 
-export const columns: ColumnDef<PlaylistOutput>[] = [
+export type PlaylistTableData = PlaylistOutput & { pending?: boolean }
+
+export const columns: ColumnDef<PlaylistTableData>[] = [
   {
     accessorKey: "id",
     header: "ID",
@@ -18,15 +19,20 @@ export const columns: ColumnDef<PlaylistOutput>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <Link
-        to="/playlists/$playlistId"
-        params={{ playlistId: row.original.id }}
-        className="hover:underline text-primary"
-      >
-        {row.original.name ?? "(untitled)"}
-      </Link>
-    ),
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="text-muted-foreground">
+          {row.original.name ?? "(untitled)"}
+        </span>
+      ) : (
+        <Link
+          to="/playlists/$playlistId"
+          params={{ playlistId: row.original.id }}
+          className="hover:underline text-primary"
+        >
+          {row.original.name ?? "(untitled)"}
+        </Link>
+      ),
     meta: {
       filterVariant: "text",
     },
@@ -35,6 +41,8 @@ export const columns: ColumnDef<PlaylistOutput>[] = [
     accessorFn: (row) => visibilityLabel(row.visibility),
     id: "visibility",
     header: "Visibility",
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
     cell: ({ row }) => {
       const visibility = row.original.visibility
       return (
@@ -65,11 +73,14 @@ export const columns: ColumnDef<PlaylistOutput>[] = [
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditPlaylist playlist={row.original} />
-        <DeletePlaylist id={row.original.id} />
+        {row.original.pending ? null : (
+          <PlaylistActionsMenu playlist={row.original} />
+        )}
       </div>
     ),
   },

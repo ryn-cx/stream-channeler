@@ -3,17 +3,22 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { LayoutGrid, Table as TableIcon } from "lucide-react"
-import { useState } from "react"
+import { LayoutGrid, ListMusic, Table as TableIcon } from "lucide-react"
 
 import { PlaylistsService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
+import { EmptyState } from "@/components/Common/EmptyState"
+import { PageHeader } from "@/components/Common/PageHeader"
+import PendingPlaylists from "@/components/Pending/PendingPlaylists"
 import { columns } from "@/components/Playlists/PlaylistList/columns"
 import { PlaylistsBrowse } from "@/components/Playlists/PlaylistList/PlaylistsBrowse"
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
-import { usePersistedState } from "@/hooks/usePersistedState"
+import {
+  usePersistedJsonState,
+  usePersistedState,
+} from "@/hooks/usePersistedState"
 
 function getPlaylistsQueryOptions() {
   return {
@@ -51,9 +56,10 @@ function PlaylistsContent() {
     "browse",
   )
 
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    id: false,
-  })
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>("playlists-column-visibility", {
+      id: false,
+    })
 
   const tableData = playlists ?? []
 
@@ -67,6 +73,8 @@ function PlaylistsContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  if (!playlists) return <PendingPlaylists />
+
   return (
     <div
       className={
@@ -75,14 +83,13 @@ function PlaylistsContent() {
           : undefined
       }
     >
-      <div className="flex flex-wrap items-center gap-2 px-[4%] pt-4 pb-2">
-        <h1 className="text-2xl font-bold tracking-tight mr-2">Playlists</h1>
+      <PageHeader title="Playlists">
         {viewMode === "browse" ? (
           <Button
             variant="outline"
             onClick={() => setViewMode("table")}
             title="Switch to table view"
-            className="mt-2 mb-4"
+            className="my-4"
           >
             <TableIcon />
             Table
@@ -92,16 +99,22 @@ function PlaylistsContent() {
             variant="outline"
             onClick={() => setViewMode("browse")}
             title="Switch to browse view"
-            className="mt-2 mb-4"
+            className="my-4"
           >
             <LayoutGrid />
             Browse
           </Button>
         )}
         {viewMode === "table" && <ColumnVisibilityButton table={table} />}
-      </div>
+      </PageHeader>
 
-      {viewMode === "table" ? (
+      {tableData.length === 0 ? (
+        <EmptyState
+          icon={ListMusic}
+          title="You don't have any playlists yet"
+          description="Create a playlist to get started"
+        />
+      ) : viewMode === "table" ? (
         <div className="px-[4%]">
           <DataTable
             columns={columns}

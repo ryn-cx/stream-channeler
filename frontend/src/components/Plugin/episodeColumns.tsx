@@ -1,8 +1,8 @@
 // TODO: Validate
 import type { ColumnDef } from "@tanstack/react-table"
+import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 
-import DeleteEpisode from "./DeleteEpisode"
-import EditEpisode from "./EditEpisode"
+import { EpisodeActionsMenu } from "./EpisodeActionsMenu"
 
 export interface EpisodeTableData {
   key: string
@@ -19,6 +19,7 @@ export interface EpisodeTableData {
   sort_order: number | null
   data_timestamp: string | null
   update_at: string | null
+  pending?: boolean
 }
 
 export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
@@ -26,7 +27,13 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium">
+      <span
+        className={
+          row.original.pending
+            ? "font-medium text-muted-foreground"
+            : "font-medium"
+        }
+      >
         {row.original.name || `No Name (${row.original.key})`}
       </span>
     ),
@@ -52,29 +59,17 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "url",
     header: "URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.url} />,
   },
   {
     accessorKey: "description",
     header: "Description",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.description ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.description} />,
   },
   {
     accessorKey: "image_url",
     header: "Image URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.image_url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
     accessorKey: "release_date",
@@ -106,51 +101,33 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.data_timestamp
-          ? new Date(row.original.data_timestamp).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.update_at
-          ? new Date(row.original.update_at).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {
     accessorKey: "key",
     header: "Key",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.key}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
     accessorKey: "id",
     header: "ID",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.id}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.id} />,
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
-    enableHiding: false,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditEpisode episode={row.original} />
-        <DeleteEpisode episode={row.original} />
+        {row.original.pending ? null : (
+          <EpisodeActionsMenu episode={row.original} />
+        )}
       </div>
     ),
   },

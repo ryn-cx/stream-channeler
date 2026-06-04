@@ -92,7 +92,7 @@ export function BulkImport() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="mt-2 mb-4">
+        <Button className="my-4">
           <FileUp className="mr-2" />
           Bulk Import
         </Button>

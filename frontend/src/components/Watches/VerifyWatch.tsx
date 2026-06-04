@@ -60,7 +60,7 @@ export default function VerifyWatch({ id, verified }: VerifyWatchProps) {
             const show = old.shows[season.show_id]
             const source = old.sources[show.source_id]
             if (source.plugin_id !== verifiedSource.plugin_id) return w
-            return { ...w, verified: true }
+            return { ...w, verified: true, pending: true }
           }),
         }
       })

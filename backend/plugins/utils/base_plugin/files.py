@@ -86,7 +86,7 @@ class BaseFile[T](ABC):
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).__name__
-        action = "updated" if self._existing_database_record else "initial"
+        action = "new" if self._existing_database_record else "initial"
         # This log is useful when a download fails.
         logger.info(f"Downloading {action} {class_name} ({identifier})")
         start = time.monotonic()

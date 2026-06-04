@@ -1,9 +1,9 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 
-import DeleteSource from "./DeleteSource"
-import EditSource from "./EditSource"
+import { SourceActionsMenu } from "./SourceActionsMenu"
 
 export interface SourceTableData {
   key: string
@@ -14,88 +14,68 @@ export interface SourceTableData {
   image_url: string | null
   data_timestamp: string | null
   update_at: string | null
+  pending?: boolean
 }
 
 export const sourceColumns: ColumnDef<SourceTableData>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <Link
-        to="/source/$sourceKey"
-        params={{ sourceKey: row.original.id }}
-        className="font-medium text-primary hover:underline"
-      >
-        {row.original.name || `No Name (${row.original.key})`}
-      </Link>
-    ),
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="font-medium text-muted-foreground">
+          {row.original.name || `No Name (${row.original.key})`}
+        </span>
+      ) : (
+        <Link
+          to="/source/$sourceKey"
+          params={{ sourceKey: row.original.id }}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.name || `No Name (${row.original.key})`}
+        </Link>
+      ),
   },
   {
     accessorKey: "favicon_url",
     header: "Favicon URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.favicon_url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.favicon_url} />,
   },
   {
     accessorKey: "image_url",
     header: "Image URL",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm truncate max-w-48 block">
-        {row.original.image_url ?? "-"}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.data_timestamp
-          ? new Date(row.original.data_timestamp).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.update_at
-          ? new Date(row.original.update_at).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {
     accessorKey: "key",
     header: "Key",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.key}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
     accessorKey: "id",
     header: "ID",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.id}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.id} />,
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
-    enableHiding: false,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditSource source={row.original} />
-        <DeleteSource source={row.original} />
+        {row.original.pending ? null : (
+          <SourceActionsMenu source={row.original} />
+        )}
       </div>
     ),
   },

@@ -1,4 +1,3 @@
-# TODO: Validate
 from dataclasses import dataclass
 
 

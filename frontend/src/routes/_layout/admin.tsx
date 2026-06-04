@@ -1,16 +1,17 @@
-// TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { useState } from "react"
 import { type UserPublic, UsersService } from "@/client"
 import AddUser from "@/components/Admin/AddUser"
-import { columns, type UserTableData } from "@/components/Admin/columns"
+import { columns } from "@/components/Admin/columns"
+import type { UserTableData } from "@/components/Admin/types"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
-import PendingUsers from "@/components/Pending/PendingUsers"
+import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import { PageHeader } from "@/components/Common/PageHeader"
 import useAuth from "@/hooks/useAuth"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 function getUsersQueryOptions() {
   return {
@@ -43,7 +44,8 @@ export const Route = createFileRoute("/_layout/admin")({
 function UsersTableContent() {
   const { user: currentUser } = useAuth()
   const { data: users, isPlaceholderData } = useQuery(getUsersQueryOptions())
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>("users-column-visibility", {})
 
   const tableData: UserTableData[] = (users?.data ?? []).map(
     (user: UserPublic) => ({
@@ -62,8 +64,6 @@ function UsersTableContent() {
     getCoreRowModel: getCoreRowModel(),
   })
 
-  if (!users) return <PendingUsers />
-
   return (
     <div
       className={
@@ -72,24 +72,22 @@ function UsersTableContent() {
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">
-            Manage user accounts and permissions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <AddUser />
-          <ColumnVisibilityButton table={table} />
-        </div>
+      <PageHeader title="Users">
+        <AddUser />
+        <ColumnVisibilityButton table={table} />
+      </PageHeader>
+      <div className="px-[4%]">
+        {!users ? (
+          <DataTableSkeleton table={table} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={tableData}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
+        )}
       </div>
-      <DataTable
-        columns={columns}
-        data={tableData}
-        columnVisibility={columnVisibility}
-        onColumnVisibilityChange={setColumnVisibility}
-      />
     </div>
   )
 }

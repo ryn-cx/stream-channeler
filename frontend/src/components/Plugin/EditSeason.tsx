@@ -7,35 +7,12 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { OpenAPI } from "@/client"
-import { request } from "@/client/core/request"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { SeasonsService, type SeasonUpdate } from "@/client"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
+import { optionalInt, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { SeasonTableData } from "./seasonColumns"
@@ -43,17 +20,18 @@ import type { SeasonTableData } from "./seasonColumns"
 type SeasonsData = Array<SeasonTableData>
 
 const formSchema = z.object({
-  name: z.string().max(255).optional().or(z.literal("")),
-  season_number: z.union([z.literal(""), z.coerce.number().int()]).optional(),
-  url: z.string().max(2048).optional().or(z.literal("")),
-  image_url: z.string().max(2048).optional().or(z.literal("")),
-  sort_order: z.union([z.literal(""), z.coerce.number().int()]).optional(),
-  data_timestamp: z.string().optional().or(z.literal("")),
-  update_at: z.string().optional().or(z.literal("")),
-  key: z.string().min(1, "Key is required").max(255),
+  name: optionalString,
+  season_number: optionalInt,
+  url: optionalString,
+  image_url: optionalString,
+  sort_order: optionalInt,
+  data_timestamp: optionalString,
+  update_at: optionalString,
+  key: requiredKey,
 })
 
-type FormData = z.infer<typeof formSchema>
+type FormInput = z.input<typeof formSchema>
+type FormOutput = z.output<typeof formSchema>
 
 interface EditSeasonProps {
   season: SeasonTableData
@@ -65,8 +43,8 @@ const EditSeason = ({ season }: EditSeasonProps) => {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryKey = ["shows", showKey, "seasons"]
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema) as any,
+  const form = useForm<FormInput, unknown, FormOutput>({
+    resolver: zodResolver(formSchema),
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
@@ -82,193 +60,101 @@ const EditSeason = ({ season }: EditSeasonProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      request(OpenAPI, {
-        method: "PATCH",
-        url: "/api/v1/seasons/{season_id}",
-        path: { season_id: season.id },
-        body: data,
-        mediaType: "application/json",
-      }),
+    mutationFn: (data: SeasonUpdate) =>
+      SeasonsService.updateSeason({ seasonId: season.id, requestBody: data }),
+    // When mutate is called:
     onMutate: async (newData, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
+      // Snapshot the previous value
       const previous = context.client.getQueryData<SeasonsData>(queryKey)
 
+      // Optimistically update to the new value
       context.client.setQueryData<SeasonsData>(queryKey, (old) =>
         old!.map((s) =>
-          s.id === season.id ? ({ ...s, ...newData } as SeasonTableData) : s,
+          s.id === season.id
+            ? ({ ...s, ...newData, pending: true } as SeasonTableData)
+            : s,
         ),
       )
 
+      // Return a result with the snapshotted value
       return { previous }
     },
     onSuccess: () => {
       showSuccessToast("Season updated successfully")
-      setIsOpen(false)
     },
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
     onError: (error, _newData, onMutateResult, context) => {
       context.client.setQueryData(queryKey, onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey }),
   })
 
-  const onSubmit = (data: FormData) => {
-    mutation.mutate({
-      ...data,
-      name: data.name || undefined,
-      season_number: data.season_number || undefined,
-      sort_order: data.sort_order || undefined,
-      data_timestamp: data.data_timestamp || undefined,
-      update_at: data.update_at || undefined,
-    })
+  const onSubmit = (data: FormOutput) => {
+    setIsOpen(false)
+    mutation.mutate(data)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost">
-              <Pencil />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Edit season</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit Season</DialogTitle>
-              <DialogDescription>
-                Update the season details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Season name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="season_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Season Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="1" type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="sort_order"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sort Order</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." type="url" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="image_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." type="url" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="data_timestamp"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data Timestamp</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="update_at"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Update At</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="key"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Key</FormLabel>
-                    <FormControl>
-                      <Input type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <FormModal
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      trigger={
+        <TooltipIconButton
+          label="Edit Season"
+          icon={<Pencil />}
+          onClick={() => setIsOpen(true)}
+        />
+      }
+      title="Edit Season"
+      description="Update the season details below."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Name"
+        placeholder="Season name"
+        type="text"
+      />
+      <FormTextField
+        control={form.control}
+        label="Season Number"
+        placeholder="1"
+        type="number"
+      />
+      <FormTextField control={form.control} label="Sort Order" type="number" />
+      <FormTextField
+        control={form.control}
+        label="URL"
+        placeholder="https://..."
+        type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="Image URL"
+        placeholder="https://..."
+        type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="Data Timestamp"
+        type="datetime-local"
+      />
+      <FormTextField
+        control={form.control}
+        label="Update At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Key" type="text" />
+    </FormModal>
   )
 }
 

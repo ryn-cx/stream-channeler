@@ -1,12 +1,11 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
+import { Trash2 } from "lucide-react"
 import { useState } from "react"
 
-import { OpenAPI } from "@/client"
-import { request } from "@/client/core/request"
-import { DeleteConfirmContent } from "@/components/Common/DeleteConfirmContent"
-import { DeleteIconTrigger } from "@/components/Common/DeleteIconTrigger"
-import { Dialog } from "@/components/ui/dialog"
+import { PluginsService } from "@/client"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -23,38 +22,51 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const mutation = useMutation({
-    mutationFn: (pluginId: string) =>
-      request(OpenAPI, {
-        method: "DELETE",
-        url: "/api/v1/plugins/{plugin_id}",
-        path: { plugin_id: pluginId },
-      }),
+    mutationFn: (pluginId: string) => PluginsService.deletePlugin({ pluginId }),
+    // When mutate is called:
     onMutate: async (_pluginId, context) => {
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey: ["plugins"] })
+      // Snapshot the previous value
       const previous = context.client.getQueryData<PluginsData>(["plugins"])
 
+      // Optimistically update to the new value
       context.client.setQueryData<PluginsData>(["plugins"], (old) =>
-        old!.filter((p) => p.id !== plugin.id),
+        old!.map((p) => (p.id === plugin.id ? { ...p, pending: true } : p)),
       )
 
+      // Return a result with the snapshotted value
       return { previous }
     },
-    onSuccess: () => {
+    onSuccess: (_data, _variables, _onMutateResult, context) => {
       showSuccessToast("Plugin deleted successfully")
-      setIsOpen(false)
+      context.client.setQueryData<PluginsData>(["plugins"], (old) =>
+        old?.filter((p) => p.id !== plugin.id),
+      )
     },
+    // If the mutation fails,
+    // use the result returned from onMutate to roll back
     onError: (error, _pluginId, onMutateResult, context) => {
       context.client.setQueryData(["plugins"], onMutateResult?.previous)
       handleError.call(showErrorToast, error as any)
     },
+    // Always refetch after error or success:
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey: ["plugins"] }),
   })
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DeleteIconTrigger tooltip="Delete plugin" />
-      <DeleteConfirmContent
+    <>
+      <TooltipIconButton
+        label="Delete Plugin"
+        icon={<Trash2 />}
+        className="text-destructive hover:text-destructive"
+        onClick={() => setIsOpen(true)}
+      />
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
         title="Delete Plugin"
         description={
           <>
@@ -63,10 +75,10 @@ const DeletePlugin = ({ plugin }: DeletePluginProps) => {
             able to undo this action.
           </>
         }
-        isPending={mutation.isPending}
-        onSubmit={() => mutation.mutate(plugin.id)}
+        confirmLabel="Delete"
+        onConfirm={() => mutation.mutate(plugin.id)}
       />
-    </Dialog>
+    </>
   )
 }
 

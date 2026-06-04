@@ -1,8 +1,3 @@
-# Generic runner for any module under ``app.tools``. Pick the script via the
-# TOOL env var, e.g.:
-#   TOOL=import_queue docker compose -f compose.tool.yml up
-#   TOOL=update_outdated docker compose -f compose.tool.yml up
-#   TOOL=youtube_rss_check docker compose -f compose.tool.yml up
 name: stream-channeler-${TOOL?Variable not set}
 
 services:

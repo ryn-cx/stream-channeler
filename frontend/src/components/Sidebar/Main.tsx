@@ -1,4 +1,3 @@
-// TODO: Validate
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
 import type { LucideIcon } from "lucide-react"
 

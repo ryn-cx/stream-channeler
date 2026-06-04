@@ -1,4 +1,3 @@
-# TODO: Validate
 import logging
 
 from sqlmodel import Session

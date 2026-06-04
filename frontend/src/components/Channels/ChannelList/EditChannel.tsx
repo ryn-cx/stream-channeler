@@ -10,7 +10,7 @@ interface EditChannelProps {
 
 const EditChannel = ({ channel }: EditChannelProps) => {
   return (
-    <Button asChild variant="ghost" size="icon" title="Edit channel">
+    <Button asChild variant="ghost" size="icon" title="Edit Channel">
       <Link to="/onboarding/$channelId/name" params={{ channelId: channel.id }}>
         <Pencil className="size-4" />
       </Link>

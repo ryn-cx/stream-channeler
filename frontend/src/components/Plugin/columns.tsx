@@ -1,13 +1,12 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-
 import type { Visibility } from "@/client"
+import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 
-import DeletePlugin from "./DeletePlugin"
-import EditPlugin from "./EditPlugin"
+import { PluginActionsMenu } from "./PluginActionsMenu"
 
 export interface PluginTableData {
   key: string
@@ -19,59 +18,49 @@ export interface PluginTableData {
   update_at: string | null
   deleted_at: string | null
   visibility: Visibility
+  pending?: boolean
 }
 
 export const columns: ColumnDef<PluginTableData>[] = [
   {
     accessorKey: "name",
     header: "Name",
-    cell: ({ row }) => (
-      <Link
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.id }}
-        className="font-medium text-primary hover:underline"
-      >
-        {row.original.name || `No Name (${row.original.key})`}
-      </Link>
-    ),
+    cell: ({ row }) =>
+      row.original.pending ? (
+        <span className="font-medium text-muted-foreground">
+          {row.original.name || `No Name (${row.original.key})`}
+        </span>
+      ) : (
+        <Link
+          to="/plugin/$pluginId"
+          params={{ pluginId: row.original.id }}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.name || `No Name (${row.original.key})`}
+        </Link>
+      ),
   },
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.data_timestamp
-          ? new Date(row.original.data_timestamp).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.update_at
-          ? new Date(row.original.update_at).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {
     accessorKey: "deleted_at",
     header: "Deleted At",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.deleted_at
-          ? new Date(row.original.deleted_at).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <DateCell value={row.original.deleted_at} />,
   },
   {
     accessorFn: (row) => visibilityLabel(row.visibility),
     id: "visibility",
     header: "Visibility",
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
     cell: ({ row }) => {
       const visibility = row.original.visibility
       return (
@@ -94,29 +83,23 @@ export const columns: ColumnDef<PluginTableData>[] = [
   {
     accessorKey: "key",
     header: "Key",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.key}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
     accessorKey: "id",
     header: "ID",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.id}
-      </span>
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.id} />,
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
-    enableHiding: false,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <EditPlugin plugin={row.original} />
-        <DeletePlugin plugin={row.original} />
+        {row.original.pending ? null : (
+          <PluginActionsMenu plugin={row.original} />
+        )}
       </div>
     ),
   },

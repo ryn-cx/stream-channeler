@@ -1,34 +1,22 @@
-// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
-import { Plus } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserCreate, type UsersPublic, UsersService } from "@/client"
-import { Button } from "@/components/ui/button"
+import type { ApiError, UserCreate } from "@/client"
+import { UsersService } from "@/client"
+import { AddButton } from "@/components/Common/AddButton"
+import { FormModal } from "@/components/Common/FormModal"
+import { FormTextField } from "@/components/Common/FormTextField"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DialogTrigger } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -55,6 +43,7 @@ type FormData = z.infer<typeof formSchema>
 
 const AddUser = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
@@ -72,189 +61,106 @@ const AddUser = () => {
   })
 
   const mutation = useMutation({
+    mutationKey: ["users", "create"],
     mutationFn: (data: UserCreate) =>
       UsersService.createUser({ requestBody: data }),
-    // When mutate is called:
-    onMutate: async (newUser, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey: ["users"] })
-
-      // Snapshot the previous value
-      const previousUsers = context.client.getQueryData<UsersPublic>(["users"])
-
-      // Optimistically update to the new value
-      context.client.setQueryData<UsersPublic>(["users"], (old) => ({
-        ...old!,
-        data: [...old!.data, { id: crypto.randomUUID(), ...newUser }],
-      }))
-
-      // Return a result with the snapshotted value
-      return { previousUsers }
-    },
     onSuccess: () => {
       showSuccessToast("User created successfully")
-      form.reset()
-      setIsOpen(false)
     },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _newUser, onMutateResult, context) => {
-      context.client.setQueryData(["users"], onMutateResult?.previousUsers)
-      handleError.call(showErrorToast, error as any)
+    onError: (err) => {
+      handleError.call(showErrorToast, err as ApiError)
     },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey: ["users"] }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+    },
   })
 
   const onSubmit = (data: FormData) => {
-    mutation.mutate(data)
+    const { confirm_password: _, ...userCreate } = data
+    setIsOpen(false)
+    form.reset()
+    mutation.mutate(userCreate)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="mt-2 mb-4">
-          <Plus className="mr-2" />
-          Add User
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add User</DialogTitle>
-          <DialogDescription>
-            Fill in the form below to add a new user to the system.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Email <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <FormModal
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      trigger={
+        <DialogTrigger asChild>
+          <AddButton>Add User</AddButton>
+        </DialogTrigger>
+      }
+      title="Add User"
+      description="Fill in the form below to add a new user to the system."
+      form={form}
+      onSubmit={onSubmit}
+      isPending={mutation.isPending}
+    >
+      <FormTextField
+        control={form.control}
+        label="Email"
+        placeholder="Email"
+        type="email"
+        required
+      />
 
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        label="Full Name"
+        placeholder="Full name"
+        type="text"
+      />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Set Password <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        name="password"
+        label="Set Password"
+        placeholder="Password"
+        type="password"
+        required
+      />
 
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Confirm Password{" "}
-                      <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <FormTextField
+        control={form.control}
+        label="Confirm Password"
+        placeholder="Password"
+        type="password"
+        required
+      />
 
-              <FormField
-                control={form.control}
-                name="is_superuser"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is superuser?</FormLabel>
-                  </FormItem>
-                )}
+      <FormField
+        control={form.control}
+        name="is_superuser"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
+            </FormControl>
+            <FormLabel className="font-normal">Is superuser?</FormLabel>
+          </FormItem>
+        )}
+      />
 
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is active?</FormLabel>
-                  </FormItem>
-                )}
+      <FormField
+        control={form.control}
+        name="is_active"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
               />
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </FormControl>
+            <FormLabel className="font-normal">Is active?</FormLabel>
+          </FormItem>
+        )}
+      />
+    </FormModal>
   )
 }
 

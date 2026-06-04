@@ -1,16 +1,16 @@
 // TODO: Validate
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { ArrowLeft } from "lucide-react"
-import { Suspense, useState } from "react"
+import { ArrowLeft, Layers } from "lucide-react"
 
 import { OpenAPI } from "@/client"
 import { request } from "@/client/core/request"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
-import PendingPlugins from "@/components/Pending/PendingPlugins"
+import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import { EmptyState } from "@/components/Common/EmptyState"
 import AddSeason from "@/components/Plugin/AddSeason"
 import {
   type SeasonTableData,
@@ -18,6 +18,7 @@ import {
 } from "@/components/Plugin/seasonColumns"
 import { Button } from "@/components/ui/button"
 import { isLoggedIn } from "@/hooks/useAuth"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 function getSeasonsQueryOptions(showKey: string) {
   return {
@@ -45,14 +46,15 @@ export const Route = createFileRoute("/_layout/show/$showKey")({
 
 function SeasonsTableContent() {
   const { showKey } = Route.useParams()
-  const { data: seasons } = useSuspenseQuery(getSeasonsQueryOptions(showKey))
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    key: false,
-    id: false,
-  })
+  const { data: seasons } = useQuery(getSeasonsQueryOptions(showKey))
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>("seasons-column-visibility", {
+      key: false,
+      id: false,
+    })
 
   const table = useReactTable({
-    data: seasons,
+    data: seasons ?? [],
     columns: seasonColumns,
     state: {
       columnVisibility,
@@ -63,8 +65,8 @@ function SeasonsTableContent() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-[4%] pt-4 pb-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -72,24 +74,33 @@ function SeasonsTableContent() {
           >
             <ArrowLeft />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Seasons</h1>
-            <p className="text-muted-foreground">
-              Manage seasons for this show
-            </p>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Seasons</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <AddSeason showKey={showKey} />
           <ColumnVisibilityButton table={table} />
         </div>
       </div>
-      <DataTable
-        columns={seasonColumns}
-        data={seasons}
-        columnVisibility={columnVisibility}
-        onColumnVisibilityChange={setColumnVisibility}
-      />
+      {!seasons ? (
+        <div className="px-[4%]">
+          <DataTableSkeleton table={table} />
+        </div>
+      ) : seasons.length === 0 ? (
+        <EmptyState
+          icon={Layers}
+          title="This show has no seasons yet"
+          description="Add a season to get started"
+        />
+      ) : (
+        <div className="px-[4%]">
+          <DataTable
+            columns={seasonColumns}
+            data={seasons}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
+        </div>
+      )}
     </>
   )
 }
@@ -97,9 +108,7 @@ function SeasonsTableContent() {
 function ShowDetailPage() {
   return (
     <div className="flex flex-col gap-6">
-      <Suspense fallback={<PendingPlugins />}>
-        <SeasonsTableContent />
-      </Suspense>
+      <SeasonsTableContent />
     </div>
   )
 }

@@ -11,16 +11,15 @@ import type {
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
-import DeleteWatch from "./DeleteWatch"
-import EditWatch from "./EditWatch"
-import VerifyWatch from "./VerifyWatch"
+import { WatchActionsMenu } from "./WatchActionsMenu"
 
-interface WatchWithDetails extends WatchItem {
+export interface WatchWithDetails extends WatchItem {
   episode: EpisodeOutput
   season: SeasonOutput
   show: ShowPublic
   source: SourcePublic
   plugin: PluginOutput
+  pending?: boolean
 }
 
 export const columns: ColumnDef<WatchWithDetails>[] = [
@@ -150,6 +149,8 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     accessorFn: (row) => (row.verified ? "Yes" : "No"),
     id: "verified",
     header: "Verified",
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <span
@@ -166,12 +167,14 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
   {
     id: "actions",
+    enableSorting: false,
+    enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <VerifyWatch id={row.original.id} verified={row.original.verified} />
-        <EditWatch watch={row.original} />
-        <DeleteWatch id={row.original.id} />
+        {row.original.pending ? null : (
+          <WatchActionsMenu watch={row.original} />
+        )}
       </div>
     ),
   },

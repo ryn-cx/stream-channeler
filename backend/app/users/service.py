@@ -1,4 +1,3 @@
-# TODO: Validate
 import secrets
 
 from sqlmodel import Session, func, select
@@ -10,9 +9,8 @@ from app.users.schemas import UserCreate, UserUpdate
 
 
 def get_or_create_plugin_user(*, session: Session) -> User:
-    """Get or create the system user that owns official plugins."""
-    user = get_user_by_email(session=session, email=PLUGIN_USER_EMAIL)
-    if not user:
+    """Get or create the user that owns installed plugins."""
+    if not (user := get_user_by_email(session=session, email=PLUGIN_USER_EMAIL)):
         user = create_user(
             session=session,
             user_create=UserCreate(

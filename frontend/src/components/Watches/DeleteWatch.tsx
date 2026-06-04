@@ -2,26 +2,10 @@
 import { useMutation } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
 
 import { type Message, type WatchesListOutput, WatchesService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -33,7 +17,6 @@ interface DeleteWatchProps {
 const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { handleSubmit } = useForm()
 
   const mutation = useMutation({
     mutationFn: (watchId: string) => WatchesService.deleteWatch({ watchId }),
@@ -48,37 +31,70 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
         "watches",
       ])
 
-      // Optimistically delete the watch and all siblings with the same
-      // plugin, episode key, and watch date.
+      // Optimistically mark the watch (and siblings with the same plugin,
+      // episode key, and watch date) as pending.
+      const matchesDeletedSibling = (
+        watch: { episode_id: string; watch_date?: string | null },
+        deleted: { episode_id: string; watch_date?: string | null },
+        old: WatchesListOutput,
+      ) => {
+        if (watch.watch_date !== deleted.watch_date) return false
+        const episode = old.episodes[watch.episode_id]
+        const deletedEpisode = old.episodes[deleted.episode_id]
+        if (episode.key !== deletedEpisode.key) return false
+        const source =
+          old.sources[
+            old.shows[old.seasons[episode.season_id].show_id].source_id
+          ]
+        const deletedSource =
+          old.sources[
+            old.shows[old.seasons[deletedEpisode.season_id].show_id].source_id
+          ]
+        return source.plugin_id === deletedSource.plugin_id
+      }
       context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
         if (!old) return old
         const deletedWatch = old.watches.find((w) => w.id === deletedId)
         if (!deletedWatch) return old
-        const deletedEpisode = old.episodes[deletedWatch.episode_id]
-        const deletedSeason = old.seasons[deletedEpisode.season_id]
-        const deletedShow = old.shows[deletedSeason.show_id]
-        const deletedSource = old.sources[deletedShow.source_id]
         return {
           ...old,
-          watches: old.watches.filter((watch) => {
-            if (watch.watch_date !== deletedWatch.watch_date) return true
-            const episode = old.episodes[watch.episode_id]
-            if (episode.key !== deletedEpisode.key) return true
-            const season = old.seasons[episode.season_id]
-            const show = old.shows[season.show_id]
-            const source = old.sources[show.source_id]
-            return source.plugin_id !== deletedSource.plugin_id
-          }),
+          watches: old.watches.map((watch) =>
+            matchesDeletedSibling(watch, deletedWatch, old)
+              ? ({ ...watch, pending: true } as typeof watch)
+              : watch,
+          ),
         }
       })
 
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: (result: Message) => {
+    onSuccess: (result: Message, deletedId, _onMutateResult, context) => {
       showSuccessToast(result.message)
-      setIsOpen(false)
       onSuccess()
+      context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
+        if (!old) return old
+        const deletedWatch = old.watches.find((w) => w.id === deletedId)
+        if (!deletedWatch) return old
+        const deletedEpisode = old.episodes[deletedWatch.episode_id]
+        const deletedSource =
+          old.sources[
+            old.shows[old.seasons[deletedEpisode.season_id].show_id].source_id
+          ]
+        return {
+          ...old,
+          watches: old.watches.filter((watch) => {
+            if (watch.watch_date !== deletedWatch.watch_date) return true
+            const episode = old.episodes[watch.episode_id]
+            if (episode.key !== deletedEpisode.key) return true
+            const source =
+              old.sources[
+                old.shows[old.seasons[episode.season_id].show_id].source_id
+              ]
+            return source.plugin_id !== deletedSource.plugin_id
+          }),
+        }
+      })
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
@@ -91,51 +107,23 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
       context.client.invalidateQueries({ queryKey: ["watches"] }),
   })
 
-  const onSubmit = async () => {
-    mutation.mutate(id)
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Delete watch</p>
-        </TooltipContent>
-      </Tooltip>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Watch</DialogTitle>
-            <DialogDescription>
-              This watch entry will be permanently deleted. Are you sure? You
-              will not be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <LoadingButton
-              variant="destructive"
-              type="submit"
-              loading={mutation.isPending}
-            >
-              Delete
-            </LoadingButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <TooltipIconButton
+        label="Delete Watch"
+        icon={<Trash2 />}
+        className="text-destructive hover:text-destructive"
+        onClick={() => setIsOpen(true)}
+      />
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        title="Delete Watch"
+        description="This watch entry will be permanently deleted. Are you sure? You will not be able to undo this action."
+        confirmLabel="Delete"
+        onConfirm={() => mutation.mutate(id)}
+      />
+    </>
   )
 }
 

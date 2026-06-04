@@ -1,4 +1,3 @@
-// TODO: Validate
 import {
   type Column,
   type ColumnDef,
@@ -12,6 +11,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type OnChangeFn,
+  type PaginationState,
   type RowData,
   type SortingState,
   useReactTable,
@@ -24,10 +24,12 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronsUpDown,
 } from "lucide-react"
-import React from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -43,158 +45,159 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
+import {
+  TABLE_FILTER_INPUT_CLASS,
+  TABLE_HEADER_CELL_CLASS,
+} from "./tableStyles"
 
-// From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
 declare module "@tanstack/react-table" {
-  // allows us to define custom properties for our columns
+  //allows us to define custom properties for our columns
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select"
   }
 }
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  columnVisibility?: VisibilityState
-  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
-  sortingStorageKey?: string
-}
-
-export function DataTable<TData, TValue>({
-  columns,
-  data,
-  columnVisibility,
-  onColumnVisibilityChange,
-  sortingStorageKey,
-}: DataTableProps<TData, TValue>) {
-  // From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  )
-
-  const [sorting, setSorting] = React.useState<SortingState>(() => {
-    if (sortingStorageKey) {
-      const stored = localStorage.getItem(sortingStorageKey)
-      if (stored) return JSON.parse(stored)
+function usePersistentState<T>(key: string | undefined, initialValue: T) {
+  const [value, setValue] = useState<T>(() => {
+    if (!key) return initialValue
+    try {
+      const stored = sessionStorage.getItem(key)
+      return stored ? (JSON.parse(stored) as T) : initialValue
+    } catch {
+      return initialValue
     }
-    return []
   })
 
-  const handleSortingChange: OnChangeFn<SortingState> = React.useCallback(
+  useEffect(() => {
+    if (!key) return
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value))
+    } catch {}
+  }, [key, value])
+
+  return [value, setValue] as const
+}
+
+interface DataTableProps<TData extends { id: string }, TValue> {
+  columns: ColumnDef<TData, TValue>[]
+  data: TData[]
+  rowClassName?: (row: TData) => string | undefined
+  storageKey?: string
+  columnVisibility?: VisibilityState
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+}
+
+export function DataTable<TData extends { id: string }, TValue>({
+  columns,
+  data,
+  rowClassName,
+  storageKey,
+  columnVisibility,
+  onColumnVisibilityChange,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = usePersistentState<SortingState>(
+    storageKey && `${storageKey}:sorting`,
+    [],
+  )
+  const [columnFilters, setColumnFilters] =
+    usePersistentState<ColumnFiltersState>(
+      storageKey && `${storageKey}:filters`,
+      [],
+    )
+  const [pagination, setPagination] = usePersistentState<PaginationState>(
+    storageKey && `${storageKey}:pagination`,
+    { pageIndex: 0, pageSize: 10 },
+  )
+
+  // Reset page to 0 when filters actually change, since autoResetPageIndex
+  // is disabled to prevent pagination clicks from resetting the page.
+  const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = useCallback(
     (updater) => {
-      setSorting((previous) => {
-        const next = typeof updater === "function" ? updater(previous) : updater
-        if (sortingStorageKey) {
-          localStorage.setItem(sortingStorageKey, JSON.stringify(next))
+      setColumnFilters((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater
+        if (JSON.stringify(next) !== JSON.stringify(prev)) {
+          setPagination((p) => ({ ...p, pageIndex: 0 }))
         }
         return next
       })
     },
-    [sortingStorageKey],
+    [setColumnFilters, setPagination],
   )
-
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 50,
-  })
-
-  // Reset page to 0 when filters actually change, since autoResetPageIndex
-  // is disabled to prevent pagination clicks from resetting the page.
-  const handleColumnFiltersChange: React.Dispatch<
-    React.SetStateAction<ColumnFiltersState>
-  > = React.useCallback((updater) => {
-    setColumnFilters((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater
-      if (JSON.stringify(next) !== JSON.stringify(prev)) {
-        setPagination((p) => ({ ...p, pageIndex: 0 }))
-      }
-      return next
-    })
-  }, [])
 
   const table = useReactTable({
     data,
     columns,
-    // From:
-    // https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
-    // https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
-
-    filterFns: {},
-    state: {
-      columnFilters,
-      columnVisibility,
-      pagination,
-      sorting,
-    },
-    onColumnVisibilityChange,
-    onColumnFiltersChange: handleColumnFiltersChange,
-    onSortingChange: handleSortingChange,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(), //client-side filtering
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(), //client-side filtering
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(), // client-side faceting
     getFacetedUniqueValues: getFacetedUniqueValues(), // generate unique values for select filter/autocomplete
     getFacetedMinMaxValues: getFacetedMinMaxValues(), // generate min/max values for range filter
-
+    onSortingChange: setSorting,
+    onColumnFiltersChange: handleColumnFiltersChange,
     onPaginationChange: setPagination,
+    onColumnVisibilityChange,
+    state: {
+      sorting,
+      columnFilters,
+      pagination,
+      columnVisibility,
+    },
     autoResetPageIndex: false,
   })
 
   return (
     <div className="flex flex-col gap-4">
-      <Table className="table-fixed w-full">
+      <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => {
+                const column = header.column
+
                 return (
-                  <TableHead key={header.id} className="overflow-hidden py-2">
-                    {/* From: https://tanstack.com/table/latest/docs/framework/react/examples/sorting */}
+                  <TableHead key={header.id} className="align-top">
                     {header.isPlaceholder ? null : (
-                      <>
-                        {/* biome-ignore lint/a11y/noStaticElementInteractions: role is conditionally set for sortable columns */}
-                        <div
-                          role={
-                            header.column.getCanSort() ? "button" : undefined
-                          }
-                          tabIndex={header.column.getCanSort() ? 0 : undefined}
+                      <div className={TABLE_HEADER_CELL_CLASS}>
+                        <button
+                          type="button"
                           className={
-                            header.column.getCanSort()
-                              ? "cursor-pointer select-none"
-                              : ""
+                            column.getCanSort()
+                              ? "flex items-center gap-1 cursor-pointer select-none"
+                              : "flex items-center gap-1"
                           }
-                          onClick={header.column.getToggleSortingHandler()}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              header.column.getToggleSortingHandler()?.(event)
-                            }
-                          }}
+                          onClick={column.getToggleSortingHandler()}
+                          disabled={!column.getCanSort()}
                           title={
-                            header.column.getCanSort()
-                              ? header.column.getNextSortingOrder() === "asc"
+                            column.getCanSort()
+                              ? column.getNextSortingOrder() === "asc"
                                 ? "Sort ascending"
-                                : header.column.getNextSortingOrder() === "desc"
+                                : column.getNextSortingOrder() === "desc"
                                   ? "Sort descending"
                                   : "Clear sort"
                               : undefined
                           }
                         >
                           {flexRender(
-                            header.column.columnDef.header,
+                            column.columnDef.header,
                             header.getContext(),
                           )}
-                          {{
-                            asc: <ArrowUp className="inline size-4 ml-1" />,
-                            desc: <ArrowDown className="inline size-4 ml-1" />,
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </div>
-                        {header.column.getCanFilter() ? (
-                          <div className="mt-2">
-                            <Filter column={header.column} />
-                          </div>
+                          {column.getCanSort() &&
+                            (column.getIsSorted() === "asc" ? (
+                              <ArrowUp className="size-3.5" />
+                            ) : column.getIsSorted() === "desc" ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : (
+                              <ChevronsUpDown className="size-3.5 opacity-50" />
+                            ))}
+                        </button>
+                        {column.getCanFilter() ? (
+                          <Filter column={column} />
                         ) : null}
-                      </>
+                      </div>
                     )}
                   </TableHead>
                 )
@@ -205,9 +208,9 @@ export function DataTable<TData, TValue>({
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className={rowClassName?.(row.original)}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="overflow-hidden">
+                  <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -216,7 +219,7 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={columns.length}
+                colSpan={table.getVisibleLeafColumns().length}
                 className="h-32 text-center text-muted-foreground"
               >
                 No results found.
@@ -226,50 +229,53 @@ export function DataTable<TData, TValue>({
         </TableBody>
       </Table>
 
-      {table.getPageCount() > 1 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              Showing{" "}
-              {table.getState().pagination.pageIndex *
-                table.getState().pagination.pageSize +
-                1}{" "}
-              to{" "}
-              {Math.min(
-                (table.getState().pagination.pageIndex + 1) *
-                  table.getState().pagination.pageSize,
-                table.getFilteredRowModel().rows.length,
-              )}{" "}
-              of{" "}
-              <span className="font-medium text-foreground">
-                {table.getFilteredRowModel().rows.length}
-              </span>{" "}
-              entries
-            </div>
-            <div className="flex items-center gap-x-2">
-              <p className="text-sm text-muted-foreground">Rows per page</p>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value))
-                }}
-              >
-                <SelectTrigger className="h-8 w-[70px]">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[5, 10, 25, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Showing{" "}
+            {table.getState().pagination.pageIndex *
+              table.getState().pagination.pageSize +
+              1}{" "}
+            to{" "}
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) *
+                table.getState().pagination.pageSize,
+              table.getFilteredRowModel().rows.length,
+            )}{" "}
+            of{" "}
+            <span className="font-medium text-foreground">
+              {table.getFilteredRowModel().rows.length}
+            </span>{" "}
+            entries
           </div>
+          <div className="flex items-center gap-x-2">
+            <p className="text-sm text-muted-foreground">Rows per page</p>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value))
+              }}
+            >
+              <SelectTrigger
+                className="h-8 w-[70px]"
+                aria-label="Rows per page"
+              >
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 100, 1_000, 10_000, 100_000].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
+        {table.getPageCount() > 1 && (
           <div className="flex items-center gap-x-6">
             <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
               <span>Page</span>
@@ -325,26 +331,26 @@ export function DataTable<TData, TValue>({
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
 
-// From: https://tanstack.com/table/v8/docs/framework/react/examples/filters-faceted
-function Filter({ column }: { column: Column<any, unknown> }) {
+function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
   const { filterVariant } = column.columnDef.meta ?? {}
 
   const columnFilterValue = column.getFilterValue()
 
-  const sortedUniqueValues = React.useMemo(
+  // biome-ignore lint/correctness/useExhaustiveDependencies: matches the official example — recompute when the faceted values change
+  const sortedUniqueValues = useMemo(
     () =>
       filterVariant === "range"
         ? []
         : Array.from(column.getFacetedUniqueValues().keys())
             .sort()
             .slice(0, 5000),
-    [filterVariant, column.getFacetedUniqueValues, column],
+    [column.getFacetedUniqueValues(), filterVariant],
   )
 
   if (filterVariant === "range") {
@@ -367,7 +373,7 @@ function Filter({ column }: { column: Column<any, unknown> }) {
                 ? `(${column.getFacetedMinMaxValues()?.[0]})`
                 : ""
             }`}
-            className="w-24 border shadow rounded"
+            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
           />
           <DebouncedInput
             type="number"
@@ -385,7 +391,7 @@ function Filter({ column }: { column: Column<any, unknown> }) {
                 ? `(${column.getFacetedMinMaxValues()?.[1]})`
                 : ""
             }`}
-            className="w-24 border shadow rounded"
+            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
           />
         </div>
         <div className="h-1" />
@@ -393,14 +399,12 @@ function Filter({ column }: { column: Column<any, unknown> }) {
     )
   }
 
-  if (
-    filterVariant !== "text" &&
-    (filterVariant === "select" || sortedUniqueValues.length <= 50)
-  ) {
+  if (filterVariant === "select") {
     return (
       <select
         onChange={(e) => column.setFilterValue(e.target.value)}
         value={columnFilterValue?.toString()}
+        className={cn(TABLE_FILTER_INPUT_CLASS, "rounded border px-1")}
       >
         <option value="">All</option>
         {sortedUniqueValues.map((value) => (
@@ -417,7 +421,7 @@ function Filter({ column }: { column: Column<any, unknown> }) {
     <>
       {/* Autocomplete suggestions from faceted values feature */}
       <datalist id={`${column.id}list`}>
-        {sortedUniqueValues.map((value: any) => (
+        {sortedUniqueValues.map((value: string) => (
           <option value={value} key={value} />
         ))}
       </datalist>
@@ -426,7 +430,7 @@ function Filter({ column }: { column: Column<any, unknown> }) {
         value={(columnFilterValue ?? "") as string}
         onChange={(value) => column.setFilterValue(value)}
         placeholder={`Search... (${column.getFacetedUniqueValues().size})`}
-        className="w-36 border shadow rounded"
+        className={cn(TABLE_FILTER_INPUT_CLASS, "w-36")}
         list={`${column.id}list`}
       />
       <div className="h-1" />
@@ -434,38 +438,37 @@ function Filter({ column }: { column: Column<any, unknown> }) {
   )
 }
 
-// From: https://tanstack.com/table/latest/docs/framework/react/examples/filters
-// Debounce time was decreased to 100ms for better responsiveness
 // A typical debounced input react component
 function DebouncedInput({
   value: initialValue,
   onChange,
-  debounce = 100,
+  debounce = 500,
   ...props
 }: {
   value: string | number
   onChange: (value: string | number) => void
   debounce?: number
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange">) {
-  const [value, setValue] = React.useState(initialValue)
+  const [value, setValue] = useState(initialValue)
 
-  React.useEffect(() => {
+  useEffect(() => {
     setValue(initialValue)
   }, [initialValue])
 
-  React.useEffect(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: matches the official example — only re-fire when the debounced value changes
+  useEffect(() => {
     const timeout = setTimeout(() => {
       onChange(value)
     }, debounce)
 
     return () => clearTimeout(timeout)
-  }, [value, debounce, onChange])
+  }, [value])
 
   return (
-    <input
+    <Input
       {...props}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(event) => setValue(event.target.value)}
     />
   )
 }
