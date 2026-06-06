@@ -28,6 +28,7 @@ from plugins.utils.base_plugin import BasePlugin, JSONFile
 from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
+_COMPLETED_PREFIX = "Completed/"
 
 
 class JustWatchDownloadDelay:
@@ -73,6 +74,12 @@ class NewTitles(
 
     def parsed_edges(self) -> list[new_titles_models.Edge]:
         return just_scrape().new_titles.extract_edges(self.parsed())
+
+    def mark_completed(self) -> None:
+        """Rename this fully-used file so it is no longer treated as pending."""
+        record = self.database_record
+        if not record.key.startswith(_COMPLETED_PREFIX):
+            record.key = f"{_COMPLETED_PREFIX}{record.key}"
 
 
 class NewTitleBucket(
@@ -303,15 +310,25 @@ class FileMixin(BasePlugin, register=False):
 
     def _download_new_titles_files(
         self,
-        source: Source,
-        dates: list[date],
+        new_titles_files: list[NewTitles],
     ) -> None:
-        for new_titles_date in dates:
-            new_titles_file = self.new_titles_file(source.key, new_titles_date)
+        for new_titles_file in new_titles_files:
             new_titles_file.download_if_outdated()
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
             if minimum_timestamp <= tz_datetime.now():
                 new_titles_file.download_if_outdated(minimum_timestamp)
+
+    def _pending_new_titles_files(self, source: Source) -> list[NewTitles]:
+        statement = select(File).where(
+            File.plugin_id == self.plugin.id,
+            col(File.key).startswith(f"{NewTitles.__name__}/{source.key}/"),
+        )
+        new_titles_files: list[NewTitles] = []
+        for file in self.session.exec(statement).all():
+            unique_identifier = NewTitles.file_key_to_unique_identifier(file.key)
+            new_titles_date = date.fromisoformat(unique_identifier.rsplit("/", 1)[-1])
+            new_titles_files.append(self.new_titles_file(source.key, new_titles_date))
+        return new_titles_files
 
     def _download_latest_new_titles_bucket(self) -> None:
         latest_bucket = self._get_latest_new_titles_bucket().first()
@@ -326,7 +343,8 @@ class FileMixin(BasePlugin, register=False):
             return
 
         # All other situations a new bucket should be downloaded.
-        bucket = self.new_titles_bucket_file(latest_bucket.data_timestamp)
+        end_datetime = latest_bucket.data_timestamp - timedelta(days=1)
+        bucket = self.new_titles_bucket_file(end_datetime)
         bucket.download_if_outdated()
 
     @override

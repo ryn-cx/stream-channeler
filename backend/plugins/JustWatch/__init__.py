@@ -1,5 +1,4 @@
 # TODO: Validate
-import json
 import re
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
@@ -23,6 +22,7 @@ from app.utils import strict_re, tz_datetime
 from plugins.JustWatch.files import (
     FileMixin,
     NewTitleBucket,
+    NewTitles,
     ProvidersLocale,
 )
 from plugins.utils.abstract_plugin import (
@@ -176,9 +176,9 @@ class JustWatch(FileMixin, register=True):
                 if not source:
                     continue
 
-                extra: set[str] = set(json.loads(source.extra or "[]"))
-                extra.add(edge.key.date.isoformat())
-                source.extra = json.dumps(sorted(extra))
+                # Download the initial NewTitles for this date, verification that this
+                # file includes all entries for the date is done by update_source.
+                self.new_titles_file(source.key, edge.key.date).download_if_outdated()
                 source.set_update_at(source.modified_at)
 
     def _get_new_new_title_buckets(self) -> list[NewTitleBucket]:
@@ -199,48 +199,42 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def update_source(self, source: Source) -> None:
-        loaded_extra = json.loads(source.extra or "[]")
-        dates = [date.fromisoformat(date_str) for date_str in loaded_extra]
-        if not dates:
-            msg = f"Source {source.key} has no dates to update on its extra field."
+        new_titles_files = self._pending_new_titles_files(source)
+        if not new_titles_files:
+            msg = f"Source {source.key} has no pending new titles files to update."
             raise ValueError(msg)
 
-        self._download_new_titles_files(source, dates)
-        self._process_new_titles_files(source, dates)
+        self._download_new_titles_files(new_titles_files)
+        self._process_new_titles_files(source, new_titles_files)
 
-        incomplete_dates: list[str] = []
-        for new_titles_date in dates:
-            new_titles_file = self.new_titles_file(source.key, new_titles_date)
+        incomplete_minimum_timestamps: list[datetime] = []
+        for new_titles_file in new_titles_files:
             minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
-            # The files should be downloaded again at a later date if there is a chance
-            # new entries can be added to it in the future.
             if minimum_timestamp > new_titles_file.data_timestamp:
-                incomplete_dates.append(new_titles_date.isoformat())
+                # New entries can still be added to this file, so leave it pending
+                # and re-check it once its data is guaranteed to be complete.
+                incomplete_minimum_timestamps.append(minimum_timestamp)
+            else:
+                # The data is complete and imported, so the file is fully used up.
+                new_titles_file.mark_completed()
 
-        if incomplete_dates:
-            source.extra = json.dumps(incomplete_dates)
-            _date = date.fromisoformat(incomplete_dates[0])
-            earliest_file = self.new_titles_file(source.key, _date)
-            minimum_timestamp = self.minimum_new_titles_data_timestamp(earliest_file)
-            source.set_update_at(minimum_timestamp)
+        if incomplete_minimum_timestamps:
+            source.set_update_at(min(incomplete_minimum_timestamps))
         else:
-            source.extra = None
             source.update_at = None
 
         source.data_timestamp = max(
-            self.new_titles_file(source.key, new_titles_date).data_timestamp
-            for new_titles_date in dates
+            new_titles_file.data_timestamp for new_titles_file in new_titles_files
         )
 
     def _process_new_titles_files(
         self,
         source: Source,
-        dates: list[date],
+        new_titles_files: list[NewTitles],
     ) -> None:
         _cache = source.shows
 
-        for new_titles_date in dates:
-            file = self.new_titles_file(source.key, new_titles_date)
+        for file in new_titles_files:
             source = Source.get_one(self.session, self.plugin, file.source_key)
             _cache_sources = self._preload_sources(
                 file.source_key,
