@@ -307,6 +307,17 @@ class JustWatch(FileMixin, register=True):
             f"s{profile}",
         ).replace("{format}", format)
 
+    def _favicon_url(self, provider: dict[str, str]) -> str | None:
+        """Build a provider's icon URL.
+
+        JustWatch serves provider icons at
+        ``{base}/icon/<id>/s<profile>/<technical_name>.jpeg``.
+        """
+        icon_url = self._format_image_url(provider["icon_url"], profile=100)
+        if icon_url is None:
+            return None
+        return f"{icon_url}/{provider['technical_name']}.jpeg"
+
     @staticmethod
     def _clean_external_url(url: str) -> str:
         """Extract the actual external URL from JustWatch's redirect wrapper."""
@@ -366,15 +377,7 @@ class JustWatch(FileMixin, register=True):
             source = Source(
                 key=provider["short_name"],
                 name=provider["clear_name"],
-                # The format used in this API endpoint is sligthly different than the
-                # one used for other endpoints because it does not include a {format}
-                # placeholder or file name. {profile}=100 and {format}=jpeg are used on
-                # https://www.justwatch.com/us/new
-                favicon_url=(
-                    self._format_image_url(provider["icon_url"], profile=100)
-                    + provider["technical_name"]
-                    + ".jpeg"
-                ),
+                favicon_url=self._favicon_url(provider),
                 plugin_id=self.plugin.id,
             ).upsert(self.plugin, source)
 
@@ -596,10 +599,7 @@ class JustWatch(FileMixin, register=True):
         return {
             provider["short_name"]: {
                 "clear_name": provider["clear_name"],
-                "icon_url": self._format_image_url(  # type: ignore[dict-item]
-                    provider["icon_url"],
-                    profile=100,
-                ),
+                "icon_url": self._favicon_url(provider),  # type: ignore[dict-item]
             }
             for provider in providers_file.parsed()
         }
