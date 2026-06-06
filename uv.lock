@@ -1849,7 +1849,7 @@ wheels = [
 [[package]]
 name = "yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/yt-dlapi#7d1c5991ac9be78e7480f9afb3ae4d71af46759b" }
+source = { git = "https://github.com/ryn-cx/yt-dlapi#7d40356dcfaa3d628ea5680ac1f3f080129bea6f" }
 dependencies = [
     { name = "good-ass-pydantic-integrator" },
     { name = "yt-dlp" },
