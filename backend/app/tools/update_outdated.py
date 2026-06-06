@@ -29,7 +29,11 @@ logger.add(sys.stdout, level="INFO", colorize=True)
 import_plugins()
 automatically_import_models()
 
-MediaModel = Source | Show | Season | Episode
+MediaModel = Plugin | Source | Show | Season | Episode
+
+
+def _get_plugin_key_plugin(plugin: Plugin) -> str:
+    return plugin.key
 
 
 def _get_plugin_key_source(s: Source) -> str:
@@ -50,8 +54,15 @@ def _get_plugin_key_episode(e: Episode) -> str:
 
 MODEL_VALUES: dict[
     type[MediaModel],
-    tuple[list[type], LoaderOption, Callable[..., str]],
+    tuple[list[type], LoaderOption | None, Callable[..., str]],
 ] = {
+    # Plugin is its own root record, so no join chain or eager loading is needed
+    # to resolve its plugin key.
+    Plugin: (
+        [],
+        None,
+        _get_plugin_key_plugin,
+    ),
     Source: (
         [Plugin],
         selectinload(Source.plugin),  # type: ignore[arg-type]
@@ -151,11 +162,11 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
             statement = statement.where(_show_has_season_in_channel_exists())
         elif media_class in (Season, Episode):
             statement = statement.where(_season_in_channel_exists())
-        statement = (
-            statement.join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
-            .where(User.email == PLUGIN_USER_EMAIL)
-            .options(load_options)
+        statement = statement.join(User, Plugin.user_id == User.id).where(  # type: ignore[arg-type]
+            User.email == PLUGIN_USER_EMAIL,
         )
+        if load_options is not None:
+            statement = statement.options(load_options)
 
         outdated_items = session.exec(statement).all()
         logger.info(f"Found {len(outdated_items)} outdated {media_type_name}")
@@ -203,6 +214,9 @@ def _process_outdated_items(media_class: type[MediaModel]) -> None:
 
 
 if __name__ == "__main__":
+    # Plugin is processed first because updating a plugin (e.g. JustWatch) can mark
+    # its sources outdated, which the Source pass then picks up in the same run.
+    _process_outdated_items(Plugin)
     _process_outdated_items(Source)
     _process_outdated_items(Show)
     _process_outdated_items(Season)
