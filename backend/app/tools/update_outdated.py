@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import engine, load_models
+from app.database import engine, automatically_import_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -27,7 +27,7 @@ logger.remove()
 logger.add(sys.stdout, level="INFO", colorize=True)
 
 import_plugins()
-load_models()
+automatically_import_models()
 
 MediaModel = Source | Show | Season | Episode
 

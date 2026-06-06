@@ -3,11 +3,11 @@
 from loguru import logger
 from sqlmodel import Session
 
-from app.database import engine, load_models
+from app.database import engine, automatically_import_models
 from plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()
-load_models()
+automatically_import_models()
 
 
 def reimport_single_url(session: Session) -> None:

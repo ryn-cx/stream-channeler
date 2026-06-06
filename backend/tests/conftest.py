@@ -15,7 +15,7 @@ from sqlmodel import Session, SQLModel, create_engine, text
 # function call in the middle of all of the imports.
 from app.auth.dependencies import get_db
 from app.config import settings
-from app.database import init_db, load_models
+from app.database import init_db, automatically_import_models
 from app.main import app
 from tests.app.users.utils import (
     authentication_token_from_email,
@@ -70,7 +70,7 @@ test_engine = create_test_engine("default")
 @pytest.fixture(scope="session", autouse=True)
 def create_test_database() -> None:
     """Load models and create all tables in the default test database."""
-    load_models()
+    automatically_import_models()
     reset_tables(test_engine)
 
 

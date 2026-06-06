@@ -13,7 +13,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import engine, load_models
+from app.database import engine, automatically_import_models
 from app.plugins.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     logger.add(sys.stdout, level="INFO", colorize=True)
 
     import_plugins()
-    load_models()
+    automatically_import_models()
 
     with Session(engine) as session:
         youtube_plugin_id = YouTube(session).plugin.id
