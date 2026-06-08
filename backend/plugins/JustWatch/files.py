@@ -31,12 +31,6 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 _COMPLETED_PREFIX = "Completed/"
 
 
-class JustWatchDownloadDelay:
-    # Matches BaseFile.DOWNLOAD_SLEEP_SECONDS (float) so the type stays consistent
-    # across base classes.
-    DOWNLOAD_SLEEP_SECONDS: float = 10
-
-
 @cache
 def just_scrape() -> JustScrape:
     server: str | None = settings.GET_AROUND_SERVER
@@ -45,12 +39,14 @@ def just_scrape() -> JustScrape:
     password: str | None = settings.GET_AROUND_PASSWORD
     if password == "changethis":  # noqa: S105
         password = None
-    return JustScrape(get_around_server=server, get_around_password=password)
+    return JustScrape(
+        get_around_server=server,
+        get_around_password=password,
+        sleep_time=10,
+    )
 
 
-class NewTitles(
-    JustWatchDownloadDelay, GAPIListJSON[new_titles_models.NewTitlesResponse]
-):
+class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     api_endpoint = just_scrape().new_titles
 
     def __init__(
@@ -82,10 +78,7 @@ class NewTitles(
             record.key = f"{_COMPLETED_PREFIX}{record.key}"
 
 
-class NewTitleBucket(
-    JustWatchDownloadDelay,
-    GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse],
-):
+class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     api_endpoint = just_scrape().new_title_buckets
 
     def __init__(
@@ -107,7 +100,7 @@ class NewTitleBucket(
         return just_scrape().new_title_buckets.extract_edges(self.parsed())
 
 
-class ProvidersLocale(JustWatchDownloadDelay, JSONFile[list[dict[str, Any]]]):
+class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
     def __init__(self, session: Session, plugin: Plugin, locale: str) -> None:
         self.unique_identifier = locale
         super().__init__(session, plugin)
@@ -127,10 +120,7 @@ class ProvidersLocale(JustWatchDownloadDelay, JSONFile[list[dict[str, Any]]]):
         return raw
 
 
-class UrlTitleDetails(
-    JustWatchDownloadDelay,
-    GAPIJSON[url_title_details_models.UrlTitleDetailsResponse],
-):
+class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     api_endpoint = just_scrape().url_title_details
 
     # TODO: Can this error be handled better?
@@ -147,7 +137,6 @@ class UrlTitleDetails(
 
 
 class CustomSeasonEpisodes(
-    JustWatchDownloadDelay,
     GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
 ):
     api_endpoint = just_scrape().custom_season_episodes
@@ -165,13 +154,12 @@ class CustomSeasonEpisodes(
 
 
 class CustomBuyBoxOffers(
-    JustWatchDownloadDelay,
     GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
     api_endpoint = just_scrape().custom_buy_box_offers
 
 
-class SearchTitles(JustWatchDownloadDelay, GAPIJSON[search_models.SearchResponse]):
+class SearchTitles(GAPIJSON[search_models.SearchResponse]):
     api_endpoint = just_scrape().search
 
 

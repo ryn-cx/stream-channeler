@@ -22,10 +22,6 @@ _UNLOADED = Sentinel("DATABASE_RECORD")
 
 class BaseFile[T](ABC):
     IMMUTABLE: bool = False
-    # Seconds to pause right before a download. 0 disables the delay. Plugins
-    # override this on their file classes (e.g. JustWatch) to rate-limit requests
-    # to a single site.
-    DOWNLOAD_SLEEP_SECONDS: float = 0
 
     def __init__(self, session: Session, plugin: Plugin) -> None:
         """Initialize the file."""
@@ -101,44 +97,19 @@ class BaseFile[T](ABC):
         )
 
     @final  # Makes mocking downloads easier.
-    def download_if_outdated(
-        self,
-        update_at: datetime | None = None,
-        sleep_seconds: float | None = None,
-    ) -> None:
-        """Download the file if it is outdated.
-
-        ``sleep_seconds`` pauses execution right before the download starts. When
-        omitted it falls back to the file class's ``DOWNLOAD_SLEEP_SECONDS``
-        default, letting individual plugins (e.g. JustWatch) rate-limit their own
-        requests.
-        """
+    def download_if_outdated(self, update_at: datetime | None = None) -> None:
+        """Download the file if it is outdated."""
         if self.is_outdated(update_at):
-            self._sleep_before_download(sleep_seconds)
             self._download()
 
     @final  # Makes mocking downloads easier.
     async def async_download_if_outdated(
         self,
         update_at: datetime | None = None,
-        sleep_seconds: float | None = None,
     ) -> None:
-        """Asynchronously download the file if it is outdated.
-
-        ``sleep_seconds`` behaves the same as in ``download_if_outdated``.
-        """
+        """Asynchronously download the file if it is outdated."""
         if self.is_outdated(update_at):
-            self._sleep_before_download(sleep_seconds)
             await self._async_download()
-
-    def _sleep_before_download(self, sleep_seconds: float | None) -> None:
-        """Pause before a download to rate-limit requests, if a delay is set."""
-        if sleep_seconds is not None:
-            time.sleep(sleep_seconds)
-            return
-
-        if self.DOWNLOAD_SLEEP_SECONDS:
-            time.sleep(self.DOWNLOAD_SLEEP_SECONDS)
 
     # This is not an abstractmethod because async_download or download must be
     # implemented, but not necessarily both.
