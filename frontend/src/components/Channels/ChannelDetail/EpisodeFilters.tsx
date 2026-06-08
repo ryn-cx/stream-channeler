@@ -71,6 +71,7 @@ import { handleError } from "@/utils"
 const formSchema = z.object({
   hideWatched: z.boolean().optional(),
   hideUnwatched: z.boolean().optional(),
+  hidePartiallyWatched: z.boolean().optional(),
 
   sortBy: z
     .array(
@@ -386,6 +387,7 @@ export function EpisodeFilters({
     defaultValues: {
       hideWatched: filterParams.hideWatched,
       hideUnwatched: filterParams.hideUnwatched,
+      hidePartiallyWatched: filterParams.hidePartiallyWatched,
       sortBy: filterParams.sortBy as FormValues["sortBy"],
       maximumWatchDateAbsolute: filterParams.maximumWatchDateAbsolute,
       maximumWatchDateRelative: filterParams.maximumWatchDateRelative,
@@ -648,6 +650,23 @@ export function EpisodeFilters({
                             </FormControl>
                             <FormLabel className="font-normal">
                               Hide Watched Episodes
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hidePartiallyWatched"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Hide Partially Watched Episodes
                             </FormLabel>
                           </FormItem>
                         )}

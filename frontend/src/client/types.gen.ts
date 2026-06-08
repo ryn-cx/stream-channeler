@@ -50,6 +50,7 @@ export type ChannelOptions = {
     randomSeed?: number;
     hideWatched?: boolean;
     hideUnwatched?: boolean;
+    hidePartiallyWatched?: boolean;
     maximumWatchDateAbsolute?: (string | null);
     minimumAirDateAbsolute?: (string | null);
     maximumAirDateAbsolute?: (string | null);
@@ -195,7 +196,7 @@ export type HTTPValidationError = {
 };
 
 /**
- * Schema for returning a message.
+ * Generic message.
  */
 export type Message = {
     message: string;
@@ -598,6 +599,7 @@ export type UserRegister = {
 
 export type UsersPublic = {
     data: Array<UserPublic>;
+    count: number;
 };
 
 export type UserUpdate = {
@@ -795,6 +797,7 @@ export type ChannelsDeleteChannelResponse = (Message);
 export type ChannelsGetChannelEpisodesData = {
     additionalChannels?: Array<(string)>;
     channelId: string;
+    hidePartiallyWatched?: boolean;
     hideUnwatched?: boolean;
     hideWatched?: boolean;
     limit?: (number | null);
@@ -1133,6 +1136,11 @@ export type SourcesGetShowsData = {
 };
 
 export type SourcesGetShowsResponse = (Array<ShowPublic>);
+
+export type UsersReadUsersData = {
+    limit?: number;
+    skip?: number;
+};
 
 export type UsersReadUsersResponse = (UsersPublic);
 

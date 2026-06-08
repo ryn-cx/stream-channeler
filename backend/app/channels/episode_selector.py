@@ -286,6 +286,7 @@ class EpisodeQueryBuilder:
                 ],
                 "hide_watched": False,
                 "hide_unwatched": False,
+                "hide_partially_watched": False,
                 "maximum_watch_date_absolute": None,
                 "maximum_watch_date_relative": None,
                 "total_shows_count": None,
@@ -320,6 +321,7 @@ class EpisodeQueryBuilder:
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
+        query = self._filter_partially_watched_episodes(query)
         query = self._filter_by_ranges(query)
         query = self._sort_episodes(query)
         query = self._apply_limit(query)
@@ -516,7 +518,14 @@ class EpisodeQueryBuilder:
             ),
         )
 
+    def _any_watches_subquery(self) -> SelectOfScalar[UUID]:
+        """Episodes with any watch (verified or not) for the current user."""
+        user = self._require_user()
+        return select(Watch.episode_id).where(Watch.user_id == user.id)
+
     def _hide_watched_condition(self) -> ColumnElement[bool] | None:
+        # Watched = has a verified watch. Partially watched (unverified) and
+        # unwatched episodes are kept.
         if not (self._user and self._channel_options.hide_watched):
             return None
         watched_subquery = self._verified_watches_subquery()
@@ -529,9 +538,21 @@ class EpisodeQueryBuilder:
         return col(Episode.id).not_in(watched_subquery)
 
     def _hide_unwatched_condition(self) -> ColumnElement[bool] | None:
+        # Unwatched = no watch at all. Partially watched (unverified) and verified
+        # episodes are kept.
         if not (self._user and self._channel_options.hide_unwatched):
             return None
-        return col(Episode.id).in_(self._verified_watches_subquery())
+        return col(Episode.id).in_(self._any_watches_subquery())
+
+    def _hide_partially_watched_condition(self) -> ColumnElement[bool] | None:
+        # Partially watched = has a watch but none verified. Unwatched and verified
+        # episodes are kept.
+        if not (self._user and self._channel_options.hide_partially_watched):
+            return None
+        return or_(
+            col(Episode.id).not_in(self._any_watches_subquery()),
+            col(Episode.id).in_(self._verified_watches_subquery()),
+        )
 
     def _filter_watched_episodes(
         self,
@@ -547,6 +568,15 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         condition = self._hide_unwatched_condition()
+        if condition is None:
+            return query
+        return query.where(condition)
+
+    def _filter_partially_watched_episodes(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        condition = self._hide_partially_watched_condition()
         if condition is None:
             return query
         return query.where(condition)

@@ -225,6 +225,11 @@ export const ChannelOptionsSchema = {
             title: 'Hideunwatched',
             default: false
         },
+        hidePartiallyWatched: {
+            type: 'boolean',
+            title: 'Hidepartiallywatched',
+            default: false
+        },
         maximumWatchDateAbsolute: {
             anyOf: [
                 {
@@ -1325,7 +1330,7 @@ export const MessageSchema = {
     type: 'object',
     required: ['message'],
     title: 'Message',
-    description: 'Schema for returning a message.'
+    description: 'Generic message.'
 } as const;
 
 export const NewPasswordSchema = {
@@ -3670,10 +3675,14 @@ export const UsersPublicSchema = {
             },
             type: 'array',
             title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
         }
     },
     type: 'object',
-    required: ['data'],
+    required: ['data', 'count'],
     title: 'UsersPublic'
 } as const;
 

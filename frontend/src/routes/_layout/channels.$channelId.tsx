@@ -47,6 +47,7 @@ function getChannelQueryOptions(channelId: string) {
 type ChannelSearchParams = {
   hideWatched?: boolean
   hideUnwatched?: boolean
+  hidePartiallyWatched?: boolean
   sortBy?: Array<SortKeyInput>
   maximumWatchDate?: string
   totalShowsCount?: number
@@ -83,6 +84,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
     return {
       hideWatched: search.hideWatched as boolean | undefined,
       hideUnwatched: search.hideUnwatched as boolean | undefined,
+      hidePartiallyWatched: search.hidePartiallyWatched as boolean | undefined,
       sortBy: search.sortBy as ChannelSearchParams["sortBy"],
       maximumWatchDate: search.maximumWatchDate as string | undefined,
       totalShowsCount: search.totalShowsCount as number | undefined,

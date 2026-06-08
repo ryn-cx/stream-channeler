@@ -167,6 +167,7 @@ class ChannelOptions(BaseInput):
     random_seed: int = Field(default_factory=lambda: random.randint(0, 2**31))  # noqa: S311 - TODO: Confirm non-cryptographic random is acceptable
     hide_watched: bool = Field(default=False)
     hide_unwatched: bool = Field(default=False)
+    hide_partially_watched: bool = Field(default=False)
     maximum_watch_date_absolute: datetime | None = Field(default=None)
     minimum_air_date_absolute: datetime | None = Field(default=None)
     maximum_air_date_absolute: datetime | None = Field(default=None)
