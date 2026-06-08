@@ -46,6 +46,25 @@ def just_scrape() -> JustScrape:
     )
 
 
+@cache
+def proxied_just_scrape() -> JustScrape:
+    server: str | None = settings.GET_AROUND_SERVER
+    if server == "changethis":
+        server = None
+    password: str | None = settings.GET_AROUND_PASSWORD
+    if password == "changethis":  # noqa: S105
+        password = None
+    proxy: str | None = settings.PROXY
+    if proxy == "changethis":
+        proxy = None
+    return JustScrape(
+        get_around_server=server,
+        get_around_password=password,
+        sleep_time=10,
+        proxy=proxy,
+    )
+
+
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     api_endpoint = just_scrape().new_titles
 
@@ -92,7 +111,7 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
 
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
-        return just_scrape().new_title_buckets.get_all_since_date(
+        return proxied_just_scrape().new_title_buckets.get_all_since_date(
             end_date=self.end_datetime.date(),
         )
 

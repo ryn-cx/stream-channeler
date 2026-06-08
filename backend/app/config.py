@@ -121,6 +121,7 @@ class Settings(BaseSettings):
 
     GET_AROUND_SERVER: str
     GET_AROUND_PASSWORD: str
+    PROXY: str
 
 
 # call-arg - Error from original template.
