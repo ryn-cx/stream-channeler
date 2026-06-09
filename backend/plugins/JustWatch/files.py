@@ -299,16 +299,15 @@ class FileMixin(BasePlugin, register=False):
             new_titles_files.append(self.new_titles_file(source.key, new_titles_date))
         return new_titles_files
 
-    def _download_latest_new_titles_bucket(self) -> None:
-        latest_bucket = self._get_latest_new_titles_bucket().first()
-        # If no buckets exist download the initial one with a 1 day buffer worth of
-        # data.
-        if not latest_bucket:
+    def _download_new_titles_bucket_if_missing(self) -> None:
+        if not self._get_latest_new_titles_bucket().first():
             bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
-            # A freshly downloaded bucket has not been processed yet.
+            # Buckets are always considered Incomplete until they are imported
             bucket.database_record.extra = "Incomplete"
-            return
+
+    def _download_latest_new_titles_bucket(self) -> None:
+        latest_bucket = self._get_latest_new_titles_bucket().one()
         # If the bucket was last updated within a day nothing needs to be done.
         if latest_bucket.data_timestamp > tz_datetime.now() - timedelta(days=1):
             return
@@ -317,7 +316,7 @@ class FileMixin(BasePlugin, register=False):
         end_datetime = latest_bucket.data_timestamp - timedelta(days=1)
         bucket = self.new_titles_bucket_file(end_datetime)
         bucket.download_if_outdated()
-        # A freshly downloaded bucket has not been processed yet.
+        # Buckets are always considered Incomplete until they are imported
         bucket.database_record.extra = "Incomplete"
 
     @override

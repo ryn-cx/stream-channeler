@@ -57,6 +57,13 @@ def create_test_engine(db_suffix: str) -> Engine:
 
 def reset_tables(engine: Engine) -> None:
     """Drop everything in the test DB and recreate tables from current metadata."""
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(
+            text(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = current_database() AND pid <> pg_backend_pid()"
+            )
+        )
     with engine.begin() as conn:
         conn.execute(text("DROP SCHEMA public CASCADE"))
         conn.execute(text("CREATE SCHEMA public"))

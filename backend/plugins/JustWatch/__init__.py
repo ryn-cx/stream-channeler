@@ -48,7 +48,7 @@ class JustWatch(FileMixin, register=True):
             bucket.download_if_outdated()
             bucket.database_record.extra = "Incomplete"
 
-            self._download_latest_new_titles_bucket()
+            self._download_new_titles_bucket_if_missing()
 
             self.plugin.data_timestamp = self.plugin_data_timestamp()
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
