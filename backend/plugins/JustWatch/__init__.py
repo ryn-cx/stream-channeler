@@ -46,6 +46,7 @@ class JustWatch(FileMixin, register=True):
 
             bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
             bucket.download_if_outdated()
+            bucket.database_record.extra = "Incomplete"
 
             self._download_latest_new_titles_bucket()
 
@@ -176,19 +177,22 @@ class JustWatch(FileMixin, register=True):
                 if not source:
                     continue
 
-                # Download the initial NewTitles for this date, verification that this
-                # file includes all entries for the date is done by update_source.
-                self.new_titles_file(source.key, edge.key.date).download_if_outdated()
+                new_titles_file = self.new_titles_file(source.key, edge.key.date)
+                new_titles_file.download_if_outdated()
+                # Files are always considered incomplete at this point because none of
+                # the data has been imported yet.
+                new_titles_file.database_record.extra = "Incomplete"
                 source.set_update_at(source.modified_at)
 
+            bucket.database_record.extra = None
+
     def _get_new_new_title_buckets(self) -> list[NewTitleBucket]:
-        """Return new-title buckets newer than the plugin's timestamp."""
         statement = (
             select(File)
             .where(
                 File.plugin_id == self.plugin.id,
                 col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
-                col(File.data_timestamp) > self.plugin.data_timestamp,
+                File.extra == "Incomplete",
             )
             .order_by(col(File.data_timestamp).asc())
         )
@@ -209,14 +213,15 @@ class JustWatch(FileMixin, register=True):
 
         incomplete_minimum_timestamps: list[datetime] = []
         for new_titles_file in new_titles_files:
-            minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
+            minimum_timestamp = self.minimum_new_titles_timestamp(new_titles_file)
+
+            # If the file is too new consider it incomplete because more entries may be
+            # added at a later time.
             if minimum_timestamp > new_titles_file.data_timestamp:
-                # New entries can still be added to this file, so leave it pending
-                # and re-check it once its data is guaranteed to be complete.
+                new_titles_file.database_record.extra = "Incomplete"
                 incomplete_minimum_timestamps.append(minimum_timestamp)
             else:
-                # The data is complete and imported, so the file is fully used up.
-                new_titles_file.mark_completed()
+                new_titles_file.database_record.extra = None
 
         if incomplete_minimum_timestamps:
             source.set_update_at(min(incomplete_minimum_timestamps))

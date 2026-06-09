@@ -28,7 +28,6 @@ from plugins.utils.base_plugin import BasePlugin, JSONFile
 from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
-_COMPLETED_PREFIX = "Completed/"
 
 
 @cache
@@ -48,21 +47,10 @@ def just_scrape() -> JustScrape:
 
 @cache
 def proxied_just_scrape() -> JustScrape:
-    server: str | None = settings.GET_AROUND_SERVER
-    if server == "changethis":
-        server = None
-    password: str | None = settings.GET_AROUND_PASSWORD
-    if password == "changethis":  # noqa: S105
-        password = None
     proxy: str | None = settings.PROXY
     if proxy == "changethis":
         proxy = None
-    return JustScrape(
-        get_around_server=server,
-        get_around_password=password,
-        sleep_time=10,
-        proxy=proxy,
-    )
+    return JustScrape(sleep_time=10, proxy=proxy)
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
@@ -90,12 +78,6 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     def parsed_edges(self) -> list[new_titles_models.Edge]:
         return just_scrape().new_titles.extract_edges(self.parsed())
 
-    def mark_completed(self) -> None:
-        """Rename this fully-used file so it is no longer treated as pending."""
-        record = self.database_record
-        if not record.key.startswith(_COMPLETED_PREFIX):
-            record.key = f"{_COMPLETED_PREFIX}{record.key}"
-
 
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     api_endpoint = just_scrape().new_title_buckets
@@ -111,9 +93,9 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
 
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
-        return proxied_just_scrape().new_title_buckets.get_all_since_date(
-            end_date=self.end_datetime.date(),
-        )
+        end_date = self.end_datetime.date()
+        # Without proxied_just_scrape 429 errors often occur.
+        return proxied_just_scrape().new_title_buckets.get_all_since_date(end_date)
 
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
         return just_scrape().new_title_buckets.extract_edges(self.parsed())
@@ -127,13 +109,12 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            response = httpx.get(
-                f"https://apis.justwatch.com/content/providers/locale/{self.unique_identifier}",
-            )
+            url = f"https://apis.justwatch.com/content/providers/locale/{self.unique_identifier}"
+            response = httpx.get(url)
             response.raise_for_status()
             self._write(response.json())
 
-    # TODO: Add scraping this to Just Scrape so the code here can be simplified.
+    # TODO: Add this to Just Scrape so it has full type support.
     @override
     def _parse(self, raw: Any) -> list[dict[str, Any]]:
         return raw
@@ -142,7 +123,6 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     api_endpoint = just_scrape().url_title_details
 
-    # TODO: Can this error be handled better?
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -162,14 +142,10 @@ class CustomSeasonEpisodes(
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
-        return just_scrape().custom_season_episodes.get_all(
-            node_id=self.unique_identifier,
-        )
+        return just_scrape().custom_season_episodes.get_all(self.unique_identifier)
 
     def parsed_episodes(self) -> list[custom_season_episodes_models.Episode]:
-        return just_scrape().custom_season_episodes.extract_episodes(
-            self.parsed(),
-        )
+        return just_scrape().custom_season_episodes.extract_episodes(self.parsed())
 
 
 class CustomBuyBoxOffers(
@@ -224,10 +200,7 @@ class FileMixin(BasePlugin, register=False):
             lambda: CustomSeasonEpisodes(self.session, self.plugin, season_key),
         )
 
-    def new_titles_bucket_file(
-        self,
-        end_datetime: datetime | File,
-    ) -> NewTitleBucket:
+    def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
         """Return a cached new titles bucket file for the given datetime or File."""
         if isinstance(end_datetime, File):
             key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
@@ -253,20 +226,6 @@ class FileMixin(BasePlugin, register=False):
             query,
             lambda: SearchTitles(self.session, self.plugin, query),
         )
-
-    def _source_keys_from_buckets(self, session: Session, plugin: Plugin) -> set[str]:
-        """Get all source keys with new titles from unimported bucket files."""
-        statement = select(File).where(
-            File.plugin_id == plugin.id,
-            col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
-            col(File.data_timestamp) > plugin.data_timestamp,
-        )
-        source_keys: set[str] = set()
-        for file in session.exec(statement).all():
-            bucket = self.new_titles_bucket_file(file)
-            for edge in bucket.parsed_edges():
-                source_keys.add(edge.key.package.short_name)
-        return source_keys
 
     @override
     def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
@@ -321,14 +280,17 @@ class FileMixin(BasePlugin, register=False):
     ) -> None:
         for new_titles_file in new_titles_files:
             new_titles_file.download_if_outdated()
-            minimum_timestamp = self.minimum_new_titles_data_timestamp(new_titles_file)
+            minimum_timestamp = self.minimum_new_titles_timestamp(new_titles_file)
             if minimum_timestamp <= tz_datetime.now():
                 new_titles_file.download_if_outdated(minimum_timestamp)
 
     def _pending_new_titles_files(self, source: Source) -> list[NewTitles]:
+        # Only files still marked incomplete (in File.extra) are pending; completed
+        # files have had their Extra marker cleared and are filtered out.
         statement = select(File).where(
             File.plugin_id == self.plugin.id,
             col(File.key).startswith(f"{NewTitles.__name__}/{source.key}/"),
+            File.extra == "Incomplete",
         )
         new_titles_files: list[NewTitles] = []
         for file in self.session.exec(statement).all():
@@ -344,6 +306,8 @@ class FileMixin(BasePlugin, register=False):
         if not latest_bucket:
             bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
+            # A freshly downloaded bucket has not been processed yet.
+            bucket.database_record.extra = "Incomplete"
             return
         # If the bucket was last updated within a day nothing needs to be done.
         if latest_bucket.data_timestamp > tz_datetime.now() - timedelta(days=1):
@@ -353,6 +317,8 @@ class FileMixin(BasePlugin, register=False):
         end_datetime = latest_bucket.data_timestamp - timedelta(days=1)
         bucket = self.new_titles_bucket_file(end_datetime)
         bucket.download_if_outdated()
+        # A freshly downloaded bucket has not been processed yet.
+        bucket.database_record.extra = "Incomplete"
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
@@ -413,7 +379,7 @@ class FileMixin(BasePlugin, register=False):
         )
         return self.session.exec(statement)
 
-    def minimum_new_titles_data_timestamp(self, file: NewTitles) -> datetime:
+    def minimum_new_titles_timestamp(self, file: NewTitles) -> datetime:
         # The data for a specific source changes throughout the day as new entries are
         # appended to existing ones as can be seen here.
         # https://web.archive.org/web/20250327001549/https://www.justwatch.com/us/new

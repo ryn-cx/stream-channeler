@@ -5,15 +5,16 @@ from typing import override
 
 import pytest
 from just_scrape.new_title_buckets import NewTitleBuckets
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from app.episodes.models import Episode
-from app.plugins.models import Plugin
+from app.plugins.models import File, Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
+from plugins.JustWatch.files import NewTitleBucket
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -32,9 +33,17 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         validator.incremented(plugin.id, "update_at")
         # All sources get re-upserted during update_plugin.
         validator.incremented(Source, "data_timestamp")
-        # Sources in the bucket will be marked as outdated.
         just_watch = JustWatch(session)
-        source_keys = just_watch._source_keys_from_buckets(session, plugin)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        bucket_statement = select(File).where(
+            File.plugin_id == plugin.id,
+            col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
+            File.extra == "Incomplete",
+        )
+        source_keys: set[str] = set()
+        for bucket_file in session.exec(bucket_statement).all():
+            bucket = just_watch.new_titles_bucket_file(bucket_file)
+            for edge in bucket.parsed_edges():
+                source_keys.add(edge.key.package.short_name)
         validator.incremented(Source, "modified_at")
         for source_key in source_keys:
             validator.populated(source_key, "update_at")
