@@ -112,7 +112,7 @@ export function ResponsiveActionMenu({
           <SheetTrigger asChild>{triggerNode}</SheetTrigger>
           <SheetContent
             side="bottom"
-            className="rounded-t-xl pt-3 pb-[env(safe-area-inset-bottom)]"
+            className="max-h-[85dvh] overflow-y-auto rounded-t-xl pt-3 pb-[env(safe-area-inset-bottom)]"
           >
             <div
               aria-hidden
