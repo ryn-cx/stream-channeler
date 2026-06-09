@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from loguru import logger
 from pydantic_core import MultiHostUrl
-from sqlalchemy import Connection, Engine
-from sqlmodel import Session, SQLModel, create_engine, text
+from sqlalchemy import Connection
+from sqlmodel import Session, create_engine, text
 
 # reportUnusedImport/F401 - This loads variables into the environment even if it looks
 # like it does nothing. It's easier to do this on import than import it then have a
@@ -27,58 +27,72 @@ from tests.app.utils.utils import get_superuser_token_headers
 logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
 
+TEST_DB_NAME = f"{settings.POSTGRES_DB}_test"
+TEST_DATABASE_URI = MultiHostUrl.build(
+    scheme="postgresql+psycopg",
+    username=settings.POSTGRES_USER,
+    password=settings.POSTGRES_PASSWORD,
+    host=settings.POSTGRES_SERVER,
+    port=settings.POSTGRES_PORT,
+    path=TEST_DB_NAME,
+)
+# Admin connection to the default "postgres" database so DROP/CREATE DATABASE can run
+# without connecting to either the application or the test database.
+ADMIN_DATABASE_URI = MultiHostUrl.build(
+    scheme="postgresql+psycopg",
+    username=settings.POSTGRES_USER,
+    password=settings.POSTGRES_PASSWORD,
+    host=settings.POSTGRES_SERVER,
+    port=settings.POSTGRES_PORT,
+    path="postgres",
+)
 
-def create_test_engine(db_suffix: str) -> Engine:
-    """Create a test database with the given suffix and return its engine."""
-    db_name = f"{settings.POSTGRES_DB}_test_{db_suffix}"
-
-    postgres_engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
-    with postgres_engine.connect().execution_options(
-        isolation_level="AUTOCOMMIT",
-    ) as conn:
-        exists = conn.execute(
-            text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
-            {"db_name": db_name},
-        ).scalar()
-        if not exists:
-            conn.execute(text(f'CREATE DATABASE "{db_name}"'))
-    postgres_engine.dispose()
-
-    uri = MultiHostUrl.build(
-        scheme="postgresql+psycopg",
-        username=settings.POSTGRES_USER,
-        password=settings.POSTGRES_PASSWORD,
-        host=settings.POSTGRES_SERVER,
-        port=settings.POSTGRES_PORT,
-        path=db_name,
-    )
-    return create_engine(str(uri))
+test_engine = create_engine(str(TEST_DATABASE_URI))
+admin_engine = create_engine(str(ADMIN_DATABASE_URI))
 
 
-def reset_tables(engine: Engine) -> None:
-    """Drop everything in the test DB and recreate tables from current metadata."""
-    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+def create_test_database() -> None:
+    """Create the test database by copying the migrated application database."""
+    # AUTOCOMMIT is required to drop/create a database.
+    with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
         conn.execute(
             text(
                 "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = current_database() AND pid <> pg_backend_pid()"
-            )
+                "WHERE datname = :db AND pid <> pg_backend_pid()",
+            ),
+            {"db": TEST_DB_NAME},
         )
-    with engine.begin() as conn:
-        conn.execute(text("DROP SCHEMA public CASCADE"))
-        conn.execute(text("CREATE SCHEMA public"))
-    SQLModel.metadata.create_all(engine)
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}"'))
+        conn.execute(
+            text(
+                f'CREATE DATABASE "{TEST_DB_NAME}" '
+                f'WITH TEMPLATE "{settings.POSTGRES_DB}"',
+            ),
+        )
 
 
-test_engine = create_test_engine("default")
+def drop_test_database() -> None:
+    """Drop the test database, terminating any lingering connections first."""
+    test_engine.dispose()
+    with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(
+            text(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = :db AND pid <> pg_backend_pid()",
+            ),
+            {"db": TEST_DB_NAME},
+        )
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}"'))
 
 
-# For every test session create a single database
+# For every test session create a single database that is dropped afterwards.
 @pytest.fixture(scope="session", autouse=True)
-def create_test_database() -> None:
-    """Load models and create all tables in the default test database."""
+def setup_test_database() -> Generator[None]:
+    """Load models, copy the application database, and tear it down at the end."""
     automatically_import_models()
-    reset_tables(test_engine)
+    create_test_database()
+    yield
+    drop_test_database()
 
 
 def savepoint_session(connection: Connection) -> Generator[Session]:
