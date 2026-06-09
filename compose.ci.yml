@@ -1,0 +1,25 @@
+# Hardcoded ports for backend CI, where pytest runs on the host (not in a
+# container) and connects to the db via its published port. The committed .env
+# sets POSTGRES_PORT=5432, so the db must be published on 5432 here.
+#
+# This file is loaded explicitly by .github/workflows/test-backend.yml; it is
+# intentionally NOT named compose.override.yml so it is never auto-merged into
+# local or in-container runs (which use the dynamic, offset ports instead):
+#
+#   docker compose -f compose.yml -f compose.ci.yml up -d db mailcatcher
+services:
+
+  db:
+    restart: "no"
+    ports:
+      - "5432:5432"
+
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+
+networks:
+  traefik-public:
+    external: false

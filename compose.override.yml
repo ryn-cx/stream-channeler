@@ -1,11 +1,3 @@
-# Local testing override: ports are read dynamically from .env (DB_PORT,
-# BACKEND_PORT, etc.) so they can be offset to avoid clashing with other
-# services running on the host. This file is NOT auto-loaded; run it explicitly:
-#
-#   docker compose -f compose.yml -f compose.local-testing.yml up -d
-#
-# compose.override.yml (the auto-loaded default) hardcodes the normal ports
-# instead, which is what CI uses.
 services:
 
   # Local services are available on their ports, but also available on:
