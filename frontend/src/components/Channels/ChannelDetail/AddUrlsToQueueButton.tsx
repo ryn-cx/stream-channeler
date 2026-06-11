@@ -47,7 +47,7 @@ export function ManageShowsButton({
         <ManageShowsTabs
           channelId={channelId}
           contentClassName="overflow-y-auto flex-1 min-h-0 px-8 py-4"
-          tabsListClassName="mx-8"
+          tabsListClassName="mx-8 flex-wrap h-auto"
         />
 
         <DialogFooter className="px-8">

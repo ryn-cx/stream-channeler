@@ -438,16 +438,18 @@ export function ManageShowsTabs({
                     const source = sources[show.source_id]
                     return (
                       <TableRow key={show.id}>
-                        <TableCell>
+                        <TableCell className="whitespace-normal">
                           <div className="flex items-center gap-2">
                             {source?.favicon_url && (
                               <img
                                 src={source.favicon_url}
                                 alt={`${source.name} favicon`}
-                                className="size-4"
+                                className="size-4 shrink-0"
                               />
                             )}
-                            <span>{show.name ?? ""}</span>
+                            <span className="wrap-break-word">
+                              {show.name ?? ""}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
