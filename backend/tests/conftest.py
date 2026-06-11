@@ -95,9 +95,13 @@ def setup_test_database() -> Generator[None]:
     drop_test_database()
 
 
-def savepoint_session(connection: Connection) -> Generator[Session]:
+def savepoint_session(
+    connection: Connection,
+    *,
+    nested: bool = False,
+) -> Generator[Session]:
     """Create a savepoint session that rolls back after use."""
-    transaction = connection.begin()
+    transaction = connection.begin_nested() if nested else connection.begin()
     session = Session(bind=connection, join_transaction_mode="create_savepoint")
     yield session
     session.close()

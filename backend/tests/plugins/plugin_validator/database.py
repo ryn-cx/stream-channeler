@@ -22,10 +22,9 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin import BasePlugin
 from tests.conftest import (
-    create_test_engine,
     init_db,
-    reset_tables,
     savepoint_session,
+    test_engine,
 )
 from tests.plugins.plugin_validator.mocks import block_downloads
 from tests.plugins.plugin_validator.serialization import SerializationMixin
@@ -183,15 +182,14 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     @pytest.fixture(scope="class")
     def _session_with_files_connection(self) -> Generator[Connection]:
         """Class-scoped connection with files pre-imported on its own database."""
-        engine = create_test_engine("files")
-        reset_tables(engine)
-        connection = engine.connect()
-        with Session(bind=connection) as session:
+        connection = test_engine.connect()
+        transaction = connection.begin()
+        with Session(bind=connection, join_transaction_mode="create_savepoint") as session:
             init_db(session)
             self._import_files(session)
         yield connection
+        transaction.rollback()
         connection.close()
-        engine.dispose()
 
     @pytest.fixture
     def session_with_files(
@@ -199,7 +197,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         _session_with_files_connection: Connection,
     ) -> Generator[Session]:
         """Per-test session with files pre-imported, rolls back after each test."""
-        yield from savepoint_session(_session_with_files_connection)
+        yield from savepoint_session(_session_with_files_connection, nested=True)
 
     @pytest.fixture(scope="class")
     def _session_with_url_connection(self) -> Generator[Connection]:
@@ -209,10 +207,9 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         if not self.url and not self.search_query:
             pytest.skip("No URL or search query defined")
 
-        engine = create_test_engine("url")
-        reset_tables(engine)
-        connection = engine.connect()
-        with Session(bind=connection) as session:
+        connection = test_engine.connect()
+        transaction = connection.begin()
+        with Session(bind=connection, join_transaction_mode="create_savepoint") as session:
             init_db(session)
             self._import_files(session)
             with block_downloads():
@@ -221,8 +218,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
                 if self.search_query:
                     self._search(session, self.search_query)
         yield connection
+        transaction.rollback()
         connection.close()
-        engine.dispose()
 
     @pytest.fixture
     def session_with_url(
@@ -230,4 +227,4 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         _session_with_url_connection: Connection,
     ) -> Generator[Session]:
         """Per-test session with files and URL imported, rolls back after."""
-        yield from savepoint_session(_session_with_url_connection)
+        yield from savepoint_session(_session_with_url_connection, nested=True)

@@ -313,15 +313,10 @@ class JustWatch(FileMixin, register=True):
         ).replace("{format}", format)
 
     def _favicon_url(self, provider: dict[str, str]) -> str | None:
-        """Build a provider's icon URL.
-
-        JustWatch serves provider icons at
-        ``{base}/icon/<id>/s<profile>/<technical_name>.jpeg``.
-        """
         icon_url = self._format_image_url(provider["icon_url"], profile=100)
         if icon_url is None:
             return None
-        return f"{icon_url}/{provider['technical_name']}.jpeg"
+        return f"{icon_url}/{provider['technical_name']}.avif"
 
     @staticmethod
     def _clean_external_url(url: str) -> str:
