@@ -129,6 +129,10 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
         # TODO: Better error detection which must be done while the RSS feed is broken.
         except Exception:  # noqa: BLE001
             logger.exception(f"{season.key}: Failed to download updated RSS feed.")
+            # The download failed so data_timestamp is still stale. Push the next
+            # check back an hour from now, otherwise the file stays outdated and is
+            # retried (and fails) every loop.
+            new_update_at = tz_datetime.now() + timedelta(hours=1)
         else:
             # Do not check for equality because this is checking only for new videos,
             # if a video is removed no update needs to be done.
@@ -139,7 +143,8 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
                 )
                 season.set_update_at(tz_datetime.now())
 
-        new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
+            new_update_at = playlist_feed.data_timestamp + timedelta(hours=1)
+
         playlist_feed.database_record.set_update_at(new_update_at)
         session.commit()
 
