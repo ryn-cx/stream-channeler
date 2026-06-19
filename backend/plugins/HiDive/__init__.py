@@ -108,7 +108,6 @@ class HiDive(FileMixin, register=True):
         else:
             file = self.season_file(key)
 
-        file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
     def _import_show(self, key: str) -> Show:

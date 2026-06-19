@@ -2,9 +2,9 @@
 # This plugin intentionally does not support movies from the movies page because it has
 # been unofficially deprecated as movies are now added as a series instead.
 
-# New movie format example:
+# Current movie page example:
 # https://www.crunchyroll.com/series/GMTE00335490/spy-x-family-code-white
-# Old movie page:
+# Deprecated movie page example:
 # https://www.crunchyroll.com/videos/alphabetical?media=movies
 
 import json
@@ -44,33 +44,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             self.source = self._upsert_source(latest_browse_file)
 
     @classmethod
-    @override
-    def import_watch_history_instructions(cls) -> str:
-        return (
-            "1. Use [Itamae](https://github.com/ryn-cx/itamae) to download "
-            "your Crunchyroll watch history\n"
-            "2. Upload the file here"
-        )
-
-    @override
-    def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
-        return [
-            ParsedWatchEntry(
-                episode_key=entry["id"],
-                watch_date=tz_datetime.fromisoformat(entry["date_played"]),
-                import_result=WatchImportResult(
-                    show=entry["panel"]["episode_metadata"]["series_title"],
-                    show_url=self._show_url(
-                        entry["panel"]["episode_metadata"]["series_id"],
-                    ),
-                    episode=entry["panel"]["title"],
-                    episode_url=self._episode_url(entry["id"]),
-                ),
-            )
-            for entry in json.loads(content)
-        ]
-
-    @classmethod
     def import_url_instructions(cls) -> str:
         return (
             "> [!TIP/Series]\n"
@@ -87,6 +60,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @classmethod
     @override
     def parse_url(cls, url: str) -> str:
+        # TODO: Add support for single episodes
         if match := re.match(cls._url_regex(), url):
             return match.group("show_key")
 
@@ -95,7 +69,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.series_file(show_key)
-        series_json.download_if_outdated()
         self.raise_invalid_url_if_no_content(series_json, url)
 
     def _import_show(self, show_key: str) -> Show:
@@ -165,7 +138,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
             favicon_url=self.build_url(
-                "build/assets/img/favicons/favicon-v2-96x96.png"
+                "build/assets/img/favicons/favicon-v2-96x96.png",
             ),
             update_at=latest_browse_file.data_timestamp + timedelta(days=1),
             data_timestamp=latest_browse_file.data_timestamp,
@@ -278,3 +251,30 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             for item in series
         ]
         return PluginSearchResults(has_source_selection=False, results=results)
+
+    @classmethod
+    @override
+    def import_watch_history_instructions(cls) -> str:
+        return (
+            "1. Use [Itamae](https://github.com/ryn-cx/itamae) to download "
+            "your Crunchyroll watch history\n"
+            "2. Upload the file here"
+        )
+
+    @override
+    def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
+        return [
+            ParsedWatchEntry(
+                episode_key=entry["id"],
+                watch_date=tz_datetime.fromisoformat(entry["date_played"]),
+                import_result=WatchImportResult(
+                    show=entry["panel"]["episode_metadata"]["series_title"],
+                    show_url=self._show_url(
+                        entry["panel"]["episode_metadata"]["series_id"],
+                    ),
+                    episode=entry["panel"]["title"],
+                    episode_url=self._episode_url(entry["id"]),
+                ),
+            )
+            for entry in json.loads(content)
+        ]

@@ -180,7 +180,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             file = self.channel_by_handle_file(key_value)
         else:  # key_type == "channel_username"
             file = self.channel_by_username_file(key_value)
-        file.download_if_outdated()
         self.raise_invalid_url_if_no_content(file, url)
 
     def _import_show(self, show_key: str, playlist_key: str) -> Show:

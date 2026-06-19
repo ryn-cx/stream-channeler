@@ -74,7 +74,7 @@ class JustWatch(FileMixin, register=True):
         season_key = parsed["season_key"]
 
         if not (shows := self._preload_show(show_key=show_key).all()):
-            self._validate_show_key(show_key, url)
+            self._validate_url(show_key, url)
             _cache = (
                 self._download_show_files(show_key),
                 self._preload_sources().all(),
@@ -94,9 +94,8 @@ class JustWatch(FileMixin, register=True):
             "season_key": match.group("season_key"),
         }
 
-    def _validate_show_key(self, show_key: str, url: str) -> None:
+    def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.url_title_details_file(show_key)
-        series_json.download_if_outdated()
         self.raise_invalid_url_if_no_content(series_json, url)
 
     def _create_url_import_results(

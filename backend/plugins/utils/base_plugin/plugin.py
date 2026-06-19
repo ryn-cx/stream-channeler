@@ -224,6 +224,7 @@ class BasePlugin(
         return obj
 
     def raise_invalid_url_if_no_content(self, file: BaseFile[Any], url: str) -> None:
+        file.download_if_outdated()
         if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)

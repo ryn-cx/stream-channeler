@@ -47,6 +47,7 @@ class NHKWorld(FileMixin, register=True):
     @classmethod
     @override
     def parse_url(cls, url: str) -> str:
+        # TODO: Add support for single episodes
         if match := re.match(cls._url_regex(), url):
             return match.group("show_key")
 
@@ -55,7 +56,6 @@ class NHKWorld(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         show_file = self.video_program_file(show_key)
-        show_file.download_if_outdated()
         self.raise_invalid_url_if_no_content(show_file, url)
 
     def _import_show(self, show_key: str) -> Show:
