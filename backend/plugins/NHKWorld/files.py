@@ -3,10 +3,10 @@ from datetime import datetime
 from functools import cache
 from typing import override
 
-from nahpki import Nahpki
-from nahpki.shows_search.models import ShowsSearchModel
-from nahpki.video_episodes.models import Item, VideoEpisodesModel
-from nahpki.video_programs.models import VideoProgramsModel
+from naphki import Naphki
+from naphki.shows_search.models import ShowsSearchModel
+from naphki.video_episodes.models import Item, VideoEpisodesModel
+from naphki.video_programs.models import VideoProgramsModel
 from sqlmodel import col, select
 
 from app.config import settings
@@ -17,45 +17,64 @@ from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
 
 
 @cache
-def nahpki() -> Nahpki:
+def naphki() -> Naphki:
     server: str | None = settings.GET_AROUND_SERVER
     if server == "changethis":
         server = None
     password: str | None = settings.GET_AROUND_PASSWORD
     if password == "changethis":  # noqa: S105
         password = None
-    return Nahpki(get_around_server=server, get_around_password=password)
+    return Naphki(get_around_server=server, get_around_password=password)
 
 
 class VideoProgram(GAPIJSON[VideoProgramsModel]):
     # Occurs when a user puts in an invalid URL.
     acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = nahpki().video_programs
+    api_endpoint = naphki().video_programs
 
 
 class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
-    api_endpoint = nahpki().video_episodes
+    api_endpoint = naphki().video_episodes
 
     @override
     def _get(self) -> list[VideoEpisodesModel]:
-        return nahpki().video_episodes.get_all(self.unique_identifier)
+        return naphki().video_episodes.get_all(self.unique_identifier)
 
     def items(self) -> list[Item]:
         return [item for page in self.parsed() for item in page.items]
 
 
 class ShowsSearch(GAPIJSON[ShowsSearchModel]):
-    api_endpoint = nahpki().shows_search
+    api_endpoint = naphki().shows_search
 
 
 class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     IMMUTABLE = True
-    api_endpoint = nahpki().video_episodes
+    api_endpoint = naphki().video_episodes
 
     @override
     def _get(self) -> list[VideoEpisodesModel]:
+        # Page 20 at a time (the API default) rather than the 100-entry pages
+        # get_all() uses. The initial baseline (to_datetime == now) stops after
+        # the first page, and day-to-day there are rarely more than a handful of
+        # new episodes, so a single page almost always covers the gap.
         to_datetime = tz_datetime.fromisoformat(self.unique_identifier)
-        return nahpki().video_episodes.get_all(to_datetime=to_datetime)
+        pages: list[VideoEpisodesModel] = []
+        offset = 0
+        while True:
+            page = naphki().video_episodes.get(offset=offset)
+            pages.append(page)
+            offset += page.pagination.count
+            reached_datetime = any(
+                item.video.published_at <= to_datetime for item in page.items
+            )
+            if (
+                page.pagination.next is None
+                or page.pagination.count == 0
+                or reached_datetime
+            ):
+                break
+        return pages
 
     def items(self) -> list[Item]:
         return [item for page in self.parsed() for item in page.items]

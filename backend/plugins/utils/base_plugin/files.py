@@ -270,7 +270,7 @@ class APISerializerEndpoint[T](Protocol):
     @staticmethod
     def dump_response(data: Sequence[BaseModel]) -> list[dict[str, Any]]: ...
     @overload
-    @staticmethod
+    @staticmethod   
     def dump_response(data: BaseModel) -> dict[str, Any]: ...
     @staticmethod
     def dump_response(

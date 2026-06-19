@@ -5,7 +5,7 @@ from typing import override
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.NHKWorld import NHKWorld
-from plugins.NHKWorld.files import nahpki
+from plugins.NHKWorld.files import naphki
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -17,10 +17,6 @@ from tests.plugins.plugin_validator.validator import Validator
 
 class NHKWorldValidator(PluginValidator[NHKWorld]):
     plugin_class = NHKWorld
-    url_path_patterns = (
-        "/nhkworld/en/shows/{parse_url_response}/",
-        "/nhkworld/en/shows/{parse_url_response}",
-    )
 
 
 class NHKWorldStandardTests(StandardTests[NHKWorld], NHKWorldValidator):
@@ -62,7 +58,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
         first_item.video_program.id = show_key
         first_item.video.published_at = timestamp
         new_feed = plugin_instance.new_video_episodes_file(timestamp)
-        new_feed._write(nahpki().video_episodes.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_feed._write(naphki().video_episodes.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         new_feed._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @override
@@ -78,6 +74,10 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
 class TestShow(NHKWorldStandardTests, NHKWorldUpdateSourceTest):
     parse_url_response = "dwc"
     url = f"https://www3.nhk.or.jp/nhkworld/en/shows/{parse_url_response}/"
+    url_path_patterns = (
+        "/nhkworld/en/shows/{parse_url_response}/",
+        "/nhkworld/en/shows/{parse_url_response}",
+    )
     search_query = "Dining with the Chef"
 
 

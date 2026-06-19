@@ -62,7 +62,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "just-scrape" },
     { name = "loguru" },
-    { name = "nahpki" },
+    { name = "naphki" },
     { name = "not-yt-dlapi" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2", "bcrypt"] },
@@ -102,7 +102,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "nahpki", git = "https://github.com/ryn-cx/nahpki" },
+    { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
     { name = "not-yt-dlapi", git = "https://github.com/ryn-cx/not-yt-dlapi" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
     { name = "pwdlib", extras = ["argon2", "bcrypt"], specifier = ">=0.3.0" },
@@ -504,7 +504,7 @@ source = { git = "https://github.com/ryn-cx/DeGenSON#0461782f9019773dafe059c7c65
 [[package]]
 name = "diving-board"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/diving-board#2028646350d6389aca732d45cb3b968fff233289" }
+source = { git = "https://github.com/ryn-cx/diving-board#bcdf2b0d0080320baf2ca507a3edd71a18a0d342" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1041,9 +1041,9 @@ wheels = [
 ]
 
 [[package]]
-name = "nahpki"
+name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/nahpki#7d693ea9f4f5432afc3f1a8d6d16bb13acb565f2" }
+source = { git = "https://github.com/ryn-cx/naphki#230bad7ae6159802fb0e120483244197f59c211e" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

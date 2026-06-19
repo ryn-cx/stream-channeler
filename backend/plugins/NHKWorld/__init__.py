@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import override
 
 from loguru import logger
-from nahpki.video_episodes import models as video_episodes_models
-from nahpki.video_programs import models as video_programs_models
+from naphki.video_episodes import models as video_episodes_models
+from naphki.video_programs import models as video_programs_models
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
