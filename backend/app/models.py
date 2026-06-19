@@ -127,6 +127,10 @@ class TimestampIdAndHashMixin(SQLModel):
         """Return a hash representation of the record based on the `id`."""
         return hash(self.id)
 
+    def __eq__(self, other: object) -> bool:
+        """Two records are equal when they share the same `id`."""
+        return isinstance(other, TimestampIdAndHashMixin) and self.id == other.id
+
 
 class BaseMediaMixin(SQLModel):
     """Mixin for base media models.

@@ -290,8 +290,8 @@ class JustWatch(FileMixin, register=True):
 
     @classmethod
     @override
-    def domains(cls) -> list[str]:
-        return ["justwatch.com"]
+    def _domain(cls) -> str:
+        return "justwatch.com"
 
     @property
     def _images_base_url(self) -> str:

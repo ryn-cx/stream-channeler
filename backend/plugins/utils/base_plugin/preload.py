@@ -2,6 +2,7 @@
 import uuid
 from abc import ABC
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.engine.result import ScalarResult
@@ -124,19 +125,19 @@ class PreloadMixin(ABC):
             select(Episode).where(Episode.id == episode_id).options(*options),
         )
 
-    def _get_new_files_since_source[T: BaseFile[Any]](
+    def get_new_files[T: BaseFile[Any]](
         self,
-        source: Source,
+        data_timestamp: datetime | None,
         file_class: type[T],
         factory: Callable[[File], T],
     ) -> list[T]:
-        """Return files of `file_class` newer than `source.data_timestamp`.
+        """Return files of `file_class` newer than `data_timestamp`.
 
         Ordered ascending by `data_timestamp` so callers can apply updates
         in the sequence the files were written.
         """
-        if not source.data_timestamp:
-            msg = "Source has no data timestamp."
+        if not data_timestamp:
+            msg = "No data timestamp provided."
             raise ValueError(msg)
 
         statement = (
@@ -144,7 +145,7 @@ class PreloadMixin(ABC):
             .where(
                 File.plugin == self.plugin,
                 col(File.key).startswith(f"{file_class.__name__}/"),
-                col(File.data_timestamp) > source.data_timestamp,
+                col(File.data_timestamp) > data_timestamp,
             )
             .order_by(col(File.data_timestamp).asc())
         )

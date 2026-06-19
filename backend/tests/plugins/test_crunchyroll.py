@@ -4,7 +4,6 @@ from typing import override
 
 from chirashi.browse_series import BrowseSeries
 
-from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -28,24 +27,6 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
         "/series/{parse_url_response}/",
         "/series/{parse_url_response}",
     )
-
-    @override
-    def update_season_validator(self, season: Season) -> Validator:
-        return (
-            super()
-            .update_season_validator(season)
-            .episodes_share_season_file(season)
-            .seasons_share_show_file(season)
-        )
-
-    @override
-    def update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            .update_episode_validator(episode)
-            .episodes_share_season_file(episode)
-            .episodes_share_file(episode)
-        )
 
 
 class CrunchyrollStandardTests(StandardTests[Crunchyroll], CrunchyrollValidator):

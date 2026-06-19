@@ -42,7 +42,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def initialize_source(self) -> None:
-        if not Source.get_from_memory(self.session, self.plugin, self.plugin_key()):
+        if not self.has_source:
             self._upsert_source()
 
     @classmethod
@@ -359,7 +359,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     @classmethod
     def _playlist_url(cls, playlist_key: str) -> str:
-        return f"{cls._base_url()}playlist?list={playlist_key}"
+        return cls.build_url(f"playlist?list={playlist_key}")
 
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -386,7 +386,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         show = Show(
             key=channel_item.id,
             name=channel_item.snippet.title,
-            url=f"{self._base_url()}channel/{channel_item.id}",
+            url=self.build_url(f"channel/{channel_item.id}"),
             media_type="YouTube Channel",
             # Updating every 30 days is reasonable because this is only sued for
             # checking if information on the channel itself has changed.
@@ -495,7 +495,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             Episode(
                 key=video_item.id,
                 name=video_snippet.title,
-                url=f"{self._base_url()}watch?v={video_item.id}",
+                url=self.build_url(f"watch?v={video_item.id}"),
                 description=video_snippet.description,
                 release_date=video_snippet.published_at,
                 air_date=video_snippet.published_at,

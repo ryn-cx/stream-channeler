@@ -1,8 +1,9 @@
 # TODO: Validate
 import uuid
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Literal, Self, get_args
+from typing import Any, Literal, Self, get_args
 
 from pydantic import BaseModel
 
@@ -11,6 +12,8 @@ from app.plugins.models import File, Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.base_plugin.files import BaseFile
 
 ValidatorRuleType = Literal[
     "Static",
@@ -109,68 +112,77 @@ class Validator:
             self.remove(model, *field_names)
         return self
 
-    def seasons_share_show_file(self, entity: Show | Season) -> Self:
-        """Mark overlapping entities as updated when shows and seasons share a file.
-
-        - Show: marks all seasons as updated.
-        - Season: marks the parent show as updated.
-        """
+    def _get_files(
+        self,
+        plugin: BasePlugin,
+        entity: Show | Season | Episode,
+    ) -> Sequence[BaseFile[Any]]:
         match entity:
-            case Show() as show:
-                for season in show.seasons:
-                    self.incremented(season.id, "modified_at", "data_timestamp")
-            case Season() as season:
-                self.incremented(season.show.id, "modified_at", "data_timestamp")
-        return self
+            case Show():
+                return plugin._show_files(entity.key)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+            case Season():
+                return plugin._season_files(entity.key, entity.show.key)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+            case Episode():
+                show = entity.season.show
+                return plugin._episode_files(  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+                    entity.key,
+                    entity.season.key,
+                    show.key,
+                )
 
-    def episodes_share_season_file(self, entity: Season | Episode) -> Self:
-        """Mark overlapping entities as updated when seasons and episodes share a file.
-
-        - Season: marks all episodes as updated.
-        - Episode: marks the parent season as updated.
-        """
+    def apply_shared_file_rules(
+        self,
+        entity: Show | Season | Episode,
+        plugin: BasePlugin,
+    ) -> None:
+        updated_files = set(self._get_files(plugin, entity))
         match entity:
-            case Season() as season:
-                for episode in season.episodes:
+            case Show():
+                self._apply_show_share_rules(entity, plugin, updated_files)
+            case Season():
+                self._apply_season_share_rules(entity, plugin, updated_files)
+            case Episode():
+                self._apply_episode_share_rules(entity, plugin, updated_files)
+
+    def _apply_show_share_rules(
+        self,
+        show: Show,
+        plugin: BasePlugin,
+        updated_files: set[BaseFile[Any]],
+    ) -> None:
+        for season in show.seasons:
+            if self._get_files(plugin, season)[0] in updated_files:
+                self.incremented(season.id, "modified_at", "data_timestamp")
+            for episode in season.episodes:
+                if self._get_files(plugin, episode)[0] in updated_files:
                     self.incremented(episode.id, "modified_at", "data_timestamp")
-            case Episode() as episode:
-                self.incremented(
-                    episode.season.id,
-                    "modified_at",
-                    "data_timestamp",
-                )
-        return self
 
-    def episodes_share_show_file(self, entity: Show | Episode) -> Self:
-        """Mark overlapping entities as updated when shows and episodes share a file.
+    def _apply_season_share_rules(
+        self,
+        season: Season,
+        plugin: BasePlugin,
+        updated_files: set[BaseFile[Any]],
+    ) -> None:
+        if self._get_files(plugin, season.show)[0] in updated_files:
+            self.incremented(season.show.id, "modified_at", "data_timestamp")
+        for episode in season.episodes:
+            if self._get_files(plugin, episode)[0] in updated_files:
+                self.incremented(episode.id, "modified_at", "data_timestamp")
 
-        - Show: marks all episodes as updated.
-        - Episode: marks the parent show as updated.
-        """
-        match entity:
-            case Show() as show:
-                for season in show.seasons:
-                    for episode in season.episodes:
-                        self.incremented(episode.id, "modified_at", "data_timestamp")
-            case Episode() as episode:
-                self.incremented(
-                    episode.season.show.id,
-                    "modified_at",
-                    "data_timestamp",
-                )
-        return self
-
-    def seasons_share_file(self, season: Season) -> Self:
-        """Mark all sibling seasons as updated when they share a file."""
-        for sibling in season.show.seasons:
-            self.incremented(sibling.id, "modified_at", "data_timestamp")
-        return self
-
-    def episodes_share_file(self, episode: Episode) -> Self:
-        """Mark all sibling episodes as updated when they share a file."""
+    def _apply_episode_share_rules(
+        self,
+        episode: Episode,
+        plugin: BasePlugin,
+        updated_files: set[BaseFile[Any]],
+    ) -> None:
+        if self._get_files(plugin, episode.season)[0] in updated_files:
+            self.incremented(episode.season.id, "modified_at", "data_timestamp")
+        show = episode.season.show
+        if self._get_files(plugin, show)[0] in updated_files:
+            self.incremented(show.id, "modified_at", "data_timestamp")
         for sibling in episode.season.episodes:
-            self.incremented(sibling.id, "modified_at", "data_timestamp")
-        return self
+            if self._get_files(plugin, sibling)[0] in updated_files:
+                self.incremented(sibling.id, "modified_at", "data_timestamp")
 
     def get_rule(
         self,

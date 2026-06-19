@@ -62,6 +62,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "just-scrape" },
     { name = "loguru" },
+    { name = "nahpki" },
     { name = "not-yt-dlapi" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2", "bcrypt"] },
@@ -83,6 +84,7 @@ dev = [
     { name = "mypy" },
     { name = "prek" },
     { name = "pytest" },
+    { name = "pytest-socket" },
     { name = "ruff" },
     { name = "ty" },
 ]
@@ -100,6 +102,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "nahpki", git = "https://github.com/ryn-cx/nahpki" },
     { name = "not-yt-dlapi", git = "https://github.com/ryn-cx/not-yt-dlapi" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
     { name = "pwdlib", extras = ["argon2", "bcrypt"], specifier = ">=0.3.0" },
@@ -121,6 +124,7 @@ dev = [
     { name = "mypy", specifier = ">=1.8.0,<2.0.0" },
     { name = "prek", specifier = ">=0.2.24,<1.0.0" },
     { name = "pytest", specifier = ">=7.4.3,<8.0.0" },
+    { name = "pytest-socket", specifier = ">=0.7.0" },
     { name = "ruff", specifier = ">=0.2.2,<1.0.0" },
     { name = "ty", specifier = ">=0.0.25" },
 ]
@@ -1037,6 +1041,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nahpki"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/nahpki#7d693ea9f4f5432afc3f1a8d6d16bb13acb565f2" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
 source = { git = "https://github.com/ryn-cx/not-yt-dlapi#b89c5914f9d885d519a0eea4d1842f918d495081" }
@@ -1363,6 +1376,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/1f/9d8e98e4133ffb16c90f3b405c43e38d3abb715bb5d7a63a5a684f7e46a3/pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280", size = 1357116, upload-time = "2023-12-31T12:00:18.035Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/ff/f6e8b8f39e08547faece4bd80f89d5a8de68a38b2d179cc1c4490ffa3286/pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8", size = 325287, upload-time = "2023-12-31T12:00:13.963Z" },
+]
+
+[[package]]
+name = "pytest-socket"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/3c/f9b58e57830e58980dbe8867d0e348f45701d3f3ea065672d448f4366da5/pytest_socket-0.8.0.tar.gz", hash = "sha256:af9bb5f487da72be63573a6194cfac033b6c7a1c1561e150521105970f9e99f2", size = 13912, upload-time = "2026-05-21T16:50:22.552Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/e8/4a8568580bae3dcd678599ed8e86a82d505a44df71c1ced4246c1aa14b4b/pytest_socket-0.8.0-py3-none-any.whl", hash = "sha256:81821ba59f07d7600fe2b551d8714f40b068bd46e8b6704c48664e9d60cdacb8", size = 8414, upload-time = "2026-05-21T16:50:21.022Z" },
 ]
 
 [[package]]

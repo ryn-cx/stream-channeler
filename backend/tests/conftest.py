@@ -8,14 +8,14 @@ from fastapi.testclient import TestClient
 from loguru import logger
 from pydantic_core import MultiHostUrl
 from sqlalchemy import Connection
-from sqlmodel import Session, create_engine, text
+from sqlmodel import Session, SQLModel, create_engine, text
 
 # reportUnusedImport/F401 - This loads variables into the environment even if it looks
 # like it does nothing. It's easier to do this on import than import it then have a
 # function call in the middle of all of the imports.
 from app.auth.dependencies import get_db
 from app.config import settings
-from app.database import init_db, automatically_import_models
+from app.database import automatically_import_models, init_db
 from app.main import app
 from tests.app.users.utils import (
     authentication_token_from_email,
@@ -27,7 +27,7 @@ from tests.app.utils.utils import get_superuser_token_headers
 logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
 
-TEST_DB_NAME = f"{settings.POSTGRES_DB}_test"
+TEST_DB_NAME = f"{settings.POSTGRES_DB}_backend_test"
 TEST_DATABASE_URI = MultiHostUrl.build(
     scheme="postgresql+psycopg",
     username=settings.POSTGRES_USER,
@@ -52,7 +52,6 @@ admin_engine = create_engine(str(ADMIN_DATABASE_URI))
 
 
 def create_test_database() -> None:
-    """Create the test database by copying the migrated application database."""
     # AUTOCOMMIT is required to drop/create a database.
     with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
         conn.execute(
@@ -63,12 +62,11 @@ def create_test_database() -> None:
             {"db": TEST_DB_NAME},
         )
         conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}"'))
-        conn.execute(
-            text(
-                f'CREATE DATABASE "{TEST_DB_NAME}" '
-                f'WITH TEMPLATE "{settings.POSTGRES_DB}"',
-            ),
-        )
+        conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
+
+    with test_engine.begin() as conn:
+        conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+    SQLModel.metadata.create_all(test_engine)
 
 
 def drop_test_database() -> None:
@@ -103,18 +101,22 @@ def savepoint_session(
     """Create a savepoint session that rolls back after use."""
     transaction = connection.begin_nested() if nested else connection.begin()
     session = Session(bind=connection, join_transaction_mode="create_savepoint")
-    yield session
-    session.close()
-    transaction.rollback()
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
 
 
 def _init_connection() -> Generator[Connection]:
     """Create a connection and initialize the database."""
     connection = test_engine.connect()
-    with Session(bind=connection) as session:
-        init_db(session)
-    yield connection
-    connection.close()
+    try:
+        with Session(bind=connection) as session:
+            init_db(session)
+        yield connection
+    finally:
+        connection.close()
 
 
 @pytest.fixture

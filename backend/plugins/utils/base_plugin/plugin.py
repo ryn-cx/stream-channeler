@@ -59,6 +59,11 @@ class BasePlugin(
         return self._source is not None
 
     def initialize_database(self) -> None:
+        """Set up the plugin and its source records in the database."""
+        self.initialize_plugin()
+        self.initialize_source()
+
+    def initialize_plugin(self) -> None:
         """Add the `Plugin (class)` to the database if it doesn't already exist.
 
         This will always set `self.plugin` to the database record for the `Plugin`, and
@@ -85,8 +90,6 @@ class BasePlugin(
             self.plugin = existing_plugin
             if len(self.plugin.sources) == 1:
                 self._source = self.plugin.sources[0]
-
-        self.initialize_source()
 
     def initialize_source(self) -> None:
         """Hook for plugins to set up their source(s) after the plugin record exists."""

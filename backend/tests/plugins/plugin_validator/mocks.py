@@ -43,18 +43,6 @@ def mock_update() -> Generator[None]:
 
 
 @contextmanager
-def block_downloads() -> Generator[None]:
-    """Raise an error if any file download is attempted."""
-
-    def _block_downloads(self: BaseFile[Any]) -> None:
-        msg = f"Unexpected download attempted: {self.database_record.key}"
-        raise RuntimeError(msg)
-
-    with _patch_download(_block_downloads):
-        yield
-
-
-@contextmanager
 def track_downloads() -> Generator[list[str]]:
     """Track which files are actually downloaded during an operation.
 

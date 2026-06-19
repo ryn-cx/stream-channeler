@@ -4,8 +4,6 @@ from typing import override
 
 from diving_board.schedule.models import ScheduleModel
 
-from app.episodes.models import Episode
-from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.HiDive import HiDive
@@ -26,14 +24,6 @@ class HiDiveValidator(PluginValidator[HiDive]):
         "/season/{parse_url_response}/",
     )
 
-    @override
-    def update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            .update_episode_validator(episode)
-            .episodes_share_season_file(episode)
-        )
-
 
 class HiDiveMovieValidator(PluginValidator[HiDive]):
     plugin_class = HiDive
@@ -41,34 +31,6 @@ class HiDiveMovieValidator(PluginValidator[HiDive]):
         "/playlist/{parse_url_response}",
         "/playlist/{parse_url_response}/",
     )
-
-    @override
-    def update_show_validator(self, show: Show) -> Validator:
-        return (
-            super()
-            .update_show_validator(show)
-            .seasons_share_show_file(show)
-            .episodes_share_show_file(show)
-        )
-
-    @override
-    def update_season_validator(self, season: Season) -> Validator:
-        return (
-            super()
-            .update_season_validator(season)
-            .episodes_share_season_file(season)
-            .seasons_share_show_file(season)
-        )
-
-    @override
-    def update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            .update_episode_validator(episode)
-            .episodes_share_season_file(episode)
-            .episodes_share_file(episode)
-            .episodes_share_show_file(episode)
-        )
 
 
 class HiDiveStandardTests(StandardTests[HiDive], HiDiveValidator):

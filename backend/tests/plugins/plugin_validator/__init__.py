@@ -26,7 +26,6 @@ from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.mocks import (
-    block_downloads,
     mock_update,
     track_downloads,
 )
@@ -34,7 +33,7 @@ from tests.plugins.plugin_validator.validator import Validator
 
 
 class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
-    """Base class with shared configuration, validation helpers, and data initialization."""
+    """Base class for testing plugins."""
 
     plugin_class: type[PluginT]
     url: str | None = None
@@ -45,25 +44,18 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     search_query: str | None = None
 
     def get_detached_plugin(self, session: Session) -> Plugin:
-        """Return a detached copy of the plugin to use for validation."""
+        """Return a detached copy of the plugin to use with validation."""
         plugin = self.select_plugin_with_children(session)
         dumped = self._dump_model(plugin)
         return self._load_model(Plugin, dumped)
 
-    def validate_plugin(
-        self,
-        session: Session,
-        original_plugin: Plugin,
-        config: Validator,
-    ) -> None:
-        """Validate that the current database state matches the original plugin."""
-        config.validate(original_plugin, self.get_detached_plugin(session))
-
     def import_url_validator(self) -> Validator:
         return (
             Validator()
-            .changed(Plugin, "user_id")
+            # Based on when the URL is imported.
             .incremented_all("created_at", "modified_at")
+            # Randomly generated values.
+            .changed(Plugin, "user_id")
             .changed_all("id")
             .changed(Source, "plugin_id")
             .changed(Show, "source_id")
@@ -78,7 +70,9 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         self,
         entity: Plugin | Source | Show | Season | Episode,
     ) -> Validator:
-        return Validator().incremented(entity.id, "modified_at", "data_timestamp")
+        validator = Validator().incremented(entity.id, "modified_at", "data_timestamp")
+        self._apply_shared_file_rules(validator, entity)
+        return validator
 
     def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
         return self.generic_update_validator(plugin)
@@ -91,6 +85,16 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def update_season_validator(self, season: Season) -> Validator:
         return self.generic_update_validator(season)
+
+    def _apply_shared_file_rules(
+        self,
+        validator: Validator,
+        entity: Plugin | Source | Show | Season | Episode,
+    ) -> None:
+        if isinstance(entity, Plugin | Source):
+            return
+
+        validator.apply_shared_file_rules(entity, self.imported_plugin)
 
     def update_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_update_validator(episode)
@@ -202,7 +206,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
         msg = f"Failed updating: {entity}"
         try:
-            self.validate_plugin(session, original_plugin, validator)
+            validator.validate(original_plugin, self.get_detached_plugin(session))
         except AssertionError as error:
             raise AssertionError(msg) from error
 
@@ -237,22 +241,9 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         files_already_cached: bool,
     ) -> None:
         """Run a search query, always exporting files for analysis even on failure."""
-        # Search results auto-refresh after a plugin TTL (e.g. 30 days). When
-        # replaying cached data, freeze the clock to just after the search file
-        # was recorded so the TTL treats it as fresh instead of re-downloading.
-        freeze_target = None
-        if files_already_cached:
-            plugin = self.select_plugin_with_children(session)
-            search_timestamps = [
-                file.data_timestamp
-                for file in plugin.files
-                if file.key.startswith("Search")
-            ]
-            if search_timestamps:
-                freeze_target = max(search_timestamps) + timedelta(seconds=1)
-
+        # _search freezes the clock so cached search files stay within their TTL.
         try:
-            with freeze_time(freeze_target), track_downloads() as download_count:
+            with track_downloads() as download_count:
                 self._search(session, search_query)
         finally:
             self._export_database_files(session)
@@ -260,6 +251,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         if files_already_cached and download_count:
             pytest.fail(f"Files were downloaded during search: {download_count}")
 
+    @pytest.mark.enable_socket
     @pytest.mark.skipif(
         "GITHUB_ACTIONS" in os.environ,
         reason="Records/refreshes test data locally; never runs on CI.",
@@ -330,7 +322,7 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         if not self.url or self.invalid_url:
             pytest.skip()
 
-        with block_downloads(), log_stats(self):
+        with log_stats(self):
             self.plugin_class(session_with_files).import_url(self.url)
 
         verification_content = self.verification_file_path().read_text()
@@ -338,7 +330,10 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
         original_plugin = self._load_model(Plugin, verification_data)
         validator = self.import_url_validator()
-        self.validate_plugin(session_with_files, original_plugin, validator)
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_files),
+        )
 
 
 class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -348,7 +343,7 @@ class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         if not self.url:
             pytest.skip()
 
-        with block_downloads(), log_stats(self), pytest.raises(InvalidURLError):
+        with log_stats(self), pytest.raises(InvalidURLError):
             self.plugin_class(session_with_files).import_url(self.url)
 
 
@@ -357,11 +352,14 @@ class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
     def test_import_existing_url(self, session_with_url: Session) -> None:
         original_plugin = self.get_detached_plugin(session_with_url)
-        with log_stats(self), block_downloads():
+        with log_stats(self):
             self.plugin_class(session_with_url).import_url(self.url)
 
         validator = self.existing_url_validator()
-        self.validate_plugin(session_with_url, original_plugin, validator)
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_url),
+        )
 
 
 class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -459,11 +457,14 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         session_with_url.flush()
 
         freeze_at = season.data_timestamp + timedelta(seconds=2)
-        with freeze_time(freeze_at), block_downloads(), log_stats(self):
+        with freeze_time(freeze_at), log_stats(self):
             self.plugin_class(session_with_url).update_season(season=season)
 
         validator = self.deleted_episode_validator(fake_episode)
-        self.validate_plugin(session_with_url, original_plugin, validator)
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_url),
+        )
 
 
 class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -490,11 +491,14 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         session_with_url.flush()
 
         freeze_at = show.data_timestamp + timedelta(seconds=2)
-        with freeze_time(freeze_at), block_downloads(), log_stats(self):
+        with freeze_time(freeze_at), log_stats(self):
             self.plugin_class(session_with_url).update_show(show=show)
 
         validator = self.deleted_season_validator(fake_season)
-        self.validate_plugin(session_with_url, original_plugin, validator)
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_url),
+        )
 
 
 class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -504,7 +508,7 @@ class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         if not self.search_query:
             pytest.skip()
 
-        with block_downloads(), log_stats(self):
+        with log_stats(self):
             result = self._search(session_with_files, self.search_query)
 
         assert isinstance(result, PluginSearchResults)

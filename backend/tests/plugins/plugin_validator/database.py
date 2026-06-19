@@ -2,10 +2,12 @@
 import json
 from collections.abc import Generator
 from contextlib import suppress
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -26,7 +28,6 @@ from tests.conftest import (
     savepoint_session,
     test_engine,
 )
-from tests.plugins.plugin_validator.mocks import block_downloads
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
@@ -35,6 +36,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     url: str | None = None
     search_query: str | None = None
     invalid_url: bool
+    imported_plugin: PluginT
 
     def files_directory_path(self) -> Path:
         """Path to the directory where all files for the test class are stored."""
@@ -129,15 +131,27 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
-        output = self.plugin_class(session).import_url(url)
+        self.imported_plugin = self.plugin_class(session)
+        output = self.imported_plugin.import_url(url)
 
         session.commit()  # Set the rollback point.
 
         return output
 
     def _search(self, session: Session, query: str) -> PluginSearchResults:
-        """Search using the plugin. Files are pre-imported by the class fixture."""
-        return self.plugin_class(session).search(query)
+        with freeze_time(self._search_files_freeze_target(session)):
+            return self.plugin_class(session).search(query)
+
+    def _search_files_freeze_target(self, session: Session) -> datetime | None:
+        plugin = self.select_plugin_with_children(session)
+        search_timestamps = [
+            file.data_timestamp
+            for file in plugin.files
+            if file.key.startswith("Search")
+        ]
+        if not search_timestamps:
+            return None
+        return max(search_timestamps) + timedelta(seconds=1)
 
     def _import_files(self, session: Session) -> None:
         """Import all exported files into the database."""
@@ -180,51 +194,73 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         session.commit()  # Set the rollback point.
 
     @pytest.fixture(scope="class")
-    def _session_with_files_connection(self) -> Generator[Connection]:
-        """Class-scoped connection with files pre-imported on its own database."""
+    def _connection_with_files(self) -> Generator[Connection]:
+        """One class-scoped connection with files imported once for the whole class.
+
+        Both session_with_files and session_with_url share this single connection.
+        Using one connection (rather than one per session fixture) is what avoids
+        the deadlock: two separate open transactions inserting the same File rows
+        for the same plugin would block on each other's uncommitted unique keys.
+        The files are imported once here and reused by every test in the class via
+        per-test savepoints.
+        """
         connection = test_engine.connect()
         transaction = connection.begin()
-        with Session(bind=connection, join_transaction_mode="create_savepoint") as session:
-            init_db(session)
-            self._import_files(session)
-        yield connection
-        transaction.rollback()
-        connection.close()
+        # Clean up even when setup raises, otherwise a failed import leaks a
+        # broken connection back into the pool and poisons later tests.
+        try:
+            with Session(
+                bind=connection,
+                join_transaction_mode="create_savepoint",
+            ) as session:
+                init_db(session)
+                self._import_files(session)
+            yield connection
+        finally:
+            transaction.rollback()
+            connection.close()
 
     @pytest.fixture
     def session_with_files(
         self,
-        _session_with_files_connection: Connection,
+        _connection_with_files: Connection,
     ) -> Generator[Session]:
         """Per-test session with files pre-imported, rolls back after each test."""
-        yield from savepoint_session(_session_with_files_connection, nested=True)
+        yield from savepoint_session(_connection_with_files, nested=True)
 
     @pytest.fixture(scope="class")
-    def _session_with_url_connection(self) -> Generator[Connection]:
-        """Class-scoped connection with files and URL pre-imported on its own database."""
+    def _connection_with_imported_url(
+        self, _connection_with_files: Connection
+    ) -> Generator[Connection]:
+        """Import the URL once per class inside a savepoint kept open for the class.
+
+        The savepoint is nested inside the shared files transaction, so
+        session_with_files tests never see the imported URL, and it is rolled back
+        when the class finishes. Both the files and the URL are therefore imported
+        only once per class; per-test isolation is a further nested savepoint.
+        """
         if self.invalid_url:
             pytest.skip("invalid_url is set")
-        if not self.url and not self.search_query:
-            pytest.skip("No URL or search query defined")
 
-        connection = test_engine.connect()
-        transaction = connection.begin()
-        with Session(bind=connection, join_transaction_mode="create_savepoint") as session:
-            init_db(session)
-            self._import_files(session)
-            with block_downloads():
+        transaction = _connection_with_files.begin_nested()
+        try:
+            with Session(
+                bind=_connection_with_files,
+                join_transaction_mode="create_savepoint",
+            ) as session:
+                # Files are already imported on the shared connection; any download
+                # here is a missing fixture, which pytest-socket fails fast.
                 if self.url:
                     self._import_url(session)
                 if self.search_query:
                     self._search(session, self.search_query)
-        yield connection
-        transaction.rollback()
-        connection.close()
+            yield _connection_with_files
+        finally:
+            transaction.rollback()
 
     @pytest.fixture
     def session_with_url(
-        self,
-        _session_with_url_connection: Connection,
+        self, _connection_with_imported_url: Connection
     ) -> Generator[Session]:
-        """Per-test session with files and URL imported, rolls back after."""
-        yield from savepoint_session(_session_with_url_connection, nested=True)
+        """Per-test session with files and URL imported, rolls back after each test."""
+        yield from savepoint_session(_connection_with_imported_url, nested=True)

@@ -1,16 +1,13 @@
 # TODO: Validate
 from datetime import date, datetime, timedelta
 from typing import override
-from unittest.mock import patch
 
 import pytest
 from just_scrape.new_title_buckets import NewTitleBuckets
 from sqlmodel import Session, col, select
 
-from app.episodes.models import Episode
 from app.plugins.models import File, Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
@@ -19,7 +16,6 @@ from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
     StandardTests,
-    block_downloads,
 )
 from tests.plugins.plugin_validator.validator import Validator
 
@@ -27,15 +23,6 @@ from tests.plugins.plugin_validator.validator import Validator
 class BaseJustWatch(PluginValidator[JustWatch]):
     plugin_class = JustWatch
     class_key: str
-
-    # @override
-    # def _import_files(self, session: Session) -> None:
-    #     # initialize_source refreshes the latest new-titles bucket whenever the newest
-    #     # one is more than a day old, which recorded test data always is, so it would
-    #     # trigger a real download during fixture setup. The recorded bucket is enough
-    #     # for these tests, so skip the refresh.
-    #     with patch.object(JustWatch, "_download_latest_new_titles_bucket"):
-    #         super()._import_files(session)
 
     def _incomplete_bucket_source_dates(
         self,
@@ -74,6 +61,17 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             validator.populated(source_key, "update_at")
         return validator
 
+    @override
+    def update_source_validator(self, source: Source) -> Validator:
+        validator = super().update_source_validator(source)
+        assert source.data_timestamp
+        completeness_deadline = tz_datetime.combine(
+            source.data_timestamp.date(), datetime.min.time()
+        ) + timedelta(days=2)
+        if completeness_deadline > tz_datetime.now():
+            validator.populated(source.id, "update_at")
+        return validator
+
     def test_update_plugin(self, session_with_url: Session) -> None:
         """Update a random plugin and validate the data."""
         if self.invalid_url or not self.url:
@@ -83,8 +81,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         assert isinstance(plugin_instance, JustWatch)
         # The URL's files are already imported by the session_with_url fixture, so the
         # re-import finds the shows preloaded and never downloads.
-        with block_downloads():
-            results = plugin_instance.import_url(self.url)
+        results = plugin_instance.import_url(self.url)
         plugin = results[0].show.source.plugin
 
         # Pre-create the NewTitles files that bucket processing will mark incomplete
@@ -107,18 +104,6 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             session_with_url,
             original_plugin,
             plugin,
-        )
-
-    @override
-    def update_season_validator(self, season: Season) -> Validator:
-        return super().update_season_validator(season).seasons_share_show_file(season)
-
-    @override
-    def update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            .update_episode_validator(episode)
-            .episodes_share_season_file(episode)
         )
 
     @staticmethod
@@ -161,8 +146,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         plugin_instance = self.plugin_class(session_with_url)
         # The URL's files are already imported by the session_with_url fixture, so the
         # re-import finds the shows preloaded and never downloads.
-        with block_downloads():
-            results = plugin_instance.import_url(self.url)
+        results = plugin_instance.import_url(self.url)
 
         # Find the specific source that will have updates available for it.
         source = next(
@@ -201,34 +185,6 @@ class TestMovie(StandardTests, BaseJustWatch):
     url = "https://www.justwatch.com/us/movie/evangelion-1-0-you-are-not-alone"
     class_key = "amp"
     search_query = "Evangelion: 1.0 You Are (Not) Alone"
-
-    @override
-    def update_show_validator(self, show: Show) -> Validator:
-        return (
-            super()
-            .update_show_validator(show)
-            .seasons_share_show_file(show)
-            .episodes_share_show_file(show)
-        )
-
-    @override
-    def update_season_validator(self, season: Season) -> Validator:
-        return (
-            super()
-            .update_season_validator(season)
-            .seasons_share_show_file(season)
-            .episodes_share_season_file(season)
-        )
-
-    @override
-    def update_episode_validator(self, episode: Episode) -> Validator:
-        return (
-            super()
-            .update_episode_validator(episode)
-            .episodes_share_show_file(episode)
-            .episodes_share_season_file(episode)
-            .episodes_share_file(episode)
-        )
 
     def test_import_single_source(self, session_with_files: Session) -> None:
         url = f"Amazon Prime Video{self.url}"

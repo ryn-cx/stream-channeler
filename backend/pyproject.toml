@@ -15,6 +15,7 @@ dependencies = [
   "jinja2<4.0.0,>=3.1.4",
   "just-scrape",
   "loguru>=0.7.3",
+  "nahpki",
   "not-yt-dlapi",
   "psycopg[binary]<4.0.0,>=3.1.13",
   "pwdlib[argon2,bcrypt]>=0.3.0",
@@ -36,6 +37,7 @@ dev = [
   "mypy<2.0.0,>=1.8.0",
   "prek>=0.2.24,<1.0.0",
   "pytest<8.0.0,>=7.4.3",
+  "pytest-socket>=0.7.0",
   "ruff<1.0.0,>=0.2.2",
   "ty>=0.0.25",
 ]
@@ -43,6 +45,10 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+# Block network access for plugin tests.
+addopts = "--disable-socket --allow-hosts=127.0.0.1,::1,localhost"
 
 [tool.coverage.run]
 source = ["app"]
@@ -100,3 +106,4 @@ just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
+nahpki = { git = "https://github.com/ryn-cx/nahpki" }

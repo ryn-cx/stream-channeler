@@ -114,12 +114,11 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         self._upsert_source(new_browse_file)
 
     def _process_new_browse_files(self, source: Source) -> None:
-        """Import existing browse files that have not been imported yet."""
         # Preload up to seasons because seasons have their update_at values set.
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self._get_new_files_since_source(
-            source,
+        for browse_json in self.get_new_files(
+            source.data_timestamp,
             Browse,
             self.browse_file,
         ):
@@ -138,8 +137,8 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     @classmethod
     @override
-    def domains(cls) -> list[str]:
-        return ["crunchyroll.com"]
+    def _domain(cls) -> str:
+        return "crunchyroll.com"
 
     @classmethod
     @override
@@ -153,11 +152,11 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         """Return the episode URL for the episode_key."""
-        return f"{cls._base_url()}watch/{episode_key}"
+        return cls.build_url(f"watch/{episode_key}")
 
     @classmethod
     def _show_url(cls, show_key: str) -> str:
-        return f"{cls._base_url()}series/{show_key}"
+        return cls.build_url(f"series/{show_key}")
 
     def _upsert_source(self, latest_browse_file: Browse) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -165,7 +164,9 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             key=self.plugin_key(),
             name=self.plugin_key(),
             # TODO: Don't hardcode the favicon URL
-            favicon_url=f"{self._base_url()}build/assets/img/favicons/favicon-v2-96x96.png",
+            favicon_url=self.build_url(
+                "build/assets/img/favicons/favicon-v2-96x96.png"
+            ),
             update_at=latest_browse_file.data_timestamp + timedelta(days=1),
             data_timestamp=latest_browse_file.data_timestamp,
             plugin_id=self.plugin.id,
@@ -262,11 +263,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def search(self, query: str) -> PluginSearchResults:
-        """Search Crunchyroll for series matching `query`.
-
-        The underlying response is cached on disk; the file is re-downloaded
-        only if it's older than 30 days.
-        """
         search_file = self.search_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)

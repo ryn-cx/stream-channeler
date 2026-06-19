@@ -151,8 +151,8 @@ class HiDive(FileMixin, register=True):
         _cache = self._preload_sources(preload_seasons=True).all()
         shows_by_name = {show.name: show for show in source.shows if show.name}
 
-        for schedule_file in self._get_new_files_since_source(
-            source,
+        for schedule_file in self.get_new_files(
+            source.data_timestamp,
             Schedule,
             self.schedule_file,
         ):
@@ -178,8 +178,8 @@ class HiDive(FileMixin, register=True):
 
     @classmethod
     @override
-    def domains(cls) -> list[str]:
-        return ["hidive.com"]
+    def _domain(cls) -> str:
+        return "hidive.com"
 
     @classmethod
     @override
@@ -214,16 +214,16 @@ class HiDive(FileMixin, register=True):
     @classmethod
     def _show_url(cls, key: str | int, media_type: str = "TV Show") -> str:
         if media_type == "Movie":
-            return f"{cls._base_url()}playlist/{key}"
-        return f"{cls._base_url()}series/{key}"
+            return cls.build_url(f"playlist/{key}")
+        return cls.build_url(f"series/{key}")
 
     @classmethod
     def _season_url(cls, season_key: str | int) -> str:
-        return f"{cls._base_url()}season/{season_key}"
+        return cls.build_url(f"season/{season_key}")
 
     @classmethod
     def _episode_url(cls, episode_key: str | int) -> str:
-        return f"{cls._base_url()}video/{episode_key}"
+        return cls.build_url(f"video/{episode_key}")
 
     def _upsert_source(self, latest_schedule_file: Schedule) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())

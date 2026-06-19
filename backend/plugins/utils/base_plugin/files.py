@@ -61,6 +61,14 @@ class BaseFile[T](ABC):
 
     unique_identifier: str
 
+    @override
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, BaseFile) and self.file_key() == other.file_key()
+
+    @override
+    def __hash__(self) -> int:
+        return hash(self.file_key())
+
     def file_key(self) -> str:
         """Return the value for File.key."""
         return (

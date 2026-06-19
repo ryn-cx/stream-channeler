@@ -27,19 +27,28 @@ class URLMixin(ABC):
         """
 
     @classmethod
-    @abstractmethod
     def domains(cls) -> list[str]:
         """Return a list of the domains the plugin supports.
 
-        The first domain should be the primary domain used by self.base_url().
+        The first domain should be the primary domain used by self._base_url().
 
         The domains should be in the format of example.com
+
+        Defaults to the single domain returned by `_domain`; plugins that support
+        multiple domains should override this instead.
         """
         # This is used in tests to make sure the regex supports every domain.
+        return [cls._domain()]
 
     @classmethod
     def _domain(cls) -> str:
-        """Return the first domain the plugin supports."""
+        """Return the single (primary) domain the plugin supports.
+
+        Plugins that support exactly one domain should override this. Plugins
+        that support multiple domains should override `domains` instead.
+
+        The domain should be in the format of example.com
+        """
         return cls.domains()[0]
 
     @classmethod
@@ -48,7 +57,20 @@ class URLMixin(ABC):
 
         The base url is in the format of https://www.example.com/
         """
-        return f"https://www.{cls._domain()}/"
+        return f"https://{cls._domain()}/"
+
+    @classmethod
+    def build_url(cls, path: str) -> str:
+        """Build an absolute URL from a path relative to the base URL.
+
+        A leading slash is added to the path when missing, so callers can pass
+        either a bare path (``series/123``) or a root-relative path
+        (``/series/123``).
+        """
+        base_url = cls._base_url().rstrip("/")
+        if not path.startswith("/"):
+            path = f"/{path}"
+        return f"{base_url}{path}"
 
     @classmethod
     def _domain_regex(cls) -> str:
