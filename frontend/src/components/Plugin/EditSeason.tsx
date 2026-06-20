@@ -12,7 +12,12 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { optionalInt, optionalString, requiredKey } from "@/lib/formSchemas"
+import {
+  nullifyBlanks,
+  optionalInt,
+  optionalString,
+  requiredKey,
+} from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { SeasonTableData } from "./seasonColumns"
@@ -98,7 +103,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
 
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(data)
+    mutation.mutate(nullifyBlanks(data))
   }
 
   return (

@@ -13,6 +13,7 @@ import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
+  nullifyBlanks,
   optionalInt,
   optionalNonNegativeInt,
   optionalString,
@@ -114,7 +115,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
 
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(data)
+    mutation.mutate(nullifyBlanks(data))
   }
 
   return (

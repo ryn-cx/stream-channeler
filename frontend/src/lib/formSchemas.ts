@@ -34,3 +34,12 @@ export const requiredKey = z.string().min(1, "Key is required")
 
 /** Visibility selector shared by plugin and playlist forms. */
 export const visibilityEnum = z.enum(["public", "unlisted", "private"])
+
+export function nullifyBlanks<T extends object>(data: T): T {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      value === undefined ? null : value,
+    ]),
+  ) as T
+}

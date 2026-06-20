@@ -25,7 +25,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { optionalString, requiredKey, visibilityEnum } from "@/lib/formSchemas"
+import {
+  nullifyBlanks,
+  optionalString,
+  requiredKey,
+  visibilityEnum,
+} from "@/lib/formSchemas"
 import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
 
@@ -107,7 +112,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
 
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(data)
+    mutation.mutate(nullifyBlanks(data))
   }
 
   return (

@@ -14,7 +14,7 @@ import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
-import { optionalString, requiredKey } from "@/lib/formSchemas"
+import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { FileTableData } from "./fileColumns"
@@ -113,7 +113,10 @@ const EditFile = ({ file }: EditFileProps) => {
 
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(data)
+    // Clear blanked fields (send null, not omit) so the PATCH actually clears
+    // them. content is fetched lazily, so keep it omit-on-blank to avoid a slow
+    // load wiping it.
+    mutation.mutate({ ...nullifyBlanks(data), content: data.content })
   }
 
   return (

@@ -12,7 +12,7 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import useCustomToast from "@/hooks/useCustomToast"
-import { optionalString, requiredKey } from "@/lib/formSchemas"
+import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./showColumns"
@@ -98,7 +98,7 @@ const EditShow = ({ show }: EditShowProps) => {
 
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(data)
+    mutation.mutate(nullifyBlanks(data))
   }
 
   return (
