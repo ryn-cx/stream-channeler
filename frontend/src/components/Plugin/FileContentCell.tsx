@@ -1,5 +1,6 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
+import { Copy } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { FilesService } from "@/client"
@@ -15,9 +16,10 @@ import {
 
 interface FileContentCellProps {
   fileId: string
+  fileName: string
 }
 
-export function FileContentCell({ fileId }: FileContentCellProps) {
+export function FileContentCell({ fileId, fileName }: FileContentCellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { data, isFetching } = useQuery({
     queryKey: ["files", fileId],
@@ -46,7 +48,23 @@ export function FileContentCell({ fileId }: FileContentCellProps) {
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-5xl lg:max-w-6xl">
         <DialogHeader>
-          <DialogTitle>File Content</DialogTitle>
+          <div className="flex items-center justify-between gap-2 pr-6">
+            <DialogTitle>{fileName} Content</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={content === null}
+              onClick={() => {
+                if (content !== null) {
+                  void navigator.clipboard.writeText(content)
+                }
+              }}
+            >
+              <Copy className="size-3.5" />
+              Copy
+            </Button>
+          </div>
         </DialogHeader>
         {isFetching ? (
           <span className="text-muted-foreground text-sm">Loading...</span>

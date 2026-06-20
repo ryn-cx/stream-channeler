@@ -52,7 +52,10 @@ export function createFileColumns(
         row.original.pending ? (
           <span className="text-muted-foreground text-sm">-</span>
         ) : (
-          <FileContentCell fileId={row.original.id} />
+          <FileContentCell
+            fileId={row.original.id}
+            fileName={row.original.key}
+          />
         ),
     },
     {
