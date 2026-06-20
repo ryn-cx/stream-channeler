@@ -140,6 +140,7 @@ const EditFile = ({ file }: EditFileProps) => {
         control={form.control}
         label="Update At"
         type="datetime-local"
+        showNowButton
       />
       <FormTextArea
         control={form.control}

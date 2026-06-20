@@ -149,6 +149,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
         control={form.control}
         label="Update At"
         type="datetime-local"
+        showNowButton
       />
       <FormField
         control={form.control}

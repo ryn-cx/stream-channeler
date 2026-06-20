@@ -12,6 +12,7 @@ import { FormTextArea } from "@/components/Common/FormTextArea"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { DialogTrigger } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
+import { currentLocalDateTime } from "@/lib/datetime"
 import { optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
@@ -25,14 +26,6 @@ const formSchema = z.object({
 
 type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
-
-function currentLocalDateTime() {
-  const now = new Date()
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-    now.getDate(),
-  )}T${pad(now.getHours())}:${pad(now.getMinutes())}`
-}
 
 interface AddFileProps {
   pluginId: string

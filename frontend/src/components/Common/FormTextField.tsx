@@ -1,5 +1,6 @@
 import type { Control, FieldPath, FieldValues } from "react-hook-form"
 
+import { Button } from "@/components/ui/button"
 import {
   FormControl,
   FormField,
@@ -8,6 +9,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { currentLocalDateTime } from "@/lib/datetime"
 
 interface FormTextFieldProps<TFieldValues extends FieldValues>
   extends Omit<React.ComponentProps<typeof Input>, "name"> {
@@ -19,6 +21,8 @@ interface FormTextFieldProps<TFieldValues extends FieldValues>
   name?: FieldPath<TFieldValues>
   label: string
   required?: boolean
+  /** Show a "Now" button that fills the field with the current local datetime. */
+  showNowButton?: boolean
   // Allow data-* attributes (e.g. data-testid) to flow through to the input.
   [dataAttribute: `data-${string}`]: string | undefined
 }
@@ -28,6 +32,7 @@ export function FormTextField<TFieldValues extends FieldValues>({
   name,
   label,
   required,
+  showNowButton,
   ...inputProps
 }: FormTextFieldProps<TFieldValues>) {
   const fieldName =
@@ -36,12 +41,8 @@ export function FormTextField<TFieldValues extends FieldValues>({
     <FormField
       control={control}
       name={fieldName}
-      render={({ field, fieldState }) => (
-        <FormItem>
-          <FormLabel>
-            {label}
-            {required && <span className="text-destructive"> *</span>}
-          </FormLabel>
+      render={({ field, fieldState }) => {
+        const input = (
           <FormControl>
             <Input
               aria-invalid={fieldState.invalid}
@@ -50,9 +51,32 @@ export function FormTextField<TFieldValues extends FieldValues>({
               {...field}
             />
           </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
+        )
+        return (
+          <FormItem>
+            <FormLabel>
+              {label}
+              {required && <span className="text-destructive"> *</span>}
+            </FormLabel>
+            {showNowButton ? (
+              <div className="flex gap-2">
+                {input}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => field.onChange(currentLocalDateTime())}
+                >
+                  Now
+                </Button>
+              </div>
+            ) : (
+              input
+            )}
+            <FormMessage />
+          </FormItem>
+        )
+      }}
     />
   )
 }

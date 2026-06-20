@@ -183,6 +183,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         control={form.control}
         label="Update At"
         type="datetime-local"
+        showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
     </FormModal>
