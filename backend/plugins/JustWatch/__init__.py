@@ -51,6 +51,34 @@ class JustWatch(FileMixin, register=True):
             self.plugin.data_timestamp = self.plugin_data_timestamp()
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
+    @override
+    def update_season(self, season: Season) -> None:
+        logger.info("Updating season: {}", season.key)
+        season = self._preload_season(
+            season.id,
+            preload_episodes=True,
+            preload_show=True,
+        ).one()
+        self._download_season_files(season.key, season.show.key, season.update_at)
+        _cache = self._download_show_files(season.show.key)
+        # The season episodes file reports when each episode's offers last
+        # changed, so re-download any buy box offers that are now stale.
+        self._refresh_outdated_offers(season.key, season.show.key)
+        self._preload_show(show_id=season.show.id, preload_episodes=True).one()
+        self._upsert_show(season.show.source, season.show.key)
+
+    def _refresh_outdated_offers(self, season_key: str, show_key: str) -> None:
+        """Re-download offers whose maxOfferUpdatedAt is newer than the stored file."""
+        if self._media_type(show_key) == "Movie":
+            return
+        for episode in self.custom_season_episodes_file(season_key).parsed_episodes():
+            offer_updated_at = episode.max_offer_updated_at
+            if isinstance(offer_updated_at, str):
+                offer_updated_at = datetime.fromisoformat(offer_updated_at)
+            self.custom_buy_box_offers_file(episode.id).download_if_outdated(
+                offer_updated_at,
+            )
+
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
