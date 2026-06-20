@@ -76,8 +76,7 @@ class NHKWorld(FileMixin, register=True):
     def _process_new_episodes_files(self, source: Source) -> None:
         _cache = self._preload_sources().all()
 
-        new_files = self.get_new_files(
-            source.data_timestamp,
+        new_files = self.get_incomplete_files(
             NewVideoEpisodes,
             self.new_video_episodes_file,
         )
@@ -91,6 +90,8 @@ class NHKWorld(FileMixin, register=True):
                 if show := Show.get_from_memory(self.session, source, show_id):
                     logger.info("Matched show: {}", show.name or show_id)
                     show.set_update_at(item.video.published_at)
+
+            feed_file.database_record.extra = "Completed"
 
     @classmethod
     @override

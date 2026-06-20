@@ -285,26 +285,22 @@ class FileMixin(BasePlugin, register=False):
                 new_titles_file.download_if_outdated(minimum_timestamp)
 
     def _pending_new_titles_files(self, source: Source) -> list[NewTitles]:
-        # Only files still marked incomplete (in File.extra) are pending; completed
-        # files have had their Extra marker cleared and are filtered out.
-        statement = select(File).where(
-            File.plugin_id == self.plugin.id,
-            col(File.key).startswith(f"{NewTitles.__name__}/{source.key}/"),
-            File.extra == "Incomplete",
-        )
-        new_titles_files: list[NewTitles] = []
-        for file in self.session.exec(statement).all():
+        # Files not yet marked "Completed" in File.extra are still pending.
+        def factory(file: File) -> NewTitles:
             unique_identifier = NewTitles.file_key_to_unique_identifier(file.key)
             new_titles_date = date.fromisoformat(unique_identifier.rsplit("/", 1)[-1])
-            new_titles_files.append(self.new_titles_file(source.key, new_titles_date))
-        return new_titles_files
+            return self.new_titles_file(source.key, new_titles_date)
+
+        return self.get_incomplete_files(
+            NewTitles,
+            factory,
+            key_prefix=f"{source.key}/",
+        )
 
     def _download_new_titles_bucket_if_missing(self) -> None:
         if not self._get_latest_new_titles_bucket().first():
             bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
-            # Buckets are always considered Incomplete until they are imported
-            bucket.database_record.extra = "Incomplete"
 
     def _download_latest_new_titles_bucket(self) -> None:
         latest_bucket = self._get_latest_new_titles_bucket().one()
@@ -316,8 +312,6 @@ class FileMixin(BasePlugin, register=False):
         end_datetime = latest_bucket.data_timestamp - timedelta(days=1)
         bucket = self.new_titles_bucket_file(end_datetime)
         bucket.download_if_outdated()
-        # Buckets are always considered Incomplete until they are imported
-        bucket.database_record.extra = "Incomplete"
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:

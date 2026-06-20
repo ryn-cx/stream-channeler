@@ -11,10 +11,9 @@ from just_scrape.custom_buy_box_offers import (
 )
 from just_scrape.url_title_details import response_models as url_title_details_models
 from loguru import logger
-from sqlmodel import col, select
 
 from app.episodes.models import Episode
-from app.plugins.models import File, Plugin
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -46,7 +45,6 @@ class JustWatch(FileMixin, register=True):
 
             bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
             bucket.download_if_outdated()
-            bucket.database_record.extra = "Incomplete"
 
             self._download_new_titles_bucket_if_missing()
 
@@ -168,7 +166,10 @@ class JustWatch(FileMixin, register=True):
         plugin.set_update_at(plugin.data_timestamp + timedelta(days=1))
 
     def _process_new_titles_buckets(self) -> None:
-        for bucket in self._get_new_new_title_buckets():
+        for bucket in self.get_incomplete_files(
+            NewTitleBucket,
+            self.new_titles_bucket_file,
+        ):
             for edge in bucket.parsed_edges():
                 short_name = edge.key.package.short_name
                 source = Source.get_from_memory(self.session, self.plugin, short_name)
@@ -178,27 +179,9 @@ class JustWatch(FileMixin, register=True):
 
                 new_titles_file = self.new_titles_file(source.key, edge.key.date)
                 new_titles_file.download_if_outdated()
-                # Files are always considered incomplete at this point because none of
-                # the data has been imported yet.
-                new_titles_file.database_record.extra = "Incomplete"
                 source.set_update_at(source.modified_at)
 
-            bucket.database_record.extra = None
-
-    def _get_new_new_title_buckets(self) -> list[NewTitleBucket]:
-        statement = (
-            select(File)
-            .where(
-                File.plugin_id == self.plugin.id,
-                col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
-                File.extra == "Incomplete",
-            )
-            .order_by(col(File.data_timestamp).asc())
-        )
-        return [
-            self.new_titles_bucket_file(file)
-            for file in self.session.exec(statement).all()
-        ]
+            bucket.database_record.extra = "Completed"
 
     @override
     def update_source(self, source: Source) -> None:
@@ -214,13 +197,12 @@ class JustWatch(FileMixin, register=True):
         for new_titles_file in new_titles_files:
             minimum_timestamp = self.minimum_new_titles_timestamp(new_titles_file)
 
-            # If the file is too new consider it incomplete because more entries may be
-            # added at a later time.
+            # If the file is too new more entries may be added later, so leave it
+            # unmarked (incomplete) to be reprocessed; otherwise mark it completed.
             if minimum_timestamp > new_titles_file.data_timestamp:
-                new_titles_file.database_record.extra = "Incomplete"
                 incomplete_minimum_timestamps.append(minimum_timestamp)
             else:
-                new_titles_file.database_record.extra = None
+                new_titles_file.database_record.extra = "Completed"
 
         if incomplete_minimum_timestamps:
             source.set_update_at(min(incomplete_minimum_timestamps))

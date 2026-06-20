@@ -150,8 +150,7 @@ class HiDive(FileMixin, register=True):
         _cache = self._preload_sources(preload_seasons=True).all()
         shows_by_name = {show.name: show for show in source.shows if show.name}
 
-        for schedule_file in self.get_new_files(
-            source.data_timestamp,
+        for schedule_file in self.get_incomplete_files(
             Schedule,
             self.schedule_file,
         ):
@@ -163,8 +162,8 @@ class HiDive(FileMixin, register=True):
                 group_list = diving_board().schedule.extract_group_list(page)
                 for group in group_list.attributes.groups:
                     for card in group.attributes.cards:
-                        # Layout: content[0].elements[0] is the ISO release
-                        # date, elements[1] is "Show Name - Episode Title".
+                        # Layout: content[0].elements[0] is the ISO release date,
+                        # elements[1] is "Show Name - Episode Title".
                         elements = card.attributes.content[0].attributes.elements
                         release_date = datetime.fromisoformat(
                             elements[0].attributes.text,  # type: ignore[arg-type]
@@ -174,6 +173,8 @@ class HiDive(FileMixin, register=True):
                             show.set_update_at(release_date)
                             for season in show.seasons:
                                 season.set_update_at(release_date)
+
+            schedule_file.database_record.extra = "Completed"
 
     @classmethod
     @override

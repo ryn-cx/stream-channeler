@@ -90,11 +90,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         # Preload up to seasons because seasons have their update_at values set.
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self.get_new_files(
-            source.data_timestamp,
-            Browse,
-            self.browse_file,
-        ):
+        for browse_json in self.get_incomplete_files(Browse, self.browse_file):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -107,6 +103,8 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                     show.set_update_at(release.last_public)
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
+
+            browse_json.database_record.extra = "Completed"
 
     @classmethod
     @override

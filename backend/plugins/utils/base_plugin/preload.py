@@ -150,3 +150,23 @@ class PreloadMixin(ABC):
             .order_by(col(File.data_timestamp).asc())
         )
         return [factory(file) for file in self.session.exec(statement).all()]
+
+    def get_incomplete_files[T: BaseFile[Any]](
+        self,
+        file_class: type[T],
+        factory: Callable[[File], T],
+        *,
+        key_prefix: str = "",
+    ) -> list[T]:
+        """Return files of `file_class` not yet marked "Completed" in `File.extra`."""
+        statement = (
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{file_class.__name__}/{key_prefix}"),
+                # is_distinct_from keeps rows where extra is NULL (not imported).
+                col(File.extra).is_distinct_from("Completed"),
+            )
+            .order_by(col(File.data_timestamp).asc())
+        )
+        return [factory(file) for file in self.session.exec(statement).all()]
