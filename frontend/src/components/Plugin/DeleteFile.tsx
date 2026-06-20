@@ -32,11 +32,11 @@ const DeleteFile = ({ file }: DeleteFileProps) => {
       // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
       // Snapshot the previous value
-      const previous = context.client.getQueryData<FilesData>(queryKey)
+      const previous = context.client.getQueriesData<FilesData>({ queryKey })
 
       // Optimistically update to the new value
-      context.client.setQueryData<FilesData>(queryKey, (old) =>
-        old!.map((existing) =>
+      context.client.setQueriesData<FilesData>({ queryKey }, (old) =>
+        old?.map((existing) =>
           existing.id === file.id ? { ...existing, pending: true } : existing,
         ),
       )
@@ -46,14 +46,16 @@ const DeleteFile = ({ file }: DeleteFileProps) => {
     },
     onSuccess: (_data, _variables, _onMutateResult, context) => {
       showSuccessToast("File deleted successfully")
-      context.client.setQueryData<FilesData>(queryKey, (old) =>
+      context.client.setQueriesData<FilesData>({ queryKey }, (old) =>
         old?.filter((existing) => existing.id !== file.id),
       )
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (error, _fileId, onMutateResult, context) => {
-      context.client.setQueryData(queryKey, onMutateResult?.previous)
+      for (const [key, data] of onMutateResult?.previous ?? []) {
+        context.client.setQueryData(key, data)
+      }
       handleError.call(showErrorToast, error as any)
     },
     // Always refetch after error or success:

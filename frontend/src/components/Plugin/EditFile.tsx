@@ -2,7 +2,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useParams } from "@tanstack/react-router"
-import { Pencil } from "lucide-react"
+import { ChevronDown, ChevronRight, Pencil } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -12,6 +12,7 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextArea } from "@/components/Common/FormTextArea"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
@@ -38,6 +39,7 @@ interface EditFileProps {
 const EditFile = ({ file }: EditFileProps) => {
   const { pluginId } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
+  const [showContent, setShowContent] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryKey = ["plugins", pluginId, "files"]
 
@@ -77,11 +79,11 @@ const EditFile = ({ file }: EditFileProps) => {
       // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
       // Snapshot the previous value
-      const previous = context.client.getQueryData<FilesData>(queryKey)
+      const previous = context.client.getQueriesData<FilesData>({ queryKey })
 
       // Optimistically update to the new value
-      context.client.setQueryData<FilesData>(queryKey, (old) =>
-        old!.map((existing) =>
+      context.client.setQueriesData<FilesData>({ queryKey }, (old) =>
+        old?.map((existing) =>
           existing.id === file.id
             ? ({ ...existing, ...newData, pending: true } as FileTableData)
             : existing,
@@ -97,7 +99,9 @@ const EditFile = ({ file }: EditFileProps) => {
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (error, _newData, onMutateResult, context) => {
-      context.client.setQueryData(queryKey, onMutateResult?.previous)
+      for (const [key, data] of onMutateResult?.previous ?? []) {
+        context.client.setQueryData(key, data)
+      }
       handleError.call(showErrorToast, error as any)
     },
     // Always refetch after error or success:
@@ -142,12 +146,24 @@ const EditFile = ({ file }: EditFileProps) => {
         type="datetime-local"
         showNowButton
       />
-      <FormTextArea
-        control={form.control}
-        label="Content"
-        placeholder="File content..."
-        rows={8}
-      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="w-fit px-2"
+        onClick={() => setShowContent((previous) => !previous)}
+      >
+        {showContent ? <ChevronDown /> : <ChevronRight />}
+        Content
+      </Button>
+      {showContent && (
+        <FormTextArea
+          control={form.control}
+          label="Content"
+          placeholder="File content..."
+          rows={8}
+        />
+      )}
       <FormTextField control={form.control} label="Extra" type="text" />
     </FormModal>
   )
