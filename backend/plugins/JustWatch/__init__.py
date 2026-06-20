@@ -408,6 +408,7 @@ class JustWatch(FileMixin, register=True):
         return show
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
+        print("Upserting seasons for show:", show_key)
         if self._media_type(show_key) == "TV Show":
             self._upsert_show_seasons(show, show_key)
         else:
@@ -422,7 +423,14 @@ class JustWatch(FileMixin, register=True):
         if seasons_data is None:
             msg = f"No seasons found for show: {show_key}"
             raise ValueError(msg)
+        print(f"Found {len(seasons_data)} season(s) for show: {show_key}")
         for season_data in seasons_data:
+            print(
+                "Upserting season:",
+                season_data.id,
+                "season_number:",
+                season_data.content.season_number,
+            )
             existing_season = Season.get_from_memory(self.session, show, season_data.id)
             image_url = self._format_image_url(season_data.content.poster_url, 166)
             season = Season(
@@ -434,6 +442,7 @@ class JustWatch(FileMixin, register=True):
                 data_timestamp=self.season_data_timestamp(season_data.id, show_key),
                 show_id=show.id,
             ).upsert(show, existing_season)
+            print("Upserted season, season.id:", season.id, "season.key:", season.key)
             self._upsert_season_episodes(show, season, season_data, show_key)
             self.soft_delete_missing_episodes(season.key)
 
@@ -474,9 +483,12 @@ class JustWatch(FileMixin, register=True):
             .parsed()
             .data.url_v2.node.content.full_backdrops
         )
-        for i, season_episode in enumerate(
-            custom_season_episodes_file.parsed_episodes(),
-        ):
+        parsed_episodes = custom_season_episodes_file.parsed_episodes()
+        print(
+            f"_upsert_season_episodes: season.key={season.key} "
+            f"found {len(parsed_episodes)} parsed episode(s)",
+        )
+        for i, season_episode in enumerate(parsed_episodes):
             existing_episode = Episode.get_from_memory(
                 self.session,
                 season,
@@ -492,6 +504,11 @@ class JustWatch(FileMixin, register=True):
                 and existing_episode.data_timestamp == episode_timestamp
                 and existing_episode.deleted_at is None
             ):
+                print(
+                    "Skipping episode (unchanged & not deleted):",
+                    season_episode.id,
+                    season_episode.content.title,
+                )
                 continue
 
             buy_box_offers = self.custom_buy_box_offers_file(season_episode.id)
@@ -500,13 +517,27 @@ class JustWatch(FileMixin, register=True):
                 buy_box_offers.parsed().data.node,
             )
             if not episode_info:
+                print(
+                    "Skipping episode (no matching offer for source",
+                    f"{source_key}):",
+                    season_episode.id,
+                    season_episode.content.title,
+                )
                 continue
 
             # For a little bit of variety in the images, rotate through the backdrop
             # images so every episode doesn't have the same image.
             backdrop_image = backdrops[i % len(backdrops)].backdrop_url
 
-            Episode(
+            print(
+                "Upserting episode:",
+                season_episode.id,
+                season_episode.content.title,
+                "into season.id:",
+                season.id,
+            )
+
+            upserted_episode = Episode(
                 url=self._clean_external_url(episode_info.standard_web_url),
                 key=season_episode.id,
                 name=season_episode.content.title,
@@ -524,6 +555,7 @@ class JustWatch(FileMixin, register=True):
                 ),
                 season_id=season.id,
             ).upsert(season, existing_episode)
+            print("Upserted episode, episode.id:", upserted_episode.id)
 
     def _upsert_movie_episode(
         self,
@@ -538,6 +570,11 @@ class JustWatch(FileMixin, register=True):
             parsed_data.data.url_v2.node,
         )
         if not episode_info:
+            print(
+                "Skipping movie episode (no matching offer for source",
+                f"{source_key}):",
+                show_key,
+            )
             return None
 
         existing_episode = Episode.get_from_memory(
@@ -555,10 +592,21 @@ class JustWatch(FileMixin, register=True):
             and existing_episode.data_timestamp == episode_timestamp
             and existing_episode.deleted_at is None
         ):
+            print(
+                "Skipping movie episode (unchanged & not deleted):",
+                episode_info.id,
+            )
             return episode_info.id
 
         node = parsed_data.data.url_v2.node
-        Episode(
+        print(
+            "Upserting movie episode:",
+            episode_info.id,
+            node.content.title,
+            "into season.id:",
+            season.id,
+        )
+        upserted_episode = Episode(
             url=self._clean_external_url(episode_info.standard_web_url),
             key=episode_info.id,
             name=node.content.title,
@@ -571,6 +619,7 @@ class JustWatch(FileMixin, register=True):
             air_date=self._date_to_datetime(node.content.original_release_date),
             season_id=season.id,
         ).upsert(season, existing_episode)
+        print("Upserted movie episode, episode.id:", upserted_episode.id)
         return episode_info.id
 
     # TODO: Consider caching this if it is slow.
