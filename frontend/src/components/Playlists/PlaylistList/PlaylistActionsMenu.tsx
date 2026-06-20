@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import type { PlaylistTableData } from "./columns"
 import DeletePlaylist from "./DeletePlaylist"
 import EditPlaylist from "./EditPlaylist"
@@ -8,9 +9,9 @@ interface PlaylistActionsMenuProps {
 
 export const PlaylistActionsMenu = ({ playlist }: PlaylistActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditPlaylist playlist={playlist} />
       <DeletePlaylist id={playlist.id} />
-    </div>
+    </ActionsMenu>
   )
 }

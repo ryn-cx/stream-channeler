@@ -10,14 +10,16 @@ from app.channels.models import Channel
 from app.episodes.models import Episode
 from app.models import MediaMixin
 from app.playlists.models import Playlist
-from app.plugins.models import Plugin
+from app.plugins.models import File, Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.watches.models import Watch
 
-MEDIA_MODELS = Episode | Season | Show | Source | Plugin | Channel | Watch | Playlist
+MEDIA_MODELS = (
+    Episode | Season | Show | Source | Plugin | Channel | Watch | Playlist | File
+)
 
 
 class Message(BaseModel):

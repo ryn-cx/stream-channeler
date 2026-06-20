@@ -1,12 +1,20 @@
 # TODO: Validate
-from fastapi import APIRouter, HTTPException
+from collections.abc import Sequence
 
-from app.auth.dependencies import CurrentUser, SessionDep
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import col, select
+
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
+from app.files.schemas import FileCreate, FileListPublic, FilePublic
 from app.media.service import (
     delete_record,
 )
 from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
-from app.plugins.models import Plugin
+from app.plugins.models import File, Plugin
 from app.plugins.schemas import (
     PluginCreate,
     PluginImportURLInformation,
@@ -142,6 +150,37 @@ def create_source(
 ) -> Source:
     """Create a `Source` if the `Plugin` is owned by the current `User`."""
     return source_input.create(session, Source, plugin)
+
+
+@router.get(
+    "/{plugin_id}/files",  # noqa: FAST003 - Used by ReadablePlugin
+    response_model=list[FileListPublic],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def get_plugin_files(
+    plugin: ReadablePlugin,
+    session: SessionDep,
+    content: str | None = None,
+) -> Sequence[File]:
+    """List all `File`s for a `Plugin` if it is public or owned by the current `User`."""
+    statement = select(File).where(col(File.plugin_id) == plugin.id)
+    if content:
+        statement = statement.where(col(File.content).ilike(f"%{content}%"))
+    return session.exec(statement).all()
+
+
+@router.post(
+    "/{plugin_id}/files",  # noqa: FAST003 - Used by OwnedPlugin
+    response_model=FilePublic,
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def create_file(
+    session: SessionDep,
+    plugin: OwnedPlugin,
+    file_input: FileCreate,
+) -> File:
+    """Create a `File` if the `Plugin` is owned by the current `User`."""
+    return file_input.create(session, File, plugin)
 
 
 @router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin

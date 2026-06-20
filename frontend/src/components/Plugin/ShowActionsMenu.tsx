@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import DeleteShow from "./DeleteShow"
 import EditShow from "./EditShow"
 import type { ShowTableData } from "./showColumns"
@@ -8,9 +9,9 @@ interface ShowActionsMenuProps {
 
 export const ShowActionsMenu = ({ show }: ShowActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditShow show={show} />
       <DeleteShow show={show} />
-    </div>
+    </ActionsMenu>
   )
 }

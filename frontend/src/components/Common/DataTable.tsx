@@ -12,6 +12,7 @@ import {
   getSortedRowModel,
   type OnChangeFn,
   type PaginationState,
+  type Row,
   type RowData,
   type SortingState,
   useReactTable,
@@ -52,10 +53,38 @@ import {
 } from "./tableStyles"
 
 declare module "@tanstack/react-table" {
-  //allows us to define custom properties for our columns
   interface ColumnMeta<TData extends RowData, TValue> {
-    filterVariant?: "text" | "range" | "select"
+    filterVariant?: "text" | "range" | "select" | "dateRange"
+    serverFilter?: {
+      value: string
+      onChange: (value: string) => void
+      placeholder?: string
+    }
   }
+}
+
+interface DateRangeFilterValue {
+  minimumDate?: string
+  maximumDate?: string
+  hideBlanks?: boolean
+}
+
+function dateRangeFilterFn<TData>(
+  row: Row<TData>,
+  columnId: string,
+  filterValue: DateRangeFilterValue,
+): boolean {
+  const rawDate = row.getValue(columnId) as string | null | undefined
+  const { minimumDate, maximumDate, hideBlanks } = filterValue ?? {}
+
+  // Blank values should always be shown unless explicitly hidden.
+  if (rawDate === null) return !hideBlanks
+
+  const date = new Date(rawDate as string).getTime()
+
+  if (minimumDate && date < new Date(minimumDate).getTime()) return false
+  if (maximumDate && date > new Date(maximumDate).getTime()) return false
+  return true
 }
 
 function usePersistentState<T>(key: string | undefined, initialValue: T) {
@@ -96,6 +125,16 @@ export function DataTable<TData extends { id: string }, TValue>({
   columnVisibility,
   onColumnVisibilityChange,
 }: DataTableProps<TData, TValue>) {
+  const processedColumns = useMemo(
+    () =>
+      columns.map((column) =>
+        column.meta?.filterVariant === "dateRange"
+          ? { ...column, filterFn: dateRangeFilterFn }
+          : column,
+      ),
+    [columns],
+  )
+
   const [sorting, setSorting] = usePersistentState<SortingState>(
     storageKey && `${storageKey}:sorting`,
     [],
@@ -127,7 +166,7 @@ export function DataTable<TData extends { id: string }, TValue>({
 
   const table = useReactTable({
     data,
-    columns,
+    columns: processedColumns,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -338,7 +377,7 @@ export function DataTable<TData extends { id: string }, TValue>({
 }
 
 function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
-  const { filterVariant } = column.columnDef.meta ?? {}
+  const { filterVariant, serverFilter } = column.columnDef.meta ?? {}
 
   const columnFilterValue = column.getFilterValue()
 
@@ -352,6 +391,98 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
             .slice(0, 5000),
     [column.getFacetedUniqueValues(), filterVariant],
   )
+
+  if (serverFilter) {
+    return (
+      <DebouncedInput
+        type="text"
+        value={serverFilter.value}
+        onChange={(value) => serverFilter.onChange(String(value))}
+        placeholder={serverFilter.placeholder ?? "Search..."}
+        className={cn(TABLE_FILTER_INPUT_CLASS, "w-36")}
+      />
+    )
+  }
+
+  // TODO: Validate this if block.
+  if (filterVariant === "dateRange") {
+    const value = (columnFilterValue as DateRangeFilterValue) ?? {}
+
+    const applyFilter = (updatedValue: DateRangeFilterValue) => {
+      const cleaned: DateRangeFilterValue = {
+        minimumDate: updatedValue.minimumDate || undefined,
+        maximumDate: updatedValue.maximumDate || undefined,
+        hideBlanks: updatedValue.hideBlanks || undefined,
+      }
+      column.setFilterValue(
+        cleaned.minimumDate || cleaned.maximumDate || cleaned.hideBlanks
+          ? cleaned
+          : undefined,
+      )
+    }
+
+    const hideBlanks = value.hideBlanks ?? false
+
+    const setBound = (
+      bound: "minimumDate" | "maximumDate",
+      date: string,
+      time: string,
+    ) => {
+      applyFilter({
+        ...value,
+        [bound]: date ? `${date}T${time || "00:00"}` : undefined,
+      })
+    }
+
+    const bounds = [
+      { key: "minimumDate", label: "Minimum" },
+      { key: "maximumDate", label: "Maximum" },
+    ] as const
+
+    return (
+      <div className="flex flex-col gap-1">
+        {bounds.map(({ key, label }) => {
+          const date = value[key]?.split("T")[0] ?? ""
+          const time = value[key]?.split("T")[1] ?? "00:00"
+          return (
+            <div
+              key={key}
+              className={cn(
+                "border-input dark:bg-input/30 flex h-7 w-52 items-center rounded-md border bg-transparent text-xs",
+                "focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
+              )}
+            >
+              <input
+                type="date"
+                aria-label={`${label} date`}
+                value={date}
+                onChange={(event) => setBound(key, event.target.value, time)}
+                className="min-w-0 flex-1 bg-transparent px-1 outline-none"
+              />
+              <input
+                type="time"
+                aria-label={`${label} time`}
+                value={time}
+                disabled={!date}
+                onChange={(event) => setBound(key, date, event.target.value)}
+                className="border-input min-w-0 border-l bg-transparent px-1 outline-none disabled:opacity-50"
+              />
+            </div>
+          )
+        })}
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={hideBlanks}
+            onChange={(event) =>
+              applyFilter({ ...value, hideBlanks: event.target.checked })
+            }
+          />
+          Hide Blanks
+        </label>
+      </div>
+    )
+  }
 
   if (filterVariant === "range") {
     return (

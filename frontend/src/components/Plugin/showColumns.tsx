@@ -65,11 +65,13 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {

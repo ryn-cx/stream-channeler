@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import type { ChannelTableData } from "./columns"
 import DeleteChannel from "./DeleteChannel"
@@ -9,10 +10,10 @@ interface ChannelActionsMenuProps {
 
 export const ChannelActionsMenu = ({ channel }: ChannelActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditChannel channel={channel} />
       <ManageShowsButton channelId={channel.id} variant="icon" />
       <DeleteChannel id={channel.id} />
-    </div>
+    </ActionsMenu>
   )
 }

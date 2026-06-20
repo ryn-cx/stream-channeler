@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import DeleteSeason from "./DeleteSeason"
 import EditSeason from "./EditSeason"
 import type { SeasonTableData } from "./seasonColumns"
@@ -8,9 +9,9 @@ interface SeasonActionsMenuProps {
 
 export const SeasonActionsMenu = ({ season }: SeasonActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditSeason season={season} />
       <DeleteSeason season={season} />
-    </div>
+    </ActionsMenu>
   )
 }

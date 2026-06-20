@@ -26,6 +26,7 @@ from app.episodes.schemas import (
     EpisodeOutput,
     EpisodeUpdate,
 )
+from app.files.schemas import FileCreate, FilePublic, FileUpdate
 from app.models import Visibility
 from app.playlists.models import Playlist
 from app.playlists.schemas import (
@@ -33,7 +34,7 @@ from app.playlists.schemas import (
     PlaylistOutput,
     PlaylistUpdate,
 )
-from app.plugins.models import Plugin
+from app.plugins.models import File, Plugin
 from app.plugins.schemas import (
     PluginCreate,
     PluginOutput,
@@ -69,13 +70,14 @@ from tests.app.users.utils import (
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
 SUPPORTED_MODELS = (
-    Channel | Episode | Season | Show | Source | Plugin | Watch | Playlist
+    Channel | Episode | Season | Show | Source | Plugin | Watch | Playlist | File
 )
 PARENT_MODELS = SUPPORTED_MODELS | User
 
 CREATE_SCHEMAS = (
     ChannelCreate
     | EpisodeCreate
+    | FileCreate
     | PluginCreate
     | SeasonCreate
     | ShowCreate
@@ -86,6 +88,7 @@ CREATE_SCHEMAS = (
 OUTPUT_SCHEMAS = (
     ChannelOutput
     | EpisodeOutput
+    | FilePublic
     | PluginOutput
     | SeasonOutput
     | ShowPublic
@@ -96,6 +99,7 @@ OUTPUT_SCHEMAS = (
 LIST_OUTPUT_SCHEMAS = (
     list[ChannelOutput]
     | list[EpisodeOutput]
+    | list[FilePublic]
     | list[PluginOutput]
     | list[SeasonOutput]
     | list[ShowPublic]
@@ -105,6 +109,7 @@ LIST_OUTPUT_SCHEMAS = (
 UPDATE_SCHEMAS = (
     ChannelUpdate
     | EpisodeUpdate
+    | FileUpdate
     | PluginUpdate
     | SeasonUpdate
     | ShowUpdate

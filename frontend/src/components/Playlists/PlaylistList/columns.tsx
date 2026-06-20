@@ -65,6 +65,7 @@ export const columns: ColumnDef<PlaylistTableData>[] = [
   {
     accessorKey: "created_at",
     header: "Saved",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {new Date(row.original.created_at).toLocaleDateString()}

@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import DeleteSource from "./DeleteSource"
 import EditSource from "./EditSource"
 import type { SourceTableData } from "./sourceColumns"
@@ -8,9 +9,9 @@ interface SourceActionsMenuProps {
 
 export const SourceActionsMenu = ({ source }: SourceActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditSource source={source} />
       <DeleteSource source={source} />
-    </div>
+    </ActionsMenu>
   )
 }

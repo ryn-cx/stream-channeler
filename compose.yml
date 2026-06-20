@@ -29,6 +29,7 @@ services:
       - db
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
+      - ADMINER_PLUGINS=backward-keys
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public

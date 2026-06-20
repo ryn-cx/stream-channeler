@@ -191,6 +191,59 @@ export type EpisodeWithDetails = {
     channel_id: string;
 };
 
+/**
+ * Schema for creating a `File`.
+ */
+export type FileCreate = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    content?: (string | null);
+};
+
+/**
+ * Schema for returning a list of `File`s, excluding `content`.
+ *
+ * `content` is excluded to reduce the response size.
+ */
+export type FileListPublic = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    plugin_id: string;
+    id: string;
+};
+
+/**
+ * Schema for returning a `File`.
+ */
+export type FilePublic = {
+    key: string;
+    data_timestamp: string;
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    content?: (string | null);
+    plugin_id: string;
+    id: string;
+};
+
+/**
+ * Schema for updating a `File`.
+ */
+export type FileUpdate = {
+    key?: (string | null);
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    content?: (string | null);
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -917,6 +970,25 @@ export type EpisodesCreateWatchData = {
 
 export type EpisodesCreateWatchResponse = (Array<WatchOutput>);
 
+export type FilesGetFileData = {
+    fileId: string;
+};
+
+export type FilesGetFileResponse = (FilePublic);
+
+export type FilesUpdateFileData = {
+    fileId: string;
+    requestBody: FileUpdate;
+};
+
+export type FilesUpdateFileResponse = (FilePublic);
+
+export type FilesDeleteFileData = {
+    fileId: string;
+};
+
+export type FilesDeleteFileResponse = (Message);
+
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
 };
@@ -1015,6 +1087,20 @@ export type PluginsCreateSourceData = {
 };
 
 export type PluginsCreateSourceResponse = (SourcePublic);
+
+export type PluginsGetPluginFilesData = {
+    content?: (string | null);
+    pluginId: string;
+};
+
+export type PluginsGetPluginFilesResponse = (Array<FileListPublic>);
+
+export type PluginsCreateFileData = {
+    pluginId: string;
+    requestBody: FileCreate;
+};
+
+export type PluginsCreateFileResponse = (FilePublic);
 
 export type PluginsUpdatePluginData = {
     pluginId: string;

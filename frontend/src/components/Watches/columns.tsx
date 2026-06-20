@@ -133,6 +133,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   {
     accessorKey: "watch_date",
     header: "Watch Date",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => {
       const date = row.original.watch_date
       if (!date)

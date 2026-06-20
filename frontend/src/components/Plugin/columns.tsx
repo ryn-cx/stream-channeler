@@ -43,16 +43,19 @@ export const columns: ColumnDef<PluginTableData>[] = [
   {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
   },
   {
     accessorKey: "update_at",
     header: "Update At",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => <DateCell value={row.original.update_at} />,
   },
   {
     accessorKey: "deleted_at",
     header: "Deleted At",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => <DateCell value={row.original.deleted_at} />,
   },
   {

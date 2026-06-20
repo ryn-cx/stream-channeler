@@ -1,3 +1,4 @@
+import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import DeleteEpisode from "./DeleteEpisode"
 import EditEpisode from "./EditEpisode"
 import type { EpisodeTableData } from "./episodeColumns"
@@ -8,9 +9,9 @@ interface EpisodeActionsMenuProps {
 
 export const EpisodeActionsMenu = ({ episode }: EpisodeActionsMenuProps) => {
   return (
-    <div className="flex items-center justify-end gap-1">
+    <ActionsMenu>
       <EditEpisode episode={episode} />
       <DeleteEpisode episode={episode} />
-    </div>
+    </ActionsMenu>
   )
 }
