@@ -247,15 +247,15 @@ class JustWatch(FileMixin, register=True):
 
             logger.info("Processing new titles file: {}", file.database_record.key)
             for edge in file.parsed_edges():
-                full_path = edge.node.content.full_path
-                match edge.node.field__typename:
+                node = edge.node
+                full_path = node.content.full_path
+                match node.field__typename:
                     case "Season":
-                        show_key, season_key = full_path.rsplit("/", 1)
+                        show_key = full_path.rsplit("/", 1)[0]
                     case "Movie":
                         show_key = full_path
-                        season_key = full_path
                     case _:
-                        msg = f"Unknown field__typename: {edge.node.field__typename}"
+                        msg = f"Unknown field__typename: {node.field__typename}"
                         raise ValueError(msg)
 
                 # Need to match on show because if this is a new season looking up an
@@ -263,11 +263,12 @@ class JustWatch(FileMixin, register=True):
                 if show := Show.get_from_memory(self.session, source, show_key):
                     logger.info("Matched show: {}", show.name or show_key)
                     _cache_seasons = show.seasons
-                    # If the season was found only the season needs to be updated.
-                    if season := Season.get_from_memory(self.session, show, season_key):
+                    # `node.id` is JustWatch's global id for the season (or movie),
+                    # which is exactly the key the season is stored under.
+                    if season := Season.get_from_memory(self.session, show, node.id):
                         season.set_update_at(file.data_timestamp)
-                    # If no season was found this contains a new episode so the show
-                    # needs to be updated.
+                    # If no season was found this is a new season so the show needs
+                    # to be updated.
                     else:
                         show.set_update_at(file.data_timestamp)
 
