@@ -34,16 +34,17 @@ MAX_EPISODES_RETURNED = 1000
 # Labels used to compose raw SQL references from Postgres subquery + column
 # names. Callers of ``literal_column`` below rely on the producing subquery
 # being materialised with exactly these names; keep them in sync.
-SHOW_LAST_WATCHED_SUBQUERY = "show_last_watched"
-SHOW_LAST_WATCH_COMPLETED_COLUMN = "show_last_watch_completed_date"
-SHOW_LAST_WATCH_INCOMPLETE_COLUMN = "show_last_watch_incomplete_date"
+EPISODE_LAST_WATCHED_SUBQUERY = "episode_last_watched"
+EPISODE_LAST_WATCH_COMPLETED_COLUMN = "episode_last_watch_completed_date"
+EPISODE_LAST_WATCH_INCOMPLETE_COLUMN = "episode_last_watch_incomplete_date"
 
 # Maps each last-watched sort field to the subquery column holding its latest
-# watch date. Completed = verified watches; incomplete = unverified (partial)
-# watches.
+# watch date. Aggregated per episode (not per show) so an episode is ranked by
+# its own watch history. Completed = verified watches; incomplete = unverified
+# (partial) watches.
 LAST_WATCHED_COLUMNS = {
-    "last_watched_completed": SHOW_LAST_WATCH_COMPLETED_COLUMN,
-    "last_watched_incomplete": SHOW_LAST_WATCH_INCOMPLETE_COLUMN,
+    "last_watched_completed": EPISODE_LAST_WATCH_COMPLETED_COLUMN,
+    "last_watched_incomplete": EPISODE_LAST_WATCH_INCOMPLETE_COLUMN,
 }
 
 
@@ -148,7 +149,7 @@ class _SortExpressionBuilder:
             return self._recently_aired_expr(sort_key)
         if field in LAST_WATCHED_COLUMNS:
             return literal_column(
-                f"{SHOW_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
+                f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
             )
         if field == "episode_count":
             return func.count(Episode.id).over(partition_by=col(Show.id))  # type: ignore[arg-type]
@@ -163,7 +164,7 @@ class _SortExpressionBuilder:
     ) -> ColumnElement[Any]:
         if sort_key.field in LAST_WATCHED_COLUMNS:
             return literal_column(
-                f"{SHOW_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[sort_key.field]}",
+                f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[sort_key.field]}",
             )
 
         if sort_key.field == "random":
@@ -344,7 +345,7 @@ class EpisodeQueryBuilder:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
         query = self._base_query()
         query = self._join_whitelist(query)
-        query = self._join_show_last_watched(query)
+        query = self._join_episode_last_watched(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
         query = self._filter_by_plugin_visibility(query)
@@ -425,7 +426,7 @@ class EpisodeQueryBuilder:
             ),
         )
 
-    def _join_show_last_watched(
+    def _join_episode_last_watched(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
@@ -435,32 +436,25 @@ class EpisodeQueryBuilder:
         if not needs_last_watched or not self._user:
             return query
 
-        show_last_watched_subquery = (
+        episode_last_watched_subquery = (
             select(
-                Season.show_id,
+                Watch.episode_id,
                 func.max(
                     case((col(Watch.verified).is_(True), Watch.watch_date)),
-                ).label(SHOW_LAST_WATCH_COMPLETED_COLUMN),
+                ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
                 func.max(
                     case((col(Watch.verified).is_(False), Watch.watch_date)),
-                ).label(SHOW_LAST_WATCH_INCOMPLETE_COLUMN),
+                ).label(EPISODE_LAST_WATCH_INCOMPLETE_COLUMN),
             )
             .select_from(Watch)
-            .join(Episode)
-            .join(Season)
-            .where(
-                and_(
-                    col(Watch.user_id) == self._user.id,
-                    col(Episode.deleted_at).is_(None),
-                ),
-            )
-            .group_by(col(Season.show_id))
-            .subquery(SHOW_LAST_WATCHED_SUBQUERY)
+            .where(col(Watch.user_id) == self._user.id)
+            .group_by(col(Watch.episode_id))
+            .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
         )
 
         return query.outerjoin(
-            show_last_watched_subquery,
-            col(Show.id) == show_last_watched_subquery.c.show_id,
+            episode_last_watched_subquery,
+            col(Episode.id) == episode_last_watched_subquery.c.episode_id,
         )
 
     @staticmethod

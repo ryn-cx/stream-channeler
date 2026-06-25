@@ -393,19 +393,21 @@ class TestGroupByShow:
 
 class TestLastWatchedSort:
     def test_last_watched_sort_ascending(self, episode_setup: EpisodeSetup) -> None:
-        """Shows watched longer ago should appear first with ascending."""
+        """Episodes watched longer ago should appear first with ascending."""
         old_watch_date = tz_datetime.now() - timedelta(days=30)
         recent_watch_date = tz_datetime.now() - timedelta(days=1)
+        older_episode = episode_setup["shows"][0]["recent"]
+        newer_episode = episode_setup["shows"][1]["recent"]
         create_random_watch(
             episode_setup["session"],
-            episode_setup["shows"][0]["recent"],
+            older_episode,
             watch_user=episode_setup["user"],
             verified=True,
             watch_date=old_watch_date,
         )
         create_random_watch(
             episode_setup["session"],
-            episode_setup["shows"][1]["recent"],
+            newer_episode,
             watch_user=episode_setup["user"],
             verified=True,
             watch_date=recent_watch_date,
@@ -415,23 +417,14 @@ class TestLastWatchedSort:
             sort_by=[_sort_key("episode.last_watched_completed", "ascending")],
         )
         assert len(episodes) == 4  # noqa: PLR2004
-        # Unwatched shows (nulls first for ascending) come first,
-        # then oldest watched show
-        show_ids = [ep.season.show_id for ep in episodes]
-        # Show 0 was watched 30 days ago, show 1 was watched 1 day ago
-        # With nulls_first, unwatched would come first but both shows are watched
-        # so show 0 (older watch) should come before show 1 (recent watch)
-        show_0_positions = [
-            i
-            for i, sid in enumerate(show_ids)
-            if sid == episode_setup["shows"][0]["show"].id
-        ]
-        show_1_positions = [
-            i
-            for i, sid in enumerate(show_ids)
-            if sid == episode_setup["shows"][1]["show"].id
-        ]
-        assert min(show_0_positions) < min(show_1_positions)
+        # Ranking is per episode: the episode completed 30 days ago sorts before
+        # the one completed 1 day ago. Unwatched episodes are null (nulls first)
+        # so they cluster ahead of both watched episodes, but the relative order
+        # of the two watched episodes is what this asserts.
+        episode_ids = [ep.id for ep in episodes]
+        assert episode_ids.index(older_episode.id) < episode_ids.index(
+            newer_episode.id,
+        )
 
     def test_last_watched_incomplete_uses_only_unverified_watches(
         self,
