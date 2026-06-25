@@ -412,7 +412,7 @@ class TestLastWatchedSort:
         )
         episodes = _build(
             episode_setup,
-            sort_by=[_sort_key("episode.last_watched", "ascending")],
+            sort_by=[_sort_key("episode.last_watched_completed", "ascending")],
         )
         assert len(episodes) == 4  # noqa: PLR2004
         # Unwatched shows (nulls first for ascending) come first,
@@ -433,13 +433,56 @@ class TestLastWatchedSort:
         ]
         assert min(show_0_positions) < min(show_1_positions)
 
+    def test_last_watched_incomplete_uses_only_unverified_watches(
+        self,
+        episode_setup: EpisodeSetup,
+    ) -> None:
+        """Incomplete ordering ranks by unverified watches and ignores verified ones."""
+        completed_watch_date = tz_datetime.now() - timedelta(days=1)
+        incomplete_watch_date = tz_datetime.now() - timedelta(days=30)
+        # Show 0 has only a verified (completed) watch.
+        create_random_watch(
+            episode_setup["session"],
+            episode_setup["shows"][0]["recent"],
+            watch_user=episode_setup["user"],
+            verified=True,
+            watch_date=completed_watch_date,
+        )
+        # Show 1 has only an unverified (incomplete) watch.
+        create_random_watch(
+            episode_setup["session"],
+            episode_setup["shows"][1]["recent"],
+            watch_user=episode_setup["user"],
+            verified=False,
+            watch_date=incomplete_watch_date,
+        )
+        episodes = _build(
+            episode_setup,
+            sort_by=[_sort_key("episode.last_watched_incomplete", "descending")],
+        )
+        assert len(episodes) == 4  # noqa: PLR2004
+        show_ids = [ep.season.show_id for ep in episodes]
+        # Only show 1 has an incomplete watch, so it sorts ahead of show 0, whose
+        # verified watch leaves its incomplete column null (nulls last).
+        show_0_positions = [
+            i
+            for i, sid in enumerate(show_ids)
+            if sid == episode_setup["shows"][0]["show"].id
+        ]
+        show_1_positions = [
+            i
+            for i, sid in enumerate(show_ids)
+            if sid == episode_setup["shows"][1]["show"].id
+        ]
+        assert min(show_1_positions) < min(show_0_positions)
+
     def test_last_watched_without_user_ignored(
         self,
         episode_setup: EpisodeSetup,
     ) -> None:
         """Last watched sort requires a user — silently dropped without one."""
         channel_options = ChannelOptions(
-            sort_by=[_sort_key("episode.last_watched", "ascending")],
+            sort_by=[_sort_key("episode.last_watched_completed", "ascending")],
         )
         builder = EpisodeQueryBuilder(
             episode_setup["session"],
@@ -1150,6 +1193,53 @@ class TestAdditionalChannels:
         )
         assert extra_episode.id in {ep.id for ep in episodes}
         assert len(episodes) == 5  # noqa: PLR2004
+
+    def test_recursively_included_channels_included(
+        self,
+        episode_setup: EpisodeSetup,
+    ) -> None:
+        """A channel including B which includes C should yield A, B and C.
+
+        Inclusion is transitive: B's included channels are read from B's saved
+        ``default_order``. The cycle C -> A proves the walk is cycle-safe.
+        """
+        session = episode_setup["session"]
+        user = episode_setup["user"]
+        plugin = episode_setup["plugin"]
+
+        def _channel_with_episode() -> tuple[Channel, Episode]:
+            channel = create_random_channel(session, user=user.id)
+            channel_show = create_random_channel_show(
+                session,
+                channel,
+                plugin,
+                is_whitelist=False,
+            )
+            season = create_random_season(session, channel_show.show)
+            episode = create_random_episode(session, season, duration=300)
+            return channel, episode
+
+        channel_b, episode_b = _channel_with_episode()
+        channel_c, episode_c = _channel_with_episode()
+
+        channel_a = episode_setup["channel"]
+        # B includes C, and C includes A (a cycle that must not loop forever).
+        channel_b.default_order = ChannelOptions(
+            additional_channels=[channel_c.id],
+        ).model_dump_json(by_alias=True, exclude_defaults=True)
+        channel_c.default_order = ChannelOptions(
+            additional_channels=[channel_a.id],
+        ).model_dump_json(by_alias=True, exclude_defaults=True)
+        session.flush()
+
+        episodes = _build(
+            episode_setup,
+            additional_channels=[str(channel_b.id)],
+        )
+        episode_ids = {ep.id for ep in episodes}
+        assert episode_b.id in episode_ids
+        assert episode_c.id in episode_ids
+        assert _all_episode_ids(episode_setup) <= episode_ids
 
 
 class TestRecentlyAiredGroupByShow:

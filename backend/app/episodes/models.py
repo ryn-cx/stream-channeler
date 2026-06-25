@@ -52,7 +52,8 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         "sort_order",
     ]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "last_watched",
+        "last_watched_completed",
+        "last_watched_incomplete",
         "random",
         "recently_aired",
         "sequential",

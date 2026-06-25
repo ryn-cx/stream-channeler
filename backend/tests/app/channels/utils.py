@@ -28,6 +28,7 @@ def create_random_channel(
         user = user.id
     if is_public is not None and "visibility" not in kwargs:
         kwargs["visibility"] = Visibility.public if is_public else Visibility.private
+    kwargs.setdefault("default_order", None)
     channel = build_random_model(Channel, user_id=user, **kwargs)
     session.add(channel)
     session.flush()  #   Allows channel.shows and channel.queue to be accessed.

@@ -1,5 +1,5 @@
 # TODO: Validate
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -35,7 +35,16 @@ MAX_EPISODES_RETURNED = 1000
 # names. Callers of ``literal_column`` below rely on the producing subquery
 # being materialised with exactly these names; keep them in sync.
 SHOW_LAST_WATCHED_SUBQUERY = "show_last_watched"
-SHOW_LAST_WATCH_DATE_COLUMN = "show_last_watch_date"
+SHOW_LAST_WATCH_COMPLETED_COLUMN = "show_last_watch_completed_date"
+SHOW_LAST_WATCH_INCOMPLETE_COLUMN = "show_last_watch_incomplete_date"
+
+# Maps each last-watched sort field to the subquery column holding its latest
+# watch date. Completed = verified watches; incomplete = unverified (partial)
+# watches.
+LAST_WATCHED_COLUMNS = {
+    "last_watched_completed": SHOW_LAST_WATCH_COMPLETED_COLUMN,
+    "last_watched_incomplete": SHOW_LAST_WATCH_INCOMPLETE_COLUMN,
+}
 
 
 @dataclass
@@ -109,7 +118,7 @@ class _SortExpressionBuilder:
         directed: UnaryExpression[Any] | ColumnElement[Any] = (
             desc(expr) if sort_key.direction == "descending" else expr
         )
-        if sort_key.field == "last_watched" and sort_key.direction == "ascending":
+        if sort_key.field in LAST_WATCHED_COLUMNS and sort_key.direction == "ascending":
             return directed.nulls_first()
         return directed.nulls_last()
 
@@ -137,9 +146,9 @@ class _SortExpressionBuilder:
             return self._sequential_rank(sort_key.model)
         if field == "recently_aired":
             return self._recently_aired_expr(sort_key)
-        if field == "last_watched":
+        if field in LAST_WATCHED_COLUMNS:
             return literal_column(
-                f"{SHOW_LAST_WATCHED_SUBQUERY}.{SHOW_LAST_WATCH_DATE_COLUMN}",
+                f"{SHOW_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
             )
         if field == "episode_count":
             return func.count(Episode.id).over(partition_by=col(Show.id))  # type: ignore[arg-type]
@@ -152,9 +161,9 @@ class _SortExpressionBuilder:
         self,
         sort_key: SortKeyInput,
     ) -> ColumnElement[Any]:
-        if sort_key.field == "last_watched":
+        if sort_key.field in LAST_WATCHED_COLUMNS:
             return literal_column(
-                f"{SHOW_LAST_WATCHED_SUBQUERY}.{SHOW_LAST_WATCH_DATE_COLUMN}",
+                f"{SHOW_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[sort_key.field]}",
             )
 
         if sort_key.field == "random":
@@ -278,11 +287,11 @@ class EpisodeQueryBuilder:
             return channel_options
         return channel_options.model_copy(
             update={
-                # last_watched sort key needs the user's watch history.
+                # last_watched sort keys need the user's watch history.
                 "sort_by": [
                     sort_key
                     for sort_key in channel_options.sort_by
-                    if sort_key.field != "last_watched"
+                    if sort_key.field not in LAST_WATCHED_COLUMNS
                 ],
                 "hide_watched": False,
                 "hide_unwatched": False,
@@ -295,12 +304,23 @@ class EpisodeQueryBuilder:
             },
         )
 
-    def _resolve_channel_ids(self, main_channel: Channel) -> list[UUID]:
-        additional_channel_ids = self._channel_options.additional_channels
-        if not additional_channel_ids:
-            return [main_channel.id]
+    def _resolve_channel_ids(self, main_channel: Channel) -> set[UUID]:
+        all_channel_ids = {main_channel.id}
+        queued_channel_ids = {main_channel.id}
+        to_expand = set(self._channel_options.additional_channels) - queued_channel_ids
 
-        query = select(Channel.id).where(col(Channel.id).in_(additional_channel_ids))
+        while to_expand:
+            queued_channel_ids.update(to_expand)
+            child_channel_ids: set[UUID] = set()
+            for channel in self._readable_channels(to_expand):
+                all_channel_ids.add(channel.id)
+                child_channel_ids.update(self._child_channel_ids(channel))
+            to_expand = child_channel_ids - queued_channel_ids
+
+        return all_channel_ids
+
+    def _readable_channels(self, channel_ids: Collection[UUID]) -> Sequence[Channel]:
+        query = select(Channel).where(col(Channel.id).in_(channel_ids))
         readable = col(Channel.visibility).in_(
             (Visibility.public, Visibility.unlisted),
         )
@@ -309,7 +329,16 @@ class EpisodeQueryBuilder:
         elif not self._user.is_superuser:
             query = query.where(or_(readable, col(Channel.user_id) == self._user.id))
 
-        return [main_channel.id, *self._session.exec(query).all()]
+        return self._session.exec(query).all()
+
+    @staticmethod
+    def _child_channel_ids(channel: Channel) -> list[UUID]:
+        if not channel.default_order:
+            return []
+
+        return ChannelOptions.model_validate_json(
+            channel.default_order,
+        ).additional_channels
 
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
@@ -401,7 +430,7 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         needs_last_watched = any(
-            key.field == "last_watched" for key in self._channel_options.sort_by
+            key.field in LAST_WATCHED_COLUMNS for key in self._channel_options.sort_by
         )
         if not needs_last_watched or not self._user:
             return query
@@ -409,7 +438,12 @@ class EpisodeQueryBuilder:
         show_last_watched_subquery = (
             select(
                 Season.show_id,
-                func.max(Watch.watch_date).label(SHOW_LAST_WATCH_DATE_COLUMN),
+                func.max(
+                    case((col(Watch.verified).is_(True), Watch.watch_date)),
+                ).label(SHOW_LAST_WATCH_COMPLETED_COLUMN),
+                func.max(
+                    case((col(Watch.verified).is_(False), Watch.watch_date)),
+                ).label(SHOW_LAST_WATCH_INCOMPLETE_COLUMN),
             )
             .select_from(Watch)
             .join(Episode)
