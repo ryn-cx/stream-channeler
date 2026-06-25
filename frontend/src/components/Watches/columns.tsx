@@ -1,5 +1,7 @@
 // TODO: Validate
+import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { Settings2 } from "lucide-react"
 
 import type {
   EpisodeOutput,
@@ -10,6 +12,7 @@ import type {
   WatchItem,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
+import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { WatchActionsMenu } from "./WatchActionsMenu"
 
@@ -20,6 +23,60 @@ export interface WatchWithDetails extends WatchItem {
   source: SourcePublic
   plugin: PluginOutput
   pending?: boolean
+}
+
+function useIsAdmin() {
+  const { user } = useAuth()
+  return Boolean(user?.is_superuser)
+}
+
+const adminLinkClassName =
+  "inline-flex shrink-0 text-muted-foreground hover:text-primary"
+const adminIconClassName = "size-3.5"
+
+function SourceAdminLink({ sourceId }: { sourceId: string }) {
+  const isAdmin = useIsAdmin()
+  if (!isAdmin) return null
+  return (
+    <Link
+      to="/source/$sourceKey"
+      params={{ sourceKey: sourceId }}
+      aria-label="Open source admin page"
+      className={adminLinkClassName}
+    >
+      <Settings2 className={adminIconClassName} />
+    </Link>
+  )
+}
+
+function ShowAdminLink({ showId }: { showId: string }) {
+  const isAdmin = useIsAdmin()
+  if (!isAdmin) return null
+  return (
+    <Link
+      to="/show/$showKey"
+      params={{ showKey: showId }}
+      aria-label="Open show admin page"
+      className={adminLinkClassName}
+    >
+      <Settings2 className={adminIconClassName} />
+    </Link>
+  )
+}
+
+function SeasonAdminLink({ seasonId }: { seasonId: string }) {
+  const isAdmin = useIsAdmin()
+  if (!isAdmin) return null
+  return (
+    <Link
+      to="/season/$seasonKey"
+      params={{ seasonKey: seasonId }}
+      aria-label="Open season admin page"
+      className={adminLinkClassName}
+    >
+      <Settings2 className={adminIconClassName} />
+    </Link>
+  )
 }
 
 export const columns: ColumnDef<WatchWithDetails>[] = [
@@ -56,6 +113,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
             />
           )}
           <span className="text-muted-foreground">{source.name ?? ""}</span>
+          <SourceAdminLink sourceId={source.id} />
         </div>
       )
     },
@@ -68,19 +126,24 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     cell: ({ row }) => {
       const { show } = row.original
       const name = show.name ?? ""
-      if (show.url) {
-        return (
-          <a
-            href={show.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary hover:underline"
-          >
-            {name}
-          </a>
-        )
-      }
-      return <span className="font-medium">{name}</span>
+      const nameElement = show.url ? (
+        <a
+          href={show.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary hover:underline"
+        >
+          {name}
+        </a>
+      ) : (
+        <span className="font-medium">{name}</span>
+      )
+      return (
+        <span className="inline-flex items-center gap-1.5">
+          {nameElement}
+          <ShowAdminLink showId={show.id} />
+        </span>
+      )
     },
   },
   {
@@ -91,19 +154,24 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     cell: ({ row }) => {
       const { season } = row.original
       const label = `${season.season_number ?? ""} ${season.name ?? ""}`.trim()
-      if (season.url) {
-        return (
-          <a
-            href={season.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            {label}
-          </a>
-        )
-      }
-      return <span>{label}</span>
+      const labelElement = season.url ? (
+        <a
+          href={season.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          {label}
+        </a>
+      ) : (
+        <span>{label}</span>
+      )
+      return (
+        <span className="inline-flex items-center gap-1.5">
+          {labelElement}
+          <SeasonAdminLink seasonId={season.id} />
+        </span>
+      )
     },
   },
   {
@@ -112,22 +180,27 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     id: "episode",
     header: "Episode",
     cell: ({ row }) => {
-      const { episode } = row.original
+      const { episode, season } = row.original
       const label =
         `${episode.episode_number ?? ""} ${episode.name ?? ""}`.trim()
-      if (episode.url) {
-        return (
-          <a
-            href={episode.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            {label}
-          </a>
-        )
-      }
-      return <span>{label}</span>
+      const labelElement = episode.url ? (
+        <a
+          href={episode.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:underline"
+        >
+          {label}
+        </a>
+      ) : (
+        <span>{label}</span>
+      )
+      return (
+        <span className="inline-flex items-center gap-1.5">
+          {labelElement}
+          <SeasonAdminLink seasonId={season.id} />
+        </span>
+      )
     },
   },
   {
