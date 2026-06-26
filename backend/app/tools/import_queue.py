@@ -1,6 +1,7 @@
 # TODO: Validate
 
 import traceback
+from uuid import UUID
 
 from loguru import logger
 from sqlmodel import Session, col, select
@@ -13,7 +14,8 @@ from app.channels.models import (
     ChannelShow,
     URLStatus,
 )
-from app.database import engine, automatically_import_models
+from app.database import automatically_import_models, engine
+from app.episodes.models import Episode
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.manage_plugins import import_plugins, plugins
 
@@ -102,6 +104,7 @@ def _create_channel_show(
         channel_id=channel.id,
         show_id=result.show.id,
         is_whitelist=result.is_whitelist,
+        is_blacklist_only=False,
     )
     channel.shows.append(channel_show)
 
@@ -127,40 +130,105 @@ def _extend_channel_show(
     existing_channel_show: ChannelShow,
     result: URLImportResult,
 ) -> None:
-    visible_season_ids = {season.id for season in result.seasons}
-    visible_episode_ids = {episode.id for episode in result.episodes}
+    """Merge an import into an existing `ChannelShow`.
 
-    if existing_channel_show.is_whitelist:
-        existing_season_ids = {
-            season_filter.season_id
-            for season_filter in existing_channel_show.season_filters
-        }
-        for season_id in visible_season_ids - existing_season_ids:
-            session.add(
-                ChannelSeasonFilter(
-                    channel_show_id=existing_channel_show.id,
-                    season_id=season_id,
-                ),
-            )
-        existing_episode_ids = {
-            episode_filter.episode_id
-            for episode_filter in existing_channel_show.episode_filters
-        }
-        for episode_id in visible_episode_ids - existing_episode_ids:
-            session.add(
-                ChannelEpisodeFilter(
-                    channel_show_id=existing_channel_show.id,
-                    episode_id=episode_id,
-                ),
-            )
-        return
+    Explicitly importing a show promotes a filter-only show (created when an episode
+    was blacklisted from an included channel) into a full member, adopts the mode the
+    import asks for (whole-show import => blacklist/opt-out, season/episode import =>
+    whitelist/opt-in), and preserves the user's existing blacklist:
 
-    for season_filter in list(existing_channel_show.season_filters):
-        if season_filter.season_id in visible_season_ids:
-            session.delete(season_filter)
-    for episode_filter in list(existing_channel_show.episode_filters):
-        if episode_filter.episode_id in visible_episode_ids:
-            session.delete(episode_filter)
+    - In blacklist mode the blacklisted episodes are simply the entries on the blacklist.
+    - In whitelist mode they are the inverse: episodes are whitelisted, except a
+      blacklisted episode whose season is whitelisted gets an episode filter so it stays
+      hidden (and a blacklisted episode is never whitelisted).
+    """
+    existing_channel_show.is_blacklist_only = False
+
+    was_whitelist = existing_channel_show.is_whitelist
+    existing_season_ids: set[UUID] = {
+        season_filter.season_id
+        for season_filter in existing_channel_show.season_filters
+    }
+    existing_episode_ids: set[UUID] = {
+        episode_filter.episode_id
+        for episode_filter in existing_channel_show.episode_filters
+    }
+    # Existing episode filters are a blacklist only while the show is in blacklist mode.
+    blacklisted_episode_ids: set[UUID] = (
+        set() if was_whitelist else existing_episode_ids
+    )
+
+    result_season_ids: set[UUID] = {season.id for season in result.seasons}
+    result_episode_ids: set[UUID] = {episode.id for episode in result.episodes}
+
+    if result.is_whitelist:
+        season_ids = (
+            (existing_season_ids if was_whitelist else set()) | result_season_ids
+        )
+        whitelisted_episode_ids = (
+            (existing_episode_ids if was_whitelist else set()) | result_episode_ids
+        ) - blacklisted_episode_ids
+        # A blacklisted episode whose season is now whitelisted needs an episode filter
+        # to stay hidden; one whose season isn't whitelisted is already excluded.
+        season_by_blacklisted_episode = _season_ids_for_episodes(
+            session,
+            blacklisted_episode_ids,
+        )
+        exclusion_episode_ids = {
+            episode_id
+            for episode_id, season_id in season_by_blacklisted_episode.items()
+            if season_id in season_ids
+        }
+        episode_ids = whitelisted_episode_ids | exclusion_episode_ids
+    else:
+        # Opt-out: show everything except the (merged) blacklist.
+        season_ids = set()
+        episode_ids = blacklisted_episode_ids | result_episode_ids
+
+    existing_channel_show.is_whitelist = result.is_whitelist
+    _replace_filters(session, existing_channel_show, season_ids, episode_ids)
+
+
+def _season_ids_for_episodes(
+    session: Session,
+    episode_ids: set[UUID],
+) -> dict[UUID, UUID]:
+    """Map each episode id to its season id."""
+    if not episode_ids:
+        return {}
+    rows = session.exec(
+        select(Episode.id, Episode.season_id).where(col(Episode.id).in_(episode_ids)),
+    ).all()
+    return dict(rows)
+
+
+def _replace_filters(
+    session: Session,
+    channel_show: ChannelShow,
+    season_ids: set[UUID],
+    episode_ids: set[UUID],
+) -> None:
+    """Replace a channel show's season/episode filters with the given sets."""
+    for season_filter in list(channel_show.season_filters):
+        session.delete(season_filter)
+    for episode_filter in list(channel_show.episode_filters):
+        session.delete(episode_filter)
+    # Flush the deletes before re-inserting so reused primary keys don't collide.
+    session.flush()
+    for season_id in season_ids:
+        session.add(
+            ChannelSeasonFilter(
+                channel_show_id=channel_show.id,
+                season_id=season_id,
+            ),
+        )
+    for episode_id in episode_ids:
+        session.add(
+            ChannelEpisodeFilter(
+                channel_show_id=channel_show.id,
+                episode_id=episode_id,
+            ),
+        )
 
 
 if __name__ == "__main__":

@@ -58,6 +58,9 @@ class EpisodeWithDetails(EpisodeOutput):
     verified: bool | None = Field(default=None)
     episode_watch_id: uuid.UUID | None = Field(default=None)
     channel_id: uuid.UUID
+    # All in-scope member channels this episode belongs to. The first is `channel_id`
+    # (the primary/base channel). Used by the blacklist UI to offer each as a target.
+    channel_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
 class ChannelEpisodesOutput(BaseModel):
@@ -71,12 +74,23 @@ class ChannelEpisodesOutput(BaseModel):
 
 class ChannelShowsOutput(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
+    # Shows that don't belong to the channel but carry blacklist/whitelist entries for
+    # episodes pulled in from other channels.
+    filter_only_shows: list[ShowPublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
 
 
 class WhitelistEntryInput(BaseInput):
     id: uuid.UUID
     marked: bool
+    # Only meaningful for episode entries; ignored for seasons. `None` = never expires.
+    expires_at: datetime | None = Field(default=None)
+
+
+class BlacklistEpisodeInput(BaseInput):
+    show_id: uuid.UUID
+    episode_id: uuid.UUID
+    expires_at: datetime | None = Field(default=None)
 
 
 class WhitelistShowInput(BaseInput):
@@ -91,6 +105,7 @@ class WhitelistSeasonOutput(SeasonOutput):
 
 class WhitelistEpisodeOutput(EpisodeOutput):
     filtered: bool
+    expires_at: datetime | None = Field(default=None)
 
 
 class WhitelistShowOutput(ShowPublic):

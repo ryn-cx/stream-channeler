@@ -26,8 +26,9 @@ import {
 import { Badge } from "@/components/ui/badge"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
-import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
 import { handleError } from "@/utils"
+import { BlacklistEpisodeDialog } from "./BlacklistEpisodeDialog"
+import { ChannelListDialog } from "./ChannelListDialog"
 import type { EpisodeWithDetails } from "./columns"
 
 interface EpisodeCardsProps {
@@ -62,12 +63,9 @@ export function EpisodeCard({
 }) {
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
+  const [showChannels, setShowChannels] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
-  const whitelistMutation = useToggleEpisodeWhitelist(
-    episode.channel_id,
-    channelId,
-  )
 
   const queryClient = useQueryClient()
   const verifyMutation = useMutation({
@@ -266,16 +264,13 @@ export function EpisodeCard({
     },
   })
   menuItems.push({
-    key: "go-to-channel",
+    key: "list-channels",
     icon: <Radio />,
-    label: `Go to Channel ${
-      episode.channel.channel_number != null
-        ? `${episode.channel.channel_number}. `
-        : ""
-    }${episode.channel.name ?? ""}`,
-    to: "/channels/$channelId",
-    params: { channelId: episode.channel_id },
-    onClick: (event) => event.stopPropagation(),
+    label: "List Channels",
+    onClick: (event) => {
+      event.stopPropagation()
+      setShowChannels(true)
+    },
   })
 
   return (
@@ -292,18 +287,18 @@ export function EpisodeCard({
       />
 
       {confirmBlacklist && (
-        <ConfirmDialog
+        <BlacklistEpisodeDialog
+          episode={episode}
+          currentChannelId={channelId}
           open={confirmBlacklist}
           onOpenChange={setConfirmBlacklist}
-          title="Blacklist Episode"
-          description={`Are you sure you want to blacklist "${episode.name ?? ""}"? This episode will be hidden from this channel.`}
-          confirmLabel="Blacklist"
-          onConfirm={() =>
-            whitelistMutation.mutate({
-              episodeId: episode.id,
-              showId: episode.show.id,
-            })
-          }
+        />
+      )}
+      {showChannels && (
+        <ChannelListDialog
+          episode={episode}
+          open={showChannels}
+          onOpenChange={setShowChannels}
         />
       )}
       {confirmDeleteWatch && (

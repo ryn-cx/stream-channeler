@@ -52,6 +52,7 @@ LAST_WATCHED_COLUMNS = {
 class EpisodeResult:
     episode: Episode
     channel_id: UUID
+    channel_ids: list[UUID]
     latest_watch: Watch | None = None
 
 
@@ -262,6 +263,7 @@ class EpisodeQueryBuilder:
     ) -> None:
         self._session = session
         self._user = user
+        self._now = tz_datetime.now()
         self._channel_options = self._filter_channel_options(channel_options)
         self._channel_ids = self._resolve_channel_ids(channel)
         self._sort_expressions = _SortExpressionBuilder(
@@ -348,6 +350,7 @@ class EpisodeQueryBuilder:
         query = self._join_episode_last_watched(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
+        query = self._apply_channel_specific_blacklist(query)
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
@@ -356,16 +359,14 @@ class EpisodeQueryBuilder:
         query = self._sort_episodes(query)
         query = self._apply_limit(query)
 
-        # Dedupe by Episode.id: joining ChannelShow fans out when additional
-        # channels are included. Preserving sort order, keep the first channel
-        # seen for each episode.
         ordered_episodes: list[Episode] = []
-        channel_by_episode: dict[UUID, UUID] = {}
+        channels_by_episode: dict[UUID, list[UUID]] = {}
         for episode, channel_id in self._session.exec(query).all():
-            if episode.id in channel_by_episode:
-                continue
-            channel_by_episode[episode.id] = channel_id
-            ordered_episodes.append(episode)
+            if episode.id not in channels_by_episode:
+                channels_by_episode[episode.id] = []
+                ordered_episodes.append(episode)
+            if channel_id not in channels_by_episode[episode.id]:
+                channels_by_episode[episode.id].append(channel_id)
 
         ordered_episodes = self._apply_show_count_selection(ordered_episodes)
 
@@ -373,7 +374,8 @@ class EpisodeQueryBuilder:
         return [
             EpisodeResult(
                 episode=episode,
-                channel_id=channel_by_episode[episode.id],
+                channel_id=channels_by_episode[episode.id][0],
+                channel_ids=channels_by_episode[episode.id],
                 latest_watch=watches.get(episode.id),
             )
             for episode in ordered_episodes
@@ -423,6 +425,10 @@ class EpisodeQueryBuilder:
             and_(
                 ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
                 ChannelEpisodeFilter.episode_id == Episode.id,
+                or_(
+                    col(ChannelEpisodeFilter.expires_at).is_(None),
+                    col(ChannelEpisodeFilter.expires_at) > self._now,
+                ),
             ),
         )
 
@@ -533,9 +539,38 @@ class EpisodeQueryBuilder:
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        return query.where(
-            col(ChannelShow.channel_id).in_(self._channel_ids),
-        ).where(self._channel_access_condition())
+        return (
+            query.where(col(ChannelShow.channel_id).in_(self._channel_ids))
+            # Only member shows contribute their episodes; filter-only shows
+            # (is_blacklist_only=True) exist solely to hold blacklist/whitelist entries.
+            .where(col(ChannelShow.is_blacklist_only).is_(False))
+            .where(self._channel_access_condition())
+        )
+
+    def _apply_channel_specific_blacklist(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        filter_only_show = aliased(ChannelShow)
+        filter_only_filter = aliased(ChannelEpisodeFilter)
+        blacklisted_episodes = (
+            select(filter_only_filter.episode_id)
+            .select_from(filter_only_filter)
+            .join(
+                filter_only_show,
+                col(filter_only_filter.channel_show_id) == filter_only_show.id,
+            )
+            .where(
+                col(filter_only_show.is_blacklist_only).is_(True),
+                col(filter_only_show.channel_id).in_(self._channel_ids),
+                filter_only_filter.episode_id == Episode.id,
+                or_(
+                    col(filter_only_filter.expires_at).is_(None),
+                    col(filter_only_filter.expires_at) > self._now,
+                ),
+            )
+        )
+        return query.where(~blacklisted_episodes.exists())
 
     def _verified_watches_subquery(self) -> SelectOfScalar[UUID]:
         user = self._require_user()

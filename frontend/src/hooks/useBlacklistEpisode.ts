@@ -4,35 +4,42 @@ import { ChannelsService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-interface ToggleEpisodeParams {
-  episodeId: string
+interface BlacklistEpisodeParams {
+  targetChannelId: string
   showId: string
+  episodeId: string
+  expiresAt: string | null
 }
 
-export function useToggleEpisodeWhitelist(
-  channelId: string,
-  queryChannelId: string,
-) {
+// Blacklists a single episode on a chosen channel (a base channel the episode belongs
+// to, or the channel currently being viewed). `currentChannelId` is only used to
+// optimistically drop the episode from the channel page the user is looking at.
+export function useBlacklistEpisode(currentChannelId: string) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ episodeId, showId }: ToggleEpisodeParams) =>
-      ChannelsService.updateChannelWhitelist({
-        channelId,
-        showId,
+    mutationFn: ({
+      targetChannelId,
+      showId,
+      episodeId,
+      expiresAt,
+    }: BlacklistEpisodeParams) =>
+      ChannelsService.blacklistChannelEpisode({
+        channelId: targetChannelId,
         requestBody: {
-          episodes: [{ id: episodeId, marked: true }],
+          show_id: showId,
+          episode_id: episodeId,
+          expires_at: expiresAt,
         },
       }),
     onMutate: async ({ episodeId }) => {
       await queryClient.cancelQueries({
-        queryKey: ["episodes", queryChannelId],
+        queryKey: ["episodes", currentChannelId],
       })
 
-      // Snapshot all matching queries (key may include randomSeed as 3rd element)
       const previousEntries = queryClient.getQueriesData({
-        queryKey: ["episodes", queryChannelId],
+        queryKey: ["episodes", currentChannelId],
       })
 
       const removeEpisode = (oldData: any) => {
@@ -44,19 +51,18 @@ export function useToggleEpisodeWhitelist(
       }
 
       queryClient.setQueriesData(
-        { queryKey: ["episodes", queryChannelId] },
+        { queryKey: ["episodes", currentChannelId] },
         removeEpisode,
       )
-
       queryClient.setQueriesData(
-        { queryKey: ["episodes-preview", queryChannelId] },
+        { queryKey: ["episodes-preview", currentChannelId] },
         removeEpisode,
       )
 
       return { previousEntries }
     },
     onSuccess: () => {
-      showSuccessToast("Episode whitelist status toggled successfully")
+      showSuccessToast("Episode blacklisted successfully")
     },
     onError: (error, _variables, context) => {
       for (const [queryKey, data] of context?.previousEntries ?? []) {

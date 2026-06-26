@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, override
 
@@ -16,7 +17,12 @@ from sqlmodel import (
 )
 
 from app.episodes.models import Episode
-from app.models import RootRecordMixin, TimestampIdAndHashMixin, Visibility
+from app.models import (
+    DateTimeField,
+    RootRecordMixin,
+    TimestampIdAndHashMixin,
+    Visibility,
+)
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
@@ -73,6 +79,13 @@ class BaseChannelShow(SQLModel):
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     is_whitelist: bool = Field()
+    """If true any entries in the `ChannelEpisodeFilter` and `ChannelSeasonFilter`
+    tables are treated as a whitelist entries so episodes and seasons will only be
+    included if they are in the tables. If false any entries in the
+    `ChannelEpisodeFilter` and `ChannelSeasonFilter` tables are treated as a blacklist
+    so episodes and seasons will be excluded if they are in the tables."""
+    is_blacklist_only: bool = Field()
+    """If true this `ChannelShow` is only used to filter out episodes and seasons."""
 
 
 class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
@@ -266,6 +279,10 @@ class BaseChannelEpisodeFilter(SQLModel):
     """Base model representing the `Episodes` that are filtered for a `ChannelShow`."""
 
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
+    # When the filter stops applying. `None` means it never expires. Once `expires_at`
+    # is in the past the entry is ignored (a blacklist stops hiding the episode, a
+    # whitelist stops including it).
+    expires_at: datetime | None = DateTimeField(default=None)
 
 
 class ChannelEpisodeFilter(

@@ -88,7 +88,11 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             episode = season.episodes[0]
 
             expected.episodes.append(
-                EpisodeWithDetails(**episode.model_dump(), channel_id=channel.id),
+                EpisodeWithDetails(
+                    **episode.model_dump(),
+                    channel_id=channel.id,
+                    channel_ids=[channel.id],
+                ),
             )
             expected.seasons[season.id] = SeasonOutput.model_validate(season)
             expected.shows[show.id] = ShowPublic.model_validate(show)

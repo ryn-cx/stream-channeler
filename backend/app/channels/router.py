@@ -17,6 +17,7 @@ from app.channels.dependencies import (
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelQueue
 from app.channels.schemas import (
+    BlacklistEpisodeInput,
     ChannelCreate,
     ChannelEpisodesOutput,
     ChannelOptions,
@@ -35,6 +36,7 @@ from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
+from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
@@ -143,7 +145,9 @@ def get_channel_episodes(
     builder = EpisodeQueryBuilder(session, channel, channel_options, user)
     results = builder.get_episodes()
 
-    unique_channel_ids = {result.channel_id for result in results}
+    unique_channel_ids = {
+        channel_id for result in results for channel_id in result.channel_ids
+    }
     channels = session.exec(
         select(Channel).where(col(Channel.id).in_(unique_channel_ids)),
     ).all()
@@ -157,7 +161,10 @@ def get_channel_episodes(
         source = show.source
         plugin = source.plugin
 
-        extras: dict[str, Any] = {"channel_id": result.channel_id}
+        extras: dict[str, Any] = {
+            "channel_id": result.channel_id,
+            "channel_ids": result.channel_ids,
+        }
         if result.latest_watch:
             extras["watch_date"] = result.latest_watch.watch_date
             extras["verified"] = result.latest_watch.verified
@@ -198,7 +205,10 @@ def get_channel_shows(
         if not plugin.is_readable(session, user):
             continue
 
-        output.shows.append(ShowPublic.model_validate(show))
+        if channel_show.is_blacklist_only:
+            output.filter_only_shows.append(ShowPublic.model_validate(show))
+        else:
+            output.shows.append(ShowPublic.model_validate(show))
 
         if source.id not in output.sources:
             output.sources[source.id] = SourcePublic.model_validate(source)
@@ -236,6 +246,10 @@ def get_channel_whitelist(
     """Read the whitelist for a show in a channel."""
     enabled_season_ids = {x.season_id for x in channel_show.season_filters}
     enabled_episode_ids = {x.episode_id for x in channel_show.episode_filters}
+    episode_expiries = {
+        episode_filter.episode_id: episode_filter.expires_at
+        for episode_filter in channel_show.episode_filters
+    }
 
     seasons: list[WhitelistSeasonOutput] = []
     episodes: list[WhitelistEpisodeOutput] = []
@@ -250,7 +264,10 @@ def get_channel_whitelist(
         episodes.extend(
             WhitelistEpisodeOutput.model_validate(
                 episode,
-                update={"filtered": episode.id in enabled_episode_ids},
+                update={
+                    "filtered": episode.id in enabled_episode_ids,
+                    "expires_at": episode_expiries.get(episode.id),
+                },
             )
             for episode in season.episodes
         )
@@ -274,7 +291,49 @@ def update_channel_whitelist(
 ) -> WhitelistShowOutput:
     """Update the whitelist/blacklist for a show in a channel."""
     service.update_whitelist(session, channel_show, whitelist_config)
-    return get_channel_whitelist(channel_show)
+    # Build the response before any cleanup so it stays valid even if the
+    # channel-show is removed below.
+    output = get_channel_whitelist(channel_show)
+    # A filter-only show that no longer hides anything serves no purpose, so drop it
+    # to keep the channel's show list clean.
+    if (
+        channel_show.is_blacklist_only
+        and not channel_show.season_filters
+        and not channel_show.episode_filters
+    ):
+        session.delete(channel_show)
+        session.commit()
+    return output
+
+
+# FAST003 - Parameter is used by OwnedChannel.
+@router.post("/{channel_id}/blacklist-episode")  # noqa: FAST003
+def blacklist_channel_episode(
+    session: SessionDep,
+    channel: OwnedChannel,
+    blacklist_in: BlacklistEpisodeInput,
+) -> Message:
+    """Blacklist a single episode for a `Channel`.
+
+    When the show is not already on the channel a filter-only `ChannelShow` is
+    created so the episode can be hidden without making the whole show a member of the
+    channel. An optional `expires_at` makes the blacklist temporary.
+    """
+    # Show's primary key is (source_id, key), so look it up by its id column.
+    show = session.exec(
+        select(Show).where(Show.id == blacklist_in.show_id),
+    ).first()
+    if show is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+
+    service.blacklist_episode_on_channel(
+        session=session,
+        channel=channel,
+        show=show,
+        episode_id=blacklist_in.episode_id,
+        expires_at=blacklist_in.expires_at,
+    )
+    return Message(message="Episode blacklisted successfully")
 
 
 # FAST003 - Parameter is used by UserChannel.

@@ -1,5 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
+from datetime import datetime
 from functools import cache
 from uuid import UUID
 
@@ -83,6 +84,7 @@ def update_whitelist(
             episode.id,
             existing_episodes,
             marked=episode.marked,
+            expires_at=episode.expires_at,
         )
 
     session.commit()
@@ -109,21 +111,28 @@ def toggle_season_whitelist(
             session.delete(existing_season)
 
 
-def toggle_episode_whitelist(
+def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist plus expiry
     session: Session,
     channel_show: ChannelShow,
     episode_id: UUID,
     existing: set[UUID],
     *,
     marked: bool,
+    expires_at: datetime | None = None,
 ) -> None:
     if marked and episode_id not in existing:
         channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
                 episode_id=episode_id,
+                expires_at=expires_at,
             ),
         )
+    elif marked and episode_id in existing:
+        # Re-marking an existing entry updates its expiry.
+        existing_episode = ChannelEpisodeFilter.get(session, channel_show, episode_id)
+        if existing_episode:
+            existing_episode.expires_at = expires_at
     elif not marked and episode_id in existing:
         existing_episode = ChannelEpisodeFilter.get(
             session,
@@ -132,6 +141,47 @@ def toggle_episode_whitelist(
         )
         if existing_episode:
             session.delete(existing_episode)
+
+
+def blacklist_episode_on_channel(
+    session: Session,
+    channel: Channel,
+    show: Show,
+    episode_id: UUID,
+    expires_at: datetime | None = None,
+) -> ChannelShow:
+    """Blacklist a single episode for `channel`.
+
+    Gets or creates the `ChannelShow` linking `channel` and `show`. A newly created
+    `ChannelShow` is a filter-only show (``is_blacklist_only=True``) in blacklist mode, so
+    the show's other episodes are not pulled into the channel. Adds (or updates the expiry
+    of) a `ChannelEpisodeFilter` for the episode.
+    """
+    channel_show = ChannelShow.get(session, channel, show)
+    if channel_show is None:
+        channel_show = ChannelShow(
+            channel_id=channel.id,
+            show_id=show.id,
+            is_whitelist=False,
+            is_blacklist_only=True,
+        )
+        session.add(channel_show)
+
+    existing_filter = ChannelEpisodeFilter.get(session, channel_show, episode_id)
+    if existing_filter is None:
+        channel_show.episode_filters.append(
+            ChannelEpisodeFilter(
+                channel_show_id=channel_show.id,
+                episode_id=episode_id,
+                expires_at=expires_at,
+            ),
+        )
+    else:
+        existing_filter.expires_at = expires_at
+
+    session.commit()
+    session.refresh(channel_show)
+    return channel_show
 
 
 @cache

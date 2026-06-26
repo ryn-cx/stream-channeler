@@ -17,9 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { isoToLocalInput, localInputToIso } from "./expiry"
 
 interface WhitelistManagerProps {
   channelId: string
@@ -42,6 +44,10 @@ export function WhitelistManager({
   )
   const [enabledEpisodeIds, setEnabledEpisodeIds] = useState<Set<string>>(
     new Set(),
+  )
+  // Maps an episode id to its expiry as a datetime-local input value. Absent = no expiry.
+  const [episodeExpiry, setEpisodeExpiry] = useState<Map<string, string>>(
+    new Map(),
   )
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(new Set())
 
@@ -69,6 +75,16 @@ export function WhitelistManager({
           whitelistData.episodes
             .filter((episode) => episode.filtered)
             .map((episode) => episode.id),
+        ),
+      )
+      setEpisodeExpiry(
+        new Map(
+          whitelistData.episodes
+            .filter((episode) => episode.expires_at)
+            .map((episode) => [
+              episode.id,
+              isoToLocalInput(episode.expires_at),
+            ]),
         ),
       )
     }
@@ -126,6 +142,18 @@ export function WhitelistManager({
     setEnabledEpisodeIds(newEnabled)
   }
 
+  const setEpisodeExpiryValue = (episodeId: string, value: string) => {
+    setEpisodeExpiry((previous) => {
+      const next = new Map(previous)
+      if (value) {
+        next.set(episodeId, value)
+      } else {
+        next.delete(episodeId)
+      }
+      return next
+    })
+  }
+
   const handleSave = () => {
     if (!whitelistData) return
 
@@ -138,6 +166,9 @@ export function WhitelistManager({
       episodes: whitelistData.episodes.map((episode) => ({
         id: episode.id,
         marked: enabledEpisodeIds.has(episode.id),
+        expires_at: enabledEpisodeIds.has(episode.id)
+          ? localInputToIso(episodeExpiry.get(episode.id) ?? "")
+          : null,
       })),
     }
     saveMutation.mutate(input)
@@ -280,6 +311,23 @@ export function WhitelistManager({
                                         <span className="flex-1 text-sm ml-8">
                                           {getEpisodeLabel(episode)}
                                         </span>
+                                        {episodeEnabled && (
+                                          <Input
+                                            type="datetime-local"
+                                            className="w-auto"
+                                            title="Filter expires at (leave empty to never expire)"
+                                            value={
+                                              episodeExpiry.get(episode.id) ??
+                                              ""
+                                            }
+                                            onChange={(event) =>
+                                              setEpisodeExpiryValue(
+                                                episode.id,
+                                                event.target.value,
+                                              )
+                                            }
+                                          />
+                                        )}
                                         <Button
                                           variant={
                                             episodeEnabled !== seasonEnabled

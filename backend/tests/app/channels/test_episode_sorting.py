@@ -1488,3 +1488,89 @@ class TestEpisodeResult:
             r for r in results if r.episode.id != watched_episode.id
         )
         assert unwatched_result.latest_watch is None
+
+
+class TestNestedChannelBlacklist:
+    """A blacklist on an including channel propagates to channels that include it.
+
+    Channel A owns episode Z. Channel B includes A but blacklists Z. Channel C
+    includes B. Because B is in scope when viewing C, B's blacklist hides Z, so C
+    must not include episode Z.
+    """
+
+    def test_blacklist_propagates_through_nested_inclusion(
+        self,
+        session_scoped_session: Session,
+    ) -> None:
+        session = session_scoped_session
+        user = create_random_user(session)
+        plugin = create_random_plugin(session, user, visibility=Visibility.public)
+
+        # Channel A owns episode Z.
+        channel_a = create_random_channel(session, user=user.id)
+        channel_show_a = create_random_channel_show(
+            session,
+            channel_a,
+            plugin,
+            is_whitelist=False,
+        )
+        show = channel_show_a.show
+        season = create_random_season(session, show)
+        episode_z = create_random_episode(session, season)
+        # A second episode that is never blacklisted, used as a positive control to
+        # prove A really is in scope (so Z's absence is the blacklist, not a missing A).
+        episode_y = create_random_episode(session, season)
+
+        # Channel B includes A but blacklists Z via a filter-only show.
+        channel_b = create_random_channel(session, user=user.id)
+        channel_b.default_order = ChannelOptions(
+            additional_channels=[channel_a.id],
+        ).model_dump_json(by_alias=True, exclude_defaults=True)
+        blacklist_show = create_random_channel_show(
+            session,
+            channel_b,
+            show,
+            is_whitelist=False,
+            is_blacklist_only=True,
+        )
+        session.add(
+            ChannelEpisodeFilter(
+                channel_show_id=blacklist_show.id,
+                episode_id=episode_z.id,
+            ),
+        )
+
+        # Channel C includes B.
+        channel_c = create_random_channel(session, user=user.id)
+        session.flush()
+
+        def included_episode_ids(
+            channel: Channel,
+            included: list[uuid.UUID],
+        ) -> set[uuid.UUID]:
+            setup: BuildSetup = {
+                "channel": channel,
+                "user": user,
+                "session": session,
+            }
+            episodes = _build(
+                setup,
+                additional_channels=[str(channel_id) for channel_id in included],
+            )
+            return {episode.id for episode in episodes}
+
+        # Baseline: viewing A directly shows both episodes.
+        ids_a = included_episode_ids(channel_a, [])
+        assert episode_z.id in ids_a
+        assert episode_y.id in ids_a
+
+        # B includes A but blacklists Z, so B hides Z while keeping Y.
+        ids_b = included_episode_ids(channel_b, [channel_a.id])
+        assert episode_z.id not in ids_b
+        assert episode_y.id in ids_b
+
+        # C includes B (which includes A); the blacklist propagates up. Y still flows
+        # through, proving A is in scope and Z is absent only because of the blacklist.
+        ids_c = included_episode_ids(channel_c, [channel_b.id])
+        assert episode_z.id not in ids_c
+        assert episode_y.id in ids_c

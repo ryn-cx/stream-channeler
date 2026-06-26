@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
-import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import {
   type ActionMenuItem,
   ResponsiveActionMenu,
@@ -20,9 +19,9 @@ import { formatDuration } from "@/components/PlaylistChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
-import { useToggleEpisodeWhitelist } from "@/hooks/useToggleEpisodeWhitelist"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import { BlacklistEpisodeDialog } from "./BlacklistEpisodeDialog"
 import type { EpisodeWithDetails } from "./columns"
 
 // Reuse card overlay system from EpisodeCards
@@ -95,10 +94,6 @@ export function EpisodeTile({
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
-  const whitelistMutation = useToggleEpisodeWhitelist(
-    episode.channel_id,
-    channelId,
-  )
   const queryClient = useQueryClient()
 
   const verifyMutation = useMutation({
@@ -327,18 +322,11 @@ export function EpisodeTile({
       </div>
 
       {confirmBlacklist && (
-        <ConfirmDialog
+        <BlacklistEpisodeDialog
+          episode={episode}
+          currentChannelId={channelId}
           open={confirmBlacklist}
           onOpenChange={setConfirmBlacklist}
-          title="Blacklist Episode"
-          description={`Are you sure you want to blacklist "${episode.name ?? ""}"? This episode will be hidden from this channel.`}
-          confirmLabel="Blacklist"
-          onConfirm={() =>
-            whitelistMutation.mutate({
-              episodeId: episode.id,
-              showId: episode.show.id,
-            })
-          }
         />
       )}
     </>

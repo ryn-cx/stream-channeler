@@ -4,6 +4,7 @@ import {
   Info,
   Link2,
   List,
+  ListX,
   Plus,
   Search,
   Settings,
@@ -46,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
+import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
 import { ShowSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
 
@@ -98,6 +100,7 @@ export function ManageShowsTabs({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
+  const [blacklistShowId, setBlacklistShowId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("search")
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
@@ -123,6 +126,7 @@ export function ManageShowsTabs({
     queryFn: () =>
       apiRequest<{
         shows: Show[]
+        filter_only_shows: Show[]
         sources: Record<string, Source>
       }>(OpenAPI, {
         method: "GET",
@@ -138,10 +142,20 @@ export function ManageShowsTabs({
   const showsList = (showsData?.shows ?? []).sort((a, b) =>
     (a.name ?? "").localeCompare(b.name ?? ""),
   )
+  const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
+    (a, b) => (a.name ?? "").localeCompare(b.name ?? ""),
+  )
   const sources: Record<string, Source> = showsData?.sources || {}
-  const shows: Record<string, Show> = showsData?.shows
-    ? Object.fromEntries(showsData.shows.map((show) => [show.id, show]))
-    : {}
+  const shows: Record<string, Show> = {
+    ...(showsData?.shows
+      ? Object.fromEntries(showsData.shows.map((show) => [show.id, show]))
+      : {}),
+    ...(showsData?.filter_only_shows
+      ? Object.fromEntries(
+          showsData.filter_only_shows.map((show) => [show.id, show]),
+        )
+      : {}),
+  }
 
   // endregion Queries
 
@@ -419,7 +433,7 @@ export function ManageShowsTabs({
           </div>
         </TabsContent>
 
-        <TabsContent value="shows" className={contentClassName}>
+        <TabsContent value="shows" className={`${contentClassName} space-y-6`}>
           {showsList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No shows in this channel
@@ -478,6 +492,74 @@ export function ManageShowsTabs({
                   })}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {filterOnlyShowsList.length > 0 && (
+            <div className="space-y-2">
+              <div>
+                <h3 className="text-sm font-semibold">Filter-only shows</h3>
+                <p className="text-xs text-muted-foreground">
+                  Shows that aren't part of this channel but have episodes
+                  blacklisted from channels included here.
+                </p>
+              </div>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Show</TableHead>
+                      <TableHead className="w-25 text-center">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filterOnlyShowsList.map((show) => {
+                      const source = sources[show.source_id]
+                      return (
+                        <TableRow key={show.id}>
+                          <TableCell className="whitespace-normal">
+                            <div className="flex items-center gap-2">
+                              {source?.favicon_url && (
+                                <img
+                                  src={source.favicon_url}
+                                  alt={`${source.name} favicon`}
+                                  className="size-4 shrink-0"
+                                />
+                              )}
+                              <span className="wrap-break-word">
+                                {show.name ?? ""}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => setBlacklistShowId(show.id)}
+                                title="View blacklisted episodes"
+                              >
+                                <ListX className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleRemoveShow(show.id)}
+                                disabled={removeShowMutation.isPending}
+                                title="Remove show"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -593,6 +675,17 @@ export function ManageShowsTabs({
           showName={shows[selectedShowId]?.name || "Unknown Show"}
           isOpen={!!selectedShowId}
           onClose={() => setSelectedShowId(null)}
+        />
+      )}
+
+      {/* Blacklisted episodes for filter-only shows */}
+      {blacklistShowId && (
+        <BlacklistedEpisodesDialog
+          channelId={channelId}
+          showId={blacklistShowId}
+          showName={shows[blacklistShowId]?.name || "Unknown Show"}
+          isOpen={!!blacklistShowId}
+          onClose={() => setBlacklistShowId(null)}
         />
       )}
     </>

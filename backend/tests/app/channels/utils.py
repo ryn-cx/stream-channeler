@@ -43,6 +43,7 @@ def create_random_channel_show(
 ) -> ChannelShow:
     if not isinstance(parent, Show):
         parent = create_random_show(session, parent)
+    kwargs.setdefault("is_blacklist_only", False)
     channel_show = build_random_model(
         ChannelShow,
         channel_id=channel.id,
