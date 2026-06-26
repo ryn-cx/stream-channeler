@@ -17,10 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isoToLocalInput, localInputToIso } from "./expiry"
 
 interface WhitelistManagerProps {
@@ -50,6 +50,9 @@ export function WhitelistManager({
     new Map(),
   )
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(new Set())
+  // Episode awaiting the expiry popup before being added to the filter.
+  const [pendingEpisode, setPendingEpisode] =
+    useState<WhitelistEpisodeOutput | null>(null)
 
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -154,6 +157,23 @@ export function WhitelistManager({
     })
   }
 
+  // Clicking an episode toggles it; removing is immediate, adding first asks for the
+  // optional expiry via a popup.
+  const handleEpisodeClick = (episode: WhitelistEpisodeOutput) => {
+    if (enabledEpisodeIds.has(episode.id)) {
+      toggleEpisodeEnabled(episode.id)
+    } else {
+      setPendingEpisode(episode)
+    }
+  }
+
+  const confirmEpisodeExpiry = (expiresAtLocal: string) => {
+    if (!pendingEpisode) return
+    setEnabledEpisodeIds((previous) => new Set(previous).add(pendingEpisode.id))
+    setEpisodeExpiryValue(pendingEpisode.id, expiresAtLocal)
+    setPendingEpisode(null)
+  }
+
   const handleSave = () => {
     if (!whitelistData) return
 
@@ -196,13 +216,17 @@ export function WhitelistManager({
     episodeEnabled: boolean,
     seasonEnabled: boolean,
   ) => {
-    // When a season is whitelisted, its episodes are included by default.
-    // Toggling an individual episode removes/adds it from the whitelist.
-    if (isWhitelist && seasonEnabled) {
-      return episodeEnabled ? "Add to Whitelist" : "Remove from Whitelist"
-    }
+    // When the season itself is filtered, an episode-level entry inverts that filter
+    // for the episode (a blacklisted season's marked episode is shown again; a
+    // whitelisted season's marked episode is excluded), so the add/remove wording flips.
     if (isWhitelist) {
+      if (seasonEnabled) {
+        return episodeEnabled ? "Add to Whitelist" : "Remove from Whitelist"
+      }
       return episodeEnabled ? "Remove from Whitelist" : "Add to Whitelist"
+    }
+    if (seasonEnabled) {
+      return episodeEnabled ? "Add to Blacklist" : "Remove from Blacklist"
     }
     return episodeEnabled ? "Remove from Blacklist" : "Add to Blacklist"
   }
@@ -219,163 +243,184 @@ export function WhitelistManager({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Manage Whitelist - {showName}</DialogTitle>
-          <DialogDescription>
-            {isWhitelist
-              ? "Only selected seasons and episodes will appear. New episodes are not automatically added."
-              : "All episodes are shown by default. New episodes are automatically added."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Manage Whitelist - {showName}</DialogTitle>
+            <DialogDescription>
+              {isWhitelist
+                ? "Only selected seasons and episodes will appear. New episodes are not automatically added."
+                : "All episodes are shown by default. New episodes are automatically added."}
+            </DialogDescription>
+          </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col gap-4 py-4 flex-1 min-h-0">
-              <div className="flex items-center justify-between p-4 border rounded bg-muted/50 shrink-0">
-                <div>
-                  <h3 className="font-semibold">
-                    Current Mode:{" "}
-                    {isWhitelist ? "Whitelist Mode" : "Blacklist Mode"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {isWhitelist
-                      ? "Only whitelisted episodes will be shown"
-                      : "All episodes except blacklisted ones will be shown"}
-                  </p>
-                </div>
-                <Button onClick={toggleIsWhitelist} variant="outline">
-                  Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
-                </Button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto border rounded min-h-0">
-                <div className="p-4 space-y-2">
-                  {!whitelistData?.seasons ||
-                  whitelistData.seasons.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No seasons found for this show
-                    </p>
-                  ) : (
-                    whitelistData.seasons.map((season) => {
-                      const seasonEnabled = enabledSeasonIds.has(season.id)
-                      return (
-                        <div key={season.id} className="border rounded">
-                          <div className="flex items-center gap-2 p-3 bg-accent/50">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => toggleSeasonExpanded(season.id)}
-                            >
-                              {expandedSeasons.has(season.id) ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <span className="flex-1 font-medium">
-                              {getSeasonLabel(season)}
-                            </span>
-                            <Button
-                              variant={seasonEnabled ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => toggleSeasonEnabled(season.id)}
-                            >
-                              {getSeasonActionLabel(seasonEnabled)}
-                            </Button>
-                          </div>
-
-                          {expandedSeasons.has(season.id) && (
-                            <div className="p-2 space-y-1">
-                              {!episodesBySeason.get(season.id) ||
-                              episodesBySeason.get(season.id)!.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-2">
-                                  No episodes found
-                                </p>
-                              ) : (
-                                episodesBySeason
-                                  .get(season.id)!
-                                  .map((episode) => {
-                                    const episodeEnabled =
-                                      enabledEpisodeIds.has(episode.id)
-                                    return (
-                                      <div
-                                        key={episode.id}
-                                        className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded"
-                                      >
-                                        <span className="flex-1 text-sm ml-8">
-                                          {getEpisodeLabel(episode)}
-                                        </span>
-                                        {episodeEnabled && (
-                                          <Input
-                                            type="datetime-local"
-                                            className="w-auto"
-                                            title="Filter expires at (leave empty to never expire)"
-                                            value={
-                                              episodeExpiry.get(episode.id) ??
-                                              ""
-                                            }
-                                            onChange={(event) =>
-                                              setEpisodeExpiryValue(
-                                                episode.id,
-                                                event.target.value,
-                                              )
-                                            }
-                                          />
-                                        )}
-                                        <Button
-                                          variant={
-                                            episodeEnabled !== seasonEnabled
-                                              ? "default"
-                                              : "outline"
-                                          }
-                                          size="sm"
-                                          onClick={() =>
-                                            toggleEpisodeEnabled(episode.id)
-                                          }
-                                        >
-                                          {getEpisodeActionLabel(
-                                            episodeEnabled,
-                                            seasonEnabled,
-                                          )}
-                                        </Button>
-                                      </div>
-                                    )
-                                  })
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-4 py-4 flex-1 min-h-0">
+                <div className="flex items-center justify-between p-4 border rounded bg-muted/50 shrink-0">
+                  <div>
+                    <h3 className="font-semibold">
+                      Current Mode:{" "}
+                      {isWhitelist ? "Whitelist Mode" : "Blacklist Mode"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isWhitelist
+                        ? "Only whitelisted episodes will be shown"
+                        : "All episodes except blacklisted ones will be shown"}
+                    </p>
+                  </div>
+                  <Button onClick={toggleIsWhitelist} variant="outline">
+                    Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
+                  </Button>
+                </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={saveMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <LoadingButton
-                onClick={handleSave}
-                loading={saveMutation.isPending}
-              >
-                Save Changes
-              </LoadingButton>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+                <div className="flex-1 overflow-y-auto border rounded min-h-0">
+                  <div className="p-4 space-y-2">
+                    {!whitelistData?.seasons ||
+                    whitelistData.seasons.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No seasons found for this show
+                      </p>
+                    ) : (
+                      whitelistData.seasons.map((season) => {
+                        const seasonEnabled = enabledSeasonIds.has(season.id)
+                        return (
+                          <div key={season.id} className="border rounded">
+                            <div className="flex items-center gap-2 p-3 bg-accent/50">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => toggleSeasonExpanded(season.id)}
+                              >
+                                {expandedSeasons.has(season.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <span className="flex-1 font-medium">
+                                {getSeasonLabel(season)}
+                              </span>
+                              <Button
+                                variant={seasonEnabled ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => toggleSeasonEnabled(season.id)}
+                              >
+                                {getSeasonActionLabel(seasonEnabled)}
+                              </Button>
+                            </div>
+
+                            {expandedSeasons.has(season.id) && (
+                              <div className="p-2 space-y-1">
+                                {!episodesBySeason.get(season.id) ||
+                                episodesBySeason.get(season.id)!.length ===
+                                  0 ? (
+                                  <p className="text-sm text-muted-foreground text-center py-2">
+                                    No episodes found
+                                  </p>
+                                ) : (
+                                  episodesBySeason
+                                    .get(season.id)!
+                                    .map((episode) => {
+                                      const episodeEnabled =
+                                        enabledEpisodeIds.has(episode.id)
+                                      return (
+                                        <div
+                                          key={episode.id}
+                                          className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded"
+                                        >
+                                          <span className="flex-1 text-sm ml-8">
+                                            {getEpisodeLabel(episode)}
+                                            {episodeEnabled &&
+                                              episodeExpiry.get(episode.id) && (
+                                                <span className="ml-2 text-xs text-muted-foreground">
+                                                  (until{" "}
+                                                  {new Date(
+                                                    episodeExpiry.get(
+                                                      episode.id,
+                                                    )!,
+                                                  ).toLocaleString()}
+                                                  )
+                                                </span>
+                                              )}
+                                          </span>
+                                          <Button
+                                            variant={
+                                              episodeEnabled !== seasonEnabled
+                                                ? "default"
+                                                : "outline"
+                                            }
+                                            size="sm"
+                                            onClick={() =>
+                                              handleEpisodeClick(episode)
+                                            }
+                                          >
+                                            {getEpisodeActionLabel(
+                                              episodeEnabled,
+                                              seasonEnabled,
+                                            )}
+                                          </Button>
+                                        </div>
+                                      )
+                                    })
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={saveMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <LoadingButton
+                  onClick={handleSave}
+                  loading={saveMutation.isPending}
+                >
+                  Save Changes
+                </LoadingButton>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {pendingEpisode && (
+        <EpisodeExpiryDialog
+          open={!!pendingEpisode}
+          // The popup only opens when adding an episode-level entry, so the action
+          // matches the not-yet-enabled label (which already accounts for the season).
+          title={getEpisodeActionLabel(
+            false,
+            enabledSeasonIds.has(pendingEpisode.season_id),
+          )}
+          description={getEpisodeLabel(pendingEpisode)}
+          dateLabel="Expires at (optional)"
+          confirmLabel={getEpisodeActionLabel(
+            false,
+            enabledSeasonIds.has(pendingEpisode.season_id),
+          )}
+          initialExpiry={episodeExpiry.get(pendingEpisode.id) ?? ""}
+          onConfirm={confirmEpisodeExpiry}
+          onOpenChange={(open) => {
+            if (!open) setPendingEpisode(null)
+          }}
+        />
+      )}
+    </>
   )
 }
