@@ -553,7 +553,7 @@ export function EpisodeFilters({
           {/* onSubmit is needed to manage additionalChannels and URL redirection */}
           <form
             onSubmit={form.handleSubmit((data) => onSubmit(data))}
-            className="flex flex-col gap-4 py-4 overflow-y-auto flex-1 min-h-0"
+            className="flex flex-col gap-4 py-4 flex-1 min-h-0"
           >
             <Tabs defaultValue="filtering" className="flex-1 min-h-0 gap-4">
               <TabsList className="w-full">
@@ -561,7 +561,10 @@ export function EpisodeFilters({
                 <TabsTrigger value="sorting">Sorting</TabsTrigger>
                 <TabsTrigger value="sources">Sources</TabsTrigger>
               </TabsList>
-              <TabsContent value="filtering" className="space-y-4">
+              <TabsContent
+                value="filtering"
+                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+              >
                 {/* grid - Use a grid layout */}
                 {/* md:grid-cols-2 - 2 column grid */}
                 {/* gap-4 - When the columns get stacked vertically this adds spacing between them */}
@@ -771,7 +774,10 @@ export function EpisodeFilters({
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="sorting" className="space-y-4">
+              <TabsContent
+                value="sorting"
+                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+              >
                 <div className="space-y-4">
                   <h3>Sort Options</h3>
                   <div className="flex items-center gap-4">
@@ -1036,7 +1042,10 @@ export function EpisodeFilters({
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="sources" className="space-y-4">
+              <TabsContent
+                value="sources"
+                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+              >
                 <FormField
                   control={form.control}
                   name="sourceIds"
