@@ -2,6 +2,7 @@
 import { Link } from "@tanstack/react-router"
 import {
   Check,
+  Globe,
   LayoutDashboard,
   LogIn,
   Play,
@@ -11,34 +12,10 @@ import {
   Zap,
 } from "lucide-react"
 
-import type { SortKeyInput } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import useAuth from "@/hooks/useAuth"
-
-const DEMO_CHANNEL_ID = "3d174ad5-41ed-4110-8ef1-5e7f1653f9d5"
-
-const DEMO_SORT_BY: SortKeyInput[] = [
-  {
-    model: "season",
-    field: "sequential",
-    direction: "ascending",
-    order: "sequential",
-  },
-  {
-    model: "episode",
-    field: "sequential",
-    direction: "ascending",
-    order: "sequential",
-  },
-  {
-    model: "episode",
-    field: "id",
-    direction: "ascending",
-    order: "randomize",
-  },
-]
 
 export function InfoPage() {
   const { user } = useAuth()
@@ -61,13 +38,9 @@ export function InfoPage() {
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Button asChild size="lg">
-              <Link
-                to="/channels/$channelId"
-                params={{ channelId: DEMO_CHANNEL_ID }}
-                search={{ sortBy: DEMO_SORT_BY }}
-              >
-                <Tv className="mr-2" />
-                View Demo Channel
+              <Link to="/channels/browse">
+                <Globe className="mr-2" />
+                Browse Public Channels
               </Link>
             </Button>
             {user ? (

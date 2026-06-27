@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,7 +15,6 @@ import { EmptyState } from "@/components/Common/EmptyState"
 import { PageHeader } from "@/components/Common/PageHeader"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
 import { Button } from "@/components/ui/button"
-import { isLoggedIn } from "@/hooks/useAuth"
 
 const CHANNELS_PER_PAGE = 10
 
@@ -34,11 +33,6 @@ function getPublicChannelsQueryOptions(page: number) {
 
 export const Route = createFileRoute("/_layout/channels/browse")({
   component: PublicChannels,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
   head: () => ({
     meta: [
       {

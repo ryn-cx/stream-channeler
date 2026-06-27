@@ -119,7 +119,6 @@ def bulk_import_queue_urls(
 @router.get("/public")
 def get_public_channels(
     session: SessionDep,
-    current_user: CurrentUser,  # noqa: ARG001 - Listing is restricted to logged-in users.
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
 ) -> ChannelPublicListOutput:
