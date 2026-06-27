@@ -1,3 +1,4 @@
+// TODO: Validate
 import {
   type Column,
   type ColumnDef,
@@ -108,6 +109,20 @@ function usePersistentState<T>(key: string | undefined, initialValue: T) {
   return [value, setValue] as const
 }
 
+// When supplied, the table runs in server-side mode: pagination, sorting, and
+// filtering state are owned by the parent and `data` is a single pre-fetched page.
+// See https://tanstack.com/table/v8/docs/guide/pagination#manual-server-side-pagination
+interface ManualTableState {
+  pagination: PaginationState
+  sorting: SortingState
+  columnFilters: ColumnFiltersState
+  onPaginationChange: OnChangeFn<PaginationState>
+  onSortingChange: OnChangeFn<SortingState>
+  onColumnFiltersChange: OnChangeFn<ColumnFiltersState>
+  /** Total filtered rows across all pages, for the page count and footer. */
+  rowCount: number
+}
+
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
@@ -115,6 +130,7 @@ interface DataTableProps<TData extends { id: string }, TValue> {
   storageKey?: string
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
+  manual?: ManualTableState
 }
 
 export function DataTable<TData extends { id: string }, TValue>({
@@ -124,6 +140,7 @@ export function DataTable<TData extends { id: string }, TValue>({
   storageKey,
   columnVisibility,
   onColumnVisibilityChange,
+  manual,
 }: DataTableProps<TData, TValue>) {
   const processedColumns = useMemo(
     () =>
@@ -135,22 +152,34 @@ export function DataTable<TData extends { id: string }, TValue>({
     [columns],
   )
 
-  const [sorting, setSorting] = usePersistentState<SortingState>(
-    storageKey && `${storageKey}:sorting`,
-    [],
-  )
-  const [columnFilters, setColumnFilters] =
+  // Client-side state, used only when the table is not driven by `manual`.
+  const [internalSorting, setInternalSorting] =
+    usePersistentState<SortingState>(storageKey && `${storageKey}:sorting`, [])
+  const [internalColumnFilters, setInternalColumnFilters] =
     usePersistentState<ColumnFiltersState>(
       storageKey && `${storageKey}:filters`,
       [],
     )
-  const [pagination, setPagination] = usePersistentState<PaginationState>(
-    storageKey && `${storageKey}:pagination`,
-    { pageIndex: 0, pageSize: 10 },
-  )
+  const [internalPagination, setInternalPagination] =
+    usePersistentState<PaginationState>(
+      storageKey && `${storageKey}:pagination`,
+      { pageIndex: 0, pageSize: 10 },
+    )
+
+  const sorting = manual ? manual.sorting : internalSorting
+  const columnFilters = manual ? manual.columnFilters : internalColumnFilters
+  const pagination = manual ? manual.pagination : internalPagination
+  const setSorting = manual ? manual.onSortingChange : setInternalSorting
+  const setPagination = manual
+    ? manual.onPaginationChange
+    : setInternalPagination
+  const setColumnFilters = manual
+    ? manual.onColumnFiltersChange
+    : setInternalColumnFilters
 
   // Reset page to 0 when filters actually change, since autoResetPageIndex
-  // is disabled to prevent pagination clicks from resetting the page.
+  // is disabled to prevent pagination clicks from resetting the page. Works in
+  // both client and server mode via the active setters above.
   const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = useCallback(
     (updater) => {
       setColumnFilters((prev) => {
@@ -169,12 +198,18 @@ export function DataTable<TData extends { id: string }, TValue>({
     columns: processedColumns,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(), //client-side filtering
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(), // client-side faceting
-    getFacetedUniqueValues: getFacetedUniqueValues(), // generate unique values for select filter/autocomplete
-    getFacetedMinMaxValues: getFacetedMinMaxValues(), // generate min/max values for range filter
+    // Server-side: the backend already paginated, sorted, and filtered, so the
+    // client row models are skipped (per the TanStack manual-pagination guide).
+    manualPagination: !!manual,
+    manualSorting: !!manual,
+    manualFiltering: !!manual,
+    rowCount: manual?.rowCount,
+    getSortedRowModel: manual ? undefined : getSortedRowModel(),
+    getFilteredRowModel: manual ? undefined : getFilteredRowModel(),
+    getPaginationRowModel: manual ? undefined : getPaginationRowModel(),
+    getFacetedRowModel: manual ? undefined : getFacetedRowModel(),
+    getFacetedUniqueValues: manual ? undefined : getFacetedUniqueValues(),
+    getFacetedMinMaxValues: manual ? undefined : getFacetedMinMaxValues(),
     onSortingChange: setSorting,
     onColumnFiltersChange: handleColumnFiltersChange,
     onPaginationChange: setPagination,
@@ -187,6 +222,12 @@ export function DataTable<TData extends { id: string }, TValue>({
     },
     autoResetPageIndex: false,
   })
+
+  // In server mode only the current page is loaded, so the filtered row model
+  // reflects one page; the true total comes from the backend via `rowCount`.
+  const totalRows = manual
+    ? manual.rowCount
+    : table.getFilteredRowModel().rows.length
 
   return (
     <div className="flex flex-col gap-4">
@@ -279,12 +320,9 @@ export function DataTable<TData extends { id: string }, TValue>({
             {Math.min(
               (table.getState().pagination.pageIndex + 1) *
                 table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length,
+              totalRows,
             )}{" "}
-            of{" "}
-            <span className="font-medium text-foreground">
-              {table.getFilteredRowModel().rows.length}
-            </span>{" "}
+            of <span className="font-medium text-foreground">{totalRows}</span>{" "}
             entries
           </div>
           <div className="flex items-center gap-x-2">

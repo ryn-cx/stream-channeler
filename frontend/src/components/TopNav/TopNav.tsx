@@ -2,6 +2,7 @@
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
   Eye,
+  Globe,
   LayoutDashboard,
   ListMusic,
   LogIn,
@@ -45,7 +46,8 @@ interface NavItem {
 
 const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
-  { icon: Radio, title: "Channels", path: "/channels" },
+  { icon: Radio, title: "My Channels", path: "/channels" },
+  { icon: Globe, title: "Public Channels", path: "/channels/browse" },
   { icon: ListMusic, title: "Playlists", path: "/playlists" },
   { icon: Eye, title: "Watches", path: "/watches" },
   { icon: Plug, title: "Custom Media", path: "/plugins" },
@@ -142,7 +144,7 @@ function UserMenu() {
         >
           <Avatar className="size-8">
             <AvatarFallback className="bg-zinc-600 text-white text-xs">
-              {getInitials(currentUser.full_name || "User")}
+              {getInitials(currentUser.username || "User")}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -150,7 +152,7 @@ function UserMenu() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col">
-            <p className="text-sm font-medium">{currentUser.full_name}</p>
+            <p className="text-sm font-medium">{currentUser.username}</p>
             <p className="text-xs text-muted-foreground">{currentUser.email}</p>
           </div>
         </DropdownMenuLabel>

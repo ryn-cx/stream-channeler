@@ -101,6 +101,177 @@ export const Body_watches_import_watch_historySchema = {
     title: 'Body_watches-import_watch_history'
 } as const;
 
+export const ChannelAdminOutputSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/Visibility'
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        }
+    },
+    type: 'object',
+    required: ['visibility', 'id', 'user_id', 'score', 'username'],
+    title: 'ChannelAdminOutput',
+    description: 'Schema for returning a `Channel` to an admin, including the owner username.'
+} as const;
+
+export const ChannelAdminUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        visibility: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/Visibility'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Anonymous'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'ChannelAdminUpdate',
+    description: 'Schema for an admin updating any field on a `Channel`.'
+} as const;
+
 export const ChannelCreateSchema = {
     properties: {
         name: {
@@ -138,6 +309,22 @@ export const ChannelCreateSchema = {
                 }
             ],
             title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
         }
     },
     additionalProperties: false,
@@ -490,6 +677,22 @@ export const ChannelOutputSchema = {
             ],
             title: 'Default Order'
         },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -499,12 +702,115 @@ export const ChannelOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'User Id'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
         }
     },
     type: 'object',
-    required: ['visibility', 'id', 'user_id'],
+    required: ['visibility', 'id', 'user_id', 'score'],
     title: 'ChannelOutput',
     description: 'Schema for returning a `Channel`.'
+} as const;
+
+export const ChannelPublicListOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ChannelPublicOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'ChannelPublicListOutput',
+    description: 'Schema for returning a page of publicly listed `Channel`s.'
+} as const;
+
+export const ChannelPublicOutputSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/Visibility'
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        }
+    },
+    type: 'object',
+    required: ['visibility', 'id', 'username'],
+    title: 'ChannelPublicOutput',
+    description: `Schema for returning a publicly listed \`Channel\`.
+
+\`username\` is the creator's username, or \`None\` when the channel is anonymous.`
 } as const;
 
 export const ChannelQueueOutputSchema = {
@@ -618,6 +924,22 @@ export const ChannelUpdateSchema = {
                 }
             ],
             title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
         }
     },
     additionalProperties: false,
@@ -960,6 +1282,30 @@ export const EpisodeOutputSchema = {
     required: ['key', 'id', 'season_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
+} as const;
+
+export const EpisodeTableOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        server_side: {
+            type: 'boolean',
+            title: 'Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'server_side'],
+    title: 'EpisodeTableOutput',
+    description: 'Schema for returning a list of `Episode`s.'
 } as const;
 
 export const EpisodeUpdateSchema = {
@@ -1649,6 +1995,16 @@ export const HTTPValidationErrorSchema = {
     },
     type: 'object',
     title: 'HTTPValidationError'
+} as const;
+
+export const MediaOwnerSchema = {
+    type: 'string',
+    enum: ['official', 'others'],
+    title: 'MediaOwner',
+    description: `Which owner's records a table query targets.
+
+Own content is represented by an unset \`owner\` (\`None\`), so this enum only
+covers the admin-only views.`
 } as const;
 
 export const MessageSchema = {
@@ -2467,6 +2823,30 @@ export const PluginSearchResultsSchema = {
     description: 'Results from a search query.'
 } as const;
 
+export const PluginTableOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PluginOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        server_side: {
+            type: 'boolean',
+            title: 'Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'server_side'],
+    title: 'PluginTableOutput',
+    description: 'Schema for returning a list of `Plugin`s.'
+} as const;
+
 export const PluginURLMatchSchema = {
     properties: {
         matched: {
@@ -2600,9 +2980,9 @@ export const PrivateUserCreateSchema = {
             type: 'string',
             title: 'Password'
         },
-        full_name: {
+        username: {
             type: 'string',
-            title: 'Full Name'
+            title: 'Username'
         },
         is_verified: {
             type: 'boolean',
@@ -2611,7 +2991,7 @@ export const PrivateUserCreateSchema = {
         }
     },
     type: 'object',
-    required: ['email', 'password', 'full_name'],
+    required: ['email', 'password', 'username'],
     title: 'PrivateUserCreate'
 } as const;
 
@@ -2855,6 +3235,30 @@ export const SeasonOutputSchema = {
     required: ['key', 'show_id', 'id'],
     title: 'SeasonOutput',
     description: 'Schema for returning a `Season`.'
+} as const;
+
+export const SeasonTableOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SeasonOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        server_side: {
+            type: 'boolean',
+            title: 'Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'server_side'],
+    title: 'SeasonTableOutput',
+    description: 'Schema for returning a list of `Season`s.'
 } as const;
 
 export const SeasonUpdateSchema = {
@@ -3220,6 +3624,30 @@ export const ShowPublicSchema = {
     required: ['key', 'source_id', 'id'],
     title: 'ShowPublic',
     description: 'Schema for returning a `Show`.'
+} as const;
+
+export const ShowTableOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ShowPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        server_side: {
+            type: 'boolean',
+            title: 'Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'server_side'],
+    title: 'ShowTableOutput',
+    description: 'Schema for returning a list of `Show`s.'
 } as const;
 
 export const ShowUpdateSchema = {
@@ -3639,6 +4067,30 @@ export const SourcePublicSchema = {
     description: 'Schema for returning a `Source`.'
 } as const;
 
+export const SourceTableOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SourcePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        server_side: {
+            type: 'boolean',
+            title: 'Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'server_side'],
+    title: 'SourceTableOutput',
+    description: 'Schema for returning a list of `Source`s.'
+} as const;
+
 export const SourceUpdateSchema = {
     properties: {
         key: {
@@ -3802,7 +4254,7 @@ export const UserCreateSchema = {
             title: 'Is Superuser',
             default: false
         },
-        full_name: {
+        username: {
             anyOf: [
                 {
                     type: 'string',
@@ -3812,7 +4264,7 @@ export const UserCreateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Username'
         },
         password: {
             type: 'string',
@@ -3844,7 +4296,7 @@ export const UserPublicSchema = {
             title: 'Is Superuser',
             default: false
         },
-        full_name: {
+        username: {
             anyOf: [
                 {
                     type: 'string',
@@ -3854,7 +4306,7 @@ export const UserPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Username'
         },
         id: {
             type: 'string',
@@ -3893,7 +4345,7 @@ export const UserRegisterSchema = {
             minLength: 8,
             title: 'Password'
         },
-        full_name: {
+        username: {
             anyOf: [
                 {
                     type: 'string',
@@ -3903,7 +4355,7 @@ export const UserRegisterSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Username'
         }
     },
     type: 'object',
@@ -3936,7 +4388,7 @@ export const UserUpdateSchema = {
             title: 'Is Superuser',
             default: false
         },
-        full_name: {
+        username: {
             anyOf: [
                 {
                     type: 'string',
@@ -3946,7 +4398,7 @@ export const UserUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Username'
         },
         password: {
             anyOf: [
@@ -3968,7 +4420,7 @@ export const UserUpdateSchema = {
 
 export const UserUpdateMeSchema = {
     properties: {
-        full_name: {
+        username: {
             anyOf: [
                 {
                     type: 'string',
@@ -3978,7 +4430,7 @@ export const UserUpdateMeSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Username'
         },
         email: {
             anyOf: [

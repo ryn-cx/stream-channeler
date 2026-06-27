@@ -7,16 +7,16 @@ import { UserActionsMenu } from "./UserActionsMenu"
 
 export const columns: ColumnDef<UserTableData>[] = [
   {
-    accessorKey: "full_name",
-    header: "Full Name",
+    accessorKey: "username",
+    header: "Username",
     cell: ({ row }) => {
-      const fullName = row.original.full_name
+      const username = row.original.username
       return (
         <div className="flex items-center gap-2">
           <span
-            className={cn("font-medium", !fullName && "text-muted-foreground")}
+            className={cn("font-medium", !username && "text-muted-foreground")}
           >
-            {fullName || "N/A"}
+            {username || "N/A"}
           </span>
           {row.original.isCurrentUser && (
             <Badge variant="outline" className="text-xs">

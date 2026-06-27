@@ -1,7 +1,7 @@
-# TODO: Validate
+import uuid
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Path
 from fastapi.security import OAuth2PasswordBearer
 
 from app.auth.dependencies import SessionDep, get_current_user
@@ -27,3 +27,15 @@ def get_optional_user(
 
 
 OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
+def get_existing_user(
+    session: SessionDep,
+    user_id: Annotated[uuid.UUID, Path()],
+) -> User:
+    if user := session.get(User, user_id):
+        return user
+    raise HTTPException(status_code=404, detail="User not found")
+
+
+ExistingUser = Annotated[User, Depends(get_existing_user)]

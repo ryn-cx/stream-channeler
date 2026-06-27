@@ -20,6 +20,35 @@ export type Body_watches_import_watch_history = {
 };
 
 /**
+ * Schema for returning a `Channel` to an admin, including the owner username.
+ */
+export type ChannelAdminOutput = {
+    name?: (string | null);
+    channel_number?: (number | null);
+    visibility: Visibility;
+    default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: boolean;
+    id: string;
+    user_id: string;
+    score: number;
+    username: (string | null);
+};
+
+/**
+ * Schema for an admin updating any field on a `Channel`.
+ */
+export type ChannelAdminUpdate = {
+    name?: (string | null);
+    channel_number?: (number | null);
+    visibility?: (Visibility | null);
+    default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: (boolean | null);
+    score?: (number | null);
+};
+
+/**
  * Schema for creating a `Channel`.
  */
 export type ChannelCreate = {
@@ -27,6 +56,8 @@ export type ChannelCreate = {
     channel_number?: (number | null);
     visibility: Visibility;
     default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: boolean;
 };
 
 export type ChannelEpisodesOutput = {
@@ -83,8 +114,35 @@ export type ChannelOutput = {
     channel_number?: (number | null);
     visibility: Visibility;
     default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: boolean;
     id: string;
     user_id: string;
+    score: number;
+};
+
+/**
+ * Schema for returning a page of publicly listed `Channel`s.
+ */
+export type ChannelPublicListOutput = {
+    data: Array<ChannelPublicOutput>;
+    count: number;
+};
+
+/**
+ * Schema for returning a publicly listed `Channel`.
+ *
+ * `username` is the creator's username, or `None` when the channel is anonymous.
+ */
+export type ChannelPublicOutput = {
+    name?: (string | null);
+    channel_number?: (number | null);
+    visibility: Visibility;
+    default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: boolean;
+    id: string;
+    username: (string | null);
 };
 
 export type ChannelQueueOutput = {
@@ -111,6 +169,8 @@ export type ChannelUpdate = {
     channel_number?: (number | null);
     visibility?: (Visibility | null);
     default_order?: (string | null);
+    description?: (string | null);
+    anonymous?: boolean;
 };
 
 /**
@@ -153,6 +213,15 @@ export type EpisodeOutput = {
     air_date?: (string | null);
     id: string;
     season_id: string;
+};
+
+/**
+ * Schema for returning a list of `Episode`s.
+ */
+export type EpisodeTableOutput = {
+    data: Array<EpisodeOutput>;
+    count: number;
+    server_side: boolean;
 };
 
 /**
@@ -255,6 +324,14 @@ export type FileUpdate = {
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
+
+/**
+ * Which owner's records a table query targets.
+ *
+ * Own content is represented by an unset `owner` (`None`), so this enum only
+ * covers the admin-only views.
+ */
+export type MediaOwner = 'official' | 'others';
 
 /**
  * Generic message.
@@ -428,6 +505,15 @@ export type PluginSearchResultSource = {
 };
 
 /**
+ * Schema for returning a list of `Plugin`s.
+ */
+export type PluginTableOutput = {
+    data: Array<PluginOutput>;
+    count: number;
+    server_side: boolean;
+};
+
+/**
  * Schema for updating a `Plugin`.
  */
 export type PluginUpdate = {
@@ -449,7 +535,7 @@ export type PluginURLMatch = {
 export type PrivateUserCreate = {
     email: string;
     password: string;
-    full_name: string;
+    username: string;
     is_verified?: boolean;
 };
 
@@ -485,6 +571,15 @@ export type SeasonOutput = {
     season_number?: (number | null);
     show_id: string;
     id: string;
+};
+
+/**
+ * Schema for returning a list of `Season`s.
+ */
+export type SeasonTableOutput = {
+    data: Array<SeasonOutput>;
+    count: number;
+    server_side: boolean;
 };
 
 /**
@@ -535,6 +630,15 @@ export type ShowPublic = {
     image_url?: (string | null);
     source_id: string;
     id: string;
+};
+
+/**
+ * Schema for returning a list of `Show`s.
+ */
+export type ShowTableOutput = {
+    data: Array<ShowPublic>;
+    count: number;
+    server_side: boolean;
 };
 
 /**
@@ -607,6 +711,15 @@ export type SourcePublic = {
 };
 
 /**
+ * Schema for returning a list of `Source`s.
+ */
+export type SourceTableOutput = {
+    data: Array<SourcePublic>;
+    count: number;
+    server_side: boolean;
+};
+
+/**
  * Schema for updating a `Source`.
  */
 export type SourceUpdate = {
@@ -639,7 +752,7 @@ export type UserCreate = {
     email: string;
     is_active?: boolean;
     is_superuser?: boolean;
-    full_name?: (string | null);
+    username?: (string | null);
     password: string;
 };
 
@@ -647,7 +760,7 @@ export type UserPublic = {
     email: string;
     is_active?: boolean;
     is_superuser?: boolean;
-    full_name?: (string | null);
+    username?: (string | null);
     id: string;
     created_at?: (string | null);
 };
@@ -655,7 +768,7 @@ export type UserPublic = {
 export type UserRegister = {
     email: string;
     password: string;
-    full_name?: (string | null);
+    username?: (string | null);
 };
 
 export type UsersPublic = {
@@ -667,12 +780,12 @@ export type UserUpdate = {
     email?: (string | null);
     is_active?: boolean;
     is_superuser?: boolean;
-    full_name?: (string | null);
+    username?: (string | null);
     password?: (string | null);
 };
 
 export type UserUpdateMe = {
-    full_name?: (string | null);
+    username?: (string | null);
     email?: (string | null);
 };
 
@@ -838,6 +951,28 @@ export type ChannelsBulkImportQueueUrlsData = {
 
 export type ChannelsBulkImportQueueUrlsResponse = (Message);
 
+export type ChannelsGetPublicChannelsData = {
+    limit?: number;
+    offset?: number;
+};
+
+export type ChannelsGetPublicChannelsResponse = (ChannelPublicListOutput);
+
+export type ChannelsAdminListChannelsResponse = (Array<ChannelAdminOutput>);
+
+export type ChannelsAdminListUserChannelsData = {
+    userId: string;
+};
+
+export type ChannelsAdminListUserChannelsResponse = (Array<ChannelAdminOutput>);
+
+export type ChannelsAdminUpdateChannelData = {
+    channelId: string;
+    requestBody: ChannelAdminUpdate;
+};
+
+export type ChannelsAdminUpdateChannelResponse = (ChannelAdminOutput);
+
 export type ChannelsGetChannelData = {
     channelId: string;
 };
@@ -960,6 +1095,16 @@ export type ChannelsClearChannelCompletedQueueData = {
 };
 
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
+
+export type EpisodesGetEpisodesData = {
+    filters?: (string | null);
+    limit?: number;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sorting?: (string | null);
+};
+
+export type EpisodesGetEpisodesResponse = (EpisodeTableOutput);
 
 export type EpisodesGetEpisodeData = {
     episodeId: string;
@@ -1084,7 +1229,15 @@ export type PluginsSearchPluginData = {
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
-export type PluginsGetPluginsResponse = (Array<PluginOutput>);
+export type PluginsGetPluginsData = {
+    filters?: (string | null);
+    limit?: number;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sorting?: (string | null);
+};
+
+export type PluginsGetPluginsResponse = (PluginTableOutput);
 
 export type PluginsCreatePluginData = {
     requestBody: PluginCreate;
@@ -1105,20 +1258,6 @@ export type PluginsCreateSourceData = {
 
 export type PluginsCreateSourceResponse = (SourcePublic);
 
-export type PluginsGetPluginFilesData = {
-    content?: (string | null);
-    pluginId: string;
-};
-
-export type PluginsGetPluginFilesResponse = (Array<FileListPublic>);
-
-export type PluginsCreateFileData = {
-    pluginId: string;
-    requestBody: FileCreate;
-};
-
-export type PluginsCreateFileResponse = (FilePublic);
-
 export type PluginsUpdatePluginData = {
     pluginId: string;
     requestBody: PluginUpdate;
@@ -1138,11 +1277,35 @@ export type PluginsGetPluginData = {
 
 export type PluginsGetPluginResponse = (PluginOutput);
 
+export type PluginsGetPluginFilesData = {
+    content?: (string | null);
+    pluginId: string;
+};
+
+export type PluginsGetPluginFilesResponse = (Array<FileListPublic>);
+
+export type PluginsCreateFileData = {
+    pluginId: string;
+    requestBody: FileCreate;
+};
+
+export type PluginsCreateFileResponse = (FilePublic);
+
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
+
+export type SeasonsGetSeasonsData = {
+    filters?: (string | null);
+    limit?: number;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sorting?: (string | null);
+};
+
+export type SeasonsGetSeasonsResponse = (SeasonTableOutput);
 
 export type SeasonsGetSeasonData = {
     seasonId: string;
@@ -1176,6 +1339,16 @@ export type SeasonsGetEpisodesData = {
 
 export type SeasonsGetEpisodesResponse = (Array<EpisodeOutput>);
 
+export type ShowsGetShowsData = {
+    filters?: (string | null);
+    limit?: number;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sorting?: (string | null);
+};
+
+export type ShowsGetShowsResponse = (ShowTableOutput);
+
 export type ShowsGetShowData = {
     showId: string;
 };
@@ -1207,6 +1380,16 @@ export type ShowsGetSeasonsData = {
 };
 
 export type ShowsGetSeasonsResponse = (Array<SeasonOutput>);
+
+export type SourcesGetSourcesData = {
+    filters?: (string | null);
+    limit?: number;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sorting?: (string | null);
+};
+
+export type SourcesGetSourcesResponse = (SourceTableOutput);
 
 export type SourcesGetSourceData = {
     sourceId: string;

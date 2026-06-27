@@ -21,7 +21,7 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
-import { isoToLocalInput, localInputToIso } from "./expiry"
+import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
 
 interface WhitelistManagerProps {
   channelId: string
@@ -76,14 +76,18 @@ export function WhitelistManager({
       setEnabledEpisodeIds(
         new Set(
           whitelistData.episodes
-            .filter((episode) => episode.filtered)
+            .filter(
+              (episode) => episode.filtered && !isExpired(episode.expires_at),
+            )
             .map((episode) => episode.id),
         ),
       )
       setEpisodeExpiry(
         new Map(
           whitelistData.episodes
-            .filter((episode) => episode.expires_at)
+            .filter(
+              (episode) => episode.expires_at && !isExpired(episode.expires_at),
+            )
             .map((episode) => [
               episode.id,
               isoToLocalInput(episode.expires_at),

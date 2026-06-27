@@ -11,7 +11,7 @@ const fillForm = async (
   password: string,
   confirm_password: string,
 ) => {
-  await page.getByTestId("full-name-input").fill(full_name)
+  await page.getByTestId("username-input").fill(full_name)
   await page.getByTestId("email-input").fill(email)
   await page.getByTestId("password-input").fill(password)
   await page.getByTestId("confirm-password-input").fill(confirm_password)
@@ -27,7 +27,7 @@ const verifyInput = async (page: Page, testId: string) => {
 test("Inputs are visible, empty and editable", async ({ page }) => {
   await page.goto("/signup")
 
-  await verifyInput(page, "full-name-input")
+  await verifyInput(page, "username-input")
   await verifyInput(page, "email-input")
   await verifyInput(page, "password-input")
   await verifyInput(page, "confirm-password-input")
@@ -117,19 +117,6 @@ test("Sign up with mismatched passwords", async ({ page }) => {
   await page.getByRole("button", { name: "Sign Up" }).click()
 
   await expect(page.getByText("The passwords don't match")).toBeVisible()
-})
-
-test("Sign up with missing full name", async ({ page }) => {
-  const fullName = ""
-  const email = randomEmail()
-  const password = randomPassword()
-
-  await page.goto("/signup")
-
-  await fillForm(page, fullName, email, password, password)
-  await page.getByRole("button", { name: "Sign Up" }).click()
-
-  await expect(page.getByText("Full Name is required")).toBeVisible()
 })
 
 test("Sign up with missing email", async ({ page }) => {

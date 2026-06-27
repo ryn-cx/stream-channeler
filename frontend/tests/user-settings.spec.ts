@@ -98,11 +98,11 @@ test.describe("Cancel edit actions", () => {
     await page.goto("/settings")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Full name").fill("Test User")
+    await page.getByLabel("Username").fill("Test User")
     await page.getByRole("button", { name: "Cancel" }).first().click()
 
     await expect(
-      page.locator("form").getByText(user.full_name as string, { exact: true }),
+      page.locator("form").getByText(user.username as string, { exact: true }),
     ).toBeVisible()
   })
 

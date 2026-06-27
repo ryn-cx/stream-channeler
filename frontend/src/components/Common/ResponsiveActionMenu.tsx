@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Link, type LinkProps } from "@tanstack/react-router"
 import { MoreVertical } from "lucide-react"
 
@@ -23,6 +24,7 @@ export type ActionMenuItem = {
   label: React.ReactNode
   onClick?: (event: React.MouseEvent) => void
   disabled?: boolean
+  keepMenuOpen?: boolean
   /** Render the item as a TanStack Router link instead of a button. */
   to?: LinkProps["to"]
   params?: LinkProps["params"]
@@ -119,11 +121,15 @@ export function ResponsiveActionMenu({
               className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted"
             />
             <div className="flex flex-col gap-1 px-2 pb-4">
-              {items.map((item) => (
-                <SheetClose key={item.key} asChild>
-                  <MenuRow item={item} />
-                </SheetClose>
-              ))}
+              {items.map((item) =>
+                item.keepMenuOpen ? (
+                  <MenuRow key={item.key} item={item} />
+                ) : (
+                  <SheetClose key={item.key} asChild>
+                    <MenuRow item={item} />
+                  </SheetClose>
+                ),
+              )}
             </div>
           </SheetContent>
         </Sheet>
@@ -150,6 +156,11 @@ export function ResponsiveActionMenu({
             <DropdownMenuItem
               key={item.key}
               onClick={item.onClick}
+              onSelect={
+                item.keepMenuOpen
+                  ? (event) => event.preventDefault()
+                  : undefined
+              }
               disabled={item.disabled}
             >
               {item.icon}

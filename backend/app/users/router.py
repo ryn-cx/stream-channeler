@@ -16,6 +16,7 @@ from app.config import settings
 from app.plugins.models import Plugin
 from app.schemas import Message
 from app.users import service as user_service
+from app.users.dependencies import ExistingUser
 from app.users.models import User
 from app.users.schemas import (
     UserCreate,
@@ -203,31 +204,25 @@ def read_user_by_id(
 
 
 @router.patch(
-    "/{user_id}",
+    "/{user_id}",  # noqa: FAST003 - Used by ExistingUser.
     dependencies=[Depends(get_current_active_superuser)],
     response_model=UserPublic,
 )
 def update_user(
     *,
     session: SessionDep,
-    user_id: uuid.UUID,
+    db_user: ExistingUser,
     user_in: UserUpdate,
 ) -> User | None:
     """
     Update a user.
     """
-    db_user = session.get(User, user_id)
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The user with this id does not exist in the system",
-        )
     if user_in.email:
         existing_user = user_service.get_user_by_email(
             session=session,
             email=user_in.email,
         )
-        if existing_user and existing_user.id != user_id:
+        if existing_user and existing_user.id != db_user.id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists",
@@ -240,31 +235,25 @@ def update_user(
     )
 
 
-@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])
+@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])  # noqa: FAST003 - Used by ExistingUser.
 def delete_user(
     session: SessionDep,
     current_user: CurrentUser,
-    user_id: uuid.UUID,
+    user: ExistingUser,
 ) -> Message:
     """
     Delete a user.
     """
-    user = session.get(User, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
     if user == current_user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super users are not allowed to delete themselves",
         )
-    statement = delete(Channel).where(col(Channel.user_id) == user_id)
+    statement = delete(Channel).where(col(Channel.user_id) == user.id)
     session.exec(statement)
-    statement = delete(Watch).where(col(Watch.user_id) == user_id)
+    statement = delete(Watch).where(col(Watch.user_id) == user.id)
     session.exec(statement)
-    statement = delete(Plugin).where(col(Plugin.user_id) == user_id)
+    statement = delete(Plugin).where(col(Plugin.user_id) == user.id)
     session.exec(statement)
     session.delete(user)
     session.commit()

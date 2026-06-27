@@ -6,21 +6,27 @@ import { useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
-import type { ChannelOutput } from "@/client"
+import type { ChannelOutput, ChannelPublicOutput } from "@/client"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
+import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 
+// Owner channels (full ChannelOutput) render edit controls; public channels
+// (ChannelPublicOutput) are read-only and only need the display fields both share.
+type BrowseChannel = ChannelOutput | ChannelPublicOutput
+
 interface ChannelRowProps {
-  channel: ChannelOutput
-  onDelete: (channel: ChannelOutput) => void
+  channel: BrowseChannel
+  onDelete: (channel: BrowseChannel) => void
+  readOnly?: boolean
 }
 
-function ChannelRow({ channel, onDelete }: ChannelRowProps) {
+function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -98,18 +104,31 @@ function ChannelRow({ channel, onDelete }: ChannelRowProps) {
           {channel.name}
         </Link>
         <div className="flex">
-          <EditChannel channel={channel} />
-          <ManageShowsButton channelId={channel.id} variant="icon" />
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Delete Channel"
-            onClick={() => onDelete(channel)}
-          >
-            <Trash2 className="size-4 text-destructive" />
-          </Button>
+          {readOnly ? (
+            <ChannelShowsButton channelId={channel.id} />
+          ) : (
+            <>
+              {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
+              <EditChannel channel={channel as ChannelOutput} />
+              <ManageShowsButton channelId={channel.id} variant="icon" />
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Delete Channel"
+                onClick={() => onDelete(channel)}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {readOnly && channel.description && (
+        <p className="px-[4%] mb-2 text-sm text-muted-foreground line-clamp-2">
+          {channel.description}
+        </p>
+      )}
 
       <div className="relative">
         {showLeftArrow && (
@@ -167,17 +186,25 @@ function ChannelRow({ channel, onDelete }: ChannelRowProps) {
 }
 
 interface ChannelsBrowseProps {
-  channels: ChannelOutput[]
+  channels: BrowseChannel[]
+  readOnly?: boolean
 }
 
-export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
-  const sorted = [...channels].sort((a, b) => {
-    const numA = a.channel_number ?? Number.MAX_SAFE_INTEGER
-    const numB = b.channel_number ?? Number.MAX_SAFE_INTEGER
-    if (numA !== numB) return numA - numB
-    return (a.name ?? "").localeCompare(b.name ?? "")
-  })
-  const [deleteChannel, setDeleteChannel] = useState<ChannelOutput | null>(null)
+export function ChannelsBrowse({
+  channels,
+  readOnly = false,
+}: ChannelsBrowseProps) {
+  // Public (read-only) lists arrive already ordered by the server (score then id),
+  // so preserve that order. Owner lists are sorted by channel number locally.
+  const sorted = readOnly
+    ? channels
+    : [...channels].sort((a, b) => {
+        const numA = a.channel_number ?? Number.MAX_SAFE_INTEGER
+        const numB = b.channel_number ?? Number.MAX_SAFE_INTEGER
+        if (numA !== numB) return numA - numB
+        return (a.name ?? "").localeCompare(b.name ?? "")
+      })
+  const [deleteChannel, setDeleteChannel] = useState<BrowseChannel | null>(null)
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -186,6 +213,7 @@ export function ChannelsBrowse({ channels }: ChannelsBrowseProps) {
           key={channel.id}
           channel={channel}
           onDelete={setDeleteChannel}
+          readOnly={readOnly}
         />
       ))}
       {channels.length === 0 && (

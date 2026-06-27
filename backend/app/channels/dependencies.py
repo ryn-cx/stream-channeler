@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException
 
 from app.auth.dependencies import SessionDep
 from app.channels.models import Channel, ChannelShow
-from app.media.service import owned_record, readable_record
+from app.media.service import existing_record, owned_record, readable_record
 from app.shows.dependencies import ReadableShow
 
 
@@ -26,3 +26,4 @@ OwnedChannelReadableShow = Annotated[
 ]
 OwnedChannel = Annotated[Channel, Depends(owned_record(Channel, "channel_id"))]
 ReadableChannel = Annotated[Channel, Depends(readable_record(Channel, "channel_id"))]
+ExistingChannel = Annotated[Channel, Depends(existing_record(Channel, "channel_id"))]

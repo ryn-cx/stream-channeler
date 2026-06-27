@@ -1,6 +1,4 @@
 # TODO: Validate
-
-
 import json
 import random
 import uuid
@@ -46,6 +44,42 @@ class ChannelOutput(BaseChannel):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    score: int
+
+
+class ChannelPublicOutput(BaseChannel):
+    """Schema for returning a publicly listed `Channel`.
+
+    `username` is the creator's username, or `None` when the channel is anonymous.
+    """
+
+    id: uuid.UUID
+    username: str | None
+
+
+class ChannelPublicListOutput(BaseModel):
+    """Schema for returning a page of publicly listed `Channel`s."""
+
+    data: list[ChannelPublicOutput]
+    count: int
+
+
+class ChannelAdminOutput(ChannelOutput):
+    """Schema for returning a `Channel` to an admin, including the owner username."""
+
+    username: str | None
+
+
+class ChannelAdminUpdate(BaseInput):
+    """Schema for an admin updating any field on a `Channel`."""
+
+    name: str | None = Field(default=None)
+    channel_number: float | None = Field(default=None)
+    visibility: Visibility | None = Field(default=None)
+    default_order: str | None = Field(default=None)
+    description: str | None = Field(default=None)
+    anonymous: bool | None = Field(default=None)
+    score: int | None = Field(default=None)
 
 
 class ChannelQueueOutput(BaseChannelQueue):

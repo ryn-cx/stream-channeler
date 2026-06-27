@@ -5,6 +5,7 @@ import { Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import Markdown from "react-markdown"
 import {
+  PluginsService,
   WatchesService,
   type WatchImportResult,
   type WatchImportResults,
@@ -16,8 +17,6 @@ interface PluginImportWatchHistoryInfo {
   instructions: string
 }
 
-import { OpenAPI } from "@/client/core/OpenAPI"
-import { request as apiRequest } from "@/client/core/request"
 import {
   Accordion,
   AccordionContent,
@@ -178,10 +177,9 @@ function ImportWatchHistory() {
 
   const { data: pluginsData, isLoading: pluginsLoading } = useQuery({
     queryFn: () =>
-      apiRequest<PluginImportWatchHistoryInfo[]>(OpenAPI, {
-        method: "GET",
-        url: "/api/v1/plugins/import-watch-history-information",
-      }),
+      PluginsService.importWatchHistoryInformation() as unknown as Promise<
+        PluginImportWatchHistoryInfo[]
+      >,
     queryKey: ["watch-import-plugins"],
   })
 

@@ -2,6 +2,7 @@
 
 import uuid
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from app.plugins.models import Plugin
@@ -25,3 +26,11 @@ class SourcePublic(BaseSource):
 
     plugin_id: uuid.UUID
     id: uuid.UUID
+
+
+class SourceTableOutput(BaseModel):
+    """Schema for returning a list of `Source`s."""
+
+    data: list[SourcePublic]
+    count: int
+    server_side: bool

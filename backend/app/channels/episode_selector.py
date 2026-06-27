@@ -253,6 +253,60 @@ class _SortExpressionBuilder:
         return case((started_query.exists(), 1), else_=0)
 
 
+def child_channel_ids(channel: Channel) -> list[UUID]:
+    """Return the additional channel ids configured in a channel's default order."""
+    if not channel.default_order:
+        return []
+
+    return ChannelOptions.model_validate_json(
+        channel.default_order,
+    ).additional_channels
+
+
+def readable_channels(
+    session: SessionDep,
+    user: User | None,
+    channel_ids: Collection[UUID],
+) -> Sequence[Channel]:
+    """Return the channels the user is allowed to read from the given ids."""
+    query = select(Channel).where(col(Channel.id).in_(channel_ids))
+    readable = col(Channel.visibility).in_(
+        (Visibility.public, Visibility.unlisted),
+    )
+    if user is None:
+        query = query.where(readable)
+    elif not user.is_superuser:
+        query = query.where(or_(readable, col(Channel.user_id) == user.id))
+
+    return session.exec(query).all()
+
+
+def resolve_channel_ids(
+    session: SessionDep,
+    user: User | None,
+    main_channel: Channel,
+    additional_channels: Collection[UUID],
+) -> set[UUID]:
+    """Resolve the full set of readable channel ids reachable from a channel.
+
+    Starts from the main channel plus ``additional_channels`` and follows each
+    readable channel's children (its own ``additional_channels``) recursively.
+    """
+    all_channel_ids = {main_channel.id}
+    queued_channel_ids = {main_channel.id}
+    to_expand = set(additional_channels) - queued_channel_ids
+
+    while to_expand:
+        queued_channel_ids.update(to_expand)
+        children: set[UUID] = set()
+        for channel in readable_channels(session, user, to_expand):
+            all_channel_ids.add(channel.id)
+            children.update(child_channel_ids(channel))
+        to_expand = children - queued_channel_ids
+
+    return all_channel_ids
+
+
 class EpisodeQueryBuilder:
     def __init__(
         self,
@@ -308,40 +362,12 @@ class EpisodeQueryBuilder:
         )
 
     def _resolve_channel_ids(self, main_channel: Channel) -> set[UUID]:
-        all_channel_ids = {main_channel.id}
-        queued_channel_ids = {main_channel.id}
-        to_expand = set(self._channel_options.additional_channels) - queued_channel_ids
-
-        while to_expand:
-            queued_channel_ids.update(to_expand)
-            child_channel_ids: set[UUID] = set()
-            for channel in self._readable_channels(to_expand):
-                all_channel_ids.add(channel.id)
-                child_channel_ids.update(self._child_channel_ids(channel))
-            to_expand = child_channel_ids - queued_channel_ids
-
-        return all_channel_ids
-
-    def _readable_channels(self, channel_ids: Collection[UUID]) -> Sequence[Channel]:
-        query = select(Channel).where(col(Channel.id).in_(channel_ids))
-        readable = col(Channel.visibility).in_(
-            (Visibility.public, Visibility.unlisted),
+        return resolve_channel_ids(
+            self._session,
+            self._user,
+            main_channel,
+            self._channel_options.additional_channels,
         )
-        if self._user is None:
-            query = query.where(readable)
-        elif not self._user.is_superuser:
-            query = query.where(or_(readable, col(Channel.user_id) == self._user.id))
-
-        return self._session.exec(query).all()
-
-    @staticmethod
-    def _child_channel_ids(channel: Channel) -> list[UUID]:
-        if not channel.default_order:
-            return []
-
-        return ChannelOptions.model_validate_json(
-            channel.default_order,
-        ).additional_channels
 
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""

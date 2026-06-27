@@ -1,8 +1,8 @@
-# TODO: Validate
 from importlib import import_module
 
 import sentry_sdk
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
@@ -22,6 +22,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
 )
+
+app.add_middleware(GZipMiddleware)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:

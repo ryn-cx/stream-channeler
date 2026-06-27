@@ -3,8 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChannelsService, PluginsService } from "@/client"
-import { OpenAPI } from "@/client/core/OpenAPI"
-import { request as apiRequest } from "@/client/core/request"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -46,18 +44,10 @@ async function searchBackend(
   pluginKey: string,
   query: string,
 ): Promise<SearchResponse> {
-  return apiRequest<SearchResponse>(OpenAPI, {
-    method: "GET",
-    url: "/api/v1/plugins/search",
-    query: {
-      plugin_key: pluginKey,
-      query,
-    },
-    errors: {
-      404: "Plugin not found",
-      422: "Plugin does not support search",
-    },
-  })
+  return PluginsService.searchPlugin({
+    pluginKey,
+    query,
+  }) as unknown as Promise<SearchResponse>
 }
 
 function useAddToQueue(channelId: string) {
@@ -227,10 +217,9 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   const { data: searchablePlugins } = useQuery({
     queryKey: ["searchable-plugins"],
     queryFn: () =>
-      apiRequest<Array<{ plugin_key: string; name: string }>>(OpenAPI, {
-        method: "GET",
-        url: "/api/v1/plugins/search-information",
-      }),
+      PluginsService.searchInformation() as unknown as Promise<
+        Array<{ plugin_key: string; name: string }>
+      >,
   })
 
   const handleSearch = async () => {

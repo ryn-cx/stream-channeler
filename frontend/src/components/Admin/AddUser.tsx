@@ -23,7 +23,7 @@ import { handleError } from "@/utils"
 const formSchema = z
   .object({
     email: z.email({ message: "Invalid email address" }),
-    full_name: z.string().optional(),
+    username: z.string().optional(),
     password: z
       .string()
       .min(1, { message: "Password is required" })
@@ -52,7 +52,7 @@ const AddUser = () => {
     criteriaMode: "all",
     defaultValues: {
       email: "",
-      full_name: "",
+      username: "",
       password: "",
       confirm_password: "",
       is_superuser: false,
@@ -107,8 +107,8 @@ const AddUser = () => {
 
       <FormTextField
         control={form.control}
-        label="Full Name"
-        placeholder="Full name"
+        label="Username"
+        placeholder="Username"
         type="text"
       />
 

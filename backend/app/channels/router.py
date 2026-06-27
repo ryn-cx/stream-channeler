@@ -3,25 +3,38 @@ import time
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from sqlmodel import col, select
+from sqlmodel import col, func, select
 
-from app.auth.dependencies import CurrentUser, SessionDep
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
 from app.channels import service
 from app.channels.dependencies import (
+    ExistingChannel,
     OwnedChannel,
     OwnedChannelReadableShow,
     ReadableChannel,
 )
-from app.channels.episode_selector import EpisodeQueryBuilder
-from app.channels.models import Channel, ChannelQueue
+from app.channels.episode_selector import (
+    EpisodeQueryBuilder,
+    child_channel_ids,
+    resolve_channel_ids,
+)
+from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.channels.schemas import (
     BlacklistEpisodeInput,
+    ChannelAdminOutput,
+    ChannelAdminUpdate,
     ChannelCreate,
     ChannelEpisodesOutput,
     ChannelOptions,
     ChannelOutput,
+    ChannelPublicListOutput,
+    ChannelPublicOutput,
     ChannelQueueOutput,
     ChannelShowsOutput,
     ChannelUpdate,
@@ -33,6 +46,7 @@ from app.channels.schemas import (
     WhitelistShowOutput,
 )
 from app.media.service import delete_record
+from app.models import Visibility
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
@@ -40,6 +54,7 @@ from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
+from app.users.models import User
 
 router = APIRouter(prefix="/channels", tags=["channels"])
 
@@ -99,6 +114,95 @@ def bulk_import_queue_urls(
                 detail=f"Channel {channel_id} not found",
             )
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
+
+
+@router.get("/public")
+def get_public_channels(
+    session: SessionDep,
+    current_user: CurrentUser,  # noqa: ARG001 - Listing is restricted to logged-in users.
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+) -> ChannelPublicListOutput:
+    """List public `Channel`s with a positive admin score, highest score first.
+
+    Channels with a `score` of `0` are hidden. Results are ordered by `score`
+    descending, then by `id` ascending, and returned a page at a time.
+    """
+    public_and_scored = (
+        Channel.visibility == Visibility.public,
+        Channel.score >= 1,
+    )
+    count = session.exec(
+        select(func.count()).select_from(Channel).where(*public_and_scored),
+    ).one()
+    rows = session.exec(
+        select(Channel, User.username)
+        .join(User, col(User.id) == Channel.user_id)
+        .where(*public_and_scored)
+        .order_by(col(Channel.score).desc(), col(Channel.id))
+        .offset(offset)
+        .limit(limit),
+    ).all()
+    data = [
+        ChannelPublicOutput(
+            id=channel.id,
+            name=channel.name,
+            channel_number=channel.channel_number,
+            visibility=channel.visibility,
+            default_order=channel.default_order,
+            description=channel.description,
+            anonymous=channel.anonymous,
+            username=None if channel.anonymous else username,
+        )
+        for channel, username in rows
+    ]
+    return ChannelPublicListOutput(data=data, count=count)
+
+
+@router.get("/all", dependencies=[Depends(get_current_active_superuser)])
+def admin_list_channels(session: SessionDep) -> list[ChannelAdminOutput]:
+    """List every `Channel` on the site along with its owner's username."""
+    rows = session.exec(
+        select(Channel, User.username).join(User, col(User.id) == Channel.user_id),
+    ).all()
+    return [
+        ChannelAdminOutput.model_validate(channel, update={"username": username})
+        for channel, username in rows
+    ]
+
+
+@router.get("/by-user/{user_id}", dependencies=[Depends(get_current_active_superuser)])
+def admin_list_user_channels(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> list[ChannelAdminOutput]:
+    """List every `Channel` owned by a single `User`."""
+    rows = session.exec(
+        select(Channel, User.username)
+        .join(User, col(User.id) == Channel.user_id)
+        .where(Channel.user_id == user_id),
+    ).all()
+    return [
+        ChannelAdminOutput.model_validate(channel, update={"username": username})
+        for channel, username in rows
+    ]
+
+
+@router.patch(
+    "/admin/{channel_id}",  # noqa: FAST003 - Used by ExistingChannel.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_update_channel(
+    session: SessionDep,
+    channel: ExistingChannel,
+    channel_in: ChannelAdminUpdate,
+) -> ChannelAdminOutput:
+    """Update any field on any `Channel` as an admin, including `score`."""
+    channel.sqlmodel_update(channel_in.model_dump(exclude_unset=True))
+    session.commit()
+    session.refresh(channel)
+    username = session.get_one(User, channel.user_id).username
+    return ChannelAdminOutput.model_validate(channel, update={"username": username})
 
 
 @router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by ReadableChannel
@@ -194,10 +298,25 @@ def get_channel_shows(
     user: OptionalUser,
     session: SessionDep,
 ) -> ChannelShowsOutput:
-    """Read all shows for a channel."""
+    """Read all shows for a channel, including those from its child channels."""
     output = ChannelShowsOutput()
 
-    for channel_show in channel.shows:
+    channel_ids = resolve_channel_ids(
+        session,
+        user,
+        channel,
+        child_channel_ids(channel),
+    )
+    channel_shows = session.exec(
+        select(ChannelShow).where(col(ChannelShow.channel_id).in_(channel_ids)),
+    ).all()
+
+    # A show can appear in several of the combined channels; deduplicate by show id.
+    # A show counts as a regular show if any channel includes it normally, even when
+    # another channel only uses it for filtering.
+    regular_shows: dict[uuid.UUID, ShowPublic] = {}
+    filter_only_shows: dict[uuid.UUID, ShowPublic] = {}
+    for channel_show in channel_shows:
         show = channel_show.show
         source = show.source
         plugin = source.plugin
@@ -206,12 +325,19 @@ def get_channel_shows(
             continue
 
         if channel_show.is_blacklist_only:
-            output.filter_only_shows.append(ShowPublic.model_validate(show))
+            filter_only_shows.setdefault(show.id, ShowPublic.model_validate(show))
         else:
-            output.shows.append(ShowPublic.model_validate(show))
+            regular_shows.setdefault(show.id, ShowPublic.model_validate(show))
 
         if source.id not in output.sources:
             output.sources[source.id] = SourcePublic.model_validate(source)
+
+    output.shows = list(regular_shows.values())
+    output.filter_only_shows = [
+        show
+        for show_id, show in filter_only_shows.items()
+        if show_id not in regular_shows
+    ]
 
     return output
 

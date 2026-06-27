@@ -5,8 +5,6 @@ import {
   Check,
   ExternalLink,
   EyeOff,
-  ListX,
-  Radio,
   SkipForward,
   Trash2,
 } from "lucide-react"
@@ -28,7 +26,6 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { handleError } from "@/utils"
 import { BlacklistEpisodeDialog } from "./BlacklistEpisodeDialog"
-import { ChannelListDialog } from "./ChannelListDialog"
 import type { EpisodeWithDetails } from "./columns"
 
 interface EpisodeCardsProps {
@@ -43,7 +40,6 @@ export function EpisodeCard({
   channelId,
   nextEpisodeId,
   onNextEpisode,
-  onHide,
   hideWatched,
   editOrder,
   onMove,
@@ -54,7 +50,6 @@ export function EpisodeCard({
   channelId: string
   nextEpisodeId?: string | undefined
   onNextEpisode?: (currentEpisodeId: string) => void
-  onHide?: (episodeId: string) => void
   hideWatched?: boolean
   editOrder?: boolean
   onMove?: (index: number, direction: MoveDirection) => void
@@ -63,7 +58,6 @@ export function EpisodeCard({
 }) {
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
-  const [showChannels, setShowChannels] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
 
@@ -206,6 +200,7 @@ export function EpisodeCard({
       key: "watched",
       icon: <Check />,
       label: "Mark as Watched",
+      keepMenuOpen: true,
       onClick: (event) => {
         event.stopPropagation()
         watchedMutation.mutate(episode.id)
@@ -217,6 +212,7 @@ export function EpisodeCard({
       key: "next",
       icon: <SkipForward />,
       label: "Next Episode",
+      keepMenuOpen: true,
       onClick: (event) => {
         event.stopPropagation()
         onNextEpisode?.(episode.id)
@@ -235,17 +231,8 @@ export function EpisodeCard({
     })
   }
   menuItems.push({
-    key: "hide",
-    icon: <EyeOff />,
-    label: "Temporarily Hide",
-    onClick: (event) => {
-      event.stopPropagation()
-      onHide?.(episode.id)
-    },
-  })
-  menuItems.push({
     key: "blacklist",
-    icon: <ListX />,
+    icon: <EyeOff />,
     label: "Blacklist Episode",
     onClick: (event) => {
       event.stopPropagation()
@@ -263,16 +250,6 @@ export function EpisodeCard({
       }
     },
   })
-  menuItems.push({
-    key: "list-channels",
-    icon: <Radio />,
-    label: "List Channels",
-    onClick: (event) => {
-      event.stopPropagation()
-      setShowChannels(true)
-    },
-  })
-
   return (
     <>
       <SharedEpisodeCard
@@ -292,13 +269,6 @@ export function EpisodeCard({
           currentChannelId={channelId}
           open={confirmBlacklist}
           onOpenChange={setConfirmBlacklist}
-        />
-      )}
-      {showChannels && (
-        <ChannelListDialog
-          episode={episode}
-          open={showChannels}
-          onOpenChange={setShowChannels}
         />
       )}
       {confirmDeleteWatch && (
@@ -337,47 +307,52 @@ export function EpisodeCards({
     lastSeenByShow.set(showId, i)
   }
 
-  const handleHide = (episodeId: string) => {
-    queryClient.setQueriesData<ChannelEpisodesOutput>(
-      { queryKey: ["episodes", channelId] },
-      (oldData) => {
-        if (!oldData) return oldData
-        return {
-          ...oldData,
-          episodes: oldData.episodes.filter((ep) => ep.id !== episodeId),
-        }
-      },
-    )
-  }
-
   const handleNextEpisode = (currentEpisodeId: string) => {
-    const nextEpisodeId = nextEpisodeMap.get(currentEpisodeId)
-    if (!nextEpisodeId) return
+    const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
+    if (currentIndex === -1) return
+    const showId = episodes[currentIndex].show.id
 
-    let anyUpdated = false
+    // Walk forward through the run of same-show episodes already queued after
+    // the current one so repeated clicks keep extending the chain.
+    let anchorIndex = currentIndex
+    while (
+      anchorIndex + 1 < episodes.length &&
+      episodes[anchorIndex + 1].show.id === showId
+    ) {
+      anchorIndex++
+    }
+
+    const nextEpisode = episodes.find(
+      (ep, index) => index > anchorIndex && ep.show.id === showId,
+    )
+    if (!nextEpisode) {
+      showErrorToast("Couldn't find the next episode in the current list")
+      return
+    }
+    const anchorEpisodeId = episodes[anchorIndex].id
+    const nextEpisodeId = nextEpisode.id
+
     queryClient.setQueriesData<ChannelEpisodesOutput>(
       { queryKey: ["episodes", channelId] },
       (oldData) => {
         if (!oldData?.episodes) return oldData
-        const eps: EpisodeWithDetails[] = [
-          ...(oldData.episodes as EpisodeWithDetails[]),
-        ]
-        const currentIndex = eps.findIndex((ep) => ep.id === currentEpisodeId)
+        const eps = [...oldData.episodes]
         const nextIndex = eps.findIndex((ep) => ep.id === nextEpisodeId)
+        const anchorIndexInCache = eps.findIndex(
+          (ep) => ep.id === anchorEpisodeId,
+        )
+        if (nextIndex === -1 || anchorIndexInCache === -1) return oldData
 
         const [nextEp] = eps.splice(nextIndex, 1)
         const insertAt =
-          nextIndex < currentIndex ? currentIndex : currentIndex + 1
+          nextIndex < anchorIndexInCache
+            ? anchorIndexInCache
+            : anchorIndexInCache + 1
         eps.splice(insertAt, 0, nextEp)
 
-        anyUpdated = true
         return { ...oldData, episodes: eps }
       },
     )
-
-    if (!anyUpdated) {
-      showErrorToast("Couldn't find the next episode in the current list")
-    }
   }
 
   const swapEpisodes = (fromIndex: number, toIndex: number) => {
@@ -448,7 +423,6 @@ export function EpisodeCards({
           channelId={channelId}
           nextEpisodeId={nextEpisodeMap.get(episode.id)}
           onNextEpisode={handleNextEpisode}
-          onHide={handleHide}
           hideWatched={hideWatched}
           editOrder={editOrder}
           onMove={handleArrowMove}

@@ -16,9 +16,7 @@ import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelQueueOutput } from "@/client"
-import { ChannelsService } from "@/client"
-import { OpenAPI } from "@/client/core/OpenAPI"
-import { request as apiRequest } from "@/client/core/request"
+import { ChannelsService, PluginsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -109,10 +107,9 @@ export function ManageShowsTabs({
   const { data: urlImportPlugins } = useQuery({
     queryKey: ["url-import-plugins"],
     queryFn: () =>
-      apiRequest<Array<{ name: string; instructions: string }>>(OpenAPI, {
-        method: "GET",
-        url: "/api/v1/plugins/import-url-information",
-      }),
+      PluginsService.importUrlInformation() as unknown as Promise<
+        Array<{ name: string; instructions: string }>
+      >,
   })
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
@@ -124,14 +121,11 @@ export function ManageShowsTabs({
   const { data: showsData } = useQuery({
     queryKey: ["channel-shows", channelId],
     queryFn: () =>
-      apiRequest<{
+      ChannelsService.getChannelShows({ channelId }) as unknown as Promise<{
         shows: Show[]
         filter_only_shows: Show[]
         sources: Record<string, Source>
-      }>(OpenAPI, {
-        method: "GET",
-        url: `/api/v1/channels/${channelId}/shows`,
-      }),
+      }>,
   })
 
   const queueEntries = queueData ?? []

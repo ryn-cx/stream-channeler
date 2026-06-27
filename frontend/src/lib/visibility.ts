@@ -22,6 +22,19 @@ export function visibilityLabel(
   }
 }
 
+export function visibilityDescription(
+  visibility: Visibility | null | undefined,
+): string {
+  switch (visibility) {
+    case "public":
+      return "Public channels are accessible by anyone with the link and may appear in the public channels list."
+    case "unlisted":
+      return "Unlisted channels are accessible by anyone with the link."
+    default:
+      return "Private channels are only accessible by the owner."
+  }
+}
+
 export function visibilityDotClass(
   visibility: Visibility | null | undefined,
 ): string {

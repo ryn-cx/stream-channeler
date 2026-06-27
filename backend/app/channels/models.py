@@ -40,6 +40,8 @@ class BaseChannel(SQLModel):
     channel_number: float | None = Field(default=None)
     visibility: Visibility = Field()
     default_order: str | None = Field(default=None)
+    description: str | None = Field(default=None)
+    anonymous: bool = Field(default=False)
 
 
 class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
@@ -53,6 +55,7 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
     )
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="channels")
+    score: int = Field(default=0)
 
     shows: list[ChannelShow] = Relationship(
         back_populates="channel",

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PlaylistsGetPlaylistsResponse, PlaylistsCreatePlaylistData, PlaylistsCreatePlaylistResponse, PlaylistsGetPlaylistData, PlaylistsGetPlaylistResponse, PlaylistsUpdatePlaylistData, PlaylistsUpdatePlaylistResponse, PlaylistsDeletePlaylistData, PlaylistsDeletePlaylistResponse, PlaylistsGetPlaylistEpisodesData, PlaylistsGetPlaylistEpisodesResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginsResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginSourcesData, PluginsGetPluginSourcesResponse, PluginsCreateSourceData, PluginsCreateSourceResponse, PluginsGetPluginFilesData, PluginsGetPluginFilesResponse, PluginsCreateFileData, PluginsCreateFileResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateEpisodeData, SeasonsCreateEpisodeResponse, SeasonsGetEpisodesData, SeasonsGetEpisodesResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateSeasonData, ShowsCreateSeasonResponse, ShowsGetSeasonsData, ShowsGetSeasonsResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateShowData, SourcesCreateShowResponse, SourcesGetShowsData, SourcesGetShowsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
+import type { ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetPublicChannelsData, ChannelsGetPublicChannelsResponse, ChannelsAdminListChannelsResponse, ChannelsAdminListUserChannelsData, ChannelsAdminListUserChannelsResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateWatchData, EpisodesCreateWatchResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PlaylistsGetPlaylistsResponse, PlaylistsCreatePlaylistData, PlaylistsCreatePlaylistResponse, PlaylistsGetPlaylistData, PlaylistsGetPlaylistResponse, PlaylistsUpdatePlaylistData, PlaylistsUpdatePlaylistResponse, PlaylistsDeletePlaylistData, PlaylistsDeletePlaylistResponse, PlaylistsGetPlaylistEpisodesData, PlaylistsGetPlaylistEpisodesResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginSourcesData, PluginsGetPluginSourcesResponse, PluginsCreateSourceData, PluginsCreateSourceResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsGetPluginFilesData, PluginsGetPluginFilesResponse, PluginsCreateFileData, PluginsCreateFileResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateEpisodeData, SeasonsCreateEpisodeResponse, SeasonsGetEpisodesData, SeasonsGetEpisodesResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateSeasonData, ShowsCreateSeasonResponse, ShowsGetSeasonsData, ShowsGetSeasonsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateShowData, SourcesCreateShowResponse, SourcesGetShowsData, SourcesGetShowsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse } from './types.gen';
 
 export class ChannelsService {
     /**
@@ -64,6 +64,90 @@ export class ChannelsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/channels/bulk-import-queue',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Public Channels
+     * List public `Channel`s with a positive admin score, highest score first.
+     *
+     * Channels with a `score` of `0` are hidden. Results are ordered by `score`
+     * descending, then by `id` ascending, and returned a page at a time.
+     * @param data The data for the request.
+     * @param data.offset
+     * @param data.limit
+     * @returns ChannelPublicListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPublicChannels(data: ChannelsGetPublicChannelsData = {}): CancelablePromise<ChannelsGetPublicChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/public',
+            query: {
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin List Channels
+     * List every `Channel` on the site along with its owner's username.
+     * @returns ChannelAdminOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminListChannels(): CancelablePromise<ChannelsAdminListChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/all'
+        });
+    }
+    
+    /**
+     * Admin List User Channels
+     * List every `Channel` owned by a single `User`.
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns ChannelAdminOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminListUserChannels(data: ChannelsAdminListUserChannelsData): CancelablePromise<ChannelsAdminListUserChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/by-user/{user_id}',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Channel
+     * Update any field on any `Channel` as an admin, including `score`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelAdminOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateChannel(data: ChannelsAdminUpdateChannelData): CancelablePromise<ChannelsAdminUpdateChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/admin/{channel_id}',
+            path: {
+                channel_id: data.channelId
+            },
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -211,7 +295,7 @@ export class ChannelsService {
     
     /**
      * Get Channel Shows
-     * Read all shows for a channel.
+     * Read all shows for a channel, including those from its child channels.
      * @param data The data for the request.
      * @param data.channelId
      * @returns ChannelShowsOutput Successful Response
@@ -466,6 +550,34 @@ export class ChannelsService {
 }
 
 export class EpisodesService {
+    /**
+     * Get Episodes
+     * @param data The data for the request.
+     * @param data.owner
+     * @param data.offset
+     * @param data.limit
+     * @param data.sorting
+     * @param data.filters
+     * @returns EpisodeTableOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodes(data: EpisodesGetEpisodesData = {}): CancelablePromise<EpisodesGetEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes',
+            query: {
+                owner: data.owner,
+                offset: data.offset,
+                limit: data.limit,
+                sorting: data.sorting,
+                filters: data.filters
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Episode
      * Get an `Episode` if it's readable by the current `User`.
@@ -937,17 +1049,32 @@ export class PluginsService {
     
     /**
      * Get Plugins
-     * Get all `Plugin`s owned by the current `User`.
+     * Return the `Plugin`s for a table view (client- or server-side).
      *
-     * Superusers also see all `Plugin`s owned by the plugin user (official media),
-     * listed after the user's own plugins.
-     * @returns PluginOutput Successful Response
+     * `official`/`others` require a superuser, matching the other admin views.
+     * @param data The data for the request.
+     * @param data.owner
+     * @param data.offset
+     * @param data.limit
+     * @param data.sorting
+     * @param data.filters
+     * @returns PluginTableOutput Successful Response
      * @throws ApiError
      */
-    public static getPlugins(): CancelablePromise<PluginsGetPluginsResponse> {
+    public static getPlugins(data: PluginsGetPluginsData = {}): CancelablePromise<PluginsGetPluginsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/plugins'
+            url: '/api/v1/plugins',
+            query: {
+                owner: data.owner,
+                offset: data.offset,
+                limit: data.limit,
+                sorting: data.sorting,
+                filters: data.filters
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -1005,55 +1132,6 @@ export class PluginsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/plugins/{plugin_id}/sources',
-            path: {
-                plugin_id: data.pluginId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Plugin Files
-     * List all `File`s for a `Plugin` if it is public or owned by the current `User`.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.content
-     * @returns FileListPublic Successful Response
-     * @throws ApiError
-     */
-    public static getPluginFiles(data: PluginsGetPluginFilesData): CancelablePromise<PluginsGetPluginFilesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/files',
-            path: {
-                plugin_id: data.pluginId
-            },
-            query: {
-                content: data.content
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Create File
-     * Create a `File` if the `Plugin` is owned by the current `User`.
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.requestBody
-     * @returns FilePublic Successful Response
-     * @throws ApiError
-     */
-    public static createFile(data: PluginsCreateFileData): CancelablePromise<PluginsCreateFileResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/plugins/{plugin_id}/files',
             path: {
                 plugin_id: data.pluginId
             },
@@ -1130,6 +1208,55 @@ export class PluginsService {
             }
         });
     }
+    
+    /**
+     * Get Plugin Files
+     * List all `File`s for a `Plugin` if it is public or owned by the current `User`.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.content
+     * @returns FileListPublic Successful Response
+     * @throws ApiError
+     */
+    public static getPluginFiles(data: PluginsGetPluginFilesData): CancelablePromise<PluginsGetPluginFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/{plugin_id}/files',
+            path: {
+                plugin_id: data.pluginId
+            },
+            query: {
+                content: data.content
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create File
+     * Create a `File` if the `Plugin` is owned by the current `User`.
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static createFile(data: PluginsCreateFileData): CancelablePromise<PluginsCreateFileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/plugins/{plugin_id}/files',
+            path: {
+                plugin_id: data.pluginId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
 }
 
 export class PrivateService {
@@ -1155,6 +1282,34 @@ export class PrivateService {
 }
 
 export class SeasonsService {
+    /**
+     * Get Seasons
+     * @param data The data for the request.
+     * @param data.owner
+     * @param data.offset
+     * @param data.limit
+     * @param data.sorting
+     * @param data.filters
+     * @returns SeasonTableOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSeasons(data: SeasonsGetSeasonsData = {}): CancelablePromise<SeasonsGetSeasonsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/seasons',
+            query: {
+                owner: data.owner,
+                offset: data.offset,
+                limit: data.limit,
+                sorting: data.sorting,
+                filters: data.filters
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Season
      * Get a `Season` if it's readable by the current `User`.
@@ -1269,6 +1424,34 @@ export class SeasonsService {
 
 export class ShowsService {
     /**
+     * Get Shows
+     * @param data The data for the request.
+     * @param data.owner
+     * @param data.offset
+     * @param data.limit
+     * @param data.sorting
+     * @param data.filters
+     * @returns ShowTableOutput Successful Response
+     * @throws ApiError
+     */
+    public static getShows(data: ShowsGetShowsData = {}): CancelablePromise<ShowsGetShowsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/shows',
+            query: {
+                owner: data.owner,
+                offset: data.offset,
+                limit: data.limit,
+                sorting: data.sorting,
+                filters: data.filters
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Get Show
      * Get a `Show` if it's readable by the current `User`.
      * @param data The data for the request.
@@ -1381,6 +1564,34 @@ export class ShowsService {
 }
 
 export class SourcesService {
+    /**
+     * Get Sources
+     * @param data The data for the request.
+     * @param data.owner
+     * @param data.offset
+     * @param data.limit
+     * @param data.sorting
+     * @param data.filters
+     * @returns SourceTableOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSources(data: SourcesGetSourcesData = {}): CancelablePromise<SourcesGetSourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/sources',
+            query: {
+                owner: data.owner,
+                offset: data.offset,
+                limit: data.limit,
+                sorting: data.sorting,
+                filters: data.filters
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Source
      * Get a `Source` if it's readable by the current `User`.

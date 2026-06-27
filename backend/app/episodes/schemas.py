@@ -2,6 +2,7 @@
 
 import uuid
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from app.episodes.models import BaseEpisode, Episode
@@ -25,3 +26,11 @@ class EpisodeOutput(BaseEpisode):
 
     id: uuid.UUID
     season_id: uuid.UUID
+
+
+class EpisodeTableOutput(BaseModel):
+    """Schema for returning a list of `Episode`s."""
+
+    data: list[EpisodeOutput]
+    count: int
+    server_side: bool

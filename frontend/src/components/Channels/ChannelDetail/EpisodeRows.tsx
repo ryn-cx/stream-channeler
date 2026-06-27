@@ -25,25 +25,48 @@ export function EpisodeRows({ episodes, channelId }: EpisodeRowsProps) {
   }
 
   const handleNextEpisode = (currentEpisodeId: string) => {
-    const nextEpisodeId = nextEpisodeMap.get(currentEpisodeId)
-    if (!nextEpisodeId) return
+    const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
+    if (currentIndex === -1) return
+    const showId = episodes[currentIndex].show.id
 
-    queryClient.setQueryData(["episodes", channelId], (oldData: any) => {
-      if (!oldData) return oldData
-      const eps = [...oldData.episodes]
-      const currentIndex = eps.findIndex(
-        (ep: any) => ep.id === currentEpisodeId,
-      )
-      const nextIndex = eps.findIndex((ep: any) => ep.id === nextEpisodeId)
-      if (currentIndex === -1 || nextIndex === -1) return oldData
+    // Walk forward through the run of same-show episodes already queued after
+    // the current one so repeated clicks keep extending the chain.
+    let anchorIndex = currentIndex
+    while (
+      anchorIndex + 1 < episodes.length &&
+      episodes[anchorIndex + 1].show.id === showId
+    ) {
+      anchorIndex++
+    }
 
-      const [nextEp] = eps.splice(nextIndex, 1)
-      const insertAt =
-        nextIndex < currentIndex ? currentIndex : currentIndex + 1
-      eps.splice(insertAt, 0, nextEp)
+    const nextEpisode = episodes.find(
+      (ep, index) => index > anchorIndex && ep.show.id === showId,
+    )
+    if (!nextEpisode) return
+    const anchorEpisodeId = episodes[anchorIndex].id
+    const nextEpisodeId = nextEpisode.id
 
-      return { ...oldData, episodes: eps }
-    })
+    queryClient.setQueriesData(
+      { queryKey: ["episodes", channelId] },
+      (oldData: any) => {
+        if (!oldData?.episodes) return oldData
+        const eps = [...oldData.episodes]
+        const nextIndex = eps.findIndex((ep: any) => ep.id === nextEpisodeId)
+        const anchorIndexInCache = eps.findIndex(
+          (ep: any) => ep.id === anchorEpisodeId,
+        )
+        if (nextIndex === -1 || anchorIndexInCache === -1) return oldData
+
+        const [nextEp] = eps.splice(nextIndex, 1)
+        const insertAt =
+          nextIndex < anchorIndexInCache
+            ? anchorIndexInCache
+            : anchorIndexInCache + 1
+        eps.splice(insertAt, 0, nextEp)
+
+        return { ...oldData, episodes: eps }
+      },
+    )
   }
 
   // Group episodes by show, preserving order of first appearance

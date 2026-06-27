@@ -2,8 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { FileUp } from "lucide-react"
 import { useState } from "react"
-import { OpenAPI } from "@/client/core/OpenAPI"
-import { request as apiRequest } from "@/client/core/request"
+import { ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -36,13 +35,7 @@ export function BulkImport() {
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, string[]>) =>
-      apiRequest(OpenAPI, {
-        method: "POST",
-        url: "/api/v1/channels/bulk-import-queue",
-        body: payload,
-        mediaType: "application/json",
-        errors: { 422: "Validation Error" },
-      }),
+      ChannelsService.bulkImportQueueUrls({ requestBody: payload }),
     onSuccess: (data: any) => {
       showSuccessToast(data?.message ?? "URLs imported successfully")
       queryClient.invalidateQueries({ queryKey: ["channelQueue"] })

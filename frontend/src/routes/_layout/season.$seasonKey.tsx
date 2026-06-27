@@ -1,33 +1,22 @@
-// TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import type { VisibilityState } from "@tanstack/react-table"
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { ArrowLeft, Film } from "lucide-react"
+import { Film } from "lucide-react"
 
-import { OpenAPI } from "@/client"
-import { request } from "@/client/core/request"
-import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
-import { DataTable } from "@/components/Common/DataTable"
-import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
-import { EmptyState } from "@/components/Common/EmptyState"
-import AddEpisode from "@/components/Plugin/AddEpisode"
+import { SeasonsService } from "@/client"
+import AddEpisode from "@/components/Episodes/Add"
 import {
   type EpisodeTableData,
   episodeColumns,
-} from "@/components/Plugin/episodeColumns"
-import { Button } from "@/components/ui/button"
+} from "@/components/Episodes/columns"
+import { DetailTablePage } from "@/components/Media/DetailTablePage"
 import { isLoggedIn } from "@/hooks/useAuth"
-import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 function getEpisodesQueryOptions(seasonKey: string) {
   return {
     queryFn: () =>
-      request(OpenAPI, {
-        method: "GET",
-        url: "/api/v1/seasons/{season_id}/episodes",
-        path: { season_id: seasonKey },
-      }) as Promise<EpisodeTableData[]>,
+      SeasonsService.getEpisodes({ seasonId: seasonKey }) as unknown as Promise<
+        EpisodeTableData[]
+      >,
     queryKey: ["seasons", seasonKey, "episodes"],
   }
 }
@@ -44,71 +33,20 @@ export const Route = createFileRoute("/_layout/season/$seasonKey")({
   }),
 })
 
-function EpisodesTableContent() {
-  const { seasonKey } = Route.useParams()
-  const { data: episodes } = useQuery(getEpisodesQueryOptions(seasonKey))
-  const [columnVisibility, setColumnVisibility] =
-    usePersistedJsonState<VisibilityState>("episodes-column-visibility", {
-      key: false,
-      id: false,
-    })
-
-  const table = useReactTable({
-    data: episodes ?? [],
-    columns: episodeColumns,
-    state: {
-      columnVisibility,
-    },
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-[4%] pt-4 pb-2">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft />
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Episodes</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AddEpisode seasonKey={seasonKey} />
-          <ColumnVisibilityButton table={table} />
-        </div>
-      </div>
-      {!episodes ? (
-        <div className="px-[4%]">
-          <DataTableSkeleton table={table} />
-        </div>
-      ) : episodes.length === 0 ? (
-        <EmptyState
-          icon={Film}
-          title="This season has no episodes yet"
-          description="Add an episode to get started"
-        />
-      ) : (
-        <div className="px-[4%]">
-          <DataTable
-            columns={episodeColumns}
-            data={episodes}
-            columnVisibility={columnVisibility}
-            onColumnVisibilityChange={setColumnVisibility}
-          />
-        </div>
-      )}
-    </>
-  )
-}
-
 function SeasonDetailPage() {
+  const { seasonKey } = Route.useParams()
+  const { data } = useQuery(getEpisodesQueryOptions(seasonKey))
+
   return (
-    <div className="flex flex-col gap-6">
-      <EpisodesTableContent />
-    </div>
+    <DetailTablePage
+      title="Episodes"
+      columns={episodeColumns}
+      data={data}
+      columnVisibilityKey="episodes-column-visibility"
+      emptyIcon={Film}
+      emptyTitle="This season has no episodes yet"
+      emptyDescription="Add an episode to get started"
+      headerActions={<AddEpisode seasonKey={seasonKey} />}
+    />
   )
 }

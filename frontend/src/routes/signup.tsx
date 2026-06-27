@@ -24,7 +24,7 @@ import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 const formSchema = z
   .object({
     email: z.email({ message: "Invalid email address" }),
-    full_name: z.string().min(1, { message: "Full Name is required" }),
+    username: z.string().optional(),
     password: z
       .string()
       .min(1, { message: "Password is required" })
@@ -66,7 +66,7 @@ function SignUp() {
     criteriaMode: "all",
     defaultValues: {
       email: "",
-      full_name: "",
+      username: "",
       password: "",
       confirm_password: "",
     },
@@ -94,9 +94,9 @@ function SignUp() {
           <div className="grid gap-4">
             <FormTextField
               control={form.control}
-              name="full_name"
-              label="Full Name"
-              data-testid="full-name-input"
+              name="username"
+              label="Username (optional)"
+              data-testid="username-input"
               placeholder="User"
               type="text"
             />

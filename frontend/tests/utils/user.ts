@@ -8,7 +8,7 @@ export async function signUpNewUser(
 ) {
   await page.goto("/signup")
 
-  await page.getByTestId("full-name-input").fill(name)
+  await page.getByTestId("username-input").fill(name)
   await page.getByTestId("email-input").fill(email)
   await page.getByTestId("password-input").fill(password)
   await page.getByTestId("confirm-password-input").fill(password)

@@ -2,6 +2,7 @@
 
 import uuid
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
@@ -25,3 +26,11 @@ class SeasonOutput(BaseSeason):
 
     show_id: uuid.UUID
     id: uuid.UUID
+
+
+class SeasonTableOutput(BaseModel):
+    """Schema for returning a list of `Season`s."""
+
+    data: list[SeasonOutput]
+    count: int
+    server_side: bool

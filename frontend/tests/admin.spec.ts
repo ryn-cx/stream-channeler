@@ -28,7 +28,7 @@ test.describe("Admin user management", () => {
     await page.getByRole("button", { name: "Add User" }).click()
 
     await page.getByPlaceholder("Email").fill(email)
-    await page.getByPlaceholder("Full name").fill(fullName)
+    await page.getByPlaceholder("Username").fill(fullName)
     await page.getByPlaceholder("Password").first().fill(password)
     await page.getByPlaceholder("Password").last().fill(password)
 

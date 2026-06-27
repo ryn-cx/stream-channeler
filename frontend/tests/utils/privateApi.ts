@@ -16,7 +16,7 @@ export const createUser = async ({
       email,
       password,
       is_verified: true,
-      full_name: "Test User",
+      username: "Test User",
     },
   })
 }

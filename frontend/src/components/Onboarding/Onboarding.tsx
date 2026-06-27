@@ -17,6 +17,7 @@ import type { ChannelOutput, SortKeyInput, Visibility } from "@/client"
 import { ChannelsService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -26,8 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
+import {
+  VISIBILITY_OPTIONS,
+  visibilityDescription,
+  visibilityLabel,
+} from "@/lib/visibility"
 import { handleError } from "@/utils"
 
 const TOTAL_STEPS = 4
@@ -118,6 +125,9 @@ export function OnboardingCreateName() {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
   const [visibility, setVisibility] = useState<Visibility>("private")
+  const [description, setDescription] = useState("")
+  const [anonymous, setAnonymous] = useState(false)
+  const { user } = useAuth()
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -130,6 +140,8 @@ export function OnboardingCreateName() {
           channel_number:
             channelNumber === "" ? null : Number.parseFloat(channelNumber),
           visibility,
+          description: description.trim() === "" ? null : description.trim(),
+          anonymous,
         },
       }),
     onSuccess: (channel: ChannelOutput) => {
@@ -187,6 +199,15 @@ export function OnboardingCreateName() {
             </p>
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="channel-description">Description</Label>
+            <Textarea
+              id="channel-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="channel-visibility">Visibility</Label>
             <Select
               value={visibility}
@@ -204,10 +225,22 @@ export function OnboardingCreateName() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Public channels are listed for anyone. Unlisted channels are only
-              accessible via direct link. Private channels are only visible to
-              you.
+              {visibilityDescription(visibility)}
             </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="channel-anonymous"
+              checked={anonymous}
+              onCheckedChange={(checked) => setAnonymous(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="channel-anonymous">Publish anonymously</Label>
+              <p className="text-sm text-muted-foreground">
+                The creator of the channel will be listed as{" "}
+                {anonymous ? "anonymous" : user?.username}.
+              </p>
+            </div>
           </div>
           <Button
             onClick={handleSubmit}
@@ -227,7 +260,10 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
   const [visibility, setVisibility] = useState<Visibility>("private")
+  const [description, setDescription] = useState("")
+  const [anonymous, setAnonymous] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const { user } = useAuth()
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -246,6 +282,8 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
           : String(channelQuery.data.channel_number),
       )
       setVisibility(channelQuery.data.visibility ?? "private")
+      setDescription(channelQuery.data.description ?? "")
+      setAnonymous(channelQuery.data.anonymous ?? false)
       setInitialized(true)
     }
   }, [channelQuery.data, initialized])
@@ -259,6 +297,8 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
           channel_number:
             channelNumber === "" ? null : Number.parseFloat(channelNumber),
           visibility,
+          description: description.trim() === "" ? null : description.trim(),
+          anonymous,
         },
       }),
     onSuccess: () => {
@@ -315,6 +355,15 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
             </p>
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="channel-description">Description</Label>
+            <Textarea
+              id="channel-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="channel-visibility">Visibility</Label>
             <Select
               value={visibility}
@@ -332,10 +381,22 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Public channels are listed for anyone. Unlisted channels are only
-              accessible via direct link. Private channels are only visible to
-              you.
+              {visibilityDescription(visibility)}
             </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="channel-anonymous"
+              checked={anonymous}
+              onCheckedChange={(checked) => setAnonymous(checked === true)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="channel-anonymous">Share Anonymously</Label>
+              <p className="text-sm text-muted-foreground">
+                The creator of the channel will be listed as{" "}
+                {anonymous ? "Anonymous" : user?.username}.
+              </p>
+            </div>
           </div>
           <Button
             onClick={handleSubmit}

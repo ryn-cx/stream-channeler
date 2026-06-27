@@ -101,7 +101,7 @@ def test_reset_password(
 
     user_create = UserCreate(
         email=email,
-        full_name="Test User",
+        username="Test User",
         password=password,
         is_active=True,
         is_superuser=False,

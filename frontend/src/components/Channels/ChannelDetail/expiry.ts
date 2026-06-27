@@ -19,3 +19,12 @@ export function localInputToIso(localValue: string): string | null {
   if (Number.isNaN(date.getTime())) return null
   return date.toISOString()
 }
+
+// True when the expiry is set and already in the past. A null/empty expiry means
+// "no expiry" (permanent), so it is never considered expired.
+export function isExpired(iso: string | null | undefined): boolean {
+  if (!iso) return false
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return false
+  return date.getTime() < Date.now()
+}

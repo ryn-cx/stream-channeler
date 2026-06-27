@@ -2,6 +2,7 @@
 
 import uuid
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
@@ -25,3 +26,11 @@ class ShowPublic(BaseShow):
 
     source_id: uuid.UUID
     id: uuid.UUID
+
+
+class ShowTableOutput(BaseModel):
+    """Schema for returning a list of `Show`s."""
+
+    data: list[ShowPublic]
+    count: int
+    server_side: bool

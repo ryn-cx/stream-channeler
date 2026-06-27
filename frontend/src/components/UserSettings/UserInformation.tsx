@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
-  full_name: z.string().max(30).optional(),
+  username: z.string().max(30).optional(),
   email: z.email({ message: "Invalid email address" }),
 })
 
@@ -39,7 +39,7 @@ const UserInformation = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      full_name: currentUser?.full_name ?? undefined,
+      username: currentUser?.username ?? undefined,
       email: currentUser?.email,
     },
   })
@@ -65,8 +65,8 @@ const UserInformation = () => {
     const updateData: UserUpdateMe = {}
 
     // only include fields that have changed
-    if (data.full_name !== currentUser?.full_name) {
-      updateData.full_name = data.full_name
+    if (data.username !== currentUser?.username) {
+      updateData.username = data.username
     }
     if (data.email !== currentUser?.email) {
       updateData.email = data.email
@@ -90,11 +90,11 @@ const UserInformation = () => {
         >
           <FormField
             control={form.control}
-            name="full_name"
+            name="username"
             render={({ field }) =>
               editMode ? (
                 <FormItem>
-                  <FormLabel>Full name</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input type="text" {...field} />
                   </FormControl>
@@ -102,7 +102,7 @@ const UserInformation = () => {
                 </FormItem>
               ) : (
                 <FormItem>
-                  <FormLabel>Full name</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <p
                     className={cn(
                       "py-2 truncate max-w-sm",
