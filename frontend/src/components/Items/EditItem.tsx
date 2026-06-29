@@ -61,22 +61,24 @@ const EditItem = ({ item }: EditItemProps) => {
       await queryClient.cancelQueries({ queryKey: ["items"] })
 
       // Snapshot the previous value
-      const previousItems = queryClient.getQueryData<ItemsPublicWithPending>([
-        "items",
-      ])
+      const previousItems = queryClient.getQueriesData<ItemsPublicWithPending>({
+        queryKey: ["items"],
+      })
 
       // Optimistically update to the new value
-      queryClient.setQueryData<ItemsPublicWithPending>(["items"], (old) =>
-        old
-          ? {
-              ...old,
-              data: old.data.map((existingItem) =>
-                existingItem.id === item.id
-                  ? { ...existingItem, ...data, pending: true }
-                  : existingItem,
-              ),
-            }
-          : old,
+      queryClient.setQueriesData<ItemsPublicWithPending>(
+        { queryKey: ["items"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                data: old.data.map((existingItem) =>
+                  existingItem.id === item.id
+                    ? { ...existingItem, ...data, pending: true }
+                    : existingItem,
+                ),
+              }
+            : old,
       )
 
       // Return a result with the snapshotted value
@@ -84,21 +86,25 @@ const EditItem = ({ item }: EditItemProps) => {
     },
     onSuccess: (data) => {
       showSuccessToast("Item updated successfully")
-      queryClient.setQueryData<ItemsPublicWithPending>(["items"], (old) =>
-        old
-          ? {
-              ...old,
-              data: old.data.map((existingItem) =>
-                existingItem.id === data.id ? data : existingItem,
-              ),
-            }
-          : old,
+      queryClient.setQueriesData<ItemsPublicWithPending>(
+        { queryKey: ["items"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                data: old.data.map((existingItem) =>
+                  existingItem.id === data.id ? data : existingItem,
+                ),
+              }
+            : old,
       )
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (err, _variables, context) => {
-      queryClient.setQueryData(["items"], context?.previousItems)
+      for (const [queryKey, data] of context?.previousItems ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
       handleError.call(showErrorToast, err as ApiError)
     },
     // Always refetch after error or success:

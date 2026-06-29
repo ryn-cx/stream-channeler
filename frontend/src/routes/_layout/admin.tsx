@@ -1,28 +1,15 @@
-import { useMutationState, useSuspenseQuery } from "@tanstack/react-query"
+import { useMutationState } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Suspense } from "react"
 
 import type { UserCreate } from "@/client"
 import { UsersService } from "@/client"
 import AddUser from "@/components/Admin/AddUser"
 import { columns } from "@/components/Admin/columns"
-import type {
-  UserPublicWithPending,
-  UsersPublicWithPending,
-  UserTableData,
-} from "@/components/Admin/types"
-import { DataTable } from "@/components/Common/DataTable"
+import type { UserTableData } from "@/components/Admin/types"
+import { ServerClientTable } from "@/components/Common/DataTable"
 import { PageHeader } from "@/components/Common/PageHeader"
 import PendingUsers from "@/components/Pending/PendingUsers"
 import useAuth from "@/hooks/useAuth"
-
-function getUsersQueryOptions() {
-  return {
-    queryFn: async (): Promise<UsersPublicWithPending> =>
-      UsersService.readUsers({ skip: 0, limit: 100_000 }),
-    queryKey: ["users"],
-  }
-}
 
 export const Route = createFileRoute("/_layout/admin")({
   component: Admin,
@@ -43,9 +30,8 @@ export const Route = createFileRoute("/_layout/admin")({
   }),
 })
 
-function UsersTableContent() {
+function UsersTable() {
   const { user: currentUser } = useAuth()
-  const { data: users } = useSuspenseQuery(getUsersQueryOptions())
 
   const pendingUsers = useMutationState({
     filters: { mutationKey: ["users", "create"], status: "pending" },
@@ -63,29 +49,32 @@ function UsersTableContent() {
     },
   })
 
-  const tableData: UserTableData[] = [
-    ...pendingUsers,
-    ...users.data.map((user: UserPublicWithPending) => ({
-      ...user,
-      isCurrentUser: currentUser?.id === user.id,
-    })),
-  ]
-
   return (
-    <DataTable
+    <ServerClientTable<UserTableData>
       columns={columns}
-      data={tableData}
-      rowClassName={(row) => (row.pending ? "opacity-50" : undefined)}
+      queryKey={["users"]}
+      fetchTable={async ({ offset, limit, sortOptions, filterOptions }) => {
+        const result = await UsersService.readUsers({
+          offset,
+          limit,
+          sortOptions: JSON.stringify(sortOptions),
+          filterOptions: JSON.stringify(filterOptions),
+        })
+        return {
+          data: result.data.map((user) => ({
+            ...user,
+            isCurrentUser: currentUser?.id === user.id,
+          })),
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
+        }
+      }}
       storageKey="users-table"
+      pendingRows={pendingUsers}
+      rowClassName={(row) => (row.pending ? "opacity-50" : undefined)}
+      loadingFallback={<PendingUsers />}
     />
-  )
-}
-
-function UsersTable() {
-  return (
-    <Suspense fallback={<PendingUsers />}>
-      <UsersTableContent />
-    </Suspense>
   )
 }
 

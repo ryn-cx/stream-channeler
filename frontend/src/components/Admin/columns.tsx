@@ -36,9 +36,15 @@ export const columns: ColumnDef<UserTableData>[] = [
   },
   {
     id: "is_superuser",
-    accessorFn: (row) => (row.is_superuser ? "Superuser" : "User"),
+    accessorFn: (row) => String(row.is_superuser),
     header: "Role",
-    meta: { filterVariant: "select" },
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Superuser", value: "true" },
+        { label: "User", value: "false" },
+      ],
+    },
     filterFn: "equalsString",
     cell: ({ row }) =>
       row.original.pending ? (
@@ -53,9 +59,15 @@ export const columns: ColumnDef<UserTableData>[] = [
   },
   {
     id: "is_active",
-    accessorFn: (row) => (row.is_active ? "Active" : "Inactive"),
+    accessorFn: (row) => String(row.is_active),
     header: "Status",
-    meta: { filterVariant: "select" },
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Active", value: "true" },
+        { label: "Inactive", value: "false" },
+      ],
+    },
     filterFn: "equalsString",
     cell: ({ row }) =>
       row.original.pending ? (

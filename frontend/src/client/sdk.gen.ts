@@ -10,7 +10,9 @@ export class ItemsService {
      * Read Items
      * Retrieve items.
      * @param data The data for the request.
-     * @param data.skip
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
      * @param data.limit
      * @returns ItemsPublic Successful Response
      * @throws ApiError
@@ -20,7 +22,9 @@ export class ItemsService {
             method: 'GET',
             url: '/api/v1/items/',
             query: {
-                skip: data.skip,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
                 limit: data.limit
             },
             errors: {
@@ -240,7 +244,9 @@ export class UsersService {
      * Read Users
      * Retrieve users.
      * @param data The data for the request.
-     * @param data.skip
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
      * @param data.limit
      * @returns UsersPublic Successful Response
      * @throws ApiError
@@ -250,7 +256,9 @@ export class UsersService {
             method: 'GET',
             url: '/api/v1/users/',
             query: {
-                skip: data.skip,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
                 limit: data.limit
             },
             errors: {

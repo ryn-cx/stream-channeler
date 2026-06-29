@@ -30,19 +30,21 @@ const DeleteUser = ({ id }: DeleteUserProps) => {
       await queryClient.cancelQueries({ queryKey: ["users"] })
 
       // Snapshot the previous value
-      const previousUsers = queryClient.getQueryData<UsersPublicWithPending>([
-        "users",
-      ])
+      const previousUsers = queryClient.getQueriesData<UsersPublicWithPending>({
+        queryKey: ["users"],
+      })
 
       // Optimistically update to the new value
-      queryClient.setQueryData<UsersPublicWithPending>(["users"], (old) =>
-        old
-          ? {
-              ...old,
-              data: old.data.filter((user) => user.id !== deletedId),
-              count: old.count - 1,
-            }
-          : old,
+      queryClient.setQueriesData<UsersPublicWithPending>(
+        { queryKey: ["users"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                data: old.data.filter((user) => user.id !== deletedId),
+                count: old.count - 1,
+              }
+            : old,
       )
 
       // Return a result with the snapshotted value
@@ -54,7 +56,9 @@ const DeleteUser = ({ id }: DeleteUserProps) => {
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (err, _deletedId, context) => {
-      queryClient.setQueryData(["users"], context?.previousUsers)
+      for (const [queryKey, data] of context?.previousUsers ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
       handleError.call(showErrorToast, err as ApiError)
     },
     // Always refetch after error or success:

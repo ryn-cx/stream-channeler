@@ -20,13 +20,10 @@
 ## Frontend Changes in this Fork
 
 - 🤞 Optimistic updates when modifying items and users.
-- 📄 Client-side pagination, filtering, and sorting.
+- 🔀 Dynamic server or client side pagination, filtering, and sorting based on the
+  number of entries.
     - In the original template, the backend paginated results but the frontend had no
-      way to load data past the first page. TanStack Table [handles 100,000 rows
-      comfortably](https://tanstack.com/table/v8/docs/guide/pagination), and most
-      projects using this template will stay well under that, so client-side pagination
-      is the default. The backend pagination code is retained, so server-side
-      pagination can be reinstated with minimal frontend changes if needed.
+      way to load data past the first page.
 - 🧪 Run automated frontend tests against a dedicated test database in test-specific
   Docker containers.
     - This also fixes a local-only issue where a prior backend test run would delete

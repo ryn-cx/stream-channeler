@@ -9,6 +9,11 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type FilterOption = {
+    id: string;
+    value: string;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -28,7 +33,9 @@ export type ItemPublic = {
 
 export type ItemsPublic = {
     data: Array<ItemPublic>;
-    count: number;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 export type ItemUpdate = {
@@ -36,6 +43,9 @@ export type ItemUpdate = {
     description?: (string | null);
 };
 
+/**
+ * Generic message.
+ */
 export type Message = {
     message: string;
 };
@@ -50,6 +60,11 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type SortOption = {
+    id: string;
+    desc?: boolean;
 };
 
 export type Token = {
@@ -87,7 +102,9 @@ export type UserRegister = {
 
 export type UsersPublic = {
     data: Array<UserPublic>;
-    count: number;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 export type UserUpdate = {
@@ -114,8 +131,10 @@ export type ValidationError = {
 };
 
 export type ItemsReadItemsData = {
+    filterOptions?: string;
     limit?: number;
-    skip?: number;
+    offset?: number;
+    sortOptions?: string;
 };
 
 export type ItemsReadItemsResponse = (ItemsPublic);
@@ -178,8 +197,10 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type UsersReadUsersData = {
+    filterOptions?: string;
     limit?: number;
-    skip?: number;
+    offset?: number;
+    sortOptions?: string;
 };
 
 export type UsersReadUsersResponse = (UsersPublic);

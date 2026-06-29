@@ -206,7 +206,8 @@ def test_retrieve_users(
     all_users = r.json()
 
     assert len(all_users["data"]) > 1
-    assert "count" in all_users
+    assert "total_count" in all_users
+    assert "filtered_count" in all_users
     for item in all_users["data"]:
         assert "email" in item
 

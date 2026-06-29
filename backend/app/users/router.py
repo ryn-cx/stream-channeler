@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -13,7 +13,8 @@ from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.config import settings
 from app.items.models import Item
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
+from app.service import get_read_results
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import (
@@ -32,22 +33,28 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/", dependencies=[Depends(get_current_active_superuser)])
 def read_users(
     session: SessionDep,
-    skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1)] = 100_000,
+    read_options: Annotated[ReadOptions, Query()],
 ) -> UsersPublic:
     """
     Retrieve users.
     """
-    count_statement = select(func.count()).select_from(User)
-    count = session.exec(count_statement).one()
+    users_query = select(User)
 
-    statement = (
-        select(User).order_by(col(User.created_at).desc()).offset(skip).limit(limit)
+    users, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        users_query,
+        schema=UserPublic,
+        default_sort=User.created_at,
+        tiebreaker=User.id,
+        params=read_options,
     )
-    users = session.exec(statement).all()
 
-    users_public = [UserPublic.model_validate(user) for user in users]
-    return UsersPublic(data=users_public, count=count)
+    return UsersPublic(
+        data=[UserPublic.model_validate(user) for user in users],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )
 
 
 @router.post(

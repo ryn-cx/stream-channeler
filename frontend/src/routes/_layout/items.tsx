@@ -1,27 +1,15 @@
-import { useMutationState, useSuspenseQuery } from "@tanstack/react-query"
+import { useMutationState } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Search } from "lucide-react"
-import { Suspense } from "react"
 
 import type { ItemCreate } from "@/client"
 import { ItemsService } from "@/client"
-import { DataTable } from "@/components/Common/DataTable"
+import { ServerClientTable } from "@/components/Common/DataTable"
 import { PageHeader } from "@/components/Common/PageHeader"
 import AddItem from "@/components/Items/AddItem"
 import { columns } from "@/components/Items/columns"
-import type {
-  ItemPublicWithPending,
-  ItemsPublicWithPending,
-} from "@/components/Items/types"
+import type { ItemPublicWithPending } from "@/components/Items/types"
 import PendingItems from "@/components/Pending/PendingItems"
-
-function getItemsQueryOptions() {
-  return {
-    queryFn: async (): Promise<ItemsPublicWithPending> =>
-      ItemsService.readItems({ skip: 0, limit: 100_000 }),
-    queryKey: ["items"],
-  }
-}
 
 export const Route = createFileRoute("/_layout/items")({
   component: Items,
@@ -34,9 +22,7 @@ export const Route = createFileRoute("/_layout/items")({
   }),
 })
 
-function ItemsTableContent() {
-  const { data: items } = useSuspenseQuery(getItemsQueryOptions())
-
+function ItemsTable() {
   const pendingItems = useMutationState({
     filters: { mutationKey: ["items", "create"], status: "pending" },
     select: (mutation): ItemPublicWithPending => ({
@@ -47,35 +33,34 @@ function ItemsTableContent() {
     }),
   })
 
-  const data = [...pendingItems, ...items.data]
-
-  if (data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-12">
-        <div className="rounded-full bg-muted p-4 mb-4">
-          <Search className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold">You don't have any items yet</h3>
-        <p className="text-muted-foreground">Add a new item to get started</p>
-      </div>
-    )
-  }
-
   return (
-    <DataTable
+    <ServerClientTable<ItemPublicWithPending>
       columns={columns}
-      data={data}
-      rowClassName={(row) => (row.pending ? "opacity-50" : undefined)}
+      queryKey={["items"]}
+      fetchTable={({ offset, limit, sortOptions, filterOptions }) =>
+        ItemsService.readItems({
+          offset,
+          limit,
+          sortOptions: JSON.stringify(sortOptions),
+          filterOptions: JSON.stringify(filterOptions),
+        })
+      }
       storageKey="items-table"
+      pendingRows={pendingItems}
+      rowClassName={(row) => (row.pending ? "opacity-50" : undefined)}
+      loadingFallback={<PendingItems />}
+      emptyState={
+        <div className="flex flex-col items-center justify-center text-center py-12">
+          <div className="rounded-full bg-muted p-4 mb-4">
+            <Search className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">
+            You don't have any items yet
+          </h3>
+          <p className="text-muted-foreground">Add a new item to get started</p>
+        </div>
+      }
     />
-  )
-}
-
-function ItemsTable() {
-  return (
-    <Suspense fallback={<PendingItems />}>
-      <ItemsTableContent />
-    </Suspense>
   )
 }
 

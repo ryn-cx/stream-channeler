@@ -37,4 +37,6 @@ class UserPublic(UserBase):
 
 class UsersPublic(SQLModel):
     data: list[UserPublic]
-    count: int
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

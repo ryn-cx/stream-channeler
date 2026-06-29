@@ -25,4 +25,6 @@ class ItemPublic(ItemBase):
 
 class ItemsPublic(SQLModel):
     data: list[ItemPublic]
-    count: int
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

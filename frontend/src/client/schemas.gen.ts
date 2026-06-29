@@ -57,6 +57,22 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const FilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            type: 'string',
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'FilterOption'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -186,13 +202,21 @@ export const ItemsPublicSchema = {
             type: 'array',
             title: 'Data'
         },
-        count: {
+        total_count: {
             type: 'integer',
-            title: 'Count'
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'ItemsPublic'
 } as const;
 
@@ -205,7 +229,8 @@ export const MessageSchema = {
     },
     type: 'object',
     required: ['message'],
-    title: 'Message'
+    title: 'Message',
+    description: 'Generic message.'
 } as const;
 
 export const NewPasswordSchema = {
@@ -249,6 +274,23 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const SortOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        desc: {
+            type: 'boolean',
+            title: 'Desc',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'SortOption'
 } as const;
 
 export const TokenSchema = {
@@ -511,13 +553,21 @@ export const UsersPublicSchema = {
             type: 'array',
             title: 'Data'
         },
-        count: {
+        total_count: {
             type: 'integer',
-            title: 'Count'
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'UsersPublic'
 } as const;
 

@@ -30,19 +30,21 @@ const DeleteItem = ({ id }: DeleteItemProps) => {
       await queryClient.cancelQueries({ queryKey: ["items"] })
 
       // Snapshot the previous value
-      const previousItems = queryClient.getQueryData<ItemsPublicWithPending>([
-        "items",
-      ])
+      const previousItems = queryClient.getQueriesData<ItemsPublicWithPending>({
+        queryKey: ["items"],
+      })
 
       // Optimistically update to the new value
-      queryClient.setQueryData<ItemsPublicWithPending>(["items"], (old) =>
-        old
-          ? {
-              ...old,
-              data: old.data.filter((item) => item.id !== deletedId),
-              count: old.count - 1,
-            }
-          : old,
+      queryClient.setQueriesData<ItemsPublicWithPending>(
+        { queryKey: ["items"] },
+        (old) =>
+          old
+            ? {
+                ...old,
+                data: old.data.filter((item) => item.id !== deletedId),
+                count: old.count - 1,
+              }
+            : old,
       )
 
       // Return a result with the snapshotted value
@@ -54,7 +56,9 @@ const DeleteItem = ({ id }: DeleteItemProps) => {
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (err, _deletedId, context) => {
-      queryClient.setQueryData(["items"], context?.previousItems)
+      for (const [queryKey, data] of context?.previousItems ?? []) {
+        queryClient.setQueryData(queryKey, data)
+      }
       handleError.call(showErrorToast, err as ApiError)
     },
     // Always refetch after error or success:

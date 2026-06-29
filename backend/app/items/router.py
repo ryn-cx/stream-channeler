@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlmodel import col, func, select
+from sqlmodel import select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.items.models import Item
@@ -12,7 +12,8 @@ from app.items.schemas import (
     ItemsPublic,
     ItemUpdate,
 )
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
+from app.service import get_read_results
 
 router = APIRouter(prefix="/items", tags=["items"])
 
@@ -21,37 +22,30 @@ router = APIRouter(prefix="/items", tags=["items"])
 def read_items(
     session: SessionDep,
     current_user: CurrentUser,
-    skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1)] = 100_000,
+    read_options: Annotated[ReadOptions, Query()],
 ) -> ItemsPublic:
     """
     Retrieve items.
     """
-    if current_user.is_superuser:
-        count_statement = select(func.count()).select_from(Item)
-        count = session.exec(count_statement).one()
-        statement = (
-            select(Item).order_by(col(Item.created_at).desc()).offset(skip).limit(limit)
-        )
-        items = session.exec(statement).all()
-    else:
-        count_statement = (
-            select(func.count())
-            .select_from(Item)
-            .where(Item.owner_id == current_user.id)
-        )
-        count = session.exec(count_statement).one()
-        statement = (
-            select(Item)
-            .where(Item.owner_id == current_user.id)
-            .order_by(col(Item.created_at).desc())
-            .offset(skip)
-            .limit(limit)
-        )
-        items = session.exec(statement).all()
+    item_query = select(Item)
+    if not current_user.is_superuser:
+        item_query = item_query.where(Item.owner_id == current_user.id)
 
-    items_public = [ItemPublic.model_validate(item) for item in items]
-    return ItemsPublic(data=items_public, count=count)
+    items, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        item_query,
+        schema=ItemPublic,
+        default_sort=Item.created_at,
+        tiebreaker=Item.id,
+        params=read_options,
+    )
+
+    return ItemsPublic(
+        data=[ItemPublic.model_validate(item) for item in items],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )
 
 
 @router.get("/{item_id}", response_model=ItemPublic)

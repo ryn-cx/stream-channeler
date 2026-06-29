@@ -1,7 +1,8 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   type Column,
   type ColumnDef,
-  type ColumnFiltersState,
+  type ColumnFiltersState as FilterOptionsState,
   flexRender,
   getCoreRowModel,
   getFacetedMinMaxValues,
@@ -10,9 +11,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type OnChangeFn,
   type PaginationState,
   type RowData,
-  type SortingState,
+  type SortingState as SortOptionsState,
+  type Table as TableInstance,
   useReactTable,
 } from "@tanstack/react-table"
 import {
@@ -24,7 +27,13 @@ import {
   ChevronsRight,
   ChevronsUpDown,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,6 +62,7 @@ declare module "@tanstack/react-table" {
   //allows us to define custom properties for our columns
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select"
+    filterOptions?: { label: string; value: string }[]
   }
 }
 
@@ -77,11 +87,66 @@ function usePersistentState<T>(key: string | undefined, initialValue: T) {
   return [value, setValue] as const
 }
 
+interface ServerSideTableState {
+  pagination: PaginationState
+  sortOptions: SortOptionsState
+  filterOptions: FilterOptionsState
+  onPaginationChange: OnChangeFn<PaginationState>
+  onSortOptionsChange: OnChangeFn<SortOptionsState>
+  onFilterOptionsChange: OnChangeFn<FilterOptionsState>
+  rowCount: number
+  totalRowCount: number
+}
+
 interface DataTableProps<TData extends { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   rowClassName?: (row: TData) => string | undefined
   storageKey?: string
+  serverSide?: ServerSideTableState
+}
+
+function useTableState(
+  serverSide: ServerSideTableState | undefined,
+  storageKey: string | undefined,
+) {
+  const [clientSortOptions, setClientSortOptions] =
+    usePersistentState<SortOptionsState>(
+      storageKey && `${storageKey}:sortOptions`,
+      [],
+    )
+  const [clientFilterOptions, setClientFilterOptions] =
+    usePersistentState<FilterOptionsState>(
+      storageKey && `${storageKey}:filterOptions`,
+      [],
+    )
+  const [clientPagination, setClientPagination] =
+    usePersistentState<PaginationState>(
+      storageKey && `${storageKey}:pagination`,
+      {
+        pageIndex: 0,
+        pageSize: 10,
+      },
+    )
+
+  if (serverSide) {
+    return {
+      sortOptions: serverSide.sortOptions,
+      filterOptions: serverSide.filterOptions,
+      pagination: serverSide.pagination,
+      setSortOptions: serverSide.onSortOptionsChange,
+      setFilterOptions: serverSide.onFilterOptionsChange,
+      setPagination: serverSide.onPaginationChange,
+    }
+  }
+  return {
+    sortOptions: clientSortOptions,
+    filterOptions: clientFilterOptions,
+    pagination: clientPagination,
+    setSortOptions: setClientSortOptions,
+    setFilterOptions: setClientFilterOptions,
+    setPagination: setClientPagination,
+  }
 }
 
 export function DataTable<TData extends { id: string }, TValue>({
@@ -89,19 +154,28 @@ export function DataTable<TData extends { id: string }, TValue>({
   data,
   rowClassName,
   storageKey,
+  serverSide,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = usePersistentState<SortingState>(
-    storageKey && `${storageKey}:sorting`,
-    [],
-  )
-  const [columnFilters, setColumnFilters] =
-    usePersistentState<ColumnFiltersState>(
-      storageKey && `${storageKey}:filters`,
-      [],
-    )
-  const [pagination, setPagination] = usePersistentState<PaginationState>(
-    storageKey && `${storageKey}:pagination`,
-    { pageIndex: 0, pageSize: 10 },
+  const {
+    sortOptions,
+    filterOptions,
+    pagination,
+    setSortOptions,
+    setFilterOptions,
+    setPagination,
+  } = useTableState(serverSide, storageKey)
+
+  const handleFilterOptionsChange: OnChangeFn<FilterOptionsState> = useCallback(
+    (updater) => {
+      setFilterOptions((last) => {
+        const next = typeof updater === "function" ? updater(last) : updater
+        if (JSON.stringify(next) !== JSON.stringify(last)) {
+          setPagination((p) => ({ ...p, pageIndex: 0 }))
+        }
+        return next
+      })
+    },
+    [setFilterOptions, setPagination],
   )
 
   const table = useReactTable({
@@ -109,22 +183,34 @@ export function DataTable<TData extends { id: string }, TValue>({
     columns,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(), //client-side filtering
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedRowModel: getFacetedRowModel(), // client-side faceting
-    getFacetedUniqueValues: getFacetedUniqueValues(), // generate unique values for select filter/autocomplete
-    getFacetedMinMaxValues: getFacetedMinMaxValues(), // generate min/max values for range filter
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    manualPagination: !!serverSide,
+    manualSorting: !!serverSide,
+    manualFiltering: !!serverSide,
+    rowCount: serverSide?.rowCount,
+    getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
+    getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(), //client-side filtering
+    getPaginationRowModel: serverSide ? undefined : getPaginationRowModel(),
+    getFacetedRowModel: serverSide ? undefined : getFacetedRowModel(), // client-side faceting
+    getFacetedUniqueValues: serverSide ? undefined : getFacetedUniqueValues(), // generate unique values for select filter/autocomplete
+    getFacetedMinMaxValues: serverSide ? undefined : getFacetedMinMaxValues(), // generate min/max values for range filter
+    onSortingChange: setSortOptions,
+    onColumnFiltersChange: handleFilterOptionsChange,
     onPaginationChange: setPagination,
     state: {
-      sorting,
-      columnFilters,
+      sorting: sortOptions,
+      columnFilters: filterOptions,
       pagination,
     },
     autoResetPageIndex: false,
   })
+
+  const filteredRows = serverSide
+    ? serverSide.rowCount
+    : table.getFilteredRowModel().rows.length
+  const totalRows = serverSide
+    ? serverSide.totalRowCount
+    : table.getCoreRowModel().rows.length
+  const isFiltered = filteredRows !== totalRows
 
   return (
     <div className="flex flex-col gap-4">
@@ -172,7 +258,7 @@ export function DataTable<TData extends { id: string }, TValue>({
                             ))}
                         </button>
                         {column.getCanFilter() ? (
-                          <Filter column={column} />
+                          <Filter column={column} isServerSide={!!serverSide} />
                         ) : null}
                       </div>
                     )}
@@ -196,7 +282,7 @@ export function DataTable<TData extends { id: string }, TValue>({
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={columns.length}
+                colSpan={table.getVisibleLeafColumns().length}
                 className="h-32 text-center text-muted-foreground"
               >
                 No results found.
@@ -206,116 +292,135 @@ export function DataTable<TData extends { id: string }, TValue>({
         </TableBody>
       </Table>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Showing{" "}
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{" "}
-            to{" "}
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
-              table.getFilteredRowModel().rows.length,
-            )}{" "}
-            of{" "}
-            <span className="font-medium text-foreground">
-              {table.getFilteredRowModel().rows.length}
-            </span>{" "}
-            entries
-          </div>
-          <div className="flex items-center gap-x-2">
-            <p className="text-sm text-muted-foreground">Rows per page</p>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger
-                className="h-8 w-[70px]"
-                aria-label="Rows per page"
-              >
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 100, 1_000, 10_000, 100_000].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {table.getPageCount() > 1 && (
-          <div className="flex items-center gap-x-6">
-            <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
-              <span>Page</span>
-              <span className="font-medium text-foreground">
-                {table.getState().pagination.pageIndex + 1}
-              </span>
-              <span>of</span>
-              <span className="font-medium text-foreground">
-                {table.getPageCount()}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-x-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to first page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to next page</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to last page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        table={table}
+        filteredRows={filteredRows}
+        totalRows={totalRows}
+        isFiltered={isFiltered}
+      />
     </div>
   )
 }
 
-function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
-  const { filterVariant } = column.columnDef.meta ?? {}
+function TablePagination<TData>({
+  table,
+  filteredRows,
+  totalRows,
+  isFiltered,
+}: {
+  table: TableInstance<TData>
+  filteredRows: number
+  totalRows: number
+  isFiltered: boolean
+}) {
+  const { pageIndex, pageSize } = table.getState().pagination
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {pageIndex * pageSize + 1} to{" "}
+          {Math.min((pageIndex + 1) * pageSize, filteredRows)} of{" "}
+          <span className="font-medium text-foreground">{filteredRows}</span>{" "}
+          entries
+          {isFiltered && (
+            <>
+              {" "}
+              (filtered from{" "}
+              <span className="font-medium text-foreground">{totalRows}</span>{" "}
+              total)
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-x-2">
+          <p className="text-sm text-muted-foreground">Rows per page</p>
+          <Select
+            value={`${pageSize}`}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-[70px]" aria-label="Rows per page">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[5, 10, 25, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {table.getPageCount() > 1 && (
+        <div className="flex items-center gap-x-6">
+          <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
+            <span>Page</span>
+            <span className="font-medium text-foreground">{pageIndex + 1}</span>
+            <span>of</span>
+            <span className="font-medium text-foreground">
+              {table.getPageCount()}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-x-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const SELECT_ALL_VALUE = "__all__"
+
+function Filter<TData, TValue>({
+  column,
+  isServerSide,
+}: {
+  column: Column<TData, TValue>
+  isServerSide: boolean
+}) {
+  const { filterVariant, filterOptions } = column.columnDef.meta ?? {}
 
   const columnFilterValue = column.getFilterValue()
 
@@ -330,57 +435,78 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
     [column.getFacetedUniqueValues(), filterVariant],
   )
 
-  return filterVariant === "range" ? (
-    <div>
-      <div className="flex space-x-2">
-        <DebouncedInput
-          type="number"
-          min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
-          max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
-          value={(columnFilterValue as [number, number])?.[0] ?? ""}
-          onChange={(value) =>
-            column.setFilterValue((old: [number, number]) => [value, old?.[1]])
-          }
-          placeholder={`Min ${
-            column.getFacetedMinMaxValues()?.[0] !== undefined
-              ? `(${column.getFacetedMinMaxValues()?.[0]})`
-              : ""
-          }`}
-          className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
-        />
-        <DebouncedInput
-          type="number"
-          min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
-          max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
-          value={(columnFilterValue as [number, number])?.[1] ?? ""}
-          onChange={(value) =>
-            column.setFilterValue((old: [number, number]) => [old?.[0], value])
-          }
-          placeholder={`Max ${
-            column.getFacetedMinMaxValues()?.[1]
-              ? `(${column.getFacetedMinMaxValues()?.[1]})`
-              : ""
-          }`}
-          className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
-        />
+  if (filterVariant === "range") {
+    const [min, max] = column.getFacetedMinMaxValues() ?? []
+    return (
+      <div>
+        <div className="flex space-x-2">
+          <DebouncedInput
+            type="number"
+            min={Number(min ?? "")}
+            max={Number(max ?? "")}
+            value={(columnFilterValue as [number, number])?.[0] ?? ""}
+            onChange={(value) =>
+              column.setFilterValue((old: [number, number]) => [
+                value,
+                old?.[1],
+              ])
+            }
+            placeholder={`Min ${min !== undefined ? `(${min})` : ""}`}
+            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
+          />
+          <DebouncedInput
+            type="number"
+            min={Number(min ?? "")}
+            max={Number(max ?? "")}
+            value={(columnFilterValue as [number, number])?.[1] ?? ""}
+            onChange={(value) =>
+              column.setFilterValue((old: [number, number]) => [
+                old?.[0],
+                value,
+              ])
+            }
+            placeholder={`Max ${max ? `(${max})` : ""}`}
+            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
+          />
+        </div>
+        <div className="h-1" />
       </div>
-      <div className="h-1" />
-    </div>
-  ) : filterVariant === "select" ? (
-    <select
-      onChange={(e) => column.setFilterValue(e.target.value)}
-      value={columnFilterValue?.toString()}
-      className={cn(TABLE_FILTER_INPUT_CLASS, "rounded border px-1")}
-    >
-      <option value="">All</option>
-      {sortedUniqueValues.map((value) => (
-        //dynamically generated select options from faceted values feature
-        <option value={value} key={value}>
-          {value}
-        </option>
-      ))}
-    </select>
-  ) : (
+    )
+  }
+
+  if (filterVariant === "select") {
+    const options =
+      filterOptions ??
+      sortedUniqueValues.map((value) => ({
+        label: String(value),
+        value: String(value),
+      }))
+    return (
+      <Select
+        value={columnFilterValue ? String(columnFilterValue) : SELECT_ALL_VALUE}
+        onValueChange={(value) =>
+          column.setFilterValue(value === SELECT_ALL_VALUE ? undefined : value)
+        }
+      >
+        <SelectTrigger
+          className={cn(TABLE_FILTER_INPUT_CLASS, "h-8 w-36")}
+          aria-label="Filter"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={SELECT_ALL_VALUE}>All</SelectItem>
+          {options.map(({ label, value }) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  return (
     <>
       {/* Autocomplete suggestions from faceted values feature */}
       <datalist id={`${column.id}list`}>
@@ -392,7 +518,11 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
         type="text"
         value={(columnFilterValue ?? "") as string}
         onChange={(value) => column.setFilterValue(value)}
-        placeholder={`Search... (${column.getFacetedUniqueValues().size})`}
+        placeholder={
+          isServerSide
+            ? "Search..."
+            : `Search... (${column.getFacetedUniqueValues().size})`
+        }
         className={cn(TABLE_FILTER_INPUT_CLASS, "w-36")}
         list={`${column.id}list`}
       />
@@ -433,5 +563,104 @@ function DebouncedInput({
       value={value}
       onChange={(event) => setValue(event.target.value)}
     />
+  )
+}
+
+export interface TablePageParams {
+  offset: number
+  limit: number
+  sortOptions: SortOptionsState
+  filterOptions: FilterOptionsState
+}
+
+export interface TableResult<TData> {
+  data: TData[]
+  total_count: number
+  filtered_count: number
+  is_server_side: boolean
+}
+
+interface ServerClientTableProps<TData extends { id: string }> {
+  columns: ColumnDef<TData>[]
+  queryKey: unknown[]
+  fetchTable: (params: TablePageParams) => Promise<TableResult<TData>>
+  storageKey?: string
+  pendingRows?: TData[]
+  rowClassName?: (row: TData) => string | undefined
+  emptyState?: ReactNode
+  loadingFallback?: ReactNode
+}
+
+export function ServerClientTable<TData extends { id: string }>({
+  columns,
+  queryKey,
+  fetchTable,
+  storageKey,
+  pendingRows = [],
+  rowClassName,
+  emptyState,
+  loadingFallback,
+}: ServerClientTableProps<TData>) {
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const [sortOptions, setSortOptions] = useState<SortOptionsState>([])
+  const [filterOptions, setFilterOptions] = useState<FilterOptionsState>([])
+
+  const tableQuery = useQuery({
+    queryKey: [...queryKey, pagination, sortOptions, filterOptions],
+    queryFn: () =>
+      fetchTable({
+        offset: pagination.pageIndex * pagination.pageSize,
+        limit: pagination.pageSize,
+        sortOptions,
+        filterOptions,
+      }),
+    placeholderData: keepPreviousData,
+  })
+
+  const isServerSide = tableQuery.data?.is_server_side ?? false
+  const rows = tableQuery.data?.data
+
+  if (rows === undefined) {
+    return <>{loadingFallback ?? null}</>
+  }
+
+  const data = [...pendingRows, ...rows]
+
+  if (!isServerSide && data.length === 0 && emptyState) {
+    return <>{emptyState}</>
+  }
+
+  return (
+    <div
+      className={
+        tableQuery.isPlaceholderData
+          ? "opacity-60 transition-opacity duration-200"
+          : undefined
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={data}
+        rowClassName={rowClassName}
+        storageKey={storageKey}
+        serverSide={
+          isServerSide
+            ? {
+                pagination,
+                sortOptions,
+                filterOptions,
+                onPaginationChange: setPagination,
+                onSortOptionsChange: setSortOptions,
+                onFilterOptionsChange: setFilterOptions,
+                rowCount: tableQuery.data?.filtered_count ?? 0,
+                totalRowCount: tableQuery.data?.total_count ?? 0,
+              }
+            : undefined
+        }
+      />
+    </div>
   )
 }
