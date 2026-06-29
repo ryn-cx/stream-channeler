@@ -3,10 +3,11 @@
 from typing import Any
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, Json
 from sqlmodel import Session, SQLModel
 
 from app.channels.models import Channel
+from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
 from app.models import MediaMixin
 from app.playlists.models import Playlist
@@ -26,6 +27,23 @@ class Message(BaseModel):
     """Generic message."""
 
     message: str
+
+
+class SortOption(BaseModel):
+    column: str = Field(alias="id")
+    desc: bool = False
+
+
+class FilterOption(BaseModel):
+    column: str = Field(alias="id")
+    value: Any
+
+
+class ReadOptions(BaseModel):
+    sort_options: Json[list[SortOption]] = Field(default="[]")  # type: ignore[arg-type]
+    filter_options: Json[list[FilterOption]] = Field(default="[]")  # type: ignore[arg-type]
+    offset: int = Field(default=0, ge=0)
+    limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 
 
 class BaseInput(SQLModel):

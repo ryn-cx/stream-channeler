@@ -3,7 +3,7 @@
 from loguru import logger
 from sqlmodel import Session
 
-from app.database import engine, automatically_import_models
+from app.database import automatically_import_models, engine
 from plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()

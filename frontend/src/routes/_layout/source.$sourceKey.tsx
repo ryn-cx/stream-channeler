@@ -1,22 +1,11 @@
-import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Tv } from "lucide-react"
 
 import { SourcesService } from "@/client"
-import { DetailTablePage } from "@/components/Media/DetailTablePage"
+import { DetailTablePage } from "@/components/Common/DataTable"
 import AddShow from "@/components/Shows/Add"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-
-function getShowsQueryOptions(sourceKey: string) {
-  return {
-    queryFn: () =>
-      SourcesService.getShows({ sourceId: sourceKey }) as unknown as Promise<
-        ShowTableData[]
-      >,
-    queryKey: ["sources", sourceKey, "shows"],
-  }
-}
 
 export const Route = createFileRoute("/_layout/source/$sourceKey")({
   component: SourceDetailPage,
@@ -32,13 +21,27 @@ export const Route = createFileRoute("/_layout/source/$sourceKey")({
 
 function SourceDetailPage() {
   const { sourceKey } = Route.useParams()
-  const { data } = useQuery(getShowsQueryOptions(sourceKey))
 
   return (
-    <DetailTablePage
+    <DetailTablePage<ShowTableData>
       title="Shows"
       columns={showColumns}
-      data={data}
+      queryKey={["sources", sourceKey, "shows"]}
+      fetchTable={async (params) => {
+        const result = await SourcesService.getShows({
+          sourceId: sourceKey,
+          offset: params.offset,
+          limit: params.limit,
+          sortOptions: JSON.stringify(params.sorting),
+          filterOptions: JSON.stringify(params.columnFilters),
+        })
+        return {
+          data: result.data,
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
+        }
+      }}
       columnVisibilityKey="shows-column-visibility"
       emptyIcon={Tv}
       emptyTitle="This source has no shows yet"

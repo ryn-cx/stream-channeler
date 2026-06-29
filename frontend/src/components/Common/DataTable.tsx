@@ -1,8 +1,9 @@
 // TODO: Validate
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   type Column,
   type ColumnDef,
-  type ColumnFiltersState,
+  type ColumnFiltersState as FilterOptionsState,
   flexRender,
   getCoreRowModel,
   getFacetedMinMaxValues,
@@ -15,21 +16,35 @@ import {
   type PaginationState,
   type Row,
   type RowData,
-  type SortingState,
+  type SortingState as SortOptionsState,
+  type Table as TableInstance,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  type LucideIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
+import type { MediaOwner } from "@/client"
+import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
+import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import { EmptyState } from "@/components/Common/EmptyState"
+import { MediaSubNav } from "@/components/Media/MediaSubNav"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -47,6 +62,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import useAuth from "@/hooks/useAuth"
+import {
+  usePersistedJsonState,
+  usePersistedState,
+} from "@/hooks/usePersistedState"
 import { cn } from "@/lib/utils"
 import {
   TABLE_FILTER_INPUT_CLASS,
@@ -56,6 +77,7 @@ import {
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select" | "dateRange"
+    filterOptions?: { label: string; value: string }[]
     serverFilter?: {
       value: string
       onChange: (value: string) => void
@@ -109,18 +131,15 @@ function usePersistentState<T>(key: string | undefined, initialValue: T) {
   return [value, setValue] as const
 }
 
-// When supplied, the table runs in server-side mode: pagination, sorting, and
-// filtering state are owned by the parent and `data` is a single pre-fetched page.
-// See https://tanstack.com/table/v8/docs/guide/pagination#manual-server-side-pagination
-interface ManualTableState {
+interface ServerSideTableState {
   pagination: PaginationState
-  sorting: SortingState
-  columnFilters: ColumnFiltersState
+  sortOptions: SortOptionsState
+  filterOptions: FilterOptionsState
   onPaginationChange: OnChangeFn<PaginationState>
-  onSortingChange: OnChangeFn<SortingState>
-  onColumnFiltersChange: OnChangeFn<ColumnFiltersState>
-  /** Total filtered rows across all pages, for the page count and footer. */
+  onSortOptionsChange: OnChangeFn<SortOptionsState>
+  onFilterOptionsChange: OnChangeFn<FilterOptionsState>
   rowCount: number
+  totalRowCount: number
 }
 
 interface DataTableProps<TData extends { id: string }, TValue> {
@@ -130,7 +149,50 @@ interface DataTableProps<TData extends { id: string }, TValue> {
   storageKey?: string
   columnVisibility?: VisibilityState
   onColumnVisibilityChange?: OnChangeFn<VisibilityState>
-  manual?: ManualTableState
+  serverSide?: ServerSideTableState
+}
+
+function useTableState(
+  serverSide: ServerSideTableState | undefined,
+  storageKey: string | undefined,
+) {
+  const [clientSortOptions, setClientSortOptions] =
+    usePersistentState<SortOptionsState>(
+      storageKey && `${storageKey}:sortOptions`,
+      [],
+    )
+  const [clientFilterOptions, setClientFilterOptions] =
+    usePersistentState<FilterOptionsState>(
+      storageKey && `${storageKey}:filterOptions`,
+      [],
+    )
+  const [clientPagination, setClientPagination] =
+    usePersistentState<PaginationState>(
+      storageKey && `${storageKey}:pagination`,
+      {
+        pageIndex: 0,
+        pageSize: 10,
+      },
+    )
+
+  if (serverSide) {
+    return {
+      sortOptions: serverSide.sortOptions,
+      filterOptions: serverSide.filterOptions,
+      pagination: serverSide.pagination,
+      setSortOptions: serverSide.onSortOptionsChange,
+      setFilterOptions: serverSide.onFilterOptionsChange,
+      setPagination: serverSide.onPaginationChange,
+    }
+  }
+  return {
+    sortOptions: clientSortOptions,
+    filterOptions: clientFilterOptions,
+    pagination: clientPagination,
+    setSortOptions: setClientSortOptions,
+    setFilterOptions: setClientFilterOptions,
+    setPagination: setClientPagination,
+  }
 }
 
 export function DataTable<TData extends { id: string }, TValue>({
@@ -140,7 +202,7 @@ export function DataTable<TData extends { id: string }, TValue>({
   storageKey,
   columnVisibility,
   onColumnVisibilityChange,
-  manual,
+  serverSide,
 }: DataTableProps<TData, TValue>) {
   const processedColumns = useMemo(
     () =>
@@ -152,45 +214,26 @@ export function DataTable<TData extends { id: string }, TValue>({
     [columns],
   )
 
-  // Client-side state, used only when the table is not driven by `manual`.
-  const [internalSorting, setInternalSorting] =
-    usePersistentState<SortingState>(storageKey && `${storageKey}:sorting`, [])
-  const [internalColumnFilters, setInternalColumnFilters] =
-    usePersistentState<ColumnFiltersState>(
-      storageKey && `${storageKey}:filters`,
-      [],
-    )
-  const [internalPagination, setInternalPagination] =
-    usePersistentState<PaginationState>(
-      storageKey && `${storageKey}:pagination`,
-      { pageIndex: 0, pageSize: 10 },
-    )
+  const {
+    sortOptions,
+    filterOptions,
+    pagination,
+    setSortOptions,
+    setFilterOptions,
+    setPagination,
+  } = useTableState(serverSide, storageKey)
 
-  const sorting = manual ? manual.sorting : internalSorting
-  const columnFilters = manual ? manual.columnFilters : internalColumnFilters
-  const pagination = manual ? manual.pagination : internalPagination
-  const setSorting = manual ? manual.onSortingChange : setInternalSorting
-  const setPagination = manual
-    ? manual.onPaginationChange
-    : setInternalPagination
-  const setColumnFilters = manual
-    ? manual.onColumnFiltersChange
-    : setInternalColumnFilters
-
-  // Reset page to 0 when filters actually change, since autoResetPageIndex
-  // is disabled to prevent pagination clicks from resetting the page. Works in
-  // both client and server mode via the active setters above.
-  const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = useCallback(
+  const handleFilterOptionsChange: OnChangeFn<FilterOptionsState> = useCallback(
     (updater) => {
-      setColumnFilters((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater
-        if (JSON.stringify(next) !== JSON.stringify(prev)) {
+      setFilterOptions((last) => {
+        const next = typeof updater === "function" ? updater(last) : updater
+        if (JSON.stringify(next) !== JSON.stringify(last)) {
           setPagination((p) => ({ ...p, pageIndex: 0 }))
         }
         return next
       })
     },
-    [setColumnFilters, setPagination],
+    [setFilterOptions, setPagination],
   )
 
   const table = useReactTable({
@@ -198,36 +241,36 @@ export function DataTable<TData extends { id: string }, TValue>({
     columns: processedColumns,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    // Server-side: the backend already paginated, sorted, and filtered, so the
-    // client row models are skipped (per the TanStack manual-pagination guide).
-    manualPagination: !!manual,
-    manualSorting: !!manual,
-    manualFiltering: !!manual,
-    rowCount: manual?.rowCount,
-    getSortedRowModel: manual ? undefined : getSortedRowModel(),
-    getFilteredRowModel: manual ? undefined : getFilteredRowModel(),
-    getPaginationRowModel: manual ? undefined : getPaginationRowModel(),
-    getFacetedRowModel: manual ? undefined : getFacetedRowModel(),
-    getFacetedUniqueValues: manual ? undefined : getFacetedUniqueValues(),
-    getFacetedMinMaxValues: manual ? undefined : getFacetedMinMaxValues(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: handleColumnFiltersChange,
+    manualPagination: !!serverSide,
+    manualSorting: !!serverSide,
+    manualFiltering: !!serverSide,
+    rowCount: serverSide?.rowCount,
+    getSortedRowModel: serverSide ? undefined : getSortedRowModel(),
+    getFilteredRowModel: serverSide ? undefined : getFilteredRowModel(),
+    getPaginationRowModel: serverSide ? undefined : getPaginationRowModel(),
+    getFacetedRowModel: serverSide ? undefined : getFacetedRowModel(),
+    getFacetedUniqueValues: serverSide ? undefined : getFacetedUniqueValues(),
+    getFacetedMinMaxValues: serverSide ? undefined : getFacetedMinMaxValues(),
+    onSortingChange: setSortOptions,
+    onColumnFiltersChange: handleFilterOptionsChange,
     onPaginationChange: setPagination,
     onColumnVisibilityChange,
     state: {
-      sorting,
-      columnFilters,
+      sorting: sortOptions,
+      columnFilters: filterOptions,
       pagination,
       columnVisibility,
     },
     autoResetPageIndex: false,
   })
 
-  // In server mode only the current page is loaded, so the filtered row model
-  // reflects one page; the true total comes from the backend via `rowCount`.
-  const totalRows = manual
-    ? manual.rowCount
+  const filteredRows = serverSide
+    ? serverSide.rowCount
     : table.getFilteredRowModel().rows.length
+  const totalRows = serverSide
+    ? serverSide.totalRowCount
+    : table.getCoreRowModel().rows.length
+  const isFiltered = filteredRows !== totalRows
 
   return (
     <div className="flex flex-col gap-4">
@@ -275,7 +318,7 @@ export function DataTable<TData extends { id: string }, TValue>({
                             ))}
                         </button>
                         {column.getCanFilter() ? (
-                          <Filter column={column} />
+                          <Filter column={column} isServerSide={!!serverSide} />
                         ) : null}
                       </div>
                     )}
@@ -309,113 +352,136 @@ export function DataTable<TData extends { id: string }, TValue>({
         </TableBody>
       </Table>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Showing{" "}
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{" "}
-            to{" "}
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
-              totalRows,
-            )}{" "}
-            of <span className="font-medium text-foreground">{totalRows}</span>{" "}
-            entries
-          </div>
-          <div className="flex items-center gap-x-2">
-            <p className="text-sm text-muted-foreground">Rows per page</p>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger
-                className="h-8 w-[70px]"
-                aria-label="Rows per page"
-              >
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 100, 1_000, 10_000, 100_000].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {table.getPageCount() > 1 && (
-          <div className="flex items-center gap-x-6">
-            <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
-              <span>Page</span>
-              <span className="font-medium text-foreground">
-                {table.getState().pagination.pageIndex + 1}
-              </span>
-              <span>of</span>
-              <span className="font-medium text-foreground">
-                {table.getPageCount()}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-x-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to first page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to next page</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Go to last page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      <TablePagination
+        table={table}
+        filteredRows={filteredRows}
+        totalRows={totalRows}
+        isFiltered={isFiltered}
+      />
     </div>
   )
 }
 
-function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
-  const { filterVariant, serverFilter } = column.columnDef.meta ?? {}
+function TablePagination<TData>({
+  table,
+  filteredRows,
+  totalRows,
+  isFiltered,
+}: {
+  table: TableInstance<TData>
+  filteredRows: number
+  totalRows: number
+  isFiltered: boolean
+}) {
+  const { pageIndex, pageSize } = table.getState().pagination
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {pageIndex * pageSize + 1} to{" "}
+          {Math.min((pageIndex + 1) * pageSize, filteredRows)} of{" "}
+          <span className="font-medium text-foreground">{filteredRows}</span>{" "}
+          entries
+          {isFiltered && (
+            <>
+              {" "}
+              (filtered from{" "}
+              <span className="font-medium text-foreground">{totalRows}</span>{" "}
+              total)
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-x-2">
+          <p className="text-sm text-muted-foreground">Rows per page</p>
+          <Select
+            value={`${pageSize}`}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-[70px]" aria-label="Rows per page">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 100, 1_000, 10_000, 100_000].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {table.getPageCount() > 1 && (
+        <div className="flex items-center gap-x-6">
+          <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
+            <span>Page</span>
+            <span className="font-medium text-foreground">{pageIndex + 1}</span>
+            <span>of</span>
+            <span className="font-medium text-foreground">
+              {table.getPageCount()}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-x-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const SELECT_ALL_VALUE = "__all__"
+
+function Filter<TData, TValue>({
+  column,
+  isServerSide,
+}: {
+  column: Column<TData, TValue>
+  isServerSide: boolean
+}) {
+  const { filterVariant, filterOptions, serverFilter } =
+    column.columnDef.meta ?? {}
 
   const columnFilterValue = column.getFilterValue()
 
@@ -523,13 +589,14 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
   }
 
   if (filterVariant === "range") {
+    const [min, max] = column.getFacetedMinMaxValues() ?? []
     return (
       <div>
         <div className="flex space-x-2">
           <DebouncedInput
             type="number"
-            min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
-            max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
+            min={Number(min ?? "")}
+            max={Number(max ?? "")}
             value={(columnFilterValue as [number, number])?.[0] ?? ""}
             onChange={(value) =>
               column.setFilterValue((old: [number, number]) => [
@@ -537,17 +604,13 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
                 old?.[1],
               ])
             }
-            placeholder={`Min ${
-              column.getFacetedMinMaxValues()?.[0] !== undefined
-                ? `(${column.getFacetedMinMaxValues()?.[0]})`
-                : ""
-            }`}
+            placeholder={`Min ${min !== undefined ? `(${min})` : ""}`}
             className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
           />
           <DebouncedInput
             type="number"
-            min={Number(column.getFacetedMinMaxValues()?.[0] ?? "")}
-            max={Number(column.getFacetedMinMaxValues()?.[1] ?? "")}
+            min={Number(min ?? "")}
+            max={Number(max ?? "")}
             value={(columnFilterValue as [number, number])?.[1] ?? ""}
             onChange={(value) =>
               column.setFilterValue((old: [number, number]) => [
@@ -555,11 +618,7 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
                 value,
               ])
             }
-            placeholder={`Max ${
-              column.getFacetedMinMaxValues()?.[1]
-                ? `(${column.getFacetedMinMaxValues()?.[1]})`
-                : ""
-            }`}
+            placeholder={`Max ${max ? `(${max})` : ""}`}
             className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
           />
         </div>
@@ -569,26 +628,39 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
   }
 
   if (filterVariant === "select") {
+    const options =
+      filterOptions ??
+      sortedUniqueValues.map((value) => ({
+        label: String(value),
+        value: String(value),
+      }))
     return (
-      <select
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        value={columnFilterValue?.toString()}
-        className={cn(TABLE_FILTER_INPUT_CLASS, "rounded border px-1")}
+      <Select
+        value={columnFilterValue ? String(columnFilterValue) : SELECT_ALL_VALUE}
+        onValueChange={(value) =>
+          column.setFilterValue(value === SELECT_ALL_VALUE ? undefined : value)
+        }
       >
-        <option value="">All</option>
-        {sortedUniqueValues.map((value) => (
-          //dynamically generated select options from faceted values feature
-          <option value={value} key={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          className={cn(TABLE_FILTER_INPUT_CLASS, "h-8 w-36")}
+          aria-label="Filter"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={SELECT_ALL_VALUE}>All</SelectItem>
+          {options.map(({ label, value }) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     )
   }
 
   return (
     <>
-      {/* Autocomplete suggestions from faceted values feature */}
       <datalist id={`${column.id}list`}>
         {sortedUniqueValues.map((value: string) => (
           <option value={value} key={value} />
@@ -598,7 +670,11 @@ function Filter<TData, TValue>({ column }: { column: Column<TData, TValue> }) {
         type="text"
         value={(columnFilterValue ?? "") as string}
         onChange={(value) => column.setFilterValue(value)}
-        placeholder={`Search... (${column.getFacetedUniqueValues().size})`}
+        placeholder={
+          isServerSide
+            ? "Search..."
+            : `Search... (${column.getFacetedUniqueValues().size})`
+        }
         className={cn(TABLE_FILTER_INPUT_CLASS, "w-36")}
         list={`${column.id}list`}
       />
@@ -638,6 +714,264 @@ function DebouncedInput({
       {...props}
       value={value}
       onChange={(event) => setValue(event.target.value)}
+    />
+  )
+}
+
+export interface MediaPageParams {
+  offset: number
+  limit: number
+  sorting: SortOptionsState
+  columnFilters: FilterOptionsState
+}
+
+export interface MediaTableResult<TData> {
+  data: TData[]
+  total_count: number
+  filtered_count: number
+  is_server_side: boolean
+}
+
+interface MediaTablePageProps<TData extends { id: string }> {
+  columns: ColumnDef<TData>[]
+  queryKey: unknown[]
+  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
+  columnVisibilityKey: string
+  defaultHidden?: VisibilityState
+  header: ReactNode
+  headerActions?: ReactNode
+  emptyState: ReactNode
+  resetKey?: unknown
+}
+
+export function MediaTablePage<TData extends { id: string }>({
+  columns,
+  queryKey,
+  fetchTable,
+  columnVisibilityKey,
+  defaultHidden = {},
+  header,
+  headerActions,
+  emptyState,
+  resetKey,
+}: MediaTablePageProps<TData>) {
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+  const [sorting, setSorting] = useState<SortOptionsState>([])
+  const [columnFilters, setColumnFilters] = useState<FilterOptionsState>([])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only on resetKey change
+  useEffect(() => {
+    setPagination((previous) => ({ ...previous, pageIndex: 0 }))
+  }, [resetKey])
+
+  const tableQuery = useQuery({
+    queryKey: [...queryKey, pagination, sorting, columnFilters],
+    queryFn: () =>
+      fetchTable({
+        offset: pagination.pageIndex * pagination.pageSize,
+        limit: pagination.pageSize,
+        sorting,
+        columnFilters,
+      }),
+    placeholderData: keepPreviousData,
+  })
+
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>(columnVisibilityKey, defaultHidden)
+
+  const isServer = tableQuery.data?.is_server_side ?? false
+  const tableData = tableQuery.data?.data
+
+  const table = useReactTable({
+    data: tableData ?? [],
+    columns,
+    state: { columnVisibility },
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const isLoading = tableData === undefined
+  const isEmpty = !isServer && (tableData?.length ?? 0) === 0
+
+  return (
+    <div className="flex flex-col gap-6">
+      <MediaSubNav />
+      <div
+        className={
+          tableQuery.isPlaceholderData
+            ? "opacity-60 transition-opacity duration-200"
+            : undefined
+        }
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 px-[4%] pt-4 pb-2">
+          {header}
+          <div className="flex flex-wrap items-center gap-2">
+            {headerActions}
+            <ColumnVisibilityButton table={table} />
+          </div>
+        </div>
+        {isLoading ? (
+          <div className="px-[4%]">
+            <DataTableSkeleton table={table} />
+          </div>
+        ) : isEmpty ? (
+          emptyState
+        ) : (
+          <div className="px-[4%]">
+            <DataTable
+              columns={columns}
+              data={tableData ?? []}
+              columnVisibility={columnVisibility}
+              onColumnVisibilityChange={setColumnVisibility}
+              serverSide={
+                isServer
+                  ? {
+                      pagination,
+                      sortOptions: sorting,
+                      filterOptions: columnFilters,
+                      onPaginationChange: setPagination,
+                      onSortOptionsChange: setSorting,
+                      onFilterOptionsChange: setColumnFilters,
+                      rowCount: tableQuery.data?.filtered_count ?? 0,
+                      totalRowCount: tableQuery.data?.total_count ?? 0,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface DetailTablePageProps<TData extends { id: string }> {
+  title: string
+  columns: ColumnDef<TData>[]
+  queryKey: unknown[]
+  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
+  columnVisibilityKey: string
+  defaultHidden?: VisibilityState
+  emptyIcon: LucideIcon
+  emptyTitle: string
+  emptyDescription: string
+  headerActions?: ReactNode
+}
+
+export function DetailTablePage<TData extends { id: string }>({
+  title,
+  columns,
+  queryKey,
+  fetchTable,
+  columnVisibilityKey,
+  defaultHidden = { key: false, id: false },
+  emptyIcon,
+  emptyTitle,
+  emptyDescription,
+  headerActions,
+}: DetailTablePageProps<TData>) {
+  return (
+    <MediaTablePage
+      columns={columns}
+      queryKey={queryKey}
+      fetchTable={fetchTable}
+      columnVisibilityKey={columnVisibilityKey}
+      defaultHidden={defaultHidden}
+      headerActions={headerActions}
+      header={
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft />
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        </div>
+      }
+      emptyState={
+        <EmptyState
+          icon={emptyIcon}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
+      }
+    />
+  )
+}
+
+export type OwnerView = MediaOwner | undefined
+type OwnerTab = "" | MediaOwner
+
+interface MediaListPageProps<TData extends { id: string }> {
+  title: string
+  columns: ColumnDef<TData>[]
+  columnVisibilityKey: string
+  defaultHidden?: VisibilityState
+  emptyIcon: LucideIcon
+  headerActions?: (owner: OwnerView) => ReactNode
+  fetchTable: (
+    owner: OwnerView,
+    params: MediaPageParams,
+  ) => Promise<MediaTableResult<TData>>
+}
+
+export function MediaListPage<TData extends { id: string }>({
+  title,
+  columns,
+  columnVisibilityKey,
+  defaultHidden = {},
+  emptyIcon,
+  headerActions,
+  fetchTable,
+}: MediaListPageProps<TData>) {
+  const { user } = useAuth()
+  const isAdmin = user?.is_superuser ?? false
+  const [ownerTab, setOwnerTab] = usePersistedState<OwnerTab>(
+    "media-owner-view-v2",
+    "",
+  )
+  const ownerFilter: OwnerView =
+    isAdmin && ownerTab !== "" ? ownerTab : undefined
+
+  return (
+    <MediaTablePage
+      columns={columns}
+      queryKey={["media-table", title, ownerFilter]}
+      fetchTable={(params) => fetchTable(ownerFilter, params)}
+      columnVisibilityKey={columnVisibilityKey}
+      defaultHidden={defaultHidden}
+      resetKey={ownerFilter}
+      headerActions={headerActions?.(ownerFilter)}
+      header={
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          {isAdmin && (
+            <Tabs
+              value={ownerTab}
+              onValueChange={(value) => setOwnerTab(value as OwnerTab)}
+            >
+              <TabsList>
+                {/* I think it's funny that ever option starts with O. */}
+                <TabsTrigger value="">Owned</TabsTrigger>
+                <TabsTrigger value="official">Official</TabsTrigger>
+                <TabsTrigger value="others">Other Users</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
+      }
+      emptyState={
+        <EmptyState
+          icon={emptyIcon}
+          title={`No ${title.toLowerCase()} found`}
+          description="Nothing to show in this category"
+        />
+      }
     />
   )
 }

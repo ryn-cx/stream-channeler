@@ -12,12 +12,8 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.files.schemas import FileCreate, FileListPublic, FilePublic
-from app.media.service import (
-    MediaOwner,
-    build_table_columns,
-    build_table_page,
-    delete_record,
-)
+from app.media.schemas import MediaOwner, MediaReadOptions
+from app.media.service import delete_record
 from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
 from app.plugins.models import File, Plugin
 from app.plugins.schemas import (
@@ -26,21 +22,20 @@ from app.plugins.schemas import (
     PluginImportWatchHistoryInformation,
     PluginOutput,
     PluginSearchInformation,
-    PluginTableOutput,
+    PluginsPublic,
     PluginUpdate,
     PluginURLMatch,
 )
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
+from app.service import get_read_results
 from app.sources.models import Source
-from app.sources.schemas import SourceCreate, SourcePublic
+from app.sources.schemas import SourceCreate, SourcePublic, SourcesPublic
+from app.users.dependencies import OptionalUser
 from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
 router = APIRouter(prefix="/plugins", tags=["plugins"])
-
-# Every `PluginOutput` field is filterable and sortable; date columns also filter by range.
-_TABLE_COLUMNS, _DATE_RANGE_COLUMNS = build_table_columns(Plugin, PluginOutput)
 
 
 @router.get("/import-watch-history-information")
@@ -122,21 +117,17 @@ def search_plugin(
 
 
 @router.get("")
-def get_plugins(  # noqa: PLR0913 - FastAPI query parameters
+def get_plugins(
     session: SessionDep,
     current_user: CurrentUser,
-    owner: MediaOwner | None = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100_000)] = 100,
-    sorting: str | None = None,
-    filters: str | None = None,
-) -> PluginTableOutput:
+    read_options: Annotated[MediaReadOptions, Query()],
+) -> PluginsPublic:
     """Return the `Plugin`s for a table view (client- or server-side).
 
     `official`/`others` require a superuser, matching the other admin views.
     """
     base = select(Plugin)
-    if owner is None:
+    if read_options.owner is None:
         base = base.where(Plugin.user_id == current_user.id)
     else:
         if not current_user.is_superuser:
@@ -145,27 +136,26 @@ def get_plugins(  # noqa: PLR0913 - FastAPI query parameters
                 detail="The user doesn't have enough privileges",
             )
         plugin_user = get_or_create_plugin_user(session=session)
-        if owner == MediaOwner.official:
+        if read_options.owner == MediaOwner.official:
             base = base.where(Plugin.user_id == plugin_user.id)
         else:
             base = base.where(
                 col(Plugin.user_id).not_in([current_user.id, plugin_user.id]),
             )
-    rows, count, server_side = build_table_page(
+    rows, total_count, filtered_count, is_server_side = get_read_results(
         session,
         base,
-        columns=_TABLE_COLUMNS,
-        date_range_columns=_DATE_RANGE_COLUMNS,
+        schema=PluginOutput,
+        default_sort=Plugin.created_at,
         tiebreaker=Plugin.id,
-        offset=offset,
-        limit=limit,
-        sorting=sorting,
-        filters=filters,
+        params=read_options,
+        current_user=current_user,
     )
-    return PluginTableOutput(
+    return PluginsPublic(
         data=[PluginOutput.model_validate(row) for row in rows],
-        count=count,
-        server_side=server_side,
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
     )
 
 
@@ -179,10 +169,30 @@ def create_plugin(
     return plugin_input.create(session, Plugin, current_user)
 
 
-@router.get("/{plugin_id}/sources", response_model=list[SourcePublic])  # noqa: FAST003 - Used by ReadablePlugin
-def get_plugin_sources(plugin: ReadablePlugin) -> list[Source]:
+@router.get("/{plugin_id}/sources")  # noqa: FAST003 - Used by ReadablePlugin
+def get_plugin_sources(
+    session: SessionDep,
+    plugin: ReadablePlugin,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> SourcesPublic:
     """List all `Source`s for a `Plugin` if it is public or owned by the current `User`."""
-    return plugin.sources
+    base = select(Source).where(Source.plugin_id == plugin.id)
+    rows, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        base,
+        schema=SourcePublic,
+        default_sort=Source.created_at,
+        tiebreaker=Source.id,
+        params=read_options,
+        current_user=current_user,
+    )
+    return SourcesPublic(
+        data=[SourcePublic.model_validate(row) for row in rows],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )
 
 
 @router.post("/{plugin_id}/sources", response_model=SourcePublic)  # noqa: FAST003 - Used by OwnedPlugin

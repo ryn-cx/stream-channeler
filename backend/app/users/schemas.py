@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
+from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.users.models import UserBase
 
 
@@ -27,6 +28,11 @@ class UserUpdate(UserBase):
 class UserUpdateMe(SQLModel):
     username: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
+    server_side_threshold: int | None = Field(
+        default=None,
+        ge=0,
+        le=SERVER_SIDE_THRESHOLD_MAXIMUM,
+    )
 
 
 # Properties to return via API, id is always required

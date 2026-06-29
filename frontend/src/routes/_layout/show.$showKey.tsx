@@ -1,25 +1,14 @@
-import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { ShowsService } from "@/client"
-import { DetailTablePage } from "@/components/Media/DetailTablePage"
+import { DetailTablePage } from "@/components/Common/DataTable"
 import AddSeason from "@/components/Seasons/Add"
 import {
   type SeasonTableData,
   seasonColumns,
 } from "@/components/Seasons/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-
-function getSeasonsQueryOptions(showKey: string) {
-  return {
-    queryFn: () =>
-      ShowsService.getSeasons({ showId: showKey }) as unknown as Promise<
-        SeasonTableData[]
-      >,
-    queryKey: ["shows", showKey, "seasons"],
-  }
-}
 
 export const Route = createFileRoute("/_layout/show/$showKey")({
   component: ShowDetailPage,
@@ -35,13 +24,27 @@ export const Route = createFileRoute("/_layout/show/$showKey")({
 
 function ShowDetailPage() {
   const { showKey } = Route.useParams()
-  const { data } = useQuery(getSeasonsQueryOptions(showKey))
 
   return (
-    <DetailTablePage
+    <DetailTablePage<SeasonTableData>
       title="Seasons"
       columns={seasonColumns}
-      data={data}
+      queryKey={["shows", showKey, "seasons"]}
+      fetchTable={async (params) => {
+        const result = await ShowsService.getSeasons({
+          showId: showKey,
+          offset: params.offset,
+          limit: params.limit,
+          sortOptions: JSON.stringify(params.sorting),
+          filterOptions: JSON.stringify(params.columnFilters),
+        })
+        return {
+          data: result.data,
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
+        }
+      }}
       columnVisibilityKey="seasons-column-visibility"
       emptyIcon={Layers}
       emptyTitle="This show has no seasons yet"

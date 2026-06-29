@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import engine, automatically_import_models
+from app.database import automatically_import_models, engine
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season

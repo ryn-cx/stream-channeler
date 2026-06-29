@@ -13,7 +13,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import engine, automatically_import_models
+from app.database import automatically_import_models, engine
 from app.plugins.models import File
 from app.seasons.models import Season
 from app.shows.models import Show

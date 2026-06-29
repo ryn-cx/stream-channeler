@@ -28,9 +28,10 @@ class EpisodeOutput(BaseEpisode):
     season_id: uuid.UUID
 
 
-class EpisodeTableOutput(BaseModel):
+class EpisodesPublic(BaseModel):
     """Schema for returning a list of `Episode`s."""
 
     data: list[EpisodeOutput]
-    count: int
-    server_side: bool
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

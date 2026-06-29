@@ -6,43 +6,34 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col, select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.service import (
-    MediaOwner,
-    build_table_columns,
-    build_table_page,
-    delete_record,
-)
+from app.media.schemas import MediaOwner, MediaReadOptions
+from app.media.service import delete_record
 from app.plugins.models import Plugin
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
+from app.service import get_read_results
 from app.shows.models import Show
-from app.shows.schemas import ShowCreate, ShowPublic
+from app.shows.schemas import ShowCreate, ShowPublic, ShowsPublic
 from app.sources.dependencies import OwnedSource, ReadableSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourcePublic,
-    SourceTableOutput,
+    SourcesPublic,
     SourceUpdate,
 )
+from app.users.dependencies import OptionalUser
 from app.users.service import get_or_create_plugin_user
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
-# Every `SourcePublic` field is filterable and sortable; date columns also filter by range.
-_TABLE_COLUMNS, _DATE_RANGE_COLUMNS = build_table_columns(Source, SourcePublic)
-
 
 @router.get("")
-def get_sources(  # noqa: PLR0913 - FastAPI query parameters
+def get_sources(
     session: SessionDep,
     current_user: CurrentUser,
-    owner: MediaOwner | None = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100_000)] = 100,
-    sorting: str | None = None,
-    filters: str | None = None,
-) -> SourceTableOutput:
+    read_options: Annotated[MediaReadOptions, Query()],
+) -> SourcesPublic:
     base = select(Source).join(Plugin)
-    if owner is None:
+    if read_options.owner is None:
         base = base.where(Plugin.user_id == current_user.id)
     else:
         if not current_user.is_superuser:
@@ -51,27 +42,26 @@ def get_sources(  # noqa: PLR0913 - FastAPI query parameters
                 detail="The user doesn't have enough privileges",
             )
         plugin_user = get_or_create_plugin_user(session=session)
-        if owner == MediaOwner.official:
+        if read_options.owner == MediaOwner.official:
             base = base.where(Plugin.user_id == plugin_user.id)
         else:
             base = base.where(
                 col(Plugin.user_id).not_in([current_user.id, plugin_user.id]),
             )
-    rows, count, server_side = build_table_page(
+    rows, total_count, filtered_count, is_server_side = get_read_results(
         session,
         base,
-        columns=_TABLE_COLUMNS,
-        date_range_columns=_DATE_RANGE_COLUMNS,
+        schema=SourcePublic,
+        default_sort=Source.created_at,
         tiebreaker=Source.id,
-        offset=offset,
-        limit=limit,
-        sorting=sorting,
-        filters=filters,
+        params=read_options,
+        current_user=current_user,
     )
-    return SourceTableOutput(
+    return SourcesPublic(
         data=[SourcePublic.model_validate(row) for row in rows],
-        count=count,
-        server_side=server_side,
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
     )
 
 
@@ -107,7 +97,27 @@ def create_show(
     return show_input.create(session, Show, source)
 
 
-@router.get("/{source_id}/shows", response_model=list[ShowPublic])  # noqa: FAST003 - Used by ReadableSource
-def get_shows(source: ReadableSource) -> list[Show]:
+@router.get("/{source_id}/shows")  # noqa: FAST003 - Used by ReadableSource
+def get_shows(
+    session: SessionDep,
+    source: ReadableSource,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> ShowsPublic:
     """Get all `Show`s for a `Source` if it's readable by the current `User`."""
-    return source.shows
+    base = select(Show).where(Show.source_id == source.id)
+    rows, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        base,
+        schema=ShowPublic,
+        default_sort=Show.created_at,
+        tiebreaker=Show.id,
+        params=read_options,
+        current_user=current_user,
+    )
+    return ShowsPublic(
+        data=[ShowPublic.model_validate(row) for row in rows],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )

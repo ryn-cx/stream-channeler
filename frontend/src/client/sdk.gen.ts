@@ -553,12 +553,12 @@ export class EpisodesService {
     /**
      * Get Episodes
      * @param data The data for the request.
-     * @param data.owner
+     * @param data.sortOptions
+     * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.sorting
-     * @param data.filters
-     * @returns EpisodeTableOutput Successful Response
+     * @param data.owner
+     * @returns EpisodesPublic Successful Response
      * @throws ApiError
      */
     public static getEpisodes(data: EpisodesGetEpisodesData = {}): CancelablePromise<EpisodesGetEpisodesResponse> {
@@ -566,11 +566,11 @@ export class EpisodesService {
             method: 'GET',
             url: '/api/v1/episodes',
             query: {
-                owner: data.owner,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                sorting: data.sorting,
-                filters: data.filters
+                owner: data.owner
             },
             errors: {
                 422: 'Validation Error'
@@ -1053,12 +1053,12 @@ export class PluginsService {
      *
      * `official`/`others` require a superuser, matching the other admin views.
      * @param data The data for the request.
-     * @param data.owner
+     * @param data.sortOptions
+     * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.sorting
-     * @param data.filters
-     * @returns PluginTableOutput Successful Response
+     * @param data.owner
+     * @returns PluginsPublic Successful Response
      * @throws ApiError
      */
     public static getPlugins(data: PluginsGetPluginsData = {}): CancelablePromise<PluginsGetPluginsResponse> {
@@ -1066,11 +1066,11 @@ export class PluginsService {
             method: 'GET',
             url: '/api/v1/plugins',
             query: {
-                owner: data.owner,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                sorting: data.sorting,
-                filters: data.filters
+                owner: data.owner
             },
             errors: {
                 422: 'Validation Error'
@@ -1100,10 +1100,14 @@ export class PluginsService {
     
     /**
      * Get Plugin Sources
-     * List all `Source`s for a `Plugin` if it is public or owned by the current `User`.
+     * List a `Plugin`'s `Source`s for a table view (client- or server-side).
      * @param data The data for the request.
      * @param data.pluginId
-     * @returns SourcePublic Successful Response
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns SourcesPublic Successful Response
      * @throws ApiError
      */
     public static getPluginSources(data: PluginsGetPluginSourcesData): CancelablePromise<PluginsGetPluginSourcesResponse> {
@@ -1112,6 +1116,12 @@ export class PluginsService {
             url: '/api/v1/plugins/{plugin_id}/sources',
             path: {
                 plugin_id: data.pluginId
+            },
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'
@@ -1285,12 +1295,12 @@ export class SeasonsService {
     /**
      * Get Seasons
      * @param data The data for the request.
-     * @param data.owner
+     * @param data.sortOptions
+     * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.sorting
-     * @param data.filters
-     * @returns SeasonTableOutput Successful Response
+     * @param data.owner
+     * @returns SeasonsPublic Successful Response
      * @throws ApiError
      */
     public static getSeasons(data: SeasonsGetSeasonsData = {}): CancelablePromise<SeasonsGetSeasonsResponse> {
@@ -1298,11 +1308,11 @@ export class SeasonsService {
             method: 'GET',
             url: '/api/v1/seasons',
             query: {
-                owner: data.owner,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                sorting: data.sorting,
-                filters: data.filters
+                owner: data.owner
             },
             errors: {
                 422: 'Validation Error'
@@ -1402,10 +1412,14 @@ export class SeasonsService {
     
     /**
      * Get Episodes
-     * List all `Episode`s for a `Season` if it's readable by the current `User`.
+     * List a `Season`'s `Episode`s for a table view (client- or server-side).
      * @param data The data for the request.
      * @param data.seasonId
-     * @returns EpisodeOutput Successful Response
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns EpisodesPublic Successful Response
      * @throws ApiError
      */
     public static getEpisodes(data: SeasonsGetEpisodesData): CancelablePromise<SeasonsGetEpisodesResponse> {
@@ -1414,6 +1428,12 @@ export class SeasonsService {
             url: '/api/v1/seasons/{season_id}/episodes',
             path: {
                 season_id: data.seasonId
+            },
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'
@@ -1426,12 +1446,12 @@ export class ShowsService {
     /**
      * Get Shows
      * @param data The data for the request.
-     * @param data.owner
+     * @param data.sortOptions
+     * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.sorting
-     * @param data.filters
-     * @returns ShowTableOutput Successful Response
+     * @param data.owner
+     * @returns ShowsPublic Successful Response
      * @throws ApiError
      */
     public static getShows(data: ShowsGetShowsData = {}): CancelablePromise<ShowsGetShowsResponse> {
@@ -1439,11 +1459,11 @@ export class ShowsService {
             method: 'GET',
             url: '/api/v1/shows',
             query: {
-                owner: data.owner,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                sorting: data.sorting,
-                filters: data.filters
+                owner: data.owner
             },
             errors: {
                 422: 'Validation Error'
@@ -1543,10 +1563,14 @@ export class ShowsService {
     
     /**
      * Get Seasons
-     * List all `Season`s for a `Show` if it's readable by the current `User`.
+     * List a `Show`'s `Season`s for a table view (client- or server-side).
      * @param data The data for the request.
      * @param data.showId
-     * @returns SeasonOutput Successful Response
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns SeasonsPublic Successful Response
      * @throws ApiError
      */
     public static getSeasons(data: ShowsGetSeasonsData): CancelablePromise<ShowsGetSeasonsResponse> {
@@ -1555,6 +1579,12 @@ export class ShowsService {
             url: '/api/v1/shows/{show_id}/seasons',
             path: {
                 show_id: data.showId
+            },
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'
@@ -1567,12 +1597,12 @@ export class SourcesService {
     /**
      * Get Sources
      * @param data The data for the request.
-     * @param data.owner
+     * @param data.sortOptions
+     * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.sorting
-     * @param data.filters
-     * @returns SourceTableOutput Successful Response
+     * @param data.owner
+     * @returns SourcesPublic Successful Response
      * @throws ApiError
      */
     public static getSources(data: SourcesGetSourcesData = {}): CancelablePromise<SourcesGetSourcesResponse> {
@@ -1580,11 +1610,11 @@ export class SourcesService {
             method: 'GET',
             url: '/api/v1/sources',
             query: {
-                owner: data.owner,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                sorting: data.sorting,
-                filters: data.filters
+                owner: data.owner
             },
             errors: {
                 422: 'Validation Error'
@@ -1684,10 +1714,14 @@ export class SourcesService {
     
     /**
      * Get Shows
-     * Get all `Show`s for a `Source` if it's readable by the current `User`.
+     * List a `Source`'s `Show`s for a table view (client- or server-side).
      * @param data The data for the request.
      * @param data.sourceId
-     * @returns ShowPublic Successful Response
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns ShowsPublic Successful Response
      * @throws ApiError
      */
     public static getShows(data: SourcesGetShowsData): CancelablePromise<SourcesGetShowsResponse> {
@@ -1696,6 +1730,12 @@ export class SourcesService {
             url: '/api/v1/sources/{source_id}/shows',
             path: {
                 source_id: data.sourceId
+            },
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'

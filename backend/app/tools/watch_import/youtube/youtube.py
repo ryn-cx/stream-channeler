@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from sqlmodel import Session, select
 
-from app.database import engine, automatically_import_models
+from app.database import automatically_import_models, engine
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season

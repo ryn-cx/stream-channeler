@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { SeasonsService } from "@/client"
-import { MediaListPage } from "@/components/Media/MediaListPage"
+import { MediaListPage } from "@/components/Common/DataTable"
 import {
   type SeasonTableData,
   seasonColumns,
@@ -34,13 +34,14 @@ function SeasonsPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sorting: JSON.stringify(params.sorting),
-          filters: JSON.stringify(params.columnFilters),
+          sortOptions: JSON.stringify(params.sorting),
+          filterOptions: JSON.stringify(params.columnFilters),
         })
         return {
           data: result.data,
-          count: result.count,
-          server_side: result.server_side,
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
         }
       }}
     />

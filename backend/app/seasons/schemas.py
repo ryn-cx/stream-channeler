@@ -28,9 +28,10 @@ class SeasonOutput(BaseSeason):
     id: uuid.UUID
 
 
-class SeasonTableOutput(BaseModel):
+class SeasonsPublic(BaseModel):
     """Schema for returning a list of `Season`s."""
 
     data: list[SeasonOutput]
-    count: int
-    server_side: bool
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

@@ -28,9 +28,10 @@ class SourcePublic(BaseSource):
     id: uuid.UUID
 
 
-class SourceTableOutput(BaseModel):
+class SourcesPublic(BaseModel):
     """Schema for returning a list of `Source`s."""
 
     data: list[SourcePublic]
-    count: int
-    server_side: bool
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

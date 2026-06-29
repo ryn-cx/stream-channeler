@@ -30,12 +30,13 @@ class PluginOutput(BasePlugin):
     id: uuid.UUID
 
 
-class PluginTableOutput(BaseModel):
+class PluginsPublic(BaseModel):
     """Schema for returning a list of `Plugin`s."""
 
     data: list[PluginOutput]
-    count: int
-    server_side: bool
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
 
 
 class PluginImportWatchHistoryInformation(BaseModel):

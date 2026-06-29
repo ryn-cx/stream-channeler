@@ -7,6 +7,7 @@ from pydantic import EmailStr
 from sqlalchemy import DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
@@ -22,6 +23,11 @@ class UserBase(SQLModel):
     is_active: bool = True
     is_superuser: bool = False
     username: str | None = Field(default=None, max_length=255)
+    server_side_threshold: int = Field(
+        default=10_000,
+        ge=0,
+        le=SERVER_SIDE_THRESHOLD_MAXIMUM,
+    )
 
 
 # Database model, database table inferred from class name

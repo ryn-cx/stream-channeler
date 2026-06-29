@@ -218,10 +218,11 @@ export type EpisodeOutput = {
 /**
  * Schema for returning a list of `Episode`s.
  */
-export type EpisodeTableOutput = {
+export type EpisodesPublic = {
     data: Array<EpisodeOutput>;
-    count: number;
-    server_side: boolean;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -321,16 +322,15 @@ export type FileUpdate = {
     content?: (string | null);
 };
 
+export type FilterOption = {
+    id: string;
+    value: unknown;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
-/**
- * Which owner's records a table query targets.
- *
- * Own content is represented by an unset `owner` (`None`), so this enum only
- * covers the admin-only views.
- */
 export type MediaOwner = 'official' | 'others';
 
 /**
@@ -507,10 +507,11 @@ export type PluginSearchResultSource = {
 /**
  * Schema for returning a list of `Plugin`s.
  */
-export type PluginTableOutput = {
+export type PluginsPublic = {
     data: Array<PluginOutput>;
-    count: number;
-    server_side: boolean;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -576,10 +577,11 @@ export type SeasonOutput = {
 /**
  * Schema for returning a list of `Season`s.
  */
-export type SeasonTableOutput = {
+export type SeasonsPublic = {
     data: Array<SeasonOutput>;
-    count: number;
-    server_side: boolean;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -635,10 +637,11 @@ export type ShowPublic = {
 /**
  * Schema for returning a list of `Show`s.
  */
-export type ShowTableOutput = {
+export type ShowsPublic = {
     data: Array<ShowPublic>;
-    count: number;
-    server_side: boolean;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -673,6 +676,11 @@ export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
 export type direction = 'ascending' | 'descending';
 
 export type order = 'sequential' | 'interleave' | 'randomize';
+
+export type SortOption = {
+    id: string;
+    desc?: boolean;
+};
 
 export type SortOptionOutput = {
     label: string;
@@ -713,10 +721,11 @@ export type SourcePublic = {
 /**
  * Schema for returning a list of `Source`s.
  */
-export type SourceTableOutput = {
+export type SourcesPublic = {
     data: Array<SourcePublic>;
-    count: number;
-    server_side: boolean;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -753,6 +762,7 @@ export type UserCreate = {
     is_active?: boolean;
     is_superuser?: boolean;
     username?: (string | null);
+    server_side_threshold?: number;
     password: string;
 };
 
@@ -761,6 +771,7 @@ export type UserPublic = {
     is_active?: boolean;
     is_superuser?: boolean;
     username?: (string | null);
+    server_side_threshold?: number;
     id: string;
     created_at?: (string | null);
 };
@@ -781,18 +792,24 @@ export type UserUpdate = {
     is_active?: boolean;
     is_superuser?: boolean;
     username?: (string | null);
+    server_side_threshold?: number;
     password?: (string | null);
 };
 
 export type UserUpdateMe = {
     username?: (string | null);
     email?: (string | null);
+    server_side_threshold?: (number | null);
 };
 
 export type ValidationError = {
     loc: Array<(string | number)>;
     msg: string;
     type: string;
+    input?: unknown;
+    ctx?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -1097,14 +1114,14 @@ export type ChannelsClearChannelCompletedQueueData = {
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
 export type EpisodesGetEpisodesData = {
-    filters?: (string | null);
+    filterOptions?: string;
     limit?: number;
     offset?: number;
     owner?: (MediaOwner | null);
-    sorting?: (string | null);
+    sortOptions?: string;
 };
 
-export type EpisodesGetEpisodesResponse = (EpisodeTableOutput);
+export type EpisodesGetEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesGetEpisodeData = {
     episodeId: string;
@@ -1230,14 +1247,14 @@ export type PluginsSearchPluginData = {
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
 export type PluginsGetPluginsData = {
-    filters?: (string | null);
+    filterOptions?: string;
     limit?: number;
     offset?: number;
     owner?: (MediaOwner | null);
-    sorting?: (string | null);
+    sortOptions?: string;
 };
 
-export type PluginsGetPluginsResponse = (PluginTableOutput);
+export type PluginsGetPluginsResponse = (PluginsPublic);
 
 export type PluginsCreatePluginData = {
     requestBody: PluginCreate;
@@ -1246,10 +1263,14 @@ export type PluginsCreatePluginData = {
 export type PluginsCreatePluginResponse = (PluginOutput);
 
 export type PluginsGetPluginSourcesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
     pluginId: string;
+    sortOptions?: string;
 };
 
-export type PluginsGetPluginSourcesResponse = (Array<SourcePublic>);
+export type PluginsGetPluginSourcesResponse = (SourcesPublic);
 
 export type PluginsCreateSourceData = {
     pluginId: string;
@@ -1298,14 +1319,14 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type SeasonsGetSeasonsData = {
-    filters?: (string | null);
+    filterOptions?: string;
     limit?: number;
     offset?: number;
     owner?: (MediaOwner | null);
-    sorting?: (string | null);
+    sortOptions?: string;
 };
 
-export type SeasonsGetSeasonsResponse = (SeasonTableOutput);
+export type SeasonsGetSeasonsResponse = (SeasonsPublic);
 
 export type SeasonsGetSeasonData = {
     seasonId: string;
@@ -1334,20 +1355,24 @@ export type SeasonsCreateEpisodeData = {
 export type SeasonsCreateEpisodeResponse = (EpisodeOutput);
 
 export type SeasonsGetEpisodesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
     seasonId: string;
+    sortOptions?: string;
 };
 
-export type SeasonsGetEpisodesResponse = (Array<EpisodeOutput>);
+export type SeasonsGetEpisodesResponse = (EpisodesPublic);
 
 export type ShowsGetShowsData = {
-    filters?: (string | null);
+    filterOptions?: string;
     limit?: number;
     offset?: number;
     owner?: (MediaOwner | null);
-    sorting?: (string | null);
+    sortOptions?: string;
 };
 
-export type ShowsGetShowsResponse = (ShowTableOutput);
+export type ShowsGetShowsResponse = (ShowsPublic);
 
 export type ShowsGetShowData = {
     showId: string;
@@ -1376,20 +1401,24 @@ export type ShowsCreateSeasonData = {
 export type ShowsCreateSeasonResponse = (SeasonOutput);
 
 export type ShowsGetSeasonsData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
     showId: string;
+    sortOptions?: string;
 };
 
-export type ShowsGetSeasonsResponse = (Array<SeasonOutput>);
+export type ShowsGetSeasonsResponse = (SeasonsPublic);
 
 export type SourcesGetSourcesData = {
-    filters?: (string | null);
+    filterOptions?: string;
     limit?: number;
     offset?: number;
     owner?: (MediaOwner | null);
-    sorting?: (string | null);
+    sortOptions?: string;
 };
 
-export type SourcesGetSourcesResponse = (SourceTableOutput);
+export type SourcesGetSourcesResponse = (SourcesPublic);
 
 export type SourcesGetSourceData = {
     sourceId: string;
@@ -1418,10 +1447,14 @@ export type SourcesCreateShowData = {
 export type SourcesCreateShowResponse = (ShowPublic);
 
 export type SourcesGetShowsData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
     sourceId: string;
 };
 
-export type SourcesGetShowsResponse = (Array<ShowPublic>);
+export type SourcesGetShowsResponse = (ShowsPublic);
 
 export type UsersReadUsersData = {
     limit?: number;

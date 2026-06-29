@@ -28,9 +28,10 @@ class ShowPublic(BaseShow):
     id: uuid.UUID
 
 
-class ShowTableOutput(BaseModel):
+class ShowsPublic(BaseModel):
     """Schema for returning a list of `Show`s."""
 
     data: list[ShowPublic]
-    count: int
-    server_side: bool
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

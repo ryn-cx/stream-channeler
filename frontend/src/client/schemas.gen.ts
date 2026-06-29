@@ -1284,30 +1284,6 @@ export const EpisodeOutputSchema = {
     description: 'Schema for returning an `Episode`.'
 } as const;
 
-export const EpisodeTableOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/EpisodeOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        server_side: {
-            type: 'boolean',
-            title: 'Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count', 'server_side'],
-    title: 'EpisodeTableOutput',
-    description: 'Schema for returning a list of `Episode`s.'
-} as const;
-
 export const EpisodeUpdateSchema = {
     properties: {
         key: {
@@ -1698,6 +1674,34 @@ export const EpisodeWithDetailsSchema = {
     title: 'EpisodeWithDetails'
 } as const;
 
+export const EpisodesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'EpisodesPublic',
+    description: 'Schema for returning a list of `Episode`s.'
+} as const;
+
 export const FileCreateSchema = {
     properties: {
         key: {
@@ -1983,6 +1987,21 @@ export const FileUpdateSchema = {
     description: 'Schema for updating a `File`.'
 } as const;
 
+export const FilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'FilterOption'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -2000,11 +2019,7 @@ export const HTTPValidationErrorSchema = {
 export const MediaOwnerSchema = {
     type: 'string',
     enum: ['official', 'others'],
-    title: 'MediaOwner',
-    description: `Which owner's records a table query targets.
-
-Own content is represented by an unset \`owner\` (\`None\`), so this enum only
-covers the admin-only views.`
+    title: 'MediaOwner'
 } as const;
 
 export const MessageSchema = {
@@ -2823,30 +2838,6 @@ export const PluginSearchResultsSchema = {
     description: 'Results from a search query.'
 } as const;
 
-export const PluginTableOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/PluginOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        server_side: {
-            type: 'boolean',
-            title: 'Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count', 'server_side'],
-    title: 'PluginTableOutput',
-    description: 'Schema for returning a list of `Plugin`s.'
-} as const;
-
 export const PluginURLMatchSchema = {
     properties: {
         matched: {
@@ -2968,6 +2959,34 @@ export const PluginUpdateSchema = {
     type: 'object',
     title: 'PluginUpdate',
     description: 'Schema for updating a `Plugin`.'
+} as const;
+
+export const PluginsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PluginOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'PluginsPublic',
+    description: 'Schema for returning a list of `Plugin`s.'
 } as const;
 
 export const PrivateUserCreateSchema = {
@@ -3237,30 +3256,6 @@ export const SeasonOutputSchema = {
     description: 'Schema for returning a `Season`.'
 } as const;
 
-export const SeasonTableOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/SeasonOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        server_side: {
-            type: 'boolean',
-            title: 'Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count', 'server_side'],
-    title: 'SeasonTableOutput',
-    description: 'Schema for returning a list of `Season`s.'
-} as const;
-
 export const SeasonUpdateSchema = {
     properties: {
         key: {
@@ -3382,6 +3377,34 @@ export const SeasonUpdateSchema = {
     type: 'object',
     title: 'SeasonUpdate',
     description: 'Schema for updating a `Season`.'
+} as const;
+
+export const SeasonsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SeasonOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'SeasonsPublic',
+    description: 'Schema for returning a list of `Season`s.'
 } as const;
 
 export const ShowCreateSchema = {
@@ -3626,30 +3649,6 @@ export const ShowPublicSchema = {
     description: 'Schema for returning a `Show`.'
 } as const;
 
-export const ShowTableOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ShowPublic'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        server_side: {
-            type: 'boolean',
-            title: 'Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count', 'server_side'],
-    title: 'ShowTableOutput',
-    description: 'Schema for returning a list of `Show`s.'
-} as const;
-
 export const ShowUpdateSchema = {
     properties: {
         key: {
@@ -3773,6 +3772,34 @@ export const ShowUpdateSchema = {
     description: 'Schema for updating a `Show`.'
 } as const;
 
+export const ShowsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ShowPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'ShowsPublic',
+    description: 'Schema for returning a list of `Show`s.'
+} as const;
+
 export const SortKeyInputSchema = {
     properties: {
         model: {
@@ -3846,6 +3873,23 @@ export const SortKeyInputSchema = {
     type: 'object',
     required: ['model', 'field', 'direction', 'order'],
     title: 'SortKeyInput'
+} as const;
+
+export const SortOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        desc: {
+            type: 'boolean',
+            title: 'Desc',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['id'],
+    title: 'SortOption'
 } as const;
 
 export const SortOptionOutputSchema = {
@@ -4067,30 +4111,6 @@ export const SourcePublicSchema = {
     description: 'Schema for returning a `Source`.'
 } as const;
 
-export const SourceTableOutputSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/SourcePublic'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        server_side: {
-            type: 'boolean',
-            title: 'Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count', 'server_side'],
-    title: 'SourceTableOutput',
-    description: 'Schema for returning a list of `Source`s.'
-} as const;
-
 export const SourceUpdateSchema = {
     properties: {
         key: {
@@ -4192,6 +4212,34 @@ export const SourceUpdateSchema = {
     description: 'Schema for updating a `Source`.'
 } as const;
 
+export const SourcesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SourcePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'SourcesPublic',
+    description: 'Schema for returning a list of `Source`s.'
+} as const;
+
 export const TokenSchema = {
     properties: {
         access_token: {
@@ -4266,6 +4314,13 @@ export const UserCreateSchema = {
             ],
             title: 'Username'
         },
+        server_side_threshold: {
+            type: 'integer',
+            maximum: 100000,
+            minimum: 0,
+            title: 'Server Side Threshold',
+            default: 10000
+        },
         password: {
             type: 'string',
             maxLength: 128,
@@ -4307,6 +4362,13 @@ export const UserPublicSchema = {
                 }
             ],
             title: 'Username'
+        },
+        server_side_threshold: {
+            type: 'integer',
+            maximum: 100000,
+            minimum: 0,
+            title: 'Server Side Threshold',
+            default: 10000
         },
         id: {
             type: 'string',
@@ -4400,6 +4462,13 @@ export const UserUpdateSchema = {
             ],
             title: 'Username'
         },
+        server_side_threshold: {
+            type: 'integer',
+            maximum: 100000,
+            minimum: 0,
+            title: 'Server Side Threshold',
+            default: 10000
+        },
         password: {
             anyOf: [
                 {
@@ -4444,6 +4513,19 @@ export const UserUpdateMeSchema = {
                 }
             ],
             title: 'Email'
+        },
+        server_side_threshold: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 100000,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Server Side Threshold'
         }
     },
     type: 'object',
@@ -4492,6 +4574,13 @@ export const ValidationErrorSchema = {
         type: {
             type: 'string',
             title: 'Error Type'
+        },
+        input: {
+            title: 'Input'
+        },
+        ctx: {
+            type: 'object',
+            title: 'Context'
         }
     },
     type: 'object',

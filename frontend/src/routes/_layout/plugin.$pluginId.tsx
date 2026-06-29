@@ -1,25 +1,14 @@
-import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Database } from "lucide-react"
 
 import { PluginsService } from "@/client"
-import { DetailTablePage } from "@/components/Media/DetailTablePage"
+import { DetailTablePage } from "@/components/Common/DataTable"
 import AddSource from "@/components/Sources/Add"
 import {
   type SourceTableData,
   sourceColumns,
 } from "@/components/Sources/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-
-function getSourcesQueryOptions(pluginId: string) {
-  return {
-    queryFn: () =>
-      PluginsService.getPluginSources({ pluginId }) as unknown as Promise<
-        SourceTableData[]
-      >,
-    queryKey: ["plugins", pluginId, "sources"],
-  }
-}
 
 export const Route = createFileRoute("/_layout/plugin/$pluginId")({
   component: PluginDetailPage,
@@ -35,13 +24,27 @@ export const Route = createFileRoute("/_layout/plugin/$pluginId")({
 
 function PluginDetailPage() {
   const { pluginId } = Route.useParams()
-  const { data } = useQuery(getSourcesQueryOptions(pluginId))
 
   return (
-    <DetailTablePage
+    <DetailTablePage<SourceTableData>
       title="Sources"
       columns={sourceColumns}
-      data={data}
+      queryKey={["plugins", pluginId, "sources"]}
+      fetchTable={async (params) => {
+        const result = await PluginsService.getPluginSources({
+          pluginId,
+          offset: params.offset,
+          limit: params.limit,
+          sortOptions: JSON.stringify(params.sorting),
+          filterOptions: JSON.stringify(params.columnFilters),
+        })
+        return {
+          data: result.data,
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
+        }
+      }}
       columnVisibilityKey="sources-column-visibility"
       emptyIcon={Database}
       emptyTitle="This plugin has no sources yet"

@@ -10,18 +10,15 @@ from app.episodes.dependencies import OwnedEpisode, ReadableEpisode
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     EpisodeOutput,
-    EpisodeTableOutput,
+    EpisodesPublic,
     EpisodeUpdate,
 )
-from app.media.service import (
-    MediaOwner,
-    build_table_columns,
-    build_table_page,
-    delete_record,
-)
+from app.media.schemas import MediaOwner, MediaReadOptions
+from app.media.service import delete_record
 from app.plugins.models import Plugin
 from app.schemas import Message
 from app.seasons.models import Season
+from app.service import get_read_results
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
@@ -33,22 +30,15 @@ from app.watches.services import create_watches
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
-# Every `EpisodeOutput` field is filterable and sortable; date columns also filter by range.
-_TABLE_COLUMNS, _DATE_RANGE_COLUMNS = build_table_columns(Episode, EpisodeOutput)
-
 
 @router.get("")
-def get_episodes(  # noqa: PLR0913 - FastAPI query parameters
+def get_episodes(
     session: SessionDep,
     current_user: CurrentUser,
-    owner: MediaOwner | None = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100_000)] = 100,
-    sorting: str | None = None,
-    filters: str | None = None,
-) -> EpisodeTableOutput:
+    read_options: Annotated[MediaReadOptions, Query()],
+) -> EpisodesPublic:
     base = select(Episode).join(Season).join(Show).join(Source).join(Plugin)
-    if owner is None:
+    if read_options.owner is None:
         base = base.where(Plugin.user_id == current_user.id)
     else:
         if not current_user.is_superuser:
@@ -57,27 +47,26 @@ def get_episodes(  # noqa: PLR0913 - FastAPI query parameters
                 detail="The user doesn't have enough privileges",
             )
         plugin_user = get_or_create_plugin_user(session=session)
-        if owner == MediaOwner.official:
+        if read_options.owner == MediaOwner.official:
             base = base.where(Plugin.user_id == plugin_user.id)
         else:
             base = base.where(
                 col(Plugin.user_id).not_in([current_user.id, plugin_user.id]),
             )
-    rows, count, server_side = build_table_page(
+    rows, total_count, filtered_count, is_server_side = get_read_results(
         session,
         base,
-        columns=_TABLE_COLUMNS,
-        date_range_columns=_DATE_RANGE_COLUMNS,
+        schema=EpisodeOutput,
+        default_sort=Episode.created_at,
         tiebreaker=Episode.id,
-        offset=offset,
-        limit=limit,
-        sorting=sorting,
-        filters=filters,
+        params=read_options,
+        current_user=current_user,
     )
-    return EpisodeTableOutput(
+    return EpisodesPublic(
         data=[EpisodeOutput.model_validate(row) for row in rows],
-        count=count,
-        server_side=server_side,
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
     )
 
 
