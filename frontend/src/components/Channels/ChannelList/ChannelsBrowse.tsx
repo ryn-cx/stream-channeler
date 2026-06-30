@@ -1,16 +1,22 @@
 // TODO: Validate
-import { useQueries } from "@tanstack/react-query"
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
-import type { ChannelOutput, ChannelPublicOutput } from "@/client"
+import {
+  type ChannelOutput,
+  type ChannelPublicOutput,
+  ChannelsService,
+} from "@/client"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
+import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
@@ -26,10 +32,41 @@ interface ChannelRowProps {
   readOnly?: boolean
 }
 
+function AdminEditChannel({ channel }: { channel: ChannelPublicOutput }) {
+  const [open, setOpen] = useState(false)
+  const { data: fullChannel } = useQuery({
+    queryKey: ["channels", channel.id, "admin-edit"],
+    queryFn: () => ChannelsService.getChannel({ channelId: channel.id }),
+    enabled: open,
+  })
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        title="Edit Channel"
+        onClick={() => setOpen(true)}
+      >
+        <Pencil className="size-4" />
+      </Button>
+      {open && fullChannel && (
+        <EditChannelDialog
+          channel={{ ...fullChannel, username: channel.username }}
+          open={open}
+          onOpenChange={setOpen}
+        />
+      )}
+    </>
+  )
+}
+
 function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
+  const { user } = useAuth()
+  const isAdmin = user?.is_superuser ?? false
 
   const defaultOrder = channel.default_order
     ? (() => {
@@ -105,7 +142,12 @@ function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
         </Link>
         <div className="flex">
           {readOnly ? (
-            <ChannelShowsButton channelId={channel.id} />
+            <>
+              {isAdmin && (
+                <AdminEditChannel channel={channel as ChannelPublicOutput} />
+              )}
+              <ChannelShowsButton channelId={channel.id} />
+            </>
           ) : (
             <>
               {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
