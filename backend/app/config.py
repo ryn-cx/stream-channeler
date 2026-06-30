@@ -118,7 +118,6 @@ class Settings(BaseSettings):
         return self
 
     YOUTUBE_API_KEY: str
-
     GET_AROUND_SERVER: str
     GET_AROUND_PASSWORD: str
     PROXY: str

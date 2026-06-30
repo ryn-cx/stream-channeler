@@ -1,3 +1,4 @@
+# TODO: Validate
 """Season router."""
 
 from typing import Annotated
@@ -34,9 +35,9 @@ def get_seasons(
     current_user: CurrentUser,
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> SeasonsPublic:
-    base = select(Season).join(Show).join(Source).join(Plugin)
+    season_selector = select(Season).join(Show).join(Source).join(Plugin)
     if read_options.owner is None:
-        base = base.where(Plugin.user_id == current_user.id)
+        season_selector = season_selector.where(Plugin.user_id == current_user.id)
     else:
         if not current_user.is_superuser:
             raise HTTPException(
@@ -45,14 +46,14 @@ def get_seasons(
             )
         plugin_user = get_or_create_plugin_user(session=session)
         if read_options.owner == MediaOwner.official:
-            base = base.where(Plugin.user_id == plugin_user.id)
+            season_selector = season_selector.where(Plugin.user_id == plugin_user.id)
         else:
-            base = base.where(
+            season_selector = season_selector.where(
                 col(Plugin.user_id).not_in([current_user.id, plugin_user.id]),
             )
     rows, total_count, filtered_count, is_server_side = get_read_results(
         session,
-        base,
+        season_selector,
         schema=SeasonOutput,
         default_sort=Season.created_at,
         tiebreaker=Season.id,

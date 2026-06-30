@@ -549,9 +549,9 @@ def clear_channel_completed_queue(
     channel: OwnedChannel,
 ) -> Message:
     """Clear a channel's import queue."""
-    for existing_record in channel.queue:
-        if existing_record.status == service.URLStatus.IMPORTED:
-            session.delete(existing_record)
+    for queue_entry in channel.queue:
+        if queue_entry.status == service.URLStatus.IMPORTED:
+            session.delete(queue_entry)
 
     session.commit()
     return Message(message="Import queue cleared successfully")

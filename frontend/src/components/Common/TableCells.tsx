@@ -1,3 +1,4 @@
+// TODO: Validate
 interface CellProps {
   value: string | null | undefined
 }

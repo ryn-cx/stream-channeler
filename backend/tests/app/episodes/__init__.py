@@ -1,2 +1,1 @@
-# TODO: Validate
-"""Episodes tests."""
+"""`Episode` tests."""

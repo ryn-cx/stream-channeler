@@ -23,7 +23,6 @@ app = FastAPI(
     generate_unique_id_function=custom_generate_unique_id,
 )
 
-app.add_middleware(GZipMiddleware)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:
@@ -35,18 +34,20 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
+# TODO: Enable this in the template.
+app.add_middleware(GZipMiddleware)
 
+# TODO: Implement this improved function into the template.
 def automatically_import_routers() -> APIRouter:
     api_router = APIRouter()
-    for router_file in APP_PATH.glob("*/router.py"):
+    for router_file in sorted(APP_PATH.glob("*/router.py")):
         module_name = router_file.parent.name
-        router = import_module(f"app.{module_name}.router").router
 
-        if module_name == "private":
-            if settings.ENVIRONMENT == "local":
-                api_router.include_router(router)
-        else:
-            api_router.include_router(router)
+        if module_name == "private" and settings.ENVIRONMENT != "local":
+            continue
+
+        router = import_module(f"app.{module_name}.router").router
+        api_router.include_router(router)
 
     return api_router
 

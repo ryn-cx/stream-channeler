@@ -1,3 +1,4 @@
+# TODO: Validate
 """Channel models."""
 
 import uuid

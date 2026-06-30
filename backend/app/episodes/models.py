@@ -1,3 +1,4 @@
+# TODO: Validate
 """Episode models."""
 
 import uuid

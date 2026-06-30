@@ -1,3 +1,4 @@
+# TODO: Validate
 """Season schemas."""
 
 import uuid

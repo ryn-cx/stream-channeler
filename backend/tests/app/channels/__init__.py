@@ -1,1 +1,1 @@
-"""Channels tests."""
+"""`Channel` tests."""

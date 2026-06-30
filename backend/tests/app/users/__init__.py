@@ -1,1 +1,1 @@
-"""Users tests."""
+"""`User` tests."""

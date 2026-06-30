@@ -1,1 +1,1 @@
-"""Tests."""
+"""App tests."""

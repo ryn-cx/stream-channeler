@@ -45,14 +45,6 @@ def just_scrape() -> JustScrape:
     )
 
 
-@cache
-def proxied_just_scrape() -> JustScrape:
-    proxy: str | None = settings.PROXY
-    if proxy == "changethis":
-        proxy = None
-    return JustScrape(sleep_time=10, proxy=proxy)
-
-
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     api_endpoint = just_scrape().new_titles
 
@@ -94,8 +86,7 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
         end_date = self.end_datetime.date()
-        # Without proxied_just_scrape 429 errors often occur.
-        return proxied_just_scrape().new_title_buckets.get_all_since_date(end_date)
+        return just_scrape().new_title_buckets.get_all_since_date(end_date)
 
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
         return just_scrape().new_title_buckets.extract_edges(self.parsed())

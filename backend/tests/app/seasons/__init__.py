@@ -1,1 +1,1 @@
-""" "Seasons tests."""
+"""`Season` tests."""

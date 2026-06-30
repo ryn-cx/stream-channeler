@@ -1,3 +1,4 @@
+# TODO: Validate
 """Set Season.update_at values based on new videos found in YouTube's RSS feeds.
 
 YouTube RSS feeds are extremely flaky so they should not be used as the only method for
