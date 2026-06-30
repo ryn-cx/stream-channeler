@@ -34,7 +34,6 @@ from app.channels.schemas import (
     ChannelOptions,
     ChannelOutput,
     ChannelPublicListOutput,
-    ChannelPublicOutput,
     ChannelQueueOutput,
     ChannelShowsOutput,
     ChannelUpdate,
@@ -57,16 +56,6 @@ from app.users.dependencies import OptionalUser
 from app.users.models import User
 
 router = APIRouter(prefix="/channels", tags=["channels"])
-
-
-def _channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
-    output = ChannelOutput.model_validate(channel)
-    if not channel.anonymous:
-        return output
-    if viewer and (viewer.is_superuser or viewer.id == channel.user_id):
-        return output
-    output.user_id = None
-    return output
 
 
 @router.get("", response_model=list[ChannelOutput])
@@ -153,17 +142,7 @@ def get_public_channels(
         .limit(limit),
     ).all()
     data = [
-        ChannelPublicOutput(
-            id=channel.id,
-            name=channel.name,
-            channel_number=channel.channel_number,
-            visibility=channel.visibility,
-            default_order=channel.default_order,
-            description=channel.description,
-            anonymous=channel.anonymous,
-            username=None if channel.anonymous else username,
-        )
-        for channel, username in rows
+        service.public_channel_output(channel, username) for channel, username in rows
     ]
     return ChannelPublicListOutput(data=data, count=count)
 
@@ -217,7 +196,7 @@ def admin_update_channel(
 @router.get("/{channel_id}")  # noqa: FAST003 - Used by ReadableChannel
 def get_channel(channel: ReadableChannel, user: OptionalUser) -> ChannelOutput:
     """Get a `Channel` if it's readable by the current `User`."""
-    return _channel_output(channel, user)
+    return service.channel_output(channel, user)
 
 
 @router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by OwnedChannel.
@@ -265,7 +244,7 @@ def get_channel_episodes(
         select(Channel).where(col(Channel.id).in_(unique_channel_ids)),
     ).all()
     for channel_obj in channels:
-        output.channels[channel_obj.id] = _channel_output(channel_obj, user)
+        output.channels[channel_obj.id] = service.channel_output(channel_obj, user)
 
     for result in results:
         episode = result.episode

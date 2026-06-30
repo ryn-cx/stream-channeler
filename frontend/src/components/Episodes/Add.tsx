@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type ApiError, type EpisodeCreate, SeasonsService } from "@/client"
+import { type ApiError, type EpisodeCreate, EpisodesService } from "@/client"
 import { AddButton } from "@/components/Common/AddButton"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
@@ -69,7 +69,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const mutation = useMutation({
     mutationKey: ["seasons", seasonKey, "episodes", "create"],
     mutationFn: (data: EpisodeCreate) =>
-      SeasonsService.createEpisode({ seasonId: seasonKey, requestBody: data }),
+      EpisodesService.createEpisode({ seasonId: seasonKey, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("Episode created successfully")
     },

@@ -59,13 +59,9 @@ class DateFilterOption(BaseModel):
 
 
 class ReadOptions(BaseModel):
-    sort_options: Json[list[SortOption]] = Field(default_factory=list[SortOption])
-    filter_options: Json[list[StringFilterOption]] = Field(
-        default_factory=list[StringFilterOption],
-    )
-    date_filter_options: Json[list[DateFilterOption]] = Field(
-        default_factory=list[DateFilterOption],
-    )
+    sort_options: Json[list[SortOption]] = Field(default="[]")  # type: ignore[arg-type]
+    filter_options: Json[list[StringFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
+    date_filter_options: Json[list[DateFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 

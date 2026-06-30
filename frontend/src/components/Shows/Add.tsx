@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type ApiError, type ShowCreate, SourcesService } from "@/client"
+import { type ApiError, type ShowCreate, ShowsService } from "@/client"
 import { AddButton } from "@/components/Common/AddButton"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
@@ -57,7 +57,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
   const mutation = useMutation({
     mutationKey: ["sources", sourceKey, "shows", "create"],
     mutationFn: (data: ShowCreate) =>
-      SourcesService.createShow({ sourceId: sourceKey, requestBody: data }),
+      ShowsService.createShow({ sourceId: sourceKey, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("Show created successfully")
     },

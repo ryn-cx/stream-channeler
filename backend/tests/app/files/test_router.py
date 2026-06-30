@@ -8,6 +8,7 @@ from sqlmodel import Session, SQLModel
 
 from app.files.schemas import (
     FileCreate,
+    FileListPublic,
     FilePublic,
     FileUpdate,
 )
@@ -36,6 +37,7 @@ class FileTestMixin(BaseTests[File]):
     database_model = File
     create_schema = FileCreate
     output_schema = FilePublic
+    list_output_schema = FileListPublic
     update_schema = FileUpdate
 
     create_parent_function = staticmethod(create_random_plugin)
@@ -157,7 +159,7 @@ class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
         user_is_superuser: bool,
         record_is_owned_by_plugin_user: bool,
     ) -> None:
-        """Ensure only a superuser owner (or plugin-user carve-out) can update."""
+        """Ensure only a superuser can update."""
         initial_test_data = self.create_test_data(
             client=session_scoped_client,
             session=session_scoped_session,
@@ -170,11 +172,7 @@ class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
 
         patch_input = build_random_model(self.update_schema)
 
-        can_update = (
-            user_is_authenticated
-            and user_is_superuser
-            and (user_is_owner or record_is_owned_by_plugin_user)
-        )
+        can_update = user_is_authenticated and user_is_superuser
         if can_update:
             self.assert_api_update_success(
                 session_scoped_session,

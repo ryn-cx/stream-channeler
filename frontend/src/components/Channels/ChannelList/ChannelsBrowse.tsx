@@ -30,6 +30,8 @@ interface ChannelRowProps {
   channel: BrowseChannel
   onDelete: (channel: BrowseChannel) => void
   readOnly?: boolean
+  showCreatedBy?: boolean
+  showChannelNumber?: boolean
 }
 
 function AdminEditChannel({ channel }: { channel: ChannelPublicOutput }) {
@@ -61,7 +63,13 @@ function AdminEditChannel({ channel }: { channel: ChannelPublicOutput }) {
   )
 }
 
-function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
+function ChannelRow({
+  channel,
+  onDelete,
+  readOnly = false,
+  showCreatedBy = true,
+  showChannelNumber = true,
+}: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -127,7 +135,7 @@ function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
   return (
     <div className="group/row relative">
       <div className="flex items-center gap-3 mb-2 px-[4%]">
-        {channel.channel_number != null && (
+        {showChannelNumber && channel.channel_number != null && (
           <span className="text-2xl font-bold text-muted-foreground tabular-nums">
             {channel.channel_number}
           </span>
@@ -169,6 +177,23 @@ function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
       {readOnly && channel.description && (
         <p className="px-[4%] mb-2 text-sm text-muted-foreground line-clamp-2">
           {channel.description}
+        </p>
+      )}
+
+      {readOnly && showCreatedBy && (
+        <p className="px-[4%] mb-2 text-sm text-muted-foreground">
+          Created by{" "}
+          {channel.user_id ? (
+            <Link
+              to="/users/$userId/channels"
+              params={{ userId: channel.user_id }}
+              className="underline hover:text-foreground"
+            >
+              {(channel as ChannelPublicOutput).username || "Unnamed User"}
+            </Link>
+          ) : (
+            "Anonymous"
+          )}
         </p>
       )}
 
@@ -230,11 +255,15 @@ function ChannelRow({ channel, onDelete, readOnly = false }: ChannelRowProps) {
 interface ChannelsBrowseProps {
   channels: BrowseChannel[]
   readOnly?: boolean
+  showCreatedBy?: boolean
+  showChannelNumber?: boolean
 }
 
 export function ChannelsBrowse({
   channels,
   readOnly = false,
+  showCreatedBy = true,
+  showChannelNumber = true,
 }: ChannelsBrowseProps) {
   // Public (read-only) lists arrive already ordered by the server (score then id),
   // so preserve that order. Owner lists are sorted by channel number locally.
@@ -256,6 +285,8 @@ export function ChannelsBrowse({
           channel={channel}
           onDelete={setDeleteChannel}
           readOnly={readOnly}
+          showCreatedBy={showCreatedBy}
+          showChannelNumber={showChannelNumber}
         />
       ))}
       {channels.length === 0 && (

@@ -5,10 +5,10 @@ import { Globe, Lock, Save } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import {
-  EpisodesService,
   type PlaylistEpisodesOutput,
   PlaylistsService,
   type Visibility,
+  WatchesService,
 } from "@/client"
 import { EditOrderButton } from "@/components/PlaylistChannelCommon/EditOrderButton"
 import type {
@@ -203,7 +203,7 @@ function PlaylistDetail() {
 
   const playHeroMutation = useMutation({
     mutationFn: (episodeId: string) =>
-      EpisodesService.createWatch({
+      WatchesService.createWatch({
         episodeId,
         requestBody: {
           watch_date: new Date().toISOString(),

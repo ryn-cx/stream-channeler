@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
-import { SeasonsService } from "@/client"
+import { EpisodesService } from "@/client"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -34,7 +34,7 @@ function SeasonDetailPage() {
       columns={episodeColumns}
       queryKey={["seasons", seasonKey, "episodes"]}
       fetchTable={async (params) => {
-        const result = await SeasonsService.getEpisodes({
+        const result = await EpisodesService.getSeasonEpisodes({
           seasonId: seasonKey,
           offset: params.offset,
           limit: params.limit,

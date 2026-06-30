@@ -8,14 +8,14 @@ from sqlmodel import col, select
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.media.schemas import MediaOwner, MediaReadOptions
 from app.media.service import delete_record
+from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import get_read_results
-from app.shows.models import Show
-from app.shows.schemas import ShowCreate, ShowPublic, ShowsPublic
 from app.sources.dependencies import OwnedSource, ReadableSource
 from app.sources.models import Source
 from app.sources.schemas import (
+    SourceCreate,
     SourcePublic,
     SourcesPublic,
     SourceUpdate,
@@ -23,10 +23,10 @@ from app.sources.schemas import (
 from app.users.dependencies import OptionalUser
 from app.users.service import get_or_create_plugin_user
 
-router = APIRouter(prefix="/sources", tags=["sources"])
+sources_router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-@router.get("")
+@sources_router.get("")
 def get_sources(
     session: SessionDep,
     current_user: CurrentUser,
@@ -65,13 +65,13 @@ def get_sources(
     )
 
 
-@router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource
+@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource
 def get_source(source: ReadableSource) -> Source:
     """Get a `Source` if it's readable by the current `User`."""
     return source
 
 
-@router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by OwnedSource
+@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by OwnedSource
 def update_source(
     session: SessionDep,
     source: OwnedSource,
@@ -81,43 +81,51 @@ def update_source(
     return source_input.update(session, source)
 
 
-@router.delete("/{source_id}")  # noqa: FAST003 - Used by OwnedSource
+@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by OwnedSource
 def delete_source(session: SessionDep, source: OwnedSource) -> Message:
     """Delete a `Source` if it's owned by the current `User`."""
     return delete_record(session, source)
 
 
-@router.post("/{source_id}/shows", response_model=ShowPublic)  # noqa: FAST003 - Used by OwnedSource
-def create_show(
-    session: SessionDep,
-    source: OwnedSource,
-    show_input: ShowCreate,
-) -> Show:
-    """Create a `Show` if the `Source` is owned by the current `User`."""
-    return show_input.create(session, Show, source)
+plugin_sources_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["sources"])
 
 
-@router.get("/{source_id}/shows")  # noqa: FAST003 - Used by ReadableSource
-def get_shows(
+@plugin_sources_router.post("/sources", response_model=SourcePublic)
+def create_source(
     session: SessionDep,
-    source: ReadableSource,
+    plugin: OwnedPlugin,
+    source_input: SourceCreate,
+) -> Source:
+    """Create a `Source` if the `Plugin` is owned by the current `User`."""
+    return source_input.create(session, Source, plugin)
+
+
+@plugin_sources_router.get("/sources")
+def get_plugin_sources(
+    session: SessionDep,
+    plugin: ReadablePlugin,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
-) -> ShowsPublic:
-    """Get all `Show`s for a `Source` if it's readable by the current `User`."""
-    base = select(Show).where(Show.source_id == source.id)
+) -> SourcesPublic:
+    """List all `Source`s for a `Plugin` if it is public or owned by the current `User`."""
+    base = select(Source).where(Source.plugin_id == plugin.id)
     rows, total_count, filtered_count, is_server_side = get_read_results(
         session,
         base,
-        schema=ShowPublic,
-        default_sort=Show.created_at,
-        tiebreaker=Show.id,
+        schema=SourcePublic,
+        default_sort=Source.created_at,
+        tiebreaker=Source.id,
         params=read_options,
         current_user=current_user,
     )
-    return ShowsPublic(
-        data=[ShowPublic.model_validate(row) for row in rows],
+    return SourcesPublic(
+        data=[SourcePublic.model_validate(row) for row in rows],
         total_count=total_count,
         filtered_count=filtered_count,
         is_server_side=is_server_side,
     )
+
+
+router = APIRouter()
+router.include_router(sources_router)
+router.include_router(plugin_sources_router)

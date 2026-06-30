@@ -26,11 +26,8 @@ from app.plugins.schemas import (
     PluginUpdate,
     PluginURLMatch,
 )
-from app.schemas import Message, ReadOptions
+from app.schemas import Message
 from app.service import get_read_results
-from app.sources.models import Source
-from app.sources.schemas import SourceCreate, SourcePublic, SourcesPublic
-from app.users.dependencies import OptionalUser
 from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
@@ -167,42 +164,6 @@ def create_plugin(
 ) -> Plugin:
     """Create a `Plugin` owned by the current `User`."""
     return plugin_input.create(session, Plugin, current_user)
-
-
-@router.get("/{plugin_id}/sources")  # noqa: FAST003 - Used by ReadablePlugin
-def get_plugin_sources(
-    session: SessionDep,
-    plugin: ReadablePlugin,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> SourcesPublic:
-    """List all `Source`s for a `Plugin` if it is public or owned by the current `User`."""
-    base = select(Source).where(Source.plugin_id == plugin.id)
-    rows, total_count, filtered_count, is_server_side = get_read_results(
-        session,
-        base,
-        schema=SourcePublic,
-        default_sort=Source.created_at,
-        tiebreaker=Source.id,
-        params=read_options,
-        current_user=current_user,
-    )
-    return SourcesPublic(
-        data=[SourcePublic.model_validate(row) for row in rows],
-        total_count=total_count,
-        filtered_count=filtered_count,
-        is_server_side=is_server_side,
-    )
-
-
-@router.post("/{plugin_id}/sources", response_model=SourcePublic)  # noqa: FAST003 - Used by OwnedPlugin
-def create_source(
-    session: SessionDep,
-    plugin: OwnedPlugin,
-    source_input: SourceCreate,
-) -> Source:
-    """Create a `Source` if the `Plugin` is owned by the current `User`."""
-    return source_input.create(session, Source, plugin)
 
 
 @router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin

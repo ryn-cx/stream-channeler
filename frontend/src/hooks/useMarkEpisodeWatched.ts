@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { EpisodesService } from "@/client"
+import { WatchesService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -21,7 +21,7 @@ export function useMarkWatched(channelId: string | undefined) {
 
   return useMutation({
     mutationFn: (episodeId: string) =>
-      EpisodesService.createWatch({
+      WatchesService.createWatch({
         episodeId,
         requestBody: {
           watch_date: new Date().toISOString(),

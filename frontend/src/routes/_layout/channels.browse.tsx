@@ -73,7 +73,11 @@ function PublicChannelsContent() {
         />
       ) : (
         <>
-          <ChannelsBrowse channels={data.data} readOnly />
+          <ChannelsBrowse
+            channels={data.data}
+            readOnly
+            showChannelNumber={false}
+          />
 
           <div className="flex items-center justify-center gap-x-6 pb-8">
             <div className="flex items-center gap-x-1 text-sm text-muted-foreground">

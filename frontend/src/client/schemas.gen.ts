@@ -801,6 +801,18 @@ export const ChannelPublicOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
         username: {
             anyOf: [
                 {
@@ -814,7 +826,7 @@ export const ChannelPublicOutputSchema = {
         }
     },
     type: 'object',
-    required: ['visibility', 'id', 'username'],
+    required: ['visibility', 'id', 'user_id', 'username'],
     title: 'ChannelPublicOutput',
     description: 'Schema for returning a publicly listed `Channel`.'
 } as const;

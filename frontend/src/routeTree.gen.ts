@@ -39,6 +39,7 @@ import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/chann
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
+import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
 import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
 import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
@@ -194,6 +195,12 @@ const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutUsersUserIdChannelsRoute =
+  LayoutUsersUserIdChannelsRouteImport.update({
+    id: '/users/$userId/channels',
+    path: '/users/$userId/channels',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutOnboardingChannelIdSortRoute =
   LayoutOnboardingChannelIdSortRouteImport.update({
     id: '/$channelId/sort',
@@ -220,6 +227,7 @@ const LayoutOnboardingChannelIdDoneRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -234,7 +242,6 @@ export interface FileRoutesByFullPath {
   '/shows': typeof LayoutShowsRoute
   '/sources': typeof LayoutSourcesRoute
   '/watches': typeof LayoutWatchesRoute
-  '/': typeof LayoutIndexRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -246,13 +253,14 @@ export interface FileRoutesByFullPath {
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin/': typeof LayoutAdminIndexRoute
-  '/channels': typeof LayoutChannelsIndexRoute
+  '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
-  '/playlists': typeof LayoutPlaylistsIndexRoute
+  '/playlists/': typeof LayoutPlaylistsIndexRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -286,6 +294,7 @@ export interface FileRoutesByTo {
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -323,10 +332,12 @@ export interface FileRoutesById {
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/_layout/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/_layout/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -341,7 +352,6 @@ export interface FileRouteTypes {
     | '/shows'
     | '/sources'
     | '/watches'
-    | '/'
     | '/admin/channels'
     | '/admin/users'
     | '/channels/$channelId'
@@ -353,13 +363,14 @@ export interface FileRouteTypes {
     | '/source/$sourceKey'
     | '/watches/import'
     | '/admin/'
-    | '/channels'
+    | '/channels/'
     | '/onboarding/'
-    | '/playlists'
+    | '/playlists/'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
+    | '/users/$userId/channels'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
+    | '/users/$userId/channels'
   id:
     | '__root__'
     | '/_layout'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/_layout/onboarding/$channelId/name'
     | '/_layout/onboarding/$channelId/shows'
     | '/_layout/onboarding/$channelId/sort'
+    | '/_layout/users/$userId/channels'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -472,7 +485,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -556,7 +569,7 @@ declare module '@tanstack/react-router' {
     '/_layout/playlists/': {
       id: '/_layout/playlists/'
       path: '/playlists'
-      fullPath: '/playlists'
+      fullPath: '/playlists/'
       preLoaderRoute: typeof LayoutPlaylistsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
@@ -570,7 +583,7 @@ declare module '@tanstack/react-router' {
     '/_layout/channels/': {
       id: '/_layout/channels/'
       path: '/channels'
-      fullPath: '/channels'
+      fullPath: '/channels/'
       preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
@@ -650,6 +663,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/channels'
       preLoaderRoute: typeof LayoutAdminChannelsRouteImport
       parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/users/$userId/channels': {
+      id: '/_layout/users/$userId/channels'
+      path: '/users/$userId/channels'
+      fullPath: '/users/$userId/channels'
+      preLoaderRoute: typeof LayoutUsersUserIdChannelsRouteImport
+      parentRoute: typeof LayoutRoute
     }
     '/_layout/onboarding/$channelId/sort': {
       id: '/_layout/onboarding/$channelId/sort'
@@ -739,6 +759,7 @@ interface LayoutRouteChildren {
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
   LayoutPlaylistsIndexRoute: typeof LayoutPlaylistsIndexRoute
+  LayoutUsersUserIdChannelsRoute: typeof LayoutUsersUserIdChannelsRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -763,6 +784,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
   LayoutPlaylistsIndexRoute: LayoutPlaylistsIndexRoute,
+  LayoutUsersUserIdChannelsRoute: LayoutUsersUserIdChannelsRoute,
 }
 
 const LayoutRouteWithChildren =

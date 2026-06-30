@@ -11,8 +11,11 @@ from app.auth.dependencies import (
 )
 from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
+from app.channels import service as channel_service
 from app.channels.models import Channel
+from app.channels.schemas import ChannelPublicListOutput
 from app.config import settings
+from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
 from app.users import service as user_service
@@ -201,6 +204,28 @@ def read_user_by_id(
             detail="User not found",
         )
     return user
+
+
+@router.get("/{user_id}/channels")
+def get_user_public_channels(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> ChannelPublicListOutput:
+    """List a `User`'s public, non-anonymous `Channel`s, highest score first."""
+    rows = session.exec(
+        select(Channel, User.username)
+        .join(User, col(User.id) == Channel.user_id)
+        .where(
+            Channel.user_id == user_id,
+            Channel.visibility == Visibility.public,
+            col(Channel.anonymous).is_(False),
+        ),
+    ).all()
+    data = [
+        channel_service.public_channel_output(channel, username)
+        for channel, username in rows
+    ]
+    return ChannelPublicListOutput(data=data, count=len(data))
 
 
 @router.patch(

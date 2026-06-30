@@ -15,6 +15,8 @@ from app.channels.models import (
     URLStatus,
 )
 from app.channels.schemas import (
+    ChannelOutput,
+    ChannelPublicOutput,
     SortOptionOutput,
     WhitelistShowInput,
 )
@@ -23,6 +25,35 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.models import User
+
+
+def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
+    output = ChannelOutput.model_validate(channel)
+    if not channel.anonymous:
+        return output
+    if viewer and (viewer.is_superuser or viewer.id == channel.user_id):
+        return output
+    output.user_id = None
+    return output
+
+
+def public_channel_output(
+    channel: Channel,
+    username: str | None,
+) -> ChannelPublicOutput:
+    anonymous = channel.anonymous
+    return ChannelPublicOutput(
+        id=channel.id,
+        user_id=None if anonymous else channel.user_id,
+        name=channel.name,
+        channel_number=channel.channel_number,
+        visibility=channel.visibility,
+        default_order=channel.default_order,
+        description=channel.description,
+        anonymous=anonymous,
+        username=None if anonymous else username,
+    )
 
 
 def add_urls_to_channel_import_queue(

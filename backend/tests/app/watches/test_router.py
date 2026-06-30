@@ -75,13 +75,13 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
+        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False
         if user_is_owner or record_is_public:
             return True
-        return user_is_superuser and record_is_owned_by_plugin_user
+        return user_is_superuser
 
     # Watches have different properties if unverified siblings exist that are tested
     # independently.
@@ -313,13 +313,13 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         user_is_owner: bool,
         record_is_public: bool,  # noqa: ARG002
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
+        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False
         if user_is_owner:
             return True
-        return user_is_superuser and record_is_owned_by_plugin_user
+        return user_is_superuser
 
     @override
     @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])

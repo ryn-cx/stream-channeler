@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Database } from "lucide-react"
 
-import { PluginsService } from "@/client"
+import { SourcesService } from "@/client"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -34,7 +34,7 @@ function PluginDetailPage() {
       columns={sourceColumns}
       queryKey={["plugins", pluginId, "sources"]}
       fetchTable={async (params) => {
-        const result = await PluginsService.getPluginSources({
+        const result = await SourcesService.getPluginSources({
           pluginId,
           offset: params.offset,
           limit: params.limit,

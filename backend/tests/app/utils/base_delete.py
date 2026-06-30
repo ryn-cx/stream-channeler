@@ -24,13 +24,13 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
         # ARG002 - Child implementations may need this value
         record_is_public: bool,  # noqa: ARG002
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
+        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False
         if user_is_owner:
             return True
-        return user_is_superuser and record_is_owned_by_plugin_user
+        return user_is_superuser
 
     def assert_delete_success(
         self,

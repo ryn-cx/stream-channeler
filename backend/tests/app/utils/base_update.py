@@ -153,7 +153,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_superuser: bool,
         record_is_owned_by_plugin_user: bool,
     ) -> None:
-        """Ensure only the owner (or a plugin-user-scoped superuser) can update."""
+        """Ensure only the owner or a superuser can update."""
         initial_test_data = self.create_test_data(
             client=session_scoped_client,
             session=session_scoped_session,
@@ -166,9 +166,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         patch_input = build_random_model(self.update_schema)
 
-        can_update = user_is_authenticated and (
-            user_is_owner or (user_is_superuser and record_is_owned_by_plugin_user)
-        )
+        can_update = user_is_authenticated and (user_is_owner or user_is_superuser)
         if can_update:
             self.assert_api_update_success(
                 session_scoped_session,

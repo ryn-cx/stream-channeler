@@ -4,6 +4,7 @@
 import uuid
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -12,7 +13,7 @@ from tests.app.utils.base import SUPPORTED_MODELS, BaseTests, CreatedTestData
 from tests.app.utils.route_assertions import (
     assert_not_found,
     assert_success,
-    assert_success_list,
+    make_request,
 )
 
 
@@ -28,7 +29,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
+        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         """Return if the user can get a specific record based on its permissions."""
         if record_is_public:
@@ -37,7 +38,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             return False
         if user_is_owner:
             return True
-        return user_is_superuser and record_is_owned_by_plugin_user
+        return user_is_superuser
 
     def assert_api_get_list_success(
         self,
@@ -47,13 +48,12 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         headers: dict[str, str],
     ) -> None:
         """Assert that the get list endpoint returns the expected data."""
-        response = assert_success_list(
-            client,
-            "get",
-            self.get_record_list_url(parent_id),
-            self.output_schema,
-            headers,
-        )
+        list_schema = getattr(self, "list_output_schema", self.output_schema)
+        raw = make_request(client, "get", self.get_record_list_url(parent_id), headers)
+        assert raw.status_code == status.HTTP_200_OK
+        payload = raw.json()
+        rows = payload["data"] if isinstance(payload, dict) else payload
+        response = [list_schema.model_validate(item) for item in rows]
 
         parent_column = getattr(self.database_model, self.parent_key_name)
         siblings_select = select(self.database_model).where(parent_column == parent_id)
@@ -62,7 +62,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         assert len(response) == len(database_records)
         response_by_id = {item.id: item for item in response}
         for record in database_records:
-            expected_dump = self.output_schema.model_validate(record).model_dump()
+            expected_dump = list_schema.model_validate(record).model_dump()
             # This works as a check to make sure the responses are not empty
             response_dump = response_by_id[record.id].model_dump()
             assert expected_dump.items() <= response_dump.items()

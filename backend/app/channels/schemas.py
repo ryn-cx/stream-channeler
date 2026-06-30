@@ -51,6 +51,7 @@ class ChannelPublicOutput(BaseChannel):
     """Schema for returning a publicly listed `Channel`."""
 
     id: uuid.UUID
+    user_id: uuid.UUID | None
     username: str | None
 
 

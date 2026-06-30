@@ -3,11 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { BadgeCheck, Check, ExternalLink, EyeOff, Trash2 } from "lucide-react"
 import { useState } from "react"
 
-import {
-  EpisodesService,
-  type PlaylistEpisodesOutput,
-  WatchesService,
-} from "@/client"
+import { type PlaylistEpisodesOutput, WatchesService } from "@/client"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import {
@@ -83,7 +79,7 @@ export function PlaylistEpisodeCard({
 
   const markWatchedMutation = useMutation({
     mutationFn: (episodeId: string) =>
-      EpisodesService.createWatch({
+      WatchesService.createWatch({
         episodeId,
         requestBody: {
           watch_date: new Date().toISOString(),

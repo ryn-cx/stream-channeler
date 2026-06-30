@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type ApiError, PluginsService, type SourceCreate } from "@/client"
+import { type ApiError, type SourceCreate, SourcesService } from "@/client"
 import { AddButton } from "@/components/Common/AddButton"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
@@ -52,7 +52,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
   const mutation = useMutation({
     mutationKey: ["plugins", pluginId, "sources", "create"],
     mutationFn: (data: SourceCreate) =>
-      PluginsService.createSource({ pluginId, requestBody: data }),
+      SourcesService.createSource({ pluginId, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("Source created successfully")
     },
