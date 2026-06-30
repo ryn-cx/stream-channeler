@@ -29,8 +29,8 @@ def create_random_channel(
     if is_public is not None and "visibility" not in kwargs:
         kwargs["visibility"] = Visibility.public if is_public else Visibility.private
     kwargs.setdefault("default_order", None)
+    kwargs.setdefault("anonymous", False)
     # TODO: If tests pass this can be deleted.
-    # kwargs.setdefault("anonymous", False)
     # kwargs.setdefault("score", 0)
     channel = build_random_model(Channel, user_id=user, **kwargs)
     session.add(channel)

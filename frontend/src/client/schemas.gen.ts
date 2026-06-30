@@ -161,8 +161,15 @@ export const ChannelAdminOutputSchema = {
             title: 'Id'
         },
         user_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'User Id'
         },
         score: {
@@ -244,15 +251,9 @@ export const ChannelAdminUpdateSchema = {
             title: 'Description'
         },
         anonymous: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Anonymous'
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
         },
         score: {
             anyOf: [
@@ -699,8 +700,15 @@ export const ChannelOutputSchema = {
             title: 'Id'
         },
         user_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'User Id'
         },
         score: {
@@ -808,9 +816,7 @@ export const ChannelPublicOutputSchema = {
     type: 'object',
     required: ['visibility', 'id', 'username'],
     title: 'ChannelPublicOutput',
-    description: `Schema for returning a publicly listed \`Channel\`.
-
-\`username\` is the creator's username, or \`None\` when the channel is anonymous.`
+    description: 'Schema for returning a publicly listed `Channel`.'
 } as const;
 
 export const ChannelQueueOutputSchema = {

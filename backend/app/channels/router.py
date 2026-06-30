@@ -59,6 +59,16 @@ from app.users.models import User
 router = APIRouter(prefix="/channels", tags=["channels"])
 
 
+def _channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
+    output = ChannelOutput.model_validate(channel)
+    if not channel.anonymous:
+        return output
+    if viewer and (viewer.is_superuser or viewer.id == channel.user_id):
+        return output
+    output.user_id = None
+    return output
+
+
 @router.get("", response_model=list[ChannelOutput])
 def get_channels(current_user: CurrentUser) -> list[Channel]:
     """List all `Channel`s owned by the current `User`."""
@@ -204,10 +214,10 @@ def admin_update_channel(
     return ChannelAdminOutput.model_validate(channel, update={"username": username})
 
 
-@router.get("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by ReadableChannel
-def get_channel(channel: ReadableChannel) -> Channel:
+@router.get("/{channel_id}")  # noqa: FAST003 - Used by ReadableChannel
+def get_channel(channel: ReadableChannel, user: OptionalUser) -> ChannelOutput:
     """Get a `Channel` if it's readable by the current `User`."""
-    return channel
+    return _channel_output(channel, user)
 
 
 @router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by OwnedChannel.
@@ -255,7 +265,7 @@ def get_channel_episodes(
         select(Channel).where(col(Channel.id).in_(unique_channel_ids)),
     ).all()
     for channel_obj in channels:
-        output.channels[channel_obj.id] = ChannelOutput.model_validate(channel_obj)
+        output.channels[channel_obj.id] = _channel_output(channel_obj, user)
 
     for result in results:
         episode = result.episode

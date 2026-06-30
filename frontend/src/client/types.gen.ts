@@ -30,7 +30,7 @@ export type ChannelAdminOutput = {
     description?: (string | null);
     anonymous?: boolean;
     id: string;
-    user_id: string;
+    user_id: (string | null);
     score: number;
     username: (string | null);
 };
@@ -44,7 +44,7 @@ export type ChannelAdminUpdate = {
     visibility?: (Visibility | null);
     default_order?: (string | null);
     description?: (string | null);
-    anonymous?: (boolean | null);
+    anonymous?: boolean;
     score?: (number | null);
 };
 
@@ -117,7 +117,7 @@ export type ChannelOutput = {
     description?: (string | null);
     anonymous?: boolean;
     id: string;
-    user_id: string;
+    user_id: (string | null);
     score: number;
 };
 
@@ -131,8 +131,6 @@ export type ChannelPublicListOutput = {
 
 /**
  * Schema for returning a publicly listed `Channel`.
- *
- * `username` is the creator's username, or `None` when the channel is anonymous.
  */
 export type ChannelPublicOutput = {
     name?: (string | null);

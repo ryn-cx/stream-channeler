@@ -43,15 +43,12 @@ class ChannelOutput(BaseChannel):
     """Schema for returning a `Channel`."""
 
     id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: uuid.UUID | None
     score: int
 
 
 class ChannelPublicOutput(BaseChannel):
-    """Schema for returning a publicly listed `Channel`.
-
-    `username` is the creator's username, or `None` when the channel is anonymous.
-    """
+    """Schema for returning a publicly listed `Channel`."""
 
     id: uuid.UUID
     username: str | None
@@ -70,15 +67,10 @@ class ChannelAdminOutput(ChannelOutput):
     username: str | None
 
 
-class ChannelAdminUpdate(BaseInput):
+class ChannelAdminUpdate(BaseInput, BaseChannel):
     """Schema for an admin updating any field on a `Channel`."""
 
-    name: str | None = Field(default=None)
-    channel_number: float | None = Field(default=None)
-    visibility: Visibility | None = Field(default=None)
-    default_order: str | None = Field(default=None)
-    description: str | None = Field(default=None)
-    anonymous: bool | None = Field(default=None)
+    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
     score: int | None = Field(default=None)
 
 
