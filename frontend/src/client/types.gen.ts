@@ -173,6 +173,17 @@ export type ChannelUpdate = {
     anonymous?: boolean;
 };
 
+export type DateFilterOption = {
+    id: string;
+    value: DateRangeFilter;
+};
+
+export type DateRangeFilter = {
+    minimumDate?: (string | null);
+    maximumDate?: (string | null);
+    hideBlanks?: boolean;
+};
+
 /**
  * Schema for creating an `Episode`.
  */
@@ -320,11 +331,6 @@ export type FileUpdate = {
     deleted_at?: (string | null);
     extra?: (string | null);
     content?: (string | null);
-};
-
-export type FilterOption = {
-    id: string;
-    value: unknown;
 };
 
 export type HTTPValidationError = {
@@ -742,6 +748,11 @@ export type SourceUpdate = {
     image_url?: (string | null);
 };
 
+export type StringFilterOption = {
+    id: string;
+    value: string;
+};
+
 export type Token = {
     access_token: string;
     token_type?: string;
@@ -1114,6 +1125,7 @@ export type ChannelsClearChannelCompletedQueueData = {
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
 export type EpisodesGetEpisodesData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1247,6 +1259,7 @@ export type PluginsSearchPluginData = {
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
 export type PluginsGetPluginsData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1263,6 +1276,7 @@ export type PluginsCreatePluginData = {
 export type PluginsCreatePluginResponse = (PluginOutput);
 
 export type PluginsGetPluginSourcesData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1319,6 +1333,7 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type SeasonsGetSeasonsData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1355,6 +1370,7 @@ export type SeasonsCreateEpisodeData = {
 export type SeasonsCreateEpisodeResponse = (EpisodeOutput);
 
 export type SeasonsGetEpisodesData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1365,6 +1381,7 @@ export type SeasonsGetEpisodesData = {
 export type SeasonsGetEpisodesResponse = (EpisodesPublic);
 
 export type ShowsGetShowsData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1401,6 +1418,7 @@ export type ShowsCreateSeasonData = {
 export type ShowsCreateSeasonResponse = (SeasonOutput);
 
 export type ShowsGetSeasonsData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1411,6 +1429,7 @@ export type ShowsGetSeasonsData = {
 export type ShowsGetSeasonsResponse = (SeasonsPublic);
 
 export type SourcesGetSourcesData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;
@@ -1447,6 +1466,7 @@ export type SourcesCreateShowData = {
 export type SourcesCreateShowResponse = (ShowPublic);
 
 export type SourcesGetShowsData = {
+    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
     offset?: number;

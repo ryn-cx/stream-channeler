@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { SeasonsService } from "@/client"
-import { MediaListPage } from "@/components/Common/DataTable"
+import {
+  MediaListPage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import {
   type SeasonTableData,
   seasonColumns,
@@ -34,8 +37,7 @@ function SeasonsPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

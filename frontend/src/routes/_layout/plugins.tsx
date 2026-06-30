@@ -3,7 +3,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Puzzle } from "lucide-react"
 
 import { PluginsService } from "@/client"
-import { MediaListPage } from "@/components/Common/DataTable"
+import {
+  MediaListPage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import AddPlugin from "@/components/Plugins/Add"
 import { columns, type PluginTableData } from "@/components/Plugins/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -34,8 +37,7 @@ function PluginPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

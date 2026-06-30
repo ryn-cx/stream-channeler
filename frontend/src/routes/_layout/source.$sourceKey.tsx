@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Tv } from "lucide-react"
 
 import { SourcesService } from "@/client"
-import { DetailTablePage } from "@/components/Common/DataTable"
+import {
+  DetailTablePage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import AddShow from "@/components/Shows/Add"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -32,8 +35,7 @@ function SourceDetailPage() {
           sourceId: sourceKey,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

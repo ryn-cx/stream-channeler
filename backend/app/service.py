@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import HTTPException, status
 from sqlalchemy import (
     Boolean,
-    DateTime,
+    ColumnElement,
     String,
     UnaryExpression,
     and_,
@@ -19,8 +19,8 @@ from sqlalchemy.orm import InstrumentedAttribute
 from sqlmodel import Session, SQLModel, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.constants import SERVER_SIDE_THRESHOLD_DEFAULT
-from app.schemas import FilterOption, ReadOptions, SortOption
+from app.constants import DEFAULT_SERVER_SIDE_THRESHOLD
+from app.schemas import DateRangeFilter, ReadOptions, SortOption
 from app.users.models import User
 
 
@@ -40,42 +40,36 @@ def _get_column(
 def _apply_date_range[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
-    value: dict[str, Any],
+    value: DateRangeFilter,
 ) -> SelectOfScalar[T]:
-    minimum = value.get("minimumDate")
-    maximum = value.get("maximumDate")
-    hide_blanks = value.get("hideBlanks")
-    if not minimum and not maximum and not hide_blanks:
-        return statement
-
-    bounds = [col(column).is_not(None)]
-    if minimum:
-        bounds.append(column >= datetime.fromisoformat(minimum))
-    if maximum:
-        bounds.append(column <= datetime.fromisoformat(maximum))
+    bounds: list[ColumnElement[bool]] = [col(column).is_not(None)]
+    if value.minimum_date is not None:
+        bounds.append(column >= value.minimum_date)
+    if value.maximum_date is not None:
+        bounds.append(column <= value.maximum_date)
     in_range = and_(*bounds)
 
-    if hide_blanks:
+    if value.hide_blanks:
         return statement.where(in_range)
     return statement.where(or_(col(column).is_(None), in_range))
 
 
 def _apply_filter_options[T](
     statement: SelectOfScalar[T],
-    filter_options: list[FilterOption],
+    params: ReadOptions,
     columns: dict[str, InstrumentedAttribute[Any]],
-    date_range_columns: set[str],
 ) -> SelectOfScalar[T]:
-    for option in filter_options:
+    for option in params.filter_options:
         column = _get_column(columns, option.column)
-        if option.column in date_range_columns and isinstance(option.value, dict):
-            statement = _apply_date_range(statement, column, option.value)
-        elif isinstance(column.type, Boolean):
+        if isinstance(column.type, Boolean):
             statement = statement.where(column == (option.value == "true"))
-        else:
-            text = str(option.value).strip()
-            if text:
-                statement = statement.where(cast(column, String).ilike(f"%{text}%"))
+        elif text := option.value.strip():
+            statement = statement.where(cast(column, String).ilike(f"%{text}%"))
+
+    for date_option in params.date_filter_options:
+        column = _get_column(columns, date_option.column)
+        statement = _apply_date_range(statement, column, date_option.value)
+
     return statement
 
 
@@ -112,25 +106,17 @@ def get_read_results[T](  # noqa: PLR0913
     if current_user:
         threshold = current_user.server_side_threshold
     else:
-        threshold = SERVER_SIDE_THRESHOLD_DEFAULT
+        threshold = DEFAULT_SERVER_SIDE_THRESHOLD
 
     model = base.column_descriptions[0]["entity"]
     columns = {field: getattr(model, field) for field in schema.model_fields}
-    date_range_columns = {
-        name for name, column in columns.items() if isinstance(column.type, DateTime)
-    }
     total_count = session.exec(select(func.count()).select_from(base.subquery())).one()
 
     if total_count < threshold:
         ordered = _apply_sort_options(base, [], columns, default_sort, tiebreaker)
         return session.exec(ordered).all(), total_count, total_count, False
 
-    filtered = _apply_filter_options(
-        base,
-        params.filter_options,
-        columns,
-        date_range_columns,
-    )
+    filtered = _apply_filter_options(base, params, columns)
     filtered_count = session.exec(
         select(func.count()).select_from(filtered.subquery()),
     ).one()

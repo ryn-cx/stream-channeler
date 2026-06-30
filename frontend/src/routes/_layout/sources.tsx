@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Database } from "lucide-react"
 
 import { SourcesService } from "@/client"
-import { MediaListPage } from "@/components/Common/DataTable"
+import {
+  MediaListPage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import {
   type SourceTableData,
   sourceColumns,
@@ -34,8 +37,7 @@ function SourcesPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

@@ -2,12 +2,15 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
 import { SeasonsService } from "@/client"
+import {
+  DetailTablePage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import AddEpisode from "@/components/Episodes/Add"
 import {
   type EpisodeTableData,
   episodeColumns,
 } from "@/components/Episodes/columns"
-import { DetailTablePage } from "@/components/Common/DataTable"
 import { isLoggedIn } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/season/$seasonKey")({
@@ -35,8 +38,7 @@ function SeasonDetailPage() {
           seasonId: seasonKey,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

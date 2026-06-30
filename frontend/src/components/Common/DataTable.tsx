@@ -683,6 +683,7 @@ function Filter<TData, TValue>({
   )
 }
 
+// Copied from https://tanstack.com/table/v8/docs/framework/react/examples/filters
 // A typical debounced input react component
 function DebouncedInput({
   value: initialValue,
@@ -700,14 +701,13 @@ function DebouncedInput({
     setValue(initialValue)
   }, [initialValue])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: matches the official example — only re-fire when the debounced value changes
   useEffect(() => {
     const timeout = setTimeout(() => {
       onChange(value)
     }, debounce)
 
     return () => clearTimeout(timeout)
-  }, [value])
+  }, [value, debounce, onChange])
 
   return (
     <Input
@@ -721,8 +721,8 @@ function DebouncedInput({
 export interface MediaPageParams {
   offset: number
   limit: number
-  sorting: SortOptionsState
-  columnFilters: FilterOptionsState
+  sortOptions: SortOptionsState
+  filterOptions: FilterOptionsState
 }
 
 export interface MediaTableResult<TData> {
@@ -730,6 +730,23 @@ export interface MediaTableResult<TData> {
   total_count: number
   filtered_count: number
   is_server_side: boolean
+}
+
+export function serializeTableQuery(params: MediaPageParams) {
+  const stringFilters: FilterOptionsState = []
+  const dateFilters: FilterOptionsState = []
+  for (const filter of params.filterOptions) {
+    if (filter.value !== null && typeof filter.value === "object") {
+      dateFilters.push(filter)
+    } else {
+      stringFilters.push(filter)
+    }
+  }
+  return {
+    sortOptions: JSON.stringify(params.sortOptions),
+    filterOptions: JSON.stringify(stringFilters),
+    dateFilterOptions: JSON.stringify(dateFilters),
+  }
 }
 
 interface MediaTablePageProps<TData extends { id: string }> {
@@ -759,8 +776,8 @@ export function MediaTablePage<TData extends { id: string }>({
     pageIndex: 0,
     pageSize: 10,
   })
-  const [sorting, setSorting] = useState<SortOptionsState>([])
-  const [columnFilters, setColumnFilters] = useState<FilterOptionsState>([])
+  const [sortOptions, setSortOptions] = useState<SortOptionsState>([])
+  const [filterOptions, setFilterOptions] = useState<FilterOptionsState>([])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset only on resetKey change
   useEffect(() => {
@@ -768,13 +785,13 @@ export function MediaTablePage<TData extends { id: string }>({
   }, [resetKey])
 
   const tableQuery = useQuery({
-    queryKey: [...queryKey, pagination, sorting, columnFilters],
+    queryKey: [...queryKey, pagination, sortOptions, filterOptions],
     queryFn: () =>
       fetchTable({
         offset: pagination.pageIndex * pagination.pageSize,
         limit: pagination.pageSize,
-        sorting,
-        columnFilters,
+        sortOptions,
+        filterOptions,
       }),
     placeholderData: keepPreviousData,
   })
@@ -830,11 +847,11 @@ export function MediaTablePage<TData extends { id: string }>({
                 isServer
                   ? {
                       pagination,
-                      sortOptions: sorting,
-                      filterOptions: columnFilters,
+                      sortOptions,
+                      filterOptions,
                       onPaginationChange: setPagination,
-                      onSortOptionsChange: setSorting,
-                      onFilterOptionsChange: setColumnFilters,
+                      onSortOptionsChange: setSortOptions,
+                      onFilterOptionsChange: setFilterOptions,
                       rowCount: tableQuery.data?.filtered_count ?? 0,
                       totalRowCount: tableQuery.data?.total_count ?? 0,
                     }

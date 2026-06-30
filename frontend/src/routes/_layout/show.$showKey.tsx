@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { ShowsService } from "@/client"
-import { DetailTablePage } from "@/components/Common/DataTable"
+import {
+  DetailTablePage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import AddSeason from "@/components/Seasons/Add"
 import {
   type SeasonTableData,
@@ -35,8 +38,7 @@ function ShowDetailPage() {
           showId: showKey,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

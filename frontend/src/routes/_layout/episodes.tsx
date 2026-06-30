@@ -3,10 +3,13 @@ import { Film } from "lucide-react"
 
 import { EpisodesService } from "@/client"
 import {
+  MediaListPage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
+import {
   type EpisodeTableData,
   episodeColumns,
 } from "@/components/Episodes/columns"
-import { MediaListPage } from "@/components/Common/DataTable"
 import { isLoggedIn } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/episodes")({
@@ -34,8 +37,7 @@ function EpisodesPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

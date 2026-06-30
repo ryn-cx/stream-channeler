@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Clapperboard } from "lucide-react"
 
 import { ShowsService } from "@/client"
-import { MediaListPage } from "@/components/Common/DataTable"
+import {
+  MediaListPage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 
@@ -31,8 +34,7 @@ function ShowsPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

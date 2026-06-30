@@ -1,5 +1,6 @@
 """Shared schemas."""
 
+from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -30,18 +31,41 @@ class Message(BaseModel):
 
 
 class SortOption(BaseModel):
+    # Aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
     desc: bool = False
 
 
-class FilterOption(BaseModel):
+class DateRangeFilter(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    # Aliased to `minimumDate` to simplify frontend code.
+    minimum_date: datetime | None = Field(default=None, alias="minimumDate")
+    # Aliased to `maximumDate` to simplify frontend code.
+    maximum_date: datetime | None = Field(default=None, alias="maximumDate")
+    # Aliased to `hideBlanks` to simplify frontend code.
+    hide_blanks: bool = Field(default=False, alias="hideBlanks")
+
+
+class StringFilterOption(BaseModel):
+    # Aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
-    value: Any
+    value: str
+
+
+class DateFilterOption(BaseModel):
+    # Aliased to `id` to match the internal TanStack Table API.
+    column: str = Field(alias="id")
+    value: DateRangeFilter
 
 
 class ReadOptions(BaseModel):
-    sort_options: Json[list[SortOption]] = Field(default="[]")  # type: ignore[arg-type]
-    filter_options: Json[list[FilterOption]] = Field(default="[]")  # type: ignore[arg-type]
+    sort_options: Json[list[SortOption]] = Field(default_factory=list[SortOption])
+    filter_options: Json[list[StringFilterOption]] = Field(
+        default_factory=list[StringFilterOption],
+    )
+    date_filter_options: Json[list[DateFilterOption]] = Field(
+        default_factory=list[DateFilterOption],
+    )
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 

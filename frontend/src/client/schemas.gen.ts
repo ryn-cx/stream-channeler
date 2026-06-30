@@ -948,6 +948,57 @@ export const ChannelUpdateSchema = {
     description: 'Schema for updating a `Channel`.'
 } as const;
 
+export const DateFilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            '$ref': '#/components/schemas/DateRangeFilter'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'DateFilterOption'
+} as const;
+
+export const DateRangeFilterSchema = {
+    properties: {
+        minimumDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimumdate'
+        },
+        maximumDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximumdate'
+        },
+        hideBlanks: {
+            type: 'boolean',
+            title: 'Hideblanks',
+            default: false
+        }
+    },
+    type: 'object',
+    title: 'DateRangeFilter'
+} as const;
+
 export const EpisodeCreateSchema = {
     properties: {
         key: {
@@ -1985,21 +2036,6 @@ export const FileUpdateSchema = {
     type: 'object',
     title: 'FileUpdate',
     description: 'Schema for updating a `File`.'
-} as const;
-
-export const FilterOptionSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
-        value: {
-            title: 'Value'
-        }
-    },
-    type: 'object',
-    required: ['id', 'value'],
-    title: 'FilterOption'
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -4238,6 +4274,22 @@ export const SourcesPublicSchema = {
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'SourcesPublic',
     description: 'Schema for returning a list of `Source`s.'
+} as const;
+
+export const StringFilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            type: 'string',
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'StringFilterOption'
 } as const;
 
 export const TokenSchema = {

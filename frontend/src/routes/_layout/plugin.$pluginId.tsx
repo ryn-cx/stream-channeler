@@ -2,7 +2,10 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Database } from "lucide-react"
 
 import { PluginsService } from "@/client"
-import { DetailTablePage } from "@/components/Common/DataTable"
+import {
+  DetailTablePage,
+  serializeTableQuery,
+} from "@/components/Common/DataTable"
 import AddSource from "@/components/Sources/Add"
 import {
   type SourceTableData,
@@ -35,8 +38,7 @@ function PluginDetailPage() {
           pluginId,
           offset: params.offset,
           limit: params.limit,
-          sortOptions: JSON.stringify(params.sorting),
-          filterOptions: JSON.stringify(params.columnFilters),
+          ...serializeTableQuery(params),
         })
         return {
           data: result.data,

@@ -555,6 +555,7 @@ export class EpisodesService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -568,6 +569,7 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1055,6 +1057,7 @@ export class PluginsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1068,6 +1071,7 @@ export class PluginsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1100,11 +1104,12 @@ export class PluginsService {
     
     /**
      * Get Plugin Sources
-     * List a `Plugin`'s `Source`s for a table view (client- or server-side).
+     * List all `Source`s for a `Plugin` if it is public or owned by the current `User`.
      * @param data The data for the request.
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SourcesPublic Successful Response
@@ -1120,6 +1125,7 @@ export class PluginsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1297,6 +1303,7 @@ export class SeasonsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1310,6 +1317,7 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1412,11 +1420,12 @@ export class SeasonsService {
     
     /**
      * Get Episodes
-     * List a `Season`'s `Episode`s for a table view (client- or server-side).
+     * List all `Episode`s for a `Season` if it's readable by the current `User`.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns EpisodesPublic Successful Response
@@ -1432,6 +1441,7 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1448,6 +1458,7 @@ export class ShowsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1461,6 +1472,7 @@ export class ShowsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1563,11 +1575,12 @@ export class ShowsService {
     
     /**
      * Get Seasons
-     * List a `Show`'s `Season`s for a table view (client- or server-side).
+     * List all `Season`s for a `Show` if it's readable by the current `User`.
      * @param data The data for the request.
      * @param data.showId
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SeasonsPublic Successful Response
@@ -1583,6 +1596,7 @@ export class ShowsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1599,6 +1613,7 @@ export class SourcesService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1612,6 +1627,7 @@ export class SourcesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1714,11 +1730,12 @@ export class SourcesService {
     
     /**
      * Get Shows
-     * List a `Source`'s `Show`s for a table view (client- or server-side).
+     * Get all `Show`s for a `Source` if it's readable by the current `User`.
      * @param data The data for the request.
      * @param data.sourceId
      * @param data.sortOptions
      * @param data.filterOptions
+     * @param data.dateFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns ShowsPublic Successful Response
@@ -1734,6 +1751,7 @@ export class SourcesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
+                date_filter_options: data.dateFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
