@@ -7,85 +7,12 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 from enum import StrEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from sqlalchemy import util
 from sqlmodel import DateTime, Field, Index, Session, SQLModel
 
 from app.utils import tz_datetime
-
-
-def sortable_field_indexes(
-    model_name: str,
-    direct_sortable_fields: Iterable[str],
-) -> tuple[Index, ...]:
-    """Build an ``Index`` for each direct sortable field on the model's table.
-
-    ``id`` is skipped because the model's ``UniqueConstraint`` already indexes
-    it. Pass only direct (column-backed) sortable fields — synthetic sort keys
-    have no column to index.
-    """
-    return tuple(
-        Index(f"{model_name}-{field}-index", field)
-        for field in direct_sortable_fields
-        if field != "id"
-    )
-
-
-class Visibility(StrEnum):
-    """Visibility level for `Channel`, `Plugin`, and `Playlist` records."""
-
-    public = "public"
-    unlisted = "unlisted"
-    private = "private"
-
-
-class _RootRecord(Protocol):
-    user_id: uuid.UUID
-    visibility: Visibility
-
-
-class RootRecordMixin(ABC):
-    """Shared visibility/ownership methods.
-
-    Used by any record that can resolve itself to a "root" record carrying
-    `user_id` and `visibility` columns.
-
-    Subclasses implement `_root_record(session)`:
-
-    - `Channel`, `Playlist`, `Plugin` -> `self`
-    - `Source` / `File` -> `self.plugin`
-    - `Show` / `Season` / `Episode` -> the joined `Plugin`
-    """
-
-    @abstractmethod
-    def _root_record(self, session: Session) -> _RootRecord:
-        """Return the record that owns `user_id` and `visibility`."""
-
-    def get_user_id(self, session: Session) -> uuid.UUID:
-        """Return the `id` of the `User` who owns this record."""
-        return self._root_record(session).user_id
-
-    def is_public(self, session: Session) -> bool:
-        """Return whether this record's `visibility` is `public`."""
-        return self._root_record(session).visibility == Visibility.public
-
-    def is_publically_readable(self, session: Session) -> bool:
-        """Return whether this record's `visibility` is `public` or `unlisted`."""
-        return self._root_record(session).visibility in (
-            Visibility.public,
-            Visibility.unlisted,
-        )
-
-    def is_readable(self, session: Session, user: User | None) -> bool:
-        """Return whether `user` can read this record.
-
-        Readable if the record is publicly readable, or if `user` owns it.
-        """
-        if self.is_publically_readable(session):
-            return True
-        return user is not None and user.id == self.get_user_id(session)
-
 
 if TYPE_CHECKING:
     from sqlalchemy import Table
@@ -93,23 +20,81 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.interfaces import ORMOption
     from sqlalchemy.sql.selectable import ForUpdateParameter
 
+    from app.channels.models import Channel
     from app.episodes.models import Episode
     from app.plugins.models import File, Plugin
     from app.seasons.models import Season
     from app.shows.models import Show
+    from app.snapshots.models import Snapshot
     from app.sources.models import Source
     from app.users.models import User
 
 
-# Partial function because it reduces the number of locations that need to
+# This is a partial function because it reduces the number of locations that need to
 # have a "# type: ignore[call-overload]" comment. Ignoring this error is acceptable
 # because the official example for implementing a DateTime field also ignore the error:
 # https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
 DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
 
 
+def sortable_field_indexes(
+    model_name: str,
+    direct_sortable_fields: Iterable[str],
+) -> tuple[Index, ...]:
+    """Build an `Index` for each field that can be used for sorting by the user."""
+    return tuple(
+        Index(f"{model_name}-{field}-index", field)
+        for field in direct_sortable_fields
+        # Skip id because it is already indexed by the primary key.
+        if field != "id"
+    )
+
+
+class Visibility(StrEnum):
+    """Visibility enum for `Channel`s, `Plugin`s, and `Snapshot`s."""
+
+    public = "public"
+    unlisted = "unlisted"
+    private = "private"
+
+
+class RootRecordMixin(ABC):
+    """Mixin for any model that a `User` can own.
+
+    Subclasses must implement `_root_record`.
+    """
+
+    @abstractmethod
+    def _root_model(self, session: Session) -> Channel | Snapshot | Plugin:
+        """Return the root record directly owned by the `User`."""
+
+    def owner_id(self, session: Session) -> uuid.UUID:
+        """Return the `id` of the `User` who owns this record."""
+        return self._root_model(session).user_id
+
+    def is_publically_readable(self, session: Session) -> bool:
+        """Return true if this record's `visibility` is `public` or `unlisted`."""
+        return self._root_model(session).visibility in (
+            Visibility.public,
+            Visibility.unlisted,
+        )
+
+    def is_readable(self, session: Session, user: User | None) -> bool:
+        """Return whether `user` can read this record.
+
+        Returns true if any of the following are true:
+        - The record's `visibility` is `public` or `unlisted`.
+        - The `user` is the owner of the record or a superuser.
+        """
+        if self.is_publically_readable(session):
+            return True
+        return user is not None and (
+            user.id == self.owner_id(session) or user.is_superuser
+        )
+
+
 class TimestampIdAndHashMixin(SQLModel):
-    """Mixin used for most models.
+    """Mixin that adds `id`, `created_at`, and `modified_at` fields to a model.
 
     Fields: `id`, `created_at`, and `modified_at`.
     """
@@ -136,8 +121,7 @@ class TimestampIdAndHashMixin(SQLModel):
 class BaseMediaMixin(SQLModel):
     """Mixin for base media models.
 
-    Used for `BasePlugin`, `BaseSource`, `BaseShow`, `BaseSeason`, and
-    `BaseEpisode` models.
+    Fields: `key`, `data_timestamp`, `update_at`, `deleted_at`, and `extra`.
     """
 
     # key is a surrogate key so the name key makes it easier to differentiate between
@@ -155,9 +139,13 @@ class MediaMixin[
     ParentT: User | Plugin | Source | Show | Season,
     ChildT: Plugin | Source | Show | Season | Episode | File,
 ](TimestampIdAndHashMixin, BaseMediaMixin, RootRecordMixin, ABC):
+    # Will be automatically set when table=True, required for type checking
+    # parent_id_field.
+    __table__: ClassVar[Table]
+
     """Mixin for media models.
 
-    Used for `Plugin`, `Source`, `Show`, `Season`, and `Episode` models.
+    Subclasses must implement `parent`, `children`, and `_root_record`.
     """
 
     @property
@@ -322,8 +310,8 @@ class MediaMixin[
         if self.data_timestamp and self.data_timestamp >= new_update_at_value:
             return
 
-        # If the new update_at happens before the existing update_at the existing
-        # update_at should be replaced so the updates occur as soon as possible.
+        # If the new update_at is before the existing update_at the existing update_at
+        # should be replaced so the updates occur as soon as possible.
         if self.update_at is None or new_update_at_value < self.update_at:
             self.update_at = new_update_at_value
 
@@ -331,33 +319,12 @@ class MediaMixin[
         """Add a child to the record."""
         self.children.append(child)
 
-    # Will be automatically set when table=True, required for type checking
-    # parent_id_field.
-    # TODO: Maybe remove this and explicitly check the value.
-    __table__: ClassVar[Table]
-
     @classmethod
     def parent_id_field(cls) -> str:
-        """Return the name of the parent id column.
-
-        Raises:
-            ValueError: If there are not exactly 1 foreign key columns on the model.
-
-        """
-        foreign_key_columns: list[str] = [
+        """Return the name of the parent id column."""
+        return next(
             column.name for column in cls.__table__.columns if column.foreign_keys
-        ]
-        if len(foreign_key_columns) != 1:
-            msg = (
-                f"Expected exactly 1 foreign key column on {cls.__name__}, "
-                f"found {len(foreign_key_columns)}: {foreign_key_columns}"
-            )
-            raise ValueError(msg)
-        return foreign_key_columns[0]
-
-    def set_parent_id(self, parent_id: uuid.UUID) -> None:
-        """Set the parent id key on the record."""
-        setattr(self, type(self).parent_id_field(), parent_id)
+        )
 
     # TODO: Consider implementing a recursive version of this so only one upsert needs
     # to be called when upserting a tree of records.
@@ -433,9 +400,9 @@ class MediaMixin[
             for child in self.children:
                 child.soft_undelete()
 
-    def soft_delete_missing_children(self, expected_keys: Iterable[str]) -> None:
-        """Soft delete children whose keys are not in `expected_keys`."""
-        expected = set(expected_keys)
+    def soft_delete_missing_children(self, found_keys: Iterable[str]) -> None:
+        """Soft delete children whose keys are not in `found_keys`."""
+        found_keys = set(found_keys)
         for child in self.children:
-            if child.key not in expected:
+            if child.key not in found_keys:
                 child.soft_delete()

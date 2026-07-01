@@ -1,3 +1,5 @@
+"""Stream Channeler application."""
+
 from importlib import import_module
 
 import sentry_sdk
@@ -10,7 +12,8 @@ from app.config import settings
 from app.constants import APP_PATH
 
 
-def custom_generate_unique_id(route: APIRoute) -> str:
+# TODO: Make this a private function upstream.
+def _custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
 
@@ -20,7 +23,7 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    generate_unique_id_function=custom_generate_unique_id,
+    generate_unique_id_function=_custom_generate_unique_id,
 )
 
 
@@ -34,11 +37,13 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
-# TODO: Enable this in the template.
+# TODO: Enable this upstream.
 app.add_middleware(GZipMiddleware)
 
-# TODO: Implement this improved function into the template.
+
+# TODO: Implement this improved function upstream.
 def automatically_import_routers() -> APIRouter:
+    """Automatically import `router` from app/*/router.py."""
     api_router = APIRouter()
     for router_file in sorted(APP_PATH.glob("*/router.py")):
         module_name = router_file.parent.name

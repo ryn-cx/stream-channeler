@@ -351,90 +351,6 @@ export type NewPassword = {
 };
 
 /**
- * Schema for creating a `Playlist`.
- */
-export type PlaylistCreate = {
-    name?: (string | null);
-    visibility: Visibility;
-    episode_ids?: Array<(string)>;
-};
-
-export type PlaylistDetailOutput = {
-    name?: (string | null);
-    visibility: Visibility;
-    id: string;
-    user_id: string;
-    created_at: string;
-    modified_at: string;
-    episodes: Array<PlaylistEpisodeOutput>;
-};
-
-export type PlaylistEpisodeOutput = {
-    position: number;
-    episode_id: string;
-};
-
-export type PlaylistEpisodesOutput = {
-    episodes: Array<PlaylistEpisodeWithExtrasOutput>;
-    seasons: {
-        [key: string]: SeasonOutput;
-    };
-    shows: {
-        [key: string]: ShowPublic;
-    };
-    sources: {
-        [key: string]: SourcePublic;
-    };
-    plugins: {
-        [key: string]: PluginOutput;
-    };
-};
-
-export type PlaylistEpisodeWithExtrasOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: (string | null);
-    url?: (string | null);
-    sort_order?: (number | null);
-    description?: (string | null);
-    image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
-    air_date?: (string | null);
-    id: string;
-    season_id: string;
-    position: number;
-    watch_date?: (string | null);
-    verified?: (boolean | null);
-    episode_watch_id?: (string | null);
-};
-
-/**
- * Schema for returning a `Playlist`.
- */
-export type PlaylistOutput = {
-    name?: (string | null);
-    visibility: Visibility;
-    id: string;
-    user_id: string;
-    created_at: string;
-    modified_at: string;
-};
-
-/**
- * Schema for updating a `Playlist`.
- */
-export type PlaylistUpdate = {
-    name?: (string | null);
-    visibility?: (Visibility | null);
-    episode_ids?: (Array<(string)> | null);
-};
-
-/**
  * Schema for creating a `Plugin`.
  */
 export type PluginCreate = {
@@ -665,6 +581,90 @@ export type ShowUpdate = {
     image_url?: (string | null);
 };
 
+/**
+ * Schema for creating a `Snapshot`.
+ */
+export type SnapshotCreate = {
+    name?: (string | null);
+    visibility: Visibility;
+    episode_ids?: Array<(string)>;
+};
+
+export type SnapshotDetailOutput = {
+    name?: (string | null);
+    visibility: Visibility;
+    id: string;
+    user_id: string;
+    created_at: string;
+    modified_at: string;
+    episodes: Array<SnapshotEpisodeOutput>;
+};
+
+export type SnapshotEpisodeOutput = {
+    position: number;
+    episode_id: string;
+};
+
+export type SnapshotEpisodesOutput = {
+    episodes: Array<SnapshotEpisodeWithExtrasOutput>;
+    seasons: {
+        [key: string]: SeasonOutput;
+    };
+    shows: {
+        [key: string]: ShowPublic;
+    };
+    sources: {
+        [key: string]: SourcePublic;
+    };
+    plugins: {
+        [key: string]: PluginOutput;
+    };
+};
+
+export type SnapshotEpisodeWithExtrasOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
+    url?: (string | null);
+    sort_order?: (number | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    name?: (string | null);
+    duration?: (number | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    id: string;
+    season_id: string;
+    position: number;
+    watch_date?: (string | null);
+    verified?: (boolean | null);
+    episode_watch_id?: (string | null);
+};
+
+/**
+ * Schema for returning a `Snapshot`.
+ */
+export type SnapshotOutput = {
+    name?: (string | null);
+    visibility: Visibility;
+    id: string;
+    user_id: string;
+    created_at: string;
+    modified_at: string;
+};
+
+/**
+ * Schema for updating a `Snapshot`.
+ */
+export type SnapshotUpdate = {
+    name?: (string | null);
+    visibility?: (Visibility | null);
+    episode_ids?: (Array<(string)> | null);
+};
+
 export type SortKeyInput = {
     model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
     field: string;
@@ -823,7 +823,7 @@ export type ValidationError = {
 };
 
 /**
- * Visibility level for `Channel`, `Plugin`, and `Playlist` records.
+ * Visibility level for `Channel`, `Plugin`, and `Snapshot` records.
  */
 export type Visibility = 'public' | 'unlisted' | 'private';
 
@@ -960,13 +960,36 @@ export type WhitelistShowOutput = {
     episodes: Array<WhitelistEpisodeOutput>;
 };
 
-export type ChannelsGetChannelsResponse = (Array<ChannelOutput>);
-
 export type ChannelsCreateChannelData = {
     requestBody: ChannelCreate;
 };
 
 export type ChannelsCreateChannelResponse = (ChannelOutput);
+
+export type ChannelsGetChannelsData = {
+    owner?: (MediaOwner | null);
+};
+
+export type ChannelsGetChannelsResponse = (Array<ChannelAdminOutput>);
+
+export type ChannelsUpdateChannelData = {
+    channelId: string;
+    requestBody: ChannelUpdate;
+};
+
+export type ChannelsUpdateChannelResponse = (ChannelOutput);
+
+export type ChannelsDeleteChannelData = {
+    channelId: string;
+};
+
+export type ChannelsDeleteChannelResponse = (Message);
+
+export type ChannelsGetChannelData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelResponse = (ChannelOutput);
 
 export type ChannelsGetSortOptionsResponse = (Array<SortOptionOutput>);
 
@@ -984,40 +1007,6 @@ export type ChannelsGetPublicChannelsData = {
 };
 
 export type ChannelsGetPublicChannelsResponse = (ChannelPublicListOutput);
-
-export type ChannelsAdminListChannelsResponse = (Array<ChannelAdminOutput>);
-
-export type ChannelsAdminListUserChannelsData = {
-    userId: string;
-};
-
-export type ChannelsAdminListUserChannelsResponse = (Array<ChannelAdminOutput>);
-
-export type ChannelsAdminUpdateChannelData = {
-    channelId: string;
-    requestBody: ChannelAdminUpdate;
-};
-
-export type ChannelsAdminUpdateChannelResponse = (ChannelAdminOutput);
-
-export type ChannelsGetChannelData = {
-    channelId: string;
-};
-
-export type ChannelsGetChannelResponse = (ChannelOutput);
-
-export type ChannelsUpdateChannelData = {
-    channelId: string;
-    requestBody: ChannelUpdate;
-};
-
-export type ChannelsUpdateChannelResponse = (ChannelOutput);
-
-export type ChannelsDeleteChannelData = {
-    channelId: string;
-};
-
-export type ChannelsDeleteChannelResponse = (Message);
 
 export type ChannelsGetChannelEpisodesData = {
     additionalChannels?: Array<(string)>;
@@ -1123,6 +1112,13 @@ export type ChannelsClearChannelCompletedQueueData = {
 
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
+export type ChannelsAdminUpdateChannelData = {
+    channelId: string;
+    requestBody: ChannelAdminUpdate;
+};
+
+export type ChannelsAdminUpdateChannelResponse = (ChannelAdminOutput);
+
 export type EpisodesGetEpisodesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
@@ -1216,57 +1212,11 @@ export type LoginRecoverPasswordHtmlContentData = {
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
 
-export type PlaylistsGetPlaylistsResponse = (Array<PlaylistOutput>);
-
-export type PlaylistsCreatePlaylistData = {
-    requestBody: PlaylistCreate;
+export type PluginsCreatePluginData = {
+    requestBody: PluginCreate;
 };
 
-export type PlaylistsCreatePlaylistResponse = (PlaylistDetailOutput);
-
-export type PlaylistsGetPlaylistData = {
-    playlistId: string;
-};
-
-export type PlaylistsGetPlaylistResponse = (PlaylistDetailOutput);
-
-export type PlaylistsUpdatePlaylistData = {
-    playlistId: string;
-    requestBody: PlaylistUpdate;
-};
-
-export type PlaylistsUpdatePlaylistResponse = (PlaylistDetailOutput);
-
-export type PlaylistsDeletePlaylistData = {
-    playlistId: string;
-};
-
-export type PlaylistsDeletePlaylistResponse = (Message);
-
-export type PlaylistsGetPlaylistEpisodesData = {
-    playlistId: string;
-};
-
-export type PlaylistsGetPlaylistEpisodesResponse = (PlaylistEpisodesOutput);
-
-export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
-
-export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
-
-export type PluginsMatchUrlData = {
-    url: string;
-};
-
-export type PluginsMatchUrlResponse = (PluginURLMatch);
-
-export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
-
-export type PluginsSearchPluginData = {
-    pluginKey: string;
-    query: string;
-};
-
-export type PluginsSearchPluginResponse = (PluginSearchResults);
+export type PluginsCreatePluginResponse = (PluginOutput);
 
 export type PluginsGetPluginsData = {
     dateFilterOptions?: string;
@@ -1278,12 +1228,6 @@ export type PluginsGetPluginsData = {
 };
 
 export type PluginsGetPluginsResponse = (PluginsPublic);
-
-export type PluginsCreatePluginData = {
-    requestBody: PluginCreate;
-};
-
-export type PluginsCreatePluginResponse = (PluginOutput);
 
 export type PluginsUpdatePluginData = {
     pluginId: string;
@@ -1303,6 +1247,25 @@ export type PluginsGetPluginData = {
 };
 
 export type PluginsGetPluginResponse = (PluginOutput);
+
+export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWatchHistoryInformation>);
+
+export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
+
+export type PluginsMatchUrlData = {
+    url: string;
+};
+
+export type PluginsMatchUrlResponse = (PluginURLMatch);
+
+export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
+
+export type PluginsSearchPluginData = {
+    pluginKey: string;
+    query: string;
+};
+
+export type PluginsSearchPluginResponse = (PluginSearchResults);
 
 export type PluginsGetPluginFilesData = {
     content?: (string | null);
@@ -1420,6 +1383,39 @@ export type ShowsGetSourceShowsData = {
 
 export type ShowsGetSourceShowsResponse = (ShowsPublic);
 
+export type SnapshotsGetSnapshotsResponse = (Array<SnapshotOutput>);
+
+export type SnapshotsCreateSnapshotData = {
+    requestBody: SnapshotCreate;
+};
+
+export type SnapshotsCreateSnapshotResponse = (SnapshotDetailOutput);
+
+export type SnapshotsGetSnapshotData = {
+    snapshotId: string;
+};
+
+export type SnapshotsGetSnapshotResponse = (SnapshotDetailOutput);
+
+export type SnapshotsUpdateSnapshotData = {
+    requestBody: SnapshotUpdate;
+    snapshotId: string;
+};
+
+export type SnapshotsUpdateSnapshotResponse = (SnapshotDetailOutput);
+
+export type SnapshotsDeleteSnapshotData = {
+    snapshotId: string;
+};
+
+export type SnapshotsDeleteSnapshotResponse = (Message);
+
+export type SnapshotsGetSnapshotEpisodesData = {
+    snapshotId: string;
+};
+
+export type SnapshotsGetSnapshotEpisodesResponse = (SnapshotEpisodesOutput);
+
 export type SourcesGetSourcesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
@@ -1468,19 +1464,6 @@ export type SourcesGetPluginSourcesData = {
 
 export type SourcesGetPluginSourcesResponse = (SourcesPublic);
 
-export type UsersReadUsersData = {
-    limit?: number;
-    skip?: number;
-};
-
-export type UsersReadUsersResponse = (UsersPublic);
-
-export type UsersCreateUserData = {
-    requestBody: UserCreate;
-};
-
-export type UsersCreateUserResponse = (UserPublic);
-
 export type UsersReadUserMeResponse = (UserPublic);
 
 export type UsersDeleteUserMeResponse = (Message);
@@ -1509,6 +1492,31 @@ export type UsersReadUserByIdData = {
 
 export type UsersReadUserByIdResponse = (UserPublic);
 
+export type UsersGetUserPublicChannelsData = {
+    userId: string;
+};
+
+export type UsersGetUserPublicChannelsResponse = (ChannelPublicListOutput);
+
+export type UsersReadUsersData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type UsersReadUsersResponse = (UsersPublic);
+
+export type UsersCreateUserData = {
+    requestBody: UserCreate;
+};
+
+export type UsersCreateUserResponse = (UserPublic);
+
+export type UsersAdminListUserChannelsData = {
+    userId: string;
+};
+
+export type UsersAdminListUserChannelsResponse = (Array<ChannelAdminOutput>);
+
 export type UsersUpdateUserData = {
     requestBody: UserUpdate;
     userId: string;
@@ -1522,19 +1530,13 @@ export type UsersDeleteUserData = {
 
 export type UsersDeleteUserResponse = (Message);
 
-export type UsersGetUserPublicChannelsData = {
-    userId: string;
-};
-
-export type UsersGetUserPublicChannelsResponse = (ChannelPublicListOutput);
+export type UtilsHealthCheckResponse = (boolean);
 
 export type UtilsTestEmailData = {
     emailTo: string;
 };
 
 export type UtilsTestEmailResponse = (Message);
-
-export type UtilsHealthCheckResponse = (boolean);
 
 export type WatchesGetWatchesResponse = (WatchesListOutput);
 

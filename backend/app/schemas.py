@@ -1,4 +1,3 @@
-# TODO: Validate
 """Shared schemas."""
 
 from datetime import datetime
@@ -12,16 +11,16 @@ from app.channels.models import Channel
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
 from app.models import MediaMixin
-from app.playlists.models import Playlist
 from app.plugins.models import File, Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.snapshots.models import Snapshot
 from app.sources.models import Source
 from app.users.models import User
 from app.watches.models import Watch
 
 MEDIA_MODELS = (
-    Episode | Season | Show | Source | Plugin | Channel | Watch | Playlist | File
+    Episode | Season | Show | Source | Plugin | Channel | Watch | Snapshot | File
 )
 
 
@@ -32,12 +31,22 @@ class Message(BaseModel):
 
 
 class SortOption(BaseModel):
+    """Sort option for a list of records."""
+
     # Aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
     desc: bool = False
 
 
-class DateRangeFilter(BaseModel):
+class StringFilterOption(BaseModel):
+    """String filter option for a list of records."""
+
+    # Aliased to `id` to match the internal TanStack Table API.
+    column: str = Field(alias="id")
+    value: str
+
+
+class _DateFilterOptionValue(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     # Aliased to `minimumDate` to simplify frontend code.
     minimum_date: datetime | None = Field(default=None, alias="minimumDate")
@@ -47,19 +56,18 @@ class DateRangeFilter(BaseModel):
     hide_blanks: bool = Field(default=False, alias="hideBlanks")
 
 
-class StringFilterOption(BaseModel):
-    # Aliased to `id` to match the internal TanStack Table API.
-    column: str = Field(alias="id")
-    value: str
-
-
 class DateFilterOption(BaseModel):
+    """Date filter option for a list of records."""
+
     # Aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
-    value: DateRangeFilter
+    # This is a separate class to simplify frontend code.
+    value: _DateFilterOptionValue
 
 
 class ReadOptions(BaseModel):
+    """Options for reading a list of records."""
+
     sort_options: Json[list[SortOption]] = Field(default="[]")  # type: ignore[arg-type]
     filter_options: Json[list[StringFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
     date_filter_options: Json[list[DateFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
