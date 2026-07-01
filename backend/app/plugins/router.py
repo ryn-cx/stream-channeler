@@ -12,9 +12,9 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.files.schemas import FileCreate, FileListPublic, FilePublic
-from app.media.schemas import MediaOwner, MediaReadOptions
-from app.media.service import delete_record
-from app.plugins.dependencies import OwnedPlugin, ReadablePlugin
+from app.media.schemas import MediaReadOptions
+from app.media.service import delete_record, media_owner_list_response
+from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import File, Plugin
 from app.plugins.schemas import (
     PluginCreate,
@@ -27,15 +27,61 @@ from app.plugins.schemas import (
     PluginURLMatch,
 )
 from app.schemas import Message
-from app.service import get_read_results
-from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
-router = APIRouter(prefix="/plugins", tags=["plugins"])
+plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
+admin_router = APIRouter(
+    prefix="/admin/plugins",
+    tags=["plugins"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 
 
-@router.get("/import-watch-history-information")
+@plugins_router.post("", response_model=PluginOutput)
+def create_plugin(
+    session: SessionDep,
+    current_user: CurrentUser,
+    plugin_input: PluginCreate,
+) -> Plugin:
+    """Create a `Plugin` owned by the `User`."""
+    return plugin_input.create(session, Plugin, current_user)
+
+
+@plugins_router.get("")
+def get_plugins(
+    session: SessionDep,
+    current_user: CurrentUser,
+    read_options: Annotated[MediaReadOptions, Query()],
+) -> PluginsPublic:
+    """Get all of the `Plugin`s readable by the `User`."""
+    return media_owner_list_response(
+        session=session,
+        base=select(Plugin),
+        response_model=PluginsPublic,
+        schema=PluginOutput,
+        read_options=read_options,
+        current_user=current_user,
+    )
+
+
+@plugins_router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by EditablePlugin
+def update_plugin(
+    session: SessionDep,
+    plugin: EditablePlugin,
+    plugin_input: PluginUpdate,
+) -> Plugin:
+    """Update and return a `Plugin` if it's editable by the `User`."""
+    return plugin_input.update(session, plugin)
+
+
+@plugins_router.delete("/{plugin_id}")  # noqa: FAST003 - Used by EditablePlugin
+def delete_plugin(session: SessionDep, plugin: EditablePlugin) -> Message:
+    """Delete a `Plugin` if it's editable by the `User`."""
+    return delete_record(session, plugin)
+
+
+@plugins_router.get("/import-watch-history-information")
 def import_watch_history_information(
     _current_user: CurrentUser,
 ) -> list[PluginImportWatchHistoryInformation]:
@@ -51,7 +97,7 @@ def import_watch_history_information(
     ]
 
 
-@router.get("/import-url-information")
+@plugins_router.get("/import-url-information")
 def import_url_information(
     _current_user: CurrentUser,
 ) -> list[PluginImportURLInformation]:
@@ -66,7 +112,7 @@ def import_url_information(
     ]
 
 
-@router.get("/match-url")
+@plugins_router.get("/match-url")
 def match_url(
     url: str,
     _current_user: CurrentUser,
@@ -78,7 +124,7 @@ def match_url(
     return PluginURLMatch(matched=False)
 
 
-@router.get("/search-information")
+@plugins_router.get("/search-information")
 def search_information(
     _current_user: CurrentUser,
 ) -> list[PluginSearchInformation]:
@@ -93,7 +139,7 @@ def search_information(
     ]
 
 
-@router.get("/search")
+@plugins_router.get("/search")
 def search_plugin(
     plugin_key: str,
     query: str,
@@ -113,107 +159,41 @@ def search_plugin(
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
-@router.get("")
-def get_plugins(
-    session: SessionDep,
-    current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
-) -> PluginsPublic:
-    """Return the `Plugin`s for a table view (client- or server-side).
-
-    `official`/`others` require a superuser, matching the other admin views.
-    """
-    base = select(Plugin)
-    if read_options.owner is None:
-        base = base.where(Plugin.user_id == current_user.id)
-    else:
-        if not current_user.is_superuser:
-            raise HTTPException(
-                status_code=403,
-                detail="The user doesn't have enough privileges",
-            )
-        plugin_user = get_or_create_plugin_user(session=session)
-        if read_options.owner == MediaOwner.official:
-            base = base.where(Plugin.user_id == plugin_user.id)
-        else:
-            base = base.where(
-                col(Plugin.user_id).not_in([current_user.id, plugin_user.id]),
-            )
-    rows, total_count, filtered_count, is_server_side = get_read_results(
-        session,
-        base,
-        schema=PluginOutput,
-        default_sort=Plugin.created_at,
-        tiebreaker=Plugin.id,
-        params=read_options,
-        current_user=current_user,
-    )
-    return PluginsPublic(
-        data=[PluginOutput.model_validate(row) for row in rows],
-        total_count=total_count,
-        filtered_count=filtered_count,
-        is_server_side=is_server_side,
-    )
-
-
-@router.post("", response_model=PluginOutput)
-def create_plugin(
-    session: SessionDep,
-    current_user: CurrentUser,
-    plugin_input: PluginCreate,
-) -> Plugin:
-    """Create a `Plugin` owned by the current `User`."""
-    return plugin_input.create(session, Plugin, current_user)
-
-
-@router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by OwnedPlugin
-def update_plugin(
-    session: SessionDep,
-    plugin: OwnedPlugin,
-    plugin_input: PluginUpdate,
-) -> Plugin:
-    """Update and return a `Plugin` if it's owned by the current `User`."""
-    return plugin_input.update(session, plugin)
-
-
-@router.delete("/{plugin_id}")  # noqa: FAST003 - Used by OwnedPlugin
-def delete_plugin(session: SessionDep, plugin: OwnedPlugin) -> Message:
-    """Delete a `Plugin` if it's owned by the current `User`."""
-    return delete_record(session, plugin)
-
-
-@router.get(
+@admin_router.get(
     "/{plugin_id}/files",  # noqa: FAST003 - Used by ReadablePlugin
     response_model=list[FileListPublic],
-    dependencies=[Depends(get_current_active_superuser)],
 )
 def get_plugin_files(
     plugin: ReadablePlugin,
     session: SessionDep,
     content: str | None = None,
 ) -> Sequence[File]:
-    """List all `File`s for a `Plugin` if it is public or owned by the current `User`."""
+    """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
     statement = select(File).where(col(File.plugin_id) == plugin.id)
     if content:
         statement = statement.where(col(File.content).ilike(f"%{content}%"))
     return session.exec(statement).all()
 
 
-@router.post(
-    "/{plugin_id}/files",  # noqa: FAST003 - Used by OwnedPlugin
+@admin_router.post(
+    "/{plugin_id}/files",  # noqa: FAST003 - Used by EditablePlugin
     response_model=FilePublic,
-    dependencies=[Depends(get_current_active_superuser)],
 )
 def create_file(
     session: SessionDep,
-    plugin: OwnedPlugin,
+    plugin: EditablePlugin,
     file_input: FileCreate,
 ) -> File:
-    """Create a `File` if the `Plugin` is owned by the current `User`."""
+    """Create a `File` if the `Plugin` is editable by the `User`."""
     return file_input.create(session, File, plugin)
 
 
-@router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
+@plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
 def get_plugin(plugin: ReadablePlugin) -> Plugin:
-    """Get a `Plugin` if it's readable by the current `User`."""
+    """Get a `Plugin` if it's readable by the `User`."""
     return plugin
+
+
+router = APIRouter()
+router.include_router(plugins_router)
+router.include_router(admin_router)

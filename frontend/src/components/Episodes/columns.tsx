@@ -26,6 +26,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "episode_number",
     header: "Episode #",
+    meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.episode_number ?? "-"}
@@ -35,6 +36,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "sort_order",
     header: "Sort Order",
+    meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.sort_order ?? "-"}
@@ -59,6 +61,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "release_date",
     header: "Release Date",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
       <span className="text-muted-foreground text-sm">
         {row.original.release_date ?? "-"}
@@ -68,6 +71,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "air_date",
     header: "Air Date",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
       <span className="text-muted-foreground text-sm">
         {row.original.air_date ?? "-"}
@@ -77,6 +81,7 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "duration",
     header: "Duration",
+    meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.duration ?? "-"}

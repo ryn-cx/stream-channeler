@@ -33,7 +33,7 @@ class Message(BaseModel):
 class SortOption(BaseModel):
     """Sort option for a list of records."""
 
-    # Aliased to `id` to match the internal TanStack Table API.
+    # This is aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
     desc: bool = False
 
@@ -41,28 +41,49 @@ class SortOption(BaseModel):
 class StringFilterOption(BaseModel):
     """String filter option for a list of records."""
 
-    # Aliased to `id` to match the internal TanStack Table API.
+    # This is aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
     value: str
 
 
-class _DateFilterOptionValue(BaseModel):
+class DateFilterOptionValue(BaseModel):
+    """The value inside of DateFilterOption.value."""
+
     model_config = ConfigDict(populate_by_name=True)
-    # Aliased to `minimumDate` to simplify frontend code.
+    # This is aliased to `minimumDate` to simplify frontend code.
     minimum_date: datetime | None = Field(default=None, alias="minimumDate")
-    # Aliased to `maximumDate` to simplify frontend code.
+    # This is aliased to `maximumDate` to simplify frontend code.
     maximum_date: datetime | None = Field(default=None, alias="maximumDate")
-    # Aliased to `hideBlanks` to simplify frontend code.
+    # This is aliased to `hideBlanks` to simplify frontend code.
     hide_blanks: bool = Field(default=False, alias="hideBlanks")
 
 
 class DateFilterOption(BaseModel):
     """Date filter option for a list of records."""
 
-    # Aliased to `id` to match the internal TanStack Table API.
+    # This is aliased to `id` to match the internal TanStack Table API.
     column: str = Field(alias="id")
-    # This is a separate class to simplify frontend code.
-    value: _DateFilterOptionValue
+    # This is a seperate class to simplify frontend code.
+    value: DateFilterOptionValue
+
+
+class NumberFilterOptionValue(BaseModel):
+    """The value inside of NumberFilterOption.value."""
+
+    model_config = ConfigDict(populate_by_name=True)
+    minimum: float | None = None
+    maximum: float | None = None
+    # This is aliased to `hideBlanks` to simplify frontend code.
+    hide_blanks: bool = Field(default=False, alias="hideBlanks")
+
+
+class NumberFilterOption(BaseModel):
+    """Number range filter option for a list of records."""
+
+    # This is aliased to `id` to match the internal TanStack Table API.
+    column: str = Field(alias="id")
+    # This is a seperate class to simplify frontend code.
+    value: NumberFilterOptionValue
 
 
 class ReadOptions(BaseModel):
@@ -71,6 +92,7 @@ class ReadOptions(BaseModel):
     sort_options: Json[list[SortOption]] = Field(default="[]")  # type: ignore[arg-type]
     filter_options: Json[list[StringFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
     date_filter_options: Json[list[DateFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
+    number_filter_options: Json[list[NumberFilterOption]] = Field(default="[]")  # type: ignore[arg-type]
     offset: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 

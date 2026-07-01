@@ -178,7 +178,7 @@ class BasePlugin(
 
     def soft_delete_missing_seasons(self, show_key: str) -> None:
         """Soft-delete seasons whose keys are not in the show's season file."""
-        expected_keys = self._season_keys_from_file(show_key)
+        season_keys = self._season_keys_from_file(show_key)
         source_ids = {source.id for source in self.plugin.sources}
         for obj in list(self.session.identity_map.values()):
             if (
@@ -186,11 +186,11 @@ class BasePlugin(
                 and obj.key == show_key
                 and obj.source_id in source_ids
             ):
-                obj.soft_delete_missing_children(expected_keys)
+                obj.soft_delete_missing_children(season_keys)
 
     def soft_delete_missing_episodes(self, season_key: str) -> None:
         """Soft-delete episodes whose keys are not in the season's episode file."""
-        expected_keys = self._episode_keys_from_file(season_key)
+        episode_keys = self._episode_keys_from_file(season_key)
         source_ids = {source.id for source in self.plugin.sources}
         show_ids = {
             obj.id
@@ -203,7 +203,7 @@ class BasePlugin(
                 and obj.key == season_key
                 and obj.show_id in show_ids
             ):
-                obj.soft_delete_missing_children(expected_keys)
+                obj.soft_delete_missing_children(episode_keys)
 
     @classmethod
     @override

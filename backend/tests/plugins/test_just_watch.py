@@ -66,7 +66,8 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         validator = super().update_source_validator(source)
         assert source.data_timestamp
         completeness_deadline = tz_datetime.combine(
-            source.data_timestamp.date(), datetime.min.time()
+            source.data_timestamp.date(),
+            datetime.min.time(),
         ) + timedelta(days=2)
         if completeness_deadline > tz_datetime.now():
             validator.populated(source.id, "update_at")

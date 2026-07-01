@@ -6,14 +6,15 @@ from app.auth.dependencies import get_current_active_superuser
 from app.schemas import Message
 from app.utils import service as email_service
 
-router = APIRouter(prefix="/utils", tags=["utils"])
-
-
-@router.post(
-    "/test-email/",
+utils_router = APIRouter(prefix="/utils", tags=["utils"])
+admin_router = APIRouter(
+    prefix="/admin/utils",
+    tags=["utils"],
     dependencies=[Depends(get_current_active_superuser)],
-    status_code=status.HTTP_201_CREATED,
 )
+
+
+@admin_router.post("/test-email/", status_code=status.HTTP_201_CREATED)
 def test_email(email_to: EmailStr) -> Message:
     """
     Test emails.
@@ -27,6 +28,11 @@ def test_email(email_to: EmailStr) -> Message:
     return Message(message="Test email sent")
 
 
-@router.get("/health-check/")
+@utils_router.get("/health-check/")
 async def health_check() -> bool:
     return True
+
+
+router = APIRouter()
+router.include_router(utils_router)
+router.include_router(admin_router)

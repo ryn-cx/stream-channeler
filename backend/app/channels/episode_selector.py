@@ -32,7 +32,7 @@ from app.watches.models import Watch
 MAX_EPISODES_RETURNED = 1000
 
 # Labels used to compose raw SQL references from Postgres subquery + column
-# names. Callers of ``literal_column`` below rely on the producing subquery
+# names. Callers of `literal_column` below rely on the producing subquery
 # being materialised with exactly these names; keep them in sync.
 EPISODE_LAST_WATCHED_SUBQUERY = "episode_last_watched"
 EPISODE_LAST_WATCH_COMPLETED_COLUMN = "episode_last_watch_completed_date"
@@ -289,8 +289,8 @@ def resolve_channel_ids(
 ) -> set[UUID]:
     """Resolve the full set of readable channel ids reachable from a channel.
 
-    Starts from the main channel plus ``additional_channels`` and follows each
-    readable channel's children (its own ``additional_channels``) recursively.
+    Starts from the main channel plus `additional_channels` and follows each
+    readable channel's children (its own `additional_channels`) recursively.
     """
     all_channel_ids = {main_channel.id}
     queued_channel_ids = {main_channel.id}

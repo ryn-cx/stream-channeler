@@ -9,5 +9,9 @@ class MediaOwner(StrEnum):
     others = "others"
 
 
+class AdminReadOptions(ReadOptions):
+    owner: MediaOwner
+
+
 class MediaReadOptions(ReadOptions):
     owner: MediaOwner | None = None

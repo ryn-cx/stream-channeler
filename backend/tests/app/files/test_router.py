@@ -27,8 +27,8 @@ from tests.app.utils.utils import build_random_model
 class FileTestMixin(BaseTests[File]):
     """Shared setup for the superuser-gated `File` endpoints.
 
-    Every `File` endpoint sits behind ``get_current_active_superuser``, so the
-    "happy path" helper tests (which don't parametrize ``user_is_superuser``)
+    Every `File` endpoint sits behind `get_current_active_superuser`, so the
+    "happy path" helper tests (which don't parametrize `user_is_superuser`)
     default the requester to a superuser, and the denial assertion only checks
     the status code because the 403 detail differs between the admin gate ("not
     enough privileges") and the ownership check ("Not authorized...").

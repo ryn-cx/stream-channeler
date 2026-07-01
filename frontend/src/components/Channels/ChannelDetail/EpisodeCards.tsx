@@ -15,12 +15,12 @@ import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import {
   type MoveDirection,
   EpisodeCard as SharedEpisodeCard,
-} from "@/components/PlaylistChannelCommon/EpisodeCard"
+} from "@/components/SnapshotChannelCommon/EpisodeCard"
 import {
   EPISODE_GRID_CLASSES,
   resolveArrowMove,
   useColumnCount,
-} from "@/components/PlaylistChannelCommon/episodeGrid"
+} from "@/components/SnapshotChannelCommon/episodeGrid"
 import { Badge } from "@/components/ui/badge"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"

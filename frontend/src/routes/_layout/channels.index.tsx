@@ -8,7 +8,10 @@ import { ChannelsService } from "@/client"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
 import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
-import { columns } from "@/components/Channels/ChannelList/columns"
+import {
+  type ChannelTableData,
+  columns,
+} from "@/components/Channels/ChannelList/columns"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
@@ -62,7 +65,7 @@ function ChannelsContent() {
       id: false,
     })
 
-  const tableData = channels ?? []
+  const tableData: ChannelTableData[] = channels ?? []
 
   const table = useReactTable({
     data: tableData,

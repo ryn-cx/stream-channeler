@@ -230,7 +230,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     @pytest.fixture(scope="class")
     def _connection_with_imported_url(
-        self, _connection_with_files: Connection
+        self,
+        _connection_with_files: Connection,
     ) -> Generator[Connection]:
         """Import the URL once per class inside a savepoint kept open for the class.
 
@@ -260,7 +261,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     @pytest.fixture
     def session_with_url(
-        self, _connection_with_imported_url: Connection
+        self,
+        _connection_with_imported_url: Connection,
     ) -> Generator[Session]:
         """Per-test session with files and URL imported, rolls back after each test."""
         yield from savepoint_session(_connection_with_imported_url, nested=True)

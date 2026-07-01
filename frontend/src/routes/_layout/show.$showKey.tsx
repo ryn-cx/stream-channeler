@@ -39,7 +39,7 @@ function ShowDetailPage() {
           showId: showKey,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params),
+          ...serializeTableQuery(params, seasonColumns),
         })
         return {
           data: result.data,

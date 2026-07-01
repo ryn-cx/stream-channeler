@@ -1,4 +1,3 @@
-# TODO: Validate
 """Episode models."""
 
 import uuid
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class BaseEpisode(BaseMediaMixin):
-    """Base model representing an Episode."""
+    """Base model for an `Episode`."""
 
     url: str | None = Field(default=None)
     sort_order: int | None = Field(default=None)
@@ -41,7 +40,7 @@ class BaseEpisode(BaseMediaMixin):
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
-    """Model representing an Episode."""
+    """Model representing an episode."""
 
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "air_date",
@@ -67,7 +66,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
         *sortable_field_indexes("Episode", DIRECT_SORTABLE_FIELDS),
-        # Used to filter out deleted episodes.
         Index("Episode-deleted_at-index", "deleted_at"),
     )
 
@@ -102,7 +100,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         return []
 
     def __str__(self) -> str:
-        """Return a string representation of the Episode."""
+        """Return a string representation of the `Episode`."""
         base_episode = "Episode:"
         if self.episode_number:
             base_episode += f" {self.episode_number} - "

@@ -37,7 +37,7 @@ function PluginPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params),
+          ...serializeTableQuery(params, columns),
         })
         return {
           data: result.data,

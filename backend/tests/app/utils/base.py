@@ -28,12 +28,6 @@ from app.episodes.schemas import (
 )
 from app.files.schemas import FileCreate, FilePublic, FileUpdate
 from app.models import Visibility
-from app.playlists.models import Playlist
-from app.playlists.schemas import (
-    PlaylistCreate,
-    PlaylistOutput,
-    PlaylistUpdate,
-)
 from app.plugins.models import File, Plugin
 from app.plugins.schemas import (
     PluginCreate,
@@ -48,6 +42,12 @@ from app.seasons.schemas import (
 )
 from app.shows.models import Show
 from app.shows.schemas import ShowCreate, ShowPublic, ShowUpdate
+from app.snapshots.models import Snapshot
+from app.snapshots.schemas import (
+    SnapshotCreate,
+    SnapshotOutput,
+    SnapshotUpdate,
+)
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceCreate,
@@ -70,7 +70,7 @@ from tests.app.users.utils import (
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
 SUPPORTED_MODELS = (
-    Channel | Episode | Season | Show | Source | Plugin | Watch | Playlist | File
+    Channel | Episode | Season | Show | Source | Plugin | Watch | Snapshot | File
 )
 PARENT_MODELS = SUPPORTED_MODELS | User
 
@@ -83,7 +83,7 @@ CREATE_SCHEMAS = (
     | ShowCreate
     | SourceCreate
     | WatchCreate
-    | PlaylistCreate
+    | SnapshotCreate
 )
 OUTPUT_SCHEMAS = (
     ChannelOutput
@@ -94,7 +94,7 @@ OUTPUT_SCHEMAS = (
     | ShowPublic
     | SourcePublic
     | WatchOutput
-    | PlaylistOutput
+    | SnapshotOutput
 )
 LIST_OUTPUT_SCHEMAS = (
     list[ChannelOutput]
@@ -104,7 +104,7 @@ LIST_OUTPUT_SCHEMAS = (
     | list[SeasonOutput]
     | list[ShowPublic]
     | list[SourcePublic]
-    | list[PlaylistOutput]
+    | list[SnapshotOutput]
 )
 UPDATE_SCHEMAS = (
     ChannelUpdate
@@ -115,7 +115,7 @@ UPDATE_SCHEMAS = (
     | ShowUpdate
     | SourceUpdate
     | WatchUpdate
-    | PlaylistUpdate
+    | SnapshotUpdate
 )
 
 
@@ -287,7 +287,7 @@ class BaseTests[T: SUPPORTED_MODELS]:
     ) -> CreatedTestData[T]:
         """Create a user and record with the given ownership and visibility.
 
-        When ``record_is_owned_by_plugin_user`` is true and ``user_is_owner`` is
+        When `record_is_owned_by_plugin_user` is true and `user_is_owner` is
         false, the record's owner is the plugin user (the superuser carve-out
         target); otherwise it's a freshly created unrelated user.
         """
@@ -332,11 +332,11 @@ class BaseTests[T: SUPPORTED_MODELS]:
     ) -> CreatedTestData[T]:
         """Create a superuser and a private record with the given owner.
 
-        - ``"self"`` — the superuser owns the record (parity with a regular
+        - `"self"` — the superuser owns the record (parity with a regular
           user accessing data they own).
-        - ``"plugin_user"`` — the record belongs to the plugin user (the
+        - `"plugin_user"` — the record belongs to the plugin user (the
           superuser-only carve-out for official media).
-        - ``"other"`` — the record belongs to an unrelated regular user (the
+        - `"other"` — the record belongs to an unrelated regular user (the
           superuser should be denied).
 
         Visibility is forced to private so the auth check actually runs;

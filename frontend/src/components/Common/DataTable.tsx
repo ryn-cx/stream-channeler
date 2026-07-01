@@ -110,6 +110,36 @@ function dateRangeFilterFn<TData>(
   return true
 }
 
+function parseNumberBound(value: unknown): number | null {
+  if (value === "" || value === null || value === undefined) return null
+  const parsed = Number(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+interface NumberRangeFilterValue {
+  minimum?: string
+  maximum?: string
+  hideBlanks?: boolean
+}
+
+function numberRangeFilterFn<TData>(
+  row: Row<TData>,
+  columnId: string,
+  filterValue: NumberRangeFilterValue,
+): boolean {
+  const rawValue = row.getValue(columnId) as number | null | undefined
+  const { minimum, maximum, hideBlanks } = filterValue ?? {}
+  const minimumBound = parseNumberBound(minimum)
+  const maximumBound = parseNumberBound(maximum)
+
+  // Blank values should always be shown unless explicitly hidden.
+  if (rawValue === null || rawValue === undefined) return !hideBlanks
+
+  if (minimumBound !== null && rawValue < minimumBound) return false
+  if (maximumBound !== null && rawValue > maximumBound) return false
+  return true
+}
+
 function usePersistentState<T>(key: string | undefined, initialValue: T) {
   const [value, setValue] = useState<T>(() => {
     if (!key) return initialValue
@@ -206,11 +236,15 @@ export function DataTable<TData extends { id: string }, TValue>({
 }: DataTableProps<TData, TValue>) {
   const processedColumns = useMemo(
     () =>
-      columns.map((column) =>
-        column.meta?.filterVariant === "dateRange"
-          ? { ...column, filterFn: dateRangeFilterFn }
-          : column,
-      ),
+      columns.map((column) => {
+        if (column.meta?.filterVariant === "dateRange") {
+          return { ...column, filterFn: dateRangeFilterFn }
+        }
+        if (column.meta?.filterVariant === "range") {
+          return { ...column, filterFn: numberRangeFilterFn }
+        }
+        return column
+      }),
     [columns],
   )
 
@@ -590,39 +624,57 @@ function Filter<TData, TValue>({
 
   if (filterVariant === "range") {
     const [min, max] = column.getFacetedMinMaxValues() ?? []
+    const value = (columnFilterValue as NumberRangeFilterValue) ?? {}
+
+    // Merge against the latest filter value (not a render-time snapshot) so the
+    // debounced min/max inputs don't clobber each other when their timers race.
+    const applyFilter = (patch: NumberRangeFilterValue) => {
+      column.setFilterValue((previous: NumberRangeFilterValue | undefined) => {
+        const merged = { ...(previous ?? {}), ...patch }
+        const cleaned: NumberRangeFilterValue = {
+          minimum: merged.minimum || undefined,
+          maximum: merged.maximum || undefined,
+          hideBlanks: merged.hideBlanks || undefined,
+        }
+        return cleaned.minimum || cleaned.maximum || cleaned.hideBlanks
+          ? cleaned
+          : undefined
+      })
+    }
+
+    const boundProps = {
+      ...(min !== undefined ? { min: Number(min) } : {}),
+      ...(max !== undefined ? { max: Number(max) } : {}),
+    }
+
     return (
-      <div>
-        <div className="flex space-x-2">
-          <DebouncedInput
-            type="number"
-            min={Number(min ?? "")}
-            max={Number(max ?? "")}
-            value={(columnFilterValue as [number, number])?.[0] ?? ""}
-            onChange={(value) =>
-              column.setFilterValue((old: [number, number]) => [
-                value,
-                old?.[1],
-              ])
+      <div className="flex flex-col gap-1">
+        <DebouncedInput
+          type="number"
+          {...boundProps}
+          value={value.minimum ?? ""}
+          onChange={(next) => applyFilter({ minimum: String(next) })}
+          placeholder={`Min ${min !== undefined ? `(${min})` : ""}`}
+          className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
+        />
+        <DebouncedInput
+          type="number"
+          {...boundProps}
+          value={value.maximum ?? ""}
+          onChange={(next) => applyFilter({ maximum: String(next) })}
+          placeholder={`Max ${max !== undefined ? `(${max})` : ""}`}
+          className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
+        />
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={value.hideBlanks ?? false}
+            onChange={(event) =>
+              applyFilter({ hideBlanks: event.target.checked })
             }
-            placeholder={`Min ${min !== undefined ? `(${min})` : ""}`}
-            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
           />
-          <DebouncedInput
-            type="number"
-            min={Number(min ?? "")}
-            max={Number(max ?? "")}
-            value={(columnFilterValue as [number, number])?.[1] ?? ""}
-            onChange={(value) =>
-              column.setFilterValue((old: [number, number]) => [
-                old?.[0],
-                value,
-              ])
-            }
-            placeholder={`Max ${max ? `(${max})` : ""}`}
-            className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
-          />
-        </div>
-        <div className="h-1" />
+          Hide Blanks
+        </label>
       </div>
     )
   }
@@ -732,12 +784,53 @@ export interface MediaTableResult<TData> {
   is_server_side: boolean
 }
 
-export function serializeTableQuery(params: MediaPageParams) {
+interface NumberFilterOption {
+  id: string
+  value: {
+    minimum: number | null
+    maximum: number | null
+    hideBlanks: boolean
+  }
+}
+
+function columnId<TData>(
+  column: ColumnDef<TData, unknown>,
+): string | undefined {
+  if (column.id) return column.id
+  if ("accessorKey" in column) return String(column.accessorKey)
+  return undefined
+}
+
+export function serializeTableQuery<TData>(
+  params: MediaPageParams,
+  columns: ColumnDef<TData, unknown>[],
+) {
+  const filterVariants = new Map<string, string>()
+  for (const column of columns) {
+    const id = columnId(column)
+    if (id && column.meta?.filterVariant) {
+      filterVariants.set(id, column.meta.filterVariant)
+    }
+  }
+
   const stringFilters: FilterOptionsState = []
   const dateFilters: FilterOptionsState = []
+  const numberFilters: NumberFilterOption[] = []
   for (const filter of params.filterOptions) {
-    if (filter.value !== null && typeof filter.value === "object") {
+    const variant = filterVariants.get(filter.id)
+    if (variant === "dateRange") {
       dateFilters.push(filter)
+    } else if (variant === "range") {
+      const { minimum, maximum, hideBlanks } =
+        (filter.value as NumberRangeFilterValue) ?? {}
+      numberFilters.push({
+        id: filter.id,
+        value: {
+          minimum: parseNumberBound(minimum),
+          maximum: parseNumberBound(maximum),
+          hideBlanks: hideBlanks ?? false,
+        },
+      })
     } else {
       stringFilters.push(filter)
     }
@@ -746,6 +839,7 @@ export function serializeTableQuery(params: MediaPageParams) {
     sortOptions: JSON.stringify(params.sortOptions),
     filterOptions: JSON.stringify(stringFilters),
     dateFilterOptions: JSON.stringify(dateFilters),
+    numberFilterOptions: JSON.stringify(numberFilters),
   }
 }
 

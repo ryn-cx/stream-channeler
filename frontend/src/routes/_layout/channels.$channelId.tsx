@@ -19,9 +19,9 @@ import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefau
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
-import { EditOrderButton } from "@/components/PlaylistChannelCommon/EditOrderButton"
-import { HeroBillboard } from "@/components/PlaylistChannelCommon/HeroBillboard"
-import { SaveAsPlaylistButton } from "@/components/Playlists/PlaylistDetail/SaveAsPlaylistButton"
+import { EditOrderButton } from "@/components/SnapshotChannelCommon/EditOrderButton"
+import { HeroBillboard } from "@/components/SnapshotChannelCommon/HeroBillboard"
+import { SaveAsSnapshotButton } from "@/components/Snapshots/SnapshotDetail/SaveAsSnapshotButton"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -282,7 +282,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                   variant="menu"
                 />
               )}
-              <SaveAsPlaylistButton
+              <SaveAsSnapshotButton
                 episodes={episodesData?.episodes ?? []}
                 variant="menu"
               />
@@ -330,7 +330,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {isOwner && (
             <SaveDefaultButton channelId={channelId} searchParams={search} />
           )}
-          <SaveAsPlaylistButton episodes={episodesData?.episodes ?? []} />
+          <SaveAsSnapshotButton episodes={episodesData?.episodes ?? []} />
           {viewMode === "cards" && (
             <EditOrderButton
               editOrder={editOrder}

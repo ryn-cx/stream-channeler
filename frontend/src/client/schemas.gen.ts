@@ -973,15 +973,16 @@ export const DateFilterOptionSchema = {
             title: 'Id'
         },
         value: {
-            '$ref': '#/components/schemas/DateRangeFilter'
+            '$ref': '#/components/schemas/DateFilterOptionValue'
         }
     },
     type: 'object',
     required: ['id', 'value'],
-    title: 'DateFilterOption'
+    title: 'DateFilterOption',
+    description: 'Date filter option for a list of records.'
 } as const;
 
-export const DateRangeFilterSchema = {
+export const DateFilterOptionValueSchema = {
     properties: {
         minimumDate: {
             anyOf: [
@@ -1014,7 +1015,8 @@ export const DateRangeFilterSchema = {
         }
     },
     type: 'object',
-    title: 'DateRangeFilter'
+    title: 'DateFilterOptionValue',
+    description: 'The value inside of DateFilterOption.value.'
 } as const;
 
 export const EpisodeCreateSchema = {
@@ -2105,6 +2107,52 @@ export const NewPasswordSchema = {
     type: 'object',
     required: ['token', 'new_password'],
     title: 'NewPassword'
+} as const;
+
+export const NumberFilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            '$ref': '#/components/schemas/NumberFilterOptionValue'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'NumberFilterOption',
+    description: 'Number range filter option for a list of records.'
+} as const;
+
+export const NumberFilterOptionValueSchema = {
+    properties: {
+        minimum: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Minimum'
+        },
+        maximum: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maximum'
+        }
+    },
+    type: 'object',
+    title: 'NumberFilterOptionValue',
+    description: 'The value inside of NumberFilterOption.value.'
 } as const;
 
 export const PluginCreateSchema = {
@@ -3402,6 +3450,122 @@ export const ShowsPublicSchema = {
     description: 'Schema for returning a list of `Show`s.'
 } as const;
 
+export const SnapshotAdminOutputSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/Visibility'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        }
+    },
+    type: 'object',
+    required: ['visibility', 'id', 'user_id', 'score', 'created_at', 'modified_at', 'username'],
+    title: 'SnapshotAdminOutput',
+    description: 'Schema for returning a `Snapshot` to an admin, including the owner username.'
+} as const;
+
+export const SnapshotAdminUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        visibility: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/Visibility'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'SnapshotAdminUpdate',
+    description: 'Schema for an admin updating any field on a `Snapshot`.'
+} as const;
+
 export const SnapshotCreateSchema = {
     properties: {
         name: {
@@ -3417,6 +3581,11 @@ export const SnapshotCreateSchema = {
         },
         visibility: {
             '$ref': '#/components/schemas/Visibility'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
         },
         episode_ids: {
             items: {
@@ -3450,15 +3619,31 @@ export const SnapshotDetailOutputSchema = {
         visibility: {
             '$ref': '#/components/schemas/Visibility'
         },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
         id: {
             type: 'string',
             format: 'uuid',
             title: 'Id'
         },
         user_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'User Id'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
         },
         created_at: {
             type: 'string',
@@ -3479,7 +3664,7 @@ export const SnapshotDetailOutputSchema = {
         }
     },
     type: 'object',
-    required: ['visibility', 'id', 'user_id', 'created_at', 'modified_at', 'episodes'],
+    required: ['visibility', 'id', 'user_id', 'score', 'created_at', 'modified_at', 'episodes'],
     title: 'SnapshotDetailOutput'
 } as const;
 
@@ -3766,7 +3951,27 @@ export const SnapshotEpisodesOutputSchema = {
     title: 'SnapshotEpisodesOutput'
 } as const;
 
-export const SnapshotOutputSchema = {
+export const SnapshotPublicListOutputSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/SnapshotPublicOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'SnapshotPublicListOutput',
+    description: 'Schema for returning a page of publicly listed `Snapshot`s.'
+} as const;
+
+export const SnapshotPublicOutputSchema = {
     properties: {
         name: {
             anyOf: [
@@ -3782,31 +3987,44 @@ export const SnapshotOutputSchema = {
         visibility: {
             '$ref': '#/components/schemas/Visibility'
         },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
+        },
         id: {
             type: 'string',
             format: 'uuid',
             title: 'Id'
         },
         user_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'User Id'
         },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
         }
     },
     type: 'object',
-    required: ['visibility', 'id', 'user_id', 'created_at', 'modified_at'],
-    title: 'SnapshotOutput',
-    description: 'Schema for returning a `Snapshot`.'
+    required: ['visibility', 'id', 'user_id', 'username'],
+    title: 'SnapshotPublicOutput',
+    description: 'Schema for returning a publicly listed `Snapshot`.'
 } as const;
 
 export const SnapshotUpdateSchema = {
@@ -3831,6 +4049,17 @@ export const SnapshotUpdateSchema = {
                     type: 'null'
                 }
             ]
+        },
+        anonymous: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Anonymous'
         },
         episode_ids: {
             anyOf: [
@@ -3943,7 +4172,8 @@ export const SortOptionSchema = {
     },
     type: 'object',
     required: ['id'],
-    title: 'SortOption'
+    title: 'SortOption',
+    description: 'Sort option for a list of records.'
 } as const;
 
 export const SortOptionOutputSchema = {
@@ -4307,7 +4537,8 @@ export const StringFilterOptionSchema = {
     },
     type: 'object',
     required: ['id', 'value'],
-    title: 'StringFilterOption'
+    title: 'StringFilterOption',
+    description: 'String filter option for a list of records.'
 } as const;
 
 export const TokenSchema = {
@@ -4662,7 +4893,7 @@ export const VisibilitySchema = {
     type: 'string',
     enum: ['public', 'unlisted', 'private'],
     title: 'Visibility',
-    description: 'Visibility level for `Channel`, `Plugin`, and `Snapshot` records.'
+    description: 'Visibility enum for `Channel`s, `Plugin`s, and `Snapshot`s.'
 } as const;
 
 export const WatchCreateSchema = {

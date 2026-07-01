@@ -64,8 +64,8 @@ class URLMixin(ABC):
         """Build an absolute URL from a path relative to the base URL.
 
         A leading slash is added to the path when missing, so callers can pass
-        either a bare path (``series/123``) or a root-relative path
-        (``/series/123``).
+        either a bare path (`series/123`) or a root-relative path
+        (`/series/123`).
         """
         base_url = cls._base_url().rstrip("/")
         if not path.startswith("/"):

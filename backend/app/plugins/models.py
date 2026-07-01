@@ -1,7 +1,7 @@
-# TODO: Validate
+"""Plugin models."""
+
 import uuid
-from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, Never, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlmodel import (
     Field,
@@ -14,7 +14,6 @@ from sqlmodel import (
 
 from app.models import (
     BaseMediaMixin,
-    DateTimeField,
     MediaMixin,
     Visibility,
     sortable_field_indexes,
@@ -22,16 +21,21 @@ from app.models import (
 from app.users.models import User
 
 if TYPE_CHECKING:
+    from app.files.models import File
     from app.sources.models import Source
 
 
 class BasePlugin(BaseMediaMixin):
+    """Base model for a `Plugin`."""
+
     name: str | None = Field(default=None)
     version: str | None = Field(default=None)
     visibility: Visibility = Field()
 
 
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
+    """Model representing a `Plugin`."""
+
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "visibility"]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
@@ -61,6 +65,8 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
 
     @override
     def add_child(self, child: Source | File) -> None:
+        from app.files.models import File  # noqa: PLC0415
+
         if isinstance(child, File):
             self.files.append(child)
         else:
@@ -76,47 +82,10 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         return [*self.sources, *self.files]
 
     def __str__(self) -> str:
-        """Return a string representation of the Plugin."""
+        """Return a string representation of the `Plugin`."""
         base_plugin = "Plugin:"
         if self.key:
             base_plugin += f" {self.key}"
         if self.id:
             base_plugin += f" ({self.id})"
         return base_plugin
-
-
-class BaseFile(BaseMediaMixin):
-    # data_timestamp is a required field for files.
-    data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
-    content: str | None = Field(default=None)
-
-
-# data_timestamp is a required value for files.
-class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
-    __table_args__ = (PrimaryKeyConstraint("plugin_id", "key"),)
-
-    plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
-    plugin: Plugin = Relationship(back_populates="files")
-
-    @property
-    @override
-    def parent(self) -> Plugin:
-        return self.plugin
-
-    @property
-    @override
-    def children(self) -> list[Never]:
-        return []
-
-    @override
-    def _root_record(self, _session: Session) -> Plugin:
-        return self.plugin
-
-    def __str__(self) -> str:
-        """Return a string representation of the File."""
-        base_file = "File:"
-        if self.key:
-            base_file += f" {self.key}"
-        if self.id:
-            base_file += f" ({self.id})"
-        return f"{self.plugin}\n{base_file}"

@@ -38,7 +38,7 @@ function EpisodesPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params),
+          ...serializeTableQuery(params, episodeColumns),
         })
         return {
           data: result.data,

@@ -184,7 +184,7 @@ def blacklist_episode_on_channel(
     """Blacklist a single episode for `channel`.
 
     Gets or creates the `ChannelShow` linking `channel` and `show`. A newly created
-    `ChannelShow` is a filter-only show (``is_blacklist_only=True``) in blacklist mode, so
+    `ChannelShow` is a filter-only show (`is_blacklist_only=True`) in blacklist mode, so
     the show's other episodes are not pulled into the channel. Adds (or updates the expiry
     of) a `ChannelEpisodeFilter` for the episode.
     """

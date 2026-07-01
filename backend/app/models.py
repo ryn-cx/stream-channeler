@@ -65,16 +65,16 @@ class RootRecordMixin(ABC):
     """
 
     @abstractmethod
-    def _root_model(self, session: Session) -> Channel | Snapshot | Plugin:
+    def _root_record(self, session: Session) -> Channel | Snapshot | Plugin:
         """Return the root record directly owned by the `User`."""
 
     def owner_id(self, session: Session) -> uuid.UUID:
         """Return the `id` of the `User` who owns this record."""
-        return self._root_model(session).user_id
+        return self._root_record(session).user_id
 
     def is_publically_readable(self, session: Session) -> bool:
         """Return true if this record's `visibility` is `public` or `unlisted`."""
-        return self._root_model(session).visibility in (
+        return self._root_record(session).visibility in (
             Visibility.public,
             Visibility.unlisted,
         )

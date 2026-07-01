@@ -1,4 +1,5 @@
-# TODO: Validate
+"""Show models."""
+
 import uuid
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -18,6 +19,8 @@ from app.sources.models import Source
 
 
 class BaseShow(BaseMediaMixin):
+    """Base model for a `Show`."""
+
     name: str | None = Field(default=None)
     media_type: str | None = Field(default=None)
     description: str | None = Field(default=None)
@@ -34,6 +37,8 @@ if TYPE_CHECKING:
 # plural form and some people may use "Series" to refer to a "Season" so the word "Show"
 # is less ambiguous and more flexible.
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
+    """Model representing a `Show`."""
+
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "media_type", "name"]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_count",
@@ -84,7 +89,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         return self.source
 
     def __str__(self) -> str:
-        """Return a string representation of the Show."""
+        """Return a string representation of the `Show`."""
         base_show = "Show:"
         if self.name:
             base_show += f" {self.name}"

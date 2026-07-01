@@ -1195,7 +1195,7 @@ class TestAdditionalChannels:
         """A channel including B which includes C should yield A, B and C.
 
         Inclusion is transitive: B's included channels are read from B's saved
-        ``default_order``. The cycle C -> A proves the walk is cycle-safe.
+        `default_order`. The cycle C -> A proves the walk is cycle-safe.
         """
         session = episode_setup["session"]
         user = episode_setup["user"]

@@ -15,7 +15,7 @@ import {
   type ActionMenuItem,
   ResponsiveActionMenu,
 } from "@/components/Common/ResponsiveActionMenu"
-import { formatDuration } from "@/components/PlaylistChannelCommon/formatters"
+import { formatDuration } from "@/components/SnapshotChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"

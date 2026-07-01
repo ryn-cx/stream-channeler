@@ -30,6 +30,7 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
     accessorKey: "season_number",
     header: "Season #",
+    meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.season_number ?? "-"}
@@ -39,6 +40,7 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
     accessorKey: "sort_order",
     header: "Sort Order",
+    meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.sort_order ?? "-"}

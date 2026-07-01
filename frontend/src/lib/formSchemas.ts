@@ -33,7 +33,7 @@ export const optionalNonNegativeInt = z
 /** Required identifier ("key") field. */
 export const requiredKey = z.string().min(1, "Key is required")
 
-/** Visibility selector shared by plugin and playlist forms. */
+/** Visibility selector shared by plugin and snapshot forms. */
 export const visibilityEnum = z.enum(["public", "unlisted", "private"])
 
 export function nullifyBlanks<T extends object>(data: T): T {

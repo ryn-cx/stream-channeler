@@ -1,4 +1,4 @@
-# TODO: Validate
+"""Season models."""
 import uuid
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -17,8 +17,14 @@ from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
 
+if TYPE_CHECKING:
+    from app.channels.models import ChannelSeasonFilter
+    from app.episodes.models import Episode
+
 
 class BaseSeason(BaseMediaMixin):
+    """Base model for an `Season`."""
+
     sort_order: int | None = Field(default=None)
     name: str | None = Field(default=None)
     url: str | None = Field(default=None)
@@ -26,12 +32,9 @@ class BaseSeason(BaseMediaMixin):
     season_number: int | None = Field(default=None)
 
 
-if TYPE_CHECKING:
-    from app.channels.models import ChannelSeasonFilter
-    from app.episodes.models import Episode
-
-
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
+    """Model representing a `Season`."""
+
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "id",
         "name",
@@ -80,7 +83,7 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         ).one()
 
     def __str__(self) -> str:
-        """Return a string representation of the Season."""
+        """Return a string representation of the `Season`."""
         base_season = "Season:"
         if self.season_number:
             base_season += f" {self.season_number} - "

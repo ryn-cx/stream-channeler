@@ -163,8 +163,8 @@ def _extend_channel_show(
 
     if result.is_whitelist:
         season_ids = (
-            (existing_season_ids if was_whitelist else set()) | result_season_ids
-        )
+            existing_season_ids if was_whitelist else set()
+        ) | result_season_ids
         whitelisted_episode_ids = (
             (existing_episode_ids if was_whitelist else set()) | result_episode_ids
         ) - blacklisted_episode_ids

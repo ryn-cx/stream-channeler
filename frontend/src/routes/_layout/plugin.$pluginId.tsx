@@ -39,7 +39,7 @@ function PluginDetailPage() {
           pluginId,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params),
+          ...serializeTableQuery(params, sourceColumns),
         })
         return {
           data: result.data,

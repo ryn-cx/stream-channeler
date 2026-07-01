@@ -35,7 +35,7 @@ function ShowsPage() {
           owner,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params),
+          ...serializeTableQuery(params, showColumns),
         })
         return {
           data: result.data,

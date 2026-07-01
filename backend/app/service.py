@@ -21,7 +21,12 @@ from sqlmodel import Session, SQLModel, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.constants import DEFAULT_SERVER_SIDE_THRESHOLD
-from app.schemas import DateRangeFilter, ReadOptions, SortOption
+from app.schemas import (
+    DateFilterOptionValue,
+    NumberFilterOptionValue,
+    ReadOptions,
+    SortOption,
+)
 from app.users.models import User
 
 
@@ -41,13 +46,30 @@ def _get_column(
 def _apply_date_range[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
-    value: DateRangeFilter,
+    value: DateFilterOptionValue,
 ) -> SelectOfScalar[T]:
     bounds: list[ColumnElement[bool]] = [col(column).is_not(None)]
     if value.minimum_date is not None:
         bounds.append(column >= value.minimum_date)
     if value.maximum_date is not None:
         bounds.append(column <= value.maximum_date)
+    in_range = and_(*bounds)
+
+    if value.hide_blanks:
+        return statement.where(in_range)
+    return statement.where(or_(col(column).is_(None), in_range))
+
+
+def _apply_number_range[T](
+    statement: SelectOfScalar[T],
+    column: InstrumentedAttribute[Any],
+    value: NumberFilterOptionValue,
+) -> SelectOfScalar[T]:
+    bounds: list[ColumnElement[bool]] = [col(column).is_not(None)]
+    if value.minimum is not None:
+        bounds.append(column >= value.minimum)
+    if value.maximum is not None:
+        bounds.append(column <= value.maximum)
     in_range = and_(*bounds)
 
     if value.hide_blanks:
@@ -71,6 +93,10 @@ def _apply_filter_options[T](
         column = _get_column(columns, date_option.column)
         statement = _apply_date_range(statement, column, date_option.value)
 
+    for number_option in params.number_filter_options:
+        column = _get_column(columns, number_option.column)
+        statement = _apply_number_range(statement, column, number_option.value)
+
     return statement
 
 
@@ -79,7 +105,7 @@ def _apply_sort_options[T](
     sort_options: list[SortOption],
     columns: dict[str, InstrumentedAttribute[Any]],
     default_sort: datetime | None,
-    tiebreaker: uuid.UUID,
+    tiebreaker: uuid.UUID | None,
 ) -> SelectOfScalar[T]:
     order_by: list[UnaryExpression[Any]] = [
         desc(column) if option.desc else asc(column)
@@ -100,7 +126,7 @@ def get_read_results[T](  # noqa: PLR0913
     *,
     schema: type[SQLModel],
     default_sort: datetime | None,
-    tiebreaker: uuid.UUID,
+    tiebreaker: uuid.UUID | None,
     params: ReadOptions,
     current_user: User | None,
 ) -> tuple[Sequence[T], int, int, bool]:

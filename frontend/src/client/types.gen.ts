@@ -172,12 +172,18 @@ export type ChannelUpdate = {
     anonymous?: boolean;
 };
 
+/**
+ * Date filter option for a list of records.
+ */
 export type DateFilterOption = {
     id: string;
-    value: DateRangeFilter;
+    value: DateFilterOptionValue;
 };
 
-export type DateRangeFilter = {
+/**
+ * The value inside of DateFilterOption.value.
+ */
+export type DateFilterOptionValue = {
     minimumDate?: (string | null);
     maximumDate?: (string | null);
     hideBlanks?: boolean;
@@ -348,6 +354,22 @@ export type Message = {
 export type NewPassword = {
     token: string;
     new_password: string;
+};
+
+/**
+ * Number range filter option for a list of records.
+ */
+export type NumberFilterOption = {
+    id: string;
+    value: NumberFilterOptionValue;
+};
+
+/**
+ * The value inside of NumberFilterOption.value.
+ */
+export type NumberFilterOptionValue = {
+    minimum?: (number | null);
+    maximum?: (number | null);
 };
 
 /**
@@ -582,19 +604,47 @@ export type ShowUpdate = {
 };
 
 /**
+ * Schema for returning a `Snapshot` to an admin, including the owner username.
+ */
+export type SnapshotAdminOutput = {
+    name?: (string | null);
+    visibility: Visibility;
+    anonymous?: boolean;
+    id: string;
+    user_id: (string | null);
+    score: number;
+    created_at: string;
+    modified_at: string;
+    username: (string | null);
+};
+
+/**
+ * Schema for an admin updating any field on a `Snapshot`.
+ */
+export type SnapshotAdminUpdate = {
+    name?: (string | null);
+    visibility?: (Visibility | null);
+    anonymous?: boolean;
+    score?: (number | null);
+};
+
+/**
  * Schema for creating a `Snapshot`.
  */
 export type SnapshotCreate = {
     name?: (string | null);
     visibility: Visibility;
+    anonymous?: boolean;
     episode_ids?: Array<(string)>;
 };
 
 export type SnapshotDetailOutput = {
     name?: (string | null);
     visibility: Visibility;
+    anonymous?: boolean;
     id: string;
-    user_id: string;
+    user_id: (string | null);
+    score: number;
     created_at: string;
     modified_at: string;
     episodes: Array<SnapshotEpisodeOutput>;
@@ -645,15 +695,23 @@ export type SnapshotEpisodeWithExtrasOutput = {
 };
 
 /**
- * Schema for returning a `Snapshot`.
+ * Schema for returning a page of publicly listed `Snapshot`s.
  */
-export type SnapshotOutput = {
+export type SnapshotPublicListOutput = {
+    data: Array<SnapshotPublicOutput>;
+    count: number;
+};
+
+/**
+ * Schema for returning a publicly listed `Snapshot`.
+ */
+export type SnapshotPublicOutput = {
     name?: (string | null);
     visibility: Visibility;
+    anonymous?: boolean;
     id: string;
-    user_id: string;
-    created_at: string;
-    modified_at: string;
+    user_id: (string | null);
+    username: (string | null);
 };
 
 /**
@@ -662,6 +720,7 @@ export type SnapshotOutput = {
 export type SnapshotUpdate = {
     name?: (string | null);
     visibility?: (Visibility | null);
+    anonymous?: (boolean | null);
     episode_ids?: (Array<(string)> | null);
 };
 
@@ -682,6 +741,9 @@ export type direction = 'ascending' | 'descending';
 
 export type order = 'sequential' | 'interleave' | 'randomize';
 
+/**
+ * Sort option for a list of records.
+ */
 export type SortOption = {
     id: string;
     desc?: boolean;
@@ -747,6 +809,9 @@ export type SourceUpdate = {
     image_url?: (string | null);
 };
 
+/**
+ * String filter option for a list of records.
+ */
 export type StringFilterOption = {
     id: string;
     value: string;
@@ -823,7 +888,7 @@ export type ValidationError = {
 };
 
 /**
- * Visibility level for `Channel`, `Plugin`, and `Snapshot` records.
+ * Visibility enum for `Channel`s, `Plugin`s, and `Snapshot`s.
  */
 export type Visibility = 'public' | 'unlisted' | 'private';
 
@@ -1123,6 +1188,7 @@ export type EpisodesGetEpisodesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1160,6 +1226,7 @@ export type EpisodesGetSeasonEpisodesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     seasonId: string;
     sortOptions?: string;
@@ -1222,6 +1289,7 @@ export type PluginsGetPluginsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1291,6 +1359,7 @@ export type SeasonsGetSeasonsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1328,6 +1397,7 @@ export type SeasonsGetShowSeasonsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     showId: string;
     sortOptions?: string;
@@ -1339,6 +1409,7 @@ export type ShowsGetShowsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1376,6 +1447,7 @@ export type ShowsGetSourceShowsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     sortOptions?: string;
     sourceId: string;
@@ -1383,13 +1455,20 @@ export type ShowsGetSourceShowsData = {
 
 export type ShowsGetSourceShowsResponse = (ShowsPublic);
 
-export type SnapshotsGetSnapshotsResponse = (Array<SnapshotOutput>);
+export type SnapshotsGetSnapshotsResponse = (Array<SnapshotAdminOutput>);
 
 export type SnapshotsCreateSnapshotData = {
     requestBody: SnapshotCreate;
 };
 
 export type SnapshotsCreateSnapshotResponse = (SnapshotDetailOutput);
+
+export type SnapshotsGetPublicSnapshotsData = {
+    limit?: number;
+    offset?: number;
+};
+
+export type SnapshotsGetPublicSnapshotsResponse = (SnapshotPublicListOutput);
 
 export type SnapshotsGetSnapshotData = {
     snapshotId: string;
@@ -1416,10 +1495,18 @@ export type SnapshotsGetSnapshotEpisodesData = {
 
 export type SnapshotsGetSnapshotEpisodesResponse = (SnapshotEpisodesOutput);
 
+export type SnapshotsAdminUpdateSnapshotData = {
+    requestBody: SnapshotAdminUpdate;
+    snapshotId: string;
+};
+
+export type SnapshotsAdminUpdateSnapshotResponse = (SnapshotAdminOutput);
+
 export type SourcesGetSourcesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1457,6 +1544,7 @@ export type SourcesGetPluginSourcesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
+    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;
@@ -1498,6 +1586,12 @@ export type UsersGetUserPublicChannelsData = {
 
 export type UsersGetUserPublicChannelsResponse = (ChannelPublicListOutput);
 
+export type UsersGetUserPublicSnapshotsData = {
+    userId: string;
+};
+
+export type UsersGetUserPublicSnapshotsResponse = (SnapshotPublicListOutput);
+
 export type UsersReadUsersData = {
     limit?: number;
     skip?: number;
@@ -1510,6 +1604,12 @@ export type UsersCreateUserData = {
 };
 
 export type UsersCreateUserResponse = (UserPublic);
+
+export type UsersAdminListUserSnapshotsData = {
+    userId: string;
+};
+
+export type UsersAdminListUserSnapshotsResponse = (Array<SnapshotAdminOutput>);
 
 export type UsersAdminListUserChannelsData = {
     userId: string;

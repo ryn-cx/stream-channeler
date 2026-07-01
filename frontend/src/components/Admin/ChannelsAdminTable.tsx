@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useQuery } from "@tanstack/react-query"
+import { useQueries } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Pencil, X } from "lucide-react"
 import { useState } from "react"
@@ -19,19 +19,20 @@ import {
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 
-function getAdminChannelsQueryOptions() {
-  return {
-    queryFn: () => ChannelsService.adminListChannels(),
-    queryKey: ["admin-channels"],
-    refetchOnWindowFocus: false,
-    placeholderData: (previousData: any) => previousData,
-  }
-}
+const ownerScopes = [undefined, "official", "others"] as const
 
 export function ChannelsAdminTable() {
-  const { data: channels, isPlaceholderData } = useQuery(
-    getAdminChannelsQueryOptions(),
-  )
+  const results = useQueries({
+    queries: ownerScopes.map((owner) => ({
+      queryFn: () => ChannelsService.getChannels(owner ? { owner } : {}),
+      queryKey: ["admin-channels", owner ?? "mine"],
+      refetchOnWindowFocus: false,
+    })),
+  })
+  const isPlaceholderData = results.some((result) => result.isFetching)
+  const channels = results.every((result) => result.data)
+    ? results.flatMap((result) => result.data ?? [])
+    : undefined
   // When set, the table only shows channels owned by this user. Set by clicking
   // a username in the table.
   const [filterUserId, setFilterUserId] = useState<string | null>(null)

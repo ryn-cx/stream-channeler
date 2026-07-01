@@ -14,11 +14,14 @@ from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.channels import service as channel_service
 from app.channels.models import Channel
-from app.channels.schemas import ChannelPublicListOutput
+from app.channels.schemas import ChannelAdminOutput, ChannelPublicListOutput
 from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
+from app.snapshots import service as snapshot_service
+from app.snapshots.models import Snapshot
+from app.snapshots.schemas import SnapshotAdminOutput, SnapshotPublicListOutput
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User
@@ -33,18 +36,21 @@ from app.users.schemas import (
 from app.utils import service as email_service
 from app.watches.models import Watch
 
-router = APIRouter(prefix="/users", tags=["users"])
+users_router = APIRouter(prefix="/users", tags=["users"])
+admin_router = APIRouter(
+    prefix="/admin/users",
+    tags=["users"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 
 
-@router.get("/", dependencies=[Depends(get_current_active_superuser)])
+@admin_router.get("")
 def read_users(
     session: SessionDep,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1)] = 100_000,
 ) -> UsersPublic:
-    """
-    Retrieve users.
-    """
+    """Retrieve users."""
     count_statement = select(func.count()).select_from(User)
     count = session.exec(count_statement).one()
 
@@ -57,15 +63,9 @@ def read_users(
     return UsersPublic(data=users_public, count=count)
 
 
-@router.post(
-    "/",
-    dependencies=[Depends(get_current_active_superuser)],
-    response_model=UserPublic,
-)
+@admin_router.post("", response_model=UserPublic)
 def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
-    """
-    Create new user.
-    """
+    """Create new user."""
     user = user_service.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -88,16 +88,14 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
     return user
 
 
-@router.patch("/me", response_model=UserPublic)
+@users_router.patch("/me", response_model=UserPublic)
 def update_user_me(
     *,
     session: SessionDep,
     user_in: UserUpdateMe,
     current_user: CurrentUser,
 ) -> User:
-    """
-    Update own user.
-    """
+    """Update own user."""
     if user_in.email:
         existing_user = user_service.get_user_by_email(
             session=session,
@@ -116,16 +114,14 @@ def update_user_me(
     return current_user
 
 
-@router.patch("/me/password")
+@users_router.patch("/me/password")
 def update_password_me(
     *,
     session: SessionDep,
     body: UpdatePassword,
     current_user: CurrentUser,
 ) -> Message:
-    """
-    Update own password.
-    """
+    """Update own password."""
     verified, _ = verify_password(body.current_password, current_user.hashed_password)
     if not verified:
         raise HTTPException(
@@ -144,19 +140,15 @@ def update_password_me(
     return Message(message="Password updated successfully")
 
 
-@router.get("/me", response_model=UserPublic)
+@users_router.get("/me", response_model=UserPublic)
 def read_user_me(current_user: CurrentUser) -> CurrentUser:
-    """
-    Get current user.
-    """
+    """Get current user."""
     return current_user
 
 
-@router.delete("/me")
+@users_router.delete("/me")
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
-    """
-    Delete own user.
-    """
+    """Delete own user."""
     if current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -167,11 +159,9 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     return Message(message="User deleted successfully")
 
 
-@router.post("/signup", response_model=UserPublic)
+@users_router.post("/signup", response_model=UserPublic)
 def register_user(session: SessionDep, user_in: UserRegister) -> User:
-    """
-    Create new user without the need to be logged in.
-    """
+    """Create new user without the need to be logged in."""
     user = user_service.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -182,15 +172,13 @@ def register_user(session: SessionDep, user_in: UserRegister) -> User:
     return user_service.create_user(session=session, user_create=user_create)
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@users_router.get("/{user_id}", response_model=UserPublic)
 def read_user_by_id(
     user_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
 ) -> User | None:
-    """
-    Get a specific user by id.
-    """
+    """Get a specific user by id."""
     user = session.get(User, user_id)
     if user == current_user:
         return user
@@ -207,7 +195,7 @@ def read_user_by_id(
     return user
 
 
-@router.get("/{user_id}/channels")
+@users_router.get("/{user_id}/channels")
 def get_user_public_channels(
     session: SessionDep,
     user_id: uuid.UUID,
@@ -229,9 +217,65 @@ def get_user_public_channels(
     return ChannelPublicListOutput(data=data, count=len(data))
 
 
-@router.patch(
+@users_router.get("/{user_id}/snapshots")
+def get_user_public_snapshots(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> SnapshotPublicListOutput:
+    """List a `User`'s public, non-anonymous `Snapshot`s, highest score first."""
+    rows = session.exec(
+        select(Snapshot, User.username)
+        .join(User, col(User.id) == Snapshot.user_id)
+        .where(
+            Snapshot.user_id == user_id,
+            Snapshot.visibility == Visibility.public,
+            col(Snapshot.anonymous).is_(False),
+        )
+        .order_by(col(Snapshot.score).desc(), col(Snapshot.id)),
+    ).all()
+    data = [
+        snapshot_service.public_snapshot_output(snapshot, username)
+        for snapshot, username in rows
+    ]
+    return SnapshotPublicListOutput(data=data, count=len(data))
+
+
+@admin_router.get("/{user_id}/snapshots")
+def admin_list_user_snapshots(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> list[SnapshotAdminOutput]:
+    """List every `Snapshot` editable by a single `User`."""
+    rows = session.exec(
+        select(Snapshot, User.username)
+        .join(User, col(User.id) == Snapshot.user_id)
+        .where(Snapshot.user_id == user_id),
+    ).all()
+    return [
+        SnapshotAdminOutput.model_validate(snapshot, update={"username": username})
+        for snapshot, username in rows
+    ]
+
+
+@admin_router.get("/{user_id}/channels")
+def admin_list_user_channels(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> list[ChannelAdminOutput]:
+    """List every `Channel` editable by a single `User`."""
+    rows = session.exec(
+        select(Channel, User.username)
+        .join(User, col(User.id) == Channel.user_id)
+        .where(Channel.user_id == user_id),
+    ).all()
+    return [
+        ChannelAdminOutput.model_validate(channel, update={"username": username})
+        for channel, username in rows
+    ]
+
+
+@admin_router.patch(
     "/{user_id}",  # noqa: FAST003 - Used by ExistingUser.
-    dependencies=[Depends(get_current_active_superuser)],
     response_model=UserPublic,
 )
 def update_user(
@@ -240,9 +284,7 @@ def update_user(
     db_user: ExistingUser,
     user_in: UserUpdate,
 ) -> User | None:
-    """
-    Update a user.
-    """
+    """Update a user."""
     if user_in.email:
         existing_user = user_service.get_user_by_email(
             session=session,
@@ -261,15 +303,13 @@ def update_user(
     )
 
 
-@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])  # noqa: FAST003 - Used by ExistingUser.
+@admin_router.delete("/{user_id}")  # noqa: FAST003 - Used by ExistingUser.
 def delete_user(
     session: SessionDep,
     current_user: CurrentUser,
     user: ExistingUser,
 ) -> Message:
-    """
-    Delete a user.
-    """
+    """Delete a user."""
     if user == current_user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -284,3 +324,8 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+router = APIRouter()
+router.include_router(users_router)
+router.include_router(admin_router)

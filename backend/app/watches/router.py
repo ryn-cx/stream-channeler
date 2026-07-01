@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.dependencies import ReadableEpisode
 from app.schemas import Message
-from app.watches.dependencies import OwnedWatch
+from app.watches.dependencies import EditableWatch
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
@@ -25,9 +25,8 @@ from app.watches.services import (
     update_watches,
 )
 
-watches_router = APIRouter(prefix="/watches", tags=["watches"])
-
 episode_watches_router = APIRouter(prefix="/episodes/{episode_id}", tags=["watches"])
+watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
 
 @episode_watches_router.post("/watches")
@@ -37,7 +36,7 @@ def create_watch(
     episode: ReadableEpisode,
     watch_input: WatchCreate,
 ) -> list[WatchOutput]:
-    """Create a `Watch` if the `Episode` is owned by the current `User`."""
+    """Create a `Watch` if the `Episode` is readable by the `User`."""
     return create_watches(session, current_user.id, episode, watch_input)
 
 
@@ -46,20 +45,20 @@ def get_watches(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> WatchesListOutput:
-    """Get multiple watched episode records."""
+    """Get all of the `Watch`es for the `User`."""
     return get_watched_episodes(session, current_user.id)
 
 
 @watches_router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003 - Used by UserWatch.
-def get_watch(watch: OwnedWatch) -> Watch:
-    """Get a watch owned by the current user by its id."""
+def get_watch(watch: EditableWatch) -> Watch:
+    """Get a `Watch` if it's editable by the `User`."""
     return watch
 
 
 @watches_router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
 def update_watch(
     session: SessionDep,
-    watch: OwnedWatch,
+    watch: EditableWatch,
     watch_input: WatchUpdate,
 ) -> list[WatchOutput]:
     """Update a watch and all matching sibling watches."""
@@ -67,7 +66,7 @@ def update_watch(
 
 
 @watches_router.delete("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
-def delete_watch(session: SessionDep, watch: OwnedWatch) -> Message:
+def delete_watch(session: SessionDep, watch: EditableWatch) -> Message:
     """Delete a watch and all sibling watches by its id."""
     return delete_watches(session, watch)
 
