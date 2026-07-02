@@ -3,6 +3,7 @@
 
 import sys
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 from sqlalchemy import or_
@@ -21,6 +22,7 @@ from app.sources.models import Source
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 
 logger.remove()
@@ -139,87 +141,141 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
-def _process_outdated_items(media_class: type[MediaModel]) -> None:
-    join_chain, load_options, get_plugin_key = MODEL_VALUES[media_class]
+# Media classes are updated in this order per plugin because updating a plugin (e.g.
+# JustWatch) can mark its own sources outdated, which the Source pass then picks up in
+# the same run; the same cascade applies down the Source -> Show -> Season -> Episode
+# chain.
+MEDIA_CLASSES_IN_ORDER: tuple[type[MediaModel], ...] = (
+    Plugin,
+    Source,
+    Show,
+    Season,
+    Episode,
+)
+
+
+def _process_outdated_items(
+    session: Session,
+    media_class: type[MediaModel],
+    plugin_key: str,
+    plugin_class: type[AbstractPlugin],
+) -> None:
+    join_chain, load_options, _get_plugin_key = MODEL_VALUES[media_class]
     media_type_name = media_class.__name__.lower()
     update_method_name = f"update_{media_type_name}"
 
-    with Session(engine) as session:
-        statement = (
-            select(media_class)
-            .where(
-                col(media_class.update_at).is_not(None),
-                col(media_class.update_at) < tz_datetime.now(),
-                col(media_class.deleted_at).is_(None),
-            )
-            .order_by(col(media_class.update_at).asc())
+    statement = (
+        select(media_class)
+        .where(
+            col(media_class.update_at).is_not(None),
+            col(media_class.update_at) < tz_datetime.now(),
+            col(media_class.deleted_at).is_(None),
         )
-        for model in join_chain:
-            statement = statement.join(model)
-        # Skip items whose Season is not included in any channel. Source is
-        # exempt because updating a Source is how new Shows are discovered.
-        if media_class is Show:
-            statement = statement.where(_show_has_season_in_channel_exists())
-        elif media_class in (Season, Episode):
-            statement = statement.where(_season_in_channel_exists())
-        statement = statement.join(User, Plugin.user_id == User.id).where(  # type: ignore[arg-type]
-            User.email == PLUGIN_USER_EMAIL,
-        )
-        if load_options is not None:
-            statement = statement.options(load_options)
+        .order_by(col(media_class.update_at).asc())
+    )
+    for model in join_chain:
+        statement = statement.join(model)
+    # Skip items whose Season is not included in any channel. Source is
+    # exempt because updating a Source is how new Shows are discovered.
+    if media_class is Show:
+        statement = statement.where(_show_has_season_in_channel_exists())
+    elif media_class in (Season, Episode):
+        statement = statement.where(_season_in_channel_exists())
+    statement = (
+        statement.join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
+        .where(User.email == PLUGIN_USER_EMAIL)
+        # Only this plugin's media so each plugin's run is independent.
+        .where(col(Plugin.key) == plugin_key)
+    )
+    if load_options is not None:
+        statement = statement.options(load_options)
 
-        outdated_items = session.exec(statement).all()
-        logger.info(f"Found {len(outdated_items)} outdated {media_type_name}")
+    outdated_items = session.exec(statement).all()
+    logger.info(
+        f"[{plugin_key}] Found {len(outdated_items)} outdated {media_type_name}",
+    )
 
-        updated_count = 0
-        for item in outdated_items:
-            plugin_key = get_plugin_key(item)
+    plugin_instance = plugin_class(session)
+    updated_count = 0
+    for item in outdated_items:
+        logger.info(f"[{plugin_key}] Updating {media_type_name}: {item.key}")
+        try:
+            getattr(plugin_instance, update_method_name)(item)
+
             logger.info(
-                f"Updating {media_type_name}: {item.key} (plugin: {plugin_key})",
+                f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}",
             )
+            updated_count += 1
 
-            for plugin in plugins:
-                if plugin.plugin_key() == plugin_key:
-                    plugin_instance = plugin(session)
+            session.commit()
+        except Exception:  # noqa: BLE001 - This should catch ALL exceptions.
+            logger.exception(
+                f"[{plugin_key}] Failed to update {media_type_name}: {item.key}",
+            )
+            # If any error occurs, roll back changes then set update_at at
+            # the maximum possible value to avoid retrying the update until
+            # the issue is resolved.
+            session.rollback()
+            session.refresh(item)
+            item.update_at = tz_datetime.max()
+            session.commit()
 
-                    try:
-                        getattr(plugin_instance, update_method_name)(item)
+    logger.info(
+        f"[{plugin_key}] Updated {updated_count} out of {len(outdated_items)} "
+        f"outdated {media_type_name}",
+    )
 
-                        logger.info(
-                            f"Successfully updated {media_type_name}: {item.key}",
-                        )
-                        updated_count += 1
 
-                        session.commit()
-                    except Exception:  # noqa: BLE001 - This chould catch ALL exceptions.
-                        logger.exception(
-                            f"Failed to update {media_type_name}: {item.key}",
-                        )
-                        # If any error occurs, roll back changes then set update_at at
-                        # the maximum possible value to avoid retrying the update until
-                        # the issue is resolved.
-                        session.rollback()
-                        session.refresh(item)
-                        item.update_at = tz_datetime.max()
-                        session.commit()
-                    break
-            else:
-                logger.error(
-                    f"No matching plugin found for {media_type_name}: {item.key} (plugin: {plugin_key})",
-                )
+def _update_plugin(plugin_key: str, plugin_class: type[AbstractPlugin]) -> None:
+    """Run the full update sequence for a single plugin in its own session."""
+    logger.info(f"[{plugin_key}] Starting update run")
+    with Session(engine) as session:
+        for media_class in MEDIA_CLASSES_IN_ORDER:
+            _process_outdated_items(session, media_class, plugin_key, plugin_class)
+    logger.info(f"[{plugin_key}] Finished update run")
 
-        logger.info(
-            f"Updated {updated_count} out of {len(outdated_items)} outdated {media_type_name}",
+
+def _plugin_user_plugin_keys() -> list[str]:
+    """Return the keys of every `Plugin` owned by the plugin user, from the database."""
+    with Session(engine) as session:
+        return list(
+            session.exec(
+                select(Plugin.key)
+                .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
+                .where(User.email == PLUGIN_USER_EMAIL),
+            ).all(),
         )
 
 
 if __name__ == "__main__":
-    # Plugin is processed first because updating a plugin (e.g. JustWatch) can mark
-    # its sources outdated, which the Source pass then picks up in the same run.
-    _process_outdated_items(Plugin)
-    _process_outdated_items(Source)
-    _process_outdated_items(Show)
-    _process_outdated_items(Season)
-    _process_outdated_items(Episode)
+    # The work is grouped by the `Plugin` rows in the database (not the installed plugin
+    # files). Each database plugin runs its whole update sequence in its own thread and
+    # session so plugins update at the same time; the installed plugin class is only used
+    # to execute the updates. Ordering is preserved within a plugin (see
+    # MEDIA_CLASSES_IN_ORDER), while different plugins are independent of each other.
+    plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
+
+    tasks: list[tuple[str, type[AbstractPlugin]]] = []
+    for plugin_key in _plugin_user_plugin_keys():
+        plugin_class = plugin_classes_by_key.get(plugin_key)
+        if plugin_class is None:
+            logger.error(
+                f"[{plugin_key}] No installed plugin matches this database entry",
+            )
+            continue
+        tasks.append((plugin_key, plugin_class))
+
+    with ThreadPoolExecutor(max_workers=max(len(tasks), 1)) as executor:
+        futures = {
+            executor.submit(_update_plugin, plugin_key, plugin_class): plugin_key
+            for plugin_key, plugin_class in tasks
+        }
+        for future in as_completed(futures):
+            plugin_key = futures[future]
+            try:
+                future.result()
+            except Exception:  # noqa: BLE001 - Surface a per-plugin crash.
+                # Log the plugin-level failure and let the other plugins finish.
+                logger.exception(f"[{plugin_key}] Plugin update run crashed")
 
     logger.info("Outdated source update process completed")
