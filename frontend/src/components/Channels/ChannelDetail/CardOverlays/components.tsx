@@ -1,5 +1,5 @@
 // TODO: Validate
-import type { BaseEpisodeWithDetails } from "@/components/SnapshotChannelCommon/EpisodeCard"
+import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeCard"
 
 /** Props shared by all card overlay components. */
 export type CardOverlayProps = { episode: BaseEpisodeWithDetails }

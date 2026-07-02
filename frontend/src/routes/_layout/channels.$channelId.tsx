@@ -7,6 +7,8 @@ import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import { ChannelsService, type SortKeyInput } from "@/client"
+import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
+import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import {
   columns,
@@ -16,12 +18,10 @@ import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
 import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
+import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
-import { EditOrderButton } from "@/components/SnapshotChannelCommon/EditOrderButton"
-import { HeroBillboard } from "@/components/SnapshotChannelCommon/HeroBillboard"
-import { SaveAsSnapshotButton } from "@/components/Snapshots/SnapshotDetail/SaveAsSnapshotButton"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -59,6 +59,7 @@ type ChannelSearchParams = {
   maximumReleaseDate?: string
   minimumDuration?: number
   maximumDuration?: number
+  limit?: number
   additionalChannels?: string[]
   sourceIds?: string[]
   sourceIdsIsBlacklist?: boolean
@@ -96,6 +97,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       maximumReleaseDate: search.maximumReleaseDate as string | undefined,
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
+      limit: search.limit as number | undefined,
       additionalChannels: search.additionalChannels as string[] | undefined,
       sourceIds: search.sourceIds as string[] | undefined,
       sourceIdsIsBlacklist: search.sourceIdsIsBlacklist as boolean | undefined,
@@ -282,10 +284,13 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                   variant="menu"
                 />
               )}
-              <SaveAsSnapshotButton
-                episodes={episodesData?.episodes ?? []}
-                variant="menu"
-              />
+              {isOwner && (
+                <SaveOrderButton
+                  channelId={channelId}
+                  episodes={episodesData?.episodes ?? []}
+                  variant="menu"
+                />
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -330,11 +335,16 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {isOwner && (
             <SaveDefaultButton channelId={channelId} searchParams={search} />
           )}
-          <SaveAsSnapshotButton episodes={episodesData?.episodes ?? []} />
           {viewMode === "cards" && (
             <EditOrderButton
               editOrder={editOrder}
               onToggle={() => setEditOrder(!editOrder)}
+            />
+          )}
+          {isOwner && viewMode === "cards" && editOrder && (
+            <SaveOrderButton
+              channelId={channelId}
+              episodes={episodesData?.episodes ?? []}
             />
           )}
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}

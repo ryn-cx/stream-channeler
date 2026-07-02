@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
-from app.plugins.models import File
+from app.files.models import File
 from plugins.utils.base_plugin.files import BaseFile
 
 

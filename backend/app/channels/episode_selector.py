@@ -15,6 +15,7 @@ from app.auth.dependencies import CurrentUser, SessionDep
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
+    ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
     ChannelShow,
 )
@@ -108,6 +109,8 @@ class _SortExpressionBuilder:
         self._user = user
 
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
+        if sort_key.field == "saved_order":
+            return col(ChannelSavedEpisodeOrder.position)
         if sort_key.aggregation and sort_key.model == "episode":
             return self._aggregate_episode_expr(sort_key)
         return self._value_expr(sort_key)
@@ -318,6 +321,7 @@ class EpisodeQueryBuilder:
         self._session = session
         self._user = user
         self._now = tz_datetime.now()
+        self._main_channel_id = channel.id
         self._channel_options = self._filter_channel_options(channel_options)
         self._channel_ids = self._resolve_channel_ids(channel)
         self._sort_expressions = _SortExpressionBuilder(
@@ -374,6 +378,7 @@ class EpisodeQueryBuilder:
         query = self._base_query()
         query = self._join_whitelist(query)
         query = self._join_episode_last_watched(query)
+        query = self._join_saved_order(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
         query = self._apply_channel_specific_blacklist(query)
@@ -455,6 +460,23 @@ class EpisodeQueryBuilder:
                     col(ChannelEpisodeFilter.expires_at).is_(None),
                     col(ChannelEpisodeFilter.expires_at) > self._now,
                 ),
+            ),
+        )
+
+    def _join_saved_order(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        needs_saved_order = any(
+            key.field == "saved_order" for key in self._channel_options.sort_by
+        )
+        if not needs_saved_order:
+            return query
+        return query.outerjoin(
+            ChannelSavedEpisodeOrder,
+            and_(
+                ChannelSavedEpisodeOrder.channel_id == self._main_channel_id,
+                ChannelSavedEpisodeOrder.episode_id == Episode.id,
             ),
         )
 

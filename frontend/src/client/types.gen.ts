@@ -107,6 +107,13 @@ export type ChannelOptions = {
 };
 
 /**
+ * Schema for setting the custom episode order of a `Channel`.
+ */
+export type ChannelOrderInput = {
+    episode_ids?: Array<(string)>;
+};
+
+/**
  * Schema for returning a `Channel`.
  */
 export type ChannelOutput = {
@@ -370,6 +377,7 @@ export type NumberFilterOption = {
 export type NumberFilterOptionValue = {
     minimum?: (number | null);
     maximum?: (number | null);
+    hideBlanks?: boolean;
 };
 
 /**
@@ -603,127 +611,6 @@ export type ShowUpdate = {
     image_url?: (string | null);
 };
 
-/**
- * Schema for returning a `Snapshot` to an admin, including the owner username.
- */
-export type SnapshotAdminOutput = {
-    name?: (string | null);
-    visibility: Visibility;
-    anonymous?: boolean;
-    id: string;
-    user_id: (string | null);
-    score: number;
-    created_at: string;
-    modified_at: string;
-    username: (string | null);
-};
-
-/**
- * Schema for an admin updating any field on a `Snapshot`.
- */
-export type SnapshotAdminUpdate = {
-    name?: (string | null);
-    visibility?: (Visibility | null);
-    anonymous?: boolean;
-    score?: (number | null);
-};
-
-/**
- * Schema for creating a `Snapshot`.
- */
-export type SnapshotCreate = {
-    name?: (string | null);
-    visibility: Visibility;
-    anonymous?: boolean;
-    episode_ids?: Array<(string)>;
-};
-
-export type SnapshotDetailOutput = {
-    name?: (string | null);
-    visibility: Visibility;
-    anonymous?: boolean;
-    id: string;
-    user_id: (string | null);
-    score: number;
-    created_at: string;
-    modified_at: string;
-    episodes: Array<SnapshotEpisodeOutput>;
-};
-
-export type SnapshotEpisodeOutput = {
-    position: number;
-    episode_id: string;
-};
-
-export type SnapshotEpisodesOutput = {
-    episodes: Array<SnapshotEpisodeWithExtrasOutput>;
-    seasons: {
-        [key: string]: SeasonOutput;
-    };
-    shows: {
-        [key: string]: ShowPublic;
-    };
-    sources: {
-        [key: string]: SourcePublic;
-    };
-    plugins: {
-        [key: string]: PluginOutput;
-    };
-};
-
-export type SnapshotEpisodeWithExtrasOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: (string | null);
-    url?: (string | null);
-    sort_order?: (number | null);
-    description?: (string | null);
-    image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
-    air_date?: (string | null);
-    id: string;
-    season_id: string;
-    position: number;
-    watch_date?: (string | null);
-    verified?: (boolean | null);
-    episode_watch_id?: (string | null);
-};
-
-/**
- * Schema for returning a page of publicly listed `Snapshot`s.
- */
-export type SnapshotPublicListOutput = {
-    data: Array<SnapshotPublicOutput>;
-    count: number;
-};
-
-/**
- * Schema for returning a publicly listed `Snapshot`.
- */
-export type SnapshotPublicOutput = {
-    name?: (string | null);
-    visibility: Visibility;
-    anonymous?: boolean;
-    id: string;
-    user_id: (string | null);
-    username: (string | null);
-};
-
-/**
- * Schema for updating a `Snapshot`.
- */
-export type SnapshotUpdate = {
-    name?: (string | null);
-    visibility?: (Visibility | null);
-    anonymous?: (boolean | null);
-    episode_ids?: (Array<(string)> | null);
-};
-
 export type SortKeyInput = {
     model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
     field: string;
@@ -888,7 +775,7 @@ export type ValidationError = {
 };
 
 /**
- * Visibility enum for `Channel`s, `Plugin`s, and `Snapshot`s.
+ * Visibility enum for `Channel`s and `Plugin`s.
  */
 export type Visibility = 'public' | 'unlisted' | 'private';
 
@@ -1143,6 +1030,13 @@ export type ChannelsUpdateChannelDefaultOrderData = {
 };
 
 export type ChannelsUpdateChannelDefaultOrderResponse = (ChannelOutput);
+
+export type ChannelsUpdateChannelOrderData = {
+    channelId: string;
+    requestBody: ChannelOrderInput;
+};
+
+export type ChannelsUpdateChannelOrderResponse = (ChannelOutput);
 
 export type ChannelsDeleteChannelShowData = {
     channelId: string;
@@ -1455,53 +1349,6 @@ export type ShowsGetSourceShowsData = {
 
 export type ShowsGetSourceShowsResponse = (ShowsPublic);
 
-export type SnapshotsGetSnapshotsResponse = (Array<SnapshotAdminOutput>);
-
-export type SnapshotsCreateSnapshotData = {
-    requestBody: SnapshotCreate;
-};
-
-export type SnapshotsCreateSnapshotResponse = (SnapshotDetailOutput);
-
-export type SnapshotsGetPublicSnapshotsData = {
-    limit?: number;
-    offset?: number;
-};
-
-export type SnapshotsGetPublicSnapshotsResponse = (SnapshotPublicListOutput);
-
-export type SnapshotsGetSnapshotData = {
-    snapshotId: string;
-};
-
-export type SnapshotsGetSnapshotResponse = (SnapshotDetailOutput);
-
-export type SnapshotsUpdateSnapshotData = {
-    requestBody: SnapshotUpdate;
-    snapshotId: string;
-};
-
-export type SnapshotsUpdateSnapshotResponse = (SnapshotDetailOutput);
-
-export type SnapshotsDeleteSnapshotData = {
-    snapshotId: string;
-};
-
-export type SnapshotsDeleteSnapshotResponse = (Message);
-
-export type SnapshotsGetSnapshotEpisodesData = {
-    snapshotId: string;
-};
-
-export type SnapshotsGetSnapshotEpisodesResponse = (SnapshotEpisodesOutput);
-
-export type SnapshotsAdminUpdateSnapshotData = {
-    requestBody: SnapshotAdminUpdate;
-    snapshotId: string;
-};
-
-export type SnapshotsAdminUpdateSnapshotResponse = (SnapshotAdminOutput);
-
 export type SourcesGetSourcesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
@@ -1586,12 +1433,6 @@ export type UsersGetUserPublicChannelsData = {
 
 export type UsersGetUserPublicChannelsResponse = (ChannelPublicListOutput);
 
-export type UsersGetUserPublicSnapshotsData = {
-    userId: string;
-};
-
-export type UsersGetUserPublicSnapshotsResponse = (SnapshotPublicListOutput);
-
 export type UsersReadUsersData = {
     limit?: number;
     skip?: number;
@@ -1604,12 +1445,6 @@ export type UsersCreateUserData = {
 };
 
 export type UsersCreateUserResponse = (UserPublic);
-
-export type UsersAdminListUserSnapshotsData = {
-    userId: string;
-};
-
-export type UsersAdminListUserSnapshotsResponse = (Array<SnapshotAdminOutput>);
 
 export type UsersAdminListUserChannelsData = {
     userId: string;

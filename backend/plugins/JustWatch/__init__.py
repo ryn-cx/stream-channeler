@@ -13,7 +13,8 @@ from just_scrape.url_title_details import response_models as url_title_details_m
 from loguru import logger
 
 from app.episodes.models import Episode
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source

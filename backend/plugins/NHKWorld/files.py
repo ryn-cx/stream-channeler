@@ -11,7 +11,7 @@ from naphki.video_programs.models import VideoProgramsModel
 from sqlmodel import col, select
 
 from app.config import settings
-from app.plugins.models import File
+from app.files.models import File
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON

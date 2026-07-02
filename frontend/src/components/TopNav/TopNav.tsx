@@ -4,7 +4,6 @@ import {
   Eye,
   Globe,
   LayoutDashboard,
-  ListMusic,
   LogIn,
   LogOut,
   Menu,
@@ -48,7 +47,6 @@ const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "My Channels", path: "/channels" },
   { icon: Globe, title: "Public Channels", path: "/channels/browse" },
-  { icon: ListMusic, title: "Snapshots", path: "/snapshots" },
   { icon: Eye, title: "Watches", path: "/watches" },
   { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]

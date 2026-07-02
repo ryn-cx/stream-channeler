@@ -32,6 +32,7 @@ from app.channels.schemas import (
     ChannelCreate,
     ChannelEpisodesOutput,
     ChannelOptions,
+    ChannelOrderInput,
     ChannelOutput,
     ChannelPublicListOutput,
     ChannelQueueOutput,
@@ -468,6 +469,19 @@ def update_channel_default_order(
         exclude=exclude,
     )
     session.commit()
+    session.refresh(channel)
+    return channel
+
+
+# FAST003 - Parameter is used by EditableChannel.
+@channels_router.patch("/{channel_id}/order", response_model=ChannelOutput)  # noqa: FAST003
+def update_channel_order(
+    session: SessionDep,
+    channel: EditableChannel,
+    order_input: ChannelOrderInput,
+) -> Channel:
+    """Set the custom episode order for a `Channel`."""
+    service.set_channel_order(session, channel, order_input.episode_ids)
     session.refresh(channel)
     return channel
 

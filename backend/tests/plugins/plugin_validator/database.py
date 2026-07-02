@@ -13,7 +13,8 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.constants import TEST_FILES_FOLDER
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source

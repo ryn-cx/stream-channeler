@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetPublicChannelsData, ChannelsGetPublicChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginFilesData, PluginsGetPluginFilesResponse, PluginsCreateFileData, PluginsCreateFileResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, SnapshotsGetSnapshotsResponse, SnapshotsCreateSnapshotData, SnapshotsCreateSnapshotResponse, SnapshotsGetPublicSnapshotsData, SnapshotsGetPublicSnapshotsResponse, SnapshotsGetSnapshotData, SnapshotsGetSnapshotResponse, SnapshotsUpdateSnapshotData, SnapshotsUpdateSnapshotResponse, SnapshotsDeleteSnapshotData, SnapshotsDeleteSnapshotResponse, SnapshotsGetSnapshotEpisodesData, SnapshotsGetSnapshotEpisodesResponse, SnapshotsAdminUpdateSnapshotData, SnapshotsAdminUpdateSnapshotResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersGetUserPublicSnapshotsData, UsersGetUserPublicSnapshotsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserSnapshotsData, UsersAdminListUserSnapshotsResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
+import type { ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetPublicChannelsData, ChannelsGetPublicChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsGetPluginFilesData, PluginsGetPluginFilesResponse, PluginsCreateFileData, PluginsCreateFileResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesResponse, WatchesGetWatchData, WatchesGetWatchResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
 
 export class ChannelsService {
     /**
@@ -375,6 +375,30 @@ export class ChannelsService {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/channels/{channel_id}/default-order',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Order
+     * Set the custom episode order for a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelOrder(data: ChannelsUpdateChannelOrderData): CancelablePromise<ChannelsUpdateChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/order',
             path: {
                 channel_id: data.channelId
             },
@@ -1443,178 +1467,6 @@ export class ShowsService {
     }
 }
 
-export class SnapshotsService {
-    /**
-     * Get Snapshots
-     * Get all of the `Snapshot`s editable by the `User`.
-     * @returns SnapshotAdminOutput Successful Response
-     * @throws ApiError
-     */
-    public static getSnapshots(): CancelablePromise<SnapshotsGetSnapshotsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/snapshots'
-        });
-    }
-    
-    /**
-     * Create Snapshot
-     * Create a `Snapshot` with all of its episodes in one shot.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns SnapshotDetailOutput Successful Response
-     * @throws ApiError
-     */
-    public static createSnapshot(data: SnapshotsCreateSnapshotData): CancelablePromise<SnapshotsCreateSnapshotResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/snapshots',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Public Snapshots
-     * List public `Snapshot`s with a positive admin score, highest score first.
-     *
-     * Snapshots with a `score` of `0` are hidden. Results are ordered by `score`
-     * descending, then by `id` ascending, and returned a page at a time.
-     * @param data The data for the request.
-     * @param data.offset
-     * @param data.limit
-     * @returns SnapshotPublicListOutput Successful Response
-     * @throws ApiError
-     */
-    public static getPublicSnapshots(data: SnapshotsGetPublicSnapshotsData = {}): CancelablePromise<SnapshotsGetPublicSnapshotsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/snapshots/public',
-            query: {
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Snapshot
-     * Get a `Snapshot` if it's readable by the `User`.
-     * @param data The data for the request.
-     * @param data.snapshotId
-     * @returns SnapshotDetailOutput Successful Response
-     * @throws ApiError
-     */
-    public static getSnapshot(data: SnapshotsGetSnapshotData): CancelablePromise<SnapshotsGetSnapshotResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/snapshots/{snapshot_id}',
-            path: {
-                snapshot_id: data.snapshotId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Snapshot
-     * Update and return a `Snapshot` if it's editable by the `User`.
-     * @param data The data for the request.
-     * @param data.snapshotId
-     * @param data.requestBody
-     * @returns SnapshotDetailOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateSnapshot(data: SnapshotsUpdateSnapshotData): CancelablePromise<SnapshotsUpdateSnapshotResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/snapshots/{snapshot_id}',
-            path: {
-                snapshot_id: data.snapshotId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Snapshot
-     * Delete a `Snapshot` if it's editable by the `User`.
-     * @param data The data for the request.
-     * @param data.snapshotId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteSnapshot(data: SnapshotsDeleteSnapshotData): CancelablePromise<SnapshotsDeleteSnapshotResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/snapshots/{snapshot_id}',
-            path: {
-                snapshot_id: data.snapshotId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Snapshot Episodes
-     * Read the episodes for a snapshot with hydrated season/show/source/plugin data.
-     * @param data The data for the request.
-     * @param data.snapshotId
-     * @returns SnapshotEpisodesOutput Successful Response
-     * @throws ApiError
-     */
-    public static getSnapshotEpisodes(data: SnapshotsGetSnapshotEpisodesData): CancelablePromise<SnapshotsGetSnapshotEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/snapshots/{snapshot_id}/media',
-            path: {
-                snapshot_id: data.snapshotId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Admin Update Snapshot
-     * Update any field on any `Snapshot` as an admin, including `score`.
-     * @param data The data for the request.
-     * @param data.snapshotId
-     * @param data.requestBody
-     * @returns SnapshotAdminOutput Successful Response
-     * @throws ApiError
-     */
-    public static adminUpdateSnapshot(data: SnapshotsAdminUpdateSnapshotData): CancelablePromise<SnapshotsAdminUpdateSnapshotResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/admin/snapshots/{snapshot_id}',
-            path: {
-                snapshot_id: data.snapshotId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
-
 export class SourcesService {
     /**
      * Get Sources
@@ -1905,27 +1757,6 @@ export class UsersService {
     }
     
     /**
-     * Get User Public Snapshots
-     * List a `User`'s public, non-anonymous `Snapshot`s, highest score first.
-     * @param data The data for the request.
-     * @param data.userId
-     * @returns SnapshotPublicListOutput Successful Response
-     * @throws ApiError
-     */
-    public static getUserPublicSnapshots(data: UsersGetUserPublicSnapshotsData): CancelablePromise<UsersGetUserPublicSnapshotsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/users/{user_id}/snapshots',
-            path: {
-                user_id: data.userId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Read Users
      * Retrieve users.
      * @param data The data for the request.
@@ -1962,27 +1793,6 @@ export class UsersService {
             url: '/api/v1/admin/users',
             body: data.requestBody,
             mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Admin List User Snapshots
-     * List every `Snapshot` editable by a single `User`.
-     * @param data The data for the request.
-     * @param data.userId
-     * @returns SnapshotAdminOutput Successful Response
-     * @throws ApiError
-     */
-    public static adminListUserSnapshots(data: UsersAdminListUserSnapshotsData): CancelablePromise<UsersAdminListUserSnapshotsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/admin/users/{user_id}/snapshots',
-            path: {
-                user_id: data.userId
-            },
             errors: {
                 422: 'Validation Error'
             }

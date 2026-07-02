@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 
     from app.channels.models import Channel
     from app.episodes.models import Episode
-    from app.plugins.models import File, Plugin
+    from app.files.models import File
+    from app.plugins.models import Plugin
     from app.seasons.models import Season
     from app.shows.models import Show
-    from app.snapshots.models import Snapshot
     from app.sources.models import Source
     from app.users.models import User
 
@@ -51,7 +51,7 @@ def sortable_field_indexes(
 
 
 class Visibility(StrEnum):
-    """Visibility enum for `Channel`s, `Plugin`s, and `Snapshot`s."""
+    """Visibility enum for `Channel`s and `Plugin`s."""
 
     public = "public"
     unlisted = "unlisted"
@@ -65,7 +65,7 @@ class RootRecordMixin(ABC):
     """
 
     @abstractmethod
-    def _root_record(self, session: Session) -> Channel | Snapshot | Plugin:
+    def _root_record(self, session: Session) -> Channel | Plugin:
         """Return the root record directly owned by the `User`."""
 
     def owner_id(self, session: Session) -> uuid.UUID:

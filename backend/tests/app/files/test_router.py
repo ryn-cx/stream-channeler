@@ -6,13 +6,13 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel
 
+from app.files.models import File
 from app.files.schemas import (
     FileCreate,
     FileListPublic,
     FilePublic,
     FileUpdate,
 )
-from app.plugins.models import File
 from tests.app.files.utils import create_random_file
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.utils.base import BaseTests, CreatedTestData

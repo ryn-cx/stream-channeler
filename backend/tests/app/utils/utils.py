@@ -1,5 +1,4 @@
 # TODO: Validate
-# cryptographically secure.
 import random
 import string
 import uuid
@@ -9,8 +8,10 @@ from enum import Enum
 from types import NoneType
 from typing import Annotated, Any, Literal, get_args, get_origin
 
+import annotated_types
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
 from app.channels.schemas import SortKeyInput
 from app.config import settings
@@ -147,6 +148,27 @@ def _random_value(object_type: type) -> object:
     raise ValueError(msg)
 
 
+def _bounded_int(info: FieldInfo) -> int:
+    """Generate a random int within the field's `ge`/`gt`/`le`/`lt` bounds."""
+    min_value, max_value = 0, 2**16
+    for constraint in info.metadata:
+        if isinstance(constraint, annotated_types.Ge):
+            min_value = max(min_value, int(constraint.ge))  # type: ignore[arg-type]
+        elif isinstance(constraint, annotated_types.Gt):
+            min_value = max(min_value, int(constraint.gt) + 1)  # type: ignore[arg-type]
+        elif isinstance(constraint, annotated_types.Le):
+            max_value = min(max_value, int(constraint.le))  # type: ignore[arg-type]
+        elif isinstance(constraint, annotated_types.Lt):
+            max_value = min(max_value, int(constraint.lt) - 1)  # type: ignore[arg-type]
+    return random_integer(min_value, max_value)
+
+
+def _random_field_value(inner_type: type, info: FieldInfo) -> object:
+    if inner_type is int:
+        return _bounded_int(info)
+    return _random_value(inner_type)
+
+
 def build_random_model[T: BaseModel](
     model: type[T],
     mode: Literal["random", "full", "minimal"] = "random",
@@ -168,9 +190,9 @@ def build_random_model[T: BaseModel](
         nullable, inner_type = _is_nullable(info.annotation)
         if mode != "full" and nullable:
             if random_bool():
-                kwargs[field_name] = _random_value(inner_type)
+                kwargs[field_name] = _random_field_value(inner_type, info)
         else:
-            kwargs[field_name] = _random_value(inner_type)
+            kwargs[field_name] = _random_field_value(inner_type, info)
     return model(**kwargs)  # type: ignore[return-value]
 
 

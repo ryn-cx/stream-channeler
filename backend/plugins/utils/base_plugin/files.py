@@ -13,7 +13,8 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlmodel import Session
 
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 

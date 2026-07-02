@@ -6,8 +6,9 @@ from datetime import datetime
 
 from sqlmodel import Field
 
+from app.files.models import BaseFile, File
 from app.models import BaseMediaMixin, DateTimeField
-from app.plugins.models import BaseFile, File, Plugin
+from app.plugins.models import Plugin
 from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
 
 

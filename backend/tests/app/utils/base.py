@@ -26,9 +26,10 @@ from app.episodes.schemas import (
     EpisodeOutput,
     EpisodeUpdate,
 )
+from app.files.models import File
 from app.files.schemas import FileCreate, FilePublic, FileUpdate
 from app.models import Visibility
-from app.plugins.models import File, Plugin
+from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginCreate,
     PluginOutput,
@@ -42,12 +43,6 @@ from app.seasons.schemas import (
 )
 from app.shows.models import Show
 from app.shows.schemas import ShowCreate, ShowPublic, ShowUpdate
-from app.snapshots.models import Snapshot
-from app.snapshots.schemas import (
-    SnapshotCreate,
-    SnapshotOutput,
-    SnapshotUpdate,
-)
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceCreate,
@@ -70,7 +65,7 @@ from tests.app.users.utils import (
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
 SUPPORTED_MODELS = (
-    Channel | Episode | Season | Show | Source | Plugin | Watch | Snapshot | File
+    Channel | Episode | Season | Show | Source | Plugin | Watch | File
 )
 PARENT_MODELS = SUPPORTED_MODELS | User
 
@@ -83,7 +78,6 @@ CREATE_SCHEMAS = (
     | ShowCreate
     | SourceCreate
     | WatchCreate
-    | SnapshotCreate
 )
 OUTPUT_SCHEMAS = (
     ChannelOutput
@@ -94,7 +88,6 @@ OUTPUT_SCHEMAS = (
     | ShowPublic
     | SourcePublic
     | WatchOutput
-    | SnapshotOutput
 )
 LIST_OUTPUT_SCHEMAS = (
     list[ChannelOutput]
@@ -104,7 +97,6 @@ LIST_OUTPUT_SCHEMAS = (
     | list[SeasonOutput]
     | list[ShowPublic]
     | list[SourcePublic]
-    | list[SnapshotOutput]
 )
 UPDATE_SCHEMAS = (
     ChannelUpdate
@@ -115,7 +107,6 @@ UPDATE_SCHEMAS = (
     | ShowUpdate
     | SourceUpdate
     | WatchUpdate
-    | SnapshotUpdate
 )
 
 

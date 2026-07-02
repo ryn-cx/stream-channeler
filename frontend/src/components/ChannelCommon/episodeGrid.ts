@@ -1,10 +1,10 @@
 // TODO: Validate
 import { type RefObject, useEffect, useState } from "react"
 
-import type { MoveDirection } from "@/components/SnapshotChannelCommon/EpisodeCard"
+import type { MoveDirection } from "@/components/ChannelCommon/EpisodeCard"
 
-/** Tailwind classes for the responsive episode card grid used by both the
- * channel detail and snapshot detail pages. */
+/** Tailwind classes for the responsive episode card grid used by the
+ * channel detail page. */
 export const EPISODE_GRID_CLASSES =
   "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 gap-4 items-start"
 

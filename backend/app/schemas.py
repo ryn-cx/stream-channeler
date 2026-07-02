@@ -10,18 +10,16 @@ from sqlmodel import Session, SQLModel
 from app.channels.models import Channel
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
+from app.files.models import File
 from app.models import MediaMixin
-from app.plugins.models import File, Plugin
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.snapshots.models import Snapshot
 from app.sources.models import Source
 from app.users.models import User
 from app.watches.models import Watch
 
-MEDIA_MODELS = (
-    Episode | Season | Show | Source | Plugin | Channel | Watch | Snapshot | File
-)
+MEDIA_MODELS = Episode | Season | Show | Source | Plugin | Channel | Watch | File
 
 
 class Message(BaseModel):

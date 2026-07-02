@@ -80,6 +80,12 @@ class ChannelQueueOutput(BaseChannelQueue):
     channel_id: uuid.UUID
 
 
+class ChannelOrderInput(BaseInput):
+    """Schema for setting the custom episode order of a `Channel`."""
+
+    episode_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
 class EpisodeWithDetails(EpisodeOutput):
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
@@ -225,4 +231,4 @@ class ChannelOptions(BaseInput):
     new_shows_count: int | None = Field(default=None, ge=0)
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
-    limit: int | None = Field(default=None, ge=1)
+    limit: int | None = Field(default=1000, ge=1, le=1000)

@@ -1,5 +1,5 @@
 // TODO: Validate
-import { formatDuration } from "@/components/SnapshotChannelCommon/formatters"
+import { formatDuration } from "@/components/ChannelCommon/formatters"
 import {
   CardMetaLines,
   type CardOverlayProps,

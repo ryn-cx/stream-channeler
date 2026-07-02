@@ -19,9 +19,6 @@ from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
-from app.snapshots import service as snapshot_service
-from app.snapshots.models import Snapshot
-from app.snapshots.schemas import SnapshotAdminOutput, SnapshotPublicListOutput
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User
@@ -217,44 +214,6 @@ def get_user_public_channels(
     return ChannelPublicListOutput(data=data, count=len(data))
 
 
-@users_router.get("/{user_id}/snapshots")
-def get_user_public_snapshots(
-    session: SessionDep,
-    user_id: uuid.UUID,
-) -> SnapshotPublicListOutput:
-    """List a `User`'s public, non-anonymous `Snapshot`s, highest score first."""
-    rows = session.exec(
-        select(Snapshot, User.username)
-        .join(User, col(User.id) == Snapshot.user_id)
-        .where(
-            Snapshot.user_id == user_id,
-            Snapshot.visibility == Visibility.public,
-            col(Snapshot.anonymous).is_(False),
-        )
-        .order_by(col(Snapshot.score).desc(), col(Snapshot.id)),
-    ).all()
-    data = [
-        snapshot_service.public_snapshot_output(snapshot, username)
-        for snapshot, username in rows
-    ]
-    return SnapshotPublicListOutput(data=data, count=len(data))
-
-
-@admin_router.get("/{user_id}/snapshots")
-def admin_list_user_snapshots(
-    session: SessionDep,
-    user_id: uuid.UUID,
-) -> list[SnapshotAdminOutput]:
-    """List every `Snapshot` editable by a single `User`."""
-    rows = session.exec(
-        select(Snapshot, User.username)
-        .join(User, col(User.id) == Snapshot.user_id)
-        .where(Snapshot.user_id == user_id),
-    ).all()
-    return [
-        SnapshotAdminOutput.model_validate(snapshot, update={"username": username})
-        for snapshot, username in rows
-    ]
 
 
 @admin_router.get("/{user_id}/channels")

@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import SessionDep, get_current_active_superuser
 from app.files.dependencies import EditableFile, ReadableFile
+from app.files.models import File
 from app.files.schemas import FilePublic, FileUpdate
 from app.media.service import delete_record
-from app.plugins.models import File
 from app.schemas import Message
 
 router = APIRouter(

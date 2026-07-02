@@ -4,12 +4,13 @@ from datetime import datetime
 from functools import cache
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, delete
 
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
     ChannelQueue,
+    ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
     ChannelShow,
     URLStatus,
@@ -213,6 +214,28 @@ def blacklist_episode_on_channel(
     session.commit()
     session.refresh(channel_show)
     return channel_show
+
+
+def set_channel_order(
+    session: Session,
+    channel: Channel,
+    episode_ids: Sequence[UUID],
+) -> None:
+    session.exec(  # type: ignore[call-overload]
+        delete(ChannelSavedEpisodeOrder).where(
+            col(ChannelSavedEpisodeOrder.channel_id) == channel.id,
+        ),
+    )
+    session.flush()
+    for position, episode_id in enumerate(episode_ids):
+        session.add(
+            ChannelSavedEpisodeOrder(
+                channel_id=channel.id,
+                episode_id=episode_id,
+                position=position,
+            ),
+        )
+    session.commit()
 
 
 @cache

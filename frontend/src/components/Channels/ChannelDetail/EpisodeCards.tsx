@@ -10,17 +10,17 @@ import {
 } from "lucide-react"
 import { useRef, useState } from "react"
 import { type ChannelEpisodesOutput, WatchesService } from "@/client"
-import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
-import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import {
   type MoveDirection,
   EpisodeCard as SharedEpisodeCard,
-} from "@/components/SnapshotChannelCommon/EpisodeCard"
+} from "@/components/ChannelCommon/EpisodeCard"
 import {
   EPISODE_GRID_CLASSES,
   resolveArrowMove,
   useColumnCount,
-} from "@/components/SnapshotChannelCommon/episodeGrid"
+} from "@/components/ChannelCommon/episodeGrid"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import { Badge } from "@/components/ui/badge"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"

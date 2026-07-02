@@ -21,7 +21,8 @@ from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
 
 from app.config import settings
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin, JSONFile

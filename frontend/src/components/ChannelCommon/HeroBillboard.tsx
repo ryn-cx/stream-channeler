@@ -1,8 +1,8 @@
 // TODO: Validate
 import { ChevronLeft, ExternalLink, Play, SkipForward } from "lucide-react"
 
-import type { BaseEpisodeWithDetails } from "@/components/SnapshotChannelCommon/EpisodeCard"
-import { formatDuration } from "@/components/SnapshotChannelCommon/formatters"
+import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeCard"
+import { formatDuration } from "@/components/ChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
 
 interface HeroBillboardProps {

@@ -48,6 +48,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -101,6 +102,15 @@ const formSchema = z.object({
   maximumReleaseDateRelative: z.coerce.number().optional(),
   minimumDuration: z.coerce.number().optional(),
   maximumDuration: z.coerce.number().optional(),
+  limit: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.coerce
+      .number()
+      .int()
+      .min(1, "Must be at least 1")
+      .max(1000, "Must be at most 1000")
+      .optional(),
+  ),
   additionalChannels: z.array(z.string()).optional(),
   sourceIds: z.array(z.string()).optional(),
   sourceIdsIsBlacklist: z.boolean().optional(),
@@ -404,6 +414,7 @@ export function EpisodeFilters({
       maximumReleaseDateRelative: filterParams.maximumReleaseDateRelative,
       minimumDuration: filterParams.minimumDuration,
       maximumDuration: filterParams.maximumDuration,
+      limit: filterParams.limit,
       sourceIds: filterParams.sourceIds,
       sourceIdsIsBlacklist: filterParams.sourceIdsIsBlacklist,
     },
@@ -768,6 +779,29 @@ export function EpisodeFilters({
                               placeholder="Max seconds"
                             />
                           </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FormLabel className="text-sm font-medium">
+                      Number of Episodes
+                    </FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="limit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              min={1}
+                              max={1000}
+                              placeholder="1 - 1000 (default 1000)"
+                            />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

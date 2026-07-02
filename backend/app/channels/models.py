@@ -66,6 +66,10 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         back_populates="channel",
         cascade_delete=True,
     )
+    episode_orders: list[ChannelSavedEpisodeOrder] = Relationship(
+        back_populates="channel",
+        cascade_delete=True,
+    )
 
     @property
     def parent(self) -> User:
@@ -406,3 +410,29 @@ class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     channel: Channel = Relationship(back_populates="queue")
+
+
+class BaseChannelSavedEpisodeOrder(SQLModel):
+    # Position of the episode in the channel's saved order (0-indexed). Episodes
+    # without a row are appended to the end ordered by their creation time.
+    position: int = Field()
+
+
+class ChannelSavedEpisodeOrder(
+    BaseChannelSavedEpisodeOrder, TimestampIdAndHashMixin, table=True
+):
+    __table_args__ = (
+        PrimaryKeyConstraint("channel_id", "episode_id"),
+        Index(
+            "ChannelSavedEpisodeOrder-channel_id-position-index",
+            "channel_id",
+            "position",
+        ),
+        Index("ChannelSavedEpisodeOrder-episode_id-index", "episode_id"),
+    )
+
+    channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
+    channel: Channel = Relationship(back_populates="episode_orders")
+
+    episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
+    episode: Episode = Relationship()

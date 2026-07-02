@@ -11,11 +11,11 @@ import {
 } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
+import { formatDuration } from "@/components/ChannelCommon/formatters"
 import {
   type ActionMenuItem,
   ResponsiveActionMenu,
 } from "@/components/Common/ResponsiveActionMenu"
-import { formatDuration } from "@/components/SnapshotChannelCommon/formatters"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"

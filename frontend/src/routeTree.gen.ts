@@ -25,14 +25,11 @@ import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboardin
 import { Route as LayoutEpisodesRouteImport } from './routes/_layout/episodes'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutSnapshotsIndexRouteImport } from './routes/_layout/snapshots.index'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutSourceSourceKeyRouteImport } from './routes/_layout/source.$sourceKey'
-import { Route as LayoutSnapshotsBrowseRouteImport } from './routes/_layout/snapshots.browse'
-import { Route as LayoutSnapshotsSnapshotIdRouteImport } from './routes/_layout/snapshots.$snapshotId'
 import { Route as LayoutShowShowKeyRouteImport } from './routes/_layout/show.$showKey'
 import { Route as LayoutSeasonSeasonKeyRouteImport } from './routes/_layout/season.$seasonKey'
 import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugin.$pluginId'
@@ -40,7 +37,6 @@ import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/chann
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
-import { Route as LayoutUsersUserIdSnapshotsRouteImport } from './routes/_layout/users.$userId.snapshots'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
 import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
@@ -126,11 +122,6 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSnapshotsIndexRoute = LayoutSnapshotsIndexRouteImport.update({
-  id: '/snapshots/',
-  path: '/snapshots/',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutOnboardingIndexRoute = LayoutOnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -156,17 +147,6 @@ const LayoutSourceSourceKeyRoute = LayoutSourceSourceKeyRouteImport.update({
   path: '/source/$sourceKey',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSnapshotsBrowseRoute = LayoutSnapshotsBrowseRouteImport.update({
-  id: '/snapshots/browse',
-  path: '/snapshots/browse',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSnapshotsSnapshotIdRoute =
-  LayoutSnapshotsSnapshotIdRouteImport.update({
-    id: '/snapshots/$snapshotId',
-    path: '/snapshots/$snapshotId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
 const LayoutShowShowKeyRoute = LayoutShowShowKeyRouteImport.update({
   id: '/show/$showKey',
   path: '/show/$showKey',
@@ -202,12 +182,6 @@ const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
-const LayoutUsersUserIdSnapshotsRoute =
-  LayoutUsersUserIdSnapshotsRouteImport.update({
-    id: '/users/$userId/snapshots',
-    path: '/users/$userId/snapshots',
-    getParentRoute: () => LayoutRoute,
-  } as any)
 const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
     id: '/users/$userId/channels',
@@ -262,20 +236,16 @@ export interface FileRoutesByFullPath {
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
-  '/snapshots/$snapshotId': typeof LayoutSnapshotsSnapshotIdRoute
-  '/snapshots/browse': typeof LayoutSnapshotsBrowseRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
-  '/snapshots/': typeof LayoutSnapshotsIndexRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/users/$userId/snapshots': typeof LayoutUsersUserIdSnapshotsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -298,20 +268,16 @@ export interface FileRoutesByTo {
   '/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/show/$showKey': typeof LayoutShowShowKeyRoute
-  '/snapshots/$snapshotId': typeof LayoutSnapshotsSnapshotIdRoute
-  '/snapshots/browse': typeof LayoutSnapshotsBrowseRoute
   '/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
-  '/snapshots': typeof LayoutSnapshotsIndexRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/users/$userId/snapshots': typeof LayoutUsersUserIdSnapshotsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -338,20 +304,16 @@ export interface FileRoutesById {
   '/_layout/plugin/$pluginId': typeof LayoutPluginPluginIdRoute
   '/_layout/season/$seasonKey': typeof LayoutSeasonSeasonKeyRoute
   '/_layout/show/$showKey': typeof LayoutShowShowKeyRoute
-  '/_layout/snapshots/$snapshotId': typeof LayoutSnapshotsSnapshotIdRoute
-  '/_layout/snapshots/browse': typeof LayoutSnapshotsBrowseRoute
   '/_layout/source/$sourceKey': typeof LayoutSourceSourceKeyRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
-  '/_layout/snapshots/': typeof LayoutSnapshotsIndexRoute
   '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/_layout/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/_layout/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/_layout/users/$userId/snapshots': typeof LayoutUsersUserIdSnapshotsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -378,20 +340,16 @@ export interface FileRouteTypes {
     | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
-    | '/snapshots/$snapshotId'
-    | '/snapshots/browse'
     | '/source/$sourceKey'
     | '/watches/import'
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
-    | '/snapshots/'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
     | '/users/$userId/channels'
-    | '/users/$userId/snapshots'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -414,20 +372,16 @@ export interface FileRouteTypes {
     | '/plugin/$pluginId'
     | '/season/$seasonKey'
     | '/show/$showKey'
-    | '/snapshots/$snapshotId'
-    | '/snapshots/browse'
     | '/source/$sourceKey'
     | '/watches/import'
     | '/admin'
     | '/channels'
     | '/onboarding'
-    | '/snapshots'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
     | '/users/$userId/channels'
-    | '/users/$userId/snapshots'
   id:
     | '__root__'
     | '/_layout'
@@ -453,20 +407,16 @@ export interface FileRouteTypes {
     | '/_layout/plugin/$pluginId'
     | '/_layout/season/$seasonKey'
     | '/_layout/show/$showKey'
-    | '/_layout/snapshots/$snapshotId'
-    | '/_layout/snapshots/browse'
     | '/_layout/source/$sourceKey'
     | '/_layout/watches_/import'
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
-    | '/_layout/snapshots/'
     | '/_layout/onboarding/$channelId/done'
     | '/_layout/onboarding/$channelId/name'
     | '/_layout/onboarding/$channelId/shows'
     | '/_layout/onboarding/$channelId/sort'
     | '/_layout/users/$userId/channels'
-    | '/_layout/users/$userId/snapshots'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -591,13 +541,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/snapshots/': {
-      id: '/_layout/snapshots/'
-      path: '/snapshots'
-      fullPath: '/snapshots/'
-      preLoaderRoute: typeof LayoutSnapshotsIndexRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/onboarding/': {
       id: '/_layout/onboarding/'
       path: '/'
@@ -631,20 +574,6 @@ declare module '@tanstack/react-router' {
       path: '/source/$sourceKey'
       fullPath: '/source/$sourceKey'
       preLoaderRoute: typeof LayoutSourceSourceKeyRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/snapshots/browse': {
-      id: '/_layout/snapshots/browse'
-      path: '/snapshots/browse'
-      fullPath: '/snapshots/browse'
-      preLoaderRoute: typeof LayoutSnapshotsBrowseRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/snapshots/$snapshotId': {
-      id: '/_layout/snapshots/$snapshotId'
-      path: '/snapshots/$snapshotId'
-      fullPath: '/snapshots/$snapshotId'
-      preLoaderRoute: typeof LayoutSnapshotsSnapshotIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/show/$showKey': {
@@ -695,13 +624,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/channels'
       preLoaderRoute: typeof LayoutAdminChannelsRouteImport
       parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/users/$userId/snapshots': {
-      id: '/_layout/users/$userId/snapshots'
-      path: '/users/$userId/snapshots'
-      fullPath: '/users/$userId/snapshots'
-      preLoaderRoute: typeof LayoutUsersUserIdSnapshotsRouteImport
-      parentRoute: typeof LayoutRoute
     }
     '/_layout/users/$userId/channels': {
       id: '/_layout/users/$userId/channels'
@@ -793,14 +715,10 @@ interface LayoutRouteChildren {
   LayoutPluginPluginIdRoute: typeof LayoutPluginPluginIdRoute
   LayoutSeasonSeasonKeyRoute: typeof LayoutSeasonSeasonKeyRoute
   LayoutShowShowKeyRoute: typeof LayoutShowShowKeyRoute
-  LayoutSnapshotsSnapshotIdRoute: typeof LayoutSnapshotsSnapshotIdRoute
-  LayoutSnapshotsBrowseRoute: typeof LayoutSnapshotsBrowseRoute
   LayoutSourceSourceKeyRoute: typeof LayoutSourceSourceKeyRoute
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
-  LayoutSnapshotsIndexRoute: typeof LayoutSnapshotsIndexRoute
   LayoutUsersUserIdChannelsRoute: typeof LayoutUsersUserIdChannelsRoute
-  LayoutUsersUserIdSnapshotsRoute: typeof LayoutUsersUserIdSnapshotsRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -820,14 +738,10 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutPluginPluginIdRoute: LayoutPluginPluginIdRoute,
   LayoutSeasonSeasonKeyRoute: LayoutSeasonSeasonKeyRoute,
   LayoutShowShowKeyRoute: LayoutShowShowKeyRoute,
-  LayoutSnapshotsSnapshotIdRoute: LayoutSnapshotsSnapshotIdRoute,
-  LayoutSnapshotsBrowseRoute: LayoutSnapshotsBrowseRoute,
   LayoutSourceSourceKeyRoute: LayoutSourceSourceKeyRoute,
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
-  LayoutSnapshotsIndexRoute: LayoutSnapshotsIndexRoute,
   LayoutUsersUserIdChannelsRoute: LayoutUsersUserIdChannelsRoute,
-  LayoutUsersUserIdSnapshotsRoute: LayoutUsersUserIdSnapshotsRoute,
 }
 
 const LayoutRouteWithChildren =

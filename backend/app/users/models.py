@@ -13,7 +13,6 @@ from app.utils import tz_datetime
 if TYPE_CHECKING:
     from app.channels.models import Channel
     from app.plugins.models import Plugin
-    from app.snapshots.models import Snapshot
     from app.watches.models import Watch
 
 
@@ -40,17 +39,13 @@ class User(UserBase, table=True):
     )
     plugins: list[Plugin] = Relationship(back_populates="user")
     channels: list[Channel] = Relationship(back_populates="user", cascade_delete=True)
-    snapshots: list[Snapshot] = Relationship(
-        back_populates="user",
-        cascade_delete=True,
-    )
     watched_episodes: list[Watch] = Relationship(
         back_populates="user",
         cascade_delete=True,
     )
 
     # TODO: This isn't actually used but the implementation is wrong.
-    def add_child(self, child: "Plugin | Channel | Snapshot | Watch") -> None:  # noqa: UP037
+    def add_child(self, child: "Plugin | Channel | Watch") -> None:  # noqa: UP037
         from app.plugins.models import Plugin  # noqa: PLC0415
 
         if isinstance(child, Plugin):

@@ -18,7 +18,7 @@ from not_yt_dlapi.video.models import VideoModel
 from sqlmodel import Session
 
 from app.config import settings
-from app.plugins.models import File
+from app.files.models import File
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (

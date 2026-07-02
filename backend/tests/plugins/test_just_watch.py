@@ -6,7 +6,8 @@ import pytest
 from just_scrape.new_title_buckets import NewTitleBuckets
 from sqlmodel import Session, col, select
 
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.utils import tz_datetime

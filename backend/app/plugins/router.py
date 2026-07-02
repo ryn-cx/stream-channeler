@@ -11,11 +11,12 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
+from app.files.models import File
 from app.files.schemas import FileCreate, FileListPublic, FilePublic
 from app.media.schemas import MediaReadOptions
 from app.media.service import delete_record, media_owner_list_response
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
-from app.plugins.models import File, Plugin
+from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginCreate,
     PluginImportURLInformation,

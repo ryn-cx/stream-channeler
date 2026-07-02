@@ -1,9 +1,9 @@
-# TODO: Validate
 import uuid
 
 from sqlmodel import Session
 
-from app.plugins.models import File, Plugin
+from app.files.models import File
+from app.plugins.models import Plugin
 from app.users.models import User
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.users.utils import CreatedUser
@@ -15,6 +15,7 @@ def create_random_file(
     parent: Plugin | User | CreatedUser | uuid.UUID | None = None,
     **kwargs: object,
 ) -> File:
+    """Create a random `File` record in the database."""
     if not isinstance(parent, Plugin):
         parent = create_random_plugin(session, parent)
     file = build_random_model(File, plugin_id=parent.id, deleted_at=None, **kwargs)

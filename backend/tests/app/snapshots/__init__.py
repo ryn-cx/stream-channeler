@@ -1,1 +1,0 @@
-"""`Snapshot` tests."""
