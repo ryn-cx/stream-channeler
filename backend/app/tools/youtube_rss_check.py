@@ -5,7 +5,6 @@ YouTube RSS feeds are extremely flaky so they should not be used as the only met
 setting update_at values because they might be deprecated at some point in the future.
 """
 
-import sys
 import threading
 from datetime import timedelta
 from typing import TYPE_CHECKING
@@ -17,12 +16,15 @@ from sqlmodel import Session, col, func, select
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, import_models
 from app.files.models import File
+from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import import_plugins
 from plugins.YouTube import YouTube
+
+logger = logger.bind(source="updater")
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -163,8 +165,7 @@ def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D10
 
 
 if __name__ == "__main__":
-    logger.remove()
-    logger.add(sys.stdout, level="INFO", colorize=True)
+    configure_logging()
 
     import_plugins()
     import_models()

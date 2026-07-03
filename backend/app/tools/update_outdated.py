@@ -2,10 +2,10 @@
 # pyright: reportArgumentType=false
 
 import signal
-import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from functools import partial
 from types import FrameType
 from typing import Any
 
@@ -18,20 +18,19 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, import_models
 from app.episodes.models import Episode
+from app.log import configure_logging
 from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.tools import youtube_rss_check
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 
-logger.remove()
-logger.add(sys.stdout, level="INFO", colorize=True)
+logger = logger.bind(source="updater")
 
 import_plugins()
 import_models()
@@ -40,19 +39,20 @@ import_models()
 # `select_with_plugin()` resolves to a single return type rather than a union.
 MediaClass = type[MediaMixin[Any, Any]]
 
-# Set when the user asks to stop (first Ctrl+C). Worker threads check it between items
-# and stop after committing their current item, so an interrupt never discards
-# in-progress downloads.
-_stop_requested = threading.Event()
-
-
-def _request_stop(_signum: int, _frame: FrameType | None) -> None:
-    if not _stop_requested.is_set():
+# The stop event is set on the first Ctrl+C. Worker threads check it between items and
+# stop after committing their current item, so an interrupt never discards in-progress
+# downloads.
+def request_stop(  # noqa: D103
+    stop_event: threading.Event,
+    _signum: int,
+    _frame: FrameType | None,
+) -> None:
+    if not stop_event.is_set():
         logger.warning(
             "Stop requested - each plugin will finish and commit its current item, "
             "then exit. Press Ctrl+C again to force quit (may lose in-progress work).",
         )
-        _stop_requested.set()
+        stop_event.set()
         # Restore the default handler so a second Ctrl+C force-quits immediately.
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -127,6 +127,7 @@ def _process_outdated_items(
     media_class: MediaClass,
     plugin_key: str,
     plugin_class: type[AbstractPlugin],
+    stop_event: threading.Event,
 ) -> None:
     media_type_name = media_class.__name__.lower()
     update_method_name = f"update_{media_type_name}"
@@ -157,7 +158,7 @@ def _process_outdated_items(
     plugin_instance = plugin_class(session)
     updated_count = 0
     for item in outdated_items:
-        if _stop_requested.is_set():
+        if stop_event.is_set():
             logger.info(
                 f"[{plugin_key}] Stop requested; skipping remaining {media_type_name}",
             )
@@ -190,14 +191,24 @@ def _process_outdated_items(
     )
 
 
-def _update_plugin(plugin_key: str, plugin_class: type[AbstractPlugin]) -> None:
+def _update_plugin(
+    plugin_key: str,
+    plugin_class: type[AbstractPlugin],
+    stop_event: threading.Event,
+) -> None:
     """Run the full update sequence for a single plugin in its own session."""
     logger.info(f"[{plugin_key}] Starting update run")
     with Session(engine) as session:
         for media_class in MEDIA_CLASSES_IN_ORDER:
-            if _stop_requested.is_set():
+            if stop_event.is_set():
                 break
-            _process_outdated_items(session, media_class, plugin_key, plugin_class)
+            _process_outdated_items(
+                session,
+                media_class,
+                plugin_key,
+                plugin_class,
+                stop_event,
+            )
     logger.info(f"[{plugin_key}] Finished update run")
 
 
@@ -255,7 +266,7 @@ def _seconds_until_next_update() -> float:
     return max(0.0, min(seconds_until_due, MAX_SLEEP_SECONDS))
 
 
-def _update_outdated() -> None:
+def _update_outdated(stop_event: threading.Event) -> None:
     # The work is grouped by the `Plugin` rows in the database (not the installed plugin
     # files). Each database plugin runs its whole update sequence in its own thread and
     # session so plugins update at the same time; the installed plugin class is only used
@@ -275,7 +286,9 @@ def _update_outdated() -> None:
 
     with ThreadPoolExecutor(max_workers=max(len(tasks), 1)) as executor:
         futures = {
-            executor.submit(_update_plugin, plugin_key, plugin_class): plugin_key
+            executor.submit(_update_plugin, plugin_key, plugin_class, stop_event): (
+                plugin_key
+            )
             for plugin_key, plugin_class in tasks
         }
         for future in as_completed(futures):
@@ -287,37 +300,28 @@ def _update_outdated() -> None:
                 logger.exception(f"[{plugin_key}] Plugin update run crashed")
 
 
-def _update_outdated_loop() -> None:
-    while not _stop_requested.is_set():
-        _update_outdated()
-        if _stop_requested.is_set():
+def run_forever(stop_event: threading.Event) -> None:  # noqa: D103
+    while not stop_event.is_set():
+        _update_outdated(stop_event)
+        if stop_event.is_set():
             break
 
         wait_seconds = _seconds_until_next_update()
         logger.info(f"Next update due in {wait_seconds:.0f}s; waiting")
 
         # Interruptible sleep: returns immediately if a stop is requested mid-wait.
-        if _stop_requested.wait(timeout=wait_seconds):
+        if stop_event.wait(timeout=wait_seconds):
             break
 
 
-def run() -> None:  # noqa: D103
+if __name__ == "__main__":
+    configure_logging()
+
     # Worker threads can't be interrupted by Ctrl+C (the signal only reaches the main
     # thread), so handle SIGINT cooperatively: the first Ctrl+C flags every worker to
     # stop after committing its current item rather than forcing a kill that would abort
     # in-progress downloads.
-    signal.signal(signal.SIGINT, _request_stop)
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = [
-            executor.submit(_update_outdated_loop),
-            executor.submit(youtube_rss_check.run_forever, _stop_requested),
-        ]
-        for future in as_completed(futures):
-            future.result()
-
-    logger.info("Update process stopped")
-
-
-if __name__ == "__main__":
-    run()
+    _stop_event = threading.Event()
+    signal.signal(signal.SIGINT, partial(request_stop, _stop_event))
+    run_forever(_stop_event)
+    logger.info("Outdated source update process stopped")

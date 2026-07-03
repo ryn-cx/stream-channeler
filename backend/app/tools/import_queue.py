@@ -17,6 +17,7 @@ from app.channels.models import (
 )
 from app.database import import_models, engine
 from app.episodes.models import Episode
+from app.log import configure_logging
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -24,18 +25,19 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.manage_plugins import import_plugins, plugins
 
+logger = logger.bind(source="import_queue")
+
 import_plugins()
 PLUGIN_LOCKS = {plugin_class.plugin_key(): threading.Lock() for plugin_class in plugins}
 
 
-def background_import_queue() -> None:
-    """Import the queue in separate threads for each plugin."""
-
-    def run() -> None:
+def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D103
+    stop_event = stop_event or threading.Event()
+    while not stop_event.is_set():
         with Session(engine) as session:
             import_queue(session)
-
-    threading.Thread(target=run, daemon=True).start()
+        if stop_event.wait(timeout=60):
+            break
 
 
 def import_queue(session: Session) -> None:
@@ -246,6 +248,7 @@ def _merge_filters(
 
 
 if __name__ == "__main__":
+    configure_logging()
     import_models()
     with Session(engine) as import_session:
         import_queue(import_session)

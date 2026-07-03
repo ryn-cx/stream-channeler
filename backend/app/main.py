@@ -1,15 +1,22 @@
 """Stream Channeler application."""
 
+from collections.abc import Awaitable, Callable
 from importlib import import_module
 
 import sentry_sdk
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app.config import settings
 from app.constants import APP_PATH
+from app.log import configure_logging
+
+configure_logging()
 
 
 # TODO: Make this a private function upstream.
@@ -25,6 +32,18 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=_custom_generate_unique_id,
 )
+
+
+@app.middleware("http")
+async def _log_requests(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    response = await call_next(request)
+    logger.bind(source="request").info(
+        f"{request.method} {request.url.path} {response.status_code}",
+    )
+    return response
 
 
 # Set all CORS enabled origins
