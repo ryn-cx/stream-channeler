@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { FilesService, type FileUpdate } from "@/client"
+import type { MediaTableResult } from "@/components/Common/DataTable"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextArea } from "@/components/Common/FormTextArea"
 import { FormTextField } from "@/components/Common/FormTextField"
@@ -18,8 +19,6 @@ import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { FileTableData } from "./columns"
-
-type FilesData = Array<FileTableData>
 
 const formSchema = z.object({
   key: requiredKey,
@@ -79,15 +78,22 @@ const EditFile = ({ file }: EditFileProps) => {
       // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
       // Snapshot the previous value
-      const previous = context.client.getQueriesData<FilesData>({ queryKey })
+      const previous = context.client.getQueriesData<
+        MediaTableResult<FileTableData>
+      >({ queryKey })
 
       // Optimistically update to the new value
-      context.client.setQueriesData<FilesData>({ queryKey }, (old) =>
-        old?.map((existing) =>
-          existing.id === file.id
-            ? ({ ...existing, ...newData, pending: true } as FileTableData)
-            : existing,
-        ),
+      context.client.setQueriesData<MediaTableResult<FileTableData>>(
+        { queryKey },
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((row) =>
+              row.id === file.id
+                ? ({ ...row, ...newData, pending: true } as FileTableData)
+                : row,
+            ),
+          },
       )
 
       // Return a result with the snapshotted value

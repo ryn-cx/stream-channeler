@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { SourcesService, type SourceUpdate } from "@/client"
+import type { MediaTableResult } from "@/components/Common/DataTable"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -16,8 +17,6 @@ import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 import type { SourceTableData } from "./columns"
-
-type SourcesData = Array<SourceTableData>
 
 const formSchema = z.object({
   key: requiredKey,
@@ -64,15 +63,22 @@ const EditSource = ({ source }: EditSourceProps) => {
       // (so they don't overwrite our optimistic update)
       await context.client.cancelQueries({ queryKey })
       // Snapshot the previous value
-      const previous = context.client.getQueryData<SourcesData>(queryKey)
+      const previous = context.client.getQueriesData<
+        MediaTableResult<SourceTableData>
+      >({ queryKey })
 
       // Optimistically update to the new value
-      context.client.setQueryData<SourcesData>(queryKey, (old) =>
-        old!.map((s) =>
-          s.id === source.id
-            ? ({ ...s, ...newData, pending: true } as SourceTableData)
-            : s,
-        ),
+      context.client.setQueriesData<MediaTableResult<SourceTableData>>(
+        { queryKey },
+        (old) =>
+          old && {
+            ...old,
+            data: old.data.map((row) =>
+              row.id === source.id
+                ? ({ ...row, ...newData, pending: true } as SourceTableData)
+                : row,
+            ),
+          },
       )
 
       // Return a result with the snapshotted value
@@ -84,7 +90,9 @@ const EditSource = ({ source }: EditSourceProps) => {
     // If the mutation fails,
     // use the result returned from onMutate to roll back
     onError: (error, _newData, onMutateResult, context) => {
-      context.client.setQueryData(queryKey, onMutateResult?.previous)
+      for (const [key, value] of onMutateResult?.previous ?? []) {
+        context.client.setQueryData(key, value)
+      }
       handleError.call(showErrorToast, error as any)
     },
     // Always refetch after error or success:
