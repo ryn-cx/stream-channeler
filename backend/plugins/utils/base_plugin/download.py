@@ -80,14 +80,11 @@ class DownloadMixin(ABC):
         show_key: str,
         update_at: datetime | None = None,
     ) -> list[File]:
-        try:
-            _cache = self._preload_show_files(show_key)
-            show_files = self._show_files(show_key)
-            all_files = self._download_outdated_files(show_files, update_at)
-            all_files.extend(self._download_all_season_files(show_key))
-            return all_files
-        finally:
-            self.session.commit()
+        _cache = self._preload_show_files(show_key)
+        show_files = self._show_files(show_key)
+        all_files = self._download_outdated_files(show_files, update_at)
+        all_files.extend(self._download_all_season_files(show_key))
+        return all_files
 
     def _download_season_files(
         self,
@@ -95,14 +92,11 @@ class DownloadMixin(ABC):
         show_key: str,
         update_at: datetime | None = None,
     ) -> list[File]:
-        try:
-            _cache = self._preload_season_files([season_key], show_key)
-            season_files = self._season_files(season_key, show_key)
-            all_files = self._download_outdated_files(season_files, update_at)
-            all_files.extend(self._download_all_episode_files(season_key, show_key))
-            return all_files
-        finally:
-            self.session.commit()
+        _cache = self._preload_season_files([season_key], show_key)
+        season_files = self._season_files(season_key, show_key)
+        all_files = self._download_outdated_files(season_files, update_at)
+        all_files.extend(self._download_all_episode_files(season_key, show_key))
+        return all_files
 
     def _download_episode_files(
         self,
@@ -111,12 +105,9 @@ class DownloadMixin(ABC):
         show_key: str,
         update_at: datetime | None = None,
     ) -> list[File]:
-        try:
-            _cache = self._preload_episode_files([episode_key], season_key, show_key)
-            episode_files = self._episode_files(episode_key, season_key, show_key)
-            return self._download_outdated_files(episode_files, update_at)
-        finally:
-            self.session.commit()
+        _cache = self._preload_episode_files([episode_key], season_key, show_key)
+        episode_files = self._episode_files(episode_key, season_key, show_key)
+        return self._download_outdated_files(episode_files, update_at)
 
     def _download_all_season_files(
         self,

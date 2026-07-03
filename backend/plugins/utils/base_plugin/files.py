@@ -135,7 +135,7 @@ class BaseFile[T](ABC):
         raise NotImplementedError(msg)
 
     def _write(self, content: str | None) -> None:
-        """Write content to the file without committing to the database."""
+        """Write content to the file and commit it to the database."""
         self._existing_database_record = File(
             key=self.file_key(),
             content=content,
@@ -144,6 +144,7 @@ class BaseFile[T](ABC):
         ).upsert(self.__plugin, self._existing_database_record)
 
         self._cached_parsed = None
+        self.__session.commit()
 
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
@@ -271,7 +272,7 @@ class APISerializerEndpoint[T](Protocol):
     @staticmethod
     def dump_response(data: Sequence[BaseModel]) -> list[dict[str, Any]]: ...
     @overload
-    @staticmethod   
+    @staticmethod
     def dump_response(data: BaseModel) -> dict[str, Any]: ...
     @staticmethod
     def dump_response(
