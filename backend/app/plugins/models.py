@@ -1,7 +1,7 @@
 """Plugin models."""
 
 import uuid
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from sqlmodel import (
     Field,
@@ -10,7 +10,9 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
+    select,
 )
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import (
     BaseMediaMixin,
@@ -75,6 +77,11 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self
+
+    @classmethod
+    @override
+    def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        return select(cls)
 
     @property
     @override

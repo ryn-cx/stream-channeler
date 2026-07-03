@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, Never, override
+from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
 from sqlmodel import (
     Field,
@@ -13,6 +13,7 @@ from sqlmodel import (
     UniqueConstraint,
     select,
 )
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import BaseMediaMixin, DateTimeField, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
@@ -89,6 +90,11 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             .join(Plugin)
             .where(Season.id == self.season_id),
         ).one()
+
+    @classmethod
+    @override
+    def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        return select(cls).join(Season).join(Show).join(Source).join(Plugin)
 
     @property
     @override

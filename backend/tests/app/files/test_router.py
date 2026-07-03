@@ -16,7 +16,6 @@ from app.files.schemas import (
 from tests.app.files.utils import create_random_file
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.utils.base import BaseTests, CreatedTestData
-from tests.app.utils.base_create import BaseCreateTests
 from tests.app.utils.base_delete import BaseDeleteTests
 from tests.app.utils.base_get import BaseGetTests
 from tests.app.utils.base_update import BaseUpdateTests
@@ -42,6 +41,11 @@ class FileTestMixin(BaseTests[File]):
 
     create_parent_function = staticmethod(create_random_plugin)
     create_record_function = staticmethod(create_random_file)
+
+    @property
+    def endpoint_name(self) -> str:
+        # `File` endpoints live under the admin-only `/admin/files` router.
+        return "admin/files"
 
     def create_test_data(  # noqa: PLR0913 - mirrors the base signature
         self,
@@ -97,26 +101,6 @@ class FileTestMixin(BaseTests[File]):
             assert response.status_code == expected_status
 
 
-class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
-    def can_create_record(
-        self,
-        *,
-        user_is_authenticated: bool,
-        user_is_owner: bool,
-        record_is_public: bool,
-        user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
-    ) -> bool:
-        # The admin gate rejects every non-superuser before ownership is checked.
-        return user_is_superuser and super().can_create_record(
-            user_is_authenticated=user_is_authenticated,
-            user_is_owner=user_is_owner,
-            record_is_public=record_is_public,
-            user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
-        )
-
-
 class TestGetFile(FileTestMixin, BaseGetTests[File]):
     def can_get_record(
         self,
@@ -140,6 +124,16 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
                 record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
             )
         )
+
+    # `File`s are admin-managed by id only (`/admin/files/{id}`) and are created by
+    # plugins rather than the API, so there is no create or list endpoint to exercise.
+    @pytest.mark.skip(reason="Files have no list endpoint.")
+    def test_list_permissions(self) -> None:  # type: ignore[override]
+        ...
+
+    @pytest.mark.skip(reason="Files have no list endpoint.")
+    def test_list_data(self) -> None:  # type: ignore[override]
+        ...
 
 
 class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):

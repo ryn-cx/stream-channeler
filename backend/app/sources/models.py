@@ -1,6 +1,6 @@
 # TODO: Validate
 import uuid
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from sqlmodel import (
     Field,
@@ -9,7 +9,9 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
+    select,
 )
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
@@ -45,6 +47,11 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self.plugin
+
+    @classmethod
+    @override
+    def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        return select(cls).join(Plugin)
 
     @property
     @override

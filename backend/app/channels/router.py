@@ -54,6 +54,7 @@ from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
+from app.tools.import_queue import background_import_queue
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
@@ -165,6 +166,7 @@ def bulk_import_queue_urls(
                 status_code=404,
                 detail=f"Channel {channel_id} not found",
             )
+    background_import_queue()
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
 
 
@@ -532,13 +534,14 @@ def create_channel_queue_urls(
     channel: EditableChannel,
     urls: list[str],
 ) -> list[ChannelQueue]:
-    """Add URLs to a channel's import queue."""
+    """Add URLs to a channel's import queue and start importing them in the background."""
     data = service.add_urls_to_channel_import_queue(
         session=session,
         urls=urls,
         channel=channel,
     )
-    return data  # noqa: RET504 - TODO: Remove unnecessary assignment before return
+    background_import_queue()
+    return data
 
 
 @channels_router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003 - Used by UserChannel.

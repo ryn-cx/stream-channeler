@@ -6,6 +6,7 @@ setting update_at values because they might be deprecated at some point in the f
 """
 
 import sys
+import threading
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -14,7 +15,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import automatically_import_models, engine
+from app.database import engine, import_models
 from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -150,14 +151,22 @@ def _check_for_updates(session: Session, youtube_plugin_id: object) -> None:
         session.commit()
 
 
+def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D103
+    stop_event = stop_event or threading.Event()
+    while not stop_event.is_set():
+        with Session(engine) as session:
+            youtube_plugin_id = YouTube(session).plugin.id
+            _download_initial_files(session, youtube_plugin_id)
+            _check_for_updates(session, youtube_plugin_id)
+        if stop_event.wait(timeout=60 * 60):
+            break
+
+
 if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stdout, level="INFO", colorize=True)
 
     import_plugins()
-    automatically_import_models()
+    import_models()
 
-    with Session(engine) as session:
-        youtube_plugin_id = YouTube(session).plugin.id
-        _download_initial_files(session, youtube_plugin_id)
-        _check_for_updates(session, youtube_plugin_id)
+    run_forever()

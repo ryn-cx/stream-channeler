@@ -1,5 +1,6 @@
 # TODO: Validate
 
+import threading
 import traceback
 from uuid import UUID
 
@@ -14,72 +15,95 @@ from app.channels.models import (
     ChannelShow,
     URLStatus,
 )
-from app.database import automatically_import_models, engine
+from app.database import import_models, engine
 from app.episodes.models import Episode
-from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    InvalidURLError,
+    URLImportResult,
+)
 from plugins.utils.manage_plugins import import_plugins, plugins
 
 import_plugins()
-automatically_import_models()
+PLUGIN_LOCKS = {plugin_class.plugin_key(): threading.Lock() for plugin_class in plugins}
+
+
+def background_import_queue() -> None:
+    """Import the queue in separate threads for each plugin."""
+
+    def run() -> None:
+        with Session(engine) as session:
+            import_queue(session)
+
+    threading.Thread(target=run, daemon=True).start()
 
 
 def import_queue(session: Session) -> None:
-    statement = select(ChannelQueue).where(
-        col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
-    )
-    results = session.exec(statement)
-    queue_items = list(results)
+    """Actually import the queue in separate threads for each plugin."""
+    for plugin_class, items in _group_pending_urls_by_plugin(session).items():
+        with PLUGIN_LOCKS[plugin_class.plugin_key()]:
+            for item in items:
+                _import_one(session, item, plugin_class)
 
-    # Move YouTube URLs to the end of the queue
-    youtube_items = [item for item in queue_items if "youtube.com" in item.url.lower()]
-    non_youtube_items = [
-        item for item in queue_items if "youtube.com" not in item.url.lower()
-    ]
-    queue_items = non_youtube_items + youtube_items
 
-    # Each item runs in its own transaction so a failure marks just that item
-    # as FAILED without rolling back other items, and the FAILED status is
-    # persisted (avoiding infinite retries from the SELECT above).
-    for queue_item in queue_items:
-        logger.info(f"Importing URL: {queue_item.url}")
-        for plugin in plugins:
-            if not plugin.is_valid_url_format(queue_item.url):
-                continue
-            if not plugin.implements("import_url"):
-                continue
-            try:
-                queue_item.status = URLStatus.IMPORTING
-                plugin_instance = plugin(session)
-                import_results = plugin_instance.import_url(queue_item.url)
-                add_results_to_channel(session, import_results, queue_item.channel)
-            except InvalidURLError:
-                logger.warning(f"Invalid URL {plugin.__name__}: {queue_item.url}")
-                note = "Invalid URL."
-            # BLE001 - capture all exceptions so one bad URL can't stall the queue.
-            except Exception as e:  # noqa: BLE001
-                logger.exception(
-                    f"Error importing {plugin.__name__}: {queue_item.url}",
-                )
-                # Rollback first so partial import work is discarded, then
-                # re-mark FAILED on the now-expired row so the next commit
-                # actually persists the status.
-                session.rollback()
-                note = "".join(
-                    traceback.format_exception(type(e), e, e.__traceback__),
-                )
-            else:
-                queue_item.status = URLStatus.IMPORTED
-                session.commit()
-                break
-            queue_item.status = URLStatus.FAILED
-            queue_item.note = note
-            session.commit()
-            break
-        else:
-            logger.warning(f"No valid plugin found for URL: {queue_item.url}")
-            queue_item.status = URLStatus.FAILED
-            queue_item.note = "No valid plugin found."
-            session.commit()
+def _get_plugin(url: str) -> type[AbstractPlugin] | None:
+    for plugin_class in plugins:
+        if plugin_class.is_valid_url_format(url):
+            return plugin_class
+    return None
+
+
+def _group_pending_urls_by_plugin(
+    session: Session,
+) -> dict[type[AbstractPlugin], list[ChannelQueue]]:
+    by_plugin: dict[type[AbstractPlugin], list[ChannelQueue]] = {}
+    unmatched: list[ChannelQueue] = []
+    pending = session.exec(
+        select(ChannelQueue)
+        .where(col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]))
+        .order_by(col(ChannelQueue.created_at).asc()),
+    ).all()
+    for item in pending:
+        if plugin_class := _get_plugin(item.url):
+            by_plugin.setdefault(plugin_class, []).append(item)
+        elif item.status == URLStatus.PENDING:
+            logger.warning(f"No valid plugin found for URL: {item.url}")
+            item.status = URLStatus.FAILED
+            item.note = "No valid plugin found."
+            unmatched.append(item)
+    if unmatched:
+        session.commit()
+    return by_plugin
+
+
+def _import_one(
+    session: Session,
+    queue_item: ChannelQueue,
+    plugin_class: type[AbstractPlugin],
+) -> None:
+    """Import a single queue item and commit its final status."""
+    plugin_key = plugin_class.plugin_key()
+    logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
+    try:
+        queue_item.status = URLStatus.IMPORTING
+        import_results = plugin_class(session).import_url(queue_item.url)
+        add_results_to_channel(session, import_results, queue_item.channel)
+    except InvalidURLError:
+        logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")
+        queue_item.status = URLStatus.FAILED
+        queue_item.note = "Invalid URL."
+        session.commit()
+    except Exception as error:  # noqa: BLE001
+        logger.exception(f"[{plugin_key}] Error importing: {queue_item.url}")
+        session.rollback()
+        queue_item.status = URLStatus.FAILED
+        queue_item.note = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__),
+        )
+        session.commit()
+    else:
+        queue_item.status = URLStatus.IMPORTED
+        session.commit()
 
 
 def add_results_to_channel(
@@ -87,10 +111,11 @@ def add_results_to_channel(
     results: list[URLImportResult],
     channel: Channel,
 ) -> None:
+    """Add the given import results to the channel."""
     existing_channel_shows = {show.show_id: show for show in channel.shows}
     for result in results:
         if existing_channel_show := existing_channel_shows.get(result.show.id):
-            _extend_channel_show(session, existing_channel_show, result)
+            _update_channel_show(session, existing_channel_show, result)
         else:
             _create_channel_show(session, channel, result)
 
@@ -125,23 +150,11 @@ def _create_channel_show(
         )
 
 
-def _extend_channel_show(
+def _update_channel_show(
     session: Session,
     existing_channel_show: ChannelShow,
     result: URLImportResult,
 ) -> None:
-    """Merge an import into an existing `ChannelShow`.
-
-    Explicitly importing a show promotes a filter-only show (created when an episode
-    was blacklisted from an included channel) into a full member, adopts the mode the
-    import asks for (whole-show import => blacklist/opt-out, season/episode import =>
-    whitelist/opt-in), and preserves the user's existing blacklist:
-
-    - In blacklist mode the blacklisted episodes are simply the entries on the blacklist.
-    - In whitelist mode they are the inverse: episodes are whitelisted, except a
-      blacklisted episode whose season is whitelisted gets an episode filter so it stays
-      hidden (and a blacklisted episode is never whitelisted).
-    """
     existing_channel_show.is_blacklist_only = False
 
     was_whitelist = existing_channel_show.is_whitelist
@@ -153,7 +166,6 @@ def _extend_channel_show(
         episode_filter.episode_id
         for episode_filter in existing_channel_show.episode_filters
     }
-    # Existing episode filters are a blacklist only while the show is in blacklist mode.
     blacklisted_episode_ids: set[UUID] = (
         set() if was_whitelist else existing_episode_ids
     )
@@ -163,13 +175,12 @@ def _extend_channel_show(
 
     if result.is_whitelist:
         season_ids = (
-            existing_season_ids if was_whitelist else set()
+            existing_season_ids if was_whitelist else set[UUID]()
         ) | result_season_ids
         whitelisted_episode_ids = (
-            (existing_episode_ids if was_whitelist else set()) | result_episode_ids
+            (existing_episode_ids if was_whitelist else set[UUID]())
+            | result_episode_ids
         ) - blacklisted_episode_ids
-        # A blacklisted episode whose season is now whitelisted needs an episode filter
-        # to stay hidden; one whose season isn't whitelisted is already excluded.
         season_by_blacklisted_episode = _season_ids_for_episodes(
             session,
             blacklisted_episode_ids,
@@ -181,12 +192,11 @@ def _extend_channel_show(
         }
         episode_ids = whitelisted_episode_ids | exclusion_episode_ids
     else:
-        # Opt-out: show everything except the (merged) blacklist.
-        season_ids = set()
+        season_ids = set[UUID]()
         episode_ids = blacklisted_episode_ids | result_episode_ids
 
     existing_channel_show.is_whitelist = result.is_whitelist
-    _replace_filters(session, existing_channel_show, season_ids, episode_ids)
+    _merge_filters(session, existing_channel_show, season_ids, episode_ids)
 
 
 def _season_ids_for_episodes(
@@ -202,27 +212,31 @@ def _season_ids_for_episodes(
     return dict(rows)
 
 
-def _replace_filters(
+def _merge_filters(
     session: Session,
     channel_show: ChannelShow,
     season_ids: set[UUID],
     episode_ids: set[UUID],
 ) -> None:
-    """Replace a channel show's season/episode filters with the given sets."""
-    for season_filter in list(channel_show.season_filters):
-        session.delete(season_filter)
-    for episode_filter in list(channel_show.episode_filters):
-        session.delete(episode_filter)
-    # Flush the deletes before re-inserting so reused primary keys don't collide.
-    session.flush()
-    for season_id in season_ids:
+    """Merge the given season/episode filters into the channel show's existing ones.
+
+    Existing filters are kept; only values not already present are added, so importing
+    never drops filters a previous import or the user already set.
+    """
+    existing_season_ids = {
+        season_filter.season_id for season_filter in channel_show.season_filters
+    }
+    existing_episode_ids = {
+        episode_filter.episode_id for episode_filter in channel_show.episode_filters
+    }
+    for season_id in season_ids - existing_season_ids:
         session.add(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
                 season_id=season_id,
             ),
         )
-    for episode_id in episode_ids:
+    for episode_id in episode_ids - existing_episode_ids:
         session.add(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
@@ -232,5 +246,6 @@ def _replace_filters(
 
 
 if __name__ == "__main__":
-    with Session(engine) as session:
-        import_queue(session)
+    import_models()
+    with Session(engine) as import_session:
+        import_queue(import_session)

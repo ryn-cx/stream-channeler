@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from sqlalchemy import util
 from sqlmodel import DateTime, Field, Index, Session, SQLModel
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.utils import tz_datetime
 
@@ -61,7 +62,7 @@ class Visibility(StrEnum):
 class RootRecordMixin(ABC):
     """Mixin for any model that a `User` can own.
 
-    Subclasses must implement `_root_record`.
+    Subclasses must implement `root_record`.
     """
 
     @abstractmethod
@@ -145,7 +146,8 @@ class MediaMixin[
 
     """Mixin for media models.
 
-    Subclasses must implement `parent`, `children`, and `_root_record`.
+    Subclasses must implement `parent`, `children`, `root_record`, and
+    `select_with_plugin`.
     """
 
     @property
@@ -183,6 +185,16 @@ class MediaMixin[
         - `Episode` -> `[]`
         """
         return [child for child in self.children if child.deleted_at is None]
+
+    @classmethod
+    @abstractmethod
+    def select_with_plugin(cls) -> SelectOfScalar[Any]:
+        """Return a select of this model joined through to its owning `Plugin`.
+
+        The return is `SelectOfScalar[Any]` rather than `SelectOfScalar[Self]` so that
+        overrides narrowing to `SelectOfScalar[Self]` stay compatible under the invariant
+        `SelectOfScalar` type parameter.
+        """
 
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function

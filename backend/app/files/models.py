@@ -2,9 +2,10 @@
 
 import uuid
 from datetime import datetime
-from typing import Never, override
+from typing import Never, Self, override
 
-from sqlmodel import Field, PrimaryKeyConstraint, Relationship, Session
+from sqlmodel import Field, PrimaryKeyConstraint, Relationship, Session, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import BaseMediaMixin, DateTimeField, MediaMixin
 from app.plugins.models import Plugin
@@ -39,6 +40,11 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self.plugin
+
+    @classmethod
+    @override
+    def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        return select(cls).join(Plugin)
 
     def __str__(self) -> str:
         """Return a string representation of the `File`."""

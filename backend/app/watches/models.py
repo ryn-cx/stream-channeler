@@ -18,7 +18,6 @@ from app.models import TimestampIdAndHashMixin
 from app.users.models import User
 from app.utils import tz_datetime
 
-
 class BaseWatch(SQLModel):
     # call-overload - See TimestampAndIdMixin for an explanation.
     watch_date: datetime = Field(
@@ -54,11 +53,8 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     def parent(self) -> Episode:
         return self.episode
 
-    def get_user_id(self, _session: Session) -> uuid.UUID:
+    def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
-
-    def is_public(self, _session: Session) -> bool:
-        return False
 
     def is_publically_readable(self, _session: Session) -> bool:
         return False

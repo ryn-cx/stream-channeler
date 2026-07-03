@@ -1,4 +1,5 @@
-# TODO: Validate
+# TODO: This was completely AI generated just to have a temporary baseline and should be
+# replaced with real tests.
 
 
 import uuid
@@ -19,6 +20,15 @@ from tests.app.utils.route_assertions import (
     assert_success_list,
 )
 from tests.app.utils.utils import random_lower_string
+
+
+@pytest.fixture(autouse=True)
+def _mock_background_import(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stop the queue endpoints from launching a real background import in these tests.
+
+    The importer itself is exercised directly in test_import_queue.py.
+    """
+    monkeypatch.setattr("app.channels.router.run_import_in_background", lambda: None)
 
 
 class BaseChannelQueueTests(BaseChannelSubEndpointTests):

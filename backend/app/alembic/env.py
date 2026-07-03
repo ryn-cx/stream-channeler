@@ -22,11 +22,11 @@ fileConfig(config.config_file_name)
 
 from sqlmodel import SQLModel
 from app.config import settings # noqa
-from app.database import automatically_import_models
+from app.database import import_models
 
 # Change this to manually_import_models() if you don't want to use the automatic model
 # loader.
-automatically_import_models()
+import_models()
 
 target_metadata = SQLModel.metadata
 

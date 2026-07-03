@@ -1,24 +1,29 @@
 # TODO: Validate
 # pyright: reportArgumentType=false
 
+import signal
 import sys
-from collections.abc import Callable
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from types import FrameType
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import or_
-from sqlalchemy.orm import selectinload
-from sqlalchemy.orm.interfaces import LoaderOption
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.database import automatically_import_models, engine
+from app.database import engine, import_models
 from app.episodes.models import Episode
+from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.tools import youtube_rss_check
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
@@ -29,72 +34,27 @@ logger.remove()
 logger.add(sys.stdout, level="INFO", colorize=True)
 
 import_plugins()
-automatically_import_models()
+import_models()
 
-MediaModel = Plugin | Source | Show | Season | Episode
+# Every media class updated by this script; typed as the shared `MediaMixin` base so
+# `select_with_plugin()` resolves to a single return type rather than a union.
+MediaClass = type[MediaMixin[Any, Any]]
 
-
-def _get_plugin_key_plugin(plugin: Plugin) -> str:
-    return plugin.key
-
-
-def _get_plugin_key_source(s: Source) -> str:
-    return s.plugin.key
-
-
-def _get_plugin_key_show(s: Show) -> str:
-    return s.source.plugin.key
+# Set when the user asks to stop (first Ctrl+C). Worker threads check it between items
+# and stop after committing their current item, so an interrupt never discards
+# in-progress downloads.
+_stop_requested = threading.Event()
 
 
-def _get_plugin_key_season(s: Season) -> str:
-    return s.show.source.plugin.key
-
-
-def _get_plugin_key_episode(e: Episode) -> str:
-    return e.season.show.source.plugin.key
-
-
-MODEL_VALUES: dict[
-    type[MediaModel],
-    tuple[list[type], LoaderOption | None, Callable[..., str]],
-] = {
-    # Plugin is its own root record, so no join chain or eager loading is needed
-    # to resolve its plugin key.
-    Plugin: (
-        [],
-        None,
-        _get_plugin_key_plugin,
-    ),
-    Source: (
-        [Plugin],
-        selectinload(Source.plugin),  # type: ignore[arg-type]
-        _get_plugin_key_source,
-    ),
-    Show: (
-        [Source, Plugin],
-        selectinload(Show.source).selectinload(Source.plugin),  # type: ignore[arg-type]
-        _get_plugin_key_show,
-    ),
-    Season: (
-        [Show, Source, Plugin],
-        (
-            selectinload(Season.show)  # type: ignore[arg-type]
-            .selectinload(Show.source)  # type: ignore[arg-type]
-            .selectinload(Source.plugin)  # type: ignore[arg-type]
-        ),
-        _get_plugin_key_season,
-    ),
-    Episode: (
-        [Season, Show, Source, Plugin],
-        (
-            selectinload(Episode.season)  # type: ignore[arg-type]
-            .selectinload(Season.show)  # type: ignore[arg-type]
-            .selectinload(Show.source)  # type: ignore[arg-type]
-            .selectinload(Source.plugin)  # type: ignore[arg-type]
-        ),
-        _get_plugin_key_episode,
-    ),
-}
+def _request_stop(_signum: int, _frame: FrameType | None) -> None:
+    if not _stop_requested.is_set():
+        logger.warning(
+            "Stop requested - each plugin will finish and commit its current item, "
+            "then exit. Press Ctrl+C again to force quit (may lose in-progress work).",
+        )
+        _stop_requested.set()
+        # Restore the default handler so a second Ctrl+C force-quits immediately.
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def _channel_inclusion_clause() -> ColumnElement[bool]:
@@ -145,7 +105,7 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
 # JustWatch) can mark its own sources outdated, which the Source pass then picks up in
 # the same run; the same cascade applies down the Source -> Show -> Season -> Episode
 # chain.
-MEDIA_CLASSES_IN_ORDER: tuple[type[MediaModel], ...] = (
+MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
     Plugin,
     Source,
     Show,
@@ -154,41 +114,40 @@ MEDIA_CLASSES_IN_ORDER: tuple[type[MediaModel], ...] = (
 )
 
 
+def _restrict_to_plugin_user[ResultT](
+    statement: SelectOfScalar[ResultT],
+) -> SelectOfScalar[ResultT]:
+    return statement.join(User, Plugin.user_id == User.id).where(  # type: ignore[arg-type]
+        User.email == PLUGIN_USER_EMAIL,
+    )
+
+
 def _process_outdated_items(
     session: Session,
-    media_class: type[MediaModel],
+    media_class: MediaClass,
     plugin_key: str,
     plugin_class: type[AbstractPlugin],
 ) -> None:
-    join_chain, load_options, _get_plugin_key = MODEL_VALUES[media_class]
     media_type_name = media_class.__name__.lower()
     update_method_name = f"update_{media_type_name}"
 
-    statement = (
-        select(media_class)
+    statement = _restrict_to_plugin_user(
+        media_class.select_with_plugin()
         .where(
             col(media_class.update_at).is_not(None),
             col(media_class.update_at) < tz_datetime.now(),
             col(media_class.deleted_at).is_(None),
         )
-        .order_by(col(media_class.update_at).asc())
+        .order_by(col(media_class.update_at).asc()),
     )
-    for model in join_chain:
-        statement = statement.join(model)
+    # Only this plugin's media so each plugin's run is independent.
+    statement = statement.where(col(Plugin.key) == plugin_key)
     # Skip items whose Season is not included in any channel. Source is
     # exempt because updating a Source is how new Shows are discovered.
     if media_class is Show:
         statement = statement.where(_show_has_season_in_channel_exists())
     elif media_class in (Season, Episode):
         statement = statement.where(_season_in_channel_exists())
-    statement = (
-        statement.join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
-        .where(User.email == PLUGIN_USER_EMAIL)
-        # Only this plugin's media so each plugin's run is independent.
-        .where(col(Plugin.key) == plugin_key)
-    )
-    if load_options is not None:
-        statement = statement.options(load_options)
 
     outdated_items = session.exec(statement).all()
     logger.info(
@@ -198,6 +157,11 @@ def _process_outdated_items(
     plugin_instance = plugin_class(session)
     updated_count = 0
     for item in outdated_items:
+        if _stop_requested.is_set():
+            logger.info(
+                f"[{plugin_key}] Stop requested; skipping remaining {media_type_name}",
+            )
+            break
         logger.info(f"[{plugin_key}] Updating {media_type_name}: {item.key}")
         try:
             getattr(plugin_instance, update_method_name)(item)
@@ -231,6 +195,8 @@ def _update_plugin(plugin_key: str, plugin_class: type[AbstractPlugin]) -> None:
     logger.info(f"[{plugin_key}] Starting update run")
     with Session(engine) as session:
         for media_class in MEDIA_CLASSES_IN_ORDER:
+            if _stop_requested.is_set():
+                break
             _process_outdated_items(session, media_class, plugin_key, plugin_class)
     logger.info(f"[{plugin_key}] Finished update run")
 
@@ -247,7 +213,49 @@ def _plugin_user_plugin_keys() -> list[str]:
         )
 
 
-if __name__ == "__main__":
+def _next_update_at(session: Session) -> datetime | None:
+    """Return the soonest future `update_at` across the plugin user's media, if any.
+
+    Items already due (`update_at <= now`) are excluded because they are handled by the
+    run that just finished; this is only used to decide how long to wait for the next one
+    to come due.
+    """
+    now = tz_datetime.now()
+    soonest: datetime | None = None
+    for media_class in MEDIA_CLASSES_IN_ORDER:
+        statement = (
+            _restrict_to_plugin_user(
+                media_class.select_with_plugin().where(
+                    col(media_class.update_at) > now,
+                    col(media_class.deleted_at).is_(None),
+                ),
+            )
+            .order_by(col(media_class.update_at).asc())
+            .limit(1)
+        )
+        item = session.exec(statement).first()
+        if item is not None and item.update_at is not None and (
+            soonest is None or item.update_at < soonest
+        ):
+            soonest = item.update_at
+    return soonest
+
+
+# When nothing is scheduled, or the next update is far away, re-check at least once a day
+# so externally-added or externally-rescheduled items are still picked up.
+MAX_SLEEP_SECONDS = 60.0 * 60.0 * 24.0
+
+
+def _seconds_until_next_update() -> float:
+    with Session(engine) as session:
+        next_update_at = _next_update_at(session)
+    if next_update_at is None:
+        return MAX_SLEEP_SECONDS
+    seconds_until_due = (next_update_at - tz_datetime.now()).total_seconds()
+    return max(0.0, min(seconds_until_due, MAX_SLEEP_SECONDS))
+
+
+def _update_outdated() -> None:
     # The work is grouped by the `Plugin` rows in the database (not the installed plugin
     # files). Each database plugin runs its whole update sequence in its own thread and
     # session so plugins update at the same time; the installed plugin class is only used
@@ -278,4 +286,38 @@ if __name__ == "__main__":
                 # Log the plugin-level failure and let the other plugins finish.
                 logger.exception(f"[{plugin_key}] Plugin update run crashed")
 
-    logger.info("Outdated source update process completed")
+
+def _update_outdated_loop() -> None:
+    while not _stop_requested.is_set():
+        _update_outdated()
+        if _stop_requested.is_set():
+            break
+
+        wait_seconds = _seconds_until_next_update()
+        logger.info(f"Next update due in {wait_seconds:.0f}s; waiting")
+
+        # Interruptible sleep: returns immediately if a stop is requested mid-wait.
+        if _stop_requested.wait(timeout=wait_seconds):
+            break
+
+
+def run() -> None:  # noqa: D103
+    # Worker threads can't be interrupted by Ctrl+C (the signal only reaches the main
+    # thread), so handle SIGINT cooperatively: the first Ctrl+C flags every worker to
+    # stop after committing its current item rather than forcing a kill that would abort
+    # in-progress downloads.
+    signal.signal(signal.SIGINT, _request_stop)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(_update_outdated_loop),
+            executor.submit(youtube_rss_check.run_forever, _stop_requested),
+        ]
+        for future in as_completed(futures):
+            future.result()
+
+    logger.info("Update process stopped")
+
+
+if __name__ == "__main__":
+    run()
