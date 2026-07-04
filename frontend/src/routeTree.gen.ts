@@ -38,6 +38,7 @@ import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/chann
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
+import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutSourceSourceKeySeasonsRouteImport } from './routes/_layout/source.$sourceKey_.seasons'
 import { Route as LayoutSourceSourceKeyEpisodesRouteImport } from './routes/_layout/source.$sourceKey_.episodes'
@@ -195,6 +196,12 @@ const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutAdminChannelQueuesRoute =
+  LayoutAdminChannelQueuesRouteImport.update({
+    id: '/channel-queues',
+    path: '/channel-queues',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
 const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
     id: '/users/$userId/channels',
@@ -285,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/shows': typeof LayoutShowsRoute
   '/sources': typeof LayoutSourcesRoute
   '/watches': typeof LayoutWatchesRoute
+  '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -325,6 +333,7 @@ export interface FileRoutesByTo {
   '/sources': typeof LayoutSourcesRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
+  '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -369,6 +378,7 @@ export interface FileRoutesById {
   '/_layout/sources': typeof LayoutSourcesRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/shows'
     | '/sources'
     | '/watches'
+    | '/admin/channel-queues'
     | '/admin/channels'
     | '/admin/users'
     | '/channels/$channelId'
@@ -453,6 +464,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/watches'
     | '/'
+    | '/admin/channel-queues'
     | '/admin/channels'
     | '/admin/users'
     | '/channels/$channelId'
@@ -496,6 +508,7 @@ export interface FileRouteTypes {
     | '/_layout/sources'
     | '/_layout/watches'
     | '/_layout/'
+    | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
@@ -735,6 +748,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminChannelsRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
+    '/_layout/admin/channel-queues': {
+      id: '/_layout/admin/channel-queues'
+      path: '/channel-queues'
+      fullPath: '/admin/channel-queues'
+      preLoaderRoute: typeof LayoutAdminChannelQueuesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/users/$userId/channels': {
       id: '/_layout/users/$userId/channels'
       path: '/users/$userId/channels'
@@ -823,12 +843,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutAdminRouteChildren {
+  LayoutAdminChannelQueuesRoute: typeof LayoutAdminChannelQueuesRoute
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
 }
 
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
+  LayoutAdminChannelQueuesRoute: LayoutAdminChannelQueuesRoute,
   LayoutAdminChannelsRoute: LayoutAdminChannelsRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,

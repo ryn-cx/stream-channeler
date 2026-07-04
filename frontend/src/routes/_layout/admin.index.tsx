@@ -1,6 +1,6 @@
 // TODO: Validate
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Radio, Users } from "lucide-react"
+import { ListOrdered, Radio, Users } from "lucide-react"
 import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Card,
@@ -35,6 +35,20 @@ function AdminIndex() {
               <CardDescription>
                 View, approve, and edit every channel on the site, or filter to
                 a single user's channels.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/channel-queues" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ListOrdered className="size-5" />
+                Channel Queues
+              </CardTitle>
+              <CardDescription>
+                View and edit every channel's import queue, or filter to a
+                single user's queues.
               </CardDescription>
             </CardHeader>
           </Card>

@@ -13,6 +13,7 @@ from app.channels.models import (
     BaseChannel,
     BaseChannelQueue,
     Channel,
+    URLStatus,
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
@@ -78,6 +79,23 @@ class ChannelAdminUpdate(BaseInput, BaseChannel):
 class ChannelQueueOutput(BaseChannelQueue):
     id: uuid.UUID
     channel_id: uuid.UUID
+
+
+class ChannelQueueAdminOutput(ChannelQueueOutput):
+    """Schema for returning a queue entry to an admin, with channel and owner info."""
+
+    created_at: datetime
+    channel_name: str | None
+    channel_number: float | None
+    user_id: uuid.UUID | None
+    username: str | None
+
+
+class ChannelQueueAdminUpdate(BaseInput):
+    """Schema for an admin updating a `Channel`'s queue entry."""
+
+    status: URLStatus | None = Field(default=None)
+    note: str | None = Field(default=None)
 
 
 class ChannelOrderInput(BaseInput):

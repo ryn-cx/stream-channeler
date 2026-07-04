@@ -151,6 +151,30 @@ export type ChannelPublicOutput = {
     username: (string | null);
 };
 
+/**
+ * Schema for returning a queue entry to an admin, with channel and owner info.
+ */
+export type ChannelQueueAdminOutput = {
+    url: string;
+    status: URLStatus;
+    note?: (string | null);
+    id: string;
+    channel_id: string;
+    created_at: string;
+    channel_name: (string | null);
+    channel_number: (number | null);
+    user_id: (string | null);
+    username: (string | null);
+};
+
+/**
+ * Schema for an admin updating a `Channel`'s queue entry.
+ */
+export type ChannelQueueAdminUpdate = {
+    status?: (URLStatus | null);
+    note?: (string | null);
+};
+
 export type ChannelQueueOutput = {
     url: string;
     status: URLStatus;
@@ -1087,6 +1111,25 @@ export type ChannelsAdminUpdateChannelData = {
 };
 
 export type ChannelsAdminUpdateChannelResponse = (ChannelAdminOutput);
+
+export type ChannelsGetAllChannelQueuesData = {
+    owner?: (MediaOwner | null);
+};
+
+export type ChannelsGetAllChannelQueuesResponse = (Array<ChannelQueueAdminOutput>);
+
+export type ChannelsAdminUpdateChannelQueueData = {
+    queueId: string;
+    requestBody: ChannelQueueAdminUpdate;
+};
+
+export type ChannelsAdminUpdateChannelQueueResponse = (ChannelQueueAdminOutput);
+
+export type ChannelsAdminDeleteChannelQueueData = {
+    queueId: string;
+};
+
+export type ChannelsAdminDeleteChannelQueueResponse = (Message);
 
 export type EpisodesGetEpisodesData = {
     dateFilterOptions?: string;

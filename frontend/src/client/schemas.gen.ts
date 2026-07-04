@@ -850,6 +850,123 @@ export const ChannelPublicOutputSchema = {
     description: 'Schema for returning a publicly listed `Channel`.'
 } as const;
 
+export const ChannelQueueAdminOutputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        status: {
+            '$ref': '#/components/schemas/URLStatus'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        channel_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        }
+    },
+    type: 'object',
+    required: ['url', 'status', 'id', 'channel_id', 'created_at', 'channel_name', 'channel_number', 'user_id', 'username'],
+    title: 'ChannelQueueAdminOutput',
+    description: 'Schema for returning a queue entry to an admin, with channel and owner info.'
+} as const;
+
+export const ChannelQueueAdminUpdateSchema = {
+    properties: {
+        status: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/URLStatus'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'ChannelQueueAdminUpdate',
+    description: "Schema for an admin updating a `Channel`'s queue entry."
+} as const;
+
 export const ChannelQueueOutputSchema = {
     properties: {
         url: {

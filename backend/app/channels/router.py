@@ -35,6 +35,8 @@ from app.channels.schemas import (
     ChannelOrderInput,
     ChannelOutput,
     ChannelPublicListOutput,
+    ChannelQueueAdminOutput,
+    ChannelQueueAdminUpdate,
     ChannelQueueOutput,
     ChannelShowsOutput,
     ChannelUpdate,
@@ -214,6 +216,89 @@ def admin_update_channel(
     session.refresh(channel)
     username = session.get_one(User, channel.user_id).username
     return ChannelAdminOutput.model_validate(channel, update={"username": username})
+
+
+def _channel_queue_admin_output(
+    channel: Channel,
+    username: str | None,
+    queue_entry: ChannelQueue,
+) -> ChannelQueueAdminOutput:
+    return ChannelQueueAdminOutput.model_validate(
+        queue_entry,
+        update={
+            "channel_name": channel.name,
+            "channel_number": channel.channel_number,
+            "user_id": channel.user_id,
+            "username": username,
+        },
+    )
+
+
+@admin_router.get("/queue")
+def get_all_channel_queues(
+    session: SessionDep,
+    current_user: CurrentUser,
+    owner: MediaOwner | None = None,
+) -> list[ChannelQueueAdminOutput]:
+    """List every `Channel`'s import queue entries, scoped by owner."""
+    selector = (
+        select(ChannelQueue, Channel, User.username)
+        .join(Channel, col(Channel.id) == ChannelQueue.channel_id)
+        .join(User, col(User.id) == Channel.user_id)
+        .order_by(col(ChannelQueue.created_at).desc())
+    )
+    if not owner:
+        selector = selector.where(Channel.user_id == current_user.id)
+    else:
+        plugin_user = get_or_create_plugin_user(session=session)
+        if owner == MediaOwner.official:
+            selector = selector.where(Channel.user_id == plugin_user.id)
+        else:
+            selector = selector.where(
+                col(Channel.user_id).not_in([current_user.id, plugin_user.id]),
+            )
+    rows = session.exec(selector).all()
+    return [
+        _channel_queue_admin_output(channel, username, queue_entry)
+        for queue_entry, channel, username in rows
+    ]
+
+
+@admin_router.patch("/queue/{queue_id}")
+def admin_update_channel_queue(
+    session: SessionDep,
+    queue_id: uuid.UUID,
+    queue_in: ChannelQueueAdminUpdate,
+) -> ChannelQueueAdminOutput:
+    """Update a `Channel`'s queue entry as an admin."""
+    queue_entry = session.exec(
+        select(ChannelQueue).where(ChannelQueue.id == queue_id),
+    ).first()
+    if not queue_entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+    queue_entry.sqlmodel_update(queue_in.model_dump(exclude_unset=True))
+    session.commit()
+    session.refresh(queue_entry)
+    channel = session.get_one(Channel, queue_entry.channel_id)
+    username = session.get_one(User, channel.user_id).username
+    return _channel_queue_admin_output(channel, username, queue_entry)
+
+
+@admin_router.delete("/queue/{queue_id}")
+def admin_delete_channel_queue(
+    session: SessionDep,
+    queue_id: uuid.UUID,
+) -> Message:
+    """Delete a `Channel`'s queue entry as an admin."""
+    queue_entry = session.exec(
+        select(ChannelQueue).where(ChannelQueue.id == queue_id),
+    ).first()
+    if not queue_entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+    url = queue_entry.url
+    session.delete(queue_entry)
+    session.commit()
+    return Message(message=f"{url} removed from import queue successfully")
 
 
 @channels_router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.
