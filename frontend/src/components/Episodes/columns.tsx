@@ -15,8 +15,8 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
       <span
         className={
           row.original.pending
-            ? "font-medium text-muted-foreground"
-            : "font-medium"
+            ? "font-medium text-muted-foreground block max-w-48 whitespace-normal wrap-break-word"
+            : "font-medium block max-w-48 whitespace-normal wrap-break-word"
         }
       >
         {row.original.name || `No Name (${row.original.key})`}

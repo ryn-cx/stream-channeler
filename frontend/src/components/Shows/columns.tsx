@@ -14,14 +14,14 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     header: "Name",
     cell: ({ row }) =>
       row.original.pending ? (
-        <span className="font-medium text-primary">
+        <span className="font-medium text-primary block max-w-48 whitespace-normal wrap-break-word">
           {row.original.name || `No Name (${row.original.key})`}
         </span>
       ) : (
         <Link
           to="/show/$showKey"
           params={{ showKey: row.original.id }}
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
         >
           {row.original.name || `No Name (${row.original.key})`}
         </Link>

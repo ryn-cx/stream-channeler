@@ -14,14 +14,14 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     header: "Name",
     cell: ({ row }) =>
       row.original.pending ? (
-        <span className="font-medium text-muted-foreground">
+        <span className="font-medium text-muted-foreground block max-w-48 whitespace-normal wrap-break-word">
           {row.original.name || `No Name (${row.original.key})`}
         </span>
       ) : (
         <Link
           to="/source/$sourceKey"
           params={{ sourceKey: row.original.id }}
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
         >
           {row.original.name || `No Name (${row.original.key})`}
         </Link>

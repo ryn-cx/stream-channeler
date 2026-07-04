@@ -14,14 +14,14 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     header: "Name",
     cell: ({ row }) =>
       row.original.pending ? (
-        <span className="font-medium text-muted-foreground">
+        <span className="font-medium text-muted-foreground block max-w-48 whitespace-normal wrap-break-word">
           {row.original.name || `No Name (${row.original.key})`}
         </span>
       ) : (
         <Link
           to="/season/$seasonKey"
           params={{ seasonKey: row.original.id }}
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
         >
           {row.original.name || `No Name (${row.original.key})`}
         </Link>
