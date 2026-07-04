@@ -8,48 +8,37 @@ import {
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
-import AddSeason from "@/components/Seasons/Add"
 import {
   type SeasonTableData,
   seasonColumns,
 } from "@/components/Seasons/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-import { usePlugin, useShow, useSource } from "@/hooks/useEntities"
+import { usePlugin } from "@/hooks/useEntities"
 
-export const Route = createFileRoute("/_layout/show/$showKey")({
-  component: ShowDetailPage,
+export const Route = createFileRoute("/_layout/plugin/$pluginId_/seasons")({
+  component: PluginSeasonsPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
     }
   },
   head: () => ({
-    meta: [{ title: "Show Seasons - Stream Channeler" }],
+    meta: [{ title: "Plugin Seasons - Stream Channeler" }],
   }),
 })
 
-function ShowDetailPage() {
-  const { showKey } = Route.useParams()
-  const { data: show } = useShow(showKey)
-  const { data: source } = useSource(show?.source_id)
-  const { data: plugin } = usePlugin(source?.plugin_id)
+function PluginSeasonsPage() {
+  const { pluginId } = Route.useParams()
+  const { data: plugin } = usePlugin(pluginId)
 
   return (
     <DetailTablePage<SeasonTableData>
-      title={
-        <DetailBreadcrumb
-          plugin={plugin}
-          source={source}
-          show={show}
-          trailing="Seasons"
-          current="show"
-        />
-      }
+      title={<DetailBreadcrumb plugin={plugin} trailing="Seasons" />}
       columns={seasonColumns}
-      queryKey={["shows", showKey, "seasons"]}
+      queryKey={["plugins", pluginId, "seasons"]}
       fetchTable={async (params) => {
-        const result = await SeasonsService.getShowSeasons({
-          showId: showKey,
+        const result = await SeasonsService.getPluginSeasons({
+          pluginId,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, seasonColumns),
@@ -63,9 +52,8 @@ function ShowDetailPage() {
       }}
       columnVisibilityKey="seasons-column-visibility"
       emptyIcon={Layers}
-      emptyTitle="This show has no seasons yet"
-      emptyDescription="Add a season to get started"
-      headerActions={<AddSeason showKey={showKey} />}
+      emptyTitle="This plugin has no seasons yet"
+      emptyDescription="Seasons will appear here once its shows have them"
     />
   )
 }

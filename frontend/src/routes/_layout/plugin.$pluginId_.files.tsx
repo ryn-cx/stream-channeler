@@ -6,9 +6,11 @@ import {
   DetailTablePage,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
+import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
 import AddFile from "@/components/Files/Add"
 import { type FileTableData, fileColumns } from "@/components/Files/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
+import { usePlugin } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/plugin/$pluginId_/files")({
   component: PluginFilesPage,
@@ -24,10 +26,11 @@ export const Route = createFileRoute("/_layout/plugin/$pluginId_/files")({
 
 function PluginFilesPage() {
   const { pluginId } = Route.useParams()
+  const { data: plugin } = usePlugin(pluginId)
 
   return (
     <DetailTablePage<FileTableData>
-      title="Files"
+      title={<DetailBreadcrumb plugin={plugin} trailing="Files" />}
       columns={fileColumns}
       queryKey={["plugins", pluginId, "files"]}
       fetchTable={async (params) => {

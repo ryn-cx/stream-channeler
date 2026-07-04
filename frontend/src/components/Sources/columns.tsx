@@ -1,8 +1,10 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { Film, Layers } from "lucide-react"
 import type { SourcePublic } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 
 import { SourceActionsMenu } from "./ActionsMenu"
 
@@ -18,13 +20,35 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
           {row.original.name || `No Name (${row.original.key})`}
         </span>
       ) : (
-        <Link
-          to="/source/$sourceKey"
-          params={{ sourceKey: row.original.id }}
-          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
-        >
-          {row.original.name || `No Name (${row.original.key})`}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/source/$sourceKey"
+            params={{ sourceKey: row.original.id }}
+            className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
+          >
+            {row.original.name || `No Name (${row.original.key})`}
+          </Link>
+          <TooltipIconLink label="Seasons">
+            <Link
+              to="/source/$sourceKey/seasons"
+              params={{ sourceKey: row.original.id }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Seasons"
+            >
+              <Layers className="size-4" />
+            </Link>
+          </TooltipIconLink>
+          <TooltipIconLink label="Episodes">
+            <Link
+              to="/source/$sourceKey/episodes"
+              params={{ sourceKey: row.original.id }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Episodes"
+            >
+              <Film className="size-4" />
+            </Link>
+          </TooltipIconLink>
+        </div>
       ),
   },
   {

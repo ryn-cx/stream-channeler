@@ -12,6 +12,7 @@ from app.media.service import (
     media_list_response,
     media_owner_list_response,
 )
+from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
@@ -24,9 +25,12 @@ from app.seasons.schemas import (
 )
 from app.shows.dependencies import EditableShow, ReadableShow
 from app.shows.models import Show
+from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 
+plugin_seasons_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["seasons"])
+source_seasons_router = APIRouter(prefix="/sources/{source_id}", tags=["seasons"])
 show_seasons_router = APIRouter(prefix="/shows/{show_id}", tags=["seasons"])
 seasons_router = APIRouter(prefix="/seasons", tags=["seasons"])
 
@@ -77,6 +81,49 @@ def get_show_seasons(
     )
 
 
+@plugin_seasons_router.get("/seasons")
+def get_plugin_seasons(
+    session: SessionDep,
+    plugin: ReadablePlugin,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> SeasonsPublic:
+    """Get all of the `Season`s for a `Plugin` if it is readable by the `User`."""
+    base = (
+        select(Season)
+        .join(Show)
+        .join(Source)
+        .where(Source.plugin_id == plugin.id)
+    )
+    return media_list_response(
+        session=session,
+        base=base,
+        response_model=SeasonsPublic,
+        schema=SeasonOutput,
+        params=read_options,
+        current_user=current_user,
+    )
+
+
+@source_seasons_router.get("/seasons")
+def get_source_seasons(
+    session: SessionDep,
+    source: ReadableSource,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> SeasonsPublic:
+    """Get all of the `Season`s for a `Source` if it is readable by the `User`."""
+    base = select(Season).join(Show).where(Show.source_id == source.id)
+    return media_list_response(
+        session=session,
+        base=base,
+        response_model=SeasonsPublic,
+        schema=SeasonOutput,
+        params=read_options,
+        current_user=current_user,
+    )
+
+
 @seasons_router.get("/{season_id}", response_model=SeasonOutput)  # noqa: FAST003 - Used by ReadableSeason
 def get_season(season: ReadableSeason) -> Season:
     """Get a `Season` if it's readable by the `User`."""
@@ -102,3 +149,5 @@ def delete_season(session: SessionDep, season: EditableSeason) -> Message:
 router = APIRouter()
 router.include_router(seasons_router)
 router.include_router(show_seasons_router)
+router.include_router(source_seasons_router)
+router.include_router(plugin_seasons_router)

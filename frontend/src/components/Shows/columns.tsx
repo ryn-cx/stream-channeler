@@ -1,8 +1,10 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { Film } from "lucide-react"
 import type { ShowPublic } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 
 import { ShowActionsMenu } from "./ActionsMenu"
 
@@ -18,13 +20,25 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
           {row.original.name || `No Name (${row.original.key})`}
         </span>
       ) : (
-        <Link
-          to="/show/$showKey"
-          params={{ showKey: row.original.id }}
-          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
-        >
-          {row.original.name || `No Name (${row.original.key})`}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/show/$showKey"
+            params={{ showKey: row.original.id }}
+            className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
+          >
+            {row.original.name || `No Name (${row.original.key})`}
+          </Link>
+          <TooltipIconLink label="Episodes">
+            <Link
+              to="/show/$showKey/episodes"
+              params={{ showKey: row.original.id }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Episodes"
+            >
+              <Film className="size-4" />
+            </Link>
+          </TooltipIconLink>
+        </div>
       ),
   },
   {

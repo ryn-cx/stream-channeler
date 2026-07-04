@@ -6,12 +6,14 @@ import {
   DetailTablePage,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
+import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
 import AddSource from "@/components/Sources/Add"
 import {
   type SourceTableData,
   sourceColumns,
 } from "@/components/Sources/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
+import { usePlugin } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/plugin/$pluginId")({
   component: PluginDetailPage,
@@ -27,10 +29,13 @@ export const Route = createFileRoute("/_layout/plugin/$pluginId")({
 
 function PluginDetailPage() {
   const { pluginId } = Route.useParams()
+  const { data: plugin } = usePlugin(pluginId)
 
   return (
     <DetailTablePage<SourceTableData>
-      title="Sources"
+      title={
+        <DetailBreadcrumb plugin={plugin} trailing="Sources" current="plugin" />
+      }
       columns={sourceColumns}
       queryKey={["plugins", pluginId, "sources"]}
       fetchTable={async (params) => {

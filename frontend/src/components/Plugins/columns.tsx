@@ -1,10 +1,11 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { FileText } from "lucide-react"
+import { Clapperboard, FileText, Film, Layers } from "lucide-react"
 import type { PluginOutput } from "@/client"
 import type { OwnerView } from "@/components/Common/DataTable"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 
@@ -33,16 +34,47 @@ export function pluginColumns(owner: OwnerView): ColumnDef<PluginTableData>[] {
             >
               {label}
             </Link>
-            {owner === "official" && (
+            <TooltipIconLink label="Shows">
               <Link
-                to="/plugin/$pluginId/files"
+                to="/plugin/$pluginId/shows"
                 params={{ pluginId: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="Files"
-                title="Files"
+                aria-label="Shows"
               >
-                <FileText className="size-4" />
+                <Clapperboard className="size-4" />
               </Link>
+            </TooltipIconLink>
+            <TooltipIconLink label="Seasons">
+              <Link
+                to="/plugin/$pluginId/seasons"
+                params={{ pluginId: row.original.id }}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Seasons"
+              >
+                <Layers className="size-4" />
+              </Link>
+            </TooltipIconLink>
+            <TooltipIconLink label="Episodes">
+              <Link
+                to="/plugin/$pluginId/episodes"
+                params={{ pluginId: row.original.id }}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Episodes"
+              >
+                <Film className="size-4" />
+              </Link>
+            </TooltipIconLink>
+            {owner === "official" && (
+              <TooltipIconLink label="Files">
+                <Link
+                  to="/plugin/$pluginId/files"
+                  params={{ pluginId: row.original.id }}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Files"
+                >
+                  <FileText className="size-4" />
+                </Link>
+              </TooltipIconLink>
             )}
           </div>
         )

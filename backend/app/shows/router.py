@@ -12,6 +12,7 @@ from app.media.service import (
     media_list_response,
     media_owner_list_response,
 )
+from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.shows.dependencies import EditableShow, ReadableShow
@@ -26,6 +27,7 @@ from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 
+plugin_shows_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["shows"])
 source_shows_router = APIRouter(prefix="/sources/{source_id}", tags=["shows"])
 shows_router = APIRouter(prefix="/shows", tags=["shows"])
 
@@ -76,6 +78,25 @@ def get_source_shows(
     )
 
 
+@plugin_shows_router.get("/shows")
+def get_plugin_shows(
+    session: SessionDep,
+    plugin: ReadablePlugin,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> ShowsPublic:
+    """Get all of the `Show`s for a `Plugin` if it is readable by the `User`."""
+    base = select(Show).join(Source).where(Source.plugin_id == plugin.id)
+    return media_list_response(
+        session=session,
+        base=base,
+        response_model=ShowsPublic,
+        schema=ShowPublic,
+        params=read_options,
+        current_user=current_user,
+    )
+
+
 @shows_router.get("/{show_id}", response_model=ShowPublic)  # noqa: FAST003 - Used by ReadableShow
 def get_show(show: ReadableShow) -> Show:
     """Get a `Show` if it's readable by the `User`."""
@@ -101,3 +122,4 @@ def delete_show(session: SessionDep, show: EditableShow) -> Message:
 router = APIRouter()
 router.include_router(shows_router)
 router.include_router(source_shows_router)
+router.include_router(plugin_shows_router)

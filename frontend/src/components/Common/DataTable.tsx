@@ -960,7 +960,7 @@ export function MediaTablePage<TData extends { id: string }>({
 }
 
 interface DetailTablePageProps<TData extends { id: string }> {
-  title: string
+  title: ReactNode
   columns: ColumnDef<TData>[]
   queryKey: unknown[]
   fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
@@ -1001,7 +1001,7 @@ export function DetailTablePage<TData extends { id: string }>({
           >
             <ArrowLeft />
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          {title}
         </div>
       }
       emptyState={

@@ -1,58 +1,56 @@
 // TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Layers } from "lucide-react"
+import { Film } from "lucide-react"
 
-import { SeasonsService } from "@/client"
+import { EpisodesService } from "@/client"
 import {
   DetailTablePage,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
-import AddSeason from "@/components/Seasons/Add"
 import {
-  type SeasonTableData,
-  seasonColumns,
-} from "@/components/Seasons/columns"
+  type EpisodeTableData,
+  episodeColumns,
+} from "@/components/Episodes/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 import { usePlugin, useShow, useSource } from "@/hooks/useEntities"
 
-export const Route = createFileRoute("/_layout/show/$showKey")({
-  component: ShowDetailPage,
+export const Route = createFileRoute("/_layout/show/$showKey_/episodes")({
+  component: ShowEpisodesPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
     }
   },
   head: () => ({
-    meta: [{ title: "Show Seasons - Stream Channeler" }],
+    meta: [{ title: "Show Episodes - Stream Channeler" }],
   }),
 })
 
-function ShowDetailPage() {
+function ShowEpisodesPage() {
   const { showKey } = Route.useParams()
   const { data: show } = useShow(showKey)
   const { data: source } = useSource(show?.source_id)
   const { data: plugin } = usePlugin(source?.plugin_id)
 
   return (
-    <DetailTablePage<SeasonTableData>
+    <DetailTablePage<EpisodeTableData>
       title={
         <DetailBreadcrumb
           plugin={plugin}
           source={source}
           show={show}
-          trailing="Seasons"
-          current="show"
+          trailing="Episodes"
         />
       }
-      columns={seasonColumns}
-      queryKey={["shows", showKey, "seasons"]}
+      columns={episodeColumns}
+      queryKey={["shows", showKey, "episodes"]}
       fetchTable={async (params) => {
-        const result = await SeasonsService.getShowSeasons({
+        const result = await EpisodesService.getShowEpisodes({
           showId: showKey,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, seasonColumns),
+          ...serializeTableQuery(params, episodeColumns),
         })
         return {
           data: result.data,
@@ -61,11 +59,11 @@ function ShowDetailPage() {
           is_server_side: result.is_server_side,
         }
       }}
-      columnVisibilityKey="seasons-column-visibility"
-      emptyIcon={Layers}
-      emptyTitle="This show has no seasons yet"
-      emptyDescription="Add a season to get started"
-      headerActions={<AddSeason showKey={showKey} />}
+      columnVisibilityKey="episodes-column-visibility"
+      defaultHidden={{ key: false, id: false }}
+      emptyIcon={Film}
+      emptyTitle="This show has no episodes yet"
+      emptyDescription="Episodes will appear here once its seasons have them"
     />
   )
 }

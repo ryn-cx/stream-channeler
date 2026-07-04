@@ -1,53 +1,50 @@
 // TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Tv } from "lucide-react"
+import { Film } from "lucide-react"
 
-import { ShowsService } from "@/client"
+import { EpisodesService } from "@/client"
 import {
   DetailTablePage,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
-import AddShow from "@/components/Shows/Add"
-import { type ShowTableData, showColumns } from "@/components/Shows/columns"
+import {
+  type EpisodeTableData,
+  episodeColumns,
+} from "@/components/Episodes/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 import { usePlugin, useSource } from "@/hooks/useEntities"
 
-export const Route = createFileRoute("/_layout/source/$sourceKey")({
-  component: SourceDetailPage,
+export const Route = createFileRoute("/_layout/source/$sourceKey_/episodes")({
+  component: SourceEpisodesPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
     }
   },
   head: () => ({
-    meta: [{ title: "Source Shows - Stream Channeler" }],
+    meta: [{ title: "Source Episodes - Stream Channeler" }],
   }),
 })
 
-function SourceDetailPage() {
+function SourceEpisodesPage() {
   const { sourceKey } = Route.useParams()
   const { data: source } = useSource(sourceKey)
   const { data: plugin } = usePlugin(source?.plugin_id)
 
   return (
-    <DetailTablePage<ShowTableData>
+    <DetailTablePage<EpisodeTableData>
       title={
-        <DetailBreadcrumb
-          plugin={plugin}
-          source={source}
-          trailing="Shows"
-          current="source"
-        />
+        <DetailBreadcrumb plugin={plugin} source={source} trailing="Episodes" />
       }
-      columns={showColumns}
-      queryKey={["sources", sourceKey, "shows"]}
+      columns={episodeColumns}
+      queryKey={["sources", sourceKey, "episodes"]}
       fetchTable={async (params) => {
-        const result = await ShowsService.getSourceShows({
+        const result = await EpisodesService.getSourceEpisodes({
           sourceId: sourceKey,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, showColumns),
+          ...serializeTableQuery(params, episodeColumns),
         })
         return {
           data: result.data,
@@ -56,11 +53,11 @@ function SourceDetailPage() {
           is_server_side: result.is_server_side,
         }
       }}
-      columnVisibilityKey="shows-column-visibility"
-      emptyIcon={Tv}
-      emptyTitle="This source has no shows yet"
-      emptyDescription="Add a show to get started"
-      headerActions={<AddShow sourceKey={sourceKey} />}
+      columnVisibilityKey="episodes-column-visibility"
+      defaultHidden={{ key: false, id: false }}
+      emptyIcon={Film}
+      emptyTitle="This source has no episodes yet"
+      emptyDescription="Episodes will appear here once its seasons have them"
     />
   )
 }

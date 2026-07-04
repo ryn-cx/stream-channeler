@@ -1138,6 +1138,42 @@ export type EpisodesGetSeasonEpisodesData = {
 
 export type EpisodesGetSeasonEpisodesResponse = (EpisodesPublic);
 
+export type EpisodesGetShowEpisodesData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    showId: string;
+    sortOptions?: string;
+};
+
+export type EpisodesGetShowEpisodesResponse = (EpisodesPublic);
+
+export type EpisodesGetSourceEpisodesData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    sortOptions?: string;
+    sourceId: string;
+};
+
+export type EpisodesGetSourceEpisodesResponse = (EpisodesPublic);
+
+export type EpisodesGetPluginEpisodesData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    pluginId: string;
+    sortOptions?: string;
+};
+
+export type EpisodesGetPluginEpisodesResponse = (EpisodesPublic);
+
 export type FilesGetFilesData = {
     dateFilterOptions?: string;
     filterOptions?: string;
@@ -1326,6 +1362,30 @@ export type SeasonsGetShowSeasonsData = {
 
 export type SeasonsGetShowSeasonsResponse = (SeasonsPublic);
 
+export type SeasonsGetSourceSeasonsData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    sortOptions?: string;
+    sourceId: string;
+};
+
+export type SeasonsGetSourceSeasonsResponse = (SeasonsPublic);
+
+export type SeasonsGetPluginSeasonsData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    pluginId: string;
+    sortOptions?: string;
+};
+
+export type SeasonsGetPluginSeasonsResponse = (SeasonsPublic);
+
 export type ShowsGetShowsData = {
     dateFilterOptions?: string;
     filterOptions?: string;
@@ -1375,6 +1435,18 @@ export type ShowsGetSourceShowsData = {
 };
 
 export type ShowsGetSourceShowsResponse = (ShowsPublic);
+
+export type ShowsGetPluginShowsData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    pluginId: string;
+    sortOptions?: string;
+};
+
+export type ShowsGetPluginShowsResponse = (ShowsPublic);
 
 export type SourcesGetSourcesData = {
     dateFilterOptions?: string;

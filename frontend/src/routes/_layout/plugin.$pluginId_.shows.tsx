@@ -1,6 +1,6 @@
 // TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Tv } from "lucide-react"
+import { Clapperboard } from "lucide-react"
 
 import { ShowsService } from "@/client"
 import {
@@ -8,43 +8,34 @@ import {
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
-import AddShow from "@/components/Shows/Add"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-import { usePlugin, useSource } from "@/hooks/useEntities"
+import { usePlugin } from "@/hooks/useEntities"
 
-export const Route = createFileRoute("/_layout/source/$sourceKey")({
-  component: SourceDetailPage,
+export const Route = createFileRoute("/_layout/plugin/$pluginId_/shows")({
+  component: PluginShowsPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
     }
   },
   head: () => ({
-    meta: [{ title: "Source Shows - Stream Channeler" }],
+    meta: [{ title: "Plugin Shows - Stream Channeler" }],
   }),
 })
 
-function SourceDetailPage() {
-  const { sourceKey } = Route.useParams()
-  const { data: source } = useSource(sourceKey)
-  const { data: plugin } = usePlugin(source?.plugin_id)
+function PluginShowsPage() {
+  const { pluginId } = Route.useParams()
+  const { data: plugin } = usePlugin(pluginId)
 
   return (
     <DetailTablePage<ShowTableData>
-      title={
-        <DetailBreadcrumb
-          plugin={plugin}
-          source={source}
-          trailing="Shows"
-          current="source"
-        />
-      }
+      title={<DetailBreadcrumb plugin={plugin} trailing="Shows" />}
       columns={showColumns}
-      queryKey={["sources", sourceKey, "shows"]}
+      queryKey={["plugins", pluginId, "shows"]}
       fetchTable={async (params) => {
-        const result = await ShowsService.getSourceShows({
-          sourceId: sourceKey,
+        const result = await ShowsService.getPluginShows({
+          pluginId,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, showColumns),
@@ -57,10 +48,9 @@ function SourceDetailPage() {
         }
       }}
       columnVisibilityKey="shows-column-visibility"
-      emptyIcon={Tv}
-      emptyTitle="This source has no shows yet"
-      emptyDescription="Add a show to get started"
-      headerActions={<AddShow sourceKey={sourceKey} />}
+      emptyIcon={Clapperboard}
+      emptyTitle="This plugin has no shows yet"
+      emptyDescription="Shows will appear here once its sources have them"
     />
   )
 }
