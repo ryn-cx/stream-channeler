@@ -4,7 +4,7 @@ import time
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
-from typing import override
+from typing import Any, override
 
 from get_around import GetAround
 from loguru import logger
@@ -198,6 +198,7 @@ class FileMixin(BasePlugin, register=False):
     @override
     def __init__(self, session: Session) -> None:
         super().__init__(session)
+        self._imported_topic_playlist_keys: set[str] = set()
 
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         """Return a cached channel-by-channel-id file for the given show key."""
@@ -259,6 +260,10 @@ class FileMixin(BasePlugin, register=False):
     def _is_music_playlist_key(key: str) -> bool:
         return key.startswith("OLAK5uy_")
 
+    @staticmethod
+    def _is_topic_channel(channel_item: Any) -> bool:  # noqa: ANN401 - TODO: Type the channel item
+        return channel_item.topic_details is not None
+
     @override
     def _show_files(
         self,
@@ -305,7 +310,9 @@ class FileMixin(BasePlugin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        channel_playlists_file = self.channel_playlists_file(show_key)
+        channel_item = get_first_item(
+            self.channel_by_channel_id_file(show_key).parsed().items,
+        )
         season_keys: list[str] = []
 
         # If the channel has uploads also include that as a season. Generally, most
@@ -313,10 +320,18 @@ class FileMixin(BasePlugin, register=False):
         # first season_key listed so when the episodes are downloaded the channel
         # uploads are downloaded first because that will maximize the batch sizes and
         # minimize the number of API calls.
-        item = get_first_item(self.channel_by_channel_id_file(show_key).parsed().items)
-        if int(item.statistics.video_count) > 0:
+        if int(channel_item.statistics.video_count) > 0:
             season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
+        if self._is_topic_channel(channel_item):
+            season_keys.extend(
+                key
+                for key in self._topic_season_keys(show_key)
+                if key not in season_keys
+            )
+            return season_keys
+
+        channel_playlists_file = self.channel_playlists_file(show_key)
         if channel_playlists_file.database_record.content:
             season_keys.extend(
                 item.id
@@ -324,6 +339,23 @@ class FileMixin(BasePlugin, register=False):
                 if item.content_details.item_count > 0
             )
 
+        return season_keys
+
+    def _topic_season_keys(self, show_key: str) -> list[str]:
+        season_keys: list[str] = list(self._imported_topic_playlist_keys)
+        uploads_key = self._get_channel_uploads_playlist_key(show_key)
+        existing_show = self._preload_show(
+            show_key=show_key,
+            preload_seasons=True,
+        ).one_or_none()
+        if existing_show:
+            for season in existing_show.seasons:
+                if (
+                    season.deleted_at is None
+                    and season.key != uploads_key
+                    and season.key not in season_keys
+                ):
+                    season_keys.append(season.key)
         return season_keys
 
     @override

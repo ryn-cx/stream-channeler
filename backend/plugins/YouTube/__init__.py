@@ -137,6 +137,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 owner_channel_id = first_item.snippet.video_owner_channel_id
                 assert owner_channel_id is not None  # noqa: S101
                 show_key = owner_channel_id
+                self._imported_topic_playlist_keys.add(key_value)
             else:
                 show_key = first_item.snippet.channel_id
             playlist_key = key_value
@@ -392,11 +393,17 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         channel_file = self.channel_by_channel_id_file(show_key)
         channel_item = get_first_item(channel_file.parsed().items)
 
+        name = channel_item.snippet.title
+        if self._is_topic_channel(channel_item):
+            media_type = "YouTube Topic"
+            name = name.removesuffix(" - Topic")
+        else:
+            media_type = "YouTube Channel"
         show = Show(
             key=channel_item.id,
-            name=channel_item.snippet.title,
+            name=name,
             url=self.build_url(f"channel/{channel_item.id}"),
-            media_type="YouTube Channel",
+            media_type=media_type,
             # Updating every 30 days is reasonable because this is only sued for
             # checking if information on the channel itself has changed.
             update_at=channel_file.data_timestamp + timedelta(days=30),
@@ -410,8 +417,37 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
         self._upsert_channel_season(show, show_key)
-        self._upsert_playlist_seasons(show, show_key)
+        if show.media_type == "YouTube Topic":
+            self._upsert_topic_playlist_seasons(show, show_key)
+        else:
+            self._upsert_playlist_seasons(show, show_key)
         self.soft_delete_missing_seasons(show_key)
+
+    def _upsert_topic_playlist_seasons(self, show: Show, show_key: str) -> None:
+        uploads_key = self._get_channel_uploads_playlist_key(show.key)
+        for season_key in self._season_keys_from_file(show_key):
+            if season_key == uploads_key:
+                continue
+            first_item = get_first_item(
+                self.playlist_items_file(season_key).parsed().items,
+            )
+            season_timestamp = self.season_data_timestamp(season_key, show_key)
+            season = Season.get_from_memory(self.session, show, season_key)
+            if (
+                not season
+                or season.data_timestamp != season_timestamp
+                or season.deleted_at is not None
+            ):
+                season = Season(
+                    key=season_key,
+                    name=first_item.snippet.channel_title,
+                    url=self._playlist_url(season_key),
+                    image_url=self._best_thumbnail_url(first_item.snippet.thumbnails),
+                    data_timestamp=season_timestamp,
+                    show_id=show.id,
+                ).upsert(show, season)
+            self._upsert_episodes(season, show_key)
+            self._set_season_update_at(season)
 
     def _upsert_channel_season(self, show: Show, show_key: str) -> None:
         """Upsert the uploads playlist."""
