@@ -253,7 +253,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         else:
             # The user specifically wants just this playlist so ignore any new
             # playlists.
-            is_whitelist = False
+            is_whitelist = True
 
         return URLImportResult(
             show=show,

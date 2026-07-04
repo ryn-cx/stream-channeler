@@ -85,7 +85,7 @@ class PlaylistValidator(YouTubeValidator):
         assert result.show.key == self.channel_key
         assert len(result.seasons) == 1
         assert result.seasons[0].key == self.playlist_key
-        assert result.is_whitelist is False
+        assert result.is_whitelist is True
 
 
 class BaseChannelValidator(YouTubeValidator):
