@@ -930,7 +930,7 @@ wheels = [
 [[package]]
 name = "just-scrape"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#e49f12848c619cd2ddb7314aebdecf7e8413afc7" }
+source = { git = "https://github.com/ryn-cx/just-scrape#dc8834cce9d71233d49230c2d85d04c00e960f87" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1137,7 +1137,7 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#b89c5914f9d885d519a0eea4d1842f918d495081" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#e9d655b2148e43fac279d159cad76bca02bae173" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

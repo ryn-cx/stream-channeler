@@ -255,11 +255,17 @@ class FileMixin(BasePlugin, register=False):
             lambda: PlaylistFeed(self.session, self.plugin, season_key),
         )
 
+    @staticmethod
+    def _is_music_playlist_key(key: str) -> bool:
+        return key.startswith("OLAK5uy_")
+
     @override
     def _show_files(
         self,
         show_key: str,
-    ) -> Sequence[ChannelByChannelId | ChannelPlaylists]:
+    ) -> Sequence[ChannelByChannelId | ChannelPlaylists | PlaylistItems]:
+        if self._is_music_playlist_key(show_key):
+            return [self.playlist_items_file(show_key)]
         return [
             # Required to detect new seasons (playlists).
             self.channel_playlists_file(show_key),
@@ -274,6 +280,8 @@ class FileMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[ChannelPlaylists | PlaylistItems]:
+        if self._is_music_playlist_key(show_key):
+            return [self.playlist_items_file(season_key)]
         return [
             # Required to detect new episodes (videos).
             self.playlist_items_file(season_key),
@@ -301,6 +309,9 @@ class FileMixin(BasePlugin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
+        if self._is_music_playlist_key(show_key):
+            return [show_key]
+
         channel_playlists_file = self.channel_playlists_file(show_key)
         season_keys: list[str] = []
 
