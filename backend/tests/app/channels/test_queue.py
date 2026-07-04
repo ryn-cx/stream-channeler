@@ -22,15 +22,6 @@ from tests.app.utils.route_assertions import (
 from tests.app.utils.utils import random_lower_string
 
 
-@pytest.fixture(autouse=True)
-def _mock_background_import(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stop the queue endpoints from launching a real background import in these tests.
-
-    The importer itself is exercised directly in test_import_queue.py.
-    """
-    monkeypatch.setattr("app.channels.router.run_import_in_background", lambda: None)
-
-
 class BaseChannelQueueTests(BaseChannelSubEndpointTests):
     def can_access_sub_endpoint(
         self,
