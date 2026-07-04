@@ -11,10 +11,11 @@ from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel import Channels as ChannelsEndpoint
 from not_yt_dlapi.channel.models import ChannelModel
-from not_yt_dlapi.playlist import Playlists as PlaylistsEndpoint
 from not_yt_dlapi.playlist.models import PlaylistModel
 from not_yt_dlapi.playlist_item import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_item.models import PlaylistItemModel
+from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
+from not_yt_dlapi.playlists.models import PlaylistsModel
 from not_yt_dlapi.video.models import VideoModel
 from sqlmodel import Session
 
@@ -104,17 +105,21 @@ class ChannelByUsername(GAPIJSONNoGet[ChannelModel]):
         return f"Channel '{self.unique_identifier}' not found."
 
 
-class ChannelPlaylists(GAPIJSONNoGet[PlaylistModel]):
+class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
     api_endpoint = not_yt_dlapi().playlists
 
     @override
-    def _get(self) -> PlaylistModel:
+    def _get(self) -> PlaylistsModel:
         assert isinstance(self.api_endpoint, PlaylistsEndpoint)  # noqa: S101
         return self.api_endpoint.get_all(self.unique_identifier)
 
     @override
     def _get_acceptable_error(self) -> str:
         return f"No playlists found for channel '{self.unique_identifier}'."
+
+
+class PlaylistInfo(GAPIJSON[PlaylistModel]):
+    api_endpoint = not_yt_dlapi().playlist
 
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
@@ -232,6 +237,14 @@ class FileMixin(BasePlugin, register=False):
             lambda: ChannelPlaylists(self.session, self.plugin, show_key),
         )
 
+    def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
+        """Return a cached playlist info file for the given playlist key."""
+        return self._get_cached_file(
+            PlaylistInfo,
+            playlist_key,
+            lambda: PlaylistInfo(self.session, self.plugin, playlist_key),
+        )
+
     def playlist_items_file(self, season_key: str) -> PlaylistItems:
         """Return a cached playlist items file for the given season key."""
         return self._get_cached_file(
@@ -282,13 +295,23 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[ChannelPlaylists | PlaylistItems]:
-        return [
+    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo]:
+        files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
             # Required to detect new episodes (videos).
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
             self.channel_playlists_file(show_key),
         ]
+        # Topic channels do not list their playlists, so the album name comes from the
+        # playlist itself rather than the channel playlists file.
+        channel_item = get_first_item(
+            self.channel_by_channel_id_file(show_key).parsed().items,
+        )
+        if self._is_topic_channel(channel_item) and season_key != (
+            self._get_channel_uploads_playlist_key(show_key)
+        ):
+            files.append(self.playlist_info_file(season_key))
+        return files
 
     @override
     def _episode_files(

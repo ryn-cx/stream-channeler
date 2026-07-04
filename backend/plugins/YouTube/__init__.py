@@ -428,9 +428,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         for season_key in self._season_keys_from_file(show_key):
             if season_key == uploads_key:
                 continue
-            first_item = get_first_item(
-                self.playlist_items_file(season_key).parsed().items,
-            )
             season_timestamp = self.season_data_timestamp(season_key, show_key)
             season = Season.get_from_memory(self.session, show, season_key)
             if (
@@ -438,11 +435,14 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 or season.data_timestamp != season_timestamp
                 or season.deleted_at is not None
             ):
+                playlist = get_first_item(
+                    self.playlist_info_file(season_key).parsed().items,
+                )
                 season = Season(
                     key=season_key,
-                    name=first_item.snippet.channel_title,
+                    name=playlist.snippet.title,
                     url=self._playlist_url(season_key),
-                    image_url=self._best_thumbnail_url(first_item.snippet.thumbnails),
+                    image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
                     data_timestamp=season_timestamp,
                     show_id=show.id,
                 ).upsert(show, season)
