@@ -91,7 +91,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
     ) -> None:
         new_schedule = plugin_instance.schedule_file(timestamp)
         dumped = diving_board().schedule.dump_response(parsed)
-        new_schedule._write(dumped)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_schedule.write(dumped)
         new_schedule._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @override

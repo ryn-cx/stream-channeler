@@ -1,5 +1,6 @@
 # TODO: Validate
 import json
+import time
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
@@ -178,7 +179,7 @@ class PlaylistFeed(XMLFile):
                     f"returned HTTP {response.status_code}"
                 )
                 raise RuntimeError(msg)
-            self._write(response.text)
+            self.write(response.text)
 
     def video_ids(self) -> list[str]:
         namespaces = {
@@ -357,12 +358,16 @@ class FileMixin(BasePlugin, register=False):
 
         if outdated_ids:
             logger.info(f"Batch downloading {len(outdated_ids)} videos")
+            start = time.monotonic()
             responses = not_yt_dlapi().videos.download_multiple(outdated_ids)
+            elapsed_time = time.monotonic() - start
+            logger.info(
+                f"Batch downloaded {len(outdated_ids)} videos in {elapsed_time:.2f}s",
+            )
+
             for video_id, response in zip(outdated_ids, responses, strict=True):
                 video_file = self.videos_file(video_id)
-                content = json.dumps(response, default=str)
-                # This is one of the few places where using _write directly is required
-                # because of the way the files are batch downloaded.
-                video_file._write(content)  # noqa: SLF001 # type: ignore[reportPrivateUsage]
+                # write is called directly because of the way the files are batch downloaded.
+                video_file.write(json.dumps(response, default=str))
 
         return [self.videos_file(video_id).database_record for video_id in video_keys]

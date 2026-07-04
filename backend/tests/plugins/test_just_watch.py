@@ -92,7 +92,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             session_with_url,
             plugin,
         ):
-            plugin_instance.new_titles_file(source_key, edge_date)._write([])  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+            plugin_instance.new_titles_file(source_key, edge_date).write([])
 
         original_plugin = self.get_detached_plugin(session_with_url)
 
@@ -124,7 +124,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         first_edge.key.package.short_name = source_key
         first_edge.key.date = edge_date
         new_bucket = plugin_instance.new_titles_bucket_file(timestamp)
-        new_bucket._write(NewTitleBuckets.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_bucket.write(NewTitleBuckets.dump_response(parsed))
         new_bucket._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @staticmethod
@@ -138,7 +138,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             source_key,
             new_titles_date,
         )
-        new_titles_file._write([])  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_titles_file.write([])
         new_titles_file.database_record.extra = "Incomplete"
 
     def test_update_source(self, session_with_url: Session) -> None:

@@ -104,7 +104,7 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
             url = f"https://apis.justwatch.com/content/providers/locale/{self.unique_identifier}"
             response = httpx.get(url)
             response.raise_for_status()
-            self._write(response.json())
+            self.write(response.json())
 
     # TODO: Add this to Just Scrape so it has full type support.
     @override
@@ -121,10 +121,10 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)
-                self._write(content)
+                self.write(content)
             # Occurs when a user puts in an invalid URL.
             except GraphQLError:
-                self._write(None)
+                self.write(None)
 
 
 class CustomSeasonEpisodes(

@@ -134,7 +134,7 @@ class BaseFile[T](ABC):
         msg = f"{type(self).__name__} does not implement _download"
         raise NotImplementedError(msg)
 
-    def _write(self, content: str | None) -> None:
+    def write(self, content: str | None) -> None:
         """Write content to the file and commit it to the database."""
         self._existing_database_record = File(
             key=self.file_key(),
@@ -186,10 +186,10 @@ class JSONFile[T](BaseFile[T], ABC):
         return self._cached_parsed
 
     @override
-    def _write(self, content: str | dict[str, Any] | list[Any] | None) -> None:
+    def write(self, content: str | dict[str, Any] | list[Any] | None) -> None:
         if content is not None and not isinstance(content, str):
             content = json.dumps(content, default=str)
-        super()._write(content)
+        super().write(content)
 
     @classmethod
     @override
@@ -256,12 +256,12 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
             try:
                 response = self._get()
                 content = self.api_endpoint.dump_response(response)
-                self._write(content)
+                self.write(content)
             except Exception as e:
                 if str(e) != self._get_acceptable_error():
                     raise
 
-                self._write(None)
+                self.write(None)
 
 
 class APISerializerEndpoint[T](Protocol):

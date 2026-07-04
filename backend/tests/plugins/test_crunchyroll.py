@@ -71,7 +71,7 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
         first_entry.id = show_key
         first_entry.last_public = timestamp
         new_browse = plugin_instance.browse_file(timestamp)
-        new_browse._write(BrowseSeries.dump_response(parsed))  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+        new_browse.write(BrowseSeries.dump_response(parsed))
         new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @override
