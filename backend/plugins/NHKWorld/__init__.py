@@ -75,7 +75,7 @@ class NHKWorld(FileMixin, register=True):
         self._upsert_source(new_feed_file.data_timestamp)
 
     def _process_new_episodes_files(self, source: Source) -> None:
-        _cache = self._preload_sources().all()
+        _cache = self._preload_sources(preload_shows=True).all()
 
         new_files = self.get_incomplete_files(
             NewVideoEpisodes,
@@ -91,6 +91,10 @@ class NHKWorld(FileMixin, register=True):
                 if show := Show.get_from_memory(self.session, source, show_id):
                     logger.info("Matched show: {}", show.name or show_id)
                     show.set_update_at(item.video.published_at)
+                else:
+                    logger.info("Importing new show: {}", show_id)
+                    self._download_show_files(show_id)
+                    self._upsert_show(source, show_id)
 
             feed_file.database_record.extra = "Completed"
 
@@ -179,6 +183,8 @@ class NHKWorld(FileMixin, register=True):
         # Episodes are listed newest to oldest.
         items = list(reversed(self.video_episodes_file(show_key).items()))
         for sort_order, item in enumerate(items):
+            season.set_update_at(item.video.expired_at)
+
             existing_episode = Episode.get_from_memory(self.session, season, item.id)
             if (
                 existing_episode
