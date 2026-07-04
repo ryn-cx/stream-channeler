@@ -3,6 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from sqlalchemy.orm import object_session
 from sqlmodel import (
     Field,
     Index,
@@ -70,7 +71,15 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         from app.files.models import File  # noqa: PLC0415
 
         if isinstance(child, File):
-            self.files.append(child)
+            # Appending to self.files force-loads the entire files collection, which is
+            # O(number of files) per write. The plugin_id is already set, so add the
+            # record to the session directly to avoid loading the collection.
+            session = object_session(self)
+            if not session:
+                msg = "Plugin must be attached to a session to add a child"
+                raise RuntimeError(msg)
+
+            session.add(child)
         else:
             self.sources.append(child)
 
