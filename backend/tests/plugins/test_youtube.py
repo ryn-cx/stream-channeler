@@ -178,11 +178,9 @@ class TestPlaylistWithDeletedVideos(
     url = f"youtube.com/playlist?list={playlist_key}"
 
 
-# Auto-generated YouTube Music album playlist (OLAK5uy_ prefix). It has no real
-# channel, so it is imported under a dummy show keyed by the playlist itself.
 class TestMusicAlbumPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_nt1Nw4wT6I7VlzNknxTiIz3hfED0ttO8Q"
-    channel_key = playlist_key
+    channel_key = "UCo1DYcm1IZ9v3UPkpiAcgtg"
     url = f"youtube.com/playlist?list={playlist_key}"
 
 

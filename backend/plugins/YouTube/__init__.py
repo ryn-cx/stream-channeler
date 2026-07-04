@@ -131,13 +131,14 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         episode_key: str | None = None
         if key_type == "playlist_key":
-            # Music playlists have no single real channel, so they are imported under
-            # a dummy channel (show) keyed by the playlist itself.
+            playlist_items = self.playlist_items_file(key_value).parsed()
+            first_item = get_first_item(playlist_items.items)
             if self._is_music_playlist_key(key_value):
-                show_key = key_value
+                owner_channel_id = first_item.snippet.video_owner_channel_id
+                assert owner_channel_id is not None  # noqa: S101
+                show_key = owner_channel_id
             else:
-                playlist_items = self.playlist_items_file(key_value).parsed()
-                show_key = playlist_items.items[0].snippet.channel_id
+                show_key = first_item.snippet.channel_id
             playlist_key = key_value
         elif key_type == "video_key":
             video_data = self.videos_file(key_value).parsed()
@@ -387,9 +388,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
-        if self._is_music_playlist_key(show_key):
-            return self._upsert_music_show(source, show_key)
-
         existing_show = Show.get_from_memory(self.session, source, show_key)
         channel_file = self.channel_by_channel_id_file(show_key)
         channel_item = get_first_item(channel_file.parsed().items)
@@ -409,47 +407,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         self._upsert_seasons(show, show_key)
 
         return show
-
-    def _upsert_music_show(self, source: Source, show_key: str) -> Show:
-        existing_show = Show.get_from_memory(self.session, source, show_key)
-        playlist_file = self.playlist_items_file(show_key)
-        first_item = get_first_item(playlist_file.parsed().items)
-
-        show = Show(
-            key=show_key,
-            name=first_item.snippet.channel_title,
-            url=self._playlist_url(show_key),
-            media_type="YouTube Music Playlist",
-            update_at=playlist_file.data_timestamp + timedelta(days=30),
-            data_timestamp=self.show_data_timestamp(show_key),
-            source_id=source.id,
-        ).upsert(source, existing_show)
-
-        self._upsert_music_season(show, show_key)
-        self.soft_delete_missing_seasons(show_key)
-
-        return show
-
-    def _upsert_music_season(self, show: Show, show_key: str) -> None:
-        """Upsert the single season for a music playlist's dummy show."""
-        first_item = get_first_item(self.playlist_items_file(show_key).parsed().items)
-        season_timestamp = self.season_data_timestamp(show_key, show_key)
-        season = Season.get_from_memory(self.session, show, show_key)
-        if (
-            not season
-            or season.data_timestamp != season_timestamp
-            or season.deleted_at is not None
-        ):
-            season = Season(
-                key=show_key,
-                name=first_item.snippet.channel_title,
-                url=self._playlist_url(show_key),
-                image_url=self._best_thumbnail_url(first_item.snippet.thumbnails),
-                data_timestamp=season_timestamp,
-                show_id=show.id,
-            ).upsert(show, season)
-        self._upsert_episodes(season, show_key)
-        self._set_season_update_at(season)
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
         self._upsert_channel_season(show, show_key)
