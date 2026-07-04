@@ -1137,7 +1137,7 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#e9d655b2148e43fac279d159cad76bca02bae173" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#32570340051e0615964f0486ad9948f48a3850d9" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

@@ -202,7 +202,8 @@ class JustWatch(FileMixin, register=True):
 
                 new_titles_file = self.new_titles_file(source.key, edge.key.date)
                 new_titles_file.download_if_outdated()
-                source.set_update_at(source.modified_at)
+                if new_titles_file.database_record.extra != "Completed":
+                    source.set_update_at(source.modified_at)
 
             bucket.database_record.extra = "Completed"
 
