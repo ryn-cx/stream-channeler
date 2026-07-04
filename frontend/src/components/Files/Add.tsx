@@ -1,11 +1,10 @@
-// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type ApiError, type FileCreate, PluginsService } from "@/client"
+import { type ApiError, type FileCreate, FilesService } from "@/client"
 import { AddButton } from "@/components/Common/AddButton"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextArea } from "@/components/Common/FormTextArea"
@@ -52,7 +51,7 @@ const AddFile = ({ pluginId }: AddFileProps) => {
   const mutation = useMutation({
     mutationKey: ["plugins", pluginId, "files", "create"],
     mutationFn: (data: FileCreate) =>
-      PluginsService.createFile({ pluginId, requestBody: data }),
+      FilesService.createFile({ pluginId, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("File created successfully")
     },

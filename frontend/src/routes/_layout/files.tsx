@@ -1,43 +1,40 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Layers } from "lucide-react"
+import { FileText } from "lucide-react"
 
-import { SeasonsService } from "@/client"
+import { FilesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
-import {
-  type SeasonTableData,
-  seasonColumns,
-} from "@/components/Seasons/columns"
+import { type FileTableData, fileColumns } from "@/components/Files/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 
-export const Route = createFileRoute("/_layout/seasons")({
-  component: SeasonsPage,
+export const Route = createFileRoute("/_layout/files")({
+  component: AllFilesPage,
   beforeLoad: async () => {
     if (!isLoggedIn()) {
       throw redirect({ to: "/" })
     }
   },
   head: () => ({
-    meta: [{ title: "Seasons - Stream Channeler" }],
+    meta: [{ title: "Files - Stream Channeler" }],
   }),
 })
 
-function SeasonsPage() {
+function AllFilesPage() {
   return (
-    <MediaListPage<SeasonTableData>
-      title="Seasons"
-      columns={seasonColumns}
-      columnVisibilityKey="seasons-column-visibility"
-      defaultHidden={{ key: false, id: false }}
-      emptyIcon={Layers}
+    <MediaListPage<FileTableData>
+      title="Files"
+      columns={fileColumns}
+      columnVisibilityKey="files-column-visibility"
+      defaultHidden={{ id: false }}
+      emptyIcon={FileText}
       fetchTable={async (owner, params) => {
-        const result = await SeasonsService.getSeasons({
+        const result = await FilesService.getFiles({
           owner,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, seasonColumns),
+          ...serializeTableQuery(params, fileColumns),
         })
         return {
           data: result.data,

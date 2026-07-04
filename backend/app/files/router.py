@@ -1,28 +1,99 @@
 """Files router."""
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
 
-from app.auth.dependencies import SessionDep, get_current_active_superuser
+from fastapi import APIRouter, Depends, Query
+from sqlmodel import select
+
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
 from app.files.dependencies import EditableFile, ReadableFile
 from app.files.models import File
-from app.files.schemas import FilePublic, FileUpdate
-from app.media.service import delete_record
-from app.schemas import Message
+from app.files.schemas import (
+    FileCreate,
+    FileListPublic,
+    FilePublic,
+    FilesPublic,
+    FileUpdate,
+)
+from app.media.schemas import MediaReadOptions
+from app.media.service import (
+    delete_record,
+    media_list_response,
+    media_owner_list_response,
+)
+from app.plugins.dependencies import EditablePlugin, ReadablePlugin
+from app.plugins.models import Plugin
+from app.schemas import Message, ReadOptions
 
-router = APIRouter(
+files_router = APIRouter(
     prefix="/admin/files",
+    tags=["files"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+plugin_files_router = APIRouter(
+    prefix="/admin/plugins/{plugin_id}",
     tags=["files"],
     dependencies=[Depends(get_current_active_superuser)],
 )
 
 
-@router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile
+@plugin_files_router.post("/files", response_model=FilePublic)
+def create_file(
+    session: SessionDep,
+    plugin: EditablePlugin,
+    file_input: FileCreate,
+) -> File:
+    """Create a `File` if the `Plugin` is editable by the `User`."""
+    return file_input.create(session, File, plugin)
+
+
+@files_router.get("")
+def get_files(
+    session: SessionDep,
+    current_user: CurrentUser,
+    read_options: Annotated[MediaReadOptions, Query()],
+) -> FilesPublic:
+    """Get every `File` across all `Plugin`s readable by the `User`."""
+    return media_owner_list_response(
+        session=session,
+        base=select(File).join(Plugin),
+        response_model=FilesPublic,
+        schema=FileListPublic,
+        read_options=read_options,
+        current_user=current_user,
+    )
+
+
+@plugin_files_router.get("/files")
+def get_plugin_files(
+    plugin: ReadablePlugin,
+    session: SessionDep,
+    current_user: CurrentUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> FilesPublic:
+    """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
+    base = select(File).where(File.plugin_id == plugin.id)
+    return media_list_response(
+        session=session,
+        base=base,
+        response_model=FilesPublic,
+        schema=FileListPublic,
+        params=read_options,
+        current_user=current_user,
+    )
+
+
+@files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile
 def get_file(file: ReadableFile) -> File:
     """Get a `File` if it's readable by the `User`."""
     return file
 
 
-@router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile
+@files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile
 def update_file(
     session: SessionDep,
     file: EditableFile,
@@ -32,7 +103,12 @@ def update_file(
     return file_input.update(session, file)
 
 
-@router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile
+@files_router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile
 def delete_file(session: SessionDep, file: EditableFile) -> Message:
     """Delete a `File` if it's editable by the `User`."""
     return delete_record(session, file)
+
+
+router = APIRouter()
+router.include_router(files_router)
+router.include_router(plugin_files_router)

@@ -1,18 +1,15 @@
 # TODO: Validate
 
-from collections.abc import Sequence
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import col, select
+from sqlmodel import select
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
 )
-from app.files.models import File
-from app.files.schemas import FileCreate, FileListPublic, FilePublic
 from app.media.schemas import MediaReadOptions
 from app.media.service import delete_record, media_owner_list_response
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
@@ -32,11 +29,6 @@ from plugins.utils.abstract_plugin import PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
-admin_router = APIRouter(
-    prefix="/admin/plugins",
-    tags=["plugins"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
 
 
 @plugins_router.post("", response_model=PluginOutput)
@@ -160,35 +152,6 @@ def search_plugin(
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
-@admin_router.get(
-    "/{plugin_id}/files",  # noqa: FAST003 - Used by ReadablePlugin
-    response_model=list[FileListPublic],
-)
-def get_plugin_files(
-    plugin: ReadablePlugin,
-    session: SessionDep,
-    content: str | None = None,
-) -> Sequence[File]:
-    """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
-    statement = select(File).where(col(File.plugin_id) == plugin.id)
-    if content:
-        statement = statement.where(col(File.content).ilike(f"%{content}%"))
-    return session.exec(statement).all()
-
-
-@admin_router.post(
-    "/{plugin_id}/files",  # noqa: FAST003 - Used by EditablePlugin
-    response_model=FilePublic,
-)
-def create_file(
-    session: SessionDep,
-    plugin: EditablePlugin,
-    file_input: FileCreate,
-) -> File:
-    """Create a `File` if the `Plugin` is editable by the `User`."""
-    return file_input.create(session, File, plugin)
-
-
 @plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
 def get_plugin(plugin: ReadablePlugin) -> Plugin:
     """Get a `Plugin` if it's readable by the `User`."""
@@ -197,4 +160,3 @@ def get_plugin(plugin: ReadablePlugin) -> Plugin:
 
 router = APIRouter()
 router.include_router(plugins_router)
-router.include_router(admin_router)

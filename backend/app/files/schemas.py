@@ -4,6 +4,7 @@
 import uuid
 from datetime import datetime
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from app.files.models import BaseFile, File
@@ -41,3 +42,12 @@ class FileListPublic(BaseMediaMixin):
     data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
     plugin_id: uuid.UUID
     id: uuid.UUID
+
+
+class FilesPublic(BaseModel):
+    """Schema for returning a paginated list of `File`s."""
+
+    data: list[FileListPublic]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool

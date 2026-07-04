@@ -2077,6 +2077,34 @@ export const FileUpdateSchema = {
     description: 'Schema for updating a `File`.'
 } as const;
 
+export const FilesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/FileListPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'FilesPublic',
+    description: 'Schema for returning a paginated list of `File`s.'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {

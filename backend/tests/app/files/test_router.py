@@ -6,6 +6,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel
 
+from app.config import settings
 from app.files.models import File
 from app.files.schemas import (
     FileCreate,
@@ -16,6 +17,7 @@ from app.files.schemas import (
 from tests.app.files.utils import create_random_file
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.utils.base import BaseTests, CreatedTestData
+from tests.app.utils.base_create import BaseCreateTests
 from tests.app.utils.base_delete import BaseDeleteTests
 from tests.app.utils.base_get import BaseGetTests
 from tests.app.utils.base_update import BaseUpdateTests
@@ -46,6 +48,12 @@ class FileTestMixin(BaseTests[File]):
     def endpoint_name(self) -> str:
         # `File` endpoints live under the admin-only `/admin/files` router.
         return "admin/files"
+
+    def get_record_list_url(self, parent_id: uuid.UUID | str) -> str:
+        return f"{settings.API_V1_STR}/admin/plugins/{parent_id}/files"
+
+    def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:
+        return f"{settings.API_V1_STR}/admin/plugins/{parent_id}/files"
 
     def create_test_data(  # noqa: PLR0913 - mirrors the base signature
         self,
@@ -125,15 +133,69 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
             )
         )
 
-    # `File`s are admin-managed by id only (`/admin/files/{id}`) and are created by
-    # plugins rather than the API, so there is no create or list endpoint to exercise.
-    @pytest.mark.skip(reason="Files have no list endpoint.")
-    def test_list_permissions(self) -> None:  # type: ignore[override]
-        ...
+    def test_admin_list_requires_superuser(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_session: Session,
+    ) -> None:
+        """The global `/admin/files` list is superuser-only."""
+        url = f"{settings.API_V1_STR}/admin/files"
 
-    @pytest.mark.skip(reason="Files have no list endpoint.")
-    def test_list_data(self) -> None:  # type: ignore[override]
-        ...
+        unauthenticated = make_request(session_scoped_client, "get", url, headers={})
+        assert unauthenticated.status_code == status.HTTP_401_UNAUTHORIZED
+
+        regular = self.create_test_data(
+            session_scoped_client,
+            session_scoped_session,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+            user_is_superuser=False,
+        )
+        forbidden = make_request(
+            session_scoped_client,
+            "get",
+            url,
+            headers=regular.headers,
+        )
+        assert forbidden.status_code == status.HTTP_403_FORBIDDEN
+
+        admin = self.create_test_data(
+            session_scoped_client,
+            session_scoped_session,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+            user_is_superuser=True,
+        )
+        allowed = make_request(
+            session_scoped_client,
+            "get",
+            url,
+            headers=admin.headers,
+        )
+        assert allowed.status_code == status.HTTP_200_OK
+
+
+class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
+    def can_create_record(
+        self,
+        *,
+        user_is_authenticated: bool,
+        user_is_owner: bool,
+        record_is_public: bool,
+        user_is_superuser: bool,
+        record_is_owned_by_plugin_user: bool,
+    ) -> bool:
+        # The admin gate rejects every non-superuser before the plugin's
+        # editable check runs.
+        return user_is_superuser and super().can_create_record(
+            user_is_authenticated=user_is_authenticated,
+            user_is_owner=user_is_owner,
+            record_is_public=record_is_public,
+            user_is_superuser=user_is_superuser,
+            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
+        )
 
 
 class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):

@@ -436,7 +436,7 @@ function TablePagination<TData>({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
-              {[10, 100, 1_000, 10_000, 100_000].map((size) => (
+              {[10, 100, 1_000].map((size) => (
                 <SelectItem key={size} value={`${size}`}>
                   {size}
                 </SelectItem>
@@ -1020,7 +1020,9 @@ type OwnerTab = "" | MediaOwner
 
 interface MediaListPageProps<TData extends { id: string }> {
   title: string
-  columns: ColumnDef<TData>[]
+  // Either a static column set, or a builder that receives the active owner tab
+  // (so columns can vary per tab, e.g. admin-only shortcuts on "Official").
+  columns: ColumnDef<TData>[] | ((owner: OwnerView) => ColumnDef<TData>[])
   columnVisibilityKey: string
   defaultHidden?: VisibilityState
   emptyIcon: LucideIcon
@@ -1049,9 +1051,14 @@ export function MediaListPage<TData extends { id: string }>({
   const ownerFilter: OwnerView =
     isAdmin && ownerTab !== "" ? ownerTab : undefined
 
+  const resolvedColumns = useMemo(
+    () => (typeof columns === "function" ? columns(ownerFilter) : columns),
+    [columns, ownerFilter],
+  )
+
   return (
     <MediaTablePage
-      columns={columns}
+      columns={resolvedColumns}
       queryKey={["media-table", title, ownerFilter]}
       fetchTable={(params) => fetchTable(ownerFilter, params)}
       columnVisibilityKey={columnVisibilityKey}

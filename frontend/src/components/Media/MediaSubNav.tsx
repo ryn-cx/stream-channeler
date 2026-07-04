@@ -1,9 +1,10 @@
 // TODO: Validate
 import { Link, useRouterState } from "@tanstack/react-router"
 
+import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
-const items = [
+const baseItems = [
   { title: "Plugins", path: "/plugins" },
   { title: "Sources", path: "/sources" },
   { title: "Shows", path: "/shows" },
@@ -11,11 +12,16 @@ const items = [
   { title: "Episodes", path: "/episodes" },
 ] as const
 
+// Files are superuser-only, so this item is only shown to admins.
+const adminItem = { title: "Files", path: "/files" } as const
+
 // Secondary navigation shown on every custom-media page so the user can jump
 // between the different media types they own.
 export function MediaSubNav() {
   const router = useRouterState()
   const currentPath = router.location.pathname
+  const { user } = useAuth()
+  const items = user?.is_superuser ? [...baseItems, adminItem] : baseItems
 
   return (
     <nav className="flex flex-wrap items-center gap-4 border-b px-[4%] py-2">

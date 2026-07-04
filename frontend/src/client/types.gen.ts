@@ -334,6 +334,16 @@ export type FilePublic = {
 };
 
 /**
+ * Schema for returning a paginated list of `File`s.
+ */
+export type FilesPublic = {
+    data: Array<FileListPublic>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
+/**
  * Schema for updating a `File`.
  */
 export type FileUpdate = {
@@ -1128,6 +1138,18 @@ export type EpisodesGetSeasonEpisodesData = {
 
 export type EpisodesGetSeasonEpisodesResponse = (EpisodesPublic);
 
+export type FilesGetFilesData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    owner?: (MediaOwner | null);
+    sortOptions?: string;
+};
+
+export type FilesGetFilesResponse = (FilesPublic);
+
 export type FilesGetFileData = {
     fileId: string;
 };
@@ -1146,6 +1168,25 @@ export type FilesDeleteFileData = {
 };
 
 export type FilesDeleteFileResponse = (Message);
+
+export type FilesCreateFileData = {
+    pluginId: string;
+    requestBody: FileCreate;
+};
+
+export type FilesCreateFileResponse = (FilePublic);
+
+export type FilesGetPluginFilesData = {
+    dateFilterOptions?: string;
+    filterOptions?: string;
+    limit?: number;
+    numberFilterOptions?: string;
+    offset?: number;
+    pluginId: string;
+    sortOptions?: string;
+};
+
+export type FilesGetPluginFilesResponse = (FilesPublic);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -1228,20 +1269,6 @@ export type PluginsSearchPluginData = {
 };
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
-
-export type PluginsGetPluginFilesData = {
-    content?: (string | null);
-    pluginId: string;
-};
-
-export type PluginsGetPluginFilesResponse = (Array<FileListPublic>);
-
-export type PluginsCreateFileData = {
-    pluginId: string;
-    requestBody: FileCreate;
-};
-
-export type PluginsCreateFileResponse = (FilePublic);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
