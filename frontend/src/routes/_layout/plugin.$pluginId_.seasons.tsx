@@ -3,6 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { SeasonsService } from "@/client"
+import { BackButton } from "@/components/Common/BackButton"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -34,6 +35,7 @@ function PluginSeasonsPage() {
   return (
     <DetailTablePage<SeasonTableData>
       title={<DetailBreadcrumb plugin={plugin} trailing="Seasons" />}
+      backButton={<BackButton to="/plugin/$pluginId" params={{ pluginId }} />}
       columns={seasonColumns}
       queryKey={["plugins", pluginId, "seasons"]}
       fetchTable={async (params) => {

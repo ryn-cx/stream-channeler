@@ -3,6 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
 import { EpisodesService } from "@/client"
+import { BackButton } from "@/components/Common/BackButton"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -34,6 +35,7 @@ function PluginEpisodesPage() {
   return (
     <DetailTablePage<EpisodeTableData>
       title={<DetailBreadcrumb plugin={plugin} trailing="Episodes" />}
+      backButton={<BackButton to="/plugin/$pluginId" params={{ pluginId }} />}
       columns={episodeColumns}
       queryKey={["plugins", pluginId, "episodes"]}
       fetchTable={async (params) => {

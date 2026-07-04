@@ -23,7 +23,6 @@ import {
 } from "@tanstack/react-table"
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   ChevronLeft,
   ChevronRight,
@@ -970,6 +969,7 @@ interface DetailTablePageProps<TData extends { id: string }> {
   emptyTitle: string
   emptyDescription: string
   headerActions?: ReactNode
+  backButton?: ReactNode
 }
 
 export function DetailTablePage<TData extends { id: string }>({
@@ -983,6 +983,7 @@ export function DetailTablePage<TData extends { id: string }>({
   emptyTitle,
   emptyDescription,
   headerActions,
+  backButton,
 }: DetailTablePageProps<TData>) {
   return (
     <MediaTablePage
@@ -994,13 +995,7 @@ export function DetailTablePage<TData extends { id: string }>({
       headerActions={headerActions}
       header={
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft />
-          </Button>
+          {backButton}
           {title}
         </div>
       }

@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { FileText } from "lucide-react"
 
 import { FilesService } from "@/client"
+import { BackButton } from "@/components/Common/BackButton"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -31,6 +32,7 @@ function PluginFilesPage() {
   return (
     <DetailTablePage<FileTableData>
       title={<DetailBreadcrumb plugin={plugin} trailing="Files" />}
+      backButton={<BackButton to="/plugin/$pluginId" params={{ pluginId }} />}
       columns={fileColumns}
       queryKey={["plugins", pluginId, "files"]}
       fetchTable={async (params) => {

@@ -3,6 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Clapperboard } from "lucide-react"
 
 import { ShowsService } from "@/client"
+import { BackButton } from "@/components/Common/BackButton"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -31,6 +32,7 @@ function PluginShowsPage() {
   return (
     <DetailTablePage<ShowTableData>
       title={<DetailBreadcrumb plugin={plugin} trailing="Shows" />}
+      backButton={<BackButton to="/plugin/$pluginId" params={{ pluginId }} />}
       columns={showColumns}
       queryKey={["plugins", pluginId, "shows"]}
       fetchTable={async (params) => {

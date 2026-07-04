@@ -3,6 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
 import { EpisodesService } from "@/client"
+import { BackButton } from "@/components/Common/BackButton"
 import {
   DetailTablePage,
   serializeTableQuery,
@@ -43,6 +44,7 @@ function ShowEpisodesPage() {
           trailing="Episodes"
         />
       }
+      backButton={<BackButton to="/show/$showKey" params={{ showKey }} />}
       columns={episodeColumns}
       queryKey={["shows", showKey, "episodes"]}
       fetchTable={async (params) => {

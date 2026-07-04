@@ -19,6 +19,7 @@ import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilte
 import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
 import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
+import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
@@ -224,6 +225,8 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
         <h1 className="text-2xl font-bold tracking-tight mr-2">
           {channel.name}
         </h1>
+
+        {(isOwner || user?.is_superuser) && <EditChannel channel={channel} />}
 
         {/* Smaller screens: Use a hamburger menu */}
         <div className="xl:hidden">
