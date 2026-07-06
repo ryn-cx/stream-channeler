@@ -16,6 +16,7 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
+from app.config import settings
 from app.database import engine, import_models
 from app.episodes.models import Episode
 from app.log import configure_logging
@@ -335,7 +336,8 @@ def _update_outdated(stop_event: threading.Event) -> None:
             continue
         tasks.append((plugin_key, plugin_class))
 
-    with ThreadPoolExecutor(max_workers=max(len(tasks), 1)) as executor:
+    max_workers = min(max(len(tasks), 1), settings.UPDATE_MAX_THREADS)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(_update_plugin, plugin_key, plugin_class, stop_event): (
                 plugin_key

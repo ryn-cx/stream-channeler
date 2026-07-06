@@ -36,3 +36,4 @@ def configure_logging() -> None:  # noqa: D103
     logger.add(sys.stdout, level="INFO", colorize=True, format=_STDOUT_FORMAT)
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)

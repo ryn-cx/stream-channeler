@@ -41,12 +41,6 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     import_watch_history_file_extension = ".json"
 
     @override
-    def initialize_source(self) -> None:
-        if not self.has_source:
-            latest_browse_file = self.get_latest_browse_file()
-            self.source = self._upsert_source(latest_browse_file)
-
-    @override
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -87,7 +81,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         new_browse_file = self.browse_file(latest_browse_file.data_timestamp)
         new_browse_file.download_if_outdated(source.update_at)
         self._process_new_browse_files(source)
-        self._upsert_source(new_browse_file)
+        self._upsert_source()
 
     def _process_new_browse_files(self, source: Source) -> None:
         # Preload up to seasons because seasons have their update_at values set.
@@ -132,8 +126,10 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     def _show_url(cls, show_key: str) -> str:
         return cls.build_url(f"series/{show_key}")
 
-    def _upsert_source(self, latest_browse_file: Browse) -> Source:
+    def _upsert_source(self) -> Source:
+        source_timestamp = self.source_data_timestamp(self.plugin_key())
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+
         return Source(
             key=self.plugin_key(),
             name=self.plugin_key(),
@@ -141,8 +137,8 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             favicon_url=self.build_url(
                 "build/assets/img/favicons/favicon-v2-96x96.png",
             ),
-            update_at=latest_browse_file.data_timestamp + timedelta(days=1),
-            data_timestamp=latest_browse_file.data_timestamp,
+            data_timestamp=source_timestamp,
+            update_at=source_timestamp + timedelta(days=1),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 

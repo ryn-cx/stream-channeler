@@ -171,6 +171,26 @@ class BasePlugin(
         self._download_episode_files(episode, update_at=episode.update_at)
         self._cache_and_upsert_show(episode.season.show)
 
+    @override
+    def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:
+        plugin.update_at = tz_datetime.max()
+
+    @override
+    def on_update_source_failure(self, source: Source, error: Exception) -> None:
+        source.update_at = tz_datetime.max()
+
+    @override
+    def on_update_show_failure(self, show: Show, error: Exception) -> None:
+        show.update_at = tz_datetime.max()
+
+    @override
+    def on_update_season_failure(self, season: Season, error: Exception) -> None:
+        season.update_at = tz_datetime.max()
+
+    @override
+    def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
+        episode.update_at = tz_datetime.max()
+
     @abstractmethod
     def _upsert_show(
         self,

@@ -223,11 +223,14 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     def _import_files(self, session: Session) -> None:
         """Import all exported files into the database."""
+
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
-        # TODO: Can they be rewritten so this is no longer a problem?
+        def no_operation(_plugin: BasePlugin) -> None:
+            """No operation function."""
+
         initialize_source = self.plugin_class.initialize_source
-        self.plugin_class.initialize_source = BasePlugin.initialize_source  # type: ignore[assignment]
+        self.plugin_class.initialize_source = no_operation  # type: ignore[assignment]
         plugin = self.plugin_class(session)
 
         plugin_user = get_or_create_plugin_user(session=session)
@@ -257,7 +260,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         session.expire_all()
 
         # Files are imported so now initialize_source can be run.
-        self.plugin_class.initialize_source = initialize_source  # type: ignore[assignment]
+        self.plugin_class.initialize_source = initialize_source  # type: ignore[method-assign]
         plugin.initialize_source()
 
         session.commit()  # Set the rollback point.

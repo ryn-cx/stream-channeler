@@ -41,6 +41,10 @@ class DownloadMixin(ABC):
         """Return the files associated with the plugin."""
         raise NotImplementedError("This plugin does not have plugin specific files.")  # noqa: EM101 - TODO: Assign message to a variable
 
+    def _source_files(self, source_key: str) -> Sequence[BaseFile[Any]]:
+        """Return the files associated with the source."""
+        raise NotImplementedError("This plugin does not have source specific files.")  # noqa: EM101 - TODO: Assign message to a variable
+
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:
         """Get the timestamp of the first file in the sequence."""
@@ -49,6 +53,10 @@ class DownloadMixin(ABC):
     def plugin_data_timestamp(self) -> datetime:
         """Return the data timestamp for the plugin's files."""
         return self._file_timestamp(self._plugin_files())
+
+    def source_data_timestamp(self, source_key: str) -> datetime:
+        """Return the data timestamp for the source's files."""
+        return self._file_timestamp(self._source_files(source_key))
 
     def show_data_timestamp(self, show_key: str) -> datetime:
         """Return the data timestamp for the show's files."""

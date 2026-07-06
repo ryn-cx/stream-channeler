@@ -86,9 +86,8 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
 
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
     # This needs to be a series with a recently aired episode.
-    parse_url_response = "GT00374493"
-    show_slug = "rilakkuma"
-
+    parse_url_response = "GQWH0MXPQ"
+    show_slug = "anime-azurlane-slow-ahead"
 
 class TestAiringMultipleSeasonsShow(
     CrunchyrollStandardTests,

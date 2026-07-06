@@ -120,6 +120,10 @@ class FileMixin(BasePlugin, register=False):
         )
 
     @override
+    def _source_files(self, source_key: str) -> Sequence[Browse]:
+        return [self.get_latest_browse_file(is_completed=True)]
+
+    @override
     def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
         return [
             # Required to detect new seasons.
@@ -169,8 +173,11 @@ class FileMixin(BasePlugin, register=False):
             for episode in self.episodes_file(season_key).parsed().data
         ]
 
-    def preload_latest_browse_file(self) -> File | None:
-        """Return the most recent browse File from the database, or None."""
+    def preload_latest_browse_file(self, *, is_completed: bool = False) -> File | None:
+        """Return the most recent browse File from the database, or None.
+
+        When `is_completed` is True only fully processed browse files are considered.
+        """
         statement = (
             select(File)
             .where(
@@ -179,12 +186,21 @@ class FileMixin(BasePlugin, register=False):
             )
             .order_by(col(File.data_timestamp).desc())
         )
+        if is_completed:
+            statement = statement.where(col(File.extra) == "Completed")
         return self.session.exec(statement).first()
 
-    def get_latest_browse_file(self) -> Browse:
-        """Return the latest browse file, downloading a fresh one if none exist."""
-        if file := self.preload_latest_browse_file():
+    def get_latest_browse_file(self, *, is_completed: bool = False) -> Browse:
+        """Return the latest browse file, downloading a fresh one if none exist.
+
+        When `is_completed` is True only the latest fully processed browse file is
+        returned.
+        """
+        if file := self.preload_latest_browse_file(is_completed=is_completed):
             return self.browse_file(file)
         browse = self.browse_file(tz_datetime.now())
         browse.download_if_outdated()
+
+        if is_completed:
+            browse.database_record.extra = "Completed"
         return browse

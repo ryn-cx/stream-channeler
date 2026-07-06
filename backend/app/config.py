@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
+    # Maximum number of plugins updated concurrently by the update tool.
+    # TODO: Raise this once the duplicate Source race is resolved.
+    UPDATE_MAX_THREADS: int = 1
+
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str,
         BeforeValidator(parse_cors),
