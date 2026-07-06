@@ -62,7 +62,9 @@ class JustWatch(FileMixin, register=True):
         season_key = self._key(season)
         show_key = self._show_key(season, show)
         files = super()._download_season_files_and_children(
-            season_key, show_key, update_at
+            season_key,
+            show_key,
+            update_at,
         )
         # The season episodes file reports when each episode's offers last
         # changed, so re-download any buy box offers that are now stale.
