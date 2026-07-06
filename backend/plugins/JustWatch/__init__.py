@@ -378,6 +378,7 @@ class JustWatch(FileMixin, register=True):
         return results
 
     def _upsert_sources(self, providers_file: ProvidersLocale) -> None:
+        _cache = self.plugin.sources
         for provider in providers_file.parsed():
             source = Source.get_from_memory(
                 self.session,
