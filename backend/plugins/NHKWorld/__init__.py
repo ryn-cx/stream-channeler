@@ -40,30 +40,29 @@ class NHKWorld(FileMixin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        show_key = self.parse_url(url)
+        show_key = self._parse_url(url)
         self._validate_url(show_key, url)
         show = self._import_show(show_key)
         return [URLImportResult(show=show, is_whitelist=False)]
 
-    @classmethod
     @override
-    def parse_url(cls, url: str) -> str:
+    def _parse_url(self, url: str) -> str:
         # TODO: Add support for single episodes
-        if match := re.match(cls._url_regex(), url):
+        if match := re.match(self._url_regex(), url):
             return match.group("show_key")
 
-        msg = f"Invalid {cls.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
 
     def _validate_url(self, show_key: str, url: str) -> None:
         show_file = self.video_program_file(show_key)
-        self.raise_invalid_url_if_no_content(show_file, url)
+        self._raise_if_no_content(show_file, url)
 
     def _import_show(self, show_key: str) -> Show:
-        if show := self._preload_show(show_key=show_key).one_or_none():
+        if show := self._preload_show(show_key).one_or_none():
             return show
 
-        _cache = self._download_show_files(show_key)
+        _cache = self._download_show_files_and_children(show_key)
         return self._upsert_show(self.source, show_key=show_key)
 
     @override
@@ -93,7 +92,7 @@ class NHKWorld(FileMixin, register=True):
                     show.set_update_at(item.video.published_at)
                 else:
                     logger.info("Importing new show: {}", show_id)
-                    self._download_show_files(show_id)
+                    self._download_show_files_and_children(show_id)
                     self._upsert_show(source, show_id)
 
             feed_file.database_record.extra = "Completed"

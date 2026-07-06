@@ -103,8 +103,8 @@ error-on-warning = true
 
 [tool.uv.sources]
 just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
-yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
+yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }

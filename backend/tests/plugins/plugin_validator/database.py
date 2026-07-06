@@ -34,10 +34,32 @@ from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     plugin_class: type[PluginT]
-    url: str | None = None
+    urls: tuple[str, ...] = ()
     search_query: str | None = None
     invalid_url: bool
     imported_plugin: PluginT
+
+    def _url_variants(self) -> list[str]:
+        class_attrs = {
+            key: value
+            for key, value in vars(type(self)).items()
+            if isinstance(value, str)
+        }
+        variants: list[str] = []
+        for url in self.urls:
+            formatted = url.format(**class_attrs)
+            if formatted.startswith("/"):
+                variants += [
+                    domain + formatted for domain in self.plugin_class.domains()
+                ]
+            else:
+                variants.append(formatted)
+        return variants
+
+    @property
+    def url(self) -> str | None:
+        variants = self._url_variants()
+        return variants[0] if variants else None
 
     def files_directory_path(self) -> Path:
         """Path to the directory where all files for the test class are stored."""
@@ -50,6 +72,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def verification_file_path(self) -> Path:
         """Path to the file that has the expected output for the test class."""
         return self.files_directory_path() / "verification.json"
+
+    def import_result_file_path(self) -> Path:
+        """Path to the file with the expected import_url result for the test class."""
+        return self.files_directory_path() / "import_result.json"
 
     def combined_files_path(self) -> Path:
         """Path to the combined file containing all exported database files."""
@@ -83,6 +109,47 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         self.verification_file_path().parent.mkdir(parents=True, exist_ok=True)
         self.verification_file_path().write_text(
             json.dumps(plugin_dict, default=str, indent=2),
+            encoding="utf-8",
+        )
+
+    @staticmethod
+    def _simplify_import_result(
+        results: list[URLImportResult],
+    ) -> list[dict[str, Any]]:
+        """Reduce import results to the key tree that identifies their structure."""
+        return [
+            {
+                "plugin_key": result.show.source.plugin.key,
+                "source_key": result.show.source.key,
+                "show_key": result.show.key,
+                "seasons": [
+                    {
+                        "key": season.key,
+                        "episodes": sorted(episode.key for episode in season.episodes),
+                    }
+                    for season in sorted(
+                        result.show.seasons,
+                        key=lambda season: season.key,
+                    )
+                ],
+                "is_whitelist": result.is_whitelist,
+                "whitelist_season_keys": sorted(
+                    season.key for season in result.seasons
+                ),
+                "whitelist_episode_keys": sorted(
+                    episode.key for episode in result.episodes
+                ),
+            }
+            for result in results
+        ]
+
+    def _export_import_result_file(self, results: list[URLImportResult]) -> None:
+        """Export the expected import result to disk if it does not already exist."""
+        if self.import_result_file_path().exists():
+            return
+        self.import_result_file_path().parent.mkdir(parents=True, exist_ok=True)
+        self.import_result_file_path().write_text(
+            json.dumps(self._simplify_import_result(results), indent=2),
             encoding="utf-8",
         )
 
@@ -158,6 +225,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         """Import all exported files into the database."""
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
+        # TODO: Can they be rewritten so this is no longer a problem?
         initialize_source = self.plugin_class.initialize_source
         self.plugin_class.initialize_source = BasePlugin.initialize_source  # type: ignore[assignment]
         plugin = self.plugin_class(session)

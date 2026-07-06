@@ -69,12 +69,11 @@ class StreamChanneler(BasePlugin, register=True):
             + rf"\/(?P<media_id>{uuid_pattern})(?:\/|$)"
         )
 
-    @classmethod
     @override
-    def parse_url(cls, url: str) -> dict[str, str]:
-        match = re.match(cls._url_regex(), url)
+    def _parse_url(self, url: str) -> dict[str, str]:
+        match = re.match(self._url_regex(), url)
         if not match:
-            msg = f"Invalid {cls.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)
         return {
             "media_type": match.group("media_type"),
@@ -83,7 +82,7 @@ class StreamChanneler(BasePlugin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        parsed = self.parse_url(url)
+        parsed = self._parse_url(url)
         media_type = parsed["media_type"]
         media_id = uuid.UUID(parsed["media_id"])
 

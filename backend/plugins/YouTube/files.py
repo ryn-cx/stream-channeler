@@ -4,7 +4,7 @@ import time
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
-from typing import Any, override
+from typing import override
 
 from get_around import GetAround
 from loguru import logger
@@ -21,6 +21,8 @@ from sqlmodel import Session
 
 from app.config import settings
 from app.files.models import File
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
@@ -71,8 +73,8 @@ class ChannelByChannelId(GAPIJSONNoGet[ChannelModel]):
 
     @override
     def _get(self) -> ChannelModel:
-        assert isinstance(self.api_endpoint, ChannelsEndpoint)  # noqa: S101
-        return self.api_endpoint.get(channel_id=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+        return endpoint.get(channel_id=self.unique_identifier)
 
     @override
     def _get_acceptable_error(self) -> str:
@@ -84,8 +86,8 @@ class ChannelByHandle(GAPIJSONNoGet[ChannelModel]):
 
     @override
     def _get(self) -> ChannelModel:
-        assert isinstance(self.api_endpoint, ChannelsEndpoint)  # noqa: S101
-        return self.api_endpoint.get(handle=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+        return endpoint.get(handle=self.unique_identifier)
 
     @override
     def _get_acceptable_error(self) -> str:
@@ -97,8 +99,8 @@ class ChannelByUsername(GAPIJSONNoGet[ChannelModel]):
 
     @override
     def _get(self) -> ChannelModel:
-        assert isinstance(self.api_endpoint, ChannelsEndpoint)  # noqa: S101
-        return self.api_endpoint.get(username=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+        return endpoint.get(username=self.unique_identifier)
 
     @override
     def _get_acceptable_error(self) -> str:
@@ -110,8 +112,8 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
 
     @override
     def _get(self) -> PlaylistsModel:
-        assert isinstance(self.api_endpoint, PlaylistsEndpoint)  # noqa: S101
-        return self.api_endpoint.get_all(self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.api_endpoint, PlaylistsEndpoint)
+        return endpoint.get_all(self.unique_identifier)
 
     @override
     def _get_acceptable_error(self) -> str:
@@ -125,29 +127,36 @@ class PlaylistInfo(GAPIJSON[PlaylistModel]):
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
     api_endpoint = not_yt_dlapi().playlist_items
 
+    # Due to API limits this function merges new videos with existing videos instead of
+    # downloading all videos every time.
     @override
     def _get(self) -> PlaylistItemModel:
-        assert isinstance(self.api_endpoint, PlaylistItemsEndpoint)  # noqa: S101
+        endpoint = self.raise_if_not_is_instance(
+            self.api_endpoint,
+            PlaylistItemsEndpoint,
+        )
+
+        # If this is the first time downloading the file download everything.
         if not self._existing_database_record:
-            return self.api_endpoint.get_all(self.unique_identifier)
+            return endpoint.get_all(self.unique_identifier)
 
         # If the entry is over a year old download a fresh copy to clean out deleted
         # videos.
         year_ago_datetime = tz_datetime.now() - timedelta(days=365)
         if self.parsed().not_yt_dlapi.timestamp < year_ago_datetime:
-            return self.api_endpoint.get_all(self.unique_identifier)
+            return endpoint.get_all(self.unique_identifier)
 
         existing_items = self.parsed().items
-        existing_ids = {item.content_details.video_id for item in existing_items}
+        existing_video_ids = {item.content_details.video_id for item in existing_items}
 
-        page = self.api_endpoint.get(self.unique_identifier)
+        page = endpoint.get(self.unique_identifier)
 
         # TODO: noy_yt_dlapi needs to support fetching a specific page, until then
         # download all of the playlist videos if there are at least 50 new entries.
         if not any(
-            item.content_details.video_id in existing_ids for item in page.items
+            item.content_details.video_id in existing_video_ids for item in page.items
         ):
-            return self.api_endpoint.get_all(self.unique_identifier)
+            return endpoint.get_all(self.unique_identifier)
 
         new_ids = {item.content_details.video_id for item in page.items}
         page.items = list(page.items) + [
@@ -203,7 +212,7 @@ class FileMixin(BasePlugin, register=False):
     @override
     def __init__(self, session: Session) -> None:
         super().__init__(session)
-        self._imported_topic_playlist_keys: set[str] = set()
+        self._imported_album_playlist_keys: set[str] = set()
 
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         """Return a cached channel-by-channel-id file for the given show key."""
@@ -273,9 +282,14 @@ class FileMixin(BasePlugin, register=False):
     def _is_music_playlist_key(key: str) -> bool:
         return key.startswith("OLAK5uy_")
 
-    @staticmethod
-    def _is_topic_channel(channel_item: Any) -> bool:  # noqa: ANN401 - TODO: Type the channel item
-        return channel_item.topic_details is not None
+    def _channel_has_only_uploads(self, show_key: str) -> bool:
+        channel_playlists_file = self.channel_playlists_file(show_key)
+        if not channel_playlists_file.database_record.content:
+            return True
+        return not any(
+            item.content_details.item_count > 0
+            for item in channel_playlists_file.parsed().items
+        )
 
     @override
     def _show_files(
@@ -302,14 +316,9 @@ class FileMixin(BasePlugin, register=False):
             # Required to detect changes to the season (playlist).
             self.channel_playlists_file(show_key),
         ]
-        # Topic channels do not list their playlists, so the album name comes from the
-        # playlist itself rather than the channel playlists file.
-        channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed().items,
-        )
-        if self._is_topic_channel(channel_item) and season_key != (
-            self._get_channel_uploads_playlist_key(show_key)
-        ):
+        # Album playlists are auto-generated and not listed by the channel, so the album
+        # name comes from the playlist itself rather than the channel playlists file.
+        if self._is_music_playlist_key(season_key):
             files.append(self.playlist_info_file(season_key))
         return files
 
@@ -346,14 +355,6 @@ class FileMixin(BasePlugin, register=False):
         if int(channel_item.statistics.video_count) > 0:
             season_keys.append(self._get_channel_uploads_playlist_key(show_key))
 
-        if self._is_topic_channel(channel_item):
-            season_keys.extend(
-                key
-                for key in self._topic_season_keys(show_key)
-                if key not in season_keys
-            )
-            return season_keys
-
         channel_playlists_file = self.channel_playlists_file(show_key)
         if channel_playlists_file.database_record.content:
             season_keys.extend(
@@ -362,20 +363,25 @@ class FileMixin(BasePlugin, register=False):
                 if item.content_details.item_count > 0
             )
 
+        # Album playlists are auto-generated and not returned by any channel listing, so
+        # they are only ever added by an explicit import and then always kept.
+        season_keys.extend(
+            key for key in self._album_season_keys(show_key) if key not in season_keys
+        )
+
         return season_keys
 
-    def _topic_season_keys(self, show_key: str) -> list[str]:
-        season_keys: list[str] = list(self._imported_topic_playlist_keys)
-        uploads_key = self._get_channel_uploads_playlist_key(show_key)
+    def _album_season_keys(self, show_key: str) -> list[str]:
+        season_keys: list[str] = list(self._imported_album_playlist_keys)
         existing_show = self._preload_show(
-            show_key=show_key,
+            show_key,
             preload_seasons=True,
         ).one_or_none()
         if existing_show:
             for season in existing_show.seasons:
                 if (
                     season.deleted_at is None
-                    and season.key != uploads_key
+                    and self._is_music_playlist_key(season.key)
                     and season.key not in season_keys
                 ):
                     season_keys.append(season.key)
@@ -402,10 +408,12 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _download_all_episode_files(
         self,
-        season_key: str,
-        show_key: str,
+        season: str | Season,
+        show: str | Show | None = None,
     ) -> list[File]:
         """Batch download all videos for a season in a single API call."""
+        season_key = self._key(season)
+        show_key = self._show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
         self._preload_episode_files(video_keys, season_key, show_key)
 

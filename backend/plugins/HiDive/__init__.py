@@ -63,7 +63,7 @@ class HiDive(FileMixin, register=True):
 
     def _resolve_show_key(self, url: str) -> str:
         """Return the show key (series_id for TV, playlist_key for Movie)."""
-        key = self.parse_url(url)
+        key = self._parse_url(url)
         if self._media_type == "Movie":
             return key
         if re.match(self._tv_series_url_regex(), url):
@@ -86,20 +86,19 @@ class HiDive(FileMixin, register=True):
 
     # This does not use _media_type because that would require this to be an instance
     # method.
-    @classmethod
     @override
-    def parse_url(cls, url: str) -> str:
-        if match := re.match(cls._tv_series_url_regex(), url):
+    def _parse_url(self, url: str) -> str:
+        if match := re.match(self._tv_series_url_regex(), url):
             return match.group("series_key")
-        if match := re.match(cls._season_url_regex(), url):
+        if match := re.match(self._season_url_regex(), url):
             return match.group("season_key")
-        if match := re.match(cls._movie_url_regex(), url):
+        if match := re.match(self._movie_url_regex(), url):
             return match.group("movie_key")
-        msg = f"Invalid {cls.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
 
     def _validate_url(self, url: str) -> None:
-        key = self.parse_url(url)
+        key = self._parse_url(url)
         file: Series | Season | Playlist
         if self._media_type == "Movie":
             file = self.playlist_file(key)
@@ -108,13 +107,13 @@ class HiDive(FileMixin, register=True):
         else:
             file = self.season_file(key)
 
-        self.raise_invalid_url_if_no_content(file, url)
+        self._raise_if_no_content(file, url)
 
     def _import_show(self, key: str) -> Show:
-        if show := self._preload_show(show_key=key).one_or_none():
+        if show := self._preload_show(key).one_or_none():
             return show
 
-        _cache = self._download_show_files(key)
+        _cache = self._download_show_files_and_children(key)
         return self._upsert_show(self.source, show_key=key)
 
     def set_media_type_from_show(self, show: Show) -> None:

@@ -178,13 +178,13 @@ class BaseJustWatch(PluginValidator[JustWatch]):
 
 
 class TestSingleSeasonTVShow(StandardTests, BaseJustWatch):
-    url = "https://www.justwatch.com/us/tv-show/mutiny/"
+    urls = ("https://www.justwatch.com/us/tv-show/mutiny/",)
     class_key = "amp"
     search_query = "Mutiny"
 
 
 class TestMovie(StandardTests, BaseJustWatch):
-    url = "https://www.justwatch.com/us/movie/evangelion-1-0-you-are-not-alone"
+    urls = ("https://www.justwatch.com/us/movie/evangelion-1-0-you-are-not-alone",)
     class_key = "amp"
     search_query = "Evangelion: 1.0 You Are (Not) Alone"
 
@@ -223,17 +223,17 @@ class TestMovie(StandardTests, BaseJustWatch):
 
 class TestInvalidMovieUrl(InvalidURLValidator[JustWatch]):
     plugin_class = JustWatch
-    url = "https://www.justwatch.com/us/movie/invalid-url"
+    urls = ("https://www.justwatch.com/us/movie/invalid-url",)
 
 
 class TestInvalidTVShowUrl(InvalidURLValidator[JustWatch]):
     plugin_class = JustWatch
-    url = "https://www.justwatch.com/us/tv-show/invalid-url"
+    urls = ("https://www.justwatch.com/us/tv-show/invalid-url",)
 
 
 class TestMultipleSeasonTVShow(StandardTests, BaseJustWatch):
     plugin_class = JustWatch
-    url = "https://www.justwatch.com/us/tv-show/mutant-x/"
+    urls = ("https://www.justwatch.com/us/tv-show/mutant-x/",)
     class_key = "amp"
     search_query = "Mutant X"
 

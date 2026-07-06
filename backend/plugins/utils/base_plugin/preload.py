@@ -50,10 +50,9 @@ class PreloadMixin(ABC):
             statement = statement.where(Source.key == source_key)
         return self.session.exec(statement.options(*options)).unique()
 
-    def _preload_show(  # noqa: PLR0913
+    def _preload_show(
         self,
-        show_key: str | None = None,
-        show_id: uuid.UUID | None = None,
+        show: str | uuid.UUID,
         source_key: str | None = None,
         *,
         preload_source: bool = False,
@@ -67,19 +66,16 @@ class PreloadMixin(ABC):
             options.append(selectinload(Show.seasons).selectinload(Season.episodes))  # type: ignore[arg-type]
         elif preload_seasons:
             options.append(selectinload(Show.seasons))  # type: ignore[arg-type]
-        if show_id is not None:
-            statement = select(Show).where(Show.id == show_id)
-        elif show_key is not None:
+        if isinstance(show, uuid.UUID):
+            statement = select(Show).where(Show.id == show)
+        else:
             statement = (
                 select(Show)
                 .join(Source)
-                .where(Source.plugin_id == self.plugin.id, Show.key == show_key)
+                .where(Source.plugin_id == self.plugin.id, Show.key == show)
             )
             if source_key is not None:
                 statement = statement.where(Source.key == source_key)
-        else:
-            msg = "Either show_key or show_id must be provided"
-            raise ValueError(msg)
         return self.session.exec(statement.options(*options)).unique()
 
     def _preload_season(

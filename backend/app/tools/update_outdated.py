@@ -39,6 +39,7 @@ import_models()
 # `select_with_plugin()` resolves to a single return type rather than a union.
 MediaClass = type[MediaMixin[Any, Any]]
 
+
 # The stop event is set on the first Ctrl+C. Worker threads check it between items and
 # stop after committing their current item, so an interrupt never discards in-progress
 # downloads.
@@ -101,6 +102,45 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
+def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring the outer Source to have a Season included in a channel."""
+    return (
+        select(Season.id)
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .outerjoin(
+            ChannelSeasonFilter,
+            (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
+            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+        )
+        .where(
+            col(Show.source_id) == col(Source.id),
+            _channel_inclusion_clause(),
+        )
+        .exists()
+    )
+
+
+def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring the outer Plugin to have a Season included in a channel."""
+    return (
+        select(Season.id)
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .outerjoin(
+            ChannelSeasonFilter,
+            (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
+            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+        )
+        .where(
+            col(Source.plugin_id) == col(Plugin.id),
+            _channel_inclusion_clause(),
+        )
+        .exists()
+    )
+
+
 # Media classes are updated in this order per plugin because updating a plugin (e.g.
 # JustWatch) can mark its own sources outdated, which the Source pass then picks up in
 # the same run; the same cascade applies down the Source -> Show -> Season -> Episode
@@ -143,9 +183,13 @@ def _process_outdated_items(
     )
     # Only this plugin's media so each plugin's run is independent.
     statement = statement.where(col(Plugin.key) == plugin_key)
-    # Skip items whose Season is not included in any channel. Source is
-    # exempt because updating a Source is how new Shows are discovered.
-    if media_class is Show:
+    # Skip items that have no Season included in any channel anywhere below them
+    # in the Plugin -> Source -> Show -> Season tree, so unused media is not updated.
+    if media_class is Plugin:
+        statement = statement.where(_plugin_has_season_in_channel_exists())
+    elif media_class is Source:
+        statement = statement.where(_source_has_season_in_channel_exists())
+    elif media_class is Show:
         statement = statement.where(_show_has_season_in_channel_exists())
     elif media_class in (Season, Episode):
         statement = statement.where(_season_in_channel_exists())
@@ -173,16 +217,21 @@ def _process_outdated_items(
             updated_count += 1
 
             session.commit()
-        except Exception:  # noqa: BLE001 - This should catch ALL exceptions.
+        except Exception as error:
             logger.exception(
                 f"[{plugin_key}] Failed to update {media_type_name}: {item.key}",
             )
-            # If any error occurs, roll back changes then set update_at at
-            # the maximum possible value to avoid retrying the update until
-            # the issue is resolved.
+            # Roll back partial changes, then let the plugin decide how to
+            # reschedule the failed item.
             session.rollback()
             session.refresh(item)
-            item.update_at = tz_datetime.max()
+            failure_method_name = f"on_update_{media_type_name}_failure"
+            try:
+                getattr(plugin_instance, failure_method_name)(item, error)
+            except Exception:  # noqa: BLE001 - The plugin re-raised its default.
+                # Set update_at to the maximum possible value to avoid retrying
+                # the update until the issue is resolved.
+                item.update_at = tz_datetime.max()
             session.commit()
 
     logger.info(
@@ -245,8 +294,10 @@ def _next_update_at(session: Session) -> datetime | None:
             .limit(1)
         )
         item = session.exec(statement).first()
-        if item is not None and item.update_at is not None and (
-            soonest is None or item.update_at < soonest
+        if (
+            item is not None
+            and item.update_at is not None
+            and (soonest is None or item.update_at < soonest)
         ):
             soonest = item.update_at
     return soonest
@@ -295,7 +346,7 @@ def _update_outdated(stop_event: threading.Event) -> None:
             plugin_key = futures[future]
             try:
                 future.result()
-            except Exception:  # noqa: BLE001 - Surface a per-plugin crash.
+            except Exception:
                 # Log the plugin-level failure and let the other plugins finish.
                 logger.exception(f"[{plugin_key}] Plugin update run crashed")
 

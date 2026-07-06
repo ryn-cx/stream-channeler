@@ -2,11 +2,14 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any
+from typing import Any, overload
 
 from sqlmodel import Session, col, select
 
+from app.episodes.models import Episode
 from app.files.models import File
+from app.seasons.models import Season
+from app.shows.models import Show
 from plugins.utils.base_plugin.files import BaseFile
 
 
@@ -75,44 +78,122 @@ class DownloadMixin(ABC):
             file.download_if_outdated(update_at)
         return [file.database_record for file in files]
 
-    def _download_show_files(
+    @staticmethod
+    def _key(record: str | Show | Season | Episode) -> str:
+        """Return the record's key, accepting either the key or the record itself."""
+        return record if isinstance(record, str) else record.key
+
+    def _show_key(self, season: str | Season, show: str | Show | None) -> str:
+        """Return the show key, deriving it from a `Season` when `show` is omitted."""
+        if show is not None:
+            return self._key(show)
+        if isinstance(season, Season):
+            return season.show.key
+        msg = "show is required when season is passed as a key."
+        raise TypeError(msg)
+
+    def _download_show_files_and_children(
         self,
-        show_key: str,
+        show: str | Show,
         update_at: datetime | None = None,
     ) -> list[File]:
+        show_key = self._key(show)
         _cache = self._preload_show_files(show_key)
         show_files = self._show_files(show_key)
         all_files = self._download_outdated_files(show_files, update_at)
         all_files.extend(self._download_all_season_files(show_key))
         return all_files
 
-    def _download_season_files(
+    @overload
+    def _download_season_files_and_children(
         self,
-        season_key: str,
-        show_key: str,
+        season: Season,
+        show: None = None,
+        update_at: datetime | None = None,
+    ) -> list[File]: ...
+
+    @overload
+    def _download_season_files_and_children(
+        self,
+        season: str,
+        show: str | Show,
+        update_at: datetime | None = None,
+    ) -> list[File]: ...
+
+    def _download_season_files_and_children(
+        self,
+        season: str | Season,
+        show: str | Show | None = None,
         update_at: datetime | None = None,
     ) -> list[File]:
+        season_key = self._key(season)
+        show_key = self._show_key(season, show)
         _cache = self._preload_season_files([season_key], show_key)
         season_files = self._season_files(season_key, show_key)
         all_files = self._download_outdated_files(season_files, update_at)
         all_files.extend(self._download_all_episode_files(season_key, show_key))
         return all_files
 
+    @overload
     def _download_episode_files(
         self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
+        episode: Episode,
+        season: None = None,
+        show: None = None,
+        update_at: datetime | None = None,
+    ) -> list[File]: ...
+
+    @overload
+    def _download_episode_files(
+        self,
+        episode: str,
+        season: Season,
+        show: None = None,
+        update_at: datetime | None = None,
+    ) -> list[File]: ...
+
+    @overload
+    def _download_episode_files(
+        self,
+        episode: str,
+        season: str,
+        show: str | Show,
+        update_at: datetime | None = None,
+    ) -> list[File]: ...
+
+    def _download_episode_files(
+        self,
+        episode: str | Episode,
+        season: str | Season | None = None,
+        show: str | Show | None = None,
         update_at: datetime | None = None,
     ) -> list[File]:
+        episode_key = self._key(episode)
+        if season is not None:
+            season_key = self._key(season)
+        elif isinstance(episode, Episode):
+            season_key = episode.season.key
+        else:
+            msg = "season is required when episode is passed as a key."
+            raise TypeError(msg)
+        if show is not None:
+            show_key = self._key(show)
+        elif isinstance(season, Season):
+            show_key = season.show.key
+        elif isinstance(episode, Episode):
+            show_key = episode.season.show.key
+        else:
+            msg = "show is required when season is passed as a key."
+            raise TypeError(msg)
         _cache = self._preload_episode_files([episode_key], season_key, show_key)
         episode_files = self._episode_files(episode_key, season_key, show_key)
         return self._download_outdated_files(episode_files, update_at)
 
     def _download_all_season_files(
         self,
-        show_key: str,
+        show: str | Show,
     ) -> list[File]:
+        show_key = self._key(show)
         season_keys = self._season_keys_from_file(show_key)
         _cache = self._preload_season_files(season_keys, show_key)
         all_files: list[File] = []
@@ -124,11 +205,27 @@ class DownloadMixin(ABC):
             all_files.extend(self._download_all_episode_files(season_key, show_key))
         return all_files
 
+    @overload
     def _download_all_episode_files(
         self,
-        season_key: str,
-        show_key: str,
+        season: Season,
+        show: None = None,
+    ) -> list[File]: ...
+
+    @overload
+    def _download_all_episode_files(
+        self,
+        season: str,
+        show: str | Show,
+    ) -> list[File]: ...
+
+    def _download_all_episode_files(
+        self,
+        season: str | Season,
+        show: str | Show | None = None,
     ) -> list[File]:
+        season_key = self._key(season)
+        show_key = self._show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
         _cache = self._preload_episode_files(video_keys, season_key, show_key)
         all_files: list[File] = []

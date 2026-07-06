@@ -1,31 +1,32 @@
 # TODO: Validate
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, override
 
 from loguru import logger
-from sqlalchemy.orm import joinedload
 from sqlmodel import Session
 
 from app.episodes.models import Episode
-from app.models import Visibility
+from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.models import User
 from app.users.service import get_or_create_plugin_user
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.download import DownloadMixin
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
+from plugins.utils.base_plugin.status import OutdatedMixin
 from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 
 
 class BasePlugin(
     PreloadMixin,
-    DownloadMixin,
+    OutdatedMixin,
     URLMixin,
     WatchMixin,
     AbstractPlugin,
@@ -45,6 +46,7 @@ class BasePlugin(
 
     @property
     def source(self) -> Source:
+        """Return the plugin's `Source` record or raise if not initialized."""
         if self._source is None:
             msg = "Source has not been initialized."
             raise AttributeError(msg)
@@ -56,43 +58,53 @@ class BasePlugin(
 
     @property
     def has_source(self) -> bool:
+        """Return True if the plugin has a `Source` record."""
         return self._source is not None
 
     def initialize_database(self) -> None:
-        """Set up the plugin and its source records in the database."""
+        """Create the `Plugin` and its `Source` record(s) and set instance attributes.
+
+        Sets `self.plugin` if only a single `Plugin` record exists.
+        Sets `self.source` if only a single `Source` record exists.
+        """
         self.initialize_plugin()
         self.initialize_source()
 
     def initialize_plugin(self) -> None:
-        """Add the `Plugin (class)` to the database if it doesn't already exist.
-
-        This will always set `self.plugin` to the database record for the `Plugin`, and
-        if there is only one `Source` for the plugin, it will set `self.source` to that
-        source.
-        """
+        """Create the `Plugin` record(s) and set `self.plugin`."""
         plugin_user = get_or_create_plugin_user(session=self.session)
-        existing_plugin = Plugin.get(
-            self.session,
-            plugin_user,
-            self.plugin_key(),
-            options=[joinedload(Plugin.sources)],  # type: ignore[arg-type]
-        )
-
-        if not existing_plugin:
-            self.plugin = Plugin(
-                key=self.plugin_key(),
-                name=self.plugin_key(),
-                version=self._VERSION,
-                visibility=Visibility.public,
-                user_id=plugin_user.id,
-            ).upsert(plugin_user, existing_plugin)
-        else:
+        if existing_plugin := Plugin.get(self.session, plugin_user, self.plugin_key()):
             self.plugin = existing_plugin
-            if len(self.plugin.sources) == 1:
-                self._source = self.plugin.sources[0]
+        else:
+            self.plugin = self._upsert_plugin(plugin_user, existing_plugin)
 
     def initialize_source(self) -> None:
-        """Hook for plugins to set up their source(s) after the plugin record exists."""
+        """Create the `Source` record(s) and set `self.source`."""
+        if existing_source := Source.get(self.session, self.plugin, self.plugin_key()):
+            self.source = existing_source
+        else:
+            self.source = self._upsert_source()
+
+    def _upsert_plugin(
+        self,
+        plugin_user: User,
+        existing_plugin: Plugin | None,
+    ) -> Plugin:
+        """Create or update the `Plugin` record."""
+        return Plugin(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            version=self._VERSION,
+            visibility=Visibility.public,
+            user_id=plugin_user.id,
+        ).upsert(plugin_user, existing_plugin)
+
+    @staticmethod
+    def _existing_data_timestamp_or_now(record: BaseMediaMixin | None) -> datetime:
+        """Return the record's data timestamp, or the current time if it has none."""
+        if record and record.data_timestamp:
+            return record.data_timestamp
+        return tz_datetime.now()
 
     @staticmethod
     def _set_weekly_updates_from_episodes(
@@ -101,10 +113,10 @@ class BasePlugin(
         update_show: bool = True,
         update_seasons: bool = True,
     ) -> None:
-        """Set update_at on the show and/or seasons from episode release dates.
+        """Set update_at on the `Show`/`Season` based on `Episode.release_date`.
 
-        Each episode's release_date + 7 days is offered to `set_update_at`
-        so the entity is re-checked roughly one week after the episode aired.
+        `update_at` will be set to be a week after the latest `Episode.release_date` if
+        that is a better `update_at` value than the current `update_at` value.
         """
         for season in show.active_children:
             for episode in season.active_children:
@@ -124,50 +136,40 @@ class BasePlugin(
             )
             raise RuntimeError(msg)
 
+    def _cache_and_upsert_show(
+        self,
+        show: Show,
+        update_at: datetime | None = None,
+    ) -> None:
+        _cache = self._download_show_files_and_children(show, update_at)
+        self._preload_show(show.id, preload_episodes=True).one()
+        self._upsert_show(show.source, show.key)
+
     @override
     def update_show(self, show: Show) -> None:
         logger.info("Updating show: {}", show.key)
         show = self._preload_show(
-            show_key=show.key,
+            show.key,
             source_key=show.source.key,
         ).one()
-        _cache = self._download_show_files(show.key, show.update_at)
-        show = self._preload_show(
-            show_key=show.key,
-            source_key=show.source.key,
-            preload_episodes=True,
-        ).one()
-        self._upsert_show(show.source, show.key)
+        self._cache_and_upsert_show(show, show.update_at)
 
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(
             season.id,
-            preload_episodes=True,
             preload_show=True,
         ).one()
-        self._download_season_files(season.key, season.show.key, season.update_at)
-        _cache = self._download_show_files(season.show.key)
-        self._preload_show(show_id=season.show.id, preload_episodes=True).one()
-        self._upsert_show(season.show.source, season.show.key)
+        self._download_season_files_and_children(season, update_at=season.update_at)
+        self._cache_and_upsert_show(season.show)
 
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
-        self._download_episode_files(
-            episode.key,
-            episode.season.key,
-            episode.season.show.key,
-            episode.update_at,
-        )
-        _cache = self._download_show_files(episode.season.show.key)
-        self._preload_show(
-            show_id=episode.season.show.id,
-            preload_episodes=True,
-        ).one()
-        self._upsert_show(episode.season.show.source, episode.season.show.key)
+        self._download_episode_files(episode, update_at=episode.update_at)
+        self._cache_and_upsert_show(episode.season.show)
 
     @abstractmethod
     def _upsert_show(
@@ -175,6 +177,11 @@ class BasePlugin(
         source: Source,
         show_key: str,
     ) -> Show: ...
+
+    def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
+        """Create or update the plugin's `Source` record(s)."""
+        msg = f"{self.plugin_key()} does not implement _upsert_source."
+        raise NotImplementedError(msg)
 
     def soft_delete_missing_seasons(self, show_key: str) -> None:
         """Soft-delete seasons whose keys are not in the show's season file."""
@@ -210,6 +217,11 @@ class BasePlugin(
     def plugin_key(cls) -> str:
         return cls.__name__
 
+    @classmethod
+    def plugin_name(cls) -> str:
+        """Return the name of the plugin."""
+        return cls.__name__
+
     def _get_cached_file[T](
         self,
         file_type: type[T],
@@ -223,7 +235,7 @@ class BasePlugin(
         self._weakref_file_cache[cache_key] = obj
         return obj
 
-    def raise_invalid_url_if_no_content(self, file: BaseFile[Any], url: str) -> None:
+    def _raise_if_no_content(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
         if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"

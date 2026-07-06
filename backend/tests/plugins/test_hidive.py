@@ -19,7 +19,7 @@ from tests.plugins.plugin_validator.validator import Validator
 
 class HiDiveValidator(PluginValidator[HiDive]):
     plugin_class = HiDive
-    url_path_patterns = (
+    urls = (
         "/season/{parse_url_response}",
         "/season/{parse_url_response}/",
     )
@@ -27,7 +27,7 @@ class HiDiveValidator(PluginValidator[HiDive]):
 
 class HiDiveMovieValidator(PluginValidator[HiDive]):
     plugin_class = HiDive
-    url_path_patterns = (
+    urls = (
         "/playlist/{parse_url_response}",
         "/playlist/{parse_url_response}/",
     )
@@ -110,14 +110,12 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
 
 class TestSingleSeasonShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "20022"
-    url = f"hidive.com/season/{parse_url_response}"
     search_query = "Tamako Market"
     search_url = "https://www.hidive.com/series/1286"
 
 
 class TestMultipleSeasonsShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "19427"
-    url = f"hidive.com/season/{parse_url_response}"
     search_query = "K-On"
     search_url = "https://www.hidive.com/series/1091"
 
@@ -127,7 +125,6 @@ class TestMultipleSeasonsShowSecondSeasonURL(
     HiDiveUpdateSourceTest,
 ):
     parse_url_response = "19426"
-    url = f"hidive.com/season/{parse_url_response}"
     search_query = "K-On"
     search_url = "https://www.hidive.com/series/1091"
 
@@ -145,7 +142,6 @@ class HiDiveMovieStandardTests(
 
 class TestMovie(HiDiveMovieStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "19919"
-    url = f"hidive.com/playlist/{parse_url_response}"
     search_query = "Tamako Market"
 
 
@@ -155,9 +151,9 @@ class InvalidHiDiveURLValidator(InvalidURLValidator[HiDive]):
 
 class TestInvalidPlaylist(InvalidHiDiveURLValidator):
     parse_url_response = "1"
-    url = f"hidive.com/playlist/{parse_url_response}"
+    urls = (f"hidive.com/playlist/{parse_url_response}",)
 
 
 class TestInvalidSeason(InvalidHiDiveURLValidator):
     parse_url_response = "1"
-    url = f"hidive.com/season/{parse_url_response}"
+    urls = (f"hidive.com/season/{parse_url_response}",)

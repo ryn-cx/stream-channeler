@@ -28,7 +28,7 @@ class AbstractPlugin(ABC):
     @classmethod
     @abstractmethod
     def plugin_key(cls) -> str:
-        """Unique identifier for the plugin.
+        """Return the unique identifier for the plugin.
 
         Used to match a `Plugin (db)` record with the actual `Plugin (class)`.
 
@@ -174,6 +174,46 @@ class AbstractPlugin(ABC):
 
         """
         file.update_at = None
+
+    def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:  # noqa: ARG002 - `plugin` is used by overrides.
+        """Handle a failure while updating a `Plugin`.
+
+        By default the error is re-raised so the caller applies its default
+        handling. Override to reschedule the plugin instead.
+        """
+        raise error
+
+    def on_update_source_failure(self, source: Source, error: Exception) -> None:  # noqa: ARG002 - `source` is used by overrides.
+        """Handle a failure while updating a `Source`.
+
+        By default the error is re-raised so the caller applies its default
+        handling. Override to reschedule the source instead.
+        """
+        raise error
+
+    def on_update_show_failure(self, show: Show, error: Exception) -> None:  # noqa: ARG002 - `show` is used by overrides.
+        """Handle a failure while updating a `Show`.
+
+        By default the error is re-raised so the caller applies its default
+        handling. Override to reschedule the show instead.
+        """
+        raise error
+
+    def on_update_season_failure(self, season: Season, error: Exception) -> None:  # noqa: ARG002 - `season` is used by overrides.
+        """Handle a failure while updating a `Season`.
+
+        By default the error is re-raised so the caller applies its default
+        handling. Override to reschedule the season instead.
+        """
+        raise error
+
+    def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:  # noqa: ARG002 - `episode` is used by overrides.
+        """Handle a failure while updating an `Episode`.
+
+        By default the error is re-raised so the caller applies its default
+        handling. Override to reschedule the episode instead.
+        """
+        raise error
 
     import_watch_history_file_extension: str
 

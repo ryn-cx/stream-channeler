@@ -60,6 +60,18 @@ class BaseFile[T](ABC):
         """Return the timestamp of the data in the file."""
         return self.database_record.data_timestamp
 
+    # TODO: Cam tjos be simplified so it doesn't need to return the record?
+    @staticmethod
+    def raise_if_not_is_instance[InstanceT](
+        value: object,
+        expected_type: type[InstanceT],
+    ) -> InstanceT:
+        """Return `value` narrowed to `expected_type`, raising if it is not one."""
+        if not isinstance(value, expected_type):
+            msg = f"Expected {expected_type.__name__}, got {type(value).__name__}."
+            raise TypeError(msg)
+        return value
+
     unique_identifier: str
 
     @override

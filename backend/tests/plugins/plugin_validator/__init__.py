@@ -36,10 +36,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     """Base class for testing plugins."""
 
     plugin_class: type[PluginT]
-    url: str | None = None
     search_url: str | None = None
     parse_url_response: object | None = None
-    url_path_patterns: tuple[str, ...] = ()
     invalid_url = False
     search_query: str | None = None
 
@@ -223,7 +221,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
                     with pytest.raises(InvalidURLError):
                         self._import_url(session)
                 else:
-                    self._import_url(session)
+                    results = self._import_url(session)
+                    self._export_import_result_file(results)
         finally:
             self._export_database_files(session)
 
@@ -281,38 +280,27 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             )
 
 
-class ParseURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
-    """Tests that parse_url returns the expected response for the canonical URL."""
-
-    def test_parse_url(self) -> None:
-        if not self.url or not self.parse_url_response:
-            pytest.skip()
-        assert self.plugin_class.parse_url(self.url) == self.parse_url_response
-
-
-class ParseURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
-    """Tests that parse_url works across all domain/path pattern combinations."""
+class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
+    """Tests that every domain/path variant imports to the recorded result."""
 
     def pytest_generate_tests(self, metafunc: pytest.Metafunc) -> None:
         if "url_variant" in metafunc.fixturenames:
-            class_attrs = {
-                key: value
-                for key, value in vars(type(self)).items()
-                if isinstance(value, str)
-            }
-            variants = [
-                domain + pattern.format(**class_attrs)
-                for domain in self.plugin_class.domains()
-                for pattern in self.url_path_patterns
-            ]
-            metafunc.parametrize("url_variant", variants)
+            metafunc.parametrize("url_variant", self._url_variants())
 
     @pytest.fixture
     def url_variant(self) -> str:
         pytest.skip("No URL variants defined")
 
-    def test_parse_url_variants(self, url_variant: str) -> None:
-        assert self.plugin_class.parse_url(url_variant) == self.parse_url_response
+    def test_import_url_variants(
+        self,
+        session_with_files: Session,
+        url_variant: str,
+    ) -> None:
+        with log_stats(self):
+            results = self.plugin_class(session_with_files).import_url(url_variant)
+
+        expected_results = json.loads(self.import_result_file_path().read_text())
+        assert self._simplify_import_result(results) == expected_results
 
 
 class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -323,7 +311,7 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             pytest.skip()
 
         with log_stats(self):
-            self.plugin_class(session_with_files).import_url(self.url)
+            results = self.plugin_class(session_with_files).import_url(self.url)
 
         verification_content = self.verification_file_path().read_text()
         verification_data = json.loads(verification_content)
@@ -334,6 +322,9 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             original_plugin,
             self.get_detached_plugin(session_with_files),
         )
+
+        expected_results = json.loads(self.import_result_file_path().read_text())
+        assert self._simplify_import_result(results) == expected_results
 
 
 class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -554,12 +545,11 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
 
 class URLTests[PluginT: BasePlugin](
-    ParseURLTests[PluginT],
-    ParseURLVariantTests[PluginT],
+    ImportURLVariantTests[PluginT],
     ImportURLTests[PluginT],
     ImportExistingURLTests[PluginT],
 ):
-    """All URL-related tests: parsing, importing, and re-importing."""
+    """All URL-related tests: importing and re-importing."""
 
 
 class UpdateTests[PluginT: BasePlugin](

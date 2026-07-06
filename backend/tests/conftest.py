@@ -87,10 +87,10 @@ def drop_test_database() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database() -> Generator[None]:
     """Load models, copy the application database, and tear it down at the end."""
+    drop_test_database()
     import_models()
     create_test_database()
-    yield
-    drop_test_database()
+    return
 
 
 def savepoint_session(

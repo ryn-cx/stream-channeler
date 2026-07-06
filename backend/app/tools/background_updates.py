@@ -7,16 +7,15 @@ from functools import partial
 from loguru import logger
 
 from app.log import configure_logging
-from app.tools import import_queue, update_outdated, youtube_rss_check
+from app.tools import import_queue, update_outdated
 
 logger = logger.bind(source="updater")
 
 
 def run(stop_event: threading.Event) -> None:  # noqa: D103
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [
             executor.submit(update_outdated.run_forever, stop_event),
-            executor.submit(youtube_rss_check.run_forever, stop_event),
             executor.submit(import_queue.run_forever, stop_event),
         ]
         for future in as_completed(futures):

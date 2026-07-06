@@ -22,7 +22,7 @@ from tests.plugins.plugin_validator.validator import Validator
 
 class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     plugin_class = Crunchyroll
-    url_path_patterns = (
+    urls = (
         "/series/{parse_url_response}/{show_slug}",
         "/series/{parse_url_response}/",
         "/series/{parse_url_response}",
@@ -88,7 +88,6 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
     # This needs to be a series with a recently aired episode.
     parse_url_response = "GT00374493"
     show_slug = "rilakkuma"
-    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"
 
 
 class TestAiringMultipleSeasonsShow(
@@ -98,7 +97,6 @@ class TestAiringMultipleSeasonsShow(
     # This needs to be a series with a recently aired episode.
     parse_url_response = "G9VHN91DJ"
     show_slug = "the-angel-next-door-spoils-me-rotten"
-    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"
 
 
 class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
@@ -106,14 +104,13 @@ class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
 
 
 class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
-    url = "crunchyroll.com/series/GGGGGGGGG"
+    urls = ("crunchyroll.com/series/GGGGGGGGG",)
 
 
 class TestInvalidURL(InvalidCrunchyrollURLValidator):
-    url = "crunchyroll.com/watch/GT00365592"
+    urls = ("crunchyroll.com/watch/GT00365592",)
 
 
 class TestLargeShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
     parse_url_response = "GRMG8ZQZR"
     show_slug = "one-piece"
-    url = f"crunchyroll.com/series/{parse_url_response}/{show_slug}"

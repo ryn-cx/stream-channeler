@@ -73,8 +73,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
 
 class TestShow(NHKWorldStandardTests, NHKWorldUpdateSourceTest):
     parse_url_response = "dwc"
-    url = f"https://www3.nhk.or.jp/nhkworld/en/shows/{parse_url_response}/"
-    url_path_patterns = (
+    urls = (
         "/nhkworld/en/shows/{parse_url_response}/",
         "/nhkworld/en/shows/{parse_url_response}",
     )
@@ -87,9 +86,9 @@ class InvalidNHKWorldURLValidator(InvalidURLValidator[NHKWorld]):
 
 class TestInvalidShowKey(InvalidNHKWorldURLValidator):
     # Correctly formatted show URL whose program does not exist.
-    url = "https://www3.nhk.or.jp/nhkworld/en/shows/zzzzzzzzzz/"
+    urls = ("https://www3.nhk.or.jp/nhkworld/en/shows/zzzzzzzzzz/",)
 
 
 class TestInvalidURL(InvalidNHKWorldURLValidator):
     # Numeric key is an episode URL, not a show, so the regex rejects it.
-    url = "https://www3.nhk.or.jp/nhkworld/en/shows/3025240/"
+    urls = ("https://www3.nhk.or.jp/nhkworld/en/shows/3025240/",)

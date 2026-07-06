@@ -53,18 +53,22 @@ class JustWatch(FileMixin, register=True):
             self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
     @override
-    def _download_season_files(
+    def _download_season_files_and_children(
         self,
-        season_key: str,
-        show_key: str,
+        season: str | Season,
+        show: str | Show | None = None,
         update_at: datetime | None = None,
     ) -> list[File]:
-        files = super()._download_season_files(season_key, show_key, update_at)
+        season_key = self._key(season)
+        show_key = self._show_key(season, show)
+        files = super()._download_season_files_and_children(
+            season_key, show_key, update_at
+        )
         # The season episodes file reports when each episode's offers last
         # changed, so re-download any buy box offers that are now stale.
         if self._media_type(show_key) != "Movie":
             for episode in self.custom_season_episodes_file(
-                season_key
+                season_key,
             ).parsed_episodes():
                 offer_updated_at = episode.max_offer_updated_at
                 if isinstance(offer_updated_at, str):
@@ -89,25 +93,24 @@ class JustWatch(FileMixin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        parsed = self.parse_url(url)
+        parsed = self._parse_url(url)
         source_name = parsed["source_name"]
         show_key = parsed["show_key"]
         season_key = parsed["season_key"]
 
-        if not (shows := self._preload_show(show_key=show_key).all()):
+        if not (shows := self._preload_show(show_key).all()):
             self._validate_url(show_key, url)
             _cache = (
-                self._download_show_files(show_key),
+                self._download_show_files_and_children(show_key),
                 self._preload_sources().all(),
             )
             shows = self._upsert_shows(show_key)
 
         return self._create_url_import_results(shows, source_name, season_key)
 
-    @classmethod
     @override
-    def parse_url(cls, url: str) -> dict[str, str]:
-        match = strict_re.strict_match(cls._url_regex(), url)
+    def _parse_url(self, url: str) -> dict[str, str]:
+        match = strict_re.strict_match(self._url_regex(), url)
         return {
             "source_name": match.group("source_name"),
             "show_key": match.group("show_key"),
@@ -117,7 +120,7 @@ class JustWatch(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.url_title_details_file(show_key)
-        self.raise_invalid_url_if_no_content(series_json, url)
+        self._raise_if_no_content(series_json, url)
 
     def _create_url_import_results(
         self,

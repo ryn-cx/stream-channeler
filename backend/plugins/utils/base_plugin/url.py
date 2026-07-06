@@ -14,9 +14,8 @@ class URLMixin(ABC):
     def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
 
-    @classmethod
     @abstractmethod
-    def parse_url(cls, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
+    def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.
 
         Args:
@@ -24,6 +23,7 @@ class URLMixin(ABC):
 
         Returns:
             The parsed URL components. The exact type depends on the plugin implementation.
+
         """
 
     @classmethod
@@ -76,13 +76,15 @@ class URLMixin(ABC):
     def _domain_regex(cls) -> str:
         """Return a regex string that matches all of the source's domains."""
         if len(cls.domains()) > 1:
-            escaped_domains = [cls._escape_domain(domain) for domain in cls.domains()]
+            escaped_domains = [
+                cls._regex_escape_domain(domain) for domain in cls.domains()
+            ]
             return "(?:" + "|".join(escaped_domains) + ")"
 
-        return cls._escape_domain(cls._domain())
+        return cls._regex_escape_domain(cls._domain())
 
     @classmethod
-    def _escape_domain(cls, domain: str) -> str:
+    def _regex_escape_domain(cls, domain: str) -> str:
         """Escapes a plain text domain in the format of example.com.
 
         The escaping process will make a regex that matches the following:
