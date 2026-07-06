@@ -1,41 +1,36 @@
 // TODO: Validate
-import { type Query, useMutation } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 
 import type { MediaTableResult } from "@/components/Common/DataTable"
+import { queryHasRow } from "@/components/Common/useDeleteTableRow"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 type TableRow = { id: string; pending?: boolean }
 type TableResult = MediaTableResult<TableRow>
 
-const isTableResult = (data: unknown): data is TableResult =>
-  typeof data === "object" &&
-  data !== null &&
-  Array.isArray((data as TableResult).data)
-
-export const queryHasRow =
-  (rowId: string) =>
-  (query: Query): boolean =>
-    isTableResult(query.state.data) &&
-    query.state.data.data.some((row) => row.id === rowId)
-
-interface UseDeleteTableRowOptions {
-  mutationFn: (id: string) => Promise<unknown>
+interface UseEditTableRowOptions<TVariables> {
+  mutationFn: (data: TVariables) => Promise<unknown>
   rowId: string
   successMessage: string
+  extraInvalidateKeys?: readonly unknown[][]
 }
 
-export function useDeleteTableRow({
+export function useEditTableRow<TVariables extends object>({
   mutationFn,
   rowId,
   successMessage,
-}: UseDeleteTableRowOptions) {
+  extraInvalidateKeys = [],
+}: UseEditTableRowOptions<TVariables>) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   return useMutation({
     mutationFn,
     // When mutate is called:
-    onMutate: async (_id, context) => {
+    onMutate: async (newData, context) => {
+      // Match every cached table holding this row, regardless of which page's
+      // query key it belongs to (rows appear on both the top-level list and
+      // the scoped detail pages, which use different keys).
       const filters = { predicate: queryHasRow(rowId) }
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)
@@ -49,7 +44,7 @@ export function useDeleteTableRow({
           ? {
               ...old,
               data: old.data.map((row) =>
-                row.id === rowId ? { ...row, pending: true } : row,
+                row.id === rowId ? { ...row, ...newData, pending: true } : row,
               ),
             }
           : old,
@@ -58,19 +53,12 @@ export function useDeleteTableRow({
       // Return a result with the snapshotted value
       return { previous }
     },
-    onSuccess: (_data, _variables, _onMutateResult, context) => {
+    onSuccess: () => {
       showSuccessToast(successMessage)
-      context.client.setQueriesData<TableResult>(
-        { predicate: queryHasRow(rowId) },
-        (old) =>
-          old
-            ? { ...old, data: old.data.filter((row) => row.id !== rowId) }
-            : old,
-      )
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back
-    onError: (error, _variables, onMutateResult, context) => {
+    onError: (error, _newData, onMutateResult, context) => {
       for (const [key, data] of onMutateResult?.previous ?? []) {
         context.client.setQueryData(key, data)
       }
@@ -79,6 +67,9 @@ export function useDeleteTableRow({
     // Always refetch after error or success:
     onSettled: (_data, _error, _variables, onMutateResult, context) => {
       for (const [key] of onMutateResult?.previous ?? []) {
+        context.client.invalidateQueries({ queryKey: key })
+      }
+      for (const key of extraInvalidateKeys) {
         context.client.invalidateQueries({ queryKey: key })
       }
     },

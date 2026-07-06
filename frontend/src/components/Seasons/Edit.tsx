@@ -1,25 +1,21 @@
 // TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
-import { useParams } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { SeasonsService, type SeasonUpdate } from "@/client"
-import type { MediaTableResult } from "@/components/Common/DataTable"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import {
   nullifyBlanks,
   optionalInt,
   optionalString,
   requiredKey,
 } from "@/lib/formSchemas"
-import { handleError } from "@/utils"
 
 import type { SeasonTableData } from "./columns"
 
@@ -42,10 +38,7 @@ interface EditSeasonProps {
 }
 
 const EditSeason = ({ season }: EditSeasonProps) => {
-  const { showKey } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["shows", showKey, "seasons"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -63,50 +56,11 @@ const EditSeason = ({ season }: EditSeasonProps) => {
     },
   })
 
-  const mutation = useMutation({
-    mutationFn: (data: SeasonUpdate) =>
+  const mutation = useEditTableRow<SeasonUpdate>({
+    mutationFn: (data) =>
       SeasonsService.updateSeason({ seasonId: season.id, requestBody: data }),
-    // When mutate is called:
-    onMutate: async (newData, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey })
-      // Snapshot the previous value
-      const previous = context.client.getQueriesData<
-        MediaTableResult<SeasonTableData>
-      >({ queryKey })
-
-      // Optimistically update to the new value
-      context.client.setQueriesData<MediaTableResult<SeasonTableData>>(
-        { queryKey },
-        (old) =>
-          old && {
-            ...old,
-            data: old.data.map((row) =>
-              row.id === season.id
-                ? ({ ...row, ...newData, pending: true } as SeasonTableData)
-                : row,
-            ),
-          },
-      )
-
-      // Return a result with the snapshotted value
-      return { previous }
-    },
-    onSuccess: () => {
-      showSuccessToast("Season updated successfully")
-    },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _newData, onMutateResult, context) => {
-      for (const [key, value] of onMutateResult?.previous ?? []) {
-        context.client.setQueryData(key, value)
-      }
-      handleError.call(showErrorToast, error as any)
-    },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey }),
+    rowId: season.id,
+    successMessage: "Season updated successfully",
   })
 
   const onSubmit = (data: FormOutput) => {

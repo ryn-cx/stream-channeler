@@ -1,16 +1,15 @@
 // TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { PluginsService, type PluginUpdate } from "@/client"
-import type { MediaTableResult } from "@/components/Common/DataTable"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import {
   FormControl,
   FormField,
@@ -25,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import useCustomToast from "@/hooks/useCustomToast"
 import {
   nullifyBlanks,
   optionalString,
@@ -33,7 +31,6 @@ import {
   visibilityEnum,
 } from "@/lib/formSchemas"
 import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
-import { handleError } from "@/utils"
 
 import type { PluginTableData } from "./columns"
 
@@ -55,8 +52,6 @@ interface EditPluginProps {
 
 const EditPlugin = ({ plugin }: EditPluginProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["media-table", "Plugins"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -72,50 +67,11 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     },
   })
 
-  const mutation = useMutation({
-    mutationFn: (data: PluginUpdate) =>
+  const mutation = useEditTableRow<PluginUpdate>({
+    mutationFn: (data) =>
       PluginsService.updatePlugin({ pluginId: plugin.id, requestBody: data }),
-    // When mutate is called:
-    onMutate: async (newData, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey })
-      // Snapshot the previous value
-      const previous = context.client.getQueriesData<
-        MediaTableResult<PluginTableData>
-      >({ queryKey })
-
-      // Optimistically update to the new value
-      context.client.setQueriesData<MediaTableResult<PluginTableData>>(
-        { queryKey },
-        (old) =>
-          old && {
-            ...old,
-            data: old.data.map((row) =>
-              row.id === plugin.id
-                ? ({ ...row, ...newData, pending: true } as PluginTableData)
-                : row,
-            ),
-          },
-      )
-
-      // Return a result with the snapshotted value
-      return { previous }
-    },
-    onSuccess: () => {
-      showSuccessToast("Plugin updated successfully")
-    },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _newData, onMutateResult, context) => {
-      for (const [key, value] of onMutateResult?.previous ?? []) {
-        context.client.setQueryData(key, value)
-      }
-      handleError.call(showErrorToast, error as any)
-    },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey }),
+    rowId: plugin.id,
+    successMessage: "Plugin updated successfully",
   })
 
   const onSubmit = (data: FormOutput) => {

@@ -1,20 +1,16 @@
 // TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation } from "@tanstack/react-query"
-import { useParams } from "@tanstack/react-router"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { ShowsService, type ShowUpdate } from "@/client"
-import type { MediaTableResult } from "@/components/Common/DataTable"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
-import { handleError } from "@/utils"
 
 import type { ShowTableData } from "./columns"
 
@@ -37,10 +33,7 @@ interface EditShowProps {
 }
 
 const EditShow = ({ show }: EditShowProps) => {
-  const { sourceKey } = useParams({ strict: false })
   const [isOpen, setIsOpen] = useState(false)
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["sources", sourceKey, "shows"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -58,50 +51,11 @@ const EditShow = ({ show }: EditShowProps) => {
     },
   })
 
-  const mutation = useMutation({
-    mutationFn: (data: ShowUpdate) =>
+  const mutation = useEditTableRow<ShowUpdate>({
+    mutationFn: (data) =>
       ShowsService.updateShow({ showId: show.id, requestBody: data }),
-    // When mutate is called:
-    onMutate: async (newData, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey })
-      // Snapshot the previous value
-      const previous = context.client.getQueriesData<
-        MediaTableResult<ShowTableData>
-      >({ queryKey })
-
-      // Optimistically update to the new value
-      context.client.setQueriesData<MediaTableResult<ShowTableData>>(
-        { queryKey },
-        (old) =>
-          old && {
-            ...old,
-            data: old.data.map((row) =>
-              row.id === show.id
-                ? ({ ...row, ...newData, pending: true } as ShowTableData)
-                : row,
-            ),
-          },
-      )
-
-      // Return a result with the snapshotted value
-      return { previous }
-    },
-    onSuccess: () => {
-      showSuccessToast("Show updated successfully")
-    },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _newData, onMutateResult, context) => {
-      for (const [key, value] of onMutateResult?.previous ?? []) {
-        context.client.setQueryData(key, value)
-      }
-      handleError.call(showErrorToast, error as any)
-    },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey }),
+    rowId: show.id,
+    successMessage: "Show updated successfully",
   })
 
   const onSubmit = (data: FormOutput) => {
