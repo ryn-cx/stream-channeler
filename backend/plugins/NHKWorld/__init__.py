@@ -1,7 +1,7 @@
 # TODO: Validate
 import re
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import override
 
 from loguru import logger
@@ -24,12 +24,6 @@ from plugins.utils.abstract_plugin import (
 
 class NHKWorld(FileMixin, register=True):
     _VERSION = "0.0.1"
-
-    @override
-    def initialize_source(self) -> None:
-        if not self.has_source:
-            latest_feed_file = self.latest_new_video_episodes_file()
-            self.source = self._upsert_source(latest_feed_file.data_timestamp)
 
     @classmethod
     def import_url_instructions(cls) -> str:
@@ -71,7 +65,7 @@ class NHKWorld(FileMixin, register=True):
         new_feed_file = self.new_video_episodes_file(latest_feed_file.data_timestamp)
         new_feed_file.download_if_outdated(source.update_at)
         self._process_new_episodes_files(source)
-        self._upsert_source(new_feed_file.data_timestamp)
+        self._upsert_source()
 
     def _process_new_episodes_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_shows=True).all()
@@ -126,7 +120,8 @@ class NHKWorld(FileMixin, register=True):
         largest = max(images, key=lambda image: image.width)
         return self.build_url(largest.url)
 
-    def _upsert_source(self, data_timestamp: datetime) -> Source:
+    def _upsert_source(self) -> Source:
+        data_timestamp = self.latest_new_video_episodes_file().data_timestamp
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),

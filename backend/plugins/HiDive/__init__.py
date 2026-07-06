@@ -31,18 +31,6 @@ from plugins.utils.abstract_plugin import (
 class HiDive(FileMixin, register=True):
     _VERSION = "0.0.1"
 
-    @override
-    def initialize_source(self) -> None:
-        if source := Source.get_from_memory(
-            self.session,
-            self.plugin,
-            self.plugin_key(),
-        ):
-            self.source = source
-        else:
-            latest_schedule_file = self.get_latest_schedule_file()
-            self.source = self._upsert_source(latest_schedule_file)
-
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
@@ -143,7 +131,7 @@ class HiDive(FileMixin, register=True):
         new_schedule_file = self.schedule_file(latest_schedule_file.data_timestamp)
         new_schedule_file.download_if_outdated(source.update_at)
         self._process_new_schedule_files(source)
-        self._upsert_source(new_schedule_file)
+        self._upsert_source()
 
     def _process_new_schedule_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
@@ -224,7 +212,8 @@ class HiDive(FileMixin, register=True):
     def _episode_url(cls, episode_key: str | int) -> str:
         return cls.build_url(f"video/{episode_key}")
 
-    def _upsert_source(self, latest_schedule_file: Schedule) -> Source:
+    def _upsert_source(self) -> Source:
+        data_timestamp = self.get_latest_schedule_file().data_timestamp
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
@@ -234,8 +223,8 @@ class HiDive(FileMixin, register=True):
                 "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
                 "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
             ),
-            update_at=latest_schedule_file.data_timestamp + timedelta(days=1),
-            data_timestamp=latest_schedule_file.data_timestamp,
+            update_at=data_timestamp + timedelta(days=1),
+            data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, source)
 
