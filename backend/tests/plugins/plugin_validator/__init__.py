@@ -222,12 +222,12 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
                         self._import_url(session)
                 else:
                     results = self._import_url(session)
-                    self._export_import_result_file(results)
+                    self._export_import_url_results_file(results)
         finally:
             self._export_database_files(session)
 
         if not self.invalid_url:
-            self._export_verification_file(session)
+            self._export_database_dump_file(session)
 
         if files_already_cached and download_count:
             pytest.fail(f"Files were downloaded during import: {download_count}")
@@ -299,8 +299,8 @@ class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         with log_stats(self):
             results = self.plugin_class(session_with_files).import_url(url_variant)
 
-        expected_results = json.loads(self.import_result_file_path().read_text())
-        assert self._simplify_import_result(results) == expected_results
+        expected_results = json.loads(self.import_url_results_file_path().read_text())
+        assert self._simplify_import_url_results(results) == expected_results
 
 
 class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -313,18 +313,18 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         with log_stats(self):
             results = self.plugin_class(session_with_files).import_url(self.url)
 
-        verification_content = self.verification_file_path().read_text()
-        verification_data = json.loads(verification_content)
+        database_dump_content = self.database_dump_file_path().read_text()
+        database_dump_data = json.loads(database_dump_content)
 
-        original_plugin = self._load_model(Plugin, verification_data)
+        original_plugin = self._load_model(Plugin, database_dump_data)
         validator = self.import_url_validator()
         validator.validate(
             original_plugin,
             self.get_detached_plugin(session_with_files),
         )
 
-        expected_results = json.loads(self.import_result_file_path().read_text())
-        assert self._simplify_import_result(results) == expected_results
+        expected_results = json.loads(self.import_url_results_file_path().read_text())
+        assert self._simplify_import_url_results(results) == expected_results
 
 
 class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):

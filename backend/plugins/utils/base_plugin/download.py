@@ -208,9 +208,15 @@ class DownloadMixin(ABC):
         for season_key in season_keys:
             season_files = self._season_files(season_key, show_key)
             all_files.extend(self._download_outdated_files(season_files))
-        _episode_cache = self._preload_all_episode_files(season_keys, show_key)
+        episode_cache = self._preload_all_episode_files(season_keys, show_key)
         for season_key in season_keys:
-            all_files.extend(self._download_all_episode_files(season_key, show_key))
+            all_files.extend(
+                self._download_all_episode_files(
+                    season_key,
+                    show_key,
+                    preloaded_files=episode_cache,
+                ),
+            )
         return all_files
 
     @overload
@@ -218,6 +224,7 @@ class DownloadMixin(ABC):
         self,
         season: Season,
         show: None = None,
+        preloaded_files: Sequence[File] | None = None,
     ) -> list[File]: ...
 
     @overload
@@ -225,17 +232,24 @@ class DownloadMixin(ABC):
         self,
         season: str,
         show: str | Show,
+        preloaded_files: Sequence[File] | None = None,
     ) -> list[File]: ...
 
     def _download_all_episode_files(
         self,
         season: str | Season,
         show: str | Show | None = None,
+        preloaded_files: Sequence[File] | None = None,
     ) -> list[File]:
         season_key = self._key(season)
         show_key = self._show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
-        _cache = self._preload_episode_files(video_keys, season_key, show_key)
+        _cache = self._preload_episode_files(
+            video_keys,
+            season_key,
+            show_key,
+            preloaded_files,
+        )
         all_files: list[File] = []
         for episode_key in video_keys:
             episode_files = self._episode_files(episode_key, season_key, show_key)

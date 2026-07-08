@@ -90,7 +90,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         timestamp: datetime,
     ) -> None:
         new_schedule = plugin_instance.schedule_file(timestamp)
-        dumped = diving_board().schedule.dump_response(parsed)
+        dumped = diving_board().schedule.dump(parsed)
         new_schedule.write(dumped)
         new_schedule._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 

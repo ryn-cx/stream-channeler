@@ -120,7 +120,7 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
         with self._log_download(self.unique_identifier):
             try:
                 response = self._get()
-                content = self.api_endpoint.dump_response(response)
+                content = self.api_endpoint.dump(response)
                 self.write(content)
             # Occurs when a user puts in an invalid URL.
             except GraphQLError:

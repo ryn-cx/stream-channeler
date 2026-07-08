@@ -69,13 +69,13 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         """Path to the directory where stats for a specific test are stored."""
         return self.files_directory_path() / "stats" / label
 
-    def verification_file_path(self) -> Path:
+    def database_dump_file_path(self) -> Path:
         """Path to the file that has the expected output for the test class."""
-        return self.files_directory_path() / "verification.json"
+        return self.files_directory_path() / "database_dump.json"
 
-    def import_result_file_path(self) -> Path:
+    def import_url_results_file_path(self) -> Path:
         """Path to the file with the expected import_url result for the test class."""
-        return self.files_directory_path() / "import_result.json"
+        return self.files_directory_path() / "import_url_results.json"
 
     def combined_files_path(self) -> Path:
         """Path to the combined file containing all exported database files."""
@@ -98,58 +98,47 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def _export_all_files(self, session: Session) -> None:
         """Export all files from the database and the verification file for to disk."""
         self._export_database_files(session)
-        self._export_verification_file(session)
+        self._export_database_dump_file(session)
 
-    def _export_verification_file(self, session: Session) -> None:
-        """Export the verification file to disk if it does not already exist."""
-        if self.verification_file_path().exists():
+    def _export_database_dump_file(self, session: Session) -> None:
+        """Export the database dump file to disk if it does not already exist."""
+        if self.database_dump_file_path().exists():
             return
         plugin = self.select_plugin_with_children(session)
         plugin_dict = self._dump_model(plugin)
-        self.verification_file_path().parent.mkdir(parents=True, exist_ok=True)
-        self.verification_file_path().write_text(
+        self.database_dump_file_path().parent.mkdir(parents=True, exist_ok=True)
+        self.database_dump_file_path().write_text(
             json.dumps(plugin_dict, default=str, indent=2),
             encoding="utf-8",
         )
 
     @staticmethod
-    def _simplify_import_result(
+    def _simplify_import_url_results(
         results: list[URLImportResult],
     ) -> list[dict[str, Any]]:
         """Reduce import results to the key tree that identifies their structure."""
         return [
             {
-                "plugin_key": result.show.source.plugin.key,
-                "source_key": result.show.source.key,
                 "show_key": result.show.key,
-                "seasons": [
-                    {
-                        "key": season.key,
-                        "episodes": sorted(episode.key for episode in season.episodes),
-                    }
-                    for season in sorted(
-                        result.show.seasons,
-                        key=lambda season: season.key,
-                    )
-                ],
                 "is_whitelist": result.is_whitelist,
                 "whitelist_season_keys": sorted(
                     season.key for season in result.seasons
                 ),
                 "whitelist_episode_keys": sorted(
-                    episode.key for episode in result.episodes
+                    f"{episode.key} ({episode.season.key})"
+                    for episode in result.episodes
                 ),
             }
             for result in results
         ]
 
-    def _export_import_result_file(self, results: list[URLImportResult]) -> None:
+    def _export_import_url_results_file(self, results: list[URLImportResult]) -> None:
         """Export the expected import result to disk if it does not already exist."""
-        if self.import_result_file_path().exists():
+        if self.import_url_results_file_path().exists():
             return
-        self.import_result_file_path().parent.mkdir(parents=True, exist_ok=True)
-        self.import_result_file_path().write_text(
-            json.dumps(self._simplify_import_result(results), indent=2),
+        self.import_url_results_file_path().parent.mkdir(parents=True, exist_ok=True)
+        self.import_url_results_file_path().write_text(
+            json.dumps(self._simplify_import_url_results(results), indent=2),
             encoding="utf-8",
         )
 

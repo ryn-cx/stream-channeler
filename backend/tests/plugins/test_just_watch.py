@@ -124,7 +124,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         first_edge.key.package.short_name = source_key
         first_edge.key.date = edge_date
         new_bucket = plugin_instance.new_titles_bucket_file(timestamp)
-        new_bucket.write(NewTitleBuckets.dump_response(parsed))
+        new_bucket.write(NewTitleBuckets.dump(parsed))
         new_bucket._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @staticmethod

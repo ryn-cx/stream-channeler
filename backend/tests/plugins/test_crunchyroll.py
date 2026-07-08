@@ -1,6 +1,6 @@
 # TODO: Validate
 from datetime import datetime
-from typing import override
+from typing import Any, cast, override
 
 from chirashi.browse_series import BrowseSeries
 
@@ -57,23 +57,6 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
 
         return validator
 
-    @staticmethod
-    def _create_fake_browse_file(
-        plugin_instance: Crunchyroll,
-        timestamp: datetime,
-        show_key: str,
-    ) -> None:
-        """Create a fake Browse file with updated last_public for the given show."""
-        existing_browse = plugin_instance.get_latest_browse_file()
-        parsed = existing_browse.parsed()
-        first_entry = parsed[0].data[0]
-        assert first_entry is not None, "Browse file has no entries"
-        first_entry.id = show_key
-        first_entry.last_public = timestamp
-        new_browse = plugin_instance.browse_file(timestamp)
-        new_browse.write(BrowseSeries.dump_response(parsed))
-        new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
-
     @override
     def _create_source_update_entry(
         self,
@@ -81,13 +64,24 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
         source: Source,
         timestamp: datetime,
     ) -> None:
-        self._create_fake_browse_file(plugin_instance, timestamp, source.shows[0].key)
+        existing_browse = plugin_instance.get_latest_browse_file()
+        raw_pages = cast(
+            "list[dict[str, Any]]",
+            BrowseSeries.dump(existing_browse.parsed()),
+        )
+        first_entry = raw_pages[0]["data"][0]
+        first_entry["id"] = source.shows[0].key
+        first_entry["last_public"] = timestamp.isoformat()
+        new_browse = plugin_instance.browse_file(timestamp)
+        new_browse.write(raw_pages)
+        new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
 
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
     # This needs to be a series with a recently aired episode.
     parse_url_response = "GQWH0MXPQ"
     show_slug = "anime-azurlane-slow-ahead"
+
 
 class TestAiringMultipleSeasonsShow(
     CrunchyrollStandardTests,

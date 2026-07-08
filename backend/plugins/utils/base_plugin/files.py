@@ -198,7 +198,7 @@ class JSONFile[T](BaseFile[T], ABC):
         return self._cached_parsed
 
     @override
-    def write(self, content: str | dict[str, Any] | list[Any] | None) -> None:
+    def write(self, content: str | INPUT_TYPE | None) -> None:
         if content is not None and not isinstance(content, str):
             content = json.dumps(content, default=str)
         super().write(content)
@@ -267,7 +267,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
         with self._log_download(self.unique_identifier):
             try:
                 response = self._get()
-                content = self.api_endpoint.dump_response(response)
+                content = self.api_endpoint.dump(response)
                 self.write(content)
             except Exception as e:
                 if str(e) != self._get_acceptable_error():
@@ -282,14 +282,14 @@ class APISerializerEndpoint[T](Protocol):
 
     @overload
     @staticmethod
-    def dump_response(data: Sequence[BaseModel]) -> list[dict[str, Any]]: ...
+    def dump(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
     @overload
     @staticmethod
-    def dump_response(data: BaseModel) -> dict[str, Any]: ...
+    def dump(data: BaseModel) -> INPUT_TYPE: ...
     @staticmethod
-    def dump_response(
+    def dump(
         data: BaseModel | Sequence[BaseModel],
-    ) -> dict[str, Any] | list[dict[str, Any]]: ...
+    ) -> INPUT_TYPE | list[INPUT_TYPE]: ...
 
 
 class APIEndpoint[T](APISerializerEndpoint[T], Protocol):
