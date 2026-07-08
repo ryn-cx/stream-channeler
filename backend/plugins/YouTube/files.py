@@ -410,12 +410,13 @@ class FileMixin(BasePlugin, register=False):
         self,
         season: str | Season,
         show: str | Show | None = None,
+        preloaded_files: Sequence[File] | None = None,
     ) -> list[File]:
         """Batch download all videos for a season in a single API call."""
         season_key = self._key(season)
         show_key = self._show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
-        self._preload_episode_files(video_keys, season_key, show_key)
+        self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
 
         outdated_ids = [
             video_id
