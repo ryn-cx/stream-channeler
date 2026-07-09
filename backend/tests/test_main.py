@@ -5,13 +5,18 @@ from fastapi import APIRouter, FastAPI
 from app.main import automatically_import_routers, manually_import_routers
 
 
+_HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+
 def _route_set(router: APIRouter) -> set[str]:
     app = FastAPI()
     app.include_router(router)
+    schema = app.openapi()
     return {
-        f"{method} {route.path}"
-        for route in app.routes
-        for method in getattr(route, "methods", ())
+        f"{method.upper()} {path}"
+        for path, operations in schema["paths"].items()
+        for method in operations
+        if method in _HTTP_METHODS
     }
 
 
