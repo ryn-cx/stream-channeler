@@ -25,11 +25,7 @@ def make_model_with_all_fields_optional(cls: type[BaseModel]) -> type[BaseModel]
 
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
 def _get_field_tuple(field_info: FieldInfo) -> Any:  # noqa: ANN401
-    """Build a ``create_model`` field entry for the optional variant of a field.
-
-    Returns whatever ``create_model`` accepts as a field definition: an
-    ``Annotated[...]`` form, or a ``(type, default)`` tuple.
-    """
+    """Returns a tuple as required by Pydantic's ``create_model()`` API."""
     annotation = field_info.annotation
     # Note 2: A bare `None` annotation is converted to `type(None)` so the assertion is fine, but
     # I'm wondering if we should provide a sentinel to better differentiate this..
