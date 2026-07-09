@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
+from app.schemas import make_model_with_all_fields_optional
 from app.users.models import UserBase
 
 
@@ -19,11 +20,7 @@ class UserRegister(SQLModel):
 
 
 # Properties to receive via API on update, all are optional
-class UserUpdate(SQLModel):
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = None
-    is_superuser: bool | None = None
-    full_name: str | None = Field(default=None, max_length=255)
+class UserUpdate(make_model_with_all_fields_optional(UserBase)):  # type: ignore[misc]
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
