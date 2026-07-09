@@ -17,28 +17,22 @@ def automatically_import_models() -> None:
 
 
 def manually_import_models() -> None:
-    import app.items.models  # noqa: PLC0415, F401
-    import app.users.models  # noqa: PLC0415, F401
+    import app.items.models  # pyright: ignore[reportUnusedImport]  # noqa: PLC0415
+    import app.users.models  # pyright: ignore[reportUnusedImport]  # noqa: PLC0415, F401
+
+
+def load_models() -> None:
+    # Change this to manually_import_models() if you don't want to use the automatic
+    # model loader.
+    automatically_import_models()
 
 
 def init_db(session: Session) -> None:
     # make sure all SQLModel models are imported before initializing DB otherwise,
     # SQLModel might fail to initialize relationships properly for more details:
     # https://github.com/fastapi/full-stack-fastapi-template/issues/28
+    load_models()
 
-    # Change this to manually_import_models() if you don't want to use the automatic
-    # model loader.
-    automatically_import_models()
-
-    # Tables should be created with Alembic migrations
-    # But if you don't want to use migrations, create
-    # the tables un-commenting the next lines
-    # # ERA001 - Error from original template.
-    # from sqlmodel import SQLModel # noqa: ERA001
-
-    # This works because the models are already imported and registered from app.schemas
-    # # ERA001 - Error from original template.
-    # SQLModel.metadata.create_all(engine) # noqa: ERA001
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER),
     ).first()
