@@ -9,7 +9,7 @@ from app.constants import MAX_PAGE_SIZE
 
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
 def make_model_with_all_fields_optional(cls: type[BaseModel]) -> type[BaseModel]:
-    """Returns a new Pydantic model based on `cls`, but with all fields optional."""
+    """Return a new Pydantic model based on `cls`, but with all fields optional."""
     # Note 1: I believe there isn't any need to look for conflicts with computed fields.
     fields = {
         field_name: _get_field_tuple(field_info)
@@ -25,7 +25,7 @@ def make_model_with_all_fields_optional(cls: type[BaseModel]) -> type[BaseModel]
 
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
 def _get_field_tuple(field_info: FieldInfo) -> Any:  # noqa: ANN401
-    """Returns a tuple as required by Pydantic's ``create_model()`` API."""
+    """Return a tuple as required by Pydantic's ``create_model()`` API."""
     annotation = field_info.annotation
     # Note 2: A bare `None` annotation is converted to `type(None)` so the assertion is fine, but
     # I'm wondering if we should provide a sentinel to better differentiate this..
