@@ -8,6 +8,7 @@ import { columns } from "@/components/Admin/columns"
 import type { UserTableData } from "@/components/Admin/types"
 import { ServerClientTable } from "@/components/Common/DataTable"
 import { PageHeader } from "@/components/Common/PageHeader"
+import { serializeFilterOptions } from "@/components/Common/tableFilters"
 import PendingUsers from "@/components/Pending/PendingUsers"
 import useAuth from "@/hooks/useAuth"
 
@@ -58,7 +59,7 @@ function UsersTable() {
           offset,
           limit,
           sortOptions: JSON.stringify(sortOptions),
-          filterOptions: JSON.stringify(filterOptions),
+          filterOptions: serializeFilterOptions(filterOptions),
         })
         return {
           data: result.data.map((user) => ({

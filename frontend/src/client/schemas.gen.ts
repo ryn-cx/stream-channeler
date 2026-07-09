@@ -64,7 +64,17 @@ export const FilterOptionSchema = {
             title: 'Id'
         },
         value: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                }
+            ],
             title: 'Value'
         }
     },

@@ -11,7 +11,7 @@ export type Body_login_login_access_token = {
 
 export type FilterOption = {
     id: string;
-    value: string;
+    value: (string | Array<string>);
 };
 
 export type HTTPValidationError = {

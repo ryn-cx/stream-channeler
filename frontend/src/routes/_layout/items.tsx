@@ -6,6 +6,7 @@ import type { ItemCreate } from "@/client"
 import { ItemsService } from "@/client"
 import { ServerClientTable } from "@/components/Common/DataTable"
 import { PageHeader } from "@/components/Common/PageHeader"
+import { serializeFilterOptions } from "@/components/Common/tableFilters"
 import AddItem from "@/components/Items/AddItem"
 import { columns } from "@/components/Items/columns"
 import type { ItemPublicWithPending } from "@/components/Items/types"
@@ -42,7 +43,7 @@ function ItemsTable() {
           offset,
           limit,
           sortOptions: JSON.stringify(sortOptions),
-          filterOptions: JSON.stringify(filterOptions),
+          filterOptions: serializeFilterOptions(filterOptions),
         })
       }
       storageKey="items-table"

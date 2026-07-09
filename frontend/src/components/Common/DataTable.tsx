@@ -61,7 +61,7 @@ import {
 declare module "@tanstack/react-table" {
   //allows us to define custom properties for our columns
   interface ColumnMeta<TData extends RowData, TValue> {
-    filterVariant?: "text" | "range" | "select"
+    filterVariant?: "text" | "range" | "dateRange" | "select"
     filterOptions?: { label: string; value: string }[]
   }
 }
@@ -413,6 +413,60 @@ function TablePagination<TData>({
 
 const SELECT_ALL_VALUE = "__all__"
 
+function splitDateTime(value: string | undefined): [string, string] {
+  const [date = "", time = ""] = (value ?? "").split("T")
+  return [date, time]
+}
+
+function joinDateTime(date: string, time: string): string {
+  return time ? `${date}T${time}` : date
+}
+
+function DateTimeRangeInput({
+  value,
+  label,
+  kind,
+  onChange,
+}: {
+  value: string
+  label: string
+  kind: "minimum" | "maximum"
+  onChange: (updater: (old: string) => string) => void
+}) {
+  const [date, time] = splitDateTime(value)
+  // Picking a date without a time defaults to the start of the day for a minimum and
+  // the end of the day for a maximum, so the whole day is covered; the user can still
+  // refine or clear the time afterwards.
+  const defaultTime = kind === "minimum" ? "00:00" : "23:59"
+  return (
+    <div className="flex space-x-2">
+      <DebouncedInput
+        type="date"
+        value={date}
+        onChange={(next) =>
+          onChange((old) => {
+            const newDate = String(next)
+            const existingTime = splitDateTime(old)[1]
+            const nextTime = existingTime || (newDate ? defaultTime : "")
+            return joinDateTime(newDate, nextTime)
+          })
+        }
+        aria-label={`${label} date`}
+        className={cn(TABLE_FILTER_INPUT_CLASS, "w-36")}
+      />
+      <DebouncedInput
+        type="time"
+        value={time}
+        onChange={(next) =>
+          onChange((old) => joinDateTime(splitDateTime(old)[0], String(next)))
+        }
+        aria-label={`${label} time`}
+        className={cn(TABLE_FILTER_INPUT_CLASS, "w-28")}
+      />
+    </div>
+  )
+}
+
 function Filter<TData, TValue>({
   column,
   isServerSide,
@@ -467,6 +521,37 @@ function Filter<TData, TValue>({
             }
             placeholder={`Max ${max ? `(${max})` : ""}`}
             className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
+          />
+        </div>
+        <div className="h-1" />
+      </div>
+    )
+  }
+
+  if (filterVariant === "dateRange") {
+    const [from = "", to = ""] = (columnFilterValue as [string, string]) ?? []
+    const updateDateFilter =
+      (index: 0 | 1) =>
+      (updater: (old: string) => string) =>
+        column.setFilterValue((old: [string, string]) => {
+          const next: [string, string] = [old?.[0] ?? "", old?.[1] ?? ""]
+          next[index] = updater(next[index])
+          return next
+        })
+    return (
+      <div>
+        <div className="flex flex-col space-y-2">
+          <DateTimeRangeInput
+            value={from}
+            label="From"
+            kind="minimum"
+            onChange={updateDateFilter(0)}
+          />
+          <DateTimeRangeInput
+            value={to}
+            label="To"
+            kind="maximum"
+            onChange={updateDateFilter(1)}
           />
         </div>
         <div className="h-1" />

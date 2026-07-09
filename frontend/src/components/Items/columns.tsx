@@ -1,9 +1,10 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { Check, Copy } from "lucide-react"
 
+import { dateRangeFilter } from "@/components/Common/tableFilters"
 import { Button } from "@/components/ui/button"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
-import { cn } from "@/lib/utils"
+import { cn, formatDateTime } from "@/lib/utils"
 import { ItemActionsMenu } from "./ItemActionsMenu"
 import type { ItemPublicWithPending } from "./types"
 
@@ -65,6 +66,19 @@ export const columns: ColumnDef<ItemPublicWithPending>[] = [
         </span>
       )
     },
+  },
+  {
+    accessorKey: "created_at",
+    header: "Created",
+    meta: {
+      filterVariant: "dateRange",
+    },
+    filterFn: dateRangeFilter,
+    cell: ({ row }) => (
+      <span className="text-muted-foreground whitespace-nowrap">
+        {formatDateTime(row.original.created_at)}
+      </span>
+    ),
   },
   {
     id: "actions",

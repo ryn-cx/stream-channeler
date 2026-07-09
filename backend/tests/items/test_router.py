@@ -98,7 +98,7 @@ def test_read_items_server_side_filtering(
 ) -> None:
     item = create_random_item(db)
     create_random_item(db)
-    monkeypatch.setattr("app.service.SERVER_SIDE_THRESHOLD", 0)
+    monkeypatch.setattr("app.service.MAX_PAGE_SIZE", 0)
 
     response = client.get(
         f"{settings.API_V1_STR}/items/",
@@ -113,6 +113,70 @@ def test_read_items_server_side_filtering(
     assert [row["id"] for row in content["data"]] == [str(item.id)]
 
 
+def test_read_items_server_side_datetime_min_filter(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_random_item(db)
+    create_random_item(db)
+    monkeypatch.setattr("app.service.MAX_PAGE_SIZE", 0)
+    expected_number_of_items = 2
+
+    included = client.get(
+        f"{settings.API_V1_STR}/items/",
+        headers=superuser_token_headers,
+        params={
+            "filter_options": '[{"id": "created_at", "value": ["2000-06-30T11:11:00.000Z", ""]}]',
+        },
+    ).json()
+    assert included["is_server_side"] is True
+    assert included["filtered_count"] >= expected_number_of_items
+
+    excluded = client.get(
+        f"{settings.API_V1_STR}/items/",
+        headers=superuser_token_headers,
+        params={
+            "filter_options": '[{"id": "created_at", "value": ["2999-01-01T00:00:00.000Z", ""]}]',
+        },
+    ).json()
+    assert excluded["is_server_side"] is True
+    assert excluded["filtered_count"] == 0
+
+
+def test_read_items_server_side_datetime_max_filter(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_random_item(db)
+    create_random_item(db)
+    monkeypatch.setattr("app.service.MAX_PAGE_SIZE", 0)
+    expected_number_of_items = 2
+
+    included = client.get(
+        f"{settings.API_V1_STR}/items/",
+        headers=superuser_token_headers,
+        params={
+            "filter_options": '[{"id": "created_at", "value": ["", "2999-06-30T11:11:00.000Z"]}]',
+        },
+    ).json()
+    assert included["is_server_side"] is True
+    assert included["filtered_count"] >= expected_number_of_items
+
+    excluded = client.get(
+        f"{settings.API_V1_STR}/items/",
+        headers=superuser_token_headers,
+        params={
+            "filter_options": '[{"id": "created_at", "value": ["", "2000-01-01T00:00:00.000Z"]}]',
+        },
+    ).json()
+    assert excluded["is_server_side"] is True
+    assert excluded["filtered_count"] == 0
+
+
 def test_read_items_server_side_sorting(
     client: TestClient,
     superuser_token_headers: dict[str, str],
@@ -122,7 +186,7 @@ def test_read_items_server_side_sorting(
     create_random_item(db)
     create_random_item(db)
     create_random_item(db)
-    monkeypatch.setattr("app.service.SERVER_SIDE_THRESHOLD", 0)
+    monkeypatch.setattr("app.service.MAX_PAGE_SIZE", 0)
 
     ascending = client.get(
         f"{settings.API_V1_STR}/items/",
@@ -153,7 +217,7 @@ def test_read_items_server_side_paginates(
 ) -> None:
     create_random_item(db)
     create_random_item(db)
-    monkeypatch.setattr("app.service.SERVER_SIDE_THRESHOLD", 0)
+    monkeypatch.setattr("app.service.MAX_PAGE_SIZE", 0)
     sort_options = '[{"id": "title", "desc": false}]'
 
     first_page = client.get(

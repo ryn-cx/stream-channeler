@@ -1,15 +1,15 @@
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import Boolean, UnaryExpression, asc, desc
+from sqlalchemy import Boolean, DateTime, UnaryExpression, asc, desc
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlmodel import Session, SQLModel, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.constants import SERVER_SIDE_THRESHOLD
+from app.constants import MAX_PAGE_SIZE
 from app.schemas import FilterOption, ReadOptions, SortOption
 
 
@@ -26,6 +26,35 @@ def _get_column(
     )
 
 
+def _date_str_to_datetime(date_string: str) -> datetime:
+    try:
+        return datetime.fromisoformat(date_string)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid datetime value: {date_string!r}",
+        ) from error
+
+
+def _apply_datetime_filter[T](
+    statement: SelectOfScalar[T],
+    column: InstrumentedAttribute[Any],
+    value: str | list[str],
+) -> SelectOfScalar[T]:
+    if not isinstance(value, list):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Datetime filters expect a [min, max] range.",
+        )
+    minimum = value[0] if value else ""
+    maximum = value[1] if len(value) > 1 else ""
+    if minimum:
+        statement = statement.where(column >= _date_str_to_datetime(minimum))
+    if maximum:
+        statement = statement.where(column <= _date_str_to_datetime(maximum))
+    return statement
+
+
 def _apply_filter_options[T](
     statement: SelectOfScalar[T],
     filter_options: list[FilterOption],
@@ -33,7 +62,9 @@ def _apply_filter_options[T](
 ) -> SelectOfScalar[T]:
     for option in filter_options:
         column = _get_column(columns, option.column)
-        if isinstance(column.type, Boolean):
+        if isinstance(column.type, DateTime):
+            statement = _apply_datetime_filter(statement, column, option.value)
+        elif isinstance(column.type, Boolean):
             statement = statement.where(column == (option.value == "true"))
         else:
             statement = statement.where(column.ilike(f"%{option.value}%"))
@@ -75,7 +106,8 @@ def get_read_results[T](  # noqa: PLR0913
     columns = {field: getattr(model, field) for field in schema.model_fields}
     total_count = session.exec(select(func.count()).select_from(base.subquery())).one()
 
-    if total_count < SERVER_SIDE_THRESHOLD:
+    if total_count < MAX_PAGE_SIZE:
+        # A default sort option needs to be applied for pagination to work correctly.
         ordered = _apply_sort_options(base, [], columns, default_sort, tiebreaker)
         return session.exec(ordered).all(), total_count, total_count, False
 
