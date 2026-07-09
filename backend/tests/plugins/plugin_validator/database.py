@@ -147,7 +147,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         plugin = self.select_plugin_with_children(session)
         all_file_dicts: list[dict[str, Any]] = []
         for file in plugin.files:
-            file_dict = file.model_dump()
+            file_dict = file.model_dump(exclude={"plugin_id"})
             all_file_dicts.append(file_dict)
             self._export_database_file(file)
 
@@ -167,7 +167,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         metadata_path = self.files_directory_path() / f"{file_id}.metadata.json"
         metadata_path.parent.mkdir(parents=True, exist_ok=True)
         metadata_path.write_text(
-            json.dumps(file.model_dump(), default=str, indent=2),
+            json.dumps(file.model_dump(exclude={"plugin_id"}), default=str, indent=2),
             encoding="utf-8",
         )
 
@@ -258,12 +258,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def _connection_with_files(self) -> Generator[Connection]:
         """One class-scoped connection with files imported once for the whole class.
 
-        Both session_with_files and session_with_url share this single connection.
-        Using one connection (rather than one per session fixture) is what avoids
-        the deadlock: two separate open transactions inserting the same File rows
-        for the same plugin would block on each other's uncommitted unique keys.
         The files are imported once here and reused by every test in the class via
-        per-test savepoints.
+        per-test savepoints, so no test re-inserts the shared File rows.
         """
         connection = test_engine.connect()
         transaction = connection.begin()
@@ -286,44 +282,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         self,
         _connection_with_files: Connection,
     ) -> Generator[Session]:
-        """Per-test session with files pre-imported, rolls back after each test."""
-        yield from savepoint_session(_connection_with_files, nested=True)
+        """Per-test session with files pre-imported, rolls back after each test.
 
-    @pytest.fixture(scope="class")
-    def _connection_with_imported_url(
-        self,
-        _connection_with_files: Connection,
-    ) -> Generator[Connection]:
-        """Import the URL once per class inside a savepoint kept open for the class.
-
-        The savepoint is nested inside the shared files transaction, so
-        session_with_files tests never see the imported URL, and it is rolled back
-        when the class finishes. Both the files and the URL are therefore imported
-        only once per class; per-test isolation is a further nested savepoint.
+        Tests that need imported URL data call `_import_url` themselves at the start
+        of the test; the import runs inside the per-test savepoint and rolls back with
+        it, so each test owns its own initialized plugin without any shared URL fixture.
         """
-        if self.invalid_url:
-            pytest.skip("invalid_url is set")
-
-        transaction = _connection_with_files.begin_nested()
-        try:
-            with Session(
-                bind=_connection_with_files,
-                join_transaction_mode="create_savepoint",
-            ) as session:
-                # Files are already imported on the shared connection; any download
-                # here is a missing fixture, which pytest-socket fails fast.
-                if self.url:
-                    self._import_url(session)
-                if self.search_query:
-                    self._search(session, self.search_query)
-            yield _connection_with_files
-        finally:
-            transaction.rollback()
-
-    @pytest.fixture
-    def session_with_url(
-        self,
-        _connection_with_imported_url: Connection,
-    ) -> Generator[Session]:
-        """Per-test session with files and URL imported, rolls back after each test."""
-        yield from savepoint_session(_connection_with_imported_url, nested=True)
+        yield from savepoint_session(_connection_with_files, nested=True)

@@ -17,7 +17,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.config import settings
-from app.database import engine, import_models
+from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from app.models import MediaMixin
@@ -34,7 +34,7 @@ from plugins.utils.manage_plugins import import_plugins, plugins
 logger = logger.bind(source="updater")
 
 import_plugins()
-import_models()
+load_models()
 
 # Every media class updated by this script; typed as the shared `MediaMixin` base so
 # `select_with_plugin()` resolves to a single return type rather than a union.

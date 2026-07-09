@@ -15,6 +15,7 @@ dependencies = [
   "jinja2<4.0.0,>=3.1.4",
   "just-scrape",
   "loguru>=0.7.3",
+  "meshfilm",
   "naphki",
   "not-yt-dlapi",
   "psycopg[binary]<4.0.0,>=3.1.13",
@@ -105,6 +106,7 @@ error-on-warning = true
 just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
+meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }

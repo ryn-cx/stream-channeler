@@ -7,26 +7,22 @@ from typing import Any
 from fastapi import HTTPException, status
 from sqlalchemy import (
     Boolean,
-    ColumnElement,
+    DateTime,
+    Float,
+    Integer,
+    Numeric,
     String,
     UnaryExpression,
-    and_,
     asc,
     cast,
     desc,
-    or_,
 )
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlmodel import Session, SQLModel, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.constants import DEFAULT_SERVER_SIDE_THRESHOLD
-from app.schemas import (
-    DateFilterOptionValue,
-    NumberFilterOptionValue,
-    ReadOptions,
-    SortOption,
-)
+from app.schemas import FilterOption, ReadOptions, SortOption
 from app.users.models import User
 
 
@@ -43,59 +39,78 @@ def _get_column(
     )
 
 
-def _apply_date_range[T](
+def _date_str_to_datetime(date_string: str) -> datetime:
+    try:
+        return datetime.fromisoformat(date_string)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid datetime value: {date_string!r}",
+        ) from error
+
+
+def _str_to_number(number_string: str) -> float:
+    try:
+        return float(number_string)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid number value: {number_string!r}",
+        ) from error
+
+
+def _range_bounds(value: str | list[str], label: str) -> tuple[str, str]:
+    if not isinstance(value, list):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{label} filters expect a [minimum, maximum] range.",
+        )
+    minimum = value[0] if value else ""
+    maximum = value[1] if len(value) > 1 else ""
+    return minimum, maximum
+
+
+def _apply_datetime_filter[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
-    value: DateFilterOptionValue,
+    value: str | list[str],
 ) -> SelectOfScalar[T]:
-    bounds: list[ColumnElement[bool]] = [col(column).is_not(None)]
-    if value.minimum_date is not None:
-        bounds.append(column >= value.minimum_date)
-    if value.maximum_date is not None:
-        bounds.append(column <= value.maximum_date)
-    in_range = and_(*bounds)
-
-    if value.hide_blanks:
-        return statement.where(in_range)
-    return statement.where(or_(col(column).is_(None), in_range))
+    minimum, maximum = _range_bounds(value, "Datetime")
+    if minimum:
+        statement = statement.where(column >= _date_str_to_datetime(minimum))
+    if maximum:
+        statement = statement.where(column <= _date_str_to_datetime(maximum))
+    return statement
 
 
-def _apply_number_range[T](
+def _apply_number_filter[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
-    value: NumberFilterOptionValue,
+    value: str | list[str],
 ) -> SelectOfScalar[T]:
-    bounds: list[ColumnElement[bool]] = [col(column).is_not(None)]
-    if value.minimum is not None:
-        bounds.append(column >= value.minimum)
-    if value.maximum is not None:
-        bounds.append(column <= value.maximum)
-    in_range = and_(*bounds)
-
-    if value.hide_blanks:
-        return statement.where(in_range)
-    return statement.where(or_(col(column).is_(None), in_range))
+    minimum, maximum = _range_bounds(value, "Number")
+    if minimum:
+        statement = statement.where(column >= _str_to_number(minimum))
+    if maximum:
+        statement = statement.where(column <= _str_to_number(maximum))
+    return statement
 
 
 def _apply_filter_options[T](
     statement: SelectOfScalar[T],
-    params: ReadOptions,
+    filter_options: list[FilterOption],
     columns: dict[str, InstrumentedAttribute[Any]],
 ) -> SelectOfScalar[T]:
-    for option in params.filter_options:
+    for option in filter_options:
         column = _get_column(columns, option.column)
-        if isinstance(column.type, Boolean):
+        if isinstance(column.type, DateTime):
+            statement = _apply_datetime_filter(statement, column, option.value)
+        elif isinstance(column.type, (Integer, Float, Numeric)):
+            statement = _apply_number_filter(statement, column, option.value)
+        elif isinstance(column.type, Boolean):
             statement = statement.where(column == (option.value == "true"))
-        elif text := option.value.strip():
+        elif isinstance(option.value, str) and (text := option.value.strip()):
             statement = statement.where(cast(column, String).ilike(f"%{text}%"))
-
-    for date_option in params.date_filter_options:
-        column = _get_column(columns, date_option.column)
-        statement = _apply_date_range(statement, column, date_option.value)
-
-    for number_option in params.number_filter_options:
-        column = _get_column(columns, number_option.column)
-        statement = _apply_number_range(statement, column, number_option.value)
 
     return statement
 
@@ -143,7 +158,7 @@ def get_read_results[T](  # noqa: PLR0913
         ordered = _apply_sort_options(base, [], columns, default_sort, tiebreaker)
         return session.exec(ordered).all(), total_count, total_count, False
 
-    filtered = _apply_filter_options(base, params, columns)
+    filtered = _apply_filter_options(base, params.filter_options, columns)
     filtered_count = session.exec(
         select(func.count()).select_from(filtered.subquery()),
     ).one()

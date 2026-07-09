@@ -204,23 +204,6 @@ export type ChannelUpdate = {
 };
 
 /**
- * Date filter option for a list of records.
- */
-export type DateFilterOption = {
-    id: string;
-    value: DateFilterOptionValue;
-};
-
-/**
- * The value inside of DateFilterOption.value.
- */
-export type DateFilterOptionValue = {
-    minimumDate?: (string | null);
-    maximumDate?: (string | null);
-    hideBlanks?: boolean;
-};
-
-/**
  * Schema for creating an `Episode`.
  */
 export type EpisodeCreate = {
@@ -379,6 +362,17 @@ export type FileUpdate = {
     content?: (string | null);
 };
 
+/**
+ * Filter option for a list of records.
+ *
+ * A plain string performs a text or boolean match. A [minimum, maximum] list performs
+ * a range match on datetime and numeric columns; either bound may be blank.
+ */
+export type FilterOption = {
+    id: string;
+    value: (string | Array<(string)>);
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -395,23 +389,6 @@ export type Message = {
 export type NewPassword = {
     token: string;
     new_password: string;
-};
-
-/**
- * Number range filter option for a list of records.
- */
-export type NumberFilterOption = {
-    id: string;
-    value: NumberFilterOptionValue;
-};
-
-/**
- * The value inside of NumberFilterOption.value.
- */
-export type NumberFilterOptionValue = {
-    minimum?: (number | null);
-    maximum?: (number | null);
-    hideBlanks?: boolean;
 };
 
 /**
@@ -728,14 +705,6 @@ export type SourceUpdate = {
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
-};
-
-/**
- * String filter option for a list of records.
- */
-export type StringFilterOption = {
-    id: string;
-    value: string;
 };
 
 export type Token = {
@@ -1132,10 +1101,8 @@ export type ChannelsAdminDeleteChannelQueueData = {
 export type ChannelsAdminDeleteChannelQueueResponse = (Message);
 
 export type EpisodesGetEpisodesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1170,10 +1137,8 @@ export type EpisodesCreateEpisodeData = {
 export type EpisodesCreateEpisodeResponse = (EpisodeOutput);
 
 export type EpisodesGetSeasonEpisodesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     seasonId: string;
     sortOptions?: string;
@@ -1182,10 +1147,8 @@ export type EpisodesGetSeasonEpisodesData = {
 export type EpisodesGetSeasonEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesGetShowEpisodesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     showId: string;
     sortOptions?: string;
@@ -1194,10 +1157,8 @@ export type EpisodesGetShowEpisodesData = {
 export type EpisodesGetShowEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesGetSourceEpisodesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     sortOptions?: string;
     sourceId: string;
@@ -1206,10 +1167,8 @@ export type EpisodesGetSourceEpisodesData = {
 export type EpisodesGetSourceEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesGetPluginEpisodesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;
@@ -1218,10 +1177,8 @@ export type EpisodesGetPluginEpisodesData = {
 export type EpisodesGetPluginEpisodesResponse = (EpisodesPublic);
 
 export type FilesGetFilesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1256,10 +1213,8 @@ export type FilesCreateFileData = {
 export type FilesCreateFileResponse = (FilePublic);
 
 export type FilesGetPluginFilesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;
@@ -1300,10 +1255,8 @@ export type PluginsCreatePluginData = {
 export type PluginsCreatePluginResponse = (PluginOutput);
 
 export type PluginsGetPluginsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1356,10 +1309,8 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type SeasonsGetSeasonsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1394,10 +1345,8 @@ export type SeasonsCreateSeasonData = {
 export type SeasonsCreateSeasonResponse = (SeasonOutput);
 
 export type SeasonsGetShowSeasonsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     showId: string;
     sortOptions?: string;
@@ -1406,10 +1355,8 @@ export type SeasonsGetShowSeasonsData = {
 export type SeasonsGetShowSeasonsResponse = (SeasonsPublic);
 
 export type SeasonsGetSourceSeasonsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     sortOptions?: string;
     sourceId: string;
@@ -1418,10 +1365,8 @@ export type SeasonsGetSourceSeasonsData = {
 export type SeasonsGetSourceSeasonsResponse = (SeasonsPublic);
 
 export type SeasonsGetPluginSeasonsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;
@@ -1430,10 +1375,8 @@ export type SeasonsGetPluginSeasonsData = {
 export type SeasonsGetPluginSeasonsResponse = (SeasonsPublic);
 
 export type ShowsGetShowsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1468,10 +1411,8 @@ export type ShowsCreateShowData = {
 export type ShowsCreateShowResponse = (ShowPublic);
 
 export type ShowsGetSourceShowsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     sortOptions?: string;
     sourceId: string;
@@ -1480,10 +1421,8 @@ export type ShowsGetSourceShowsData = {
 export type ShowsGetSourceShowsResponse = (ShowsPublic);
 
 export type ShowsGetPluginShowsData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;
@@ -1492,10 +1431,8 @@ export type ShowsGetPluginShowsData = {
 export type ShowsGetPluginShowsResponse = (ShowsPublic);
 
 export type SourcesGetSourcesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     owner?: (MediaOwner | null);
     sortOptions?: string;
@@ -1530,10 +1467,8 @@ export type SourcesCreateSourceData = {
 export type SourcesCreateSourceResponse = (SourcePublic);
 
 export type SourcesGetPluginSourcesData = {
-    dateFilterOptions?: string;
     filterOptions?: string;
     limit?: number;
-    numberFilterOptions?: string;
     offset?: number;
     pluginId: string;
     sortOptions?: string;

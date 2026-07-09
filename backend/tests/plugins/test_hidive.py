@@ -90,7 +90,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         timestamp: datetime,
     ) -> None:
         new_schedule = plugin_instance.schedule_file(timestamp)
-        dumped = diving_board().schedule.dump(parsed)
+        dumped = diving_board().schedule.model_dump(parsed)
         new_schedule.write(dumped)
         new_schedule._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
@@ -124,9 +124,9 @@ class TestMultipleSeasonsShowSecondSeasonURL(
     HiDiveStandardTests,
     HiDiveUpdateSourceTest,
 ):
-    parse_url_response = "19426"
-    search_query = "K-On"
-    search_url = "https://www.hidive.com/series/1091"
+    parse_url_response = "19425"
+    search_query = "Non Non Biyori"
+    search_url = "https://www.hidive.com/series/19821"
 
 
 # https://www.hidive.com/season/19426

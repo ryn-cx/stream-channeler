@@ -15,7 +15,7 @@ from sqlmodel import Session, SQLModel, create_engine, text
 # function call in the middle of all of the imports.
 from app.auth.dependencies import get_db
 from app.config import settings
-from app.database import import_models, init_db
+from app.database import init_db, load_models
 from app.main import app
 from tests.app.users.utils import (
     authentication_token_from_email,
@@ -88,7 +88,7 @@ def drop_test_database() -> None:
 def setup_test_database() -> Generator[None]:
     """Load models, copy the application database, and tear it down at the end."""
     drop_test_database()
-    import_models()
+    load_models()
     create_test_database()
     return
 

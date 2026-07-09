@@ -267,7 +267,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
         with self._log_download(self.unique_identifier):
             try:
                 response = self._get()
-                content = self.api_endpoint.dump(response)
+                content = self.api_endpoint.original_input(response)
                 self.write(content)
             except Exception as e:
                 if str(e) != self._get_acceptable_error():
@@ -282,12 +282,23 @@ class APISerializerEndpoint[T](Protocol):
 
     @overload
     @staticmethod
-    def dump(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
+    def original_input(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
     @overload
     @staticmethod
-    def dump(data: BaseModel) -> INPUT_TYPE: ...
+    def original_input(data: BaseModel) -> INPUT_TYPE: ...
     @staticmethod
-    def dump(
+    def original_input(
+        data: BaseModel | Sequence[BaseModel],
+    ) -> INPUT_TYPE | list[INPUT_TYPE]: ...
+
+    @overload
+    @staticmethod
+    def model_dump(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
+    @overload
+    @staticmethod
+    def model_dump(data: BaseModel) -> INPUT_TYPE: ...
+    @staticmethod
+    def model_dump(
         data: BaseModel | Sequence[BaseModel],
     ) -> INPUT_TYPE | list[INPUT_TYPE]: ...
 

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from sqlmodel import Session, select
 
-from app.database import import_models, engine
+from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -18,7 +18,7 @@ from app.users.models import User
 from app.watches.models import Watch
 
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
-import_models()
+load_models()
 
 # Mapping for common US timezone abbreviations that dateutil doesn't understand
 TZINFOS = {

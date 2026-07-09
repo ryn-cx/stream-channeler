@@ -15,7 +15,7 @@ from app.channels.models import (
     ChannelShow,
     URLStatus,
 )
-from app.database import import_models, engine
+from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from plugins.utils.abstract_plugin import (
@@ -249,6 +249,6 @@ def _merge_filters(
 
 if __name__ == "__main__":
     configure_logging()
-    import_models()
+    load_models()
     with Session(engine) as import_session:
         import_queue(import_session)

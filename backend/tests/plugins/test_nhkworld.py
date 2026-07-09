@@ -58,7 +58,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
         first_item.video_program.id = show_key
         first_item.video.published_at = timestamp
         new_feed = plugin_instance.new_video_episodes_file(timestamp)
-        new_feed.write(naphki().video_episodes.dump(parsed))  # pyright: ignore[reportPrivateUsage]
+        new_feed.write(naphki().video_episodes.model_dump(parsed))  # pyright: ignore[reportPrivateUsage]
         new_feed._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @override

@@ -620,8 +620,6 @@ export class EpisodesService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -635,8 +633,6 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -744,8 +740,6 @@ export class EpisodesService {
      * @param data.seasonId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns EpisodesPublic Successful Response
@@ -761,8 +755,6 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -779,8 +771,6 @@ export class EpisodesService {
      * @param data.showId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns EpisodesPublic Successful Response
@@ -796,8 +786,6 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -814,8 +802,6 @@ export class EpisodesService {
      * @param data.sourceId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns EpisodesPublic Successful Response
@@ -831,8 +817,6 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -849,8 +833,6 @@ export class EpisodesService {
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns EpisodesPublic Successful Response
@@ -866,8 +848,6 @@ export class EpisodesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -885,8 +865,6 @@ export class FilesService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -900,8 +878,6 @@ export class FilesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1009,8 +985,6 @@ export class FilesService {
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns FilesPublic Successful Response
@@ -1026,8 +1000,6 @@ export class FilesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1162,8 +1134,6 @@ export class PluginsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1177,8 +1147,6 @@ export class PluginsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1368,8 +1336,6 @@ export class SeasonsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1383,8 +1349,6 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1492,8 +1456,6 @@ export class SeasonsService {
      * @param data.showId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SeasonsPublic Successful Response
@@ -1509,8 +1471,6 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1527,8 +1487,6 @@ export class SeasonsService {
      * @param data.sourceId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SeasonsPublic Successful Response
@@ -1544,8 +1502,6 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1562,8 +1518,6 @@ export class SeasonsService {
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SeasonsPublic Successful Response
@@ -1579,8 +1533,6 @@ export class SeasonsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1598,8 +1550,6 @@ export class ShowsService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1613,8 +1563,6 @@ export class ShowsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1722,8 +1670,6 @@ export class ShowsService {
      * @param data.sourceId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns ShowsPublic Successful Response
@@ -1739,8 +1685,6 @@ export class ShowsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1757,8 +1701,6 @@ export class ShowsService {
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns ShowsPublic Successful Response
@@ -1774,8 +1716,6 @@ export class ShowsService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },
@@ -1793,8 +1733,6 @@ export class SourcesService {
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @param data.owner
@@ -1808,8 +1746,6 @@ export class SourcesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit,
                 owner: data.owner
@@ -1917,8 +1853,6 @@ export class SourcesService {
      * @param data.pluginId
      * @param data.sortOptions
      * @param data.filterOptions
-     * @param data.dateFilterOptions
-     * @param data.numberFilterOptions
      * @param data.offset
      * @param data.limit
      * @returns SourcesPublic Successful Response
@@ -1934,8 +1868,6 @@ export class SourcesService {
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
-                date_filter_options: data.dateFilterOptions,
-                number_filter_options: data.numberFilterOptions,
                 offset: data.offset,
                 limit: data.limit
             },

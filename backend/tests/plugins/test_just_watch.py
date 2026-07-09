@@ -74,27 +74,26 @@ class BaseJustWatch(PluginValidator[JustWatch]):
             validator.populated(source.id, "update_at")
         return validator
 
-    def test_update_plugin(self, session_with_url: Session) -> None:
+    def test_update_plugin(self, session_with_files: Session) -> None:
         """Update a random plugin and validate the data."""
         if self.invalid_url or not self.url:
             pytest.skip()
 
-        plugin_instance = self.plugin_class(session_with_url)
-        assert isinstance(plugin_instance, JustWatch)
-        # The URL's files are already imported by the session_with_url fixture, so the
-        # re-import finds the shows preloaded and never downloads.
-        results = plugin_instance.import_url(self.url)
+        # The URL's files are already imported by the session_with_files fixture, so the
+        # import finds the shows preloaded and never downloads.
+        results = self._import_url(session_with_files)
+        plugin_instance = self.imported_plugin
         plugin = results[0].show.source.plugin
 
         # Pre-create the NewTitles files that bucket processing will mark incomplete
         # so the mocked update doesn't try to download an unrecorded file.
         for source_key, edge_date in self._incomplete_bucket_source_dates(
-            session_with_url,
+            session_with_files,
             plugin,
         ):
             plugin_instance.new_titles_file(source_key, edge_date).write([])
 
-        original_plugin = self.get_detached_plugin(session_with_url)
+        original_plugin = self.get_detached_plugin(session_with_files)
 
         # Set the bucket file's data_timestamp to now so
         # _download_latest_new_titles_bucket considers it recent (within 1 day)
@@ -103,7 +102,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         bucket_file.data_timestamp = tz_datetime.now()
 
         self._update_and_validate(
-            session_with_url,
+            session_with_files,
             original_plugin,
             plugin,
         )
@@ -124,7 +123,7 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         first_edge.key.package.short_name = source_key
         first_edge.key.date = edge_date
         new_bucket = plugin_instance.new_titles_bucket_file(timestamp)
-        new_bucket.write(NewTitleBuckets.dump(parsed))
+        new_bucket.write(NewTitleBuckets.model_dump(parsed))
         new_bucket._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
     @staticmethod
@@ -141,14 +140,14 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         new_titles_file.write([])
         new_titles_file.database_record.extra = "Incomplete"
 
-    def test_update_source(self, session_with_url: Session) -> None:
+    def test_update_source(self, session_with_files: Session) -> None:
         if self.invalid_url or not self.url:
             pytest.skip()
 
-        plugin_instance = self.plugin_class(session_with_url)
-        # The URL's files are already imported by the session_with_url fixture, so the
-        # re-import finds the shows preloaded and never downloads.
-        results = plugin_instance.import_url(self.url)
+        # The URL's files are already imported by the session_with_files fixture, so the
+        # import finds the shows preloaded and never downloads.
+        results = self._import_url(session_with_files)
+        plugin_instance = self.imported_plugin
 
         # Find the specific source that will have updates available for it.
         source = next(
@@ -168,10 +167,10 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         )
         self._create_fake_new_titles_file(plugin_instance, source.key, edge_date)
 
-        original_plugin = self.get_detached_plugin(session_with_url)
+        original_plugin = self.get_detached_plugin(session_with_files)
 
         self._update_and_validate(
-            session_with_url,
+            session_with_files,
             original_plugin,
             source,
         )

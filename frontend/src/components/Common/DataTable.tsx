@@ -14,7 +14,6 @@ import {
   getSortedRowModel,
   type OnChangeFn,
   type PaginationState,
-  type Row,
   type RowData,
   type SortingState as SortOptionsState,
   type Table as TableInstance,
@@ -69,6 +68,11 @@ import {
 } from "@/hooks/usePersistedState"
 import { cn } from "@/lib/utils"
 import {
+  dateRangeFilter,
+  datetimeStringToIsoString,
+  numberRangeFilter,
+} from "./tableFilters"
+import {
   TABLE_FILTER_INPUT_CLASS,
   TABLE_HEADER_CELL_CLASS,
 } from "./tableStyles"
@@ -83,60 +87,6 @@ declare module "@tanstack/react-table" {
       placeholder?: string
     }
   }
-}
-
-interface DateRangeFilterValue {
-  minimumDate?: string
-  maximumDate?: string
-  hideBlanks?: boolean
-}
-
-function dateRangeFilterFn<TData>(
-  row: Row<TData>,
-  columnId: string,
-  filterValue: DateRangeFilterValue,
-): boolean {
-  const rawDate = row.getValue(columnId) as string | null | undefined
-  const { minimumDate, maximumDate, hideBlanks } = filterValue ?? {}
-
-  // Blank values should always be shown unless explicitly hidden.
-  if (rawDate === null) return !hideBlanks
-
-  const date = new Date(rawDate as string).getTime()
-
-  if (minimumDate && date < new Date(minimumDate).getTime()) return false
-  if (maximumDate && date > new Date(maximumDate).getTime()) return false
-  return true
-}
-
-function parseNumberBound(value: unknown): number | null {
-  if (value === "" || value === null || value === undefined) return null
-  const parsed = Number(value)
-  return Number.isNaN(parsed) ? null : parsed
-}
-
-interface NumberRangeFilterValue {
-  minimum?: string
-  maximum?: string
-  hideBlanks?: boolean
-}
-
-function numberRangeFilterFn<TData>(
-  row: Row<TData>,
-  columnId: string,
-  filterValue: NumberRangeFilterValue,
-): boolean {
-  const rawValue = row.getValue(columnId) as number | null | undefined
-  const { minimum, maximum, hideBlanks } = filterValue ?? {}
-  const minimumBound = parseNumberBound(minimum)
-  const maximumBound = parseNumberBound(maximum)
-
-  // Blank values should always be shown unless explicitly hidden.
-  if (rawValue === null || rawValue === undefined) return !hideBlanks
-
-  if (minimumBound !== null && rawValue < minimumBound) return false
-  if (maximumBound !== null && rawValue > maximumBound) return false
-  return true
 }
 
 function usePersistentState<T>(key: string | undefined, initialValue: T) {
@@ -237,10 +187,10 @@ export function DataTable<TData extends { id: string }, TValue>({
     () =>
       columns.map((column) => {
         if (column.meta?.filterVariant === "dateRange") {
-          return { ...column, filterFn: dateRangeFilterFn }
+          return { ...column, filterFn: dateRangeFilter }
         }
         if (column.meta?.filterVariant === "range") {
-          return { ...column, filterFn: numberRangeFilterFn }
+          return { ...column, filterFn: numberRangeFilter }
         }
         return column
       }),
@@ -543,47 +493,36 @@ function Filter<TData, TValue>({
 
   // TODO: Validate this if block.
   if (filterVariant === "dateRange") {
-    const value = (columnFilterValue as DateRangeFilterValue) ?? {}
+    const [from = "", to = ""] = (columnFilterValue as [string, string]) ?? []
 
-    const applyFilter = (updatedValue: DateRangeFilterValue) => {
-      const cleaned: DateRangeFilterValue = {
-        minimumDate: updatedValue.minimumDate || undefined,
-        maximumDate: updatedValue.maximumDate || undefined,
-        hideBlanks: updatedValue.hideBlanks || undefined,
-      }
-      column.setFilterValue(
-        cleaned.minimumDate || cleaned.maximumDate || cleaned.hideBlanks
-          ? cleaned
-          : undefined,
-      )
-    }
-
-    const hideBlanks = value.hideBlanks ?? false
-
-    const setBound = (
-      bound: "minimumDate" | "maximumDate",
-      date: string,
-      time: string,
-    ) => {
-      applyFilter({
-        ...value,
-        [bound]: date ? `${date}T${time || "00:00"}` : undefined,
+    // Picking a date without a time covers the whole day: the minimum defaults to the
+    // start of the day and the maximum to the end of the day.
+    const setBound = (index: 0 | 1, date: string, time: string) => {
+      const defaultTime = index === 0 ? "00:00" : "23:59"
+      const nextValue = date ? `${date}T${time || defaultTime}` : ""
+      column.setFilterValue((previous: [string, string] | undefined) => {
+        const next: [string, string] = [
+          previous?.[0] ?? "",
+          previous?.[1] ?? "",
+        ]
+        next[index] = nextValue
+        return next[0] || next[1] ? next : undefined
       })
     }
 
     const bounds = [
-      { key: "minimumDate", label: "Minimum" },
-      { key: "maximumDate", label: "Maximum" },
+      { index: 0, label: "Minimum", value: from },
+      { index: 1, label: "Maximum", value: to },
     ] as const
 
     return (
       <div className="flex flex-col gap-1">
-        {bounds.map(({ key, label }) => {
-          const date = value[key]?.split("T")[0] ?? ""
-          const time = value[key]?.split("T")[1] ?? "00:00"
+        {bounds.map(({ index, label, value }) => {
+          const date = value.split("T")[0] ?? ""
+          const time = value.split("T")[1] ?? (index === 0 ? "00:00" : "23:59")
           return (
             <div
-              key={key}
+              key={label}
               className={cn(
                 "border-input dark:bg-input/30 flex h-7 w-52 items-center rounded-md border bg-transparent text-xs",
                 "focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
@@ -593,7 +532,7 @@ function Filter<TData, TValue>({
                 type="date"
                 aria-label={`${label} date`}
                 value={date}
-                onChange={(event) => setBound(key, event.target.value, time)}
+                onChange={(event) => setBound(index, event.target.value, time)}
                 className="min-w-0 flex-1 bg-transparent px-1 outline-none"
               />
               <input
@@ -601,43 +540,31 @@ function Filter<TData, TValue>({
                 aria-label={`${label} time`}
                 value={time}
                 disabled={!date}
-                onChange={(event) => setBound(key, date, event.target.value)}
+                onChange={(event) => setBound(index, date, event.target.value)}
                 className="border-input min-w-0 border-l bg-transparent px-1 outline-none disabled:opacity-50"
               />
             </div>
           )
         })}
-        <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={hideBlanks}
-            onChange={(event) =>
-              applyFilter({ ...value, hideBlanks: event.target.checked })
-            }
-          />
-          Hide Blanks
-        </label>
       </div>
     )
   }
 
   if (filterVariant === "range") {
     const [min, max] = column.getFacetedMinMaxValues() ?? []
-    const value = (columnFilterValue as NumberRangeFilterValue) ?? {}
+    const [minimum = "", maximum = ""] =
+      (columnFilterValue as [string, string]) ?? []
 
     // Merge against the latest filter value (not a render-time snapshot) so the
     // debounced min/max inputs don't clobber each other when their timers race.
-    const applyFilter = (patch: NumberRangeFilterValue) => {
-      column.setFilterValue((previous: NumberRangeFilterValue | undefined) => {
-        const merged = { ...(previous ?? {}), ...patch }
-        const cleaned: NumberRangeFilterValue = {
-          minimum: merged.minimum || undefined,
-          maximum: merged.maximum || undefined,
-          hideBlanks: merged.hideBlanks || undefined,
-        }
-        return cleaned.minimum || cleaned.maximum || cleaned.hideBlanks
-          ? cleaned
-          : undefined
+    const setBound = (index: 0 | 1, next: string | number) => {
+      column.setFilterValue((previous: [string, string] | undefined) => {
+        const value: [string, string] = [
+          previous?.[0] ?? "",
+          previous?.[1] ?? "",
+        ]
+        value[index] = String(next)
+        return value[0] || value[1] ? value : undefined
       })
     }
 
@@ -651,29 +578,19 @@ function Filter<TData, TValue>({
         <DebouncedInput
           type="number"
           {...boundProps}
-          value={value.minimum ?? ""}
-          onChange={(next) => applyFilter({ minimum: String(next) })}
+          value={minimum}
+          onChange={(next) => setBound(0, next)}
           placeholder={`Min ${min !== undefined ? `(${min})` : ""}`}
           className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
         />
         <DebouncedInput
           type="number"
           {...boundProps}
-          value={value.maximum ?? ""}
-          onChange={(next) => applyFilter({ maximum: String(next) })}
+          value={maximum}
+          onChange={(next) => setBound(1, next)}
           placeholder={`Max ${max !== undefined ? `(${max})` : ""}`}
           className={cn(TABLE_FILTER_INPUT_CLASS, "w-24")}
         />
-        <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={value.hideBlanks ?? false}
-            onChange={(event) =>
-              applyFilter({ hideBlanks: event.target.checked })
-            }
-          />
-          Hide Blanks
-        </label>
       </div>
     )
   }
@@ -783,15 +700,6 @@ export interface MediaTableResult<TData> {
   is_server_side: boolean
 }
 
-interface NumberFilterOption {
-  id: string
-  value: {
-    minimum: number | null
-    maximum: number | null
-    hideBlanks: boolean
-  }
-}
-
 function columnId<TData>(
   column: ColumnDef<TData, unknown>,
 ): string | undefined {
@@ -812,33 +720,24 @@ export function serializeTableQuery<TData>(
     }
   }
 
-  const stringFilters: FilterOptionsState = []
-  const dateFilters: FilterOptionsState = []
-  const numberFilters: NumberFilterOption[] = []
-  for (const filter of params.filterOptions) {
-    const variant = filterVariants.get(filter.id)
-    if (variant === "dateRange") {
-      dateFilters.push(filter)
-    } else if (variant === "range") {
-      const { minimum, maximum, hideBlanks } =
-        (filter.value as NumberRangeFilterValue) ?? {}
-      numberFilters.push({
+  const filterOptions = params.filterOptions.map((filter) => {
+    if (filterVariants.get(filter.id) === "dateRange") {
+      const [rawMinimum = "", rawMaximum = ""] =
+        (filter.value as [string, string]) ?? []
+      return {
         id: filter.id,
-        value: {
-          minimum: parseNumberBound(minimum),
-          maximum: parseNumberBound(maximum),
-          hideBlanks: hideBlanks ?? false,
-        },
-      })
-    } else {
-      stringFilters.push(filter)
+        value: [
+          datetimeStringToIsoString(rawMinimum, "minimum"),
+          datetimeStringToIsoString(rawMaximum, "maximum"),
+        ],
+      }
     }
-  }
+    return filter
+  })
+
   return {
     sortOptions: JSON.stringify(params.sortOptions),
-    filterOptions: JSON.stringify(stringFilters),
-    dateFilterOptions: JSON.stringify(dateFilters),
-    numberFilterOptions: JSON.stringify(numberFilters),
+    filterOptions: JSON.stringify(filterOptions),
   }
 }
 

@@ -1102,59 +1102,6 @@ export const ChannelUpdateSchema = {
     description: 'Schema for updating a `Channel`.'
 } as const;
 
-export const DateFilterOptionSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
-        value: {
-            '$ref': '#/components/schemas/DateFilterOptionValue'
-        }
-    },
-    type: 'object',
-    required: ['id', 'value'],
-    title: 'DateFilterOption',
-    description: 'Date filter option for a list of records.'
-} as const;
-
-export const DateFilterOptionValueSchema = {
-    properties: {
-        minimumDate: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Minimumdate'
-        },
-        maximumDate: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Maximumdate'
-        },
-        hideBlanks: {
-            type: 'boolean',
-            title: 'Hideblanks',
-            default: false
-        }
-    },
-    type: 'object',
-    title: 'DateFilterOptionValue',
-    description: 'The value inside of DateFilterOption.value.'
-} as const;
-
 export const EpisodeCreateSchema = {
     properties: {
         key: {
@@ -2222,6 +2169,36 @@ export const FilesPublicSchema = {
     description: 'Schema for returning a paginated list of `File`s.'
 } as const;
 
+export const FilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    type: 'object',
+    required: ['id', 'value'],
+    title: 'FilterOption',
+    description: `Filter option for a list of records.
+
+A plain string performs a text or boolean match. A [minimum, maximum] list performs
+a range match on datetime and numeric columns; either bound may be blank.`
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -2271,57 +2248,6 @@ export const NewPasswordSchema = {
     type: 'object',
     required: ['token', 'new_password'],
     title: 'NewPassword'
-} as const;
-
-export const NumberFilterOptionSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
-        value: {
-            '$ref': '#/components/schemas/NumberFilterOptionValue'
-        }
-    },
-    type: 'object',
-    required: ['id', 'value'],
-    title: 'NumberFilterOption',
-    description: 'Number range filter option for a list of records.'
-} as const;
-
-export const NumberFilterOptionValueSchema = {
-    properties: {
-        minimum: {
-            anyOf: [
-                {
-                    type: 'number'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Minimum'
-        },
-        maximum: {
-            anyOf: [
-                {
-                    type: 'number'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Maximum'
-        },
-        hideBlanks: {
-            type: 'boolean',
-            title: 'Hideblanks',
-            default: false
-        }
-    },
-    type: 'object',
-    title: 'NumberFilterOptionValue',
-    description: 'The value inside of NumberFilterOption.value.'
 } as const;
 
 export const PluginCreateSchema = {
@@ -4058,23 +3984,6 @@ export const SourcesPublicSchema = {
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'SourcesPublic',
     description: 'Schema for returning a list of `Source`s.'
-} as const;
-
-export const StringFilterOptionSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            title: 'Id'
-        },
-        value: {
-            type: 'string',
-            title: 'Value'
-        }
-    },
-    type: 'object',
-    required: ['id', 'value'],
-    title: 'StringFilterOption',
-    description: 'String filter option for a list of records.'
 } as const;
 
 export const TokenSchema = {

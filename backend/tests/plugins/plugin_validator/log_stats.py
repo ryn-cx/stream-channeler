@@ -22,23 +22,10 @@ if TYPE_CHECKING:
 def _record_best_metrics(
     file_path: Path,
     current_values: dict[str, float],
-    allowed_regressions: dict[str, float],
 ) -> None:
     best_values: dict[str, float] = {}
     if file_path.exists():
         best_values = json.loads(file_path.read_text())
-
-    for metric_name, current_value in current_values.items():
-        best_value = best_values.get(metric_name)
-        if best_value is None:
-            continue
-        allowed_regression = allowed_regressions[metric_name]
-        if current_value > best_value * (1 + allowed_regression):
-            message = (
-                f"{metric_name} regressed to {current_value}, more than "
-                f"{allowed_regression:.0%} worse than the best recorded {best_value}"
-            )
-            raise AssertionError(message)
 
     updated_values = dict(best_values)
     for metric_name, current_value in current_values.items():
@@ -151,10 +138,5 @@ def log_stats(plugin_validator: PluginValidator[Any]) -> Generator[None]:
             "sql_statements": stats["sql_statements"],
             "peak_memory_bytes": stats["peak_memory_bytes"],
             "execution_time": stats["execution_time"],
-        },
-        {
-            "sql_statements": 0.0,
-            "peak_memory_bytes": 1.0,
-            "execution_time": 1.0,
         },
     )

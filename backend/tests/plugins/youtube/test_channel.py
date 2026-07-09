@@ -51,9 +51,9 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
     channel_name = "MrBeast"
     parse_url_response = ("channel_handle", channel_name)
 
-    def test_episode_in_multiple_seasons(self, session_with_url: Session) -> None:
+    def test_episode_in_multiple_seasons(self, session_with_files: Session) -> None:
         """Test that episodes that belong to multiple seasons works correctly."""
-        results = self._import_url(session_with_url)
+        results = self._import_url(session_with_files)
         result = results[0]
         show = result.show
         episode_count = 0

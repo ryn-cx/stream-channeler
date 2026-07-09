@@ -341,47 +341,50 @@ class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that re-importing an existing URL doesn't change the data."""
 
-    def test_import_existing_url(self, session_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(session_with_url)
+    def test_import_existing_url(self, session_with_files: Session) -> None:
+        if not self.url or self.invalid_url:
+            pytest.skip()
+
+        self._import_url(session_with_files)
+        original_plugin = self.get_detached_plugin(session_with_files)
         with log_stats(self):
-            self.plugin_class(session_with_url).import_url(self.url)
+            self.plugin_class(session_with_files).import_url(self.url)
 
         validator = self.existing_url_validator()
         validator.validate(
             original_plugin,
-            self.get_detached_plugin(session_with_url),
+            self.get_detached_plugin(session_with_files),
         )
 
 
 class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a show restores randomized data."""
 
-    def test_update_show(self, session_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(session_with_url)
-        results = self._import_url(session_with_url)
+    def test_update_show(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
+        original_plugin = self.get_detached_plugin(session_with_files)
         entity = self.get_random_show(results)
-        self._update_and_validate(session_with_url, original_plugin, entity)
+        self._update_and_validate(session_with_files, original_plugin, entity)
 
 
 class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a season restores randomized data."""
 
-    def test_update_season(self, session_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(session_with_url)
-        results = self._import_url(session_with_url)
+    def test_update_season(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
+        original_plugin = self.get_detached_plugin(session_with_files)
         entity = self.get_random_season(results)
-        self._update_and_validate(session_with_url, original_plugin, entity)
+        self._update_and_validate(session_with_files, original_plugin, entity)
 
 
 class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating an episode restores randomized data."""
 
-    def test_update_episode(self, session_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(session_with_url)
-        results = self._import_url(session_with_url)
+    def test_update_episode(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
+        original_plugin = self.get_detached_plugin(session_with_files)
         entity = self.get_random_episode(results)
-        self._update_and_validate(session_with_url, original_plugin, entity)
-        # assert False
+        self._update_and_validate(session_with_files, original_plugin, entity)
 
 
 class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -400,13 +403,13 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         """
         raise NotImplementedError
 
-    def test_update_source(self, session_with_url: Session) -> None:
+    def test_update_source(self, session_with_files: Session) -> None:
         """Update a random source and validate the data."""
         if self.invalid_url or not self.url:
             pytest.skip()
 
-        plugin_instance = self.plugin_class(session_with_url)
-        results = plugin_instance.import_url(self.url)
+        results = self._import_url(session_with_files)
+        plugin_instance = self.imported_plugin
         source = self.get_random_source(results)
 
         timestamp = tz_datetime.now() + timedelta(minutes=1)
@@ -420,15 +423,15 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             if season.update_at:
                 season.update_at = timestamp + timedelta(minutes=1)
 
-        original_plugin = self.get_detached_plugin(session_with_url)
-        self._update_and_validate(session_with_url, original_plugin, source)
+        original_plugin = self.get_detached_plugin(session_with_files)
+        self._update_and_validate(session_with_files, original_plugin, source)
 
 
 class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake episode gets soft-deleted during update_season."""
 
-    def test_deleted_episode(self, session_with_url: Session) -> None:
-        results = self._import_url(session_with_url)
+    def test_deleted_episode(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
         season = self.get_random_season(results)
         assert season.data_timestamp
 
@@ -443,26 +446,26 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             )
         season.episodes.append(fake_episode)
 
-        original_plugin = self.get_detached_plugin(session_with_url)
+        original_plugin = self.get_detached_plugin(session_with_files)
         fake_episode.soft_undelete()
-        session_with_url.flush()
+        session_with_files.flush()
 
         freeze_at = season.data_timestamp + timedelta(seconds=2)
         with freeze_time(freeze_at), log_stats(self):
-            self.plugin_class(session_with_url).update_season(season=season)
+            self.plugin_class(session_with_files).update_season(season=season)
 
         validator = self.deleted_episode_validator(fake_episode)
         validator.validate(
             original_plugin,
-            self.get_detached_plugin(session_with_url),
+            self.get_detached_plugin(session_with_files),
         )
 
 
 class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake season gets soft-deleted during update_show."""
 
-    def test_deleted_season(self, session_with_url: Session) -> None:
-        results = self._import_url(session_with_url)
+    def test_deleted_season(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
         show = self.get_random_show(results)
         assert show.data_timestamp
 
@@ -477,18 +480,18 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             )
         show.seasons.append(fake_season)
 
-        original_plugin = self.get_detached_plugin(session_with_url)
+        original_plugin = self.get_detached_plugin(session_with_files)
         fake_season.soft_undelete()
-        session_with_url.flush()
+        session_with_files.flush()
 
         freeze_at = show.data_timestamp + timedelta(seconds=2)
         with freeze_time(freeze_at), log_stats(self):
-            self.plugin_class(session_with_url).update_show(show=show)
+            self.plugin_class(session_with_files).update_show(show=show)
 
         validator = self.deleted_season_validator(fake_season)
         validator.validate(
             original_plugin,
-            self.get_detached_plugin(session_with_url),
+            self.get_detached_plugin(session_with_files),
         )
 
 
@@ -523,25 +526,30 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity individually."""
 
     @pytest.mark.skip(reason="Exhaustive test - run manually")
-    def test_all_updates(self, session_with_url: Session) -> None:
-        original_plugin = self.get_detached_plugin(session_with_url)
-        plugin = self.select_plugin_with_children(session_with_url)
+    def test_all_updates(self, session_with_files: Session) -> None:
+        self._import_url(session_with_files)
+        original_plugin = self.get_detached_plugin(session_with_files)
+        plugin = self.select_plugin_with_children(session_with_files)
 
         for source in plugin.sources:
             for show in source.shows:
                 if show.data_timestamp:
-                    self._update_and_validate(session_with_url, original_plugin, show)
-                    session_with_url.rollback()
+                    self._update_and_validate(session_with_files, original_plugin, show)
+                    session_with_files.rollback()
                 for season in show.seasons:
-                    self._update_and_validate(session_with_url, original_plugin, season)
-                    session_with_url.rollback()
+                    self._update_and_validate(
+                        session_with_files,
+                        original_plugin,
+                        season,
+                    )
+                    session_with_files.rollback()
                     for episode in season.episodes:
                         self._update_and_validate(
-                            session_with_url,
+                            session_with_files,
                             original_plugin,
                             episode,
                         )
-                        session_with_url.rollback()
+                        session_with_files.rollback()
 
 
 class URLTests[PluginT: BasePlugin](

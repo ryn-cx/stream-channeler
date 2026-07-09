@@ -1,6 +1,6 @@
 # TODO: Validate
 from datetime import datetime
-from typing import Any, cast, override
+from typing import override
 
 from chirashi.browse_series import BrowseSeries
 
@@ -65,15 +65,12 @@ class CrunchyrollUpdateSourceTest(UpdateSourceTests[Crunchyroll], CrunchyrollVal
         timestamp: datetime,
     ) -> None:
         existing_browse = plugin_instance.get_latest_browse_file()
-        raw_pages = cast(
-            "list[dict[str, Any]]",
-            BrowseSeries.dump(existing_browse.parsed()),
-        )
-        first_entry = raw_pages[0]["data"][0]
-        first_entry["id"] = source.shows[0].key
-        first_entry["last_public"] = timestamp.isoformat()
+        parsed = existing_browse.parsed()
+        first_entry = parsed[0].data[0]
+        first_entry.id = source.shows[0].key
+        first_entry.last_public = timestamp
         new_browse = plugin_instance.browse_file(timestamp)
-        new_browse.write(raw_pages)
+        new_browse.write(BrowseSeries.model_dump(parsed))
         new_browse._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
 

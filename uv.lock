@@ -71,6 +71,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "just-scrape" },
     { name = "loguru" },
+    { name = "meshfilm" },
     { name = "naphki" },
     { name = "not-yt-dlapi" },
     { name = "psycopg", extra = ["binary"] },
@@ -112,6 +113,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
     { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
     { name = "not-yt-dlapi", git = "https://github.com/ryn-cx/not-yt-dlapi" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
@@ -351,7 +353,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#23b38eefcafac4175d7c98ca283f08ebb9fce4ae" }
+source = { git = "https://github.com/ryn-cx/chirashi#da129ac82a0d6239ae6eaf2489e51d0eddfcd67f" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -521,7 +523,7 @@ wheels = [
 [[package]]
 name = "diving-board"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/diving-board#a84b3e24664ef6f81127eba33b76bdb055746603" }
+source = { git = "https://github.com/ryn-cx/diving-board#002cfce879d8c559a446cdc8667b383cbe79771b" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -706,7 +708,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#ac81c7fe5dea092129b02a4f932d464d2226dcdd" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#7c13dc1ea424c5be1e39d803ceb4b6b9466b915e" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -926,7 +928,7 @@ wheels = [
 [[package]]
 name = "just-scrape"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#8d4d925f32cbb599a358b65f632b9973ee03c856" }
+source = { git = "https://github.com/ryn-cx/just-scrape#a2663162e3e522c026de1015254ac50b8dac27c3" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1083,6 +1085,14 @@ wheels = [
 ]
 
 [[package]]
+name = "meshfilm"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/meshfilm#9e2aa59290267f8b5c3cbfe42e36a37a7b6e4abe" }
+dependencies = [
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
 name = "more-itertools"
 version = "10.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1124,7 +1134,7 @@ wheels = [
 [[package]]
 name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/naphki#df4b7bb7b96b05a1bf88f6f2025bcc9add46730a" }
+source = { git = "https://github.com/ryn-cx/naphki#3f6c51e21ff612c226541fb8dd70933dd305ac5d" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1133,7 +1143,7 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#78908073d7e392afb2faa47b7a822070ce577e26" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#954cda305f00697dbf85074bec3451046c6d1bbe" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2011,7 +2021,7 @@ wheels = [
 [[package]]
 name = "yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/yt-dlapi#1198dbf2eaf1b4f2bf9e5088af34053ac26f0a93" }
+source = { git = "https://github.com/ryn-cx/yt-dlapi#31a4dd625cacd67d3b34d4c6bfa03ee444dfae69" }
 dependencies = [
     { name = "good-ass-pydantic-integrator" },
     { name = "yt-dlp" },

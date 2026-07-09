@@ -12,16 +12,21 @@ from app.users.schemas import UserCreate
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
-def import_models() -> None:
+def automatically_import_models() -> None:
     for model_file in APP_PATH.glob("*/models.py"):
         import_module(f"app.{model_file.parent.name}.models")
+
+
+def load_models() -> None:
+    automatically_import_models()
+
 
 # TODO: Update this comment upstream.
 def init_db(session: Session) -> None:
     # make sure all SQLModel models are imported before initializing DB otherwise,
     # SQLModel might fail to initialize relationships properly for more details:
     # https://github.com/fastapi/full-stack-fastapi-template/issues/28
-    import_models()
+    load_models()
 
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER),
