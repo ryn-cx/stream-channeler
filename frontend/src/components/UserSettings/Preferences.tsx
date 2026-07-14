@@ -20,7 +20,7 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-// This needs to stay in sync with the value in the backend.
+// This needs to manually be kept in sync with the value in the backend.
 const SERVER_SIDE_THRESHOLD_MAXIMUM = 100_000
 
 const formSchema = z.object({

@@ -1,13 +1,15 @@
-# TODO: Validate
 """Episode schemas."""
 
 import uuid
 
 from pydantic import BaseModel
-from sqlmodel import Field
 
 from app.episodes.models import BaseEpisode, Episode
-from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
 from app.seasons.models import Season
 
 
@@ -15,11 +17,11 @@ class EpisodeCreate(BaseCreateWithParentAndKey[Episode, Season], BaseEpisode):
     """Schema for creating an `Episode`."""
 
 
-class EpisodeUpdate(BaseUpdateWithKey[Episode], BaseEpisode):
+class EpisodeUpdate(
+    make_model_with_all_fields_optional(BaseEpisode),
+    BaseUpdateWithKey[Episode],
+):
     """Schema for updating an `Episode`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
 
 
 class EpisodeOutput(BaseEpisode):

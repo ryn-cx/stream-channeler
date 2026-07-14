@@ -30,7 +30,8 @@ jobs:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
       GET_AROUND_SERVER: ${{ secrets.GET_AROUND_SERVER }}
-      GET_AROUND_PASSWORD: ${{ secrets.GET_AROUND_PASSWORD }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

@@ -7,7 +7,11 @@ from sqlmodel import Field, SQLModel
 
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
-from app.schemas import BaseInput, BaseUpdateWithoutKey
+from app.schemas import (
+    BaseInput,
+    BaseUpdateWithoutKey,
+    make_model_with_all_fields_optional,
+)
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
@@ -18,12 +22,11 @@ class WatchCreate(BaseInput, BaseWatch):
     """Schema for creating a `Watch`."""
 
 
-class WatchUpdate(BaseUpdateWithoutKey[Watch], BaseWatch):
+class WatchUpdate(
+    make_model_with_all_fields_optional(BaseWatch),
+    BaseUpdateWithoutKey[Watch],
+):
     """Schema for updating a `Watch`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    watch_date: datetime | None = None  # type: ignore[assignment]
-    verified: bool | None = None  # type: ignore[assignment]
 
 
 # TODO: This class may be redundant

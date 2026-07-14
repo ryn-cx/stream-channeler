@@ -205,7 +205,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         if match := re.match(self._video_key_regex(), url):
             video_key = match.group("video_key")
             videos_file = self.videos_file(video_key)
-            self._raise_if_no_content(videos_file, url)
+            self._raise_if_invalid_file(videos_file, url)
             show_key = videos_file.parsed().items[0].snippet.channel_id
             return ParsedURL(
                 show_key=show_key,
@@ -215,7 +215,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         if match := re.match(self._channel_key_regex(), url):
             channel_key = match.group("channel_key")
-            self._raise_if_no_content(self.channel_by_channel_id_file(channel_key), url)
+            self._raise_if_invalid_file(self.channel_by_channel_id_file(channel_key), url)
             return ParsedURL(
                 show_key=channel_key,
                 playlist_key=self._get_channel_uploads_playlist_key(channel_key),
@@ -227,7 +227,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             username_file = self.channel_by_username_file(
                 match.group("channel_username"),
             )
-            self._raise_if_no_content(username_file, url)
+            self._raise_if_invalid_file(username_file, url)
             show_key = get_first_item(username_file.parsed().items).id
             return ParsedURL(
                 show_key=show_key,
@@ -236,7 +236,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         if match := re.match(self._channel_handle_regex(), url):
             handle_file = self.channel_by_handle_file(match.group("channel_handle"))
-            self._raise_if_no_content(handle_file, url)
+            self._raise_if_invalid_file(handle_file, url)
             show_key = get_first_item(handle_file.parsed().items).id
             return ParsedURL(
                 show_key=show_key,
@@ -253,7 +253,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         video_key: str | None = None,
     ) -> ParsedURL:
         playlist_items_file = self.playlist_items_file(playlist_key)
-        self._raise_if_no_content(playlist_items_file, url)
+        self._raise_if_invalid_file(playlist_items_file, url)
         first_item = get_first_item(playlist_items_file.parsed().items)
         if self._is_music_playlist_key(playlist_key):
             # Automatically generated music playlists have a
@@ -372,7 +372,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
-        if show_check := self._show_is_outdated(source, show_key):
+        if show_check := self._show_chek(source, show_key):
             channel_file = self.channel_by_channel_id_file(show_key)
             channel_item = get_first_item(channel_file.parsed().items)
             show = Show(
@@ -407,7 +407,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         name: str,
         playlist: ChannelItem | PlaylistItem | PlaylistsItem,
     ) -> None:
-        if season_check := self._season_is_outdated(show, season_key, show_key):
+        if season_check := self._season_check(show, season_key, show_key):
             season = Season(
                 key=season_key,
                 name=name,
@@ -477,13 +477,12 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 continue
             seen.add(episode_key)
 
-            if not (
-                episode_check := self._episode_is_outdated(
-                    episode_key,
-                    season,
-                    show_key,
-                )
-            ):
+            episode_check = self._episode_check(
+                episode_key,
+                season,
+                show_key,
+            )
+            if not episode_check:
                 continue
 
             video_item = self.videos_file(episode_key).parsed().items[0]
@@ -518,13 +517,13 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             old_video_ids = set(playlist_feed.video_ids())
         else:
             old_video_ids = set()
-        playlist_feed.download_if_outdated(tz_datetime.now())
+        playlist_feed.download_if_outdated(season.update_at)
         if set(playlist_feed.video_ids()) - old_video_ids:
             self._download_season_files_and_children(
                 season,
                 update_at=tz_datetime.now(),
             )
-        self._cache_and_upsert_show(season.show)
+        self._preload_and_upsert_show(season.show)
         season.update_at = playlist_feed.data_timestamp + timedelta(hours=1)
 
     @override

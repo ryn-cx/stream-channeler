@@ -1,7 +1,9 @@
 import secrets
 import warnings
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
+import keyring
+from get_around import KEYRING_SERVICE
 from pydantic import (
     AnyUrl,
     BeforeValidator,
@@ -123,8 +125,23 @@ class Settings(BaseSettings):
 
     YOUTUBE_API_KEY: str
     GET_AROUND_SERVER: str
-    GET_AROUND_PASSWORD: str
+    CF_ACCESS_CLIENT_ID: str
+    CF_ACCESS_CLIENT_SECRET: str
     PROXY: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _get_keyring_or_env(cls, data: Any) -> Any:  # noqa: ANN401
+        if isinstance(data, dict):
+            for name in (
+                "GET_AROUND_SERVER",
+                "CF_ACCESS_CLIENT_ID",
+                "CF_ACCESS_CLIENT_SECRET",
+            ):
+                keyring_value = keyring.get_password(KEYRING_SERVICE, name)
+                if keyring_value is not None:
+                    data[name] = keyring_value
+        return data
 
 
 # call-arg - Error from original template.

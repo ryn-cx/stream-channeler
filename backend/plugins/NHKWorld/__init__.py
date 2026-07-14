@@ -50,7 +50,7 @@ class NHKWorld(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         show_file = self.video_program_file(show_key)
-        self._raise_if_no_content(show_file, url)
+        self._raise_if_invalid_file(show_file, url)
 
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():
@@ -154,37 +154,32 @@ class NHKWorld(FileMixin, register=True):
         return show
 
     def _upsert_season(self, show: Show, show_key: str) -> None:
-        season_timestamp = self.season_data_timestamp(show_key, show_key)
-        season = Season.get_from_memory(self.session, show, show_key)
-        if (
-            not season
-            or season.data_timestamp != season_timestamp
-            or season.deleted_at is not None
-        ):
+        if season_check := self._season_check(show, show_key, show_key):
             season = Season(
                 key=show_key,
                 sort_order=0,
                 url=show.url,
-                data_timestamp=season_timestamp,
+                data_timestamp=season_check.data_timestamp,
                 show_id=show.id,
-            ).upsert(show, season)
+            ).upsert(show, season_check.record)
+        else:
+            season = season_check.record
 
         self._upsert_episodes(season, show_key)
         self.soft_delete_missing_seasons(show_key)
 
     def _upsert_episodes(self, season: Season, show_key: str) -> None:
-        episode_timestamp = self.episode_data_timestamp("", season.key, show_key)
         # Episodes are listed newest to oldest.
         items = list(reversed(self.video_episodes_file(show_key).items()))
         for sort_order, item in enumerate(items):
             season.set_update_at(item.video.expired_at)
 
-            existing_episode = Episode.get_from_memory(self.session, season, item.id)
-            if (
-                existing_episode
-                and existing_episode.data_timestamp == episode_timestamp
-                and existing_episode.deleted_at is None
-            ):
+            episode_check = self._episode_check(
+                item.id,
+                season,
+                show_key,
+            )
+            if not episode_check:
                 continue
 
             video = item.video
@@ -199,9 +194,9 @@ class NHKWorld(FileMixin, register=True):
                 duration=video.duration,
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
-                data_timestamp=episode_timestamp,
+                data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
-            ).upsert(season, existing_episode)
+            ).upsert(season, episode_check.record)
 
         self.soft_delete_missing_episodes(season.key)
 

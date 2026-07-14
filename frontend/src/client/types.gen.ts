@@ -844,8 +844,8 @@ export type WatchOutput = {
  * Schema for updating a `Watch`.
  */
 export type WatchUpdate = {
-    watch_date?: (string | null);
-    verified?: (boolean | null);
+    watch_date?: string;
+    verified?: boolean;
 };
 
 export type WhitelistEntryInput = {

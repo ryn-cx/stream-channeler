@@ -1,28 +1,29 @@
-# TODO: Validate
 """Files schemas."""
 
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
-from sqlmodel import Field
 
 from app.files.models import BaseFile, File
 from app.models import BaseMediaMixin, DateTimeField
 from app.plugins.models import Plugin
-from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
 
 
 class FileCreate(BaseCreateWithParentAndKey[File, Plugin], BaseFile):
     """Schema for creating a `File`."""
 
 
-class FileUpdate(BaseUpdateWithKey[File], BaseFile):
+class FileUpdate(
+    make_model_with_all_fields_optional(BaseFile),
+    BaseUpdateWithKey[File],
+):
     """Schema for updating a `File`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
-    data_timestamp: datetime | None = Field(default=None)  # type: ignore[assignment]
 
 
 class FilePublic(BaseFile):

@@ -53,10 +53,14 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
         as a new timestamped file so update_source treats it as unprocessed.
         """
         latest_feed = plugin_instance.latest_new_video_episodes_file()
+        latest_feed.database_record.extra = "Completed"
         parsed = latest_feed.parsed()
-        first_item = parsed[0].items[0]
+        first_page = parsed[0]
+        first_item = first_page.items[0]
         first_item.video_program.id = show_key
         first_item.video.published_at = timestamp
+        first_page.items = [first_item]
+        parsed = [first_page]
         new_feed = plugin_instance.new_video_episodes_file(timestamp)
         new_feed.write(naphki().video_episodes.model_dump(parsed))  # pyright: ignore[reportPrivateUsage]
         new_feed._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001

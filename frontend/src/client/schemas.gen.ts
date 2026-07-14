@@ -4476,27 +4476,14 @@ export const WatchOutputSchema = {
 export const WatchUpdateSchema = {
     properties: {
         watch_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            format: 'date-time',
             title: 'Watch Date'
         },
         verified: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Verified'
+            type: 'boolean',
+            title: 'Verified',
+            default: false
         }
     },
     additionalProperties: false,

@@ -49,6 +49,14 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output.incremented(episode.key, "modified_at", "data_timestamp")
         return output
 
+    @override
+    def deleted_episode_validator(self, episode: Episode) -> Validator:
+        output = super().deleted_episode_validator(episode)
+        # update_season re-derives the target season's update_at from the RSS feed,
+        # which also bumps its modified_at.
+        output.incremented(episode.season.id, "update_at", "modified_at")
+        return output
+
 
 class ChannelWithNoUploadsMixin(YouTubeValidator):
     @property

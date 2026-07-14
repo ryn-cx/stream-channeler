@@ -7,47 +7,40 @@ from typing import Any, override
 import httpx
 from just_scrape import JustScrape
 from just_scrape.custom_buy_box_offers import (
-    response_models as custom_buy_box_offers_models,
+    models as custom_buy_box_offers_models,
 )
 from just_scrape.custom_season_episodes import (
-    response_models as custom_season_episodes_models,
+    models as custom_season_episodes_models,
 )
 from just_scrape.exceptions import GraphQLError
-from just_scrape.new_title_buckets import response_models as new_title_buckets_models
-from just_scrape.new_titles import response_models as new_titles_models
-from just_scrape.search import response_models as search_models
-from just_scrape.url_title_details import response_models as url_title_details_models
+from just_scrape.new_title_buckets import models as new_title_buckets_models
+from just_scrape.new_titles import models as new_titles_models
+from just_scrape.search import models as search_models
+from just_scrape.url_title_details import models as url_title_details_models
 from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
 
-from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin, JSONFile
 from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
+from plugins.utils.get_around_client import get_around_client
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
 
 @cache
 def just_scrape() -> JustScrape:
-    server: str | None = settings.GET_AROUND_SERVER
-    if server == "changethis":
-        server = None
-    password: str | None = settings.GET_AROUND_PASSWORD
-    if password == "changethis":  # noqa: S105
-        password = None
     return JustScrape(
-        get_around_server=server,
-        get_around_password=password,
+        get_around_client=get_around_client(),
         sleep_time=10,
     )
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
-    api_endpoint = just_scrape().new_titles
+    API_ENDPOINT = just_scrape().new_titles
 
     def __init__(
         self,
@@ -73,7 +66,7 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
 
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
-    api_endpoint = just_scrape().new_title_buckets
+    API_ENDPOINT = just_scrape().new_title_buckets
 
     def __init__(
         self,
@@ -113,14 +106,14 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
-    api_endpoint = just_scrape().url_title_details
+    API_ENDPOINT = just_scrape().url_title_details
 
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
                 response = self._get()
-                content = self.api_endpoint.original_input(response)
+                content = self.API_ENDPOINT.original_input(response)
                 self.write(content)
             # Occurs when a user puts in an invalid URL.
             except GraphQLError:
@@ -130,7 +123,7 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
 class CustomSeasonEpisodes(
     GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
 ):
-    api_endpoint = just_scrape().custom_season_episodes
+    API_ENDPOINT = just_scrape().custom_season_episodes
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
@@ -143,11 +136,11 @@ class CustomSeasonEpisodes(
 class CustomBuyBoxOffers(
     GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
 ):
-    api_endpoint = just_scrape().custom_buy_box_offers
+    API_ENDPOINT = just_scrape().custom_buy_box_offers
 
 
 class SearchTitles(GAPIJSON[search_models.SearchResponse]):
-    api_endpoint = just_scrape().search
+    API_ENDPOINT = just_scrape().search
 
 
 class FileMixin(BasePlugin, register=False):
@@ -157,7 +150,7 @@ class FileMixin(BasePlugin, register=False):
         self._cached_media_type = None
 
     def custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
-        """Return a cached custom buy box offers file for the given episode key."""
+        """Return a cached CustomBuyBoxOffers for the given episode key."""
         return self._get_cached_file(
             CustomBuyBoxOffers,
             episode_key,
@@ -165,7 +158,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def url_title_details_file(self, show_key: str) -> UrlTitleDetails:
-        """Return a cached url title details file for the given show key."""
+        """Return a cached UrlTitleDetails for the given show key."""
         return self._get_cached_file(
             UrlTitleDetails,
             show_key,
@@ -173,7 +166,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def new_titles_file(self, source_key: str, date: datetime | date) -> NewTitles:
-        """Return a cached new titles file for the given source key and date."""
+        """Return a cached NewTitles for the given source key and date."""
         if isinstance(date, datetime):
             date = date.date()
 
@@ -185,7 +178,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
-        """Return a cached custom season episodes file for the given season key."""
+        """Return a cached CustomSeasonEpisodes for the given season key."""
         return self._get_cached_file(
             CustomSeasonEpisodes,
             season_key,
@@ -193,7 +186,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
-        """Return a cached new titles bucket file for the given datetime or File."""
+        """Return a cached NewTitleBucket for the given datetime or File."""
         if isinstance(end_datetime, File):
             key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
             end_datetime = datetime.fromisoformat(key)
@@ -204,7 +197,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
-        """Return a cached providers locale file for the given locale."""
+        """Return a cached ProvidersLocale for the given locale."""
         return self._get_cached_file(
             ProvidersLocale,
             locale,
@@ -212,7 +205,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def search_titles_file(self, query: str) -> SearchTitles:
-        """Return a cached search titles file for the given query."""
+        """Return a cached SearchTitles for the given query."""
         return self._get_cached_file(
             SearchTitles,
             query,

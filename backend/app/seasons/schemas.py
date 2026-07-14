@@ -1,12 +1,14 @@
-# TODO: Validate
 """Season schemas."""
 
 import uuid
 
 from pydantic import BaseModel
-from sqlmodel import Field
 
-from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
 from app.seasons.models import BaseSeason, Season
 from app.shows.models import Show
 
@@ -15,11 +17,11 @@ class SeasonCreate(BaseCreateWithParentAndKey[Season, Show], BaseSeason):
     """Schema for creating a `Season`."""
 
 
-class SeasonUpdate(BaseUpdateWithKey[Season], BaseSeason):
+class SeasonUpdate(
+    make_model_with_all_fields_optional(BaseSeason),
+    BaseUpdateWithKey[Season],
+):
     """Schema for updating a `Season`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
 
 
 class SeasonOutput(BaseSeason):

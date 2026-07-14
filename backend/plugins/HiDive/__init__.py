@@ -5,6 +5,7 @@ from typing import ClassVar, override
 
 from diving_board.search import models as search_models
 from diving_board.vod import models as vod_models
+from diving_board.vod.hero.models import VodHeroModel
 from loguru import logger
 
 from app.episodes.models import Episode
@@ -14,10 +15,10 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.HiDive.files import (
     FileMixin,
-    Playlist,
     Schedule,
     Season,
     Series,
+    Vod,
     diving_board,
 )
 from plugins.utils.abstract_plugin import (
@@ -38,19 +39,19 @@ class HiDive(FileMixin, register=True):
             "> `https://www.hidive.com/series/1286`\n"
             "> `https://www.hidive.com/season/20022`\n\n"
             "> [!TIP/Movie]\n"
-            "> `https://www.hidive.com/playlist/19919`\n\n"
+            "> `https://www.hidive.com/video/586784`\n\n"
         )
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         self.set_media_type_from_url(url)
         self._validate_url(url)
-        show_key = self._resolve_show_key(url)
+        show_key = self._get_show_key(url)
         show = self._import_show(show_key)
         return [URLImportResult(show=show, is_whitelist=False)]
 
-    def _resolve_show_key(self, url: str) -> str:
-        """Return the show key (series_id for TV, playlist_key for Movie)."""
+    def _get_show_key(self, url: str) -> str:
+        """Return the show key (series_id for TV, vod_id for Movie)."""
         key = self._parse_url(url)
         if self._media_type == "Movie":
             return key
@@ -80,22 +81,22 @@ class HiDive(FileMixin, register=True):
             return match.group("series_key")
         if match := re.match(self._season_url_regex(), url):
             return match.group("season_key")
-        if match := re.match(self._movie_url_regex(), url):
-            return match.group("movie_key")
+        if match := re.match(self._movie_video_url_regex(), url):
+            return match.group("movie_vod_key")
         msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
 
     def _validate_url(self, url: str) -> None:
         key = self._parse_url(url)
-        file: Series | Season | Playlist
+        file: Series | Season | Vod
         if self._media_type == "Movie":
-            file = self.playlist_file(key)
+            file = self.vod_file(key)
         elif re.match(self._tv_series_url_regex(), url):
             file = self.series_file(key)
         else:
             file = self.season_file(key)
 
-        self._raise_if_no_content(file, url)
+        self._raise_if_invalid_file(file, url)
 
     def _import_show(self, key: str) -> Show:
         if show := self._preload_show(key).one_or_none():
@@ -193,15 +194,19 @@ class HiDive(FileMixin, register=True):
 
     @classmethod
     def _movie_url_regex(cls) -> str:
+        return cls._movie_video_url_regex()
+
+    @classmethod
+    def _movie_video_url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
-        # Example URL: https://www.hidive.com/playlist/20431
-        regex_string = r"\/playlist\/(?P<movie_key>\d+)(?:\/|$)"
+        # Example URL: https://www.hidive.com/video/586784
+        regex_string = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
         return domain_regex + regex_string
 
     @classmethod
     def _show_url(cls, key: str | int, media_type: str = "TV Show") -> str:
         if media_type == "Movie":
-            return cls.build_url(f"playlist/{key}")
+            return cls.build_url(f"video/{key}")
         return cls.build_url(f"series/{key}")
 
     @classmethod
@@ -254,15 +259,12 @@ class HiDive(FileMixin, register=True):
 
     def _upsert_movie_show(self, source: Source, show_key: str) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
-        playlist_data = self.playlist_file(show_key).parsed()
-        playlist_bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
-        hero = diving_board().playlist.extract_hero(playlist_data)
-        movie_data = playlist_bucket.attributes.items[0]
+        hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
 
         show = Show(
             key=show_key,
-            name=movie_data.title,
-            description=movie_data.description,
+            name=self._movie_title(hero),
+            description=self._movie_description(hero),
             url=self._show_url(show_key, "Movie"),
             image_url=hero.attributes.image.attributes.source,
             media_type="Movie",
@@ -282,13 +284,7 @@ class HiDive(FileMixin, register=True):
             season_data = self.season_file(season_key).parsed()
             hero = diving_board().season.extract_hero(season_data)
 
-            new_timestamp = self.season_data_timestamp(season_key, show_key)
-            season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if (
-                not season
-                or season.data_timestamp != new_timestamp
-                or season.deleted_at is not None
-            ):
+            if season_check := self._season_check(show, season_key, show_key):
                 season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
@@ -296,9 +292,11 @@ class HiDive(FileMixin, register=True):
                     sort_order=sort_order,
                     url=self._season_url(season_key),
                     image_url=hero.attributes.image.attributes.source,
-                    data_timestamp=new_timestamp,
+                    data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
-                ).upsert(show, season)
+                ).upsert(show, season_check.record)
+            else:
+                season = season_check.record
 
             self._upsert_tv_episodes(season, show_key)
 
@@ -308,30 +306,21 @@ class HiDive(FileMixin, register=True):
         for sort_order, season_key in enumerate(
             self._season_keys_from_file(show_key),
         ):
-            playlist_data = self.playlist_file(show_key).parsed()
-            bucket = diving_board().playlist.extract_bucket_playlist(
-                playlist_data,
-            )
-            hero = diving_board().playlist.extract_hero(playlist_data)
-            movie_data = bucket.attributes.items[0]
+            hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
 
-            new_timestamp = self.season_data_timestamp(season_key, show_key)
-            season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if (
-                not season
-                or season.data_timestamp != new_timestamp
-                or season.deleted_at is not None
-            ):
+            if season_check := self._season_check(show, season_key, show_key):
                 season = SeasonModel(
                     key=season_key,
-                    name=movie_data.title,
+                    name=self._movie_title(hero),
                     season_number=0,
                     sort_order=sort_order,
                     url=self._show_url(show_key, "Movie"),
                     image_url=hero.attributes.image.attributes.source,
-                    data_timestamp=new_timestamp,
+                    data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
-                ).upsert(show, season)
+                ).upsert(show, season_check.record)
+            else:
+                season = season_check.record
 
             self._upsert_movie_episode(season, show_key)
 
@@ -342,17 +331,12 @@ class HiDive(FileMixin, register=True):
         bucket = diving_board().season.extract_bucket_season(season_data)
         for sort_order, item in enumerate(bucket.attributes.items):
             episode_key = str(item.id)
-            episode = Episode.get_from_memory(self.session, season, episode_key)
-            new_timestamp = self.episode_data_timestamp(
+            episode_check = self._episode_check(
                 episode_key,
-                season.key,
+                season,
                 show_key,
             )
-            if (
-                episode
-                and episode.data_timestamp == new_timestamp
-                and episode.deleted_at is None
-            ):
+            if not episode_check:
                 continue
 
             vod_data = self.vod_file(episode_key).parsed()
@@ -372,44 +356,66 @@ class HiDive(FileMixin, register=True):
                 duration=item.duration,
                 release_date=release_date,
                 air_date=release_date,
-                data_timestamp=new_timestamp,
+                data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
-            ).upsert(season, episode)
+            ).upsert(season, episode_check.record)
 
         self.soft_delete_missing_episodes(season.key)
 
     def _upsert_movie_episode(self, season: SeasonModel, show_key: str) -> None:
-        playlist_data = self.playlist_file(show_key).parsed()
-        bucket = diving_board().playlist.extract_bucket_playlist(playlist_data)
-        movie_data = bucket.attributes.items[0]
-        episode_key = str(movie_data.id)
+        episode_key = show_key
+        vod_data = self.vod_file(episode_key).parsed()
+        hero = diving_board().vod.extract_hero(vod_data)
 
-        episode = Episode.get_from_memory(self.session, season, episode_key)
-        new_timestamp = self.episode_data_timestamp(episode_key, season.key, show_key)
-        if not episode or episode.data_timestamp != new_timestamp:
-            vod_data = self.vod_file(episode_key).parsed()
+        if episode_check := self._episode_check(episode_key, season, show_key):
             release_date = self._extract_release_date(vod_data)
 
             Episode(
                 key=episode_key,
-                name=movie_data.title,
-                description=movie_data.description,
+                name=self._movie_title(hero),
+                description=self._movie_description(hero),
                 url=self._episode_url(episode_key),
-                image_url=movie_data.thumbnail_url,
+                image_url=hero.attributes.image.attributes.source,
                 episode_number=0,
                 sort_order=0,
-                duration=int(movie_data.duration),
+                duration=self._movie_duration(hero),
                 release_date=release_date,
                 air_date=release_date,
-                data_timestamp=new_timestamp,
+                data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
-            ).upsert(season, episode)
+            ).upsert(season, episode_check.record)
 
         self.soft_delete_missing_episodes(season.key)
 
+    @staticmethod
+    def _movie_title(hero: VodHeroModel) -> str:
+        """Return the movie's title from the VOD's own hero action."""
+        for action in hero.attributes.actions:
+            data = action.attributes.action.data
+            if data.type == "VOD":
+                return data.title
+        msg = "No VOD action found in movie hero."
+        raise ValueError(msg)
+
+    @staticmethod
+    def _movie_description(hero: VodHeroModel) -> str | None:
+        """Return the movie's synopsis from the first hero content block with text."""
+        for content in hero.attributes.content:
+            if content.attributes.text:
+                return content.attributes.text
+        return None
+
+    @staticmethod
+    def _movie_duration(hero: VodHeroModel) -> int | None:
+        """Return the movie's runtime in seconds from the hero content."""
+        for content in hero.attributes.content:
+            if content.attributes.duration is not None:
+                return content.attributes.duration
+        return None
+
     _SEARCH_CARD_TYPES: ClassVar[dict[str, str]] = {
         "SERIES": "TV Show",
-        "PLAYLIST": "Movie",
+        "VOD": "Movie",
     }
 
     @override

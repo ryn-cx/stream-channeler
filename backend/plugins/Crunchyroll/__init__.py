@@ -1,12 +1,4 @@
 """Crunchyroll plugin."""
-# TODO: Validate
-# This plugin intentionally does not support movies from the movies page because it has
-# been unofficially deprecated as movies are now added as a series instead.
-
-# Current movie page example:
-# https://www.crunchyroll.com/series/GMTE00335490/spy-x-family-code-white
-# Deprecated movie page example:
-# https://www.crunchyroll.com/videos/alphabetical?media=movies
 
 import json
 import re
@@ -21,7 +13,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.files import Browse, FileMixin, chirashi
+from plugins.Crunchyroll.files import BrowseSeries, FileMixin, chirashi
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
     PluginSearchResult,
@@ -45,7 +37,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     def import_url_instructions(cls) -> str:
         return (
             "> [!TIP/Series]\n"
-            "> `https://www.crunchyroll.com/series/G4PH0WXVJ/spy-x-family`\n\n"
+            "> `https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project`\n\n"
         )
 
     @override
@@ -61,12 +53,12 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
         if match := re.match(self._url_regex(), url):
             return match.group("show_key")
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.series_file(show_key)
-        self._raise_if_no_content(series_json, url)
+        self._raise_if_invalid_file(series_json, url)
 
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():
@@ -79,15 +71,14 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     def update_source(self, source: Source) -> None:
         latest_browse_file = self.get_latest_browse_file()
         new_browse_file = self.browse_file(latest_browse_file.data_timestamp)
-        new_browse_file.download_if_outdated(source.update_at)
+        new_browse_file.download_if_outdated()
         self._process_new_browse_files(source)
         self._upsert_source()
 
     def _process_new_browse_files(self, source: Source) -> None:
-        # Preload up to seasons because seasons have their update_at values set.
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self.get_incomplete_files(Browse, self.browse_file):
+        for browse_json in self.get_incomplete_files(BrowseSeries, self.browse_file):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -169,50 +160,40 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
             for season_key in self._season_keys_from_file(show_key)
             for episode_data in self.episodes_file(season_key).parsed().data
         ]
-        if len(release_dates) != 1:
-            return "TV Show"
-        latest_release = release_dates[0]
-        if self.show_data_timestamp(show_key) > latest_release + timedelta(days=7):
+        data_timestamp = self.show_data_timestamp(show_key)
+        next_episode_timestamp = release_dates[0] + timedelta(days=7)
+        if len(release_dates) == 1 and data_timestamp > next_episode_timestamp:
             return "Movie"
         return "TV Show"
 
     def _upsert_seasons(self, show: Show, show_key: str) -> None:
         seasons_file = self.seasons_file(show_key)
         for i, season_data in enumerate(seasons_file.parsed().data):
-            season_timestamp = self.season_data_timestamp(season_data.id, show.key)
-            season = Season.get_from_memory(self.session, show, season_data.id)
-            if (
-                not season
-                or season.data_timestamp != season_timestamp
-                or season.deleted_at is not None
-            ):
+            if season_check := self._season_check(show, season_data.id, show.key):
                 season = Season(
                     key=season_data.id,
                     sort_order=i,
                     name=season_data.title,
                     season_number=season_data.season_number,
-                    data_timestamp=season_timestamp,
+                    data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
-                ).upsert(show, season)
+                ).upsert(show, season_check.record)
+            else:
+                season = season_check.record
 
             self._upsert_episodes(season)
 
         self.soft_delete_missing_seasons(show_key)
 
     def _upsert_episodes(self, season: Season) -> None:
-        episode_timestamp = self.episode_data_timestamp("", season.key, season.show.key)
         episodes_data = self.episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):
-            existing_episode = Episode.get_from_memory(
-                self.session,
-                season,
+            episode_check = self._episode_check(
                 episode_data.id,
+                season,
+                season.show.key,
             )
-            if (
-                existing_episode
-                and existing_episode.data_timestamp == episode_timestamp
-                and existing_episode.deleted_at is None
-            ):
+            if not episode_check:
                 continue
             Episode(
                 key=episode_data.id,
@@ -225,12 +206,13 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                 release_date=episode_data.premium_available_date,
                 air_date=episode_data.episode_air_date,
                 duration=episode_data.duration_ms // 1000,
-                data_timestamp=episode_timestamp,
+                data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
-            ).upsert(season, existing_episode)
+            ).upsert(season, episode_check.record)
 
         self.soft_delete_missing_episodes(season.key)
 
+    # TODO: Add searching for other media types.
     @override
     def search(self, query: str) -> PluginSearchResults:
         search_file = self.search_file(query)
@@ -243,7 +225,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                 url=self._show_url(item.id),
                 year=item.series_metadata.series_launch_year,
                 image_url=item.images.poster_tall[0][1].source,
-                media_type="TV Show",
+                media_type="TV Show",  
             )
             for item in series
         ]

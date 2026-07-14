@@ -10,32 +10,26 @@ from naphki.video_episodes.models import Item, VideoEpisodesModel
 from naphki.video_programs.models import VideoProgramsModel
 from sqlmodel import col, select
 
-from app.config import settings
 from app.files.models import File
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
+from plugins.utils.get_around_client import get_around_client
 
 
 @cache
 def naphki() -> Naphki:
-    server: str | None = settings.GET_AROUND_SERVER
-    if server == "changethis":
-        server = None
-    password: str | None = settings.GET_AROUND_PASSWORD
-    if password == "changethis":  # noqa: S105
-        password = None
-    return Naphki(get_around_server=server, get_around_password=password)
+    return Naphki(get_around_client=get_around_client())
 
 
 class VideoProgram(GAPIJSON[VideoProgramsModel]):
     # Occurs when a user puts in an invalid URL.
-    acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = naphki().video_programs
+    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    API_ENDPOINT = naphki().video_programs
 
 
 class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
-    api_endpoint = naphki().video_episodes
+    API_ENDPOINT = naphki().video_episodes
 
     @override
     def _get(self) -> list[VideoEpisodesModel]:
@@ -46,12 +40,12 @@ class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
 
 class ShowsSearch(GAPIJSON[ShowsSearchModel]):
-    api_endpoint = naphki().shows_search
+    API_ENDPOINT = naphki().shows_search
 
 
 class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     IMMUTABLE = True
-    api_endpoint = naphki().video_episodes
+    API_ENDPOINT = naphki().video_episodes
 
     @override
     def _get(self) -> list[VideoEpisodesModel]:

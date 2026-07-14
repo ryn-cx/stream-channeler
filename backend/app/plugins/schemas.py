@@ -1,15 +1,15 @@
 # TODO: Validate
 """Plugin schemas."""
-
-# TODO: Validate
 import uuid
 
 from pydantic import BaseModel
-from sqlmodel import Field
 
-from app.models import Visibility
 from app.plugins.models import BasePlugin, Plugin
-from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
 from app.users.models import User
 
 
@@ -17,12 +17,11 @@ class PluginCreate(BaseCreateWithParentAndKey[Plugin, User], BasePlugin):
     """Schema for creating a `Plugin`."""
 
 
-class PluginUpdate(BaseUpdateWithKey[Plugin], BasePlugin):
+class PluginUpdate(
+    make_model_with_all_fields_optional(BasePlugin),
+    BaseUpdateWithKey[Plugin],
+):
     """Schema for updating a `Plugin`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
-    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
 
 
 class PluginOutput(BasePlugin):

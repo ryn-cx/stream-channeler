@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from freezegun import freeze_time
+from loguru import logger
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -165,11 +166,17 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         # Export the full file (metadata + content) as JSON for importing.
         metadata_path = self.files_directory_path() / f"{file_id}.metadata.json"
-        metadata_path.parent.mkdir(parents=True, exist_ok=True)
-        metadata_path.write_text(
-            json.dumps(file.model_dump(exclude={"plugin_id"}), default=str, indent=2),
-            encoding="utf-8",
-        )
+        if not metadata_path.exists():
+            metadata_path.parent.mkdir(parents=True, exist_ok=True)
+            metadata_path.write_text(
+                json.dumps(
+                    file.model_dump(exclude={"plugin_id"}),
+                    default=str,
+                    indent=2,
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
 
         # Also export the raw content file for easy inspection.
         content_path = self.files_directory_path() / file_id
@@ -191,7 +198,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.import_url(url)
 
-        session.commit()  # Set the rollback point.
+        session.flush()
+        session.expire_all()
 
         return output
 
@@ -212,6 +220,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     def _import_files(self, session: Session) -> None:
         """Import all exported files into the database."""
+        logger.info(f"Importing files for {type(self).__name__}")
 
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.

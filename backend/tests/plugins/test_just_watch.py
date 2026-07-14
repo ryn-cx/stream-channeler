@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
@@ -30,24 +31,33 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         session: Session,
         plugin: Plugin,
     ) -> list[tuple[str, date]]:
-        """Return (source_key, edge_date) for incomplete-bucket edges with a source."""
+        """Return (source_key, edge_date) for edges of not-yet-completed buckets.
+
+        The source key is the edge's provider short name. update_plugin upserts a
+        source for every provider in the locale file, so edges are matched against
+        that provider list rather than the sources that already exist -- at
+        pre-creation time only the few sources imported for the current show exist,
+        which would miss the majority of edges the update actually processes.
+        """
         plugin_instance = JustWatch(session)
+        provider_keys = {
+            provider["short_name"]
+            for provider in plugin_instance.providers_locale_file().parsed()
+        }
         statement = select(File).where(
             File.plugin_id == plugin.id,
             col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
-            File.extra == "Incomplete",
+            # Matches get_incomplete_files: buckets not marked "Completed", which
+            # includes NULL extras that have never been processed.
+            col(File.extra).is_distinct_from("Completed"),
         )
         entries: list[tuple[str, date]] = []
         for bucket_file in session.exec(statement).all():
             bucket = plugin_instance.new_titles_bucket_file(bucket_file)
             for edge in bucket.parsed_edges():
-                source = Source.get_from_memory(
-                    session,
-                    plugin,
-                    edge.key.package.short_name,
-                )
-                if source:
-                    entries.append((source.key, edge.key.date))
+                short_name = edge.key.package.short_name
+                if short_name in provider_keys:
+                    entries.append((short_name, edge.key.date))
         return entries
 
     @override
@@ -72,6 +82,23 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         ) + timedelta(days=2)
         if completeness_deadline > tz_datetime.now():
             validator.populated(source.id, "update_at")
+        return validator
+
+    @override
+    def update_show_validator(self, show: Show) -> Validator:
+        validator = super().update_show_validator(show)
+        # update_show refreshes the show but does not recompute update_at for a show
+        # without a weekly schedule; the scaffolding forces update_at to mark the show
+        # outdated, so its final value is plugin-dependent and left unasserted.
+        validator.ignored(show.id, "update_at")
+        return validator
+
+    @override
+    def update_season_validator(self, season: Season) -> Validator:
+        validator = super().update_season_validator(season)
+        # As with update_show, a non-scheduled season's update_at is not recomputed, so
+        # the scaffolding-forced value is left unasserted.
+        validator.ignored(season.id, "update_at")
         return validator
 
     def test_update_plugin(self, session_with_files: Session) -> None:
@@ -118,10 +145,13 @@ class BaseJustWatch(PluginValidator[JustWatch]):
         existing_bucket_file = plugin_instance._get_latest_new_titles_bucket().one()  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
         existing_bucket = plugin_instance.new_titles_bucket_file(existing_bucket_file)
         parsed = existing_bucket.parsed()
-        first_edge = parsed[0].data.new_title_buckets.edges[0]
+        first_page = parsed[0]
+        first_edge = first_page.data.new_title_buckets.edges[0]
         assert first_edge is not None, "Bucket file has no edges"
         first_edge.key.package.short_name = source_key
         first_edge.key.date = edge_date
+        first_page.data.new_title_buckets.edges = [first_edge]
+        parsed = [first_page]
         new_bucket = plugin_instance.new_titles_bucket_file(timestamp)
         new_bucket.write(NewTitleBuckets.model_dump(parsed))
         new_bucket._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001

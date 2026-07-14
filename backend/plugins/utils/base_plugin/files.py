@@ -235,9 +235,9 @@ class XMLFile(BaseFile[Element], ABC):
 
 
 class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
-    api_endpoint: ClassVar[Any]
+    API_ENDPOINT: ClassVar[Any]
 
-    acceptable_error: str | None = None
+    ACCEPTABLE_ERROR: str | None = None
 
     def __init__(
         self,
@@ -250,30 +250,34 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     @override
     def _parse(self, raw: Any) -> T:
-        return self.api_endpoint.parse(raw)  # type: ignore[return-value]
+        return self.API_ENDPOINT.parse(raw)  # type: ignore[return-value]
 
     @abstractmethod
     def _get(self) -> T:
         """Call the appropriate get method on the API endpoint."""
 
-    def _get_acceptable_error(self) -> str | None:
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
         """Return the error message that should be caught during download.
 
         Override this for dynamic error messages that depend on instance state.
         """
-        return self.acceptable_error
+        return self.ACCEPTABLE_ERROR
+
+    def acceptable_error_extra_value(self) -> str:
+        return f"Invalid unique_identifier {self.unique_identifier}"
 
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
                 response = self._get()
-                content = self.api_endpoint.original_input(response)
+                content = self.API_ENDPOINT.original_input(response)
                 self.write(content)
             except Exception as e:
-                if str(e) != self._get_acceptable_error():
+                if str(e) != self._get_ACCEPTABLE_ERROR():
                     raise
 
                 self.write(None)
+                self.database_record.extra = self.acceptable_error_extra_value()
 
 
 class APISerializerEndpoint[T](Protocol):
@@ -308,22 +312,22 @@ class APIEndpoint[T](APISerializerEndpoint[T], Protocol):
 
 
 class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
-    api_endpoint: ClassVar[APIEndpoint[Any]]
+    API_ENDPOINT: ClassVar[APIEndpoint[Any]]
 
     @override
     def _get(self) -> T:
         """Call the appropriate get method on the API endpoint."""
-        return self.api_endpoint.get(self.unique_identifier)
+        return self.API_ENDPOINT.get(self.unique_identifier)
 
 
 # TODO: This may no longe be needed
 class GAPIJSONNoGet[T: BaseModel](PartialGAPIJSON[T], ABC):
-    api_endpoint: ClassVar[APISerializerEndpoint[Any]]
+    API_ENDPOINT: ClassVar[APISerializerEndpoint[Any]]
 
 
 class GAPIListJSON[T: BaseModel](PartialGAPIJSON[list[T]], ABC):
-    api_endpoint: ClassVar[APISerializerEndpoint[Any]]
+    API_ENDPOINT: ClassVar[APISerializerEndpoint[Any]]
 
     @override
     def _parse(self, raw: Any) -> list[T]:
-        return [self.api_endpoint.parse(page) for page in raw]
+        return [self.API_ENDPOINT.parse(page) for page in raw]

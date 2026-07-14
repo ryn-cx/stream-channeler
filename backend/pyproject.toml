@@ -50,7 +50,7 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 # Block network access for plugin tests.
-addopts = "--disable-socket --allow-hosts=127.0.0.1,::1,localhost"
+addopts = "--disable-socket --allow-hosts=127.0.0.1,::1,localhost -s"
 
 [tool.coverage.run]
 source = ["app"]
@@ -80,9 +80,9 @@ ignore = [
   "W191",  # indentation contains tabs
   "B904",  # Allow raising exceptions without from e, for HTTPException
 
-  # # Additional ignores
-  # # Too many false positives
-  # TODO: Go through all code so these linters can be used.
+  # Additional ignores.
+  "D",  # Existing code does not contain docstrings.
+  # Too many false positives.
   "TC001",
   "TC002",
   "TC003",
@@ -92,12 +92,11 @@ ignore = [
   "FIX002"
 ]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101"]  # Asserts should be allowed in tests.
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
-[tool.ruff.lint.pyupgrade]
-# Preserve types, even if a file imports `from __future__ import annotations`.
-keep-runtime-typing = true
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D"]  # Asserts and missing docstrings allowed in tests.
 
 [tool.ty.terminal]
 error-on-warning = true
@@ -106,7 +105,7 @@ error-on-warning = true
 just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
-meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
+meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }

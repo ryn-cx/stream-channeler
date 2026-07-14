@@ -7,9 +7,9 @@ from itertools import chain
 from typing import cast, override
 
 from just_scrape.custom_buy_box_offers import (
-    response_models as custom_buy_box_offers_models,
+    models as custom_buy_box_offers_models,
 )
-from just_scrape.url_title_details import response_models as url_title_details_models
+from just_scrape.url_title_details import models as url_title_details_models
 from loguru import logger
 
 from app.episodes.models import Episode
@@ -122,7 +122,7 @@ class JustWatch(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.url_title_details_file(show_key)
-        self._raise_if_no_content(series_json, url)
+        self._raise_if_invalid_file(series_json, url)
 
     def _create_url_import_results(
         self,
@@ -506,21 +506,12 @@ class JustWatch(FileMixin, register=True):
         )
         parsed_episodes = custom_season_episodes_file.parsed_episodes()
         for i, season_episode in enumerate(parsed_episodes):
-            existing_episode = Episode.get_from_memory(
-                self.session,
+            episode_check = self._episode_check(
+                season_episode.id,
                 season,
-                season_episode.id,
-            )
-            episode_timestamp = self.episode_data_timestamp(
-                season_episode.id,
-                season.key,
                 show_key,
             )
-            if (
-                existing_episode
-                and existing_episode.data_timestamp == episode_timestamp
-                and existing_episode.deleted_at is None
-            ):
+            if not episode_check:
                 continue
 
             buy_box_offers = self.custom_buy_box_offers_file(season_episode.id)
@@ -543,7 +534,7 @@ class JustWatch(FileMixin, register=True):
                 duration=season_episode.content.runtime * 60,
                 sort_order=season_episode.content.episode_number,
                 episode_number=season_episode.content.episode_number,
-                data_timestamp=episode_timestamp,
+                data_timestamp=episode_check.data_timestamp,
                 image_url=self._images_base_url + backdrop_image,
                 release_date=self._date_to_datetime(
                     season_episode.content.original_release_date,
@@ -552,7 +543,7 @@ class JustWatch(FileMixin, register=True):
                     season_episode.content.original_release_date,
                 ),
                 season_id=season.id,
-            ).upsert(season, existing_episode)
+            ).upsert(season, episode_check.record)
 
     def _upsert_movie_episode(
         self,
@@ -569,21 +560,12 @@ class JustWatch(FileMixin, register=True):
         if not episode_info:
             return None
 
-        existing_episode = Episode.get_from_memory(
-            self.session,
+        episode_check = self._episode_check(
+            episode_info.id,
             season,
-            episode_info.id,
-        )
-        episode_timestamp = self.episode_data_timestamp(
-            episode_info.id,
-            season.key,
             show_key,
         )
-        if (
-            existing_episode
-            and existing_episode.data_timestamp == episode_timestamp
-            and existing_episode.deleted_at is None
-        ):
+        if not episode_check:
             return episode_info.id
 
         node = parsed_data.data.url_v2.node
@@ -595,11 +577,11 @@ class JustWatch(FileMixin, register=True):
             duration=node.content.runtime * 60,
             sort_order=0,
             episode_number=0,
-            data_timestamp=episode_timestamp,
+            data_timestamp=episode_check.data_timestamp,
             release_date=self._date_to_datetime(node.content.original_release_date),
             air_date=self._date_to_datetime(node.content.original_release_date),
             season_id=season.id,
-        ).upsert(season, existing_episode)
+        ).upsert(season, episode_check.record)
         return episode_info.id
 
     # TODO: Consider caching this if it is slow.

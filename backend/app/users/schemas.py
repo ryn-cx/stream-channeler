@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from datetime import datetime
 
@@ -6,6 +5,7 @@ from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
+from app.schemas import make_model_with_all_fields_optional
 from app.users.models import UserBase
 
 
@@ -21,8 +21,7 @@ class UserRegister(SQLModel):
 
 
 # Properties to receive via API on update, all are optional
-class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore[assignment]
+class UserUpdate(make_model_with_all_fields_optional(UserBase)):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 

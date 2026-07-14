@@ -23,6 +23,10 @@ class StreamChanneler(BasePlugin, register=True):
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 
     @override
+    def initialize_source(self) -> None:
+        return
+
+    @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return []
 

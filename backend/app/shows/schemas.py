@@ -1,12 +1,14 @@
-# TODO: Validate
 """Show schemas."""
 
 import uuid
 
 from pydantic import BaseModel
-from sqlmodel import Field
 
-from app.schemas import BaseCreateWithParentAndKey, BaseUpdateWithKey
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
 from app.shows.models import BaseShow, Show
 from app.sources.models import Source
 
@@ -15,11 +17,11 @@ class ShowCreate(BaseCreateWithParentAndKey[Show, Source], BaseShow):
     """Schema for creating a `Show`."""
 
 
-class ShowUpdate(BaseUpdateWithKey[Show], BaseShow):
+class ShowUpdate(
+    make_model_with_all_fields_optional(BaseShow),
+    BaseUpdateWithKey[Show],
+):
     """Schema for updating a `Show`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    key: str | None = Field(default=None, min_length=1)  # type: ignore[assignment]
 
 
 class ShowPublic(BaseShow):

@@ -25,7 +25,7 @@ from plugins.utils.base_plugin import BasePlugin
 from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
-from tests.plugins.plugin_validator.mocks import (
+from tests.plugins.plugin_validator.context_managers import (
     mock_update,
     track_downloads,
 )
@@ -69,7 +69,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         entity: Plugin | Source | Show | Season | Episode,
     ) -> Validator:
         validator = Validator().incremented(entity.id, "modified_at", "data_timestamp")
-        self._apply_shared_file_rules(validator, entity)
+        if not isinstance(entity, Plugin | Source):
+            validator.apply_shared_file_rules(entity, self.imported_plugin)
         return validator
 
     def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
@@ -83,16 +84,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
     def update_season_validator(self, season: Season) -> Validator:
         return self.generic_update_validator(season)
-
-    def _apply_shared_file_rules(
-        self,
-        validator: Validator,
-        entity: Plugin | Source | Show | Season | Episode,
-    ) -> None:
-        if isinstance(entity, Plugin | Source):
-            return
-
-        validator.apply_shared_file_rules(entity, self.imported_plugin)
 
     def update_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_update_validator(episode)
@@ -180,6 +171,18 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             case Episode() as episode:
                 return self.update_episode_validator(episode)
 
+    @staticmethod
+    def _newest_descendant_timestamp(entity: Show | Season | Episode) -> datetime:
+        newest = entity.data_timestamp
+        assert newest
+        descendants: list[Season | Episode] = list(entity.children)
+        while descendants:
+            node = descendants.pop()
+            if node.data_timestamp and node.data_timestamp > newest:
+                newest = node.data_timestamp
+            descendants.extend(node.children)
+        return newest
+
     def _update_and_validate(
         self,
         session: Session,
@@ -191,9 +194,11 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     ) -> None:
         """Mark an entity as outdated, run its update, and validate the result."""
         assert entity.data_timestamp
-        entity.update_at = entity.data_timestamp + timedelta(seconds=1)
+        outdated_threshold = entity.data_timestamp
         if isinstance(entity, (Show, Season, Episode)):
             entity.extra = "Outdated"
+            outdated_threshold = self._newest_descendant_timestamp(entity)
+        entity.update_at = outdated_threshold + timedelta(seconds=1)
         validator = validator or self._get_validator(session, entity)
         update = self._get_update_function(session, entity)
 
@@ -495,6 +500,83 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         )
 
 
+class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
+    """Tests that a fake episode in an existing season is soft-deleted by update_show."""
+
+    def test_deleted_episode_update_show(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
+        season = self.get_random_season(results)
+        show = season.show
+        assert show.data_timestamp
+
+        freeze_at = show.data_timestamp + timedelta(seconds=1)
+
+        with freeze_time(freeze_at):
+            fake_episode = build_random_model(
+                Episode,
+                "full",
+                season_id=season.id,
+                deleted_at=tz_datetime.now(),
+            )
+        season.episodes.append(fake_episode)
+
+        original_plugin = self.get_detached_plugin(session_with_files)
+        fake_episode.soft_undelete()
+        session_with_files.flush()
+
+        freeze_at = show.data_timestamp + timedelta(seconds=2)
+        with freeze_time(freeze_at), log_stats(self):
+            self.plugin_class(session_with_files).update_show(show=show)
+
+        validator = self.deleted_episode_validator(fake_episode)
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_files),
+        )
+
+
+class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
+    """Tests that a fake season and its fake episode are soft-deleted by update_show."""
+
+    def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
+        results = self._import_url(session_with_files)
+        show = self.get_random_show(results)
+        assert show.data_timestamp
+
+        freeze_at = show.data_timestamp + timedelta(seconds=1)
+
+        with freeze_time(freeze_at):
+            fake_season = build_random_model(
+                Season,
+                "full",
+                show_id=show.id,
+                deleted_at=tz_datetime.now(),
+            )
+            fake_episode = build_random_model(
+                Episode,
+                "full",
+                season_id=fake_season.id,
+                deleted_at=tz_datetime.now(),
+            )
+        fake_season.episodes.append(fake_episode)
+        show.seasons.append(fake_season)
+
+        original_plugin = self.get_detached_plugin(session_with_files)
+        fake_season.soft_undelete()
+        session_with_files.flush()
+
+        freeze_at = show.data_timestamp + timedelta(seconds=2)
+        with freeze_time(freeze_at), log_stats(self):
+            self.plugin_class(session_with_files).update_show(show=show)
+
+        validator = self.deleted_season_validator(fake_season)
+        validator.incremented(fake_episode.id, "deleted_at", "modified_at")
+        validator.validate(
+            original_plugin,
+            self.get_detached_plugin(session_with_files),
+        )
+
+
 class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that searching returns results."""
 
@@ -517,8 +599,10 @@ class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             .removeprefix("www.")
             .removesuffix("/")
         )
-        assert any(
-            stripped_url in search_result.url for search_result in result.results
+        found_urls = [search_result.url for search_result in result.results]
+        assert any(stripped_url in found_url for found_url in found_urls), (
+            f"Expected URL {stripped_url} to be in search results. "
+            f"Found URLs: {found_urls}"
         )
 
 
@@ -571,6 +655,8 @@ class UpdateTests[PluginT: BasePlugin](
 class DeletionTests[PluginT: BasePlugin](
     DeletedEpisodeTests[PluginT],
     DeletedSeasonTests[PluginT],
+    DeletedEpisodeUpdateShowTests[PluginT],
+    DeletedSeasonWithEpisodeTests[PluginT],
 ):
     """All soft-deletion tests."""
 

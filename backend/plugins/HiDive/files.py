@@ -5,7 +5,6 @@ from functools import cache
 from typing import override
 
 from diving_board import DivingBoard
-from diving_board.playlist import models as playlist_models
 from diving_board.schedule import models as schedule_models
 from diving_board.search import models as search_models
 from diving_board.season import models as season_models
@@ -13,7 +12,6 @@ from diving_board.series import models as series_models
 from diving_board.vod import models as vod_models
 from sqlmodel import Session, col, select
 
-from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
@@ -23,23 +21,18 @@ from plugins.utils.base_plugin.files import (
     GAPIListJSON,
     PartialGAPIJSON,
 )
+from plugins.utils.get_around_client import get_around_client
 
 
 @cache
 def diving_board() -> DivingBoard:
-    server: str | None = settings.GET_AROUND_SERVER
-    if server == "changethis":
-        server = None
-    password: str | None = settings.GET_AROUND_PASSWORD
-    if password == "changethis":  # noqa: S105
-        password = None
-    return DivingBoard(get_around_server=server, get_around_password=password)
+    return DivingBoard(get_around_client=get_around_client())
 
 
 class Season(PartialGAPIJSON[season_models.SeasonModel]):
     # Occurs when the user imports an invalid TV show url.
-    acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = diving_board().season
+    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    API_ENDPOINT = diving_board().season
 
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
@@ -48,7 +41,9 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
 
 
 class Vod(PartialGAPIJSON[vod_models.VodModel]):
-    api_endpoint = diving_board().vod
+    # Occurs when the user imports an invalid movie url.
+    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    API_ENDPOINT = diving_board().vod
 
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
@@ -56,21 +51,10 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
         return diving_board().vod.get(int(self.unique_identifier))
 
 
-class Playlist(PartialGAPIJSON[playlist_models.PlaylistModel]):
-    # Occurs when the user imports an invalid movie url.
-    acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = diving_board().playlist
-
-    @override
-    # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _get(self) -> playlist_models.PlaylistModel:
-        return diving_board().playlist.get(int(self.unique_identifier))
-
-
 class Series(PartialGAPIJSON[series_models.SeriesModel]):
     # Occurs when the user imports an invalid series url.
-    acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = diving_board().series
+    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    API_ENDPOINT = diving_board().series
 
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
@@ -79,7 +63,7 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
 
 
 class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
-    api_endpoint = diving_board().schedule
+    API_ENDPOINT = diving_board().schedule
 
     def __init__(
         self,
@@ -107,7 +91,7 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
 
 
 class Search(GAPIJSON[search_models.SearchModel]):
-    api_endpoint = diving_board().search
+    API_ENDPOINT = diving_board().search
 
 
 class FileMixin(BasePlugin, register=False):
@@ -124,7 +108,7 @@ class FileMixin(BasePlugin, register=False):
         return self._media_type_value
 
     def season_file(self, season_key: str | int) -> Season:
-        """Return a cached season file for the given season key."""
+        """Return a cached Season for the given season key."""
         key = str(season_key)
         return self._get_cached_file(
             Season,
@@ -133,7 +117,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def vod_file(self, vod_key: str | int) -> Vod:
-        """Return a cached vod file for the given vod key."""
+        """Return a cached Vod for the given vod key."""
         key = str(vod_key)
         return self._get_cached_file(
             Vod,
@@ -141,17 +125,8 @@ class FileMixin(BasePlugin, register=False):
             lambda: Vod(self.session, self.plugin, key),
         )
 
-    def playlist_file(self, playlist_key: str | int) -> Playlist:
-        """Return a cached playlist file for the given playlist key."""
-        key = str(playlist_key)
-        return self._get_cached_file(
-            Playlist,
-            key,
-            lambda: Playlist(self.session, self.plugin, key),
-        )
-
     def series_file(self, series_key: str | int) -> Series:
-        """Return a cached series file for the given series key."""
+        """Return a cached Series for the given series key."""
         key = str(series_key)
         return self._get_cached_file(
             Series,
@@ -160,7 +135,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def schedule_file(self, input_date: datetime | File) -> Schedule:
-        """Return a cached schedule file for the given datetime or existing File."""
+        """Return a cached Schedule for the given datetime or existing File."""
         if isinstance(input_date, File):
             input_date = datetime.fromisoformat(
                 Schedule.file_key_to_unique_identifier(input_date.key),
@@ -172,7 +147,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def search_file(self, query: str) -> Search:
-        """Return a cached search file for the given query."""
+        """Return a cached Search for the given query."""
         return self._get_cached_file(
             Search,
             query,
@@ -203,9 +178,9 @@ class FileMixin(BasePlugin, register=False):
     def _show_files(
         self,
         show_key: str,
-    ) -> Sequence[Season | Series | Playlist]:
+    ) -> Sequence[Season | Series | Vod]:
         if self._media_type == "Movie":
-            return [self.playlist_file(show_key)]
+            return [self.vod_file(show_key)]
         return [self.series_file(show_key)]
 
     @override
@@ -213,9 +188,9 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[Season | Playlist]:
+    ) -> Sequence[Season | Vod]:
         if self._media_type == "Movie":
-            return [self.playlist_file(season_key)]
+            return [self.vod_file(season_key)]
         return [
             # Required to detect new episodes and changes to the season.
             self.season_file(season_key),
@@ -227,12 +202,9 @@ class FileMixin(BasePlugin, register=False):
         episode_key: str,
         season_key: str,
         show_key: str,
-    ) -> Sequence[Season | Vod | Playlist]:
+    ) -> Sequence[Season | Vod]:
         if self._media_type == "Movie":
-            return [
-                self.playlist_file(show_key),
-                self.vod_file(episode_key),
-            ]
+            return [self.vod_file(episode_key)]
         return [
             # Required to detect changes to the episode information.
             self.vod_file(episode_key),
@@ -257,11 +229,7 @@ class FileMixin(BasePlugin, register=False):
         episode_keys: list[str] = []
         for season_key in season_keys:
             if self._media_type == "Movie":
-                playlist_data = self.playlist_file(season_key).parsed()
-                bucket = diving_board().playlist.extract_bucket_playlist(
-                    playlist_data,
-                )
-                episode_keys.extend(str(item.id) for item in bucket.attributes.items)
+                episode_keys.append(season_key)
                 continue
             season_data = self.season_file(season_key).parsed()
             bucket = diving_board().season.extract_bucket_season(season_data)

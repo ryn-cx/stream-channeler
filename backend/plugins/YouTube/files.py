@@ -6,17 +6,16 @@ from datetime import timedelta
 from functools import cache
 from typing import override
 
-from get_around import GetAround
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel import Channels as ChannelsEndpoint
-from not_yt_dlapi.channel.models import ChannelModel
+from not_yt_dlapi.channel.models import ChannelsModel
 from not_yt_dlapi.playlist.models import PlaylistModel
 from not_yt_dlapi.playlist_item import PlaylistItems as PlaylistItemsEndpoint
-from not_yt_dlapi.playlist_item.models import PlaylistItemModel
+from not_yt_dlapi.playlist_item.models import PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
 from not_yt_dlapi.playlists.models import PlaylistsModel
-from not_yt_dlapi.video.models import VideoModel
+from not_yt_dlapi.video.models import VideosModel
 from sqlmodel import Session
 
 from app.config import settings
@@ -30,34 +29,14 @@ from plugins.utils.base_plugin.files import (
     GAPIJSONNoGet,
     XMLFile,
 )
+from plugins.utils.get_around_client import get_around_client
 
 
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
-    server: str | None = settings.GET_AROUND_SERVER
-    if server == "changethis":
-        server = None
-    password: str | None = settings.GET_AROUND_PASSWORD
-    if password == "changethis":  # noqa: S105
-        password = None
     return NotYTDLAPI(
         settings.YOUTUBE_API_KEY,
-        get_around_server=server,
-        get_around_password=password,
-    )
-
-
-@cache
-def get_around_client() -> GetAround:
-    get_around_server: str | None = settings.GET_AROUND_SERVER
-    if get_around_server == "changethis":
-        get_around_server = None
-    get_around_password: str | None = settings.GET_AROUND_PASSWORD
-    if get_around_password == "changethis":  # noqa: S105
-        get_around_password = None
-    return GetAround(
-        server=get_around_server,
-        password=get_around_password,
+        get_around_client=get_around_client(),
     )
 
 
@@ -68,71 +47,71 @@ def get_first_item[T](items: list[T] | None) -> T:
     return items[0]
 
 
-class ChannelByChannelId(GAPIJSONNoGet[ChannelModel]):
-    api_endpoint = not_yt_dlapi().channels
+class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
 
     @override
-    def _get(self) -> ChannelModel:
-        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+    def _get(self) -> ChannelsModel:
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
         return endpoint.get(channel_id=self.unique_identifier)
 
     @override
-    def _get_acceptable_error(self) -> str:
+    def _get_ACCEPTABLE_ERROR(self) -> str:
         return f"Channel '{self.unique_identifier}' not found."
 
 
-class ChannelByHandle(GAPIJSONNoGet[ChannelModel]):
-    api_endpoint = not_yt_dlapi().channels
+class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
 
     @override
-    def _get(self) -> ChannelModel:
-        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+    def _get(self) -> ChannelsModel:
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
         return endpoint.get(handle=self.unique_identifier)
 
     @override
-    def _get_acceptable_error(self) -> str:
+    def _get_ACCEPTABLE_ERROR(self) -> str:
         return f"Channel '{self.unique_identifier}' not found."
 
 
-class ChannelByUsername(GAPIJSONNoGet[ChannelModel]):
-    api_endpoint = not_yt_dlapi().channels
+class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
 
     @override
-    def _get(self) -> ChannelModel:
-        endpoint = self.raise_if_not_is_instance(self.api_endpoint, ChannelsEndpoint)
+    def _get(self) -> ChannelsModel:
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
         return endpoint.get(username=self.unique_identifier)
 
     @override
-    def _get_acceptable_error(self) -> str:
+    def _get_ACCEPTABLE_ERROR(self) -> str:
         return f"Channel '{self.unique_identifier}' not found."
 
 
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
-    api_endpoint = not_yt_dlapi().playlists
+    API_ENDPOINT = not_yt_dlapi().playlists
 
     @override
     def _get(self) -> PlaylistsModel:
-        endpoint = self.raise_if_not_is_instance(self.api_endpoint, PlaylistsEndpoint)
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
         return endpoint.get_all(self.unique_identifier)
 
     @override
-    def _get_acceptable_error(self) -> str:
+    def _get_ACCEPTABLE_ERROR(self) -> str:
         return f"No playlists found for channel '{self.unique_identifier}'."
 
 
 class PlaylistInfo(GAPIJSON[PlaylistModel]):
-    api_endpoint = not_yt_dlapi().playlist
+    API_ENDPOINT = not_yt_dlapi().playlist
 
 
-class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
-    api_endpoint = not_yt_dlapi().playlist_items
+class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
+    API_ENDPOINT = not_yt_dlapi().playlist_items
 
     # Due to API limits this function merges new videos with existing videos instead of
     # downloading all videos every time.
     @override
-    def _get(self) -> PlaylistItemModel:
+    def _get(self) -> PlaylistItemsModel:
         endpoint = self.raise_if_not_is_instance(
-            self.api_endpoint,
+            self.API_ENDPOINT,
             PlaylistItemsEndpoint,
         )
 
@@ -143,7 +122,7 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
         # If the entry is over a year old download a fresh copy to clean out deleted
         # videos.
         year_ago_datetime = tz_datetime.now() - timedelta(days=365)
-        if self.parsed().not_yt_dlapi.timestamp < year_ago_datetime:
+        if self._existing_database_record.data_timestamp < year_ago_datetime:
             return endpoint.get_all(self.unique_identifier)
 
         existing_items = self.parsed().items
@@ -167,15 +146,20 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemModel]):
         return page
 
     @override
-    def _get_acceptable_error(self) -> str:
+    def _get_ACCEPTABLE_ERROR(self) -> str:
         return "The playlist identified with the request's <code>playlistId</code> parameter cannot be found."
 
 
-class Videos(GAPIJSON[VideoModel]):
-    api_endpoint = not_yt_dlapi().videos
+class Videos(GAPIJSON[VideosModel]):
+    API_ENDPOINT = not_yt_dlapi().videos
 
 
 class PlaylistFeed(XMLFile):
+    # Empty feed written when the RSS feed is unavailable. YouTube RSS feeds are
+    # unreliable (some playlists 404), and the feed is only an update-time baseline for
+    # detecting new videos, so a dummy lets the import proceed without a live feed.
+    _DUMMY_FEED = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -188,11 +172,13 @@ class PlaylistFeed(XMLFile):
                 params=params,
             )
             if not response.is_success:
-                msg = (
-                    f"PlaylistFeed fetch for {self.unique_identifier} "
-                    f"returned HTTP {response.status_code}"
+                logger.warning(
+                    "PlaylistFeed fetch for {} returned HTTP {}; writing dummy feed.",
+                    self.unique_identifier,
+                    response.status_code,
                 )
-                raise RuntimeError(msg)
+                self.write(self._DUMMY_FEED)
+                return
             self.write(response.text)
 
     def video_ids(self) -> list[str]:
@@ -215,7 +201,7 @@ class FileMixin(BasePlugin, register=False):
         self._imported_album_playlist_keys: set[str] = set()
 
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
-        """Return a cached channel-by-channel-id file for the given show key."""
+        """Return a cached ChannelByChannelId for the given show key."""
         return self._get_cached_file(
             ChannelByChannelId,
             show_key,
@@ -223,7 +209,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
-        """Return a cached channel-by-handle file for the given channel handle."""
+        """Return a cached ChannelByHandle for the given channel handle."""
         return self._get_cached_file(
             ChannelByHandle,
             channel_handle,
@@ -231,7 +217,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
-        """Return a cached channel-by-username file for the given channel username."""
+        """Return a cached ChannelByUsername for the given channel username."""
         return self._get_cached_file(
             ChannelByUsername,
             channel_username,
@@ -239,7 +225,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
-        """Return a cached channel playlists file for the given show key."""
+        """Return a cached ChannelPlaylists for the given show key."""
         return self._get_cached_file(
             ChannelPlaylists,
             show_key,
@@ -247,7 +233,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
-        """Return a cached playlist info file for the given playlist key."""
+        """Return a cached PlaylistInfo for the given playlist key."""
         return self._get_cached_file(
             PlaylistInfo,
             playlist_key,
@@ -255,7 +241,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def playlist_items_file(self, season_key: str) -> PlaylistItems:
-        """Return a cached playlist items file for the given season key."""
+        """Return a cached PlaylistItems for the given season key."""
         return self._get_cached_file(
             PlaylistItems,
             season_key,
@@ -263,7 +249,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def videos_file(self, episode_key: str) -> Videos:
-        """Return a cached videos file for the given episode key."""
+        """Return a cached Videos for the given episode key."""
         return self._get_cached_file(
             Videos,
             episode_key,
@@ -271,7 +257,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def playlist_feed_file(self, season_key: str) -> PlaylistFeed:
-        """Return a cached playlist feed file for the given season key."""
+        """Return a cached PlaylistFeed for the given season key."""
         return self._get_cached_file(
             PlaylistFeed,
             season_key,
@@ -309,12 +295,16 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo]:
-        files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
-            # Required to detect new episodes (videos).
+    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo | PlaylistFeed]:
+        files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo | PlaylistFeed] = [
+            # Required to detect new episodes (videos). Must stay first because
+            # season_data_timestamp reads files[0].
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
             self.channel_playlists_file(show_key),
+            # RSS feed used by update_season to detect newly added videos. Recorded
+            # during import so updates have a cached baseline without a live fetch.
+            self.playlist_feed_file(season_key),
         ]
         # Album playlists are auto-generated and not listed by the channel, so the album
         # name comes from the playlist itself rather than the channel playlists file.

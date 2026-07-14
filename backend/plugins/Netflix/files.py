@@ -1,25 +1,32 @@
 # TODO: Validate
-import re
 from collections.abc import Sequence
 from functools import cache
 from typing import override
 
-from meshfilm import MeshFilm
-from meshfilm.title import models as netflix_models
+from meshfilm import Meshfilm
+from meshfilm.lodp_title_and_plans_page import models as netflix_models
 
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import GAPIJSON
+from plugins.utils.get_around_client import get_around_client
 
 
 @cache
-def meshfilm() -> MeshFilm:
-    return MeshFilm()
+def meshfilm() -> Meshfilm:
+    return Meshfilm(get_around_client=get_around_client())
 
 
-class Title(GAPIJSON[netflix_models.Title]):
-    # Netflix serves a 404 for unknown title IDs.
-    acceptable_error = "Unexpected response status code: 404"
-    api_endpoint = meshfilm().title
+class Title(GAPIJSON[netflix_models.LodpTitleAndPlansPageModel]):
+    API_ENDPOINT = meshfilm().lodp_title_and_plans_page
+
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str:
+        # meshfilm raises NoContentError with this message when a title id is missing
+        # or is not a Show/Movie/Episode (e.g. a season id or an invalid id).
+        return (
+            f"Response has no content for "
+            f"{type(self.API_ENDPOINT).__name__} {self.unique_identifier}."
+        )
 
 
 class FileMixin(BasePlugin, register=False):
@@ -31,74 +38,35 @@ class FileMixin(BasePlugin, register=False):
             lambda: Title(self.session, self.plugin, title_key),
         )
 
-    def _title(self, show_key: str) -> netflix_models.Title:
-        return self.title_file(show_key).parsed()
-
-    def _main_show(self, show_key: str) -> netflix_models.Show | None:
-        return next(
-            (
-                show
-                for show in self._title(show_key).shows
-                if show.video_id == int(show_key)
-            ),
+    def _title_video(self, show_key: str) -> netflix_models.Video1:
+        parsed = self.title_file(show_key).parsed()
+        video = next(
+            (video for video in parsed.data.videos if video.video_id == int(show_key)),
             None,
         )
-
-    def _main_movie(self, show_key: str) -> netflix_models.Movie | None:
-        return next(
-            (
-                movie
-                for movie in self._title(show_key).movies
-                if movie.video_id == int(show_key)
-            ),
-            None,
-        )
+        if video is None:
+            msg = f"No title found for {show_key}"
+            raise ValueError(msg)
+        return video
 
     def _is_movie(self, show_key: str) -> bool:
-        return self._main_show(show_key) is None
+        return self._title_video(show_key).field__typename == "Movie"
 
-    def _ordered_seasons(self, show_key: str) -> list[netflix_models.Season]:
-        title = self._title(show_key)
-        seasons_by_id = {season.video_id: season for season in title.seasons or []}
-        main_show = self._main_show(show_key)
-        if main_show and main_show.seasons:
-            ordered_ids = [
-                self._ref_video_id(edge.node.field__ref)
-                for edge in main_show.seasons.edges
-            ]
-        else:
-            ordered_ids = list(seasons_by_id)
-        return [seasons_by_id[sid] for sid in ordered_ids if sid in seasons_by_id]
+    def _ordered_seasons(self, show_key: str) -> list[netflix_models.Node7]:
+        seasons = self._title_video(show_key).seasons
+        if seasons is None:
+            return []
+        return [edge.node for edge in seasons.edges]
 
     def _season_episodes(
         self,
         show_key: str,
         season_id: int,
-    ) -> list[netflix_models.Episode]:
-        title = self._title(show_key)
-        season = next(
-            (season for season in title.seasons or [] if season.video_id == season_id),
-            None,
-        )
-        if season is None:
-            return []
-        episodes_by_id = {episode.video_id: episode for episode in title.episodes or []}
-        ordered_ids = [
-            self._ref_video_id(edge.node.field__ref)
-            for edge in season.episodes.edges
-        ]
-        return [episodes_by_id[eid] for eid in ordered_ids if eid in episodes_by_id]
-
-    @staticmethod
-    def _ref_video_id(ref: str) -> int:
-        """Extract the videoId from a normalized GraphQL cache ref.
-
-        Refs look like ``Season:{"videoId":80240028}``.
-        """
-        if match := re.search(r'"videoId":\s*(\d+)', ref):
-            return int(match.group(1))
-        msg = f"Could not extract videoId from ref: {ref}"
-        raise ValueError(msg)
+    ) -> list[netflix_models.Node8]:
+        for season in self._ordered_seasons(show_key):
+            if season.video_id == season_id:
+                return [edge.node for edge in season.episodes.edges]
+        return []
 
     @staticmethod
     def _season_key(show_key: str, season_id: str | int) -> str:

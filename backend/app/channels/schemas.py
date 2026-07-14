@@ -17,10 +17,13 @@ from app.channels.models import (
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
-from app.models import Visibility
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
-from app.schemas import BaseInput, BaseUpdateWithoutKey
+from app.schemas import (
+    BaseInput,
+    BaseUpdateWithoutKey,
+    make_model_with_all_fields_optional,
+)
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
@@ -33,11 +36,11 @@ class ChannelCreate(BaseInput, BaseChannel):
     """Schema for creating a `Channel`."""
 
 
-class ChannelUpdate(BaseUpdateWithoutKey[Channel], BaseChannel):
+class ChannelUpdate(
+    make_model_with_all_fields_optional(BaseChannel),
+    BaseUpdateWithoutKey[Channel],
+):
     """Schema for updating a `Channel`."""
-
-    # Update requests use PATCH endpoints so all required fields must be made optional.
-    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
 
 
 class ChannelOutput(BaseChannel):
@@ -69,10 +72,12 @@ class ChannelAdminOutput(ChannelOutput):
     username: str | None
 
 
-class ChannelAdminUpdate(BaseInput, BaseChannel):
+class ChannelAdminUpdate(
+    make_model_with_all_fields_optional(BaseChannel),
+    BaseInput,
+):
     """Schema for an admin updating any field on a `Channel`."""
 
-    visibility: Visibility | None = Field(default=None)  # type: ignore[assignment]
     score: int | None = Field(default=None)
 
 

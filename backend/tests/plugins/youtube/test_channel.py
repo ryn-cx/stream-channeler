@@ -9,13 +9,12 @@ from tests.plugins.youtube.validators import (
     YouTubeValidator,
 )
 
-# A channel is reachable from any of its identifying prefixes with any tab suffix.
-CHANNEL_TAB_SUFFIXES = ("", "/videos", "/featured")
-
 
 def channel_url_patterns(*prefixes: str) -> tuple[str, ...]:
     return tuple(
-        prefix + suffix for prefix in prefixes for suffix in CHANNEL_TAB_SUFFIXES
+        "youtube.com" + prefix + suffix
+        for prefix in prefixes
+        for suffix in ("", "/videos", "/featured")
     )
 
 
@@ -29,7 +28,7 @@ class ChannelNameValidator(YouTubeValidator):
 
 
 class UsernameValidator(YouTubeValidator):
-    """Validate importing a channel by legacy username."""
+    """Validate importing a channel by username."""
 
     username: str
     urls = channel_url_patterns(
@@ -47,8 +46,24 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
     handled correctly.
     """
 
-    channel_key = "UC4QobU6STFB0P71PMvOGN5A"
+    channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
     channel_name = "MrBeast"
+    parse_url_response = ("channel_handle", channel_name)
+
+
+class TestChannelWithVideoInMultiplePlaylists(
+    StandardTests[YouTube],
+    ChannelNameValidator,
+):
+    """Test a channel where the same video belongs to multiple playlists.
+
+    jawed's channel has a single upload, "Me at the zoo", which appears both in the
+    channel uploads and in a separate playlist, so the video is imported into two
+    seasons.
+    """
+
+    channel_key = "UC4QobU6STFB0P71PMvOGN5A"
+    channel_name = "jawed"
     parse_url_response = ("channel_handle", channel_name)
 
     def test_episode_in_multiple_seasons(self, session_with_files: Session) -> None:

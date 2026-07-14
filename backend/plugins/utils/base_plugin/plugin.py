@@ -19,14 +19,14 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
-from plugins.utils.base_plugin.status import OutdatedMixin
+from plugins.utils.base_plugin.check import CheckMixin
 from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 
 
 class BasePlugin(
     PreloadMixin,
-    OutdatedMixin,
+    CheckMixin,
     URLMixin,
     WatchMixin,
     AbstractPlugin,
@@ -136,7 +136,7 @@ class BasePlugin(
             )
             raise RuntimeError(msg)
 
-    def _cache_and_upsert_show(
+    def _preload_and_upsert_show(
         self,
         show: Show,
         update_at: datetime | None = None,
@@ -152,7 +152,7 @@ class BasePlugin(
             show.key,
             source_key=show.source.key,
         ).one()
-        self._cache_and_upsert_show(show, show.update_at)
+        self._preload_and_upsert_show(show, show.update_at)
 
     @override
     def update_season(self, season: Season) -> None:
@@ -162,14 +162,14 @@ class BasePlugin(
             preload_show=True,
         ).one()
         self._download_season_files_and_children(season, update_at=season.update_at)
-        self._cache_and_upsert_show(season.show)
+        self._preload_and_upsert_show(season.show)
 
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(episode, update_at=episode.update_at)
-        self._cache_and_upsert_show(episode.season.show)
+        self._preload_and_upsert_show(episode.season.show)
 
     @override
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:
@@ -255,7 +255,7 @@ class BasePlugin(
         self._weakref_file_cache[cache_key] = obj
         return obj
 
-    def _raise_if_no_content(self, file: BaseFile[Any], url: str) -> None:
+    def _raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
         if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"

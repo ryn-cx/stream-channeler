@@ -21,9 +21,13 @@ ValidatorRuleType = Literal[
     "Incremented",
     "Decremented",
     "Changed",
+    "ChangedTo",
     "Populated",
+    "PopulatedOrDecremented",
+    "Ignored",
 ]
 ValidatorKey = type[BaseModel] | uuid.UUID | str
+ChangedToValue = datetime | int | str
 
 _ALL_MODELS = (Plugin, Source, Show, Season, Episode)
 
@@ -38,8 +42,12 @@ class Validator:
     """
 
     def __init__(self) -> None:
+        """Initialize Validator."""
         self._rules: dict[ValidatorKey, dict[ValidatorRuleType, list[str]]] = (
             defaultdict(lambda: defaultdict(list))
+        )
+        self._changed_to_values: dict[ValidatorKey, dict[str, ChangedToValue]] = (
+            defaultdict(dict)
         )
 
     def incremented(self, key: ValidatorKey, *field_names: str) -> Self:
@@ -62,9 +70,35 @@ class Validator:
         self._rules[key]["Changed"].extend(field_names)
         return self
 
+    def changed_to(
+        self,
+        key: ValidatorKey,
+        field_name: str,
+        value: ChangedToValue,
+    ) -> Self:
+        """Mark a field that must have changed to a specific new value."""
+        self._rules[key]["ChangedTo"].append(field_name)
+        self._changed_to_values[key][field_name] = value
+        return self
+
     def populated(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must go from None to a non-None value."""
         self._rules[key]["Populated"].extend(field_names)
+        return self
+
+    def populated_or_decremented(self, key: ValidatorKey, *field_names: str) -> Self:
+        """Mark fields that must be populated if None, or decremented otherwise."""
+        self._rules[key]["PopulatedOrDecremented"].extend(field_names)
+        return self
+
+    def ignored(self, key: ValidatorKey, *field_names: str) -> Self:
+        """Mark fields whose value is not validated at all.
+
+        Used when a field's post-update value is legitimately plugin- or
+        data-dependent (e.g. an optimized update that only conditionally recomputes
+        `update_at`) so no single Static/Changed/Populated rule fits every case.
+        """
+        self._rules[key]["Ignored"].extend(field_names)
         return self
 
     def static_all(self, *field_names: str) -> Self:
@@ -105,6 +139,8 @@ class Validator:
             for field_name in field_names:
                 if field_name in self._rules[key][rule_type]:
                     self._rules[key][rule_type].remove(field_name)
+        for field_name in field_names:
+            self._changed_to_values[key].pop(field_name, None)
         return self
 
     def remove_all(self, *field_names: str) -> Self:
@@ -201,6 +237,18 @@ class Validator:
                     return rule_type
         return None
 
+    def _get_changed_to_value(
+        self,
+        obj: Plugin | Source | Show | Season | Episode | File,
+        field_name: str,
+    ) -> ChangedToValue:
+        """Get the expected value for a ChangedTo field, checking id, key, then type."""
+        for rules_key in (obj.id, obj.key, type(obj)):
+            if field_name in self._changed_to_values[rules_key]:
+                return self._changed_to_values[rules_key][field_name]
+        message = f"No changed_to value configured for {field_name}"
+        raise KeyError(message)
+
     def validate[T: Plugin | Source | Show | Season | Episode](
         self,
         original: T,
@@ -276,7 +324,7 @@ class Validator:
 
     # PLR0911/C901 - Reducing the number of returns or match cases just makes the code
     # more complex and much harder to comprehend.
-    def _validate_field[T: str | int | datetime](  # noqa: PLR0911, C901
+    def _validate_field[T: str | int | datetime](  # noqa: PLR0911, PLR0912, C901
         self,
         original_obj: Plugin | Source | Show | Season | Episode | File,
         field_name: str,
@@ -314,6 +362,16 @@ class Validator:
                         f"Key Not Changed: {field_name}\n"
                         f"Value: {original_value}\n"
                     )
+            case "ChangedTo":
+                expected_value = self._get_changed_to_value(original_obj, field_name)
+                if new_value != expected_value:
+                    return (
+                        f"{original_obj}\n"
+                        f"Key Not Changed To Expected Value: {field_name}\n"
+                        f"Original: {original_value}\n"
+                        f"Expected: {expected_value}\n"
+                        f"Updated : {new_value}"
+                    )
             case "Populated":
                 if original_value is not None:
                     return (
@@ -329,6 +387,24 @@ class Validator:
                         f"Original: {original_value}\n"
                         f"Updated : {new_value}"
                     )
+            case "PopulatedOrDecremented":
+                if original_value is None:
+                    if new_value is None:
+                        return (
+                            f"{original_obj}\n"
+                            f"Key Not Populated: {field_name}\n"
+                            f"Original: {original_value}\n"
+                            f"Updated : {new_value}"
+                        )
+                elif new_value is None or original_value <= new_value:  # type: ignore[operator]
+                    return (
+                        f"{original_obj}\n"
+                        f"Key Not Decremented: {field_name}\n"
+                        f"Original: {original_value}\n"
+                        f"Updated : {new_value}"
+                    )
+            case "Ignored":
+                return None
             case "Static" | None:
                 if original_value != new_value:
                     return (
