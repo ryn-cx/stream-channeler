@@ -129,6 +129,7 @@ class Settings(BaseSettings):
     CF_ACCESS_CLIENT_SECRET: str
     PROXY: str
 
+    # TODO: This function sucks
     @model_validator(mode="before")
     @classmethod
     def _get_keyring_or_env(cls, data: Any) -> Any:  # noqa: ANN401
@@ -138,6 +139,8 @@ class Settings(BaseSettings):
                 "CF_ACCESS_CLIENT_ID",
                 "CF_ACCESS_CLIENT_SECRET",
             ):
+                if name in data:
+                    continue
                 keyring_value = keyring.get_password(KEYRING_SERVICE, name)
                 if keyring_value is not None:
                     data[name] = keyring_value
