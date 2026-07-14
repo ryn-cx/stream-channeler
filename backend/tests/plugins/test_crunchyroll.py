@@ -32,7 +32,8 @@ class CrunchyrollStandardTests(StandardTests[Crunchyroll], BaseCrunchyrollValida
 
 
 class CrunchyrollUpdateSourceTest(
-    UpdateSourceTests[Crunchyroll], BaseCrunchyrollValidator
+    UpdateSourceTests[Crunchyroll],
+    BaseCrunchyrollValidator,
 ):
     @override
     def update_source_validator(self, source: Source) -> Validator:
@@ -84,6 +85,7 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
     search_query = "Anime AzurLane: Slow Ahead!"
     search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
 
+
 class TestAiringMultipleSeasonsShow(
     CrunchyrollStandardTests,
     CrunchyrollUpdateSourceTest,
@@ -94,6 +96,18 @@ class TestAiringMultipleSeasonsShow(
     search_url = "https://www.crunchyroll.com/series/G9VHN91DJ"
 
 
+class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    parse_url_response = "GT00375170"
+    show_slug = "the-food-diary-of-miss-maid"
+    episode_key = "GE00375439JAJP"
+    episode_slug = "taiyaki-takoyaki-odango-convenience-store-onigiri-and-baumkuchen"
+    urls = (
+        "/watch/{episode_key}",
+        "/watch/{episode_key}/",
+        "/watch/{episode_key}/{episode_slug}",
+    )
+
+
 class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
     plugin_class = Crunchyroll
 
@@ -102,9 +116,8 @@ class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
     urls = ("crunchyroll.com/series/GGGGGGGGG",)
 
 
-# TODO: Add support for this URL format
-class TestInvalidURL(InvalidCrunchyrollURLValidator):
-    urls = ("crunchyroll.com/watch/GE00374401JAJP",)
+class TestInvalidWatchKey(InvalidCrunchyrollURLValidator):
+    urls = ("crunchyroll.com/watch/GGGGGGGGGGGGGG",)
 
 
 class TestLargeShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):

@@ -1,11 +1,14 @@
 """Crunchyroll plugin."""
 
+from __future__ import annotations
+
 import json
 import re
 from datetime import timedelta
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
+from pydantic import BaseModel
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -25,6 +28,45 @@ from plugins.utils.base_plugin.watch_history import (
     WatchHistoryMixin,
 )
 
+if TYPE_CHECKING:
+    from plugins.Crunchyroll import Crunchyroll
+
+
+class SeriesURL(BaseModel):
+    url: str
+    show_key: str
+
+    def get_show_key(self, plugin: Crunchyroll) -> str:  # noqa: ARG002
+        return self.show_key
+
+    def generate_url_import_results(self, show: Show) -> list[URLImportResult]:
+        return [URLImportResult(show=show, is_whitelist=False)]
+
+
+class EpisodeURL(BaseModel):
+    url: str
+    episode_key: str
+
+    def get_show_key(self, plugin: Crunchyroll) -> str:
+        objects_file = plugin.objects_file(self.episode_key)
+        objects_file.download_if_outdated()
+        return objects_file.parsed().data[0].episode_metadata.series_id
+
+    def generate_url_import_results(self, show: Show) -> list[URLImportResult]:
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.key == self.episode_key:
+                    return [
+                        URLImportResult(
+                            show=show,
+                            episodes=[episode],
+                            is_whitelist=True,
+                        ),
+                    ]
+
+        msg = f"Episode {self.episode_key} not found in show {show.key}"
+        raise InvalidURLError(msg)
+
 
 class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     """Crunchyroll plugin."""
@@ -42,16 +84,19 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        parsed_url = self._parse_url(url)
+        show_key = parsed_url.get_show_key(self)
         self._validate_url(show_key, url)
         show = self._import_show(show_key)
-        return [URLImportResult(show=show, is_whitelist=False)]
+        return parsed_url.generate_url_import_results(show)
 
     @override
-    def _parse_url(self, url: str) -> str:
-        # TODO: Add support for single episodes
-        if match := re.match(self._url_regex(), url):
-            return match.group("show_key")
+    def _parse_url(self, url: str) -> SeriesURL | EpisodeURL:
+        if match := re.match(self._series_url_regex(), url):
+            return SeriesURL(url=url, show_key=match.group("show_key"))
+
+        if match := re.match(self._watch_url_regex(), url):
+            return EpisodeURL(url=url, episode_key=match.group("episode_key"))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -102,11 +147,19 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
     @classmethod
     @override
     def _url_regex(cls) -> str:
-        domain_regex = cls._domain_regex()
+        return f"(?:{cls._series_url_regex()}|{cls._watch_url_regex()})"
+
+    @classmethod
+    def _series_url_regex(cls) -> str:
         # Example URLs:
         #   https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
-        regex_string = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
-        return domain_regex + regex_string
+        return cls._domain_regex() + r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
+
+    @classmethod
+    def _watch_url_regex(cls) -> str:
+        # Example URLs:
+        #   https://www.crunchyroll.com/watch/GE00375439JAJP/taiyaki-takoyaki-odango
+        return cls._domain_regex() + r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
 
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
@@ -225,7 +278,7 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
                 url=self._show_url(item.id),
                 year=item.series_metadata.series_launch_year,
                 image_url=item.images.poster_tall[0][1].source,
-                media_type="TV Show",  
+                media_type="TV Show",
             )
             for item in series
         ]

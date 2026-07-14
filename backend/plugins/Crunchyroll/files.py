@@ -7,6 +7,7 @@ from typing import override
 
 from chirashi import Chirashi
 from chirashi.browse_series import models as browse_series_models
+from chirashi.objects import models as objects_models
 from chirashi.search import models as search_models
 from chirashi.season_episodes import models as episodes_models
 from chirashi.seasons import models as seasons_models
@@ -33,6 +34,14 @@ class Series(GAPIJSON[series_models.SeriesModel]):
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid series_id {self.unique_identifier}"
 
+
+class Objects(GAPIJSON[objects_models.ObjectsModel]):
+    # Occurs when a user puts in an invalid URL.
+    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    API_ENDPOINT = chirashi().objects
+
+    def acceptable_error_extra_value(self) -> str:
+        return f"Invalid episode_id {self.unique_identifier}"
 
 
 class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
@@ -73,6 +82,14 @@ class FileMixin(BasePlugin, register=False):
             lambda: Series(self.session, self.plugin, show_key),
         )
 
+    def objects_file(self, episode_key: str) -> Objects:
+        """Return a cached Objects file for the given episode key."""
+        return self._get_cached_file(
+            Objects,
+            episode_key,
+            lambda: Objects(self.session, self.plugin, episode_key),
+        )
+
     def seasons_file(self, show_key: str) -> Seasons:
         """Return a cached Seasons file the given show key."""
         return self._get_cached_file(
@@ -93,7 +110,7 @@ class FileMixin(BasePlugin, register=False):
         """Return a cached Browse file for the given datetime or existing File."""
         if isinstance(browse_datetime, File):
             str_datetime = BrowseSeries.file_key_to_unique_identifier(
-                browse_datetime.key
+                browse_datetime.key,
             )
         else:
             str_datetime = str(browse_datetime)
