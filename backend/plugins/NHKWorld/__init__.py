@@ -1,4 +1,3 @@
-# TODO: Validate
 import re
 from collections.abc import Sequence
 from datetime import timedelta
@@ -50,6 +49,7 @@ class NHKWorld(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         show_file = self.video_program_file(show_key)
+        # TODO: Will an error be raised naturally so this is no longer needed?
         self._raise_if_invalid_file(show_file, url)
 
     def _import_show(self, show_key: str) -> Show:
@@ -85,6 +85,8 @@ class NHKWorld(FileMixin, register=True):
                     logger.info("Matched show: {}", show.name or show_id)
                     show.set_update_at(item.video.published_at)
                 else:
+                    # NHK World has a small library so new shows can be imported
+                    # immediately.
                     logger.info("Importing new show: {}", show_id)
                     self._download_show_files_and_children(show_id)
                     self._upsert_show(source, show_id)
@@ -149,7 +151,6 @@ class NHKWorld(FileMixin, register=True):
         ).upsert(source, existing_show)
 
         self._upsert_season(show, show_key)
-        self._set_weekly_updates_from_episodes(show)
 
         return show
 

@@ -1,4 +1,3 @@
-# TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
@@ -47,6 +46,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     IMMUTABLE = True
     API_ENDPOINT = naphki().video_episodes
 
+    # TODO: Consider moving this login into naphki
     @override
     def _get(self) -> list[VideoEpisodesModel]:
         # Page 20 at a time (the API default) rather than the 100-entry pages
@@ -100,6 +100,7 @@ class FileMixin(BasePlugin, register=False):
             lambda: ShowsSearch(self.session, self.plugin, query),
         )
 
+    # TODO: Consider making this a generic function
     def new_video_episodes_file(
         self,
         feed_datetime: datetime | File,
@@ -117,6 +118,7 @@ class FileMixin(BasePlugin, register=False):
             lambda: NewVideoEpisodes(self.session, self.plugin, str_datetime),
         )
 
+    # TODO: Consider making this a generic function
     def latest_new_video_episodes_file(self) -> NewVideoEpisodes:
         """Return the latest new video episodes file, downloading one if none exist."""
         statement = (
@@ -133,6 +135,7 @@ class FileMixin(BasePlugin, register=False):
         feed.download_if_outdated()
         return feed
 
+    # TODO: Consider if a _source_files function should exist.
     @override
     def _show_files(self, show_key: str) -> Sequence[VideoProgram]:
         # Required to detect changes to the show.
