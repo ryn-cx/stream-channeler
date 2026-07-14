@@ -1,3 +1,4 @@
+# TODO: Validate
 from datetime import datetime
 from typing import override
 
@@ -39,6 +40,7 @@ class CrunchyrollUpdateSourceTest(
         # Source.update will mock download a new BrowseSeries file, this file will then
         # be used to set Source.data_timestamp, then Source.update_at will be set to 24
         # hours after Source.data_timestamp.
+        # TODO: More accurate timestamp checking
         validator = validator.incremented(Source, "update_at")
 
         # Source.update will mock download a new BrowseSeries that includes a mock new
