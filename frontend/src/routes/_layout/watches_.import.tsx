@@ -211,7 +211,7 @@ function ImportWatchHistory() {
     )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 px-[4%] pt-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Import Watch History
