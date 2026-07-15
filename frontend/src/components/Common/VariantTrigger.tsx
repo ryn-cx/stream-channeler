@@ -4,6 +4,11 @@ import { forwardRef, type Ref } from "react"
 
 import { Button } from "@/components/ui/button"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export type TriggerVariant = "button" | "menu" | "icon"
 
@@ -51,16 +56,23 @@ export const VariantTrigger = forwardRef<HTMLElement, VariantTriggerProps>(
     }
     if (variant === "icon") {
       const IconComponent = iconVariantIcon ?? Icon
-      return (
+      const button = (
         <Button
           ref={ref as Ref<HTMLButtonElement>}
           variant="ghost"
           size="icon"
-          title={iconTitle}
           {...rest}
         >
           <IconComponent />
+          {iconTitle && <span className="sr-only">{iconTitle}</span>}
         </Button>
+      )
+      if (!iconTitle) return button
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>{iconTitle}</TooltipContent>
+        </Tooltip>
       )
     }
     return (

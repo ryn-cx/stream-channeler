@@ -1,5 +1,5 @@
 // TODO: Validate
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { FileText } from "lucide-react"
 import Markdown, { type Components } from "react-markdown"
 
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface ChannelDescriptionProps {
@@ -19,9 +25,7 @@ interface ChannelDescriptionProps {
 
 const INTERNAL_HOSTS = ["streamchanneler.com"]
 
-// Links to Stream Channeler (or relative/same-origin links) are kept; any other
-// external link is rendered as plain text so descriptions can't link elsewhere.
-function _isInternalHref(href: string | undefined): boolean {
+function isInternalHref(href: string | undefined): boolean {
   if (!href) return false
   try {
     const url = new URL(href, window.location.origin)
@@ -38,31 +42,50 @@ function _isInternalHref(href: string | undefined): boolean {
   }
 }
 
-function InlineText({ children }: { children?: ReactNode }) {
-  return <span>{children} </span>
+// Some AI generated  stuff to fix the missing styles on markdown text.
+const markdownComponents: Components = {
+  a: ({ href, children }) =>
+    isInternalHref(href) ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-foreground"
+      >
+        {children}
+      </a>
+    ) : null,
+  h1: ({ children }) => (
+    <h1 className="mt-4 mb-2 text-xl font-semibold text-foreground first:mt-0">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mt-4 mb-2 text-lg font-semibold text-foreground first:mt-0">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mt-3 mb-1 text-base font-semibold text-foreground first:mt-0">
+      {children}
+    </h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="mt-3 mb-1 text-sm font-semibold text-foreground first:mt-0">
+      {children}
+    </h4>
+  ),
+  ul: ({ children }) => (
+    <ul className="list-inside list-disc space-y-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-inside list-decimal space-y-1">{children}</ol>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 pl-3 italic">{children}</blockquote>
+  ),
 }
 
-// The preview flattens every block element and line break to inline text so the
-// clamped last line is always full-width. That keeps "Read more" flush against
-// where the text ends instead of leaving a gap after a hard line break.
-const previewComponents: Components = {
-  a: markdownComponents.a,
-  p: InlineText,
-  h1: InlineText,
-  h2: InlineText,
-  h3: InlineText,
-  h4: InlineText,
-  h5: InlineText,
-  h6: InlineText,
-  blockquote: InlineText,
-  li: InlineText,
-  ul: ({ children }) => <span>{children}</span>,
-  ol: ({ children }) => <span>{children}</span>,
-  br: () => <span> </span>,
-  img: () => null,
-}
-
-// Shared code-block styling for both the clamped preview and the full modal.
 const markdownStyles =
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs"
 
@@ -70,69 +93,36 @@ export function ChannelDescription({
   channel,
   className,
 }: ChannelDescriptionProps) {
-  const [open, setOpen] = useState(false)
-  const [isTruncated, setIsTruncated] = useState(false)
-  const previewRef = useRef<HTMLDivElement>(null)
-
-  const description = channel.description
-
-  useEffect(() => {
-    const element = previewRef.current
-    if (!element) return
-    const check = () => {
-      setIsTruncated(element.scrollHeight > element.clientHeight)
-    }
-    check()
-    const observer = new ResizeObserver(check)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
-  if (!description) return null
+  if (!channel.description) return null
 
   return (
-    <div className={className}>
-      <div className="relative max-w-3xl">
-        <div
-          ref={previewRef}
+    <Dialog>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className={className}>
+              <FileText className="size-4" />
+              <span className="sr-only">Description</span>
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Description</TooltipContent>
+      </Tooltip>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
+        </DialogHeader>
+        <DialogBody
           className={cn(
-            "line-clamp-2 text-sm text-muted-foreground",
+            "text-sm text-muted-foreground [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2",
             markdownStyles,
           )}
         >
-          <Markdown components={previewComponents}>{description}</Markdown>
-        </div>
-        {isTruncated && (
-          <Button
-            variant="link"
-            className="absolute right-0 bottom-0 h-5 bg-background p-0 text-sm"
-            onClick={() => setOpen(true)}
-          >
-            {/* Fade the last line out before the button so text doesn't collide. */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute top-0 right-full h-full w-8 bg-linear-to-l from-background to-transparent"
-            />
-            Read more
-          </Button>
-        )}
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
-          </DialogHeader>
-          <DialogBody
-            className={cn(
-              "text-sm text-muted-foreground [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2",
-              markdownStyles,
-            )}
-          >
-            <Markdown components={markdownComponents}>{description}</Markdown>
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <Markdown components={markdownComponents}>
+            {channel.description}
+          </Markdown>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }

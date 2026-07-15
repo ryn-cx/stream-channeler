@@ -15,6 +15,7 @@ import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelD
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
@@ -45,14 +46,11 @@ function AdminEditChannel({ channel }: { channel: ChannelPublicOutput }) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Edit Channel"
+      <TooltipIconButton
+        label="Edit Channel"
+        icon={<Pencil className="size-4" />}
         onClick={() => setOpen(true)}
-      >
-        <Pencil className="size-4" />
-      </Button>
+      />
       {open && fullChannel && (
         <EditChannelDialog
           channel={{ ...fullChannel, username: channel.username }}
@@ -152,47 +150,38 @@ function ChannelRow({
         <div className="flex">
           {readOnly ? (
             <>
+              <ChannelDescription channel={channel} />
+              <ChannelShowsButton channelId={channel.id} />
               {isAdmin && (
                 <AdminEditChannel channel={channel as ChannelPublicOutput} />
               )}
-              <ChannelShowsButton channelId={channel.id} />
             </>
           ) : (
             <>
               {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
-              <EditChannel channel={channel as ChannelOutput} />
+              <ChannelDescription channel={channel} />
               <ManageShowsButton channelId={channel.id} variant="icon" />
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Delete Channel"
+              <EditChannel channel={channel as ChannelOutput} />
+              <TooltipIconButton
+                label="Delete Channel"
+                icon={<Trash2 className="size-4 text-destructive" />}
                 onClick={() => onDelete(channel)}
-              >
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
+              />
             </>
           )}
         </div>
       </div>
 
-      {readOnly && (
-        <ChannelDescription channel={channel} className="mb-2 px-[4%]" />
-      )}
-
-      {readOnly && showCreatedBy && (
+      {readOnly && showCreatedBy && channel.user_id && (
         <p className="px-[4%] mb-2 text-sm text-muted-foreground">
           Created by{" "}
-          {channel.user_id ? (
-            <Link
-              to="/users/$userId/channels"
-              params={{ userId: channel.user_id }}
-              className="underline hover:text-foreground"
-            >
-              {(channel as ChannelPublicOutput).username || "Unnamed User"}
-            </Link>
-          ) : (
-            "Anonymous"
-          )}
+          <Link
+            to="/users/$userId/channels"
+            params={{ userId: channel.user_id }}
+            className="underline hover:text-foreground"
+          >
+            {(channel as ChannelPublicOutput).username || "Unnamed User"}
+          </Link>
         </p>
       )}
 

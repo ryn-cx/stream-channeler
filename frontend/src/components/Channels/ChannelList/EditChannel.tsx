@@ -3,7 +3,7 @@ import { Pencil } from "lucide-react"
 import { useState } from "react"
 import type { ChannelOutput } from "@/client"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
-import { Button } from "@/components/ui/button"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 
 interface EditChannelProps {
   channel: ChannelOutput
@@ -14,14 +14,11 @@ const EditChannel = ({ channel }: EditChannelProps) => {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Edit Channel"
+      <TooltipIconButton
+        label="Edit Channel"
+        icon={<Pencil className="size-4" />}
         onClick={() => setOpen(true)}
-      >
-        <Pencil className="size-4" />
-      </Button>
+      />
       {open && (
         <EditChannelDialog
           channel={channel}

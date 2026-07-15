@@ -227,6 +227,8 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {channel.name}
         </h1>
 
+        <ChannelDescription channel={channel} />
+
         {(isOwner || user?.is_superuser) && <EditChannel channel={channel} />}
 
         {/* Smaller screens: Use a hamburger menu */}
@@ -354,8 +356,6 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>
       </div>
-
-      <ChannelDescription channel={channel} className="-mt-2 px-[4%] pb-4" />
 
       {/* Content */}
       <div
