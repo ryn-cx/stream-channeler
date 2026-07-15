@@ -6,6 +6,7 @@ import { ModalContent, type ModalSize } from "@/components/Common/ModalContent"
 import { ModalFooter } from "@/components/Common/ModalFooter"
 import {
   Dialog,
+  DialogBody,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -65,14 +66,17 @@ export function FormModal<
       {trigger}
       <ModalContent size={size}>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex min-h-0 flex-1 flex-col"
+          >
             <DialogHeader>
               <DialogTitle>{title}</DialogTitle>
               {description ? (
                 <DialogDescription>{description}</DialogDescription>
               ) : null}
             </DialogHeader>
-            <div className="grid gap-4 py-4">{children}</div>
+            <DialogBody className="grid gap-4 py-4">{children}</DialogBody>
             <ModalFooter isPending={isPending} submitLabel={submitLabel} />
           </form>
         </Form>

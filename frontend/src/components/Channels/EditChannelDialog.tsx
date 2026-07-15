@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -114,7 +115,7 @@ export function EditChannelDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <DialogBody className="flex flex-col gap-4 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="edit-channel-name">Name</Label>
             <Input
@@ -140,6 +141,7 @@ export function EditChannelDialog({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Optional"
+              className="max-h-40 overflow-y-auto"
             />
           </div>
           <div className="space-y-1.5">
@@ -196,7 +198,7 @@ export function EditChannelDialog({
               </p>
             </div>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

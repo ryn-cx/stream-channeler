@@ -5,6 +5,7 @@ import { ModalContent } from "@/components/Common/ModalContent"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -53,7 +54,7 @@ export function EpisodeExpiryDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 py-2">
+        <DialogBody className="flex flex-col gap-2 py-2">
           <Label htmlFor="episode-expiry">{dateLabel}</Label>
           <Input
             id="episode-expiry"
@@ -64,7 +65,7 @@ export function EpisodeExpiryDialog({
           <p className="text-xs text-muted-foreground">
             Leave empty to never expire.
           </p>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

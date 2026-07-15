@@ -5,6 +5,7 @@ import { ModalContent } from "@/components/Common/ModalContent"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -37,8 +38,10 @@ export function ConfirmDialog({
       <ModalContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        <DialogBody>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {cancelLabel}

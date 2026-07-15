@@ -5,6 +5,7 @@ import { ModalContent } from "@/components/Common/ModalContent"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -100,7 +101,7 @@ export function BlacklistedEpisodesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto">
+        <DialogBody>
           {isLoading ? (
             <p className="text-sm text-muted-foreground py-4">Loading…</p>
           ) : blacklistedEpisodes.length === 0 ? (
@@ -134,7 +135,7 @@ export function BlacklistedEpisodesDialog({
               ))}
             </div>
           )}
-        </div>
+        </DialogBody>
       </ModalContent>
     </Dialog>
   )

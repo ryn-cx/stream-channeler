@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
+  DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -141,7 +142,7 @@ export function BlacklistEpisodeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3 py-2">
+        <DialogBody className="flex flex-col gap-3 py-2">
           <div className="flex flex-col gap-1">
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Loading channels…</p>
@@ -208,7 +209,7 @@ export function BlacklistEpisodeDialog({
               blacklist with no expiry.
             </p>
           </div>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -36,11 +36,7 @@ export function ModalContent({
 }: ModalContentProps) {
   return (
     <DialogContent
-      className={cn(
-        widthClasses[size],
-        "max-h-[80vh] overflow-y-auto",
-        className,
-      )}
+      className={cn(widthClasses[size], "max-h-[80vh]", className)}
       {...props}
     />
   )

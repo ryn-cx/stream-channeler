@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -80,7 +81,7 @@ export function EditChannelQueueDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <DialogBody className="flex flex-col gap-4 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="edit-queue-status">Status</Label>
             <Select
@@ -111,7 +112,7 @@ export function EditChannelQueueDialog({
               placeholder="Optional"
             />
           </div>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
