@@ -10,6 +10,7 @@ import { ChannelsService, type SortKeyInput } from "@/client"
 import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
 import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
+import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import {
   columns,
   type EpisodeWithDetails,
@@ -353,6 +354,8 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>
       </div>
+
+      <ChannelDescription channel={channel} className="-mt-2 px-[4%] pb-4" />
 
       {/* Content */}
       <div

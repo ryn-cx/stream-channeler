@@ -11,6 +11,7 @@ import {
   type ChannelPublicOutput,
   ChannelsService,
 } from "@/client"
+import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
@@ -174,10 +175,8 @@ function ChannelRow({
         </div>
       </div>
 
-      {readOnly && channel.description && (
-        <p className="px-[4%] mb-2 text-sm text-muted-foreground line-clamp-2">
-          {channel.description}
-        </p>
+      {readOnly && (
+        <ChannelDescription channel={channel} className="mb-2 px-[4%]" />
       )}
 
       {readOnly && showCreatedBy && (
