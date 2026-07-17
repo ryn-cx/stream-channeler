@@ -60,7 +60,7 @@ def request_stop(  # noqa: D103
 
 
 def _channel_inclusion_clause() -> ColumnElement[bool]:
-    return or_(
+    return col(ChannelShow.is_blacklist_only).is_(False) & or_(
         col(ChannelShow.is_whitelist).is_(True)
         & col(ChannelSeasonFilter.season_id).is_not(None),
         col(ChannelShow.is_whitelist).is_(False)
