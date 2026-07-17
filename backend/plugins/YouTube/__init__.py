@@ -215,7 +215,10 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         if match := re.match(self._channel_key_regex(), url):
             channel_key = match.group("channel_key")
-            self._raise_if_invalid_file(self.channel_by_channel_id_file(channel_key), url)
+            self._raise_if_invalid_file(
+                self.channel_by_channel_id_file(channel_key),
+                url,
+            )
             return ParsedURL(
                 show_key=channel_key,
                 playlist_key=self._get_channel_uploads_playlist_key(channel_key),
@@ -512,12 +515,22 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         playlist_feed = self.playlist_feed_file(season.key)
-        old_video_ids: set[str]
         if playlist_feed.database_record.content:
             old_video_ids = set(playlist_feed.video_ids())
         else:
-            old_video_ids = set()
+            old_video_ids: set[str] = set()
         playlist_feed.download_if_outdated(season.update_at)
+
+        # A failed fetch leaves the stored feed untouched, so it is still outdated.
+        if playlist_feed.is_outdated(season.update_at):
+            logger.warning(
+                "PlaylistFeed for season {} is unavailable, skipping new video check.",
+                season.key,
+            )
+            self._preload_and_upsert_show(season.show)
+            season.update_at = tz_datetime.now() + timedelta(hours=1)
+            return
+
         new_video_ids = set(playlist_feed.video_ids()) - old_video_ids
         if new_video_ids:
             logger.info(

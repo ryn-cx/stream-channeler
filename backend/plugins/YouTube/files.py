@@ -155,11 +155,6 @@ class Videos(GAPIJSON[VideosModel]):
 
 
 class PlaylistFeed(XMLFile):
-    # Empty feed written when the RSS feed is unavailable. YouTube RSS feeds are
-    # unreliable (some playlists 404), and the feed is only an update-time baseline for
-    # detecting new videos, so a dummy lets the import proceed without a live feed.
-    _DUMMY_FEED = '<feed xmlns="http://www.w3.org/2005/Atom"></feed>'
-
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -173,11 +168,10 @@ class PlaylistFeed(XMLFile):
             )
             if not response.is_success:
                 logger.warning(
-                    "PlaylistFeed fetch for {} returned HTTP {}; writing dummy feed.",
+                    "PlaylistFeed fetch for {} returned HTTP {}; keeping the existing feed.",
                     self.unique_identifier,
                     response.status_code,
                 )
-                self.write(self._DUMMY_FEED)
                 return
             self.write(response.text)
 
@@ -295,16 +289,13 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo | PlaylistFeed]:
-        files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo | PlaylistFeed] = [
+    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo]:
+        files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
             self.channel_playlists_file(show_key),
-            # RSS feed used by update_season to detect newly added videos. Recorded
-            # during import so updates have a cached baseline without a live fetch.
-            self.playlist_feed_file(season_key),
         ]
         # Album playlists are auto-generated and not listed by the channel, so the album
         # name comes from the playlist itself rather than the channel playlists file.
