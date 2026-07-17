@@ -1,4 +1,3 @@
-# TODO: Validate
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -11,6 +10,7 @@ from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
+    from app.channel_orders.models import ChannelOrder
     from app.channels.models import Channel
     from app.plugins.models import Plugin
     from app.watches.models import Watch
@@ -39,21 +39,11 @@ class User(UserBase, table=True):
     )
     plugins: list[Plugin] = Relationship(back_populates="user")
     channels: list[Channel] = Relationship(back_populates="user", cascade_delete=True)
+    channel_orders: list[ChannelOrder] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
     watched_episodes: list[Watch] = Relationship(
         back_populates="user",
         cascade_delete=True,
     )
-
-    # TODO: This isn't actually used but the implementation is wrong.
-    def add_child(self, child: "Plugin | Channel | Watch") -> None:  # noqa: UP037
-        from app.plugins.models import Plugin  # noqa: PLC0415
-
-        if isinstance(child, Plugin):
-            self.plugins.append(child)
-        else:
-            self.channels.append(child)
-
-    # TODO: Where is this used?
-    @property
-    def children(self) -> "list[Plugin]":  # noqa: UP037
-        return self.plugins

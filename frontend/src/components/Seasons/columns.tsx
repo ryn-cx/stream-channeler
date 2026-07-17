@@ -1,14 +1,56 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import type { SeasonOutput } from "@/client"
-import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import type { SeasonListOutput } from "@/client"
+import {
+  DateCell,
+  ParentLinkCell,
+  TruncatedCell,
+} from "@/components/Common/TableCells"
 
 import { SeasonActionsMenu } from "./ActionsMenu"
 
-export type SeasonTableData = SeasonOutput & { pending?: boolean }
+export type SeasonTableData = SeasonListOutput & { pending?: boolean }
 
 export const seasonColumns: ColumnDef<SeasonTableData>[] = [
+  {
+    accessorKey: "username",
+    header: "User",
+    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
+  },
+  {
+    accessorKey: "plugin_name",
+    header: "Plugin",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/plugin/$pluginId"
+        params={{ pluginId: row.original.plugin_id }}
+        name={row.original.plugin_name}
+      />
+    ),
+  },
+  {
+    accessorKey: "source_name",
+    header: "Source",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/source/$sourceKey"
+        params={{ sourceKey: row.original.source_id }}
+        name={row.original.source_name}
+      />
+    ),
+  },
+  {
+    accessorKey: "show_name",
+    header: "Show",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/show/$showKey"
+        params={{ showKey: row.original.show_id }}
+        name={row.original.show_name}
+      />
+    ),
+  },
   {
     accessorKey: "name",
     header: "Name",

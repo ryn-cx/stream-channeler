@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlmodel import Session, col, or_, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
@@ -14,13 +15,15 @@ from app.media.service import delete_record
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
+from app.service import get_read_results
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
+from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -36,29 +39,57 @@ if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
 
+def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
+    return (
+        select(Watch)
+        .join(Episode)
+        .join(Season)
+        .join(Show)
+        .join(Source)
+        .join(Plugin)
+        .where(Watch.user_id == user_id)
+        .where(
+            or_(
+                col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
+                col(Plugin.user_id) == user_id,
+            ),
+        )
+    )
+
+
 def _episode_watch_select_statement(
     session: Session,
     user_id: uuid.UUID,
 ) -> Sequence[Watch]:
-    statement = (
-        select(Watch).join(Episode).join(Season).join(Show).join(Source).join(Plugin)
-    )
-    statement = statement.where(Watch.user_id == user_id)
-    statement = statement.where(
-        or_(
-            col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
-            col(Plugin.user_id) == user_id,
-        ),
-    )
-    return session.exec(statement).all()
+    return session.exec(_episode_watch_base_statement(user_id)).all()
 
 
 def get_watched_episodes(
     session: Session,
-    user_id: uuid.UUID,
+    user: User,
+    read_options: ReadOptions,
 ) -> WatchesListOutput:
-    episode_watches = _episode_watch_select_statement(session, user_id)
-    return _format_watched_episodes_data(episode_watches)
+    rows, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        _episode_watch_base_statement(user.id),
+        schema=WatchOutput,
+        default_sort=Watch.watch_date,
+        tiebreaker=Watch.id,
+        params=read_options,
+        current_user=user,
+        extra_columns={
+            "plugin": col(Plugin.name),
+            "source": col(Source.name),
+            "show": col(Show.name),
+            "season": col(Season.name),
+            "episode": col(Episode.name),
+        },
+    )
+    output = _format_watched_episodes_data(rows)
+    output.total_count = total_count
+    output.filtered_count = filtered_count
+    output.is_server_side = is_server_side
+    return output
 
 
 def _format_watched_episodes_data(

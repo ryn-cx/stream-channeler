@@ -3,6 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
     Index,
@@ -17,6 +18,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.sources.models import Source
+from app.users.models import User
 
 
 class BaseShow(BaseMediaMixin):
@@ -27,6 +29,7 @@ class BaseShow(BaseMediaMixin):
     description: str | None = Field(default=None)
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
+    icon: str | None = Field(default=None, max_length=32)
 
 
 if TYPE_CHECKING:
@@ -83,6 +86,19 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Source).join(Plugin)
+
+    @classmethod
+    @override
+    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
+        return (
+            cls.select_with_plugin()
+            .join(User)
+            .options(
+                contains_eager(cls.source)  # type: ignore[arg-type]
+                .contains_eager(Source.plugin)  # type: ignore[arg-type]
+                .contains_eager(Plugin.user),  # type: ignore[arg-type]
+            )
+        )
 
     @property
     @override

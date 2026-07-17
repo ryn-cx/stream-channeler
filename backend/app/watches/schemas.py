@@ -63,6 +63,9 @@ class WatchesListOutput(SQLModel):
     shows: dict[uuid.UUID, ShowPublic] = Field()
     sources: dict[uuid.UUID, SourcePublic] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
+    total_count: int = Field(default=0)
+    filtered_count: int = Field(default=0)
+    is_server_side: bool = Field(default=False)
 
 
 class WatchImportResult(BaseModel):

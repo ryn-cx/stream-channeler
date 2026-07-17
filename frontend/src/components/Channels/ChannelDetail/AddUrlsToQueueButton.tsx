@@ -17,11 +17,16 @@ import { ManageShowsTabs } from "./ManageShowsTabs"
 interface ManageShowsButtonProps {
   channelId: string
   variant?: "button" | "menu" | "icon"
+  /** When provided, adds an owner-only "Combined Channels" tab to the modal. */
+  combinedChannels?: {
+    isLoggedIn?: boolean
+  }
 }
 
 export function ManageShowsButton({
   channelId,
   variant = "button",
+  combinedChannels,
 }: ManageShowsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -48,6 +53,8 @@ export function ManageShowsButton({
           channelId={channelId}
           contentClassName="overflow-y-auto flex-1 min-h-0 px-8 py-4"
           tabsListClassName="mx-8 flex-wrap h-auto"
+          combinedChannels={combinedChannels}
+          onRequestClose={() => setIsOpen(false)}
         />
 
         <DialogFooter className="px-8">

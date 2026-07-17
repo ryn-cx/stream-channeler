@@ -1,14 +1,34 @@
 // TODO: Validate
 import type { ColumnDef } from "@tanstack/react-table"
-import type { FilePublic } from "@/client"
-import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import type { FileListPublic } from "@/client"
+import {
+  DateCell,
+  ParentLinkCell,
+  TruncatedCell,
+} from "@/components/Common/TableCells"
 
 import { FileActionsMenu } from "./ActionsMenu"
 import { FileContentCell } from "./ContentCell"
 
-export type FileTableData = FilePublic & { pending?: boolean }
+export type FileTableData = FileListPublic & { pending?: boolean }
 
 export const fileColumns: ColumnDef<FileTableData>[] = [
+  {
+    accessorKey: "username",
+    header: "User",
+    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
+  },
+  {
+    accessorKey: "plugin_name",
+    header: "Plugin",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/plugin/$pluginId"
+        params={{ pluginId: row.original.plugin_id }}
+        name={row.original.plugin_name}
+      />
+    ),
+  },
   {
     accessorKey: "key",
     header: "Key",
@@ -23,8 +43,6 @@ export const fileColumns: ColumnDef<FileTableData>[] = [
         </span>
       ),
   },
-  // The content column is just a button view the content so it has to use id instead of
-  // accessorKey because there is nothing to access.
   {
     id: "content",
     header: "Content",

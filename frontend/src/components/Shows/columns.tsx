@@ -2,15 +2,46 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Film } from "lucide-react"
-import type { ShowPublic } from "@/client"
-import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import type { ShowListPublic } from "@/client"
+import {
+  DateCell,
+  ParentLinkCell,
+  TruncatedCell,
+} from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 
 import { ShowActionsMenu } from "./ActionsMenu"
 
-export type ShowTableData = ShowPublic & { pending?: boolean }
+export type ShowTableData = ShowListPublic & { pending?: boolean }
 
 export const showColumns: ColumnDef<ShowTableData>[] = [
+  {
+    accessorKey: "username",
+    header: "User",
+    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
+  },
+  {
+    accessorKey: "plugin_name",
+    header: "Plugin",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/plugin/$pluginId"
+        params={{ pluginId: row.original.plugin_id }}
+        name={row.original.plugin_name}
+      />
+    ),
+  },
+  {
+    accessorKey: "source_name",
+    header: "Source",
+    cell: ({ row }) => (
+      <ParentLinkCell
+        to="/source/$sourceKey"
+        params={{ sourceKey: row.original.source_id }}
+        name={row.original.source_name}
+      />
+    ),
+  },
   {
     accessorKey: "name",
     header: "Name",

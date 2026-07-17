@@ -1,7 +1,9 @@
 """Season models."""
+
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
     Index,
@@ -17,6 +19,7 @@ from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.models import User
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelSeasonFilter
@@ -87,6 +90,20 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Show).join(Source).join(Plugin)
+
+    @classmethod
+    @override
+    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
+        return (
+            cls.select_with_plugin()
+            .join(User)
+            .options(
+                contains_eager(cls.show)  # type: ignore[arg-type]
+                .contains_eager(Show.source)  # type: ignore[arg-type]
+                .contains_eager(Source.plugin)  # type: ignore[arg-type]
+                .contains_eager(Plugin.user),  # type: ignore[arg-type]
+            )
+        )
 
     def __str__(self) -> str:
         """Return a string representation of the `Season`."""

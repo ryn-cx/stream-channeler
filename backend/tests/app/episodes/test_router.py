@@ -1,4 +1,6 @@
 # TODO: Validate
+import pytest
+
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     EpisodeCreate,
@@ -28,7 +30,13 @@ class TestCreateEpisode(EpisodeTestMixin, BaseCreateTests[Episode]):
 
 
 class TestGetEpisode(EpisodeTestMixin, BaseGetTests[Episode]):
-    pass
+    @pytest.mark.skip(reason="`Episode` has no single-record GET route.")
+    def test_get_permissions(self) -> None:  # type: ignore[override]
+        ...
+
+    @pytest.mark.skip(reason="`Episode` has no single-record GET route.")
+    def test_get_not_found(self) -> None:  # type: ignore[override]
+        ...
 
 
 class TestUpdateEpisode(EpisodeTestMixin, BaseUpdateTests[Episode]):

@@ -1,5 +1,6 @@
 """Shared schemas."""
 
+from enum import StrEnum
 from typing import Annotated, Any
 
 from fastapi import HTTPException
@@ -7,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, Json, create_model
 from pydantic.fields import FieldInfo
 from sqlmodel import Session, SQLModel
 
+from app.channel_orders.models import ChannelOrder
 from app.channels.models import Channel
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
@@ -19,7 +21,10 @@ from app.sources.models import Source
 from app.users.models import User
 from app.watches.models import Watch
 
-MEDIA_MODELS = Episode | Season | Show | Source | Plugin | Channel | Watch | File
+USER_OWNED_MODELS = (
+    Episode | Season | Show | Source | Plugin | Channel | Watch | File | ChannelOrder
+)
+
 
 # TODO: This can be improved upstream, this one changes return to Any as a workaround.
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
@@ -96,6 +101,24 @@ class ReadOptions(BaseModel):
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 
 
+class AdminScope(StrEnum):
+    """Which records an admin list endpoint returns."""
+
+    mine = "mine"
+    public = "public"
+    all = "all"
+
+
+class ScopedReadOptions(ReadOptions):
+    """Read options for the admin list endpoints, which serve every scope tab.
+
+    `scope` is a field rather than a standalone query param because a standalone
+    param alongside a `Query()`-annotated model suppresses FastAPI's flattening.
+    """
+
+    scope: AdminScope = AdminScope.all
+
+
 class BaseInput(SQLModel):
     """Base class for input schemas."""
 
@@ -152,7 +175,7 @@ class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
         return existing_record
 
 
-class BaseUpdateWithoutKey[ModelT: Channel | Watch](BaseInput):
+class BaseUpdateWithoutKey[ModelT: Channel | Watch | ChannelOrder](BaseInput):
     """Base update schemas for models without a key field."""
 
     def update(self, session: Session, existing_record: ModelT) -> ModelT:

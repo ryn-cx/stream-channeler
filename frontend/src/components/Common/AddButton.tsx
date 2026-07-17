@@ -2,7 +2,6 @@
 import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 export function AddButton({
   className,
@@ -10,7 +9,7 @@ export function AddButton({
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
-    <Button className={cn("my-4", className)} {...props}>
+    <Button className={className} {...props}>
       <Plus className="mr-2" />
       {children}
     </Button>

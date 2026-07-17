@@ -2,7 +2,7 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Clapperboard, FileText, Film, Layers } from "lucide-react"
-import type { PluginOutput } from "@/client"
+import type { PluginListOutput } from "@/client"
 import type { OwnerView } from "@/components/Common/DataTable"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
@@ -11,10 +11,15 @@ import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 
 import { PluginActionsMenu } from "./ActionsMenu"
 
-export type PluginTableData = PluginOutput & { pending?: boolean }
+export type PluginTableData = PluginListOutput & { pending?: boolean }
 
 export function pluginColumns(owner: OwnerView): ColumnDef<PluginTableData>[] {
   return [
+    {
+      accessorKey: "username",
+      header: "User",
+      cell: ({ row }) => <TruncatedCell value={row.original.username} />,
+    },
     {
       accessorKey: "name",
       header: "Name",

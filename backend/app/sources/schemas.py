@@ -2,7 +2,7 @@
 
 import uuid
 
-from pydantic import BaseModel
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from app.plugins.models import Plugin
 from app.schemas import (
@@ -31,10 +31,22 @@ class SourcePublic(BaseSource):
     id: uuid.UUID
 
 
+# TODO: Consider reworking this into seperate models for each parent.
+class SourceListPublic(SourcePublic):
+    """Schema for returning a list of `Source`s, with parent information."""
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
+    username: str | None = Field(
+        validation_alias=AliasPath("plugin", "user", "username"),
+    )
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
+
+
 class SourcesPublic(BaseModel):
     """Schema for returning a list of `Source`s."""
 
-    data: list[SourcePublic]
+    data: list[SourceListPublic]
     total_count: int
     filtered_count: int
     is_server_side: bool

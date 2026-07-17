@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 
 const AddChannel = () => {
   return (
-    <Button asChild className="my-4">
+    <Button asChild>
       <Link to="/onboarding">
         <Plus className="mr-2" />
         New Channel

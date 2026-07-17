@@ -70,6 +70,13 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         back_populates="channel",
         cascade_delete=True,
     )
+    combined_channels: list[ChannelCombinedChannel] = Relationship(
+        back_populates="channel",
+        cascade_delete=True,
+        sa_relationship_kwargs={
+            "foreign_keys": "ChannelCombinedChannel.channel_id",
+        },
+    )
 
     @property
     def parent(self) -> User:
@@ -419,7 +426,9 @@ class BaseChannelSavedEpisodeOrder(SQLModel):
 
 
 class ChannelSavedEpisodeOrder(
-    BaseChannelSavedEpisodeOrder, TimestampIdAndHashMixin, table=True
+    BaseChannelSavedEpisodeOrder,
+    TimestampIdAndHashMixin,
+    table=True,
 ):
     __table_args__ = (
         PrimaryKeyConstraint("channel_id", "episode_id"),
@@ -436,3 +445,32 @@ class ChannelSavedEpisodeOrder(
 
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
     episode: Episode = Relationship()
+
+
+class ChannelCombinedChannel(TimestampIdAndHashMixin, table=True):
+    """Model representing the additional `Channel`s combined into a `Channel`."""
+
+    __table_args__ = (
+        # Each combined channel is unique within a channel; the leading column also
+        # serves lookups of a channel's combined channels and cascade deletion when
+        # the owning channel is deleted.
+        PrimaryKeyConstraint("channel_id", "combined_channel_id"),
+        # Used by cascade deletion when a combined channel is deleted.
+        Index(
+            "ChannelCombinedChannel-combined_channel_id-index",
+            "combined_channel_id",
+        ),
+    )
+
+    channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
+    combined_channel_id: uuid.UUID = Field(
+        foreign_key="channel.id",
+        ondelete="CASCADE",
+    )
+
+    channel: Channel = Relationship(
+        back_populates="combined_channels",
+        sa_relationship_kwargs={
+            "foreign_keys": "ChannelCombinedChannel.channel_id",
+        },
+    )

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.interfaces import ORMOption
     from sqlalchemy.sql.selectable import ForUpdateParameter
 
+    from app.channel_orders.models import ChannelOrder
     from app.channels.models import Channel
     from app.episodes.models import Episode
     from app.files.models import File
@@ -66,7 +67,7 @@ class RootRecordMixin(ABC):
     """
 
     @abstractmethod
-    def _root_record(self, session: Session) -> Channel | Plugin:
+    def _root_record(self, session: Session) -> Channel | Plugin | ChannelOrder:
         """Return the root record directly owned by the `User`."""
 
     def owner_id(self, session: Session) -> uuid.UUID:
@@ -189,12 +190,12 @@ class MediaMixin[
     @classmethod
     @abstractmethod
     def select_with_plugin(cls) -> SelectOfScalar[Any]:
-        """Return a select of this model joined through to its owning `Plugin`.
+        """Return a select joined to `Plugin`."""
 
-        The return is `SelectOfScalar[Any]` rather than `SelectOfScalar[Self]` so that
-        overrides narrowing to `SelectOfScalar[Self]` stay compatible under the invariant
-        `SelectOfScalar` type parameter.
-        """
+    @classmethod
+    @abstractmethod
+    def select_with_user_eager(cls) -> SelectOfScalar[Any]:
+        """Return a select joined to `User` with contains_eager."""
 
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function

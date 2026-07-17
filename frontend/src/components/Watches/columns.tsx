@@ -87,7 +87,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorFn: (row) => row.show.name,
+    accessorFn: (row) => row.plugin.name,
     id: "plugin",
     header: "Plugin",
     cell: ({ row }) => (
@@ -96,7 +96,8 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorKey: "source.name",
+    accessorFn: (row) => row.source.name,
+    id: "source",
     header: "Source",
     cell: ({ row }) => {
       const { source } = row.original
@@ -220,10 +221,16 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
     },
   },
   {
-    accessorFn: (row) => (row.verified ? "Yes" : "No"),
+    accessorFn: (row) => (row.verified ? "true" : "false"),
     id: "verified",
     header: "Verified",
-    meta: { filterVariant: "select" },
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Yes", value: "true" },
+        { label: "No", value: "false" },
+      ],
+    },
     filterFn: "equalsString",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">

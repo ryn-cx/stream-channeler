@@ -18,6 +18,7 @@ from app.models import TimestampIdAndHashMixin
 from app.users.models import User
 from app.utils import tz_datetime
 
+
 class BaseWatch(SQLModel):
     # call-overload - See TimestampAndIdMixin for an explanation.
     watch_date: datetime = Field(

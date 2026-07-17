@@ -6,7 +6,11 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
-import { ChannelsService, type SortKeyInput } from "@/client"
+import {
+  ChannelOrdersService,
+  ChannelsService,
+  type SortKeyInput,
+} from "@/client"
 import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
 import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
@@ -17,8 +21,6 @@ import {
 } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
-import { ManageAdditionalChannels } from "@/components/Channels/ChannelDetail/ManageSubChannels"
-import { SaveDefaultButton } from "@/components/Channels/ChannelDetail/SaveDefaultButton"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -36,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { usePersistedState } from "@/hooks/usePersistedState"
+import { parseOrderConfig } from "@/lib/channelOrder"
 
 function getChannelQueryOptions(channelId: string) {
   return {
@@ -51,6 +54,7 @@ type ChannelSearchParams = {
   hideUnwatched?: boolean
   hidePartiallyWatched?: boolean
   sortBy?: Array<SortKeyInput>
+  orderPresetId?: string
   maximumWatchDate?: string
   totalShowsCount?: number
   startedShowsCount?: number
@@ -62,7 +66,6 @@ type ChannelSearchParams = {
   minimumDuration?: number
   maximumDuration?: number
   limit?: number
-  additionalChannels?: string[]
   sourceIds?: string[]
   sourceIdsIsBlacklist?: boolean
   randomSeed?: number
@@ -89,6 +92,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       hideUnwatched: search.hideUnwatched as boolean | undefined,
       hidePartiallyWatched: search.hidePartiallyWatched as boolean | undefined,
       sortBy: search.sortBy as ChannelSearchParams["sortBy"],
+      orderPresetId: search.orderPresetId as string | undefined,
       maximumWatchDate: search.maximumWatchDate as string | undefined,
       totalShowsCount: search.totalShowsCount as number | undefined,
       startedShowsCount: search.startedShowsCount as number | undefined,
@@ -100,7 +104,6 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
       limit: search.limit as number | undefined,
-      additionalChannels: search.additionalChannels as string[] | undefined,
       sourceIds: search.sourceIds as string[] | undefined,
       sourceIdsIsBlacklist: search.sourceIdsIsBlacklist as boolean | undefined,
       randomSeed: search.randomSeed as number | undefined,
@@ -148,6 +151,29 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   )
   const routeFullPath = Route.fullPath
 
+  // A referenced preset holds the options the backend actually applies, and the URL
+  // only carries its id, so the preset has to be read back for the dialog to show it.
+  const { data: orderPreset } = useQuery({
+    queryKey: ["channel-orders", search.orderPresetId],
+    queryFn: () =>
+      ChannelOrdersService.getChannelOrder({
+        channelOrderId: search.orderPresetId as string,
+      }),
+    enabled: search.orderPresetId !== undefined,
+    refetchOnWindowFocus: false,
+  })
+
+  // `_resolve_order_preset` overrides the channel's options with every option the
+  // preset stored, so the preset wins here the same way it does on the backend.
+  const filterParams: ChannelSearchParams = orderPreset
+    ? {
+        ...search,
+        ...(parseOrderConfig(
+          orderPreset.config,
+        ) as Partial<ChannelSearchParams>),
+      }
+    : search
+
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     id: false,
     plugin: false,
@@ -162,10 +188,6 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   )
   const editOrder = editOrderFlag === "on"
   const setEditOrder = (next: boolean) => setEditOrderFlag(next ? "on" : "off")
-
-  const currentChannelIds = search.additionalChannels
-    ? [channelId, ...search.additionalChannels]
-    : [channelId]
 
   const episodesWithDetails: EpisodeWithDetails[] = (
     episodesData?.episodes ?? []
@@ -262,34 +284,25 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               {isOwner && (
                 <>
                   <DropdownMenuSeparator />
-                  <ManageShowsButton channelId={channelId} variant="menu" />
+                  <ManageShowsButton
+                    channelId={channelId}
+                    variant="menu"
+                    combinedChannels={{ isLoggedIn: !!user }}
+                  />
                 </>
               )}
               <DropdownMenuSeparator />
-              <ManageAdditionalChannels
-                channelId={channelId}
-                filterParams={search}
-                routeFullPath={routeFullPath}
-                currentChannelIds={currentChannelIds}
-                isLoggedIn={!!user}
-                variant="menu"
-              />
 
               <EpisodeFilters
-                filterParams={search}
+                key={orderPreset?.id ?? "channel"}
+                filterParams={filterParams}
                 routeFullPath={routeFullPath}
                 channelId={channelId}
-                randomSeed={search.randomSeed}
+                randomSeed={filterParams.randomSeed}
                 variant="menu"
+                isOwner={isOwner}
               />
 
-              {isOwner && (
-                <SaveDefaultButton
-                  channelId={channelId}
-                  searchParams={search}
-                  variant="menu"
-                />
-              )}
               {isOwner && (
                 <SaveOrderButton
                   channelId={channelId}
@@ -308,7 +321,6 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               variant="outline"
               onClick={() => setViewMode("table")}
               title="Switch to table view"
-              className="my-4"
             >
               <TableIcon />
               Table
@@ -318,29 +330,25 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               variant="outline"
               onClick={() => setViewMode("cards")}
               title="Switch to card view"
-              className="my-4"
             >
               <LayoutGrid />
               Cards
             </Button>
           )}
-          {isOwner && <ManageShowsButton channelId={channelId} />}
-          <ManageAdditionalChannels
-            channelId={channelId}
-            filterParams={search}
-            routeFullPath={routeFullPath}
-            currentChannelIds={currentChannelIds}
-            isLoggedIn={!!user}
-          />
-          <EpisodeFilters
-            filterParams={search}
-            routeFullPath={routeFullPath}
-            channelId={channelId}
-            randomSeed={search.randomSeed}
-          />
           {isOwner && (
-            <SaveDefaultButton channelId={channelId} searchParams={search} />
+            <ManageShowsButton
+              channelId={channelId}
+              combinedChannels={{ isLoggedIn: !!user }}
+            />
           )}
+          <EpisodeFilters
+            key={orderPreset?.id ?? "channel"}
+            filterParams={filterParams}
+            routeFullPath={routeFullPath}
+            channelId={channelId}
+            randomSeed={filterParams.randomSeed}
+            isOwner={isOwner}
+          />
           {viewMode === "cards" && (
             <EditOrderButton
               editOrder={editOrder}

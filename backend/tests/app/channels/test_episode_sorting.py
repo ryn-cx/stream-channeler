@@ -1,4 +1,3 @@
-# TODO: Validate
 # TODO: This file was entirely AI generated just to have a baseline for testing.
 """Tests for EpisodeQueryBuilder sorting, filtering, and interleaving."""
 
@@ -9,10 +8,15 @@ from typing import TypedDict
 
 import pytest
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, col, delete
 
 from app.channels.episode_selector import EpisodeQueryBuilder, EpisodeResult
-from app.channels.models import Channel, ChannelEpisodeFilter, ChannelSeasonFilter
+from app.channels.models import (
+    Channel,
+    ChannelCombinedChannel,
+    ChannelEpisodeFilter,
+    ChannelSeasonFilter,
+)
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.models import Visibility
@@ -136,6 +140,28 @@ def _build_results(setup: BuildSetup, **filter_kwargs: object) -> list[EpisodeRe
 
 def _build(setup: BuildSetup, **filter_kwargs: object) -> list[Episode]:
     return [r.episode for r in _build_results(setup, **filter_kwargs)]
+
+
+def _combine_channels(
+    session: Session,
+    channel: Channel,
+    combined_channel_ids: list[uuid.UUID],
+) -> None:
+    """Set a channel's combined channels (replacing any existing ones)."""
+    session.exec(  # type: ignore[call-overload]
+        delete(ChannelCombinedChannel).where(
+            col(ChannelCombinedChannel.channel_id) == channel.id,
+        ),
+    )
+    for position, combined_channel_id in enumerate(combined_channel_ids):
+        session.add(
+            ChannelCombinedChannel(
+                channel_id=channel.id,
+                combined_channel_id=combined_channel_id,
+                position=position,
+            ),
+        )
+    session.flush()
 
 
 def _all_episode_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
@@ -1181,10 +1207,8 @@ class TestAdditionalChannels:
         extra_episode = create_random_episode(session, season, duration=300)
         session.flush()
 
-        episodes = _build(
-            episode_setup,
-            additional_channels=[str(extra_channel.id)],
-        )
+        _combine_channels(session, episode_setup["channel"], [extra_channel.id])
+        episodes = _build(episode_setup)
         assert extra_episode.id in {ep.id for ep in episodes}
         assert len(episodes) == 5  # noqa: PLR2004
 
@@ -1194,8 +1218,8 @@ class TestAdditionalChannels:
     ) -> None:
         """A channel including B which includes C should yield A, B and C.
 
-        Inclusion is transitive: B's included channels are read from B's saved
-        `default_order`. The cycle C -> A proves the walk is cycle-safe.
+        Inclusion is transitive: B's combined channels are read from B's
+        stored combined channels. The cycle C -> A proves the walk is cycle-safe.
         """
         session = episode_setup["session"]
         user = episode_setup["user"]
@@ -1217,19 +1241,12 @@ class TestAdditionalChannels:
         channel_c, episode_c = _channel_with_episode()
 
         channel_a = episode_setup["channel"]
-        # B includes C, and C includes A (a cycle that must not loop forever).
-        channel_b.default_order = ChannelOptions(
-            additional_channels=[channel_c.id],
-        ).model_dump_json(by_alias=True, exclude_defaults=True)
-        channel_c.default_order = ChannelOptions(
-            additional_channels=[channel_a.id],
-        ).model_dump_json(by_alias=True, exclude_defaults=True)
-        session.flush()
+        # A includes B, B includes C, and C includes A (a cycle that must not loop).
+        _combine_channels(session, channel_a, [channel_b.id])
+        _combine_channels(session, channel_b, [channel_c.id])
+        _combine_channels(session, channel_c, [channel_a.id])
 
-        episodes = _build(
-            episode_setup,
-            additional_channels=[str(channel_b.id)],
-        )
+        episodes = _build(episode_setup)
         episode_ids = {ep.id for ep in episodes}
         assert episode_b.id in episode_ids
         assert episode_c.id in episode_ids
@@ -1524,9 +1541,7 @@ class TestNestedChannelBlacklist:
 
         # Channel B includes A but blacklists Z via a filter-only show.
         channel_b = create_random_channel(session, user=user.id)
-        channel_b.default_order = ChannelOptions(
-            additional_channels=[channel_a.id],
-        ).model_dump_json(by_alias=True, exclude_defaults=True)
+        _combine_channels(session, channel_b, [channel_a.id])
         blacklist_show = create_random_channel_show(
             session,
             channel_b,
@@ -1549,15 +1564,13 @@ class TestNestedChannelBlacklist:
             channel: Channel,
             included: list[uuid.UUID],
         ) -> set[uuid.UUID]:
+            _combine_channels(session, channel, included)
             setup: BuildSetup = {
                 "channel": channel,
                 "user": user,
                 "session": session,
             }
-            episodes = _build(
-                setup,
-                additional_channels=[str(channel_id) for channel_id in included],
-            )
+            episodes = _build(setup)
             return {episode.id for episode in episodes}
 
         # Baseline: viewing A directly shows both episodes.

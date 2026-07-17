@@ -1,15 +1,18 @@
 """Episodes router."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
-from sqlmodel import select
 
-from app.auth.dependencies import CurrentUser, SessionDep
-from app.episodes.dependencies import EditableEpisode, ReadableEpisode
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+)
+from app.episodes.dependencies import EditableEpisode
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     EpisodeCreate,
+    EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
     EpisodeUpdate,
@@ -30,12 +33,24 @@ from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
+from app.users.models import User
 
 plugin_episodes_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["episodes"])
 source_episodes_router = APIRouter(prefix="/sources/{source_id}", tags=["episodes"])
 show_episodes_router = APIRouter(prefix="/shows/{show_id}", tags=["episodes"])
 season_episodes_router = APIRouter(prefix="/seasons/{season_id}", tags=["episodes"])
 episodes_router = APIRouter(prefix="/episodes", tags=["episodes"])
+
+EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
+    "username": User.username,
+    "season_name": Season.name,
+    "show_id": Season.show_id,
+    "show_name": Show.name,
+    "source_id": Show.source_id,
+    "source_name": Source.name,
+    "plugin_id": Source.plugin_id,
+    "plugin_name": Plugin.name,
+}
 
 
 @season_episodes_router.post("/episodes", response_model=EpisodeOutput)
@@ -54,14 +69,15 @@ def get_episodes(
     current_user: CurrentUser,
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> EpisodesPublic:
-    """Get all of the `Episode`s readable by the `User`."""
+    """Get `Episode`s."""
     return media_owner_list_response(
         session=session,
-        base=select(Episode).join(Season).join(Show).join(Source).join(Plugin),
+        base=Episode.select_with_user_eager(),
         response_model=EpisodesPublic,
-        schema=EpisodeOutput,
+        schema=EpisodeListOutput,
         read_options=read_options,
         current_user=current_user,
+        extra_columns=EPISODE_EXTRA_COLUMNS,
     )
 
 
@@ -73,14 +89,14 @@ def get_season_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Season` if it is readable by the `User`."""
-    base = select(Episode).where(Episode.season_id == season.id)
     return media_list_response(
         session=session,
-        base=base,
+        base=Episode.select_with_user_eager().where(Episode.season_id == season.id),
         response_model=EpisodesPublic,
-        schema=EpisodeOutput,
+        schema=EpisodeListOutput,
         params=read_options,
         current_user=current_user,
+        extra_columns=EPISODE_EXTRA_COLUMNS,
     )
 
 
@@ -92,20 +108,14 @@ def get_plugin_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Plugin` if it is readable by the `User`."""
-    base = (
-        select(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-        .where(Source.plugin_id == plugin.id)
-    )
     return media_list_response(
         session=session,
-        base=base,
+        base=Episode.select_with_user_eager().where(Source.plugin_id == plugin.id),
         response_model=EpisodesPublic,
-        schema=EpisodeOutput,
+        schema=EpisodeListOutput,
         params=read_options,
         current_user=current_user,
+        extra_columns=EPISODE_EXTRA_COLUMNS,
     )
 
 
@@ -117,19 +127,14 @@ def get_source_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Source` if it is readable by the `User`."""
-    base = (
-        select(Episode)
-        .join(Season)
-        .join(Show)
-        .where(Show.source_id == source.id)
-    )
     return media_list_response(
         session=session,
-        base=base,
+        base=Episode.select_with_user_eager().where(Show.source_id == source.id),
         response_model=EpisodesPublic,
-        schema=EpisodeOutput,
+        schema=EpisodeListOutput,
         params=read_options,
         current_user=current_user,
+        extra_columns=EPISODE_EXTRA_COLUMNS,
     )
 
 
@@ -141,24 +146,18 @@ def get_show_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Show` if it is readable by the `User`."""
-    base = select(Episode).join(Season).where(Season.show_id == show.id)
     return media_list_response(
         session=session,
-        base=base,
+        base=Episode.select_with_user_eager().where(Season.show_id == show.id),
         response_model=EpisodesPublic,
-        schema=EpisodeOutput,
+        schema=EpisodeListOutput,
         params=read_options,
         current_user=current_user,
+        extra_columns=EPISODE_EXTRA_COLUMNS,
     )
 
 
-@episodes_router.get("/{episode_id}", response_model=EpisodeOutput)  # noqa: FAST003 - Used by ReadableEpisode
-def get_episode(episode: ReadableEpisode) -> Episode:
-    """Get an `Episode` if it's readable by the `User`."""
-    return episode
-
-
-@episodes_router.patch("/{episode_id}", response_model=EpisodeOutput)  # noqa: FAST003 - Used by EditableEpisode
+@episodes_router.patch("/{episode_id}", response_model=EpisodeOutput)  # noqa: FAST003 - Used by EditableEpisode.
 def update_episode(
     session: SessionDep,
     episode: EditableEpisode,
@@ -168,7 +167,7 @@ def update_episode(
     return episode_input.update(session, episode)
 
 
-@episodes_router.delete("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode
+@episodes_router.delete("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.
 def delete_episode(session: SessionDep, episode: EditableEpisode) -> Message:
     """Delete an `Episode` if it's editable by the `User`."""
     return delete_record(session, episode)

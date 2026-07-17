@@ -1,6 +1,7 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  Antenna,
   Info,
   Link2,
   List,
@@ -46,6 +47,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
+import { AdditionalChannelsPanel } from "./ManageSubChannels"
 import { ShowSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
 
@@ -83,6 +85,12 @@ interface ManageShowsTabsProps {
   tabsListClassName?: string
   /** Poll interval (ms) for the queue. Defaults to undefined (no polling). */
   queueRefetchInterval?: number
+  /** When provided, adds an owner-only "Combined Channels" tab. */
+  combinedChannels?: {
+    isLoggedIn?: boolean
+  }
+  /** Called to close the surrounding modal, e.g. after saving a tab's action. */
+  onRequestClose?: () => void
 }
 
 export function ManageShowsTabs({
@@ -90,6 +98,8 @@ export function ManageShowsTabs({
   contentClassName = "overflow-y-auto flex-1 min-h-0 py-4",
   tabsListClassName,
   queueRefetchInterval,
+  combinedChannels,
+  onRequestClose,
 }: ManageShowsTabsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -361,6 +371,11 @@ export function ManageShowsTabs({
           <TabsTrigger value="queue">
             Queue{pendingQueueCount > 0 && ` (${pendingQueueCount})`}
           </TabsTrigger>
+          {combinedChannels && (
+            <TabsTrigger value="channels">
+              <Antenna className="h-4 w-4 mr-1" /> Combined Channels
+            </TabsTrigger>
+          )}
           <TabsTrigger value="ai">
             <Sparkles className="h-4 w-4 mr-1" /> AI Suggestions
           </TabsTrigger>
@@ -626,6 +641,16 @@ export function ManageShowsTabs({
             </div>
           )}
         </TabsContent>
+
+        {combinedChannels && (
+          <TabsContent value="channels" className={contentClassName}>
+            <AdditionalChannelsPanel
+              channelId={channelId}
+              isLoggedIn={combinedChannels.isLoggedIn}
+              onSaved={onRequestClose}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent
           value="ai"

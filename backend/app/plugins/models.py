@@ -3,7 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
-from sqlalchemy.orm import object_session
+from sqlalchemy.orm import contains_eager, object_session
 from sqlmodel import (
     Field,
     Index,
@@ -90,7 +90,19 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        # A `Plugin` is its own owning `Plugin`, so there is nothing to join.
         return select(cls)
+
+    @classmethod
+    @override
+    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
+        return (
+            cls.select_with_plugin()
+            .join(User)
+            .options(
+                contains_eager(cls.user),  # type: ignore[arg-type]
+            )
+        )
 
     @property
     @override

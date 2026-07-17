@@ -4,11 +4,13 @@ import uuid
 from datetime import datetime
 from typing import Never, Self, override
 
+from sqlalchemy.orm import contains_eager
 from sqlmodel import Field, PrimaryKeyConstraint, Relationship, Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import BaseMediaMixin, DateTimeField, MediaMixin
 from app.plugins.models import Plugin
+from app.users.models import User
 
 
 class BaseFile(BaseMediaMixin):
@@ -45,6 +47,17 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Plugin)
+
+    @classmethod
+    @override
+    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
+        return (
+            cls.select_with_plugin()
+            .join(User)
+            .options(
+                contains_eager(cls.plugin).contains_eager(Plugin.user),  # type: ignore[arg-type]  # type: ignore[arg-type]
+            )
+        )
 
     def __str__(self) -> str:
         """Return a string representation of the `File`."""

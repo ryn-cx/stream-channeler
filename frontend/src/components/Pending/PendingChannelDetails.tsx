@@ -13,18 +13,18 @@ const PendingChannelDetails = () => (
     <div className="flex flex-wrap items-center gap-2 px-[4%] py-4">
       <Skeleton className="h-8 w-48 mr-2" />
       <ButtonGroup>
-        <Button variant="default" disabled className="opacity-50 my-4">
+        <Button variant="default" disabled className="opacity-50">
           <LayoutGrid />
           Cards
         </Button>
-        <Button variant="outline" disabled className="opacity-50 my-4">
+        <Button variant="outline" disabled className="opacity-50">
           <TableIcon />
           Table
         </Button>
       </ButtonGroup>
-      <Skeleton className="h-10 w-28 my-4 rounded-md" />
-      <Skeleton className="h-10 w-28 my-4 rounded-md" />
-      <Skeleton className="h-10 w-28 my-4 rounded-md" />
+      <Skeleton className="h-10 w-28 rounded-md" />
+      <Skeleton className="h-10 w-28 rounded-md" />
+      <Skeleton className="h-10 w-28 rounded-md" />
     </div>
 
     {/* Card grid skeleton */}

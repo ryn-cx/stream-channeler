@@ -10,16 +10,16 @@ const PendingChannelList = () => (
       <h1 className="text-2xl font-bold tracking-tight">Channels</h1>
       <div className="flex flex-wrap items-center gap-2">
         <ButtonGroup>
-          <Button variant="default" disabled className="opacity-50 my-4">
+          <Button variant="default" disabled className="opacity-50">
             <LayoutGrid />
             Browse
           </Button>
-          <Button variant="outline" disabled className="opacity-50 my-4">
+          <Button variant="outline" disabled className="opacity-50">
             <TableIcon />
             Table
           </Button>
         </ButtonGroup>
-        <Button disabled className="opacity-50 my-4">
+        <Button disabled className="opacity-50">
           <Plus />
           New Channel
         </Button>

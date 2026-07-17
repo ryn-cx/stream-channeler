@@ -1,11 +1,13 @@
 """Source router."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
-from sqlmodel import select
 
-from app.auth.dependencies import CurrentUser, SessionDep
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+)
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
@@ -19,14 +21,21 @@ from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceCreate,
+    SourceListPublic,
     SourcePublic,
     SourcesPublic,
     SourceUpdate,
 )
 from app.users.dependencies import OptionalUser
+from app.users.models import User
 
 plugin_sources_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["sources"])
 sources_router = APIRouter(prefix="/sources", tags=["sources"])
+
+SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
+    "username": User.username,
+    "plugin_name": Plugin.name,
+}
 
 
 @plugin_sources_router.post("/sources", response_model=SourcePublic)
@@ -45,14 +54,15 @@ def get_sources(
     current_user: CurrentUser,
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> SourcesPublic:
-    """Get all of the `Source`s readable by the `User`."""
+    """Get `Source`s."""
     return media_owner_list_response(
         session=session,
-        base=select(Source).join(Plugin),
+        base=Source.select_with_user_eager(),
         response_model=SourcesPublic,
-        schema=SourcePublic,
+        schema=SourceListPublic,
         read_options=read_options,
         current_user=current_user,
+        extra_columns=SOURCE_EXTRA_COLUMNS,
     )
 
 
@@ -64,24 +74,24 @@ def get_plugin_sources(
     read_options: Annotated[ReadOptions, Query()],
 ) -> SourcesPublic:
     """Get all of the `Source`s for a `Plugin` if it is readable by the `User`."""
-    base = select(Source).where(Source.plugin_id == plugin.id)
     return media_list_response(
         session=session,
-        base=base,
+        base=Source.select_with_user_eager().where(Source.plugin_id == plugin.id),
         response_model=SourcesPublic,
-        schema=SourcePublic,
+        schema=SourceListPublic,
         params=read_options,
         current_user=current_user,
+        extra_columns=SOURCE_EXTRA_COLUMNS,
     )
 
 
-@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource
+@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource.
 def get_source(source: ReadableSource) -> Source:
     """Get a `Source` if it's readable by the `User`."""
     return source
 
 
-@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by EditableSource
+@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by EditableSource.
 def update_source(
     session: SessionDep,
     source: EditableSource,
@@ -91,7 +101,7 @@ def update_source(
     return source_input.update(session, source)
 
 
-@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by EditableSource
+@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by EditableSource.
 def delete_source(session: SessionDep, source: EditableSource) -> Message:
     """Delete a `Source` if it's editable by the `User`."""
     return delete_record(session, source)

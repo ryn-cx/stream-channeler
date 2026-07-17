@@ -12,6 +12,7 @@ from sqlmodel import and_, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.auth.dependencies import CurrentUser, SessionDep
+from app.channel_orders.models import ChannelOrder
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
@@ -257,13 +258,8 @@ class _SortExpressionBuilder:
 
 
 def child_channel_ids(channel: Channel) -> list[UUID]:
-    """Return the additional channel ids configured in a channel's default order."""
-    if not channel.default_order:
-        return []
-
-    return ChannelOptions.model_validate_json(
-        channel.default_order,
-    ).additional_channels
+    """Return the additional channel ids combined into a channel, in order."""
+    return [combined.combined_channel_id for combined in channel.combined_channels]
 
 
 def readable_channels(
@@ -322,6 +318,7 @@ class EpisodeQueryBuilder:
         self._user = user
         self._now = tz_datetime.now()
         self._main_channel_id = channel.id
+        channel_options = self._resolve_order_preset(channel_options)
         self._channel_options = self._filter_channel_options(channel_options)
         self._channel_ids = self._resolve_channel_ids(channel)
         self._sort_expressions = _SortExpressionBuilder(
@@ -334,6 +331,30 @@ class EpisodeQueryBuilder:
             msg = "This operation requires an authenticated user."
             raise ValueError(msg)
         return self._user
+
+    def _resolve_order_preset(
+        self,
+        channel_options: ChannelOptions,
+    ) -> ChannelOptions:
+        """Replace the channel's options with a referenced `ChannelOrder` preset."""
+        if channel_options.order_preset_id is None:
+            return channel_options
+        order = self._session.exec(
+            select(ChannelOrder).where(
+                ChannelOrder.id == channel_options.order_preset_id,
+            ),
+        ).first()
+        if order is None:
+            return channel_options
+        preset = ChannelOptions.model_validate_json(order.config)
+        # Only override the options the preset actually stored so older presets that
+        # only captured sorting leave the channel's other options untouched.
+        update = {
+            name: getattr(preset, name)
+            for name in preset.model_fields_set
+            if name != "order_preset_id"
+        }
+        return channel_options.model_copy(update=update)
 
     def _filter_channel_options(
         self,
@@ -370,7 +391,7 @@ class EpisodeQueryBuilder:
             self._session,
             self._user,
             main_channel,
-            self._channel_options.additional_channels,
+            child_channel_ids(main_channel),
         )
 
     def get_episodes(self) -> list[EpisodeResult]:

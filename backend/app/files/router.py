@@ -1,13 +1,12 @@
 """Files router."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlmodel import select
 
 from app.auth.dependencies import (
-    CurrentUser,
     SessionDep,
+    SuperUser,
     get_current_active_superuser,
 )
 from app.files.dependencies import EditableFile, ReadableFile
@@ -28,6 +27,7 @@ from app.media.service import (
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
+from app.users.models import User
 
 files_router = APIRouter(
     prefix="/admin/files",
@@ -40,6 +40,11 @@ plugin_files_router = APIRouter(
     dependencies=[Depends(get_current_active_superuser)],
 )
 
+FILE_PARENT_COLUMNS: dict[str, Any] = {
+    "plugin_name": Plugin.name,
+    "username": User.username,
+}
+
 
 @plugin_files_router.post("/files", response_model=FilePublic)
 def create_file(
@@ -51,20 +56,24 @@ def create_file(
     return file_input.create(session, File, plugin)
 
 
+# Every `File` route is already superuser-only, so there is no user/admin list split to
+# make: `get_files` takes an optional `owner` filter rather than the required one an
+# admin-only list route would have.
 @files_router.get("")
 def get_files(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: SuperUser,
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> FilesPublic:
     """Get every `File` across all `Plugin`s readable by the `User`."""
     return media_owner_list_response(
         session=session,
-        base=select(File).join(Plugin),
+        base=File.select_with_user_eager(),
         response_model=FilesPublic,
         schema=FileListPublic,
         read_options=read_options,
         current_user=current_user,
+        extra_columns=FILE_PARENT_COLUMNS,
     )
 
 
@@ -72,28 +81,29 @@ def get_files(
 def get_plugin_files(
     plugin: ReadablePlugin,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> FilesPublic:
     """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
-    base = select(File).where(File.plugin_id == plugin.id)
+    base = File.select_with_user_eager().where(File.plugin_id == plugin.id)
     return media_list_response(
         session=session,
         base=base,
         response_model=FilesPublic,
         schema=FileListPublic,
         params=read_options,
+        extra_columns=FILE_PARENT_COLUMNS,
         current_user=current_user,
     )
 
 
-@files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile
+@files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile.
 def get_file(file: ReadableFile) -> File:
     """Get a `File` if it's readable by the `User`."""
     return file
 
 
-@files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile
+@files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile.
 def update_file(
     session: SessionDep,
     file: EditableFile,
@@ -103,7 +113,7 @@ def update_file(
     return file_input.update(session, file)
 
 
-@files_router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile
+@files_router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile.
 def delete_file(session: SessionDep, file: EditableFile) -> Message:
     """Delete a `File` if it's editable by the `User`."""
     return delete_record(session, file)

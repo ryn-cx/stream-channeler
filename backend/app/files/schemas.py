@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from app.files.models import BaseFile, File
 from app.models import BaseMediaMixin, DateTimeField
@@ -33,16 +33,23 @@ class FilePublic(BaseFile):
     id: uuid.UUID
 
 
+# TODO: Consider reworking this into seperate models for each parent.
 class FileListPublic(BaseMediaMixin):
     """Schema for returning a list of `File`s, excluding `content`.
 
     `content` is excluded to reduce the response size.
     """
 
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
     # data_timestamp is a required field for files.
     data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
     plugin_id: uuid.UUID
     id: uuid.UUID
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
+    username: str | None = Field(
+        validation_alias=AliasPath("plugin", "user", "username"),
+    )
 
 
 class FilesPublic(BaseModel):

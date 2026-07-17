@@ -13,14 +13,14 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.media.schemas import MediaOwner, MediaReadOptions
 from app.plugins.models import Plugin
-from app.schemas import MEDIA_MODELS, Message, ReadOptions
+from app.schemas import USER_OWNED_MODELS, Message, ReadOptions
 from app.service import get_read_results
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 
 
-def readable_record[T: MEDIA_MODELS](
+def readable_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
 ) -> Callable[..., T]:
@@ -48,7 +48,7 @@ def readable_record[T: MEDIA_MODELS](
     return dependency
 
 
-def editable_record[T: MEDIA_MODELS](
+def editable_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
 ) -> Callable[..., T]:
@@ -72,7 +72,7 @@ def editable_record[T: MEDIA_MODELS](
     return dependency
 
 
-def existing_record[T: MEDIA_MODELS](
+def existing_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
 ) -> Callable[..., T]:
@@ -95,7 +95,7 @@ def existing_record[T: MEDIA_MODELS](
 
 def delete_record(
     session: Session,
-    existing_record: MEDIA_MODELS,
+    existing_record: USER_OWNED_MODELS,
 ) -> Message:
     """Delete the record and return a success message."""
     session.delete(existing_record)
@@ -126,6 +126,7 @@ def media_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     current_user: User | None,
     default_sort: datetime | None = None,
     tiebreaker: uuid.UUID | None = None,
+    extra_columns: dict[str, Any] | None = None,
 ) -> ResponseT:
     model = base.column_descriptions[0]["entity"]
     if default_sort is None:
@@ -140,6 +141,7 @@ def media_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         tiebreaker=tiebreaker,
         params=params,
         current_user=current_user,
+        extra_columns=extra_columns,
     )
     return response_model(
         data=[schema.model_validate(row) for row in rows],
@@ -159,6 +161,7 @@ def media_owner_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     current_user: User,
     default_sort: datetime | None = None,
     tiebreaker: uuid.UUID | None = None,
+    extra_columns: dict[str, Any] | None = None,
 ) -> ResponseT:
     if not read_options.owner:
         base = base.where(Plugin.user_id == current_user.id)
@@ -183,4 +186,5 @@ def media_owner_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         current_user=current_user,
         default_sort=default_sort,
         tiebreaker=tiebreaker,
+        extra_columns=extra_columns,
     )

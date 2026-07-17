@@ -10,6 +10,7 @@ from sqlmodel import col, func, select
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    SuperUser,
     get_current_active_superuser,
 )
 from app.channels import service
@@ -22,11 +23,13 @@ from app.channels.dependencies import (
 from app.channels.episode_selector import (
     EpisodeQueryBuilder,
     child_channel_ids,
+    readable_channels,
     resolve_channel_ids,
 )
 from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.channels.schemas import (
     BlacklistEpisodeInput,
+    ChannelAdminListOutput,
     ChannelAdminOutput,
     ChannelAdminUpdate,
     ChannelCreate,
@@ -40,6 +43,7 @@ from app.channels.schemas import (
     ChannelQueueOutput,
     ChannelShowsOutput,
     ChannelUpdate,
+    CombinedChannelOutput,
     EpisodeWithDetails,
     SortOptionOutput,
     WhitelistEpisodeOutput,
@@ -47,11 +51,12 @@ from app.channels.schemas import (
     WhitelistShowInput,
     WhitelistShowOutput,
 )
+from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
 from app.models import Visibility
 from app.plugins.schemas import PluginOutput
-from app.schemas import Message
+from app.schemas import Message, ScopedReadOptions
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
@@ -85,30 +90,13 @@ def create_channel(
 def get_channels(
     session: SessionDep,
     current_user: CurrentUser,
-    owner: MediaOwner | None = None,
 ) -> list[ChannelAdminOutput]:
-    """List the current `User`'s `Channel`s, or official/others for admins."""
-    channel_selector = select(Channel, User.username).join(
-        User,
-        col(User.id) == Channel.user_id,
+    """List the current `User`'s `Channel`s."""
+    channel_selector = (
+        select(Channel, User.username)
+        .join(User, col(User.id) == Channel.user_id)
+        .where(Channel.user_id == current_user.id)
     )
-    if not owner:
-        channel_selector = channel_selector.where(Channel.user_id == current_user.id)
-    else:
-        if not current_user.is_superuser:
-            raise HTTPException(
-                status_code=403,
-                detail="The user doesn't have enough privileges",
-            )
-        plugin_user = get_or_create_plugin_user(session=session)
-        if owner == MediaOwner.official:
-            channel_selector = channel_selector.where(
-                Channel.user_id == plugin_user.id,
-            )
-        else:
-            channel_selector = channel_selector.where(
-                col(Channel.user_id).not_in([current_user.id, plugin_user.id]),
-            )
     rows = session.exec(channel_selector).all()
     return [
         ChannelAdminOutput.model_validate(channel, update={"username": username})
@@ -174,7 +162,7 @@ def bulk_import_queue_urls(
 def get_public_channels(
     session: SessionDep,
     offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    limit: Annotated[int, Query(ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)] = 10,
 ) -> ChannelPublicListOutput:
     """List public `Channel`s with a positive admin score, highest score first.
 
@@ -200,6 +188,16 @@ def get_public_channels(
         service.public_channel_output(channel, username) for channel, username in rows
     ]
     return ChannelPublicListOutput(data=data, count=count)
+
+
+@admin_router.get("")
+def admin_get_channels(
+    session: SessionDep,
+    current_user: SuperUser,
+    read_options: Annotated[ScopedReadOptions, Query()],
+) -> ChannelAdminListOutput:
+    """List `Channel`s for the requested scope, regardless of visibility."""
+    return service.admin_channel_list_output(session, current_user, read_options)
 
 
 @admin_router.patch(
@@ -237,7 +235,7 @@ def _channel_queue_admin_output(
 @admin_router.get("/queue")
 def get_all_channel_queues(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: SuperUser,
     owner: MediaOwner | None = None,
 ) -> list[ChannelQueueAdminOutput]:
     """List every `Channel`'s import queue entries, scoped by owner."""
@@ -299,6 +297,49 @@ def admin_delete_channel_queue(
     session.delete(queue_entry)
     session.commit()
     return Message(message=f"{url} removed from import queue successfully")
+
+
+@channels_router.get(
+    "/{channel_id}/combined-channels",  # noqa: FAST003 - Used by ReadableChannel.
+)
+def get_channel_combined_channels(
+    channel: ReadableChannel,
+    session: SessionDep,
+) -> list[CombinedChannelOutput]:
+    """Return a `Channel`'s `CombinedChannel`s."""
+    result: list[CombinedChannelOutput] = []
+    for combined in channel.combined_channels:
+        combined_channel = session.get(Channel, combined.combined_channel_id)
+        result.append(
+            CombinedChannelOutput(
+                id=combined.combined_channel_id,
+                name=combined_channel.name if combined_channel else None,
+            ),
+        )
+    return result
+
+
+@channels_router.put(
+    "/{channel_id}/combined-channels",  # noqa: FAST003 - Used by EditableChannel.
+)
+def update_channel_combined_channels(
+    session: SessionDep,
+    current_user: CurrentUser,
+    channel: EditableChannel,
+    combined_channel_ids: list[uuid.UUID],
+) -> Message:
+    """Delete a `Channel`'s `CombinedChannel`s."""
+    readable_ids = {
+        readable.id
+        for readable in readable_channels(session, current_user, combined_channel_ids)
+    }
+    ordered_ids = [
+        combined_id
+        for combined_id in combined_channel_ids
+        if combined_id in readable_ids
+    ]
+    service.set_channel_combined_channels(session, channel, ordered_ids)
+    return Message(message="Combined channels updated successfully")
 
 
 @channels_router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.

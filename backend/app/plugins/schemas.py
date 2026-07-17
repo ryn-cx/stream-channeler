@@ -1,8 +1,9 @@
 # TODO: Validate
 """Plugin schemas."""
+
 import uuid
 
-from pydantic import BaseModel
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
@@ -30,10 +31,19 @@ class PluginOutput(BasePlugin):
     id: uuid.UUID
 
 
+# TODO: Consider reworking this into seperate models for each parent.
+class PluginListOutput(PluginOutput):
+    """Schema for returning a list of `Plugin`s, with owner information."""
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
+    username: str | None = Field(validation_alias=AliasPath("user", "username"))
+
+
 class PluginsPublic(BaseModel):
     """Schema for returning a list of `Plugin`s."""
 
-    data: list[PluginOutput]
+    data: list[PluginListOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool

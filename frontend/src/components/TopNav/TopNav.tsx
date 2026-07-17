@@ -2,8 +2,8 @@
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
   Eye,
-  Globe,
   LayoutDashboard,
+  ListOrdered,
   LogIn,
   LogOut,
   Menu,
@@ -45,15 +45,19 @@ interface NavItem {
 
 const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
-  { icon: Radio, title: "My Channels", path: "/channels" },
-  { icon: Globe, title: "Public Channels", path: "/channels/browse" },
+  { icon: Radio, title: "Channels", path: "/channels" },
   { icon: Eye, title: "Watches", path: "/watches" },
+  { icon: ListOrdered, title: "Orders", path: "/channel-orders" },
   { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]
 
 const adminItems: NavItem[] = [
   ...baseItems,
   { icon: Users, title: "Admin", path: "/admin" },
+]
+
+const publicItems: NavItem[] = [
+  { icon: Radio, title: "Channels", path: "/channels" },
 ]
 
 function NavLinks({
@@ -76,9 +80,9 @@ function NavLinks({
             to={item.path}
             onClick={onClick}
             className={cn(
-              "text-sm transition-colors hover:text-white",
+              "text-sm transition-colors hover:text-foreground",
               isActive
-                ? "text-white font-bold"
+                ? "text-foreground font-bold"
                 : "text-muted-foreground font-medium",
             )}
           >
@@ -176,7 +180,11 @@ export function TopNav() {
   const { user: currentUser } = useAuth()
   const loggedIn = isLoggedIn()
 
-  const items = currentUser?.is_superuser ? adminItems : baseItems
+  const items = loggedIn
+    ? currentUser?.is_superuser
+      ? adminItems
+      : baseItems
+    : publicItems
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10)
@@ -208,13 +216,12 @@ export function TopNav() {
                   <Logo variant="full" className="h-8" />
                 </SheetTitle>
               </SheetHeader>
-              {loggedIn ? (
-                <MobileNavLinks
-                  items={items}
-                  onClick={() => setMobileOpen(false)}
-                />
-              ) : (
-                <div className="mt-4">
+              <MobileNavLinks
+                items={items}
+                onClick={() => setMobileOpen(false)}
+              />
+              {!loggedIn && (
+                <div className="mt-1 flex flex-col gap-1">
                   <Link
                     to="/login"
                     onClick={() => setMobileOpen(false)}
@@ -233,11 +240,9 @@ export function TopNav() {
         <Logo variant="full" className="h-9" />
 
         {/* Desktop nav links */}
-        {loggedIn && (
-          <nav className="hidden md:flex items-center gap-6">
-            <NavLinks items={items} />
-          </nav>
-        )}
+        <nav className="hidden md:flex items-center gap-6">
+          <NavLinks items={items} />
+        </nav>
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-2">

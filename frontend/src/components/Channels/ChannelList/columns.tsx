@@ -3,12 +3,54 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelOutput } from "@/client"
+import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
 import { CopyId } from "@/components/Common/CopyId"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import { ChannelActionsMenu } from "./ChannelActionsMenu"
 
 export type ChannelTableData = ChannelOutput & { pending?: boolean }
+
+// Score is admin-only and only present on rows fetched from the admin endpoint.
+export function channelScoreColumn<T extends object>(): ColumnDef<T> {
+  const score = (row: T) => ("score" in row ? (row.score as number) : null)
+  return {
+    id: "score",
+    accessorFn: score,
+    header: "Score",
+    meta: { filterVariant: "range" },
+    cell: ({ row }) => (
+      <span className="tabular-nums">{score(row.original) ?? "—"}</span>
+    ),
+  }
+}
+
+export function ChannelDescriptionCell({
+  description,
+}: {
+  description?: string | null
+}) {
+  if (!description) {
+    return <span className="text-muted-foreground italic">None</span>
+  }
+  return (
+    <div
+      className="max-w-[320px] truncate text-muted-foreground"
+      title={description}
+    >
+      {description}
+    </div>
+  )
+}
+
+export function ownedChannelColumns(isAdmin: boolean): ColumnDef<ChannelRow>[] {
+  const cols = [...columns] as ColumnDef<ChannelRow>[]
+  if (isAdmin) {
+    // Keep the actions column last.
+    cols.splice(cols.length - 1, 0, channelScoreColumn<ChannelRow>())
+  }
+  return cols
+}
 
 export const columns: ColumnDef<ChannelTableData>[] = [
   {
@@ -78,6 +120,16 @@ export const columns: ColumnDef<ChannelTableData>[] = [
           </span>
         </div>
       )
+    },
+  },
+  {
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => (
+      <ChannelDescriptionCell description={row.original.description} />
+    ),
+    meta: {
+      filterVariant: "text",
     },
   },
   {

@@ -1,11 +1,6 @@
 // TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDown,
@@ -21,7 +16,16 @@ import { type Resolver, useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { getChannelEpisodes } from "@/api/channels"
-import { ChannelsService, type SortKeyInput, type SourcePublic } from "@/client"
+import {
+  ChannelOrdersService,
+  ChannelsService,
+  type SortKeyInput,
+  type Visibility,
+} from "@/client"
+import { PublicOrderPickerDialog } from "@/components/ChannelOrders/PublicOrderPickerDialog"
+import { SaveChannelOrderDialog } from "@/components/ChannelOrders/SaveChannelOrderDialog"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { EmojiPicker } from "@/components/Common/EmojiPicker"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -65,8 +69,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
+import { Textarea } from "@/components/ui/textarea"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import {
+  VISIBILITY_OPTIONS,
+  visibilityDescription,
+  visibilityLabel,
+} from "@/lib/visibility"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
@@ -111,7 +121,6 @@ const formSchema = z.object({
       .max(1000, "Must be at most 1000")
       .optional(),
   ),
-  additionalChannels: z.array(z.string()).optional(),
   sourceIds: z.array(z.string()).optional(),
   sourceIdsIsBlacklist: z.boolean().optional(),
 })
@@ -222,14 +231,37 @@ function cleanFormData(data: FormValues): FormValues {
 interface EpisodeFiltersProps {
   filterParams: Omit<FormValues, "sortBy"> & {
     sortBy?: SortKeyInput[]
-    additionalChannels?: string[]
     sourceIds?: string[]
     sourceIdsIsBlacklist?: boolean
+    /** Set when the channel's options come from a referenced preset. */
+    orderPresetId?: string
   }
-  routeFullPath: string
-  channelId: string
+  routeFullPath?: string
+  channelId?: string
   randomSeed?: number
   variant?: "button" | "menu"
+  isOwner?: boolean
+  /**
+   * When set, the dialog edits a saved `ChannelOrder` instead of a channel's
+   * live options: the Saved tab is replaced by a Details tab (name, icon,
+   * description, visibility) and saving writes both the config and details back
+   * to the order rather than applying it to a channel.
+   */
+  orderEdit?: {
+    order: {
+      id: string
+      name?: string | null
+      description?: string | null
+      visibility: Visibility
+      anonymous?: boolean
+      icon?: string | null
+      score?: number
+    }
+    onSaved?: () => void
+  }
+  /** Controlled open state (used in order-edit mode, where the table owns the trigger). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function EpisodeFilters({
@@ -238,12 +270,46 @@ export function EpisodeFilters({
   channelId,
   randomSeed,
   variant = "button",
+  isOwner = false,
+  orderEdit,
+  open,
+  onOpenChange,
 }: EpisodeFiltersProps) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { user } = useAuth()
+  // Only admins can see or change the score, wherever the dialog is opened from.
+  const isAdmin = user?.is_superuser ?? false
 
-  // Tracks when the dialog is open
-  const [isOpen, setIsOpen] = useState(false)
+  const isOrderMode = orderEdit !== undefined
+
+  // Order-details fields, edited in the Details tab when in order-edit mode.
+  const [orderName, setOrderName] = useState(orderEdit?.order.name ?? "")
+  const [orderDescription, setOrderDescription] = useState(
+    orderEdit?.order.description ?? "",
+  )
+  const [orderVisibility, setOrderVisibility] = useState<Visibility>(
+    orderEdit?.order.visibility ?? "private",
+  )
+  const [orderAnonymous, setOrderAnonymous] = useState(
+    orderEdit?.order.anonymous ?? false,
+  )
+  const [orderIcon, setOrderIcon] = useState<string | null>(
+    orderEdit?.order.icon ?? null,
+  )
+  const [orderScore, setOrderScore] = useState(
+    String(orderEdit?.order.score ?? 0),
+  )
+
+  // Tracks when the dialog is open (internal state unless controlled).
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+  const setIsOpen = onOpenChange ?? setInternalOpen
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false)
+  const [pendingDefault, setPendingDefault] = useState<Record<
+    string,
+    any
+  > | null>(null)
 
   // Track which date format is being used so only the visible fields are submitted
   const [dateInputModes, setDateInputModes] = useState({
@@ -390,6 +456,16 @@ export function EpisodeFilters({
     refetchOnMount: false,
   })
 
+  const loggedIn = isLoggedIn()
+  const [saveOrderOpen, setSaveOrderOpen] = useState(false)
+  const [selectedSavedOrderId, setSelectedSavedOrderId] = useState<string>("")
+  const { data: savedOrders = [] } = useQuery({
+    queryKey: ["channel-orders", "own"],
+    queryFn: () => ChannelOrdersService.getChannelOrders(),
+    enabled: loggedIn && !isOrderMode,
+    refetchOnWindowFocus: false,
+  })
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,
     mode: "onChange",
@@ -420,48 +496,115 @@ export function EpisodeFilters({
     },
   })
 
-  const sourceChannelIds = [
-    channelId,
-    ...(filterParams.additionalChannels ?? []),
-  ]
-
-  const sourcesQueries = useQueries({
-    queries: sourceChannelIds.map((id) => ({
-      queryKey: ["channel-sources", id],
-      queryFn: () => ChannelsService.getChannelSources({ channelId: id }),
-      enabled: isOpen,
-      refetchOnWindowFocus: false,
-    })),
+  const sourcesQuery = useQuery({
+    queryKey: ["channel-sources", channelId],
+    queryFn: () =>
+      ChannelsService.getChannelSources({ channelId: channelId ?? "" }),
+    enabled: isOpen && !isOrderMode,
+    refetchOnWindowFocus: false,
   })
 
-  const availableSources = (() => {
-    const merged: Record<string, SourcePublic> = {}
-    for (const query of sourcesQueries) {
-      for (const source of query.data ?? []) {
-        merged[source.id] = source
-      }
-    }
-    return Object.values(merged).sort((a, b) =>
-      (a.name ?? "").localeCompare(b.name ?? ""),
-    )
-  })()
+  const availableSources = [...(sourcesQuery.data ?? [])].sort((a, b) =>
+    (a.name ?? "").localeCompare(b.name ?? ""),
+  )
 
   const mutation = useMutation({
     mutationFn: (newSearch: Record<string, any>) =>
       getChannelEpisodes({
-        channelId,
+        channelId: channelId ?? "",
         ...newSearch,
       }),
     onSuccess: (newData, newSearch) => {
       queryClient.setQueryData(["episodes", channelId], newData)
       setIsOpen(false)
-      navigate({ to: routeFullPath, search: newSearch as any, replace: true })
+      if (routeFullPath) {
+        navigate({ to: routeFullPath, search: newSearch as any, replace: true })
+      }
       showSuccessToast("Filters applied successfully")
     },
     onError: handleError.bind(showErrorToast),
   })
 
-  const onSubmit = (data: FormValues) => {
+  const orderSaveMutation = useMutation({
+    mutationFn: (config: string) => {
+      const channelOrderId = orderEdit!.order.id
+      const requestBody = {
+        config,
+        name: orderName.trim() === "" ? null : orderName.trim(),
+        description:
+          orderDescription.trim() === "" ? null : orderDescription.trim(),
+        visibility: orderVisibility,
+        anonymous: orderAnonymous,
+        icon: orderIcon,
+      }
+      // Only admins can set the score, so it is sent on the admin endpoint only.
+      return isAdmin
+        ? ChannelOrdersService.adminUpdateChannelOrder({
+            channelOrderId,
+            requestBody: {
+              ...requestBody,
+              score: Math.max(0, Number.parseInt(orderScore, 10) || 0),
+            },
+          })
+        : ChannelOrdersService.updateChannelOrder({
+            channelOrderId,
+            requestBody,
+          })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["channel-orders"] })
+      showSuccessToast("Order updated")
+      setIsOpen(false)
+      orderEdit?.onSaved?.()
+    },
+    onError: handleError.bind(showErrorToast),
+  })
+
+  const saveDefaultMutation = useMutation({
+    mutationFn: (searchParams: Record<string, any>) =>
+      ChannelsService.updateChannelDefaultOrder({
+        channelId: channelId ?? "",
+        requestBody: searchParams,
+      }),
+    onSuccess: () => {
+      showSuccessToast("Default order saved successfully")
+      setSaveConfirmOpen(false)
+      setIsOpen(false)
+    },
+    onError: handleError.bind(showErrorToast),
+  })
+
+  const isRecentlyAiredEntry = (entry: SortEntry) =>
+    entry.model === "episode" && entry.field === "recently_aired"
+
+  const buildSortByEntries = () =>
+    sortEntries.map((entry) => ({
+      model: entry.model,
+      field: entry.field,
+      direction: entry.direction,
+      order: entry.order,
+      aggregation: entry.aggregation ?? undefined,
+      days:
+        isRecentlyAiredEntry(entry) && entry.recentlyAiredMode === "relative"
+          ? entry.days
+          : undefined,
+      recentlyAiredDate:
+        isRecentlyAiredEntry(entry) && entry.recentlyAiredMode === "absolute"
+          ? entry.recentlyAiredDate
+          : undefined,
+      fuzziness: entry.fuzziness > 0 ? entry.fuzziness : undefined,
+    }))
+
+  const currentRandomSeed = () => {
+    const parsedSeed =
+      seedInputValue !== "" ? parseInt(seedInputValue, 10) : undefined
+    return !Number.isNaN(parsedSeed as number) ? parsedSeed : randomSeed
+  }
+
+  const buildSearchParams = (
+    data: FormValues,
+    orderPresetId?: string,
+  ): Record<string, any> => {
     // Filter out unused date values that are not currently visible on the screen
     const filteredData = { ...data }
     if (dateInputModes.watchDate === "absolute") {
@@ -486,38 +629,50 @@ export function EpisodeFilters({
       delete filteredData.maximumReleaseDateAbsolute
     }
 
-    const isRecentlyAired = (entry: SortEntry) =>
-      entry.model === "episode" && entry.field === "recently_aired"
-
-    const sortByEntries = sortEntries.map((entry) => ({
-      model: entry.model,
-      field: entry.field,
-      direction: entry.direction,
-      order: entry.order,
-      aggregation: entry.aggregation ?? undefined,
-      days:
-        isRecentlyAired(entry) && entry.recentlyAiredMode === "relative"
-          ? entry.days
-          : undefined,
-      recentlyAiredDate:
-        isRecentlyAired(entry) && entry.recentlyAiredMode === "absolute"
-          ? entry.recentlyAiredDate
-          : undefined,
-      fuzziness: entry.fuzziness > 0 ? entry.fuzziness : undefined,
-    }))
-
-    // additionalChannels is managed from a different form so the value needs to be
-    // extracted from the current URL then all of the other filters can be applied.
-    const parsedSeed =
-      seedInputValue !== "" ? parseInt(seedInputValue, 10) : undefined
-    const newSearch: Record<string, any> = {
-      additionalChannels: filterParams.additionalChannels,
-      randomSeed: !Number.isNaN(parsedSeed as number) ? parsedSeed : randomSeed,
-      ...cleanFormData({ ...filteredData, sortBy: sortByEntries }),
+    // Applying a preset replaces the channel's options outright rather than layering
+    // the preset over whatever the form currently holds. Anything left behind would
+    // still be applied by the backend while the dialog showed the preset's values, so
+    // only the reference and the seed survive. A normal apply clears the reference.
+    if (orderPresetId) {
+      return { randomSeed: currentRandomSeed(), orderPresetId }
     }
-
-    mutation.mutate(newSearch)
+    return {
+      randomSeed: currentRandomSeed(),
+      // Kept explicitly undefined so a normal apply drops any preset reference.
+      orderPresetId: undefined,
+      ...cleanFormData({ ...filteredData, sortBy: buildSortByEntries() }),
+    }
   }
+
+  const buildOrderConfig = (data: FormValues): string => {
+    // An order stores filters and sorting, but never a reference to another
+    // preset nor source selection (sources are channel-specific).
+    const {
+      orderPresetId: _orderPresetId,
+      sourceIds: _sourceIds,
+      sourceIdsIsBlacklist: _sourceIdsIsBlacklist,
+      ...config
+    } = buildSearchParams(data)
+    return JSON.stringify(config)
+  }
+
+  const onSubmit = (data: FormValues, orderPresetId?: string) => {
+    if (isOrderMode) {
+      orderSaveMutation.mutate(buildOrderConfig(data))
+      return
+    }
+    mutation.mutate(buildSearchParams(data, orderPresetId))
+  }
+
+  // A channel using a preset stores the reference, not the options the preset expands
+  // to, so that the default keeps following the preset if it is later edited.
+  const saveAsDefault = form.handleSubmit((data) => {
+    setPendingDefault(buildSearchParams(data, filterParams.orderPresetId))
+    setSaveConfirmOpen(true)
+  })
+
+  const applyOrder = (orderId: string) =>
+    form.handleSubmit((data) => onSubmit(data, orderId))()
 
   const updateEntry = (index: number, updates: Partial<SortEntry>) => {
     setSortEntries((prev) =>
@@ -543,25 +698,31 @@ export function EpisodeFilters({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <VariantTrigger
-          variant={variant}
-          icon={Filter}
-          label="Channel Options"
-          menuLabel="Filters"
-        />
-      </DialogTrigger>
+      {!isOrderMode && (
+        <DialogTrigger asChild>
+          <VariantTrigger
+            variant={variant}
+            icon={Filter}
+            label="Channel Options"
+            menuLabel="Filters"
+          />
+        </DialogTrigger>
+      )}
       {/* Large max width looks nicer than medium. */}
       <DialogContent className="sm:max-w-lrg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Channel Options</DialogTitle>
+          <DialogTitle>
+            {isOrderMode ? "Edit Order" : "Channel Options"}
+          </DialogTitle>
           <DialogDescription>
-            Configure channel filters and sorting options
+            {isOrderMode
+              ? "Edit this order's filters and sorting"
+              : "Configure channel filters and sorting options"}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          {/* onSubmit is needed to manage additionalChannels and URL redirection */}
+          {/* onSubmit applies the filters and redirects to the updated URL. */}
           <form
             onSubmit={form.handleSubmit((data) => onSubmit(data))}
             className="flex flex-col gap-4 py-4 flex-1 min-h-0"
@@ -570,7 +731,15 @@ export function EpisodeFilters({
               <TabsList className="w-full">
                 <TabsTrigger value="filtering">Filtering</TabsTrigger>
                 <TabsTrigger value="sorting">Sorting</TabsTrigger>
-                <TabsTrigger value="sources">Sources</TabsTrigger>
+                {!isOrderMode && (
+                  <TabsTrigger value="sources">Sources</TabsTrigger>
+                )}
+                {loggedIn && !isOrderMode && (
+                  <TabsTrigger value="saved">Saved</TabsTrigger>
+                )}
+                {isOrderMode && (
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                )}
               </TabsList>
               <TabsContent
                 value="filtering"
@@ -1076,132 +1245,290 @@ export function EpisodeFilters({
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent
-                value="sources"
-                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
-              >
-                <FormField
-                  control={form.control}
-                  name="sourceIds"
-                  render={({ field }) => {
-                    const selected = new Set(field.value ?? [])
-                    const isLoading = sourcesQueries.some(
-                      (query) => query.isLoading,
-                    )
-                    const allIds = availableSources.map((source) => source.id)
-                    const allSelected =
-                      allIds.length > 0 &&
-                      allIds.every((id) => selected.has(id))
-                    const isBlacklist = !!form.watch("sourceIdsIsBlacklist")
+              {!isOrderMode && (
+                <TabsContent
+                  value="sources"
+                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                >
+                  <FormField
+                    control={form.control}
+                    name="sourceIds"
+                    render={({ field }) => {
+                      const selected = new Set(field.value ?? [])
+                      const isLoading = sourcesQuery.isLoading
+                      const allIds = availableSources.map((source) => source.id)
+                      const allSelected =
+                        allIds.length > 0 &&
+                        allIds.every((id) => selected.has(id))
+                      const isBlacklist = !!form.watch("sourceIdsIsBlacklist")
 
-                    const toggle = (id: string) => {
-                      const next = new Set(selected)
-                      if (next.has(id)) {
-                        next.delete(id)
-                      } else {
-                        next.add(id)
+                      const toggle = (id: string) => {
+                        const next = new Set(selected)
+                        if (next.has(id)) {
+                          next.delete(id)
+                        } else {
+                          next.add(id)
+                        }
+                        field.onChange(Array.from(next))
                       }
-                      field.onChange(Array.from(next))
-                    }
 
-                    return (
-                      <FormItem className="space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <FormLabel>Filter by Source</FormLabel>
-                          <div className="flex items-center gap-2">
-                            <FormField
-                              control={form.control}
-                              name="sourceIdsIsBlacklist"
-                              render={({ field: modeField }) => (
-                                <div className="inline-flex rounded-md border overflow-hidden">
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      isBlacklist ? "ghost" : "secondary"
-                                    }
-                                    size="sm"
-                                    className="rounded-none"
-                                    onClick={() => modeField.onChange(false)}
-                                  >
-                                    Whitelist
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      isBlacklist ? "secondary" : "ghost"
-                                    }
-                                    size="sm"
-                                    className="rounded-none"
-                                    onClick={() => modeField.onChange(true)}
-                                  >
-                                    Blacklist
-                                  </Button>
-                                </div>
-                              )}
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                field.onChange(allSelected ? [] : allIds)
-                              }
-                              disabled={allIds.length === 0}
-                            >
-                              {allSelected ? "Clear All" : "Select All"}
-                            </Button>
+                      return (
+                        <FormItem className="space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <FormLabel>Filter by Source</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormField
+                                control={form.control}
+                                name="sourceIdsIsBlacklist"
+                                render={({ field: modeField }) => (
+                                  <div className="inline-flex rounded-md border overflow-hidden">
+                                    <Button
+                                      type="button"
+                                      variant={
+                                        isBlacklist ? "ghost" : "secondary"
+                                      }
+                                      size="sm"
+                                      className="rounded-none"
+                                      onClick={() => modeField.onChange(false)}
+                                    >
+                                      Whitelist
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant={
+                                        isBlacklist ? "secondary" : "ghost"
+                                      }
+                                      size="sm"
+                                      className="rounded-none"
+                                      onClick={() => modeField.onChange(true)}
+                                    >
+                                      Blacklist
+                                    </Button>
+                                  </div>
+                                )}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  field.onChange(allSelected ? [] : allIds)
+                                }
+                                disabled={allIds.length === 0}
+                              >
+                                {allSelected ? "Clear All" : "Select All"}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {isBlacklist
-                            ? "Episodes from the selected sources will be hidden. Select none to include all sources."
-                            : "Episodes are limited to the selected sources. Select none to include all sources."}
-                        </p>
-                        {isLoading ? (
-                          <p className="text-sm text-muted-foreground">
-                            Loading sources...
+                          <p className="text-xs text-muted-foreground">
+                            {isBlacklist
+                              ? "Episodes from the selected sources will be hidden. Select none to include all sources."
+                              : "Episodes are limited to the selected sources. Select none to include all sources."}
                           </p>
-                        ) : availableSources.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No sources found.
-                          </p>
-                        ) : (
-                          <div className="border rounded-lg divide-y">
-                            {availableSources.map((source) => {
-                              const checkboxId = `source-${source.id}`
-                              return (
-                                <div
-                                  key={source.id}
-                                  className="flex items-center gap-3 p-2 hover:bg-muted/50"
-                                >
-                                  <Checkbox
-                                    id={checkboxId}
-                                    checked={selected.has(source.id)}
-                                    onCheckedChange={() => toggle(source.id)}
-                                  />
-                                  {source.favicon_url && (
-                                    <img
-                                      src={source.favicon_url}
-                                      alt={`${source.name} favicon`}
-                                      className="size-4"
+                          {isLoading ? (
+                            <p className="text-sm text-muted-foreground">
+                              Loading sources...
+                            </p>
+                          ) : availableSources.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              No sources found.
+                            </p>
+                          ) : (
+                            <div className="border rounded-lg divide-y">
+                              {availableSources.map((source) => {
+                                const checkboxId = `source-${source.id}`
+                                return (
+                                  <div
+                                    key={source.id}
+                                    className="flex items-center gap-3 p-2 hover:bg-muted/50"
+                                  >
+                                    <Checkbox
+                                      id={checkboxId}
+                                      checked={selected.has(source.id)}
+                                      onCheckedChange={() => toggle(source.id)}
                                     />
-                                  )}
-                                  <Label
-                                    htmlFor={checkboxId}
-                                    className="text-sm font-normal cursor-pointer flex-1"
-                                  >
-                                    {source.name ?? source.id}
-                                  </Label>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </FormItem>
-                    )
-                  }}
-                />
-              </TabsContent>
+                                    {source.favicon_url && (
+                                      <img
+                                        src={source.favicon_url}
+                                        alt={`${source.name} favicon`}
+                                        className="size-4"
+                                      />
+                                    )}
+                                    <Label
+                                      htmlFor={checkboxId}
+                                      className="text-sm font-normal cursor-pointer flex-1"
+                                    >
+                                      {source.name ?? source.id}
+                                    </Label>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </FormItem>
+                      )
+                    }}
+                  />
+                </TabsContent>
+              )}
+
+              {loggedIn && !isOrderMode && (
+                <TabsContent
+                  value="saved"
+                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      Apply a saved order, or save the current sorting.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSaveOrderOpen(true)}
+                    >
+                      Save current sorting
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Your saved orders
+                    </Label>
+                    {savedOrders.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        You haven't saved any orders yet.
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={selectedSavedOrderId}
+                          onValueChange={setSelectedSavedOrderId}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select a saved order" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {savedOrders.map((order) => (
+                              <SelectItem key={order.id} value={order.id}>
+                                {order.name ?? "Untitled order"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          onClick={() => applyOrder(selectedSavedOrderId)}
+                          disabled={selectedSavedOrderId === ""}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Public orders
+                    </Label>
+                    <PublicOrderPickerDialog onUse={applyOrder} />
+                  </div>
+                </TabsContent>
+              )}
+
+              {isOrderMode && (
+                <TabsContent
+                  value="details"
+                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                >
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="order-details-name">Name</Label>
+                      <Input
+                        id="order-details-name"
+                        value={orderName}
+                        onChange={(event) => setOrderName(event.target.value)}
+                        placeholder="My order"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="order-details-icon">Icon</Label>
+                      <EmojiPicker
+                        id="order-details-icon"
+                        value={orderIcon}
+                        onChange={setOrderIcon}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="order-details-description">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="order-details-description"
+                      value={orderDescription}
+                      onChange={(event) =>
+                        setOrderDescription(event.target.value)
+                      }
+                      placeholder="Optional"
+                      className="max-h-40 overflow-y-auto"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="order-details-visibility">Visibility</Label>
+                    <Select
+                      value={orderVisibility}
+                      onValueChange={(value) =>
+                        setOrderVisibility(value as Visibility)
+                      }
+                    >
+                      <SelectTrigger id="order-details-visibility">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VISIBILITY_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {visibilityLabel(option)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      {visibilityDescription(orderVisibility)}
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="order-details-score">Score</Label>
+                      <Input
+                        id="order-details-score"
+                        type="number"
+                        min={0}
+                        value={orderScore}
+                        onChange={(event) => setOrderScore(event.target.value)}
+                        className="w-24"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Public orders with a score of 1 or higher are offered
+                        during onboarding, highest score first.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="order-details-anonymous"
+                      checked={orderAnonymous}
+                      onCheckedChange={(checked) =>
+                        setOrderAnonymous(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="order-details-anonymous"
+                      className="font-normal"
+                    >
+                      Publish anonymously
+                    </Label>
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
             <DialogFooter>
               <Button
@@ -1212,13 +1539,53 @@ export function EpisodeFilters({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Applying..." : "Apply Filters"}
-              </Button>
+              {isOwner && !isOrderMode && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={saveAsDefault}
+                  disabled={mutation.isPending || saveDefaultMutation.isPending}
+                >
+                  {saveDefaultMutation.isPending
+                    ? "Saving..."
+                    : "Save as Default"}
+                </Button>
+              )}
+              {isOrderMode ? (
+                <Button type="submit" disabled={orderSaveMutation.isPending}>
+                  {orderSaveMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              ) : (
+                <Button type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? "Applying..." : "Apply Filters"}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
+
+      {saveConfirmOpen && (
+        <ConfirmDialog
+          open={saveConfirmOpen}
+          onOpenChange={setSaveConfirmOpen}
+          title="Save as Default"
+          description="This will overwrite the current default order for this channel. Are you sure?"
+          confirmLabel="Save"
+          variant="default"
+          onConfirm={() => {
+            if (pendingDefault) saveDefaultMutation.mutate(pendingDefault)
+          }}
+        />
+      )}
+
+      {saveOrderOpen && (
+        <SaveChannelOrderDialog
+          config={buildOrderConfig(form.getValues())}
+          open={saveOrderOpen}
+          onOpenChange={setSaveOrderOpen}
+        />
+      )}
     </Dialog>
   )
 }

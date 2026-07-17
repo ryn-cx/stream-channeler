@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useQueries, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
@@ -85,21 +85,40 @@ function ChannelRow({
       })()
     : {}
 
-  const { data, isLoading } = useQueries({
-    queries: [
-      {
-        queryKey: ["episodes-preview", channel.id, defaultOrder],
-        queryFn: () =>
-          getChannelEpisodes({
-            channelId: channel.id,
-            limit: 20,
-            ...defaultOrder,
-          }),
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-      },
-    ],
-  })[0]
+  const hasDefaultOrder = Object.keys(defaultOrder).length > 0
+
+  const orderedQuery = useQuery({
+    queryKey: ["episodes-preview", channel.id, defaultOrder],
+    queryFn: () =>
+      getChannelEpisodes({
+        channelId: channel.id,
+        limit: 20,
+        ...defaultOrder,
+      }),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: false,
+  })
+
+  // A saved default order can be rejected by the API when it was stored under an
+  // older schema, so retry without any options rather than losing the whole row.
+  const orderRejected = orderedQuery.isError && hasDefaultOrder
+  const fallbackQuery = useQuery({
+    queryKey: ["episodes-preview", channel.id, "no-options"],
+    queryFn: () => getChannelEpisodes({ channelId: channel.id, limit: 20 }),
+    enabled: orderRejected,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: false,
+  })
+
+  const query = orderRejected ? fallbackQuery : orderedQuery
+  const data = query.data
+  const isLoading =
+    orderedQuery.isPending || (orderRejected && fallbackQuery.isPending)
+  const loadFailed = orderRejected
+    ? fallbackQuery.isError
+    : orderedQuery.isError
 
   const updateArrows = () => {
     const container = scrollRef.current
@@ -185,6 +204,13 @@ function ChannelRow({
         </p>
       )}
 
+      {orderRejected && !loadFailed && (
+        <p className="px-[4%] mb-2 text-sm text-destructive">
+          This channel's saved order could not be applied, so its episodes are
+          unsorted.
+        </p>
+      )}
+
       <div className="relative">
         {showLeftArrow && (
           <Button
@@ -218,7 +244,13 @@ function ChannelRow({
                 </div>
               ))}
 
-          {!isLoading && episodesWithDetails.length === 0 && (
+          {!isLoading && loadFailed && (
+            <p className="text-sm text-destructive py-8">
+              Could not load episodes for this channel.
+            </p>
+          )}
+
+          {!isLoading && !loadFailed && episodesWithDetails.length === 0 && (
             <p className="text-sm text-muted-foreground py-8">
               No episodes in this channel yet
             </p>
@@ -247,27 +279,28 @@ interface ChannelsBrowseProps {
   showChannelNumber?: boolean
 }
 
+// Public lists arrive already ordered by the server (score then id); owner lists
+// have no inherent order, so they are sorted by channel number before paging.
+export function sortOwnedChannels<T extends BrowseChannel>(channels: T[]): T[] {
+  return [...channels].sort((first, second) => {
+    const firstNumber = first.channel_number ?? Number.MAX_SAFE_INTEGER
+    const secondNumber = second.channel_number ?? Number.MAX_SAFE_INTEGER
+    if (firstNumber !== secondNumber) return firstNumber - secondNumber
+    return (first.name ?? "").localeCompare(second.name ?? "")
+  })
+}
+
 export function ChannelsBrowse({
   channels,
   readOnly = false,
   showCreatedBy = true,
   showChannelNumber = true,
 }: ChannelsBrowseProps) {
-  // Public (read-only) lists arrive already ordered by the server (score then id),
-  // so preserve that order. Owner lists are sorted by channel number locally.
-  const sorted = readOnly
-    ? channels
-    : [...channels].sort((a, b) => {
-        const numA = a.channel_number ?? Number.MAX_SAFE_INTEGER
-        const numB = b.channel_number ?? Number.MAX_SAFE_INTEGER
-        if (numA !== numB) return numA - numB
-        return (a.name ?? "").localeCompare(b.name ?? "")
-      })
   const [deleteChannel, setDeleteChannel] = useState<BrowseChannel | null>(null)
 
   return (
     <div className="flex flex-col gap-8 pb-8">
-      {sorted.map((channel) => (
+      {channels.map((channel) => (
         <ChannelRow
           key={channel.id}
           channel={channel}

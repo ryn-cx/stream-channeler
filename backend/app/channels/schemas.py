@@ -72,6 +72,15 @@ class ChannelAdminOutput(ChannelOutput):
     username: str | None
 
 
+class ChannelAdminListOutput(BaseModel):
+    """Schema for returning a page of `Channel`s to an admin."""
+
+    data: list[ChannelAdminOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
+
+
 class ChannelAdminUpdate(
     make_model_with_all_fields_optional(BaseChannel),
     BaseInput,
@@ -79,6 +88,13 @@ class ChannelAdminUpdate(
     """Schema for an admin updating any field on a `Channel`."""
 
     score: int | None = Field(default=None)
+
+
+class CombinedChannelOutput(BaseModel):
+    """Schema for returning a channel combined into another channel."""
+
+    id: uuid.UUID
+    name: str | None
 
 
 class ChannelQueueOutput(BaseChannelQueue):
@@ -232,7 +248,7 @@ class ChannelOptions(BaseInput):
             for item in value  # type: ignore[attr-defined]
         ]
 
-    additional_channels: list[uuid.UUID] = Field(default_factory=list)
+    order_preset_id: uuid.UUID | None = Field(default=None)
     source_ids: list[uuid.UUID] = Field(default_factory=list)
     source_ids_is_blacklist: bool = Field(default=False)
     random_seed: int = Field(default_factory=lambda: random.randint(0, 2**31))  # noqa: S311 - TODO: Confirm non-cryptographic random is acceptable

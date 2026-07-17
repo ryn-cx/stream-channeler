@@ -13,7 +13,6 @@ export function EditOrderButton({ editOrder, onToggle }: EditOrderButtonProps) {
     <Button
       onClick={onToggle}
       title={editOrder ? "Finish reordering" : "Reorder episodes"}
-      className="my-4"
     >
       {editOrder ? <Check /> : <Move />}
       {editOrder ? "Done" : "Edit Order"}

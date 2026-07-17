@@ -144,6 +144,7 @@ def get_read_results[T](  # noqa: PLR0913
     tiebreaker: uuid.UUID | None,
     params: ReadOptions,
     current_user: User | None,
+    extra_columns: dict[str, Any] | None = None,
 ) -> tuple[Sequence[T], int, int, bool]:
     if current_user:
         threshold = current_user.server_side_threshold
@@ -151,7 +152,13 @@ def get_read_results[T](  # noqa: PLR0913
         threshold = DEFAULT_SERVER_SIDE_THRESHOLD
 
     model = base.column_descriptions[0]["entity"]
-    columns = {field: getattr(model, field) for field in schema.model_fields}
+    columns = {
+        field: getattr(model, field)
+        for field in schema.model_fields
+        if hasattr(model, field)
+    }
+    if extra_columns:
+        columns.update(extra_columns)
     total_count = session.exec(select(func.count()).select_from(base.subquery())).one()
 
     if total_count < threshold:

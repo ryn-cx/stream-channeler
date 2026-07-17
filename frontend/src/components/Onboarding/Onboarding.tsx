@@ -1,20 +1,11 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
-import {
-  ArrowLeft,
-  Check,
-  Cherry,
-  ChevronRight,
-  Dice5,
-  ListOrdered,
-  PartyPopper,
-  Waves,
-} from "lucide-react"
+import { ArrowLeft, Check, ChevronRight, PartyPopper } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelOutput, SortKeyInput, Visibility } from "@/client"
-import { ChannelsService } from "@/client"
+import { ChannelOrdersService, ChannelsService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -30,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { parseOrderConfig } from "@/lib/channelOrder"
 import {
   VISIBILITY_OPTIONS,
   visibilityDescription,
@@ -38,62 +30,6 @@ import {
 import { handleError } from "@/utils"
 
 const TOTAL_STEPS = 4
-
-interface SortPreset {
-  label: string
-  description: string
-  icon: ReactNode
-  sortBy: SortKeyInput[]
-}
-
-function sortKey(
-  modelField: `${SortKeyInput["model"]}.${string}`,
-  direction: SortKeyInput["direction"],
-  order: NonNullable<SortKeyInput["order"]> = "sequential",
-): SortKeyInput {
-  const [model, field] = modelField.split(".") as [
-    SortKeyInput["model"],
-    string,
-  ]
-  return { model, field, direction, order }
-}
-
-const SORT_PRESETS: SortPreset[] = [
-  {
-    label: "Roll The Dice",
-    description: "The episode order is completely random",
-    icon: <Dice5 className="h-10 w-10" />,
-    sortBy: [sortKey("episode.random", "ascending")],
-  },
-  {
-    label: "Channel Surfing",
-    description:
-      "Episodes play in order within each show, but show order is random",
-    icon: <Waves className="h-10 w-10" />,
-    sortBy: [
-      sortKey("season.sequential", "ascending"),
-      sortKey("episode.sequential", "ascending"),
-      sortKey("episode.id", "ascending", "randomize"),
-    ],
-  },
-  {
-    label: "Fresh Picks",
-    description: "Most recently aired episodes appear first",
-    icon: <Cherry className="h-10 w-10" />,
-    sortBy: [sortKey("episode.air_date", "descending")],
-  },
-  {
-    label: "Marathon Mode",
-    description:
-      "All episodes of one show play in order before moving to the next show",
-    icon: <ListOrdered className="h-10 w-10" />,
-    sortBy: [
-      sortKey("show.name", "ascending"),
-      sortKey("season.season_number", "ascending"),
-      sortKey("episode.episode_number", "ascending"),
-    ],
-  },
-]
 
 function OnboardingShell({
   currentStep,
@@ -462,9 +398,15 @@ export function OnboardingShows({ channelId }: { channelId: string }) {
 }
 
 export function OnboardingSort({ channelId }: { channelId: string }) {
-  const [selectedSort, setSelectedSort] = useState<number | null>(null)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const { showErrorToast } = useCustomToast()
   const navigate = useNavigate()
+
+  const { data: orders = [] } = useQuery({
+    queryKey: ["channel-orders", "featured"],
+    queryFn: () => ChannelOrdersService.getFeaturedChannelOrders(),
+    refetchOnWindowFocus: false,
+  })
 
   const saveSortMutation = useMutation({
     mutationFn: (sortBy: SortKeyInput[]) =>
@@ -483,11 +425,12 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
   })
 
   const handleSave = () => {
-    if (selectedSort === null) {
+    const order = orders.find((option) => option.id === selectedOrderId)
+    if (!order) {
       showErrorToast("Please select a sort option")
       return
     }
-    saveSortMutation.mutate(SORT_PRESETS[selectedSort].sortBy)
+    saveSortMutation.mutate(parseOrderConfig(order.config).sortBy ?? [])
   }
 
   return (
@@ -501,35 +444,48 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
             Choose a default ordering for your channel.
           </p>
         </div>
-        <div className="grid gap-3">
-          {SORT_PRESETS.map((preset, index) => (
-            <button
-              key={preset.label}
-              type="button"
-              className={`flex items-center gap-4 p-4 rounded-lg border text-left transition-colors ${
-                selectedSort === index
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-accent/50"
-              }`}
-              onClick={() => setSelectedSort(index)}
-            >
-              <div
-                className={`shrink-0 ${selectedSort === index ? "text-primary" : "text-muted-foreground"}`}
-              >
-                {preset.icon}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">{preset.label}</p>
-                <p className="text-sm text-muted-foreground">
-                  {preset.description}
-                </p>
-              </div>
-              {selectedSort === index && (
-                <Check className="h-5 w-5 text-primary shrink-0" />
-              )}
-            </button>
-          ))}
-        </div>
+        {orders.length === 0 ? (
+          <p className="text-center text-muted-foreground">
+            No featured orders are available yet.
+          </p>
+        ) : (
+          <div className="grid gap-3">
+            {orders.map((order) => {
+              const emoji = order.icon
+              const label = order.name
+              const isSelected = selectedOrderId === order.id
+              return (
+                <button
+                  key={order.id}
+                  type="button"
+                  className={`flex items-center gap-4 p-4 rounded-lg border text-left transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-accent/50"
+                  }`}
+                  onClick={() => setSelectedOrderId(order.id)}
+                >
+                  {emoji && (
+                    <div className="shrink-0 text-4xl leading-none">
+                      {emoji}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium">{label || "Untitled order"}</p>
+                    {order.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {order.description}
+                      </p>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <Check className="h-5 w-5 text-primary shrink-0" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div className="flex justify-between">
           <Button
             variant="outline"
@@ -547,7 +503,7 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
           <Button
             size="lg"
             onClick={handleSave}
-            disabled={saveSortMutation.isPending || selectedSort === null}
+            disabled={saveSortMutation.isPending || selectedOrderId === null}
           >
             {saveSortMutation.isPending ? "Saving..." : "Save & Continue"}
             <ChevronRight className="h-4 w-4 ml-1" />

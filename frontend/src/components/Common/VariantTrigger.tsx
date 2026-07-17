@@ -76,7 +76,7 @@ export const VariantTrigger = forwardRef<HTMLElement, VariantTriggerProps>(
       )
     }
     return (
-      <Button ref={ref as Ref<HTMLButtonElement>} className="my-4" {...rest}>
+      <Button ref={ref as Ref<HTMLButtonElement>} {...rest}>
         <Icon />
         {label}
       </Button>

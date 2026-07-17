@@ -8,6 +8,7 @@ from sqlmodel import col, delete, func, select
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    SuperUser,
     get_current_active_superuser,
 )
 from app.auth.schemas import UpdatePassword
@@ -214,8 +215,6 @@ def get_user_public_channels(
     return ChannelPublicListOutput(data=data, count=len(data))
 
 
-
-
 @admin_router.get("/{user_id}/channels")
 def admin_list_user_channels(
     session: SessionDep,
@@ -265,7 +264,7 @@ def update_user(
 @admin_router.delete("/{user_id}")  # noqa: FAST003 - Used by ExistingUser.
 def delete_user(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: SuperUser,
     user: ExistingUser,
 ) -> Message:
     """Delete a user."""

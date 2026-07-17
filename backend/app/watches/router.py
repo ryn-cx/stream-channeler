@@ -5,9 +5,8 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.dependencies import ReadableEpisode
-from app.schemas import Message
+from app.schemas import Message, ReadOptions
 from app.watches.dependencies import EditableWatch
-from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
     WatchesListOutput,
@@ -44,15 +43,10 @@ def create_watch(
 def get_watches(
     session: SessionDep,
     current_user: CurrentUser,
+    read_options: Annotated[ReadOptions, Query()],
 ) -> WatchesListOutput:
     """Get all of the `Watch`es for the `User`."""
-    return get_watched_episodes(session, current_user.id)
-
-
-@watches_router.get("/{watch_id}", response_model=WatchOutput)  # noqa: FAST003 - Used by UserWatch.
-def get_watch(watch: EditableWatch) -> Watch:
-    """Get a `Watch` if it's editable by the `User`."""
-    return watch
+    return get_watched_episodes(session, current_user, read_options)
 
 
 @watches_router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.

@@ -232,6 +232,14 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
 # Pretty much completely rewritten from BaseGetTests because the verification is more
 # complex.
 class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
+    @pytest.mark.skip(reason="`Watch` has no single-record GET route.")
+    def test_get_permissions(self) -> None:  # type: ignore[override]
+        ...
+
+    @pytest.mark.skip(reason="`Watch` has no single-record GET route.")
+    def test_get_not_found(self) -> None:  # type: ignore[override]
+        ...
+
     def get_record_list_url(
         self,
         parent_id: uuid.UUID | str | None = None,  # noqa: ARG002
@@ -320,32 +328,6 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         if user_is_owner:
             return True
         return user_is_superuser
-
-    @override
-    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
-    @pytest.mark.parametrize("user_is_superuser", [True, False])
-    @pytest.mark.parametrize("user_is_authenticated", [True, False])
-    @pytest.mark.parametrize("user_is_owner", [True, False])
-    def test_get_permissions(
-        self,
-        session_scoped_client: TestClient,
-        session_scoped_session: Session,
-        *,
-        user_is_authenticated: bool,
-        user_is_owner: bool,
-        user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
-        record_is_public: bool = True,  # noqa: PT028
-    ) -> None:
-        super().test_get_permissions(
-            session_scoped_client,
-            session_scoped_session,
-            user_is_authenticated=user_is_authenticated,
-            user_is_owner=user_is_owner,
-            record_is_public=record_is_public,
-            user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
-        )
 
     def test_list_excludes_other_users_watches(
         self,

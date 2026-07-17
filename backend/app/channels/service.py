@@ -4,10 +4,11 @@ from datetime import datetime
 from functools import cache
 from uuid import UUID
 
-from sqlmodel import Session, col, delete
+from sqlmodel import Session, col, delete, select
 
 from app.channels.models import (
     Channel,
+    ChannelCombinedChannel,
     ChannelEpisodeFilter,
     ChannelQueue,
     ChannelSavedEpisodeOrder,
@@ -16,14 +17,19 @@ from app.channels.models import (
     URLStatus,
 )
 from app.channels.schemas import (
+    ChannelAdminListOutput,
+    ChannelAdminOutput,
     ChannelOutput,
     ChannelPublicOutput,
     SortOptionOutput,
     WhitelistShowInput,
 )
 from app.episodes.models import Episode
+from app.models import Visibility
 from app.plugins.models import Plugin
+from app.schemas import AdminScope, ScopedReadOptions
 from app.seasons.models import Season
+from app.service import get_read_results
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
@@ -37,6 +43,42 @@ def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
         return output
     output.user_id = None
     return output
+
+
+def admin_channel_output(
+    channel: Channel,
+    username: str | None,
+) -> ChannelAdminOutput:
+    return ChannelAdminOutput.model_validate(channel, update={"username": username})
+
+
+def admin_channel_list_output(
+    session: Session,
+    viewer: User | None,
+    read_options: ScopedReadOptions,
+) -> ChannelAdminListOutput:
+    """List `Channel`s for the requested scope, regardless of visibility."""
+    base = select(Channel).join(User)
+    if read_options.scope == AdminScope.mine and viewer:
+        base = base.where(Channel.user_id == viewer.id)
+    elif read_options.scope == AdminScope.public:
+        base = base.where(Channel.visibility == Visibility.public)
+    rows, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        base,
+        schema=ChannelOutput,
+        default_sort=Channel.created_at,
+        tiebreaker=Channel.id,
+        params=read_options,
+        current_user=viewer,
+        extra_columns={"username": User.username},
+    )
+    return ChannelAdminListOutput(
+        data=[admin_channel_output(channel, channel.user.username) for channel in rows],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )
 
 
 def public_channel_output(
@@ -235,6 +277,23 @@ def set_channel_order(
                 position=position,
             ),
         )
+    session.commit()
+
+
+def set_channel_combined_channels(
+    session: Session,
+    channel: Channel,
+    combined_channel_ids: Sequence[UUID],
+) -> None:
+    """Replace a `Channel`s `CombinedChannel` with the given channel `UUID`s."""
+    channel.combined_channels = [
+        ChannelCombinedChannel(
+            channel_id=channel.id,
+            combined_channel_id=combined_channel_id,
+        )
+        for combined_channel_id in dict.fromkeys(combined_channel_ids)
+        if combined_channel_id != channel.id
+    ]
     session.commit()
 
 

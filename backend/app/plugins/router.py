@@ -1,23 +1,25 @@
 # TODO: Validate
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import select
+from fastapi import APIRouter, HTTPException, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
-    get_current_active_superuser,
 )
 from app.media.schemas import MediaReadOptions
-from app.media.service import delete_record, media_owner_list_response
+from app.media.service import (
+    delete_record,
+    media_owner_list_response,
+)
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginCreate,
     PluginImportURLInformation,
     PluginImportWatchHistoryInformation,
+    PluginListOutput,
     PluginOutput,
     PluginSearchInformation,
     PluginsPublic,
@@ -25,12 +27,17 @@ from app.plugins.schemas import (
     PluginURLMatch,
 )
 from app.schemas import Message
+from app.users.models import User
 from plugins.utils.abstract_plugin import PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
 
+PLUGIN_EXTRA_COLUMNS: dict[str, Any] = {"username": User.username}
 
+
+# A `Plugin`'s parent is the `User` that owns it rather than another media record, so
+# the create route resolves the requester instead of a record they can edit.
 @plugins_router.post("", response_model=PluginOutput)
 def create_plugin(
     session: SessionDep,
@@ -47,18 +54,19 @@ def get_plugins(
     current_user: CurrentUser,
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> PluginsPublic:
-    """Get all of the `Plugin`s readable by the `User`."""
+    """Get `Plugin`s."""
     return media_owner_list_response(
         session=session,
-        base=select(Plugin),
+        base=Plugin.select_with_user_eager(),
         response_model=PluginsPublic,
-        schema=PluginOutput,
+        schema=PluginListOutput,
         read_options=read_options,
         current_user=current_user,
+        extra_columns=PLUGIN_EXTRA_COLUMNS,
     )
 
 
-@plugins_router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by EditablePlugin
+@plugins_router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by EditablePlugin.
 def update_plugin(
     session: SessionDep,
     plugin: EditablePlugin,
@@ -68,7 +76,7 @@ def update_plugin(
     return plugin_input.update(session, plugin)
 
 
-@plugins_router.delete("/{plugin_id}")  # noqa: FAST003 - Used by EditablePlugin
+@plugins_router.delete("/{plugin_id}")  # noqa: FAST003 - Used by EditablePlugin.
 def delete_plugin(session: SessionDep, plugin: EditablePlugin) -> Message:
     """Delete a `Plugin` if it's editable by the `User`."""
     return delete_record(session, plugin)
@@ -152,7 +160,8 @@ def search_plugin(
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
-@plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin
+# Registered after the literal paths above so that they are matched first.
+@plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin.
 def get_plugin(plugin: ReadablePlugin) -> Plugin:
     """Get a `Plugin` if it's readable by the `User`."""
     return plugin
