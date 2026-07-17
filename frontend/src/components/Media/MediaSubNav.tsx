@@ -1,6 +1,7 @@
 // TODO: Validate
 import { Link, useRouterState } from "@tanstack/react-router"
 
+import { validateMediaSearch } from "@/components/Common/DataTable"
 import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +24,10 @@ export function MediaSubNav() {
   const { user } = useAuth()
   const items = user?.is_superuser ? [...baseItems, adminItem] : baseItems
 
+  const currentSearch = validateMediaSearch(
+    router.location.search as Record<string, unknown>,
+  )
+
   return (
     <nav className="flex flex-wrap items-center gap-4 border-b px-[4%] py-2">
       {items.map((item) => {
@@ -31,6 +36,7 @@ export function MediaSubNav() {
           <Link
             key={item.path}
             to={item.path}
+            search={currentSearch}
             className={cn(
               "text-sm transition-colors hover:text-foreground",
               isActive
