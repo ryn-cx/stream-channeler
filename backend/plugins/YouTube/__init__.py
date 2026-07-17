@@ -518,7 +518,14 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         else:
             old_video_ids = set()
         playlist_feed.download_if_outdated(season.update_at)
-        if set(playlist_feed.video_ids()) - old_video_ids:
+        new_video_ids = set(playlist_feed.video_ids()) - old_video_ids
+        if new_video_ids:
+            logger.info(
+                "Found {} new videos in season {}: {}",
+                len(new_video_ids),
+                season.key,
+                ", ".join(sorted(new_video_ids)),
+            )
             self._download_season_files_and_children(
                 season,
                 update_at=tz_datetime.now(),
