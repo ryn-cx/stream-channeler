@@ -163,6 +163,23 @@ def _restrict_to_plugin_user[ResultT](
     )
 
 
+def _restrict_to_media_in_channel[ResultT](
+    statement: SelectOfScalar[ResultT],
+    media_class: MediaClass,
+) -> SelectOfScalar[ResultT]:
+    # Skip items that have no Season included in any channel anywhere below them
+    # in the Plugin -> Source -> Show -> Season tree, so unused media is not updated.
+    if media_class is Plugin:
+        return statement.where(_plugin_has_season_in_channel_exists())
+    if media_class is Source:
+        return statement.where(_source_has_season_in_channel_exists())
+    if media_class is Show:
+        return statement.where(_show_has_season_in_channel_exists())
+    if media_class in (Season, Episode):
+        return statement.where(_season_in_channel_exists())
+    return statement
+
+
 def _process_outdated_items(
     session: Session,
     media_class: MediaClass,
@@ -184,16 +201,7 @@ def _process_outdated_items(
     )
     # Only this plugin's media so each plugin's run is independent.
     statement = statement.where(col(Plugin.key) == plugin_key)
-    # Skip items that have no Season included in any channel anywhere below them
-    # in the Plugin -> Source -> Show -> Season tree, so unused media is not updated.
-    if media_class is Plugin:
-        statement = statement.where(_plugin_has_season_in_channel_exists())
-    elif media_class is Source:
-        statement = statement.where(_source_has_season_in_channel_exists())
-    elif media_class is Show:
-        statement = statement.where(_show_has_season_in_channel_exists())
-    elif media_class in (Season, Episode):
-        statement = statement.where(_season_in_channel_exists())
+    statement = _restrict_to_media_in_channel(statement, media_class)
 
     outdated_items = session.exec(statement).all()
     logger.info(
@@ -279,17 +287,21 @@ def _next_update_at(session: Session) -> datetime | None:
 
     Items already due (`update_at <= now`) are excluded because they are handled by the
     run that just finished; this is only used to decide how long to wait for the next one
-    to come due.
+    to come due. Media that no channel includes is excluded so the wait is not cut short
+    by an item that the update run would skip.
     """
     now = tz_datetime.now()
     soonest: datetime | None = None
     for media_class in MEDIA_CLASSES_IN_ORDER:
         statement = (
-            _restrict_to_plugin_user(
-                media_class.select_with_plugin().where(
-                    col(media_class.update_at) > now,
-                    col(media_class.deleted_at).is_(None),
+            _restrict_to_media_in_channel(
+                _restrict_to_plugin_user(
+                    media_class.select_with_plugin().where(
+                        col(media_class.update_at) > now,
+                        col(media_class.deleted_at).is_(None),
+                    ),
                 ),
+                media_class,
             )
             .order_by(col(media_class.update_at).asc())
             .limit(1)
