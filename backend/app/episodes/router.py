@@ -18,16 +18,13 @@ from app.episodes.schemas import (
     EpisodeUpdate,
 )
 from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_list_response,
-    media_owner_list_response,
-)
+from app.media.service import delete_record, media_scoped_list_response
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
 from app.seasons.models import Season
+from app.service import list_response
 from app.shows.dependencies import ReadableShow
 from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
@@ -70,7 +67,7 @@ def get_episodes(
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get `Episode`s."""
-    return media_owner_list_response(
+    return media_scoped_list_response(
         session=session,
         base=Episode.select_with_user_eager(),
         response_model=EpisodesPublic,
@@ -89,7 +86,7 @@ def get_season_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Season` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Episode.select_with_user_eager().where(Episode.season_id == season.id),
         response_model=EpisodesPublic,
@@ -108,7 +105,7 @@ def get_plugin_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Plugin` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Episode.select_with_user_eager().where(Source.plugin_id == plugin.id),
         response_model=EpisodesPublic,
@@ -127,7 +124,7 @@ def get_source_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Source` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Episode.select_with_user_eager().where(Show.source_id == source.id),
         response_model=EpisodesPublic,
@@ -146,7 +143,7 @@ def get_show_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get all of the `Episode`s for a `Show` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Episode.select_with_user_eager().where(Season.show_id == show.id),
         response_model=EpisodesPublic,

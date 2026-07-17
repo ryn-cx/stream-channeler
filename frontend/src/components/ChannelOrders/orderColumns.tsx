@@ -1,30 +1,24 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Copy, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 
-import {
-  type ChannelOrderAdminOutput,
-  type ChannelOrderOutput,
-  type ChannelOrderPublicOutput,
-  ChannelOrdersService,
-} from "@/client"
-import { CopyChannelOrderDialog } from "@/components/ChannelOrders/CopyChannelOrderDialog"
+import { type ChannelOrderListOutput, ChannelOrdersService } from "@/client"
+import { FavoriteChannelOrder } from "@/components/ChannelOrders/FavoriteChannelOrder"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
+import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { orderSortStepCount } from "@/lib/channelOrder"
 import { visibilityLabel } from "@/lib/visibility"
 import { handleError } from "@/utils"
 
-export type OrderRow =
-  | ChannelOrderOutput
-  | ChannelOrderPublicOutput
-  | ChannelOrderAdminOutput
+// One row shape now serves every scope and viewer.
+export type OrderRow = ChannelOrderListOutput
 
-function OrderRowActions({
+export function OrderRowActions({
   order,
   isOwn,
   onEditConfig,
@@ -35,7 +29,6 @@ function OrderRowActions({
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const [copyOpen, setCopyOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const deleteMutation = useMutation({
@@ -50,11 +43,7 @@ function OrderRowActions({
 
   return (
     <div className="flex justify-end gap-1">
-      <TooltipIconButton
-        label="Copy to your account"
-        icon={<Copy className="size-4" />}
-        onClick={() => setCopyOpen(true)}
-      />
+      {isLoggedIn() && <FavoriteChannelOrder orderId={order.id} />}
       {isOwn && onEditConfig && (
         <TooltipIconButton
           label="Edit"
@@ -70,13 +59,6 @@ function OrderRowActions({
         />
       )}
 
-      {copyOpen && (
-        <CopyChannelOrderDialog
-          order={order}
-          open={copyOpen}
-          onOpenChange={setCopyOpen}
-        />
-      )}
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -201,7 +183,7 @@ export function orderColumns({
 }
 
 export function publicOrderPickerColumns(
-  onUse: (order: ChannelOrderPublicOutput) => void,
+  onUse: (order: ChannelOrderListOutput) => void,
 ): ColumnDef<OrderRow>[] {
   const cols = baseOrderColumns(true)
   cols.push({
@@ -212,7 +194,7 @@ export function publicOrderPickerColumns(
       <div className="flex justify-end">
         <Button
           size="sm"
-          onClick={() => onUse(row.original as ChannelOrderPublicOutput)}
+          onClick={() => onUse(row.original as ChannelOrderListOutput)}
         >
           Use
         </Button>

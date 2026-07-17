@@ -6,30 +6,30 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { LayoutGrid, Table as TableIcon, Tv } from "lucide-react"
+import { Tv } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 
 import { channelColumns } from "@/components/Admin/channelColumns"
+import AddChannel from "@/components/Channels/ChannelList/AddChannel"
+import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
+import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
+import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
+import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
 import {
   BrowsePagination,
   DEFAULT_BROWSE_PAGE_SIZE,
   MAX_BROWSE_PAGE_SIZE,
-} from "@/components/Channels/ChannelList/BrowsePagination"
-import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
-import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
-import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
+} from "@/components/Common/BrowsePagination"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
+import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
-import { Button } from "@/components/ui/button"
 import {
   usePersistedJsonState,
   usePersistedState,
 } from "@/hooks/usePersistedState"
-
-type ViewMode = "table" | "browse"
 
 export function AllChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
   const [pagination, setPagination] = useState<PaginationState>({
@@ -44,6 +44,18 @@ export function AllChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
   )
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>("all-channels-column-visibility", {})
+
+  // The table view lets the page size grow past what browse offers, so clamp it
+  // back down to browse's maximum on the way in.
+  const changeViewMode = (mode: ViewMode) => {
+    if (mode === "browse") {
+      setPagination((current) => ({
+        pageIndex: 0,
+        pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
+      }))
+    }
+    setViewMode(mode)
+  }
 
   const query = useScopedChannels(
     "all",
@@ -90,34 +102,14 @@ export function AllChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
           : undefined
       }
     >
-      <ChannelsHeader scopeTabs={scopeTabs}>
-        {viewMode === "browse" ? (
-          <Button
-            variant="outline"
-            onClick={() => setViewMode("table")}
-            title="Switch to table view"
-          >
-            <TableIcon />
-            Table
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={() => {
-              // The table view lets the page size grow past what browse offers,
-              // so clamp it back down to browse's maximum.
-              setPagination((current) => ({
-                pageIndex: 0,
-                pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
-              }))
-              setViewMode("browse")
-            }}
-            title="Switch to browse view"
-          >
-            <LayoutGrid />
-            Browse
-          </Button>
-        )}
+      <ChannelsHeader
+        scopeTabs={scopeTabs}
+        viewTabs={
+          <ViewModeTabs value={viewMode} onValueChange={changeViewMode} />
+        }
+      >
+        <AddChannel />
+        <BulkImport />
         {viewMode === "table" && <ColumnVisibilityButton table={table} />}
       </ChannelsHeader>
 

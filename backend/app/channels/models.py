@@ -42,7 +42,7 @@ class BaseChannel(SQLModel):
     visibility: Visibility = Field()
     default_order: str | None = Field(default=None)
     description: str | None = Field(default=None)
-    anonymous: bool = Field(default=False)
+    anonymous: bool = Field()
 
 
 class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
@@ -76,6 +76,10 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         sa_relationship_kwargs={
             "foreign_keys": "ChannelCombinedChannel.channel_id",
         },
+    )
+    favorites: list[ChannelFavorite] = Relationship(
+        back_populates="channel",
+        cascade_delete=True,
     )
 
     @property
@@ -474,3 +478,34 @@ class ChannelCombinedChannel(TimestampIdAndHashMixin, table=True):
             "foreign_keys": "ChannelCombinedChannel.channel_id",
         },
     )
+
+
+class ChannelFavorite(TimestampIdAndHashMixin, table=True):
+    """Model representing a `Channel` a `User` has favorited."""
+
+    __table_args__ = (
+        # Each channel is favorited at most once per user; the leading column also
+        # serves lookups of a user's favorites.
+        PrimaryKeyConstraint("user_id", "channel_id"),
+        # Used by cascade deletion when a channel is deleted.
+        Index("ChannelFavorite-channel_id-index", "channel_id"),
+    )
+
+    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    user: User = Relationship(back_populates="favorite_channels")
+
+    channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
+    channel: Channel = Relationship(back_populates="favorites")
+
+    @property
+    def parent(self) -> Channel:
+        """Return the `Channel` that was favorited."""
+        return self.channel
+
+    def owner_id(self, _session: Session) -> uuid.UUID:
+        """Return the `id` of the `User` who favorited the `Channel`."""
+        return self.user_id
+
+    def is_publically_readable(self, _session: Session) -> bool:
+        """Return false because a favorite is only ever readable by its `User`."""
+        return False

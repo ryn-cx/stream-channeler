@@ -3,22 +3,9 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelOrdersGetChannelOrdersResponse, ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetPublicChannelOrdersData, ChannelOrdersGetPublicChannelOrdersResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersAdminGetChannelOrdersData, ChannelOrdersAdminGetChannelOrdersResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsGetChannelsResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetPublicChannelsData, ChannelsGetPublicChannelsResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminGetChannelsData, ChannelsAdminGetChannelsResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, EpisodesGetShowEpisodesData, EpisodesGetShowEpisodesResponse, EpisodesGetSourceEpisodesData, EpisodesGetSourceEpisodesResponse, EpisodesGetPluginEpisodesData, EpisodesGetPluginEpisodesResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, FilesGetPluginFilesData, FilesGetPluginFilesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, SeasonsGetSourceSeasonsData, SeasonsGetSourceSeasonsResponse, SeasonsGetPluginSeasonsData, SeasonsGetPluginSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, ShowsGetPluginShowsData, ShowsGetPluginShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
+import type { ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, EpisodesGetShowEpisodesData, EpisodesGetShowEpisodesResponse, EpisodesGetSourceEpisodesData, EpisodesGetSourceEpisodesResponse, EpisodesGetPluginEpisodesData, EpisodesGetPluginEpisodesResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, FilesGetPluginFilesData, FilesGetPluginFilesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, SeasonsGetSourceSeasonsData, SeasonsGetSourceSeasonsResponse, SeasonsGetPluginSeasonsData, SeasonsGetPluginSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, ShowsGetPluginShowsData, ShowsGetPluginShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesSyncWatchesResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
 
 export class ChannelOrdersService {
-    /**
-     * Get Channel Orders
-     * List the current `User`'s `ChannelOrder`s.
-     * @returns ChannelOrderOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannelOrders(): CancelablePromise<ChannelOrdersGetChannelOrdersResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channel-orders'
-        });
-    }
-    
     /**
      * Create Channel Order
      * Create a `ChannelOrder` owned by the `User`.
@@ -40,25 +27,27 @@ export class ChannelOrdersService {
     }
     
     /**
-     * Get Public Channel Orders
-     * List public `ChannelOrder`s, applying the viewer's server-side filtering.
+     * Get Channel Orders
+     * Get `ChannelOrder`s.
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @returns ChannelOrderPublicListOutput Successful Response
+     * @param data.scope
+     * @returns ChannelOrdersPublic Successful Response
      * @throws ApiError
      */
-    public static getPublicChannelOrders(data: ChannelOrdersGetPublicChannelOrdersData = {}): CancelablePromise<ChannelOrdersGetPublicChannelOrdersResponse> {
+    public static getChannelOrders(data: ChannelOrdersGetChannelOrdersData = {}): CancelablePromise<ChannelOrdersGetChannelOrdersResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channel-orders/public',
+            url: '/api/v1/channel-orders',
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
                 offset: data.offset,
-                limit: data.limit
+                limit: data.limit,
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -69,13 +58,71 @@ export class ChannelOrdersService {
     /**
      * Get Featured Channel Orders
      * List public `ChannelOrder`s with a positive score for onboarding.
-     * @returns ChannelOrderPublicOutput Successful Response
+     * @returns ChannelOrderListOutput Successful Response
      * @throws ApiError
      */
     public static getFeaturedChannelOrders(): CancelablePromise<ChannelOrdersGetFeaturedChannelOrdersResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/channel-orders/featured'
+        });
+    }
+    
+    /**
+     * Get Favorite Channel Order Ids
+     * List the ids of the `ChannelOrder`s the current `User` has favorited.
+     *
+     * Unreadable favorites are left in because this only drives the favorite toggle;
+     * the `favorites` scope of the list endpoint is what applies the read rules.
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getFavoriteChannelOrderIds(): CancelablePromise<ChannelOrdersGetFavoriteChannelOrderIdsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/favorite-ids'
+        });
+    }
+    
+    /**
+     * Favorite Channel Order
+     * Favorite a `ChannelOrder` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static favoriteChannelOrder(data: ChannelOrdersFavoriteChannelOrderData): CancelablePromise<ChannelOrdersFavoriteChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channel-orders/{channel_order_id}/favorite',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unfavorite Channel Order
+     * Remove a `ChannelOrder` from the `User`'s favorites.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unfavoriteChannelOrder(data: ChannelOrdersUnfavoriteChannelOrderData): CancelablePromise<ChannelOrdersUnfavoriteChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channel-orders/{channel_order_id}/favorite',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
     
@@ -170,41 +217,12 @@ export class ChannelOrdersService {
     }
     
     /**
-     * Admin Get Channel Orders
-     * List `ChannelOrder`s for the requested scope, regardless of visibility.
-     * @param data The data for the request.
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @param data.scope
-     * @returns ChannelOrderAdminListOutput Successful Response
-     * @throws ApiError
-     */
-    public static adminGetChannelOrders(data: ChannelOrdersAdminGetChannelOrdersData = {}): CancelablePromise<ChannelOrdersAdminGetChannelOrdersResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/admin/channel-orders',
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit,
-                scope: data.scope
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Admin Update Channel Order
      * Update any field on any `ChannelOrder` as an admin, including `score`.
      * @param data The data for the request.
      * @param data.channelOrderId
      * @param data.requestBody
-     * @returns ChannelOrderAdminOutput Successful Response
+     * @returns ChannelOrderListOutput Successful Response
      * @throws ApiError
      */
     public static adminUpdateChannelOrder(data: ChannelOrdersAdminUpdateChannelOrderData): CancelablePromise<ChannelOrdersAdminUpdateChannelOrderResponse> {
@@ -225,19 +243,6 @@ export class ChannelOrdersService {
 
 export class ChannelsService {
     /**
-     * Get Channels
-     * List the current `User`'s `Channel`s.
-     * @returns ChannelAdminOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannels(): CancelablePromise<ChannelsGetChannelsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels'
-        });
-    }
-    
-    /**
      * Create Channel
      * Create a `Channel` owned by the `User`.
      * @param data The data for the request.
@@ -251,6 +256,35 @@ export class ChannelsService {
             url: '/api/v1/channels',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channels
+     * Get `Channel`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.scope
+     * @returns ChannelsPublic Successful Response
+     * @throws ApiError
+     */
+    public static getChannels(data: ChannelsGetChannelsData = {}): CancelablePromise<ChannelsGetChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                scope: data.scope
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -357,24 +391,56 @@ export class ChannelsService {
     }
     
     /**
-     * Get Public Channels
-     * List public `Channel`s with a positive admin score, highest score first.
+     * Get Favorite Channel Ids
+     * List the ids of the `Channel`s the current `User` has favorited.
      *
-     * Channels with a `score` of `0` are hidden. Results are ordered by `score`
-     * descending, then by `id` ascending, and returned a page at a time.
-     * @param data The data for the request.
-     * @param data.offset
-     * @param data.limit
-     * @returns ChannelPublicListOutput Successful Response
+     * Unreadable favorites are left in because this only drives the favorite toggle;
+     * the `favorites` scope of the list endpoint is what applies the read rules.
+     * @returns string Successful Response
      * @throws ApiError
      */
-    public static getPublicChannels(data: ChannelsGetPublicChannelsData = {}): CancelablePromise<ChannelsGetPublicChannelsResponse> {
+    public static getFavoriteChannelIds(): CancelablePromise<ChannelsGetFavoriteChannelIdsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/public',
-            query: {
-                offset: data.offset,
-                limit: data.limit
+            url: '/api/v1/channels/favorite-ids'
+        });
+    }
+    
+    /**
+     * Favorite Channel
+     * Favorite a `Channel` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static favoriteChannel(data: ChannelsFavoriteChannelData): CancelablePromise<ChannelsFavoriteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/favorite',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unfavorite Channel
+     * Remove a `Channel` from the `User`'s favorites.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unfavoriteChannel(data: ChannelsUnfavoriteChannelData): CancelablePromise<ChannelsUnfavoriteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}/favorite',
+            path: {
+                channel_id: data.channelId
             },
             errors: {
                 422: 'Validation Error'
@@ -778,41 +844,12 @@ export class ChannelsService {
     }
     
     /**
-     * Admin Get Channels
-     * List `Channel`s for the requested scope, regardless of visibility.
-     * @param data The data for the request.
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @param data.scope
-     * @returns ChannelAdminListOutput Successful Response
-     * @throws ApiError
-     */
-    public static adminGetChannels(data: ChannelsAdminGetChannelsData = {}): CancelablePromise<ChannelsAdminGetChannelsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/admin/channels',
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit,
-                scope: data.scope
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Admin Update Channel
      * Update any field on any `Channel` as an admin, including `score`.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
-     * @returns ChannelAdminOutput Successful Response
+     * @returns ChannelListOutput Successful Response
      * @throws ApiError
      */
     public static adminUpdateChannel(data: ChannelsAdminUpdateChannelData): CancelablePromise<ChannelsAdminUpdateChannelResponse> {
@@ -906,7 +943,7 @@ export class EpisodesService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns EpisodesPublic Successful Response
      * @throws ApiError
      */
@@ -919,7 +956,7 @@ export class EpisodesService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -1130,7 +1167,7 @@ export class FilesService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns FilesPublic Successful Response
      * @throws ApiError
      */
@@ -1143,7 +1180,7 @@ export class FilesService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -1399,7 +1436,7 @@ export class PluginsService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns PluginsPublic Successful Response
      * @throws ApiError
      */
@@ -1412,7 +1449,7 @@ export class PluginsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -1601,7 +1638,7 @@ export class SeasonsService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns SeasonsPublic Successful Response
      * @throws ApiError
      */
@@ -1614,7 +1651,7 @@ export class SeasonsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -1815,7 +1852,7 @@ export class ShowsService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns ShowsPublic Successful Response
      * @throws ApiError
      */
@@ -1828,7 +1865,7 @@ export class ShowsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -1998,7 +2035,7 @@ export class SourcesService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.owner
+     * @param data.scope
      * @returns SourcesPublic Successful Response
      * @throws ApiError
      */
@@ -2011,7 +2048,7 @@ export class SourcesService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                owner: data.owner
+                scope: data.scope
             },
             errors: {
                 422: 'Validation Error'
@@ -2318,7 +2355,7 @@ export class UsersService {
      * List every `Channel` editable by a single `User`.
      * @param data The data for the request.
      * @param data.userId
-     * @returns ChannelAdminOutput Successful Response
+     * @returns ChannelListOutput Successful Response
      * @throws ApiError
      */
     public static adminListUserChannels(data: UsersAdminListUserChannelsData): CancelablePromise<UsersAdminListUserChannelsResponse> {

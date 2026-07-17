@@ -11,12 +11,12 @@ from app.auth.dependencies import (
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
-    media_list_response,
-    media_owner_list_response,
+    media_scoped_list_response,
 )
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
+from app.service import list_response
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.sources.schemas import (
@@ -55,7 +55,7 @@ def get_sources(
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> SourcesPublic:
     """Get `Source`s."""
-    return media_owner_list_response(
+    return media_scoped_list_response(
         session=session,
         base=Source.select_with_user_eager(),
         response_model=SourcesPublic,
@@ -74,7 +74,7 @@ def get_plugin_sources(
     read_options: Annotated[ReadOptions, Query()],
 ) -> SourcesPublic:
     """Get all of the `Source`s for a `Plugin` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Source.select_with_user_eager().where(Source.plugin_id == plugin.id),
         response_model=SourcesPublic,

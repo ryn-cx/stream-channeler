@@ -11,7 +11,7 @@ from app.auth.dependencies import (
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
-    media_owner_list_response,
+    media_scoped_list_response,
 )
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
@@ -55,7 +55,7 @@ def get_plugins(
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> PluginsPublic:
     """Get `Plugin`s."""
-    return media_owner_list_response(
+    return media_scoped_list_response(
         session=session,
         base=Plugin.select_with_user_eager(),
         response_model=PluginsPublic,

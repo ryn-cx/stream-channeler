@@ -26,10 +26,12 @@ export function BrowsePagination({
   pagination,
   onPaginationChange,
   rowCount,
+  itemLabel = "Channels",
 }: {
   pagination: PaginationState
   onPaginationChange: (pagination: PaginationState) => void
   rowCount: number
+  itemLabel?: string
 }) {
   const pageCount = Math.max(1, Math.ceil(rowCount / pagination.pageSize))
   const canPreviousPage = pagination.pageIndex > 0
@@ -41,7 +43,7 @@ export function BrowsePagination({
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pb-8">
       <div className="flex items-center gap-x-2">
-        <p className="text-sm text-muted-foreground">Channels per page</p>
+        <p className="text-sm text-muted-foreground">{itemLabel} per page</p>
         <Select
           value={`${pagination.pageSize}`}
           onValueChange={(value) =>
@@ -50,7 +52,7 @@ export function BrowsePagination({
         >
           <SelectTrigger
             className="h-8 w-[70px]"
-            aria-label="Channels per page"
+            aria-label={`${itemLabel} per page`}
           >
             <SelectValue placeholder={pagination.pageSize} />
           </SelectTrigger>

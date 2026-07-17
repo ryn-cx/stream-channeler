@@ -6,6 +6,7 @@ import { EpisodesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import {
   type EpisodeTableData,
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_layout/episodes")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Episodes - Stream Channeler" }],
   }),
@@ -29,13 +31,14 @@ function EpisodesPage() {
   return (
     <MediaListPage<EpisodeTableData>
       title="Episodes"
+      path="/episodes"
       columns={episodeColumns}
       columnVisibilityKey="episodes-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Film}
-      fetchTable={async (owner, params) => {
+      fetchTable={async (scope, params) => {
         const result = await EpisodesService.getEpisodes({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, episodeColumns),

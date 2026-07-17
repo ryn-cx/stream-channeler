@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from sqlmodel import col, func, select
+from sqlmodel import col, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -26,22 +26,22 @@ from app.channels.episode_selector import (
     readable_channels,
     resolve_channel_ids,
 )
-from app.channels.models import Channel, ChannelQueue, ChannelShow
+from app.channels.models import Channel, ChannelFavorite, ChannelQueue, ChannelShow
 from app.channels.schemas import (
     BlacklistEpisodeInput,
-    ChannelAdminListOutput,
-    ChannelAdminOutput,
     ChannelAdminUpdate,
     ChannelCreate,
     ChannelEpisodesOutput,
+    ChannelListOutput,
     ChannelOptions,
     ChannelOrderInput,
     ChannelOutput,
-    ChannelPublicListOutput,
     ChannelQueueAdminOutput,
     ChannelQueueAdminUpdate,
     ChannelQueueOutput,
+    ChannelReadOptions,
     ChannelShowsOutput,
+    ChannelsPublic,
     ChannelUpdate,
     CombinedChannelOutput,
     EpisodeWithDetails,
@@ -51,12 +51,10 @@ from app.channels.schemas import (
     WhitelistShowInput,
     WhitelistShowOutput,
 )
-from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
-from app.models import Visibility
 from app.plugins.schemas import PluginOutput
-from app.schemas import Message, ScopedReadOptions
+from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
@@ -89,19 +87,11 @@ def create_channel(
 @channels_router.get("")
 def get_channels(
     session: SessionDep,
-    current_user: CurrentUser,
-) -> list[ChannelAdminOutput]:
-    """List the current `User`'s `Channel`s."""
-    channel_selector = (
-        select(Channel, User.username)
-        .join(User, col(User.id) == Channel.user_id)
-        .where(Channel.user_id == current_user.id)
-    )
-    rows = session.exec(channel_selector).all()
-    return [
-        ChannelAdminOutput.model_validate(channel, update={"username": username})
-        for channel, username in rows
-    ]
+    current_user: OptionalUser,
+    read_options: Annotated[ChannelReadOptions, Query()],
+) -> ChannelsPublic:
+    """Get `Channel`s."""
+    return service.scoped_channel_list_output(session, current_user, read_options)
 
 
 @channels_router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by EditableChannel
@@ -158,46 +148,51 @@ def bulk_import_queue_urls(
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
 
 
-@channels_router.get("/public")
-def get_public_channels(
+@channels_router.get("/favorite-ids")
+def get_favorite_channel_ids(
     session: SessionDep,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)] = 10,
-) -> ChannelPublicListOutput:
-    """List public `Channel`s with a positive admin score, highest score first.
+    current_user: CurrentUser,
+) -> list[uuid.UUID]:
+    """List the ids of the `Channel`s the current `User` has favorited.
 
-    Channels with a `score` of `0` are hidden. Results are ordered by `score`
-    descending, then by `id` ascending, and returned a page at a time.
+    Unreadable favorites are left in because this only drives the favorite toggle;
+    the `favorites` scope of the list endpoint is what applies the read rules.
     """
-    public_and_scored = (
-        Channel.visibility == Visibility.public,
-        Channel.score >= 1,
+    return list(
+        session.exec(
+            select(ChannelFavorite.channel_id).where(
+                ChannelFavorite.user_id == current_user.id,
+            ),
+        ).all(),
     )
-    count = session.exec(
-        select(func.count()).select_from(Channel).where(*public_and_scored),
-    ).one()
-    rows = session.exec(
-        select(Channel, User.username)
-        .join(User, col(User.id) == Channel.user_id)
-        .where(*public_and_scored)
-        .order_by(col(Channel.score).desc(), col(Channel.id))
-        .offset(offset)
-        .limit(limit),
-    ).all()
-    data = [
-        service.public_channel_output(channel, username) for channel, username in rows
-    ]
-    return ChannelPublicListOutput(data=data, count=count)
 
 
-@admin_router.get("")
-def admin_get_channels(
+@channels_router.post("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
+def favorite_channel(
     session: SessionDep,
-    current_user: SuperUser,
-    read_options: Annotated[ScopedReadOptions, Query()],
-) -> ChannelAdminListOutput:
-    """List `Channel`s for the requested scope, regardless of visibility."""
-    return service.admin_channel_list_output(session, current_user, read_options)
+    current_user: CurrentUser,
+    channel: ReadableChannel,
+) -> Message:
+    """Favorite a `Channel` if it's readable by the `User`."""
+    favorite = session.get(ChannelFavorite, (current_user.id, channel.id))
+    if favorite is None:
+        session.add(ChannelFavorite(user_id=current_user.id, channel_id=channel.id))
+        session.commit()
+    return Message(message="Channel favorited successfully")
+
+
+@channels_router.delete("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
+def unfavorite_channel(
+    session: SessionDep,
+    current_user: CurrentUser,
+    channel: ReadableChannel,
+) -> Message:
+    """Remove a `Channel` from the `User`'s favorites."""
+    favorite = session.get(ChannelFavorite, (current_user.id, channel.id))
+    if favorite is not None:
+        session.delete(favorite)
+        session.commit()
+    return Message(message="Channel unfavorited successfully")
 
 
 @admin_router.patch(
@@ -207,13 +202,13 @@ def admin_update_channel(
     session: SessionDep,
     channel: ExistingChannel,
     channel_in: ChannelAdminUpdate,
-) -> ChannelAdminOutput:
+) -> ChannelListOutput:
     """Update any field on any `Channel` as an admin, including `score`."""
     channel.sqlmodel_update(channel_in.model_dump(exclude_unset=True))
     session.commit()
     session.refresh(channel)
     username = session.get_one(User, channel.user_id).username
-    return ChannelAdminOutput.model_validate(channel, update={"username": username})
+    return ChannelListOutput.model_validate(channel, update={"username": username})
 
 
 def _channel_queue_admin_output(

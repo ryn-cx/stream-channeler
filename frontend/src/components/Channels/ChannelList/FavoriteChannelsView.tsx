@@ -1,5 +1,4 @@
 // TODO: Validate
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type {
   ColumnFiltersState,
   PaginationState,
@@ -7,19 +6,15 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Tv } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { Star } from "lucide-react"
+import type { ReactNode } from "react"
+import { useState } from "react"
+
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
-import { AllChannelsView } from "@/components/Channels/ChannelList/AllChannelsView"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
-import {
-  ChannelsBrowse,
-  sortOwnedChannels,
-} from "@/components/Channels/ChannelList/ChannelsBrowse"
+import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
 import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
-import { ownedChannelColumns } from "@/components/Channels/ChannelList/columns"
-import { FavoriteChannelsView } from "@/components/Channels/ChannelList/FavoriteChannelsView"
-import { PublicChannelsView } from "@/components/Channels/ChannelList/PublicChannelsView"
+import { publicChannelColumns } from "@/components/Channels/ChannelList/publicColumns"
 import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
 import {
   BrowsePagination,
@@ -31,55 +26,30 @@ import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
 import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import useAuth from "@/hooks/useAuth"
 import {
   usePersistedJsonState,
   usePersistedState,
 } from "@/hooks/usePersistedState"
 
-type Scope = "owned" | "favorites" | "public" | "all"
-
-type ChannelsSearch = {
-  view?: "favorites" | "public" | "all"
-}
-
-export const Route = createFileRoute("/_layout/channels/")({
-  component: Channels,
-  validateSearch: (search: Record<string, unknown>): ChannelsSearch => ({
-    view:
-      search.view === "favorites" ||
-      search.view === "public" ||
-      search.view === "all"
-        ? search.view
-        : undefined,
-  }),
-  head: () => ({
-    meta: [
-      {
-        title: "Channels - Stream Channeler",
-      },
-    ],
-  }),
-})
-
-function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
+export function FavoriteChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    "channels-list-view",
-    "browse",
-  )
-  const [columnVisibility, setColumnVisibility] =
-    usePersistedJsonState<VisibilityState>("channels-column-visibility", {
-      id: false,
-    })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_BROWSE_PAGE_SIZE,
   })
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
+    "favorite-channels-list-view",
+    "browse",
+  )
+  const [columnVisibility, setColumnVisibility] =
+    usePersistedJsonState<VisibilityState>(
+      "favorite-channels-column-visibility",
+      {},
+    )
 
   // The table view lets the page size grow past what browse offers, so clamp it
   // back down to browse's maximum on the way in.
@@ -93,9 +63,9 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
     setViewMode(mode)
   }
 
-  const columns = ownedChannelColumns(isAdmin)
+  const columns = publicChannelColumns(isAdmin)
   const query = useScopedChannels(
-    "owned",
+    "favorites",
     isAdmin,
     {
       offset: pagination.pageIndex * pagination.pageSize,
@@ -107,21 +77,15 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
   )
 
   const isServer = query.data?.is_server_side ?? false
-  const tableData = query.data?.data ?? []
+  const allRows = query.data?.data ?? []
   const pageStart = pagination.pageIndex * pagination.pageSize
-  // The server already returns browse's page in its own order; only a
-  // client-side list needs sorting by channel number and slicing here.
-  const ordered = useMemo(
-    () => (isServer ? tableData : sortOwnedChannels(tableData)),
-    [isServer, tableData],
-  )
-  const pageChannels = isServer
-    ? ordered
-    : ordered.slice(pageStart, pageStart + pagination.pageSize)
-  const rowCount = isServer ? (query.data?.filtered_count ?? 0) : ordered.length
+  const browseRows = isServer
+    ? allRows
+    : allRows.slice(pageStart, pageStart + pagination.pageSize)
+  const rowCount = isServer ? (query.data?.filtered_count ?? 0) : allRows.length
 
   const table = useReactTable({
-    data: tableData,
+    data: allRows,
     columns,
     state: { columnVisibility },
     onColumnVisibilityChange: setColumnVisibility,
@@ -158,16 +122,16 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
 
       {query.data.total_count === 0 ? (
         <EmptyState
-          icon={Tv}
-          title="You don't have any channels yet"
-          description="Create a channel to get started"
+          icon={Star}
+          title="No favorite channels yet"
+          description="Star a channel to keep it here."
         />
       ) : viewMode === "table" ? (
         <div className="px-[4%]">
           <DataTable
             columns={columns}
-            data={tableData}
-            storageKey="channels-own"
+            data={allRows}
+            storageKey="favorite-channels"
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             serverSide={
@@ -188,55 +152,13 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
         </div>
       ) : (
         <>
-          <ChannelsBrowse channels={pageChannels} />
+          <ChannelsBrowse channels={browseRows} readOnly />
           <BrowsePagination
             pagination={pagination}
             onPaginationChange={setPagination}
             rowCount={rowCount}
           />
         </>
-      )}
-    </div>
-  )
-}
-
-function Channels() {
-  const search = Route.useSearch()
-  const navigate = useNavigate()
-  const loggedIn = isLoggedIn()
-  const { user } = useAuth()
-  const isAdmin = user?.is_superuser ?? false
-  const scope: Scope = loggedIn ? (search.view ?? "owned") : "public"
-
-  const setScope = (next: Scope) => {
-    navigate({
-      to: "/channels",
-      search: next === "owned" ? {} : { view: next },
-      replace: true,
-    })
-  }
-
-  const scopeTabs = loggedIn ? (
-    <Tabs value={scope} onValueChange={(value) => setScope(value as Scope)}>
-      <TabsList>
-        <TabsTrigger value="owned">Owned</TabsTrigger>
-        <TabsTrigger value="favorites">Favorites</TabsTrigger>
-        <TabsTrigger value="public">Public</TabsTrigger>
-        {isAdmin && <TabsTrigger value="all">All</TabsTrigger>}
-      </TabsList>
-    </Tabs>
-  ) : null
-
-  return (
-    <div className="flex flex-col gap-6">
-      {scope === "all" && isAdmin ? (
-        <AllChannelsView scopeTabs={scopeTabs} />
-      ) : scope === "owned" ? (
-        <MyChannels scopeTabs={scopeTabs} />
-      ) : scope === "favorites" ? (
-        <FavoriteChannelsView scopeTabs={scopeTabs} />
-      ) : (
-        <PublicChannelsView scopeTabs={scopeTabs} />
       )}
     </div>
   )

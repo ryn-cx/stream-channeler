@@ -1,4 +1,5 @@
 # TODO: Validate
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -7,7 +8,6 @@ from sqlmodel import select
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
-    SuperUser,
     get_current_active_superuser,
 )
 from app.channel_orders import service
@@ -16,21 +16,20 @@ from app.channel_orders.dependencies import (
     ExistingChannelOrder,
     ReadableChannelOrder,
 )
-from app.channel_orders.models import ChannelOrder
+from app.channel_orders.models import ChannelOrder, ChannelOrderFavorite
 from app.channel_orders.schemas import (
-    ChannelOrderAdminListOutput,
-    ChannelOrderAdminOutput,
     ChannelOrderAdminUpdate,
     ChannelOrderCopyInput,
     ChannelOrderCreate,
+    ChannelOrderListOutput,
     ChannelOrderOutput,
-    ChannelOrderPublicListOutput,
-    ChannelOrderPublicOutput,
+    ChannelOrderReadOptions,
+    ChannelOrdersPublic,
     ChannelOrderUpdate,
 )
 from app.media.service import delete_record
 from app.models import Visibility
-from app.schemas import Message, ReadOptions, ScopedReadOptions
+from app.schemas import Message
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 
@@ -65,35 +64,68 @@ def create_channel_order(
 @channel_orders_router.get("")
 def get_channel_orders(
     session: SessionDep,
-    current_user: CurrentUser,
-) -> list[ChannelOrderOutput]:
-    """List the current `User`'s `ChannelOrder`s."""
-    orders = session.exec(
-        select(ChannelOrder).where(ChannelOrder.user_id == current_user.id),
-    ).all()
-    return [service.channel_order_output(order, current_user) for order in orders]
-
-
-@channel_orders_router.get("/public")
-def get_public_channel_orders(
-    session: SessionDep,
     current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> ChannelOrderPublicListOutput:
-    """List public `ChannelOrder`s, applying the viewer's server-side filtering."""
-    return service.public_channel_order_list_output(
-        session,
-        current_user,
-        read_options,
-    )
+    read_options: Annotated[ChannelOrderReadOptions, Query()],
+) -> ChannelOrdersPublic:
+    """Get `ChannelOrder`s."""
+    return service.scoped_channel_order_list_output(session, current_user, read_options)
 
 
 @channel_orders_router.get("/featured")
 def get_featured_channel_orders(
     session: SessionDep,
-) -> list[ChannelOrderPublicOutput]:
+) -> list[ChannelOrderListOutput]:
     """List public `ChannelOrder`s with a positive score for onboarding."""
     return service.featured_channel_orders(session)
+
+
+@channel_orders_router.get("/favorite-ids")
+def get_favorite_channel_order_ids(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[uuid.UUID]:
+    """List the ids of the `ChannelOrder`s the current `User` has favorited.
+
+    Unreadable favorites are left in because this only drives the favorite toggle;
+    the `favorites` scope of the list endpoint is what applies the read rules.
+    """
+    return list(
+        session.exec(
+            select(ChannelOrderFavorite.channel_order_id).where(
+                ChannelOrderFavorite.user_id == current_user.id,
+            ),
+        ).all(),
+    )
+
+
+@channel_orders_router.post("/{channel_order_id}/favorite")  # noqa: FAST003 - Used by ReadableChannelOrder
+def favorite_channel_order(
+    session: SessionDep,
+    current_user: CurrentUser,
+    order: ReadableChannelOrder,
+) -> Message:
+    """Favorite a `ChannelOrder` if it's readable by the `User`."""
+    favorite = session.get(ChannelOrderFavorite, (current_user.id, order.id))
+    if favorite is None:
+        session.add(
+            ChannelOrderFavorite(user_id=current_user.id, channel_order_id=order.id),
+        )
+        session.commit()
+    return Message(message="Order favorited successfully")
+
+
+@channel_orders_router.delete("/{channel_order_id}/favorite")  # noqa: FAST003 - Used by ReadableChannelOrder
+def unfavorite_channel_order(
+    session: SessionDep,
+    current_user: CurrentUser,
+    order: ReadableChannelOrder,
+) -> Message:
+    """Remove a `ChannelOrder` from the `User`'s favorites."""
+    favorite = session.get(ChannelOrderFavorite, (current_user.id, order.id))
+    if favorite is not None:
+        session.delete(favorite)
+        session.commit()
+    return Message(message="Order unfavorited successfully")
 
 
 @channel_orders_router.post(
@@ -151,26 +183,12 @@ def delete_channel_order(
     return delete_record(session, order)
 
 
-@admin_channel_orders_router.get("")
-def admin_get_channel_orders(
-    session: SessionDep,
-    current_user: SuperUser,
-    read_options: Annotated[ScopedReadOptions, Query()],
-) -> ChannelOrderAdminListOutput:
-    """List `ChannelOrder`s for the requested scope, regardless of visibility."""
-    return service.admin_channel_order_list_output(
-        session,
-        current_user,
-        read_options,
-    )
-
-
 @admin_channel_orders_router.patch("/{channel_order_id}")  # noqa: FAST003 - Used by ExistingChannelOrder
 def admin_update_channel_order(
     session: SessionDep,
     order: ExistingChannelOrder,
     order_in: ChannelOrderAdminUpdate,
-) -> ChannelOrderAdminOutput:
+) -> ChannelOrderListOutput:
     """Update any field on any `ChannelOrder` as an admin, including `score`."""
     order.sqlmodel_update(order_in.model_dump(exclude_unset=True))
     session.commit()

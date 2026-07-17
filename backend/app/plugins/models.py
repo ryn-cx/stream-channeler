@@ -31,9 +31,10 @@ if TYPE_CHECKING:
 class BasePlugin(BaseMediaMixin):
     """Base model for a `Plugin`."""
 
+    visibility: Visibility = Field()
+    anonymous: bool = Field()
     name: str | None = Field(default=None)
     version: str | None = Field(default=None)
-    visibility: Visibility = Field()
 
 
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):

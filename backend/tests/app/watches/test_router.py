@@ -75,7 +75,6 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False
@@ -321,7 +320,6 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         user_is_owner: bool,
         record_is_public: bool,  # noqa: ARG002
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False

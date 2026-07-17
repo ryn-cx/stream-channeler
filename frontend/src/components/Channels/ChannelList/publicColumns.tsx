@@ -2,13 +2,14 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type { ChannelPublicOutput } from "@/client"
+import type { ChannelListOutput } from "@/client"
 import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
 import { ChannelDescriptionCell, channelScoreColumn } from "./columns"
 
-// Admins read this tab from the admin endpoint, which sorts and filters
-// server-side; the public endpoint pages by score only, so those controls stay
-// off unless an admin is viewing.
+// `score` is only populated for a `Channel`'s owner or an admin, so the column is
+// pushed for admins alone. Sorting and filtering stay off for everyone else purely
+// to keep this tab's presentation unchanged — the endpoint now serves them to any
+// viewer, so this gate can be lifted whenever that is wanted.
 export function publicChannelColumns(
   isAdmin: boolean,
 ): ColumnDef<ChannelRow>[] {
@@ -23,7 +24,7 @@ export function publicChannelColumns(
   return cols
 }
 
-const publicColumns: ColumnDef<ChannelPublicOutput>[] = [
+const publicColumns: ColumnDef<ChannelListOutput>[] = [
   {
     accessorKey: "channel_number",
     header: "Ch#",

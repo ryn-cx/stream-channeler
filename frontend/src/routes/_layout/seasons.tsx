@@ -5,6 +5,7 @@ import { SeasonsService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import {
   type SeasonTableData,
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_layout/seasons")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Seasons - Stream Channeler" }],
   }),
@@ -28,13 +30,14 @@ function SeasonsPage() {
   return (
     <MediaListPage<SeasonTableData>
       title="Seasons"
+      path="/seasons"
       columns={seasonColumns}
       columnVisibilityKey="seasons-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Layers}
-      fetchTable={async (owner, params) => {
+      fetchTable={async (scope, params) => {
         const result = await SeasonsService.getSeasons({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, seasonColumns),

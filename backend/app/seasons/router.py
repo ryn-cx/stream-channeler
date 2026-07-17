@@ -11,8 +11,7 @@ from app.auth.dependencies import (
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
-    media_list_response,
-    media_owner_list_response,
+    media_scoped_list_response,
 )
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
@@ -26,6 +25,7 @@ from app.seasons.schemas import (
     SeasonsPublic,
     SeasonUpdate,
 )
+from app.service import list_response
 from app.shows.dependencies import EditableShow, ReadableShow
 from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
@@ -65,7 +65,7 @@ def get_seasons(
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> SeasonsPublic:
     """Get `Season`s."""
-    return media_owner_list_response(
+    return media_scoped_list_response(
         session=session,
         base=Season.select_with_user_eager(),
         response_model=SeasonsPublic,
@@ -84,7 +84,7 @@ def get_show_seasons(
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
     """Get all of the `Season`s for a `Show` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Season.select_with_user_eager().where(Season.show_id == show.id),
         response_model=SeasonsPublic,
@@ -103,7 +103,7 @@ def get_plugin_seasons(
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
     """Get all of the `Season`s for a `Plugin` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Season.select_with_user_eager().where(Source.plugin_id == plugin.id),
         response_model=SeasonsPublic,
@@ -122,7 +122,7 @@ def get_source_seasons(
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
     """Get all of the `Season`s for a `Source` if it is readable by the `User`."""
-    return media_list_response(
+    return list_response(
         session=session,
         base=Season.select_with_user_eager().where(Show.source_id == source.id),
         response_model=SeasonsPublic,

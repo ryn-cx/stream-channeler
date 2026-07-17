@@ -13,7 +13,7 @@ import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
-export function pluginColumns(owner: OwnerView): ColumnDef<PluginTableData>[] {
+export function pluginColumns(scope: OwnerView): ColumnDef<PluginTableData>[] {
   return [
     {
       accessorKey: "username",
@@ -69,7 +69,7 @@ export function pluginColumns(owner: OwnerView): ColumnDef<PluginTableData>[] {
                 <Film className="size-4" />
               </Link>
             </TooltipIconLink>
-            {owner === "official" && (
+            {scope === "official" && (
               <TooltipIconLink label="Files">
                 <Link
                   to="/plugin/$pluginId/files"

@@ -15,7 +15,7 @@ from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.channels import service as channel_service
 from app.channels.models import Channel
-from app.channels.schemas import ChannelAdminOutput, ChannelPublicListOutput
+from app.channels.schemas import ChannelListOutput, ChannelPublicListOutput
 from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
@@ -219,7 +219,7 @@ def get_user_public_channels(
 def admin_list_user_channels(
     session: SessionDep,
     user_id: uuid.UUID,
-) -> list[ChannelAdminOutput]:
+) -> list[ChannelListOutput]:
     """List every `Channel` editable by a single `User`."""
     rows = session.exec(
         select(Channel, User.username)
@@ -227,7 +227,7 @@ def admin_list_user_channels(
         .where(Channel.user_id == user_id),
     ).all()
     return [
-        ChannelAdminOutput.model_validate(channel, update={"username": username})
+        ChannelListOutput.model_validate(channel, update={"username": username})
         for channel, username in rows
     ]
 

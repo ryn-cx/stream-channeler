@@ -45,7 +45,8 @@ export function PublicOrderPickerDialog({
       filterOptions,
     ],
     queryFn: () =>
-      ChannelOrdersService.getPublicChannelOrders({
+      ChannelOrdersService.getChannelOrders({
+        scope: "public",
         offset: pagination.pageIndex * pagination.pageSize,
         limit: pagination.pageSize,
         ...serializeTableQuery(

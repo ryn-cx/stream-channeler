@@ -11,10 +11,11 @@ from sqlmodel import Session, SQLModel, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.media.schemas import MediaOwner, MediaReadOptions
+from app.media.schemas import MediaReadOptions, MediaScope
+from app.models import Visibility
 from app.plugins.models import Plugin
-from app.schemas import USER_OWNED_MODELS, Message, ReadOptions
-from app.service import get_read_results
+from app.schemas import USER_OWNED_MODELS, Message
+from app.service import list_response
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
@@ -103,55 +104,7 @@ def delete_record(
     return Message(message=f"{type(existing_record).__name__} deleted successfully")
 
 
-def filter_media_by_owner[T](
-    base: SelectOfScalar[T],
-    *,
-    owner: MediaOwner,
-    current_user: User,
-    session: Session,
-) -> SelectOfScalar[T]:
-    plugin_user = get_or_create_plugin_user(session=session)
-    if owner == MediaOwner.official:
-        return base.where(Plugin.user_id == plugin_user.id)
-    return base.where(col(Plugin.user_id).not_in([current_user.id, plugin_user.id]))
-
-
-def media_list_response[ResponseT: BaseModel](  # noqa: PLR0913
-    *,
-    session: Session,
-    base: SelectOfScalar[Any],
-    response_model: type[ResponseT],
-    schema: type[SQLModel],
-    params: ReadOptions,
-    current_user: User | None,
-    default_sort: datetime | None = None,
-    tiebreaker: uuid.UUID | None = None,
-    extra_columns: dict[str, Any] | None = None,
-) -> ResponseT:
-    model = base.column_descriptions[0]["entity"]
-    if default_sort is None:
-        default_sort = model.created_at
-    if tiebreaker is None:
-        tiebreaker = model.id
-    rows, total_count, filtered_count, is_server_side = get_read_results(
-        session,
-        base,
-        schema=schema,
-        default_sort=default_sort,
-        tiebreaker=tiebreaker,
-        params=params,
-        current_user=current_user,
-        extra_columns=extra_columns,
-    )
-    return response_model(
-        data=[schema.model_validate(row) for row in rows],
-        total_count=total_count,
-        filtered_count=filtered_count,
-        is_server_side=is_server_side,
-    )
-
-
-def media_owner_list_response[ResponseT: BaseModel](  # noqa: PLR0913
+def media_scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,
     base: SelectOfScalar[Any],
@@ -163,21 +116,32 @@ def media_owner_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     tiebreaker: uuid.UUID | None = None,
     extra_columns: dict[str, Any] | None = None,
 ) -> ResponseT:
-    if not read_options.owner:
-        base = base.where(Plugin.user_id == current_user.id)
+    """List media for the requested scope, applying that scope's access rules.
+
+    Media carries no owner or visibility of its own, so every scope filters on the
+    owning `Plugin` and its `User`, both of which `base` already joins. `owned` and
+    `public` are open to any `User`; `all`, `official` and `others` are admin-only.
+    """
+    scope = read_options.scope
+    if scope == MediaScope.owned:
+        base = base.where(User.id == current_user.id)
+    elif scope == MediaScope.public:
+        base = base.where(Plugin.visibility == Visibility.public)
     else:
         if not current_user.is_superuser:
             raise HTTPException(
                 status_code=403,
                 detail="The user doesn't have enough privileges",
             )
-        base = filter_media_by_owner(
-            base,
-            owner=read_options.owner,
-            current_user=current_user,
-            session=session,
-        )
-    return media_list_response(
+        plugin_user = get_or_create_plugin_user(session=session)
+        if scope == MediaScope.official:
+            base = base.where(User.id == plugin_user.id)
+        elif scope == MediaScope.others:
+            base = base.where(
+                col(User.id).not_in([current_user.id, plugin_user.id]),
+            )
+        # `all` deliberately adds no filter, so it includes official media.
+    return list_response(
         session=session,
         base=base,
         response_model=response_model,

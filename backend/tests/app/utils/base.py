@@ -64,9 +64,7 @@ from tests.app.users.utils import (
 )
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
-SUPPORTED_MODELS = (
-    Channel | Episode | Season | Show | Source | Plugin | Watch | File
-)
+SUPPORTED_MODELS = Channel | Episode | Season | Show | Source | Plugin | Watch | File
 PARENT_MODELS = SUPPORTED_MODELS | User
 
 CREATE_SCHEMAS = (
@@ -274,24 +272,18 @@ class BaseTests[T: SUPPORTED_MODELS]:
         user_is_authenticated: bool,
         record_is_public: bool,
         user_is_superuser: bool = False,
-        record_is_owned_by_plugin_user: bool = False,
     ) -> CreatedTestData[T]:
         """Create a user and record with the given ownership and visibility.
 
-        When `record_is_owned_by_plugin_user` is true and `user_is_owner` is
-        false, the record's owner is the plugin user (the superuser carve-out
-        target); otherwise it's a freshly created unrelated user.
+        When `user_is_owner` is false the record's owner is a freshly created
+        unrelated user.
         """
         user = (
             create_random_superuser(session)
             if user_is_superuser
             else create_random_user(session)
         )
-        other = (
-            get_or_create_plugin_user(session=session)
-            if record_is_owned_by_plugin_user
-            else create_random_user(session)
-        )
+        other = create_random_user(session)
 
         if user_is_owner:
             record = self.create_record_function(session, user.id)

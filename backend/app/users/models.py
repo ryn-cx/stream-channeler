@@ -10,8 +10,8 @@ from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
-    from app.channel_orders.models import ChannelOrder
-    from app.channels.models import Channel
+    from app.channel_orders.models import ChannelOrder, ChannelOrderFavorite
+    from app.channels.models import Channel, ChannelFavorite
     from app.plugins.models import Plugin
     from app.watches.models import Watch
 
@@ -44,6 +44,14 @@ class User(UserBase, table=True):
         cascade_delete=True,
     )
     watched_episodes: list[Watch] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
+    favorite_channels: list[ChannelFavorite] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
+    favorite_channel_orders: list[ChannelOrderFavorite] = Relationship(
         back_populates="user",
         cascade_delete=True,
     )

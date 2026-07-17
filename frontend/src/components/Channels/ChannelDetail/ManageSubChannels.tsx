@@ -4,7 +4,7 @@ import { Plus, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import {
-  type ChannelOutput,
+  type ChannelListOutput,
   ChannelsService,
   type CombinedChannelOutput,
 } from "@/client"
@@ -65,16 +65,16 @@ export function AdditionalChannelsPanel({
   // Channels owned by the user, used by the picker.
   const { data: channelsData, isLoading: isLoadingChannels } = useQuery({
     queryKey: ["channels"],
-    queryFn: () => ChannelsService.getChannels(),
+    queryFn: () => ChannelsService.getChannels({ scope: "owned" }),
     enabled: isLoggedIn,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
-  const channels = channelsData ?? []
+  const channels = channelsData?.data ?? []
 
   const localIds = new Set(localChannels.map((channel) => channel.id))
   const selectableChannels = channels.filter(
-    (channel: ChannelOutput) =>
+    (channel: ChannelListOutput) =>
       channel.id !== channelId && !localIds.has(channel.id),
   )
 
@@ -158,22 +158,24 @@ export function AdditionalChannelsPanel({
                     <CommandList>
                       <CommandEmpty>No channels found.</CommandEmpty>
                       <CommandGroup>
-                        {selectableChannels.map((channel: ChannelOutput) => (
-                          <CommandItem
-                            key={channel.id}
-                            value={channel.name ?? channel.id}
-                            keywords={[channel.id]}
-                            onSelect={() => {
-                              addChannel({
-                                id: channel.id,
-                                name: channel.name ?? null,
-                              })
-                              setChannelPickerOpen(false)
-                            }}
-                          >
-                            {channel.name}
-                          </CommandItem>
-                        ))}
+                        {selectableChannels.map(
+                          (channel: ChannelListOutput) => (
+                            <CommandItem
+                              key={channel.id}
+                              value={channel.name ?? channel.id}
+                              keywords={[channel.id]}
+                              onSelect={() => {
+                                addChannel({
+                                  id: channel.id,
+                                  name: channel.name ?? null,
+                                })
+                                setChannelPickerOpen(false)
+                              }}
+                            >
+                              {channel.name}
+                            </CommandItem>
+                          ),
+                        )}
                       </CommandGroup>
                     </CommandList>
                   </Command>

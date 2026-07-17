@@ -2,12 +2,12 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type { ChannelAdminOutput } from "@/client"
+import type { ChannelListOutput } from "@/client"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import { ChannelActions } from "./ChannelActions"
 
-export const channelColumns: ColumnDef<ChannelAdminOutput>[] = [
+export const channelColumns: ColumnDef<ChannelListOutput>[] = [
   {
     id: "channel_number",
     accessorFn: (row) => row.channel_number,

@@ -7,21 +7,17 @@ import type {
 } from "@tanstack/react-table"
 
 import {
-  type AdminScope,
-  type ChannelAdminOutput,
-  type ChannelOutput,
-  type ChannelPublicOutput,
+  type ChannelListOutput,
   ChannelsService,
+  type RecordScope,
 } from "@/client"
 import {
   type MediaTableResult,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 
-export type ChannelRow =
-  | ChannelOutput
-  | ChannelPublicOutput
-  | ChannelAdminOutput
+// One row shape now serves every scope and viewer.
+export type ChannelRow = ChannelListOutput
 
 export interface ScopedChannelsParams {
   offset: number
@@ -30,14 +26,14 @@ export interface ScopedChannelsParams {
   filterOptions: ColumnFiltersState
 }
 
-// Admins read every tab through the admin endpoint, the only one that carries
-// `score` and that can serve all three scopes; everyone else uses the owned and
-// public endpoints.
-// TData is whichever row shape the scope/isAdmin pair actually returns, which the
-// caller pins through its columns: admins always get `ChannelAdminOutput`, while
-// a regular user gets `ChannelPublicOutput` on the public tab.
+// Every scope reads through the one channels endpoint, which decides server-side
+// what the viewer may see: `public` lists every public channel, `owned` needs a
+// user and `all` is admin-only.
+// `isAdmin` no longer picks the endpoint, but it stays in the query key because the
+// same scope returns different rows per privilege — `score` and the owner of an
+// anonymous channel are only populated for an owner or an admin.
 export function useScopedChannels<TData extends ChannelRow = ChannelRow>(
-  scope: AdminScope,
+  scope: RecordScope,
   isAdmin: boolean,
   params: ScopedChannelsParams,
   columns: ColumnDef<TData, unknown>[],
@@ -52,38 +48,13 @@ export function useScopedChannels<TData extends ChannelRow = ChannelRow>(
       params.sortOptions,
       params.filterOptions,
     ],
-    queryFn: async (): Promise<MediaTableResult<TData>> => {
-      if (isAdmin) {
-        return (await ChannelsService.adminGetChannels({
-          scope,
-          offset: params.offset,
-          limit: params.limit,
-          ...serializeTableQuery(params, columns),
-        })) as MediaTableResult<TData>
-      }
-      if (scope === "public") {
-        // The public endpoint always pages server-side, ordered by score.
-        const page = await ChannelsService.getPublicChannels({
-          offset: params.offset,
-          limit: params.limit,
-        })
-        return {
-          data: page.data,
-          total_count: page.count,
-          filtered_count: page.count,
-          is_server_side: true,
-        } as MediaTableResult<TData>
-      }
-      // The owned endpoint returns a plain list, so give it the shape the table
-      // expects and let the client handle sorting, filtering and paging.
-      const channels = await ChannelsService.getChannels()
-      return {
-        data: channels,
-        total_count: channels.length,
-        filtered_count: channels.length,
-        is_server_side: false,
-      } as MediaTableResult<TData>
-    },
+    queryFn: async (): Promise<MediaTableResult<TData>> =>
+      (await ChannelsService.getChannels({
+        scope,
+        offset: params.offset,
+        limit: params.limit,
+        ...serializeTableQuery(params, columns),
+      })) as MediaTableResult<TData>,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   })

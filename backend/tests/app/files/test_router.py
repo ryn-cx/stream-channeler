@@ -64,7 +64,6 @@ class FileTestMixin(BaseTests[File]):
         user_is_authenticated: bool,
         record_is_public: bool,
         user_is_superuser: bool = True,
-        record_is_owned_by_plugin_user: bool = False,
     ) -> CreatedTestData[File]:
         return super().create_test_data(
             client,
@@ -73,7 +72,6 @@ class FileTestMixin(BaseTests[File]):
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
     def assert_cannot_access(  # noqa: PLR0913
@@ -117,7 +115,6 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> bool:
         # The admin gate rejects every non-superuser (and the unauthenticated)
         # before the public/ownership check the base predicate performs.
@@ -129,7 +126,6 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
                 user_is_owner=user_is_owner,
                 record_is_public=record_is_public,
                 user_is_superuser=user_is_superuser,
-                record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
             )
         )
 
@@ -185,7 +181,6 @@ class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> bool:
         # The admin gate rejects every non-superuser before the plugin's
         # editable check runs.
@@ -194,12 +189,10 @@ class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
 
 class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
-    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -213,7 +206,6 @@ class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> None:
         """Ensure only a superuser can update."""
         initial_test_data = self.create_test_data(
@@ -223,7 +215,6 @@ class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
         patch_input = build_random_model(self.update_schema)
@@ -257,7 +248,6 @@ class TestDeleteFile(FileTestMixin, BaseDeleteTests[File]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> bool:
         # The admin gate rejects every non-superuser before ownership is checked.
         return user_is_superuser and super()._can_delete_record(
@@ -265,7 +255,6 @@ class TestDeleteFile(FileTestMixin, BaseDeleteTests[File]):
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
     def test_delete_not_found(

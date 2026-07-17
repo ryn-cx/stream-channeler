@@ -6,6 +6,7 @@ import { ShowsService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_layout/shows")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Shows - Stream Channeler" }],
   }),
@@ -26,13 +28,14 @@ function ShowsPage() {
   return (
     <MediaListPage<ShowTableData>
       title="Shows"
+      path="/shows"
       columns={showColumns}
       columnVisibilityKey="shows-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Clapperboard}
-      fetchTable={async (owner, params) => {
+      fetchTable={async (scope, params) => {
         const result = await ShowsService.getShows({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, showColumns),

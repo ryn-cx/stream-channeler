@@ -137,7 +137,6 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         return [result]
 
-    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -151,7 +150,6 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> None:
         """Ensure only the owner or a superuser can update."""
         initial_test_data = self.create_test_data(
@@ -161,7 +159,6 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
         patch_input = build_random_model(self.update_schema)

@@ -57,7 +57,6 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         # ARG002 - Child implementations may need this value
         record_is_public: bool,  # noqa: ARG002
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,  # noqa: ARG002
     ) -> bool:
         if not user_is_authenticated:
             return False
@@ -152,7 +151,6 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         return result
 
-    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [True, False])
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -166,7 +164,6 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> None:
         if not hasattr(self.database_model, "parent"):
             pytest.skip("Model has no parent")
@@ -178,7 +175,6 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_authenticated=user_is_authenticated,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
         # Get parent before deleting the initial record.
@@ -194,7 +190,6 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         ):
             self.assert_create_record_success(
                 session_scoped_client,
@@ -424,7 +419,6 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     # POST /{endpoint} always owns the new record by the authenticated user,
     # so user_is_owner is always True and the plugin-user/other-user parent
     # scenarios are not expressible via this endpoint.
-    @pytest.mark.parametrize("record_is_owned_by_plugin_user", [False])
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True])
@@ -438,7 +432,6 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
         user_is_owner: bool,
         record_is_public: bool,
         user_is_superuser: bool,
-        record_is_owned_by_plugin_user: bool,
     ) -> None:
         super().test_create_permissions(
             session_scoped_client,
@@ -447,7 +440,6 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
             user_is_owner=user_is_owner,
             record_is_public=record_is_public,
             user_is_superuser=user_is_superuser,
-            record_is_owned_by_plugin_user=record_is_owned_by_plugin_user,
         )
 
     def test_create_rejects_extra_fields(

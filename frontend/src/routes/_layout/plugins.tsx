@@ -5,6 +5,7 @@ import { PluginsService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import AddPlugin from "@/components/Plugins/Add"
 import {
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_layout/plugins")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Plugins - Stream Channeler" }],
   }),
@@ -29,17 +31,18 @@ function PluginPage() {
   return (
     <MediaListPage<PluginTableData>
       title="Plugins"
+      path="/plugins"
       columns={pluginColumns}
       columnVisibilityKey="plugins-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Puzzle}
-      headerActions={(owner) => (owner === undefined ? <AddPlugin /> : null)}
-      fetchTable={async (owner, params) => {
+      headerActions={(scope) => (scope === "owned" ? <AddPlugin /> : null)}
+      fetchTable={async (scope, params) => {
         const result = await PluginsService.getPlugins({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, pluginColumns(owner)),
+          ...serializeTableQuery(params, pluginColumns(scope)),
         })
         return {
           data: result.data,

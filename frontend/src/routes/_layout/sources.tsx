@@ -6,6 +6,7 @@ import { SourcesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import {
   type SourceTableData,
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_layout/sources")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Sources - Stream Channeler" }],
   }),
@@ -29,13 +31,14 @@ function SourcesPage() {
   return (
     <MediaListPage<SourceTableData>
       title="Sources"
+      path="/sources"
       columns={sourceColumns}
       columnVisibilityKey="sources-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Database}
-      fetchTable={async (owner, params) => {
+      fetchTable={async (scope, params) => {
         const result = await SourcesService.getSources({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, sourceColumns),

@@ -6,31 +6,31 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Globe, LayoutGrid, Table as TableIcon } from "lucide-react"
+import { Globe } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 
-import {
-  BrowsePagination,
-  DEFAULT_BROWSE_PAGE_SIZE,
-  MAX_BROWSE_PAGE_SIZE,
-} from "@/components/Channels/ChannelList/BrowsePagination"
+import AddChannel from "@/components/Channels/ChannelList/AddChannel"
+import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
 import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
 import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
 import { publicChannelColumns } from "@/components/Channels/ChannelList/publicColumns"
 import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
+import {
+  BrowsePagination,
+  DEFAULT_BROWSE_PAGE_SIZE,
+  MAX_BROWSE_PAGE_SIZE,
+} from "@/components/Common/BrowsePagination"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
+import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
-import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
 import {
   usePersistedJsonState,
   usePersistedState,
 } from "@/hooks/usePersistedState"
-
-type ViewMode = "table" | "browse"
 
 export function PublicChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
   const { user } = useAuth()
@@ -51,6 +51,18 @@ export function PublicChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
       "public-channels-column-visibility",
       {},
     )
+
+  // The table view lets the page size grow past what browse offers, so clamp it
+  // back down to browse's maximum on the way in.
+  const changeViewMode = (mode: ViewMode) => {
+    if (mode === "browse") {
+      setPagination((current) => ({
+        pageIndex: 0,
+        pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
+      }))
+    }
+    setViewMode(mode)
+  }
 
   const columns = publicChannelColumns(isAdmin)
   const query = useScopedChannels(
@@ -98,34 +110,14 @@ export function PublicChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
           : undefined
       }
     >
-      <ChannelsHeader scopeTabs={scopeTabs}>
-        {viewMode === "browse" ? (
-          <Button
-            variant="outline"
-            onClick={() => setViewMode("table")}
-            title="Switch to table view"
-          >
-            <TableIcon />
-            Table
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={() => {
-              // The table view lets the page size grow past what browse offers,
-              // so clamp it back down to browse's maximum.
-              setPagination((current) => ({
-                pageIndex: 0,
-                pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
-              }))
-              setViewMode("browse")
-            }}
-            title="Switch to browse view"
-          >
-            <LayoutGrid />
-            Browse
-          </Button>
-        )}
+      <ChannelsHeader
+        scopeTabs={scopeTabs}
+        viewTabs={
+          <ViewModeTabs value={viewMode} onValueChange={changeViewMode} />
+        }
+      >
+        <AddChannel />
+        <BulkImport />
         {viewMode === "table" && <ColumnVisibilityButton table={table} />}
       </ChannelsHeader>
 
@@ -133,11 +125,7 @@ export function PublicChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
         <EmptyState
           icon={Globe}
           title="No public channels yet"
-          description={
-            isAdmin
-              ? "Channels shared publicly by any user will show up here."
-              : "Public channels with a score of 1 or higher will show up here."
-          }
+          description="Channels shared publicly by any user will show up here."
         />
       ) : viewMode === "table" ? (
         <div className="px-[4%]">

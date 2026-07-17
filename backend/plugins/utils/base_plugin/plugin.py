@@ -17,9 +17,9 @@ from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.base_plugin.check import CheckMixin
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
-from plugins.utils.base_plugin.check import CheckMixin
 from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 
@@ -95,7 +95,8 @@ class BasePlugin(
             key=self.plugin_key(),
             name=self.plugin_name(),
             version=self._VERSION,
-            visibility=Visibility.public,
+            visibility=Visibility.unlisted,
+            anonymous=False,
             user_id=plugin_user.id,
         ).upsert(plugin_user, existing_plugin)
 

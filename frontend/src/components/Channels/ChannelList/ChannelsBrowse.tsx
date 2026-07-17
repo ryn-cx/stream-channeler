@@ -7,8 +7,8 @@ import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
 import {
+  type ChannelListOutput,
   type ChannelOutput,
-  type ChannelPublicOutput,
   ChannelsService,
 } from "@/client"
 import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
@@ -18,15 +18,16 @@ import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import useAuth from "@/hooks/useAuth"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
+import { FavoriteChannel } from "./FavoriteChannel"
 
 // Owner channels (full ChannelOutput) render edit controls; public channels
-// (ChannelPublicOutput) are read-only and only need the display fields both share.
-type BrowseChannel = ChannelOutput | ChannelPublicOutput
+// (ChannelListOutput) are read-only and only need the display fields both share.
+type BrowseChannel = ChannelOutput | ChannelListOutput
 
 interface ChannelRowProps {
   channel: BrowseChannel
@@ -36,7 +37,7 @@ interface ChannelRowProps {
   showChannelNumber?: boolean
 }
 
-function AdminEditChannel({ channel }: { channel: ChannelPublicOutput }) {
+function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
   const [open, setOpen] = useState(false)
   const { data: fullChannel } = useQuery({
     queryKey: ["channels", channel.id, "admin-edit"],
@@ -74,6 +75,7 @@ function ChannelRow({
   const [showRightArrow, setShowRightArrow] = useState(true)
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
+  const loggedIn = isLoggedIn()
 
   const defaultOrder = channel.default_order
     ? (() => {
@@ -171,8 +173,9 @@ function ChannelRow({
             <>
               <ChannelDescription channel={channel} />
               <ChannelShowsButton channelId={channel.id} />
+              {loggedIn && <FavoriteChannel channelId={channel.id} />}
               {isAdmin && (
-                <AdminEditChannel channel={channel as ChannelPublicOutput} />
+                <AdminEditChannel channel={channel as ChannelListOutput} />
               )}
             </>
           ) : (
@@ -180,6 +183,7 @@ function ChannelRow({
               {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
               <ChannelDescription channel={channel} />
               <ManageShowsButton channelId={channel.id} variant="icon" />
+              {loggedIn && <FavoriteChannel channelId={channel.id} />}
               <EditChannel channel={channel as ChannelOutput} />
               <TooltipIconButton
                 label="Delete Channel"
@@ -199,7 +203,7 @@ function ChannelRow({
             params={{ userId: channel.user_id }}
             className="underline hover:text-foreground"
           >
-            {(channel as ChannelPublicOutput).username || "Unnamed User"}
+            {(channel as ChannelListOutput).username || "Unnamed User"}
           </Link>
         </p>
       )}

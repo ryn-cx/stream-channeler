@@ -101,10 +101,11 @@ class ReadOptions(BaseModel):
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 
 
-class AdminScope(StrEnum):
+class RecordScope(StrEnum):
     """Which records an admin list endpoint returns."""
 
-    mine = "mine"
+    owned = "owned"
+    favorites = "favorites"
     public = "public"
     all = "all"
 
@@ -116,7 +117,7 @@ class ScopedReadOptions(ReadOptions):
     param alongside a `Query()`-annotated model suppresses FastAPI's flattening.
     """
 
-    scope: AdminScope = AdminScope.all
+    scope: RecordScope = RecordScope.all
 
 
 class BaseInput(SQLModel):

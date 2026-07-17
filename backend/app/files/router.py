@@ -1,3 +1,4 @@
+# TODO: Validate
 """Files router."""
 
 from typing import Annotated, Any
@@ -21,12 +22,12 @@ from app.files.schemas import (
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
-    media_list_response,
-    media_owner_list_response,
+    media_scoped_list_response,
 )
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
+from app.service import list_response
 from app.users.models import User
 
 files_router = APIRouter(
@@ -56,9 +57,6 @@ def create_file(
     return file_input.create(session, File, plugin)
 
 
-# Every `File` route is already superuser-only, so there is no user/admin list split to
-# make: `get_files` takes an optional `owner` filter rather than the required one an
-# admin-only list route would have.
 @files_router.get("")
 def get_files(
     session: SessionDep,
@@ -66,7 +64,7 @@ def get_files(
     read_options: Annotated[MediaReadOptions, Query()],
 ) -> FilesPublic:
     """Get every `File` across all `Plugin`s readable by the `User`."""
-    return media_owner_list_response(
+    return media_scoped_list_response(
         session=session,
         base=File.select_with_user_eager(),
         response_model=FilesPublic,
@@ -86,7 +84,7 @@ def get_plugin_files(
 ) -> FilesPublic:
     """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
     base = File.select_with_user_eager().where(File.plugin_id == plugin.id)
-    return media_list_response(
+    return list_response(
         session=session,
         base=base,
         response_model=FilesPublic,

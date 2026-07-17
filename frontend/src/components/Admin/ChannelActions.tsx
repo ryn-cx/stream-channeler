@@ -2,11 +2,11 @@
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 
-import type { ChannelAdminOutput } from "@/client"
+import type { ChannelListOutput } from "@/client"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
 import { Button } from "@/components/ui/button"
 
-export function ChannelActions({ channel }: { channel: ChannelAdminOutput }) {
+export function ChannelActions({ channel }: { channel: ChannelListOutput }) {
   const [isEditing, setIsEditing] = useState(false)
 
   return (

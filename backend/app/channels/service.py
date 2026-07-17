@@ -4,12 +4,13 @@ from datetime import datetime
 from functools import cache
 from uuid import UUID
 
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete
 
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
     ChannelEpisodeFilter,
+    ChannelFavorite,
     ChannelQueue,
     ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
@@ -17,76 +18,61 @@ from app.channels.models import (
     URLStatus,
 )
 from app.channels.schemas import (
-    ChannelAdminListOutput,
-    ChannelAdminOutput,
+    ChannelListOutput,
     ChannelOutput,
-    ChannelPublicOutput,
+    ChannelsPublic,
     SortOptionOutput,
     WhitelistShowInput,
 )
 from app.episodes.models import Episode
-from app.models import Visibility
 from app.plugins.models import Plugin
-from app.schemas import AdminScope, ScopedReadOptions
+from app.schemas import ScopedReadOptions
 from app.seasons.models import Season
-from app.service import get_read_results
+from app.service import scoped_list_response
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
+
+
+def viewer_is_privileged(channel: Channel, viewer: User | None) -> bool:
+    """Return whether `viewer` may see `channel`'s owner and `score`."""
+    return bool(viewer and (viewer.is_superuser or viewer.id == channel.user_id))
 
 
 def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
     output = ChannelOutput.model_validate(channel)
     if not channel.anonymous:
         return output
-    if viewer and (viewer.is_superuser or viewer.id == channel.user_id):
+    if viewer_is_privileged(channel, viewer):
         return output
     output.user_id = None
     return output
 
 
-def admin_channel_output(
-    channel: Channel,
-    username: str | None,
-) -> ChannelAdminOutput:
-    return ChannelAdminOutput.model_validate(channel, update={"username": username})
-
-
-def admin_channel_list_output(
+def scoped_channel_list_output(
     session: Session,
     viewer: User | None,
     read_options: ScopedReadOptions,
-) -> ChannelAdminListOutput:
-    """List `Channel`s for the requested scope, regardless of visibility."""
-    base = select(Channel).join(User)
-    if read_options.scope == AdminScope.mine and viewer:
-        base = base.where(Channel.user_id == viewer.id)
-    elif read_options.scope == AdminScope.public:
-        base = base.where(Channel.visibility == Visibility.public)
-    rows, total_count, filtered_count, is_server_side = get_read_results(
-        session,
-        base,
-        schema=ChannelOutput,
-        default_sort=Channel.created_at,
-        tiebreaker=Channel.id,
-        params=read_options,
-        current_user=viewer,
-        extra_columns={"username": User.username},
-    )
-    return ChannelAdminListOutput(
-        data=[admin_channel_output(channel, channel.user.username) for channel in rows],
-        total_count=total_count,
-        filtered_count=filtered_count,
-        is_server_side=is_server_side,
+) -> ChannelsPublic:
+    """List `Channel`s for the requested scope."""
+    return scoped_list_response(
+        session=session,
+        model=Channel,
+        viewer=viewer,
+        read_options=read_options,
+        schema=ChannelListOutput,
+        response_model=ChannelsPublic,
+        favorite_model=ChannelFavorite,
+        favorite_record_id=ChannelFavorite.channel_id,
     )
 
 
 def public_channel_output(
     channel: Channel,
     username: str | None,
-) -> ChannelPublicOutput:
+) -> ChannelListOutput:
     anonymous = channel.anonymous
-    return ChannelPublicOutput(
+    return ChannelListOutput(
         id=channel.id,
         user_id=None if anonymous else channel.user_id,
         name=channel.name,
@@ -96,6 +82,7 @@ def public_channel_output(
         description=channel.description,
         anonymous=anonymous,
         username=None if anonymous else username,
+        score=channel.score,
     )
 
 

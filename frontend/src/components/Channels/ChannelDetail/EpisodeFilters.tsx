@@ -459,12 +459,13 @@ export function EpisodeFilters({
   const loggedIn = isLoggedIn()
   const [saveOrderOpen, setSaveOrderOpen] = useState(false)
   const [selectedSavedOrderId, setSelectedSavedOrderId] = useState<string>("")
-  const { data: savedOrders = [] } = useQuery({
+  const { data: savedOrdersPage } = useQuery({
     queryKey: ["channel-orders", "own"],
-    queryFn: () => ChannelOrdersService.getChannelOrders(),
+    queryFn: () => ChannelOrdersService.getChannelOrders({ scope: "owned" }),
     enabled: loggedIn && !isOrderMode,
     refetchOnWindowFocus: false,
   })
+  const savedOrders = savedOrdersPage?.data ?? []
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as Resolver<FormValues>,

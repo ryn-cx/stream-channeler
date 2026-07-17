@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
 import {
-  type ChannelAdminOutput,
+  type ChannelListOutput,
   type ChannelOutput,
   ChannelsService,
   type Visibility,
@@ -40,7 +40,7 @@ import {
 import { handleError } from "@/utils"
 
 interface EditChannelDialogProps {
-  channel: ChannelOutput | ChannelAdminOutput
+  channel: ChannelOutput | ChannelListOutput
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -63,8 +63,8 @@ export function EditChannelDialog({
   const [visibility, setVisibility] = useState<Visibility>(channel.visibility)
   const [description, setDescription] = useState(channel.description ?? "")
   const [anonymous, setAnonymous] = useState(channel.anonymous ?? false)
-  // Score is admin-only. `0` hides the channel from the public list; `1` or higher
-  // lists it publicly, with higher scores shown first.
+  // Score is admin-only. It ranks a public channel rather than gating it, with
+  // higher scores shown first.
   const [score, setScore] = useState(String(channel.score ?? 0))
   // The admin endpoint returns the owner's username on the channel; for an owner
   // editing their own channel it falls back to the logged-in user.
@@ -193,8 +193,8 @@ export function EditChannelDialog({
                 onChange={(event) => setScore(event.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                0 hides the channel from the public list. 1 or higher lists it
-                publicly, with higher scores shown first.
+                Ranks the channel in the public list, with higher scores shown
+                first.
               </p>
             </div>
           )}

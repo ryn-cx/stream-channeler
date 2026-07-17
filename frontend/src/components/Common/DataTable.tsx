@@ -1,5 +1,6 @@
 // TODO: Validate
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useNavigate, useSearch } from "@tanstack/react-router"
 import {
   type Column,
   type ColumnDef,
@@ -38,7 +39,7 @@ import {
   useState,
 } from "react"
 
-import type { MediaOwner } from "@/client"
+import type { MediaScope } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { EmptyState } from "@/components/Common/EmptyState"
@@ -62,10 +63,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
-import {
-  usePersistedJsonState,
-  usePersistedState,
-} from "@/hooks/usePersistedState"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import { cn } from "@/lib/utils"
 import {
   dateRangeFilter,
@@ -909,26 +907,68 @@ export function DetailTablePage<TData extends { id: string }>({
   )
 }
 
-export type OwnerView = MediaOwner | undefined
-type OwnerTab = "" | MediaOwner
+// The active tab. Media has no owner or visibility of its own, so every scope is
+// resolved server-side against the owning plugin.
+export type OwnerView = MediaScope
+
+// `owned` and `public` are open to any user; the rest are admin-only, matching the
+// scopes the API will serve.
+const ADMIN_SCOPES: MediaScope[] = ["all", "official", "others"]
+
+// `owned` is the default scope, so it stays out of the URL entirely.
+export type MediaSearch = {
+  view?: Exclude<MediaScope, "owned">
+}
+
+// The route each media list lives at, so the scope tabs know where to navigate.
+export type MediaPath =
+  | "/plugins"
+  | "/sources"
+  | "/shows"
+  | "/seasons"
+  | "/episodes"
+  | "/files"
+
+export const validateMediaSearch = (
+  search: Record<string, unknown>,
+): MediaSearch => ({
+  view:
+    search.view === "public" ||
+    search.view === "all" ||
+    search.view === "official" ||
+    search.view === "others"
+      ? search.view
+      : undefined,
+})
+
+const SCOPE_TABS: { value: MediaScope; label: string }[] = [
+  // I think it's funny that ever option starts with O.
+  { value: "owned", label: "Owned" },
+  { value: "public", label: "Public" },
+  { value: "all", label: "All" },
+  { value: "official", label: "Official" },
+  { value: "others", label: "Other Users" },
+]
 
 interface MediaListPageProps<TData extends { id: string }> {
   title: string
-  // Either a static column set, or a builder that receives the active owner tab
+  path: MediaPath
+  // Either a static column set, or a builder that receives the active scope tab
   // (so columns can vary per tab, e.g. admin-only shortcuts on "Official").
-  columns: ColumnDef<TData>[] | ((owner: OwnerView) => ColumnDef<TData>[])
+  columns: ColumnDef<TData>[] | ((scope: OwnerView) => ColumnDef<TData>[])
   columnVisibilityKey: string
   defaultHidden?: VisibilityState
   emptyIcon: LucideIcon
-  headerActions?: (owner: OwnerView) => ReactNode
+  headerActions?: (scope: OwnerView) => ReactNode
   fetchTable: (
-    owner: OwnerView,
+    scope: OwnerView,
     params: MediaPageParams,
   ) => Promise<MediaTableResult<TData>>
 }
 
 export function MediaListPage<TData extends { id: string }>({
   title,
+  path,
   columns,
   columnVisibilityKey,
   defaultHidden = {},
@@ -938,43 +978,53 @@ export function MediaListPage<TData extends { id: string }>({
 }: MediaListPageProps<TData>) {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const [ownerTab, setOwnerTab] = usePersistedState<OwnerTab>(
-    "media-owner-view-v2",
-    "",
+  const search = useSearch({ strict: false }) as MediaSearch
+  const navigate = useNavigate()
+  const scopeTab: MediaScope = search.view ?? "owned"
+  // A linked admin-only scope would 403 for a non-admin, so fall back.
+  const scopeFilter: OwnerView =
+    !isAdmin && ADMIN_SCOPES.includes(scopeTab) ? "owned" : scopeTab
+
+  const setScopeTab = (next: MediaScope) => {
+    navigate({
+      to: path,
+      search: next === "owned" ? {} : { view: next },
+      replace: true,
+    })
+  }
+  const visibleTabs = SCOPE_TABS.filter(
+    (tab) => isAdmin || !ADMIN_SCOPES.includes(tab.value),
   )
-  const ownerFilter: OwnerView =
-    isAdmin && ownerTab !== "" ? ownerTab : undefined
 
   const resolvedColumns = useMemo(
-    () => (typeof columns === "function" ? columns(ownerFilter) : columns),
-    [columns, ownerFilter],
+    () => (typeof columns === "function" ? columns(scopeFilter) : columns),
+    [columns, scopeFilter],
   )
 
   return (
     <MediaTablePage
       columns={resolvedColumns}
-      queryKey={["media-table", title, ownerFilter]}
-      fetchTable={(params) => fetchTable(ownerFilter, params)}
+      queryKey={["media-table", title, scopeFilter]}
+      fetchTable={(params) => fetchTable(scopeFilter, params)}
       columnVisibilityKey={columnVisibilityKey}
       defaultHidden={defaultHidden}
-      resetKey={ownerFilter}
-      headerActions={headerActions?.(ownerFilter)}
+      resetKey={scopeFilter}
+      headerActions={headerActions?.(scopeFilter)}
       header={
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {isAdmin && (
-            <Tabs
-              value={ownerTab}
-              onValueChange={(value) => setOwnerTab(value as OwnerTab)}
-            >
-              <TabsList>
-                {/* I think it's funny that ever option starts with O. */}
-                <TabsTrigger value="">Owned</TabsTrigger>
-                <TabsTrigger value="official">Official</TabsTrigger>
-                <TabsTrigger value="others">Other Users</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
+          <Tabs
+            value={scopeFilter}
+            onValueChange={(value) => setScopeTab(value as MediaScope)}
+          >
+            <TabsList>
+              {visibleTabs.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
       }
       emptyState={

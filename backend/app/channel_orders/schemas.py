@@ -9,6 +9,8 @@ from app.channels.schemas import SortKeyInput
 from app.schemas import (
     BaseInput,
     BaseUpdateWithoutKey,
+    RecordScope,
+    ScopedReadOptions,
     make_model_with_all_fields_optional,
 )
 
@@ -42,28 +44,37 @@ class ChannelOrderOutput(BaseChannelOrder):
     user_id: uuid.UUID | None
 
 
-class ChannelOrderPublicOutput(BaseChannelOrder):
-    """Schema for returning a publicly listed `ChannelOrder`."""
+class ChannelOrderListOutput(BaseChannelOrder):
+    """Schema for returning a `ChannelOrder` alongside its owner.
+
+    `user_id` and `username` are redacted on anonymous records unless the viewer owns
+    the record or is an admin. `score` is not a secret, so one row shape serves every
+    scope and every viewer.
+    """
 
     id: uuid.UUID
     user_id: uuid.UUID | None
     username: str | None
+    score: int
 
 
-class ChannelOrderPublicListOutput(BaseModel):
-    """Schema for returning a page of publicly listed `ChannelOrder`s."""
+class ChannelOrdersPublic(BaseModel):
+    """Schema for returning a page of `ChannelOrder`s."""
 
-    data: list[ChannelOrderPublicOutput]
+    data: list[ChannelOrderListOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool
 
 
-class ChannelOrderAdminOutput(ChannelOrderOutput):
-    """Schema for returning a `ChannelOrder` to an admin, including score."""
+class ChannelOrderReadOptions(ScopedReadOptions):
+    """Read options for the `ChannelOrder` list.
 
-    username: str | None
-    score: int
+    Defaults to `owned` rather than `ScopedReadOptions`'s `all`, so an unscoped read
+    returns the `User`'s own `ChannelOrder`s instead of demanding admin rights.
+    """
+
+    scope: RecordScope = RecordScope.owned
 
 
 class ChannelOrderAdminUpdate(
@@ -73,15 +84,6 @@ class ChannelOrderAdminUpdate(
     """Schema for an admin updating any field on a `ChannelOrder`."""
 
     score: int | None = Field(default=None)
-
-
-class ChannelOrderAdminListOutput(BaseModel):
-    """Schema for returning a page of `ChannelOrder`s to an admin."""
-
-    data: list[ChannelOrderAdminOutput]
-    total_count: int
-    filtered_count: int
-    is_server_side: bool
 
 
 class ChannelOrderCopyInput(BaseInput):

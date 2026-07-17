@@ -13,13 +13,15 @@ import {
 import { ListOrdered, Plus } from "lucide-react"
 import { useState } from "react"
 
-import { type AdminScope, ChannelOrdersService } from "@/client"
+import { ChannelOrdersService, type RecordScope } from "@/client"
 import { CreateChannelOrderDialog } from "@/components/ChannelOrders/CreateChannelOrderDialog"
 import { EditOrderConfigDialog } from "@/components/ChannelOrders/EditOrderConfigDialog"
+import { OrdersBrowse } from "@/components/ChannelOrders/OrdersBrowse"
 import {
   type OrderRow,
   orderColumns,
 } from "@/components/ChannelOrders/orderColumns"
+import { BrowsePagination } from "@/components/Common/BrowsePagination"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import {
   DataTable,
@@ -27,15 +29,19 @@ import {
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
+import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import { usePersistedJsonState } from "@/hooks/usePersistedState"
+import {
+  usePersistedJsonState,
+  usePersistedState,
+} from "@/hooks/usePersistedState"
 
-type Scope = AdminScope
+type Scope = RecordScope
 
 type OrdersSearch = {
-  view?: "public" | "all"
+  view?: "favorites" | "public" | "all"
 }
 
 export const Route = createFileRoute("/_layout/channel-orders")({
@@ -47,7 +53,9 @@ export const Route = createFileRoute("/_layout/channel-orders")({
   },
   validateSearch: (search: Record<string, unknown>): OrdersSearch => ({
     view:
-      search.view === "public" || search.view === "all"
+      search.view === "favorites" ||
+      search.view === "public" ||
+      search.view === "all"
         ? search.view
         : undefined,
   }),
@@ -57,10 +65,14 @@ export const Route = createFileRoute("/_layout/channel-orders")({
 })
 
 const emptyStates: Record<Scope, { title: string; description: string }> = {
-  mine: {
+  owned: {
     title: "You haven't saved any orders yet",
     description:
       "Create one, or save the current sorting from a channel's sorting options.",
+  },
+  favorites: {
+    title: "No favorite orders yet",
+    description: "Star an order to keep it here.",
   },
   public: {
     title: "No public orders yet",
@@ -95,28 +107,13 @@ function useScopedOrders(
       params.sortOptions,
       params.filterOptions,
     ],
-    queryFn: async (): Promise<MediaTableResult<OrderRow>> => {
-      const query = {
+    queryFn: async (): Promise<MediaTableResult<OrderRow>> =>
+      ChannelOrdersService.getChannelOrders({
+        scope,
         offset: params.offset,
         limit: params.limit,
         ...serializeTableQuery(params, columns),
-      }
-      if (isAdmin) {
-        return ChannelOrdersService.adminGetChannelOrders({ ...query, scope })
-      }
-      if (scope === "public") {
-        return ChannelOrdersService.getPublicChannelOrders(query)
-      }
-      // The owned endpoint returns a plain list, so give it the shape the table
-      // expects and let the client handle sorting, filtering and paging.
-      const orders = await ChannelOrdersService.getChannelOrders()
-      return {
-        data: orders,
-        total_count: orders.length,
-        filtered_count: orders.length,
-        is_server_side: false,
-      }
-    },
+      }),
     placeholderData: keepPreviousData,
   })
 }
@@ -139,14 +136,21 @@ function OrdersTable({
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
   const [editOrder, setEditOrder] = useState<OrderRow | null>(null)
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
+    "orders-list-view",
+    "browse",
+  )
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>(
       `orders-${scope}-column-visibility`,
       {},
     )
 
+  // Admins can manage any order, so the row actions follow the viewer's
+  // permissions rather than the tab being rendered, matching `orderColumns`.
+  const canManage = scope === "owned" || isAdmin
   const columns = orderColumns({
-    isOwn: scope === "mine",
+    isOwn: scope === "owned",
     isAdmin,
     onEditConfig: (order) => setEditOrder(order),
   })
@@ -162,6 +166,13 @@ function OrdersTable({
 
   const isServer = query.data?.is_server_side ?? false
   const rows = query.data?.data ?? []
+  // The table pages itself when the list is client-side; browse renders plain
+  // cards, so it needs the current page sliced out.
+  const pageStart = pagination.pageIndex * pagination.pageSize
+  const browseRows = isServer
+    ? rows
+    : rows.slice(pageStart, pageStart + pagination.pageSize)
+  const rowCount = isServer ? (query.data?.filtered_count ?? 0) : rows.length
 
   const table = useReactTable({
     data: rows,
@@ -179,19 +190,20 @@ function OrdersTable({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           {scopeTabs}
+          <ViewModeTabs value={viewMode} onValueChange={setViewMode} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button onClick={onCreate}>
             <Plus />
             New Order
           </Button>
-          <ColumnVisibilityButton table={table} />
+          {viewMode === "table" && <ColumnVisibilityButton table={table} />}
         </div>
       </div>
 
       {isEmpty ? (
         <EmptyState icon={ListOrdered} {...emptyStates[scope]} />
-      ) : (
+      ) : viewMode === "table" ? (
         <div
           className={
             query.isPlaceholderData
@@ -221,6 +233,26 @@ function OrdersTable({
             }
           />
         </div>
+      ) : (
+        <div
+          className={
+            query.isPlaceholderData
+              ? "opacity-60 transition-opacity duration-200"
+              : undefined
+          }
+        >
+          <OrdersBrowse
+            orders={browseRows}
+            canManage={canManage}
+            onEditConfig={(order) => setEditOrder(order)}
+          />
+          <BrowsePagination
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            rowCount={rowCount}
+            itemLabel="Orders"
+          />
+        </div>
       )}
 
       {editOrder && (
@@ -241,13 +273,13 @@ function OrdersPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const scope: Scope = search.view ?? "mine"
+  const scope: Scope = search.view ?? "owned"
   const [createOpen, setCreateOpen] = useState(false)
 
   const setScope = (next: Scope) => {
     navigate({
       to: "/channel-orders",
-      search: next === "mine" ? {} : { view: next },
+      search: next === "owned" ? {} : { view: next },
       replace: true,
     })
   }
@@ -255,7 +287,8 @@ function OrdersPage() {
   const scopeTabs = (
     <Tabs value={scope} onValueChange={(value) => setScope(value as Scope)}>
       <TabsList>
-        <TabsTrigger value="mine">Owned</TabsTrigger>
+        <TabsTrigger value="owned">Owned</TabsTrigger>
+        <TabsTrigger value="favorites">Favorites</TabsTrigger>
         <TabsTrigger value="public">Public</TabsTrigger>
         {isAdmin && <TabsTrigger value="all">All</TabsTrigger>}
       </TabsList>

@@ -22,6 +22,8 @@ from app.plugins.schemas import PluginOutput
 from app.schemas import (
     BaseInput,
     BaseUpdateWithoutKey,
+    RecordScope,
+    ScopedReadOptions,
     make_model_with_all_fields_optional,
 )
 from app.seasons.models import Season
@@ -51,34 +53,44 @@ class ChannelOutput(BaseChannel):
     score: int
 
 
-class ChannelPublicOutput(BaseChannel):
-    """Schema for returning a publicly listed `Channel`."""
+class ChannelListOutput(BaseChannel):
+    """Schema for returning a `Channel` alongside its owner.
+
+    `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
+    owns the record or is an admin. `score` is not a secret, so one row shape serves
+    every scope and every viewer.
+    """
 
     id: uuid.UUID
     user_id: uuid.UUID | None
     username: str | None
+    score: int
 
 
 class ChannelPublicListOutput(BaseModel):
     """Schema for returning a page of publicly listed `Channel`s."""
 
-    data: list[ChannelPublicOutput]
+    data: list[ChannelListOutput]
     count: int
 
 
-class ChannelAdminOutput(ChannelOutput):
-    """Schema for returning a `Channel` to an admin, including the owner username."""
+class ChannelsPublic(BaseModel):
+    """Schema for returning a page of `Channel`s."""
 
-    username: str | None
-
-
-class ChannelAdminListOutput(BaseModel):
-    """Schema for returning a page of `Channel`s to an admin."""
-
-    data: list[ChannelAdminOutput]
+    data: list[ChannelListOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool
+
+
+class ChannelReadOptions(ScopedReadOptions):
+    """Read options for the `Channel` list.
+
+    Defaults to `owned` rather than `ScopedReadOptions`'s `all`, so an unscoped read
+    returns the `User`'s own `Channel`s instead of demanding admin rights.
+    """
+
+    scope: RecordScope = RecordScope.owned
 
 
 class ChannelAdminUpdate(

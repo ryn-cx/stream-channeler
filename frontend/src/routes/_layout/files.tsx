@@ -5,6 +5,7 @@ import { FilesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
+  validateMediaSearch,
 } from "@/components/Common/DataTable"
 import { type FileTableData, fileColumns } from "@/components/Files/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_layout/files")({
       throw redirect({ to: "/" })
     }
   },
+  validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Files - Stream Channeler" }],
   }),
@@ -25,13 +27,14 @@ function AllFilesPage() {
   return (
     <MediaListPage<FileTableData>
       title="Files"
+      path="/files"
       columns={fileColumns}
       columnVisibilityKey="files-column-visibility"
       defaultHidden={{ id: false }}
       emptyIcon={FileText}
-      fetchTable={async (owner, params) => {
+      fetchTable={async (scope, params) => {
         const result = await FilesService.getFiles({
-          owner,
+          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, fileColumns),
