@@ -23,6 +23,7 @@ import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
+import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
@@ -250,6 +251,8 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
         </h1>
 
         <ChannelDescription channel={channel} />
+
+        {user && <FavoriteChannel channelId={channel.id} />}
 
         {(isOwner || user?.is_superuser) && <EditChannel channel={channel} />}
 

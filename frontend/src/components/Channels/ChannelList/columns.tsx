@@ -5,9 +5,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { ChannelOutput } from "@/client"
 import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
 import { CopyId } from "@/components/Common/CopyId"
+import { isLoggedIn } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import { ChannelActionsMenu } from "./ChannelActionsMenu"
+import { FavoriteChannel } from "./FavoriteChannel"
 
 export type ChannelTableData = ChannelOutput & { pending?: boolean }
 
@@ -163,12 +165,12 @@ export const columns: ColumnDef<ChannelTableData>[] = [
     enableSorting: false,
     enableColumnFilter: false,
     header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        {row.original.pending ? null : (
+    cell: ({ row }) =>
+      row.original.pending ? null : (
+        <div className="flex justify-end gap-1">
+          {isLoggedIn() && <FavoriteChannel channelId={row.original.id} />}
           <ChannelActionsMenu channel={row.original} />
-        )}
-      </div>
-    ),
+        </div>
+      ),
   },
 ]
