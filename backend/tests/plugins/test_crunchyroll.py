@@ -1,4 +1,3 @@
-# TODO: Validate
 from datetime import datetime
 from typing import override
 
@@ -96,6 +95,26 @@ class TestAiringMultipleSeasonsShow(
     search_url = "https://www.crunchyroll.com/series/G9VHN91DJ"
 
 
+class TestCompletedSingleSeasonShow(
+    CrunchyrollStandardTests,
+    CrunchyrollUpdateSourceTest,
+):
+    parse_url_response = "GEXH3W29Z"
+    show_slug = "compass20-animation-project"
+    search_query = "#COMPASS2.0 ANIMATION PROJECT"
+    search_url = "https://www.crunchyroll.com/series/GEXH3W29Z"
+
+
+class TestCompletedMultipleSeasonsShow(
+    CrunchyrollStandardTests,
+    CrunchyrollUpdateSourceTest,
+):
+    parse_url_response = "GRVNZK5PY"
+    show_slug = "a-certain-magical-index"
+    search_query = "A Certain Magical Index"
+    search_url = "https://www.crunchyroll.com/series/GRVNZK5PY"
+
+
 class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
     parse_url_response = "GT00375170"
     show_slug = "the-food-diary-of-miss-maid"
@@ -118,10 +137,3 @@ class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
 
 class TestInvalidWatchKey(InvalidCrunchyrollURLValidator):
     urls = ("crunchyroll.com/watch/GGGGGGGGGGGGGG",)
-
-
-class TestLargeShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GRMG8ZQZR"
-    show_slug = "one-piece"
-    search_query = "One Piece"
-    search_url = "https://www.crunchyroll.com/series/GRMG8ZQZR"

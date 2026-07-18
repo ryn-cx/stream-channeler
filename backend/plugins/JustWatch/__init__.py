@@ -11,6 +11,8 @@ from just_scrape.custom_buy_box_offers import (
 )
 from just_scrape.url_title_details import models as url_title_details_models
 from loguru import logger
+from sqlalchemy import func
+from sqlmodel import col, select
 
 from app.episodes.models import Episode
 from app.files.models import File
@@ -122,7 +124,7 @@ class JustWatch(FileMixin, register=True):
 
     def _validate_url(self, show_key: str, url: str) -> None:
         series_json = self.url_title_details_file(show_key)
-        self._raise_if_invalid_file(series_json, url)
+        self.raise_if_invalid_file(series_json, url)
 
     def _create_url_import_results(
         self,
@@ -183,17 +185,27 @@ class JustWatch(FileMixin, register=True):
     @override
     def update_plugin(self, plugin: Plugin) -> None:
         providers_file = self.providers_locale_file()
-        providers_file.download_if_outdated(self.plugin.update_at)
+        providers_file.download_if_outdated()
         self._upsert_sources(providers_file)
 
         _cache = plugin.sources
         self._download_latest_new_titles_bucket()
         self._process_new_titles_buckets()
-
-        plugin.data_timestamp = self.plugin_data_timestamp()
-        plugin.set_update_at(plugin.data_timestamp + timedelta(days=1))
+        latest_bucket = self._get_latest_new_titles_bucket().one()
+        plugin.data_timestamp = latest_bucket.data_timestamp
+        plugin.set_update_at(latest_bucket.data_timestamp + timedelta(days=1))
 
     def _process_new_titles_buckets(self) -> None:
+        source_key = func.split_part(col(File.key), "/", 2)
+        _cache = self.session.exec(
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{NewTitles.__name__}/"),
+            )
+            .order_by(source_key, col(File.key).desc())
+            .distinct(source_key),
+        ).all()
         for bucket in self.get_incomplete_files(
             NewTitleBucket,
             self.new_titles_bucket_file,
@@ -201,8 +213,15 @@ class JustWatch(FileMixin, register=True):
             for edge in bucket.parsed_edges():
                 short_name = edge.key.package.short_name
                 source = Source.get_from_memory(self.session, self.plugin, short_name)
-                # TODO: This is just bypassing a serious error.
+
                 if not source:
+                    self._refresh_providers()
+                    source = Source.get_from_memory(
+                        self.session,
+                        self.plugin,
+                        short_name,
+                    )
+
                     continue
 
                 new_titles_file = self.new_titles_file(source.key, edge.key.date)
@@ -211,6 +230,11 @@ class JustWatch(FileMixin, register=True):
                     source.set_update_at(source.modified_at)
 
             bucket.database_record.extra = "Completed"
+
+    def _refresh_providers(self) -> None:
+        providers_file = self.providers_locale_file()
+        providers_file.download_if_outdated(tz_datetime.now())
+        self._upsert_sources(providers_file)
 
     @override
     def update_source(self, source: Source) -> None:

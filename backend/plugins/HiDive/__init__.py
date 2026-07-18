@@ -96,7 +96,7 @@ class HiDive(FileMixin, register=True):
         else:
             file = self.season_file(key)
 
-        self._raise_if_invalid_file(file, url)
+        self.raise_if_invalid_file(file, url)
 
     def _import_show(self, key: str) -> Show:
         if show := self._preload_show(key).one_or_none():

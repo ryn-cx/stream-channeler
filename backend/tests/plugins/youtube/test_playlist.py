@@ -67,10 +67,18 @@ class TestPlaylistWithUnavailableVideos(
     parse_url_response = ("playlist_key", playlist_key)
 
 
-class TestAlbumWithChannel(StandardTests[YouTube], PlaylistValidator):
-    """Test importing an album that is associated with a channel."""
+# class TestAlbumWithChannel(StandardTests[YouTube], PlaylistValidator):
+#     """Test importing an album that is associated with a channel."""
 
-    playlist_key = "OLAK5uy_lfFeKLvDqhTQwmfolUjDBfbyrjjgdmYcE"
+#     playlist_key = "OLAK5uy_lfFeKLvDqhTQwmfolUjDBfbyrjjgdmYcE"
+#     channel_key = "UCo1DYcm1IZ9v3UPkpiAcgtg"
+#     parse_url_response = ("playlist_key", playlist_key)
+
+
+class TestAlbumBelongingToTopic(StandardTests[YouTube], PlaylistValidator):
+    """Test importing the CHROMAKOPIA album playlist."""
+
+    playlist_key = "OLAK5uy_nt1Nw4wT6I7VlzNknxTiIz3hfED0ttO8Q"
     channel_key = "UCo1DYcm1IZ9v3UPkpiAcgtg"
     parse_url_response = ("playlist_key", playlist_key)
 

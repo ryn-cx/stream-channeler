@@ -35,6 +35,7 @@ class BaseFile[T](ABC):
     def _existing_database_record(self) -> File | None:
         if isinstance(self.__database_record, Sentinel):
             key = self.file_key()
+            # The fallback File.get should only occur during tests when importing files
             existing = File.get_from_memory(self.__session, self.__plugin, key)
             self.__database_record = existing or File.get(
                 self.__session,
@@ -263,6 +264,13 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
         """
         return self.ACCEPTABLE_ERROR
 
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        """Return whether `error` should be caught during download.
+
+        Override this to match on the exception type instead of its message.
+        """
+        return str(error) == self._get_ACCEPTABLE_ERROR()
+
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid unique_identifier {self.unique_identifier}"
 
@@ -273,7 +281,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
                 content = self.API_ENDPOINT.original_input(response)
                 self.write(content)
             except Exception as e:
-                if str(e) != self._get_ACCEPTABLE_ERROR():
+                if not self._is_acceptable_error(e):
                     raise
 
                 self.write(None)
@@ -308,7 +316,7 @@ class APISerializerEndpoint[T](Protocol):
 
 
 class APIEndpoint[T](APISerializerEndpoint[T], Protocol):
-    def get(self, unique_identifier: str, /) -> T: ...
+    def download_and_parse(self, unique_identifier: str, /) -> T: ...
 
 
 class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
@@ -317,7 +325,7 @@ class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
     @override
     def _get(self) -> T:
         """Call the appropriate get method on the API endpoint."""
-        return self.API_ENDPOINT.get(self.unique_identifier)
+        return self.API_ENDPOINT.download_and_parse(self.unique_identifier)
 
 
 # TODO: This may no longe be needed

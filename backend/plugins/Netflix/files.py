@@ -19,15 +19,6 @@ def meshfilm() -> Meshfilm:
 class Title(GAPIJSON[netflix_models.LodpTitleAndPlansPageModel]):
     API_ENDPOINT = meshfilm().lodp_title_and_plans_page
 
-    @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        # meshfilm raises NoContentError with this message when a title id is missing
-        # or is not a Show/Movie/Episode (e.g. a season id or an invalid id).
-        return (
-            f"Response has no content for "
-            f"{type(self.API_ENDPOINT).__name__} {self.unique_identifier}."
-        )
-
 
 class FileMixin(BasePlugin, register=False):
     def title_file(self, title_key: str) -> Title:

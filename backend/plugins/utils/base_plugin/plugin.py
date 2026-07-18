@@ -256,7 +256,7 @@ class BasePlugin(
         self._weakref_file_cache[cache_key] = obj
         return obj
 
-    def _raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
+    def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
         if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"

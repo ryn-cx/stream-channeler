@@ -37,7 +37,7 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> season_models.SeasonModel:
-        return diving_board().season.get(int(self.unique_identifier))
+        return diving_board().season.download_and_parse(int(self.unique_identifier))
 
 
 class Vod(PartialGAPIJSON[vod_models.VodModel]):
@@ -48,7 +48,7 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> vod_models.VodModel:
-        return diving_board().vod.get(int(self.unique_identifier))
+        return diving_board().vod.download_and_parse(int(self.unique_identifier))
 
 
 class Series(PartialGAPIJSON[series_models.SeriesModel]):
@@ -59,7 +59,7 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> series_models.SeriesModel:
-        return diving_board().series.get(int(self.unique_identifier))
+        return diving_board().series.download_and_parse(int(self.unique_identifier))
 
 
 class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
@@ -84,7 +84,7 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
             second=0,
             microsecond=0,
         )
-        return diving_board().schedule.get_until_datetime(
+        return diving_board().schedule.download_and_parse_until_datetime(
             from_=from_,
             end_datetime=tz_datetime.now(),
         )

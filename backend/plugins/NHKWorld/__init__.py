@@ -50,7 +50,7 @@ class NHKWorld(FileMixin, register=True):
     def _validate_url(self, show_key: str, url: str) -> None:
         show_file = self.video_program_file(show_key)
         # TODO: Will an error be raised naturally so this is no longer needed?
-        self._raise_if_invalid_file(show_file, url)
+        self.raise_if_invalid_file(show_file, url)
 
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():

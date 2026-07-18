@@ -36,7 +36,7 @@ class Netflix(FileMixin, register=True):
         raise InvalidURLError(msg)
 
     def _validate_url(self, show_key: str, url: str) -> None:
-        self._raise_if_invalid_file(self.title_file(show_key), url)
+        self.raise_if_invalid_file(self.title_file(show_key), url)
 
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():
@@ -130,7 +130,7 @@ class Netflix(FileMixin, register=True):
         show_key: str,
         season_id: int,
     ) -> None:
-        for sort_order,     episode_data in enumerate(
+        for sort_order, episode_data in enumerate(
             self._season_episodes(show_key, season_id),
         ):
             episode_key = str(episode_data.video_id)

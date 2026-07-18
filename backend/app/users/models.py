@@ -55,3 +55,14 @@ class User(UserBase, table=True):
         back_populates="user",
         cascade_delete=True,
     )
+
+    def add_child(self, child: Plugin | Channel | ChannelOrder) -> None:
+        from app.channel_orders.models import ChannelOrder  # noqa: PLC0415
+        from app.channels.models import Channel  # noqa: PLC0415
+
+        if isinstance(child, Channel):
+            self.channels.append(child)
+        elif isinstance(child, ChannelOrder):
+            self.channel_orders.append(child)
+        else:
+            self.plugins.append(child)

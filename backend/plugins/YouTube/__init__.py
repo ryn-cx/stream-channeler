@@ -7,7 +7,6 @@ from typing import Any, override
 
 from loguru import logger
 from not_yt_dlapi.channel.models import Item as ChannelItem
-from not_yt_dlapi.playlist.models import Item as PlaylistItem
 from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 from pydantic import BaseModel
 
@@ -205,7 +204,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         if match := re.match(self._video_key_regex(), url):
             video_key = match.group("video_key")
             videos_file = self.videos_file(video_key)
-            self._raise_if_invalid_file(videos_file, url)
+            self.raise_if_invalid_file(videos_file, url)
             show_key = videos_file.parsed().items[0].snippet.channel_id
             return ParsedURL(
                 show_key=show_key,
@@ -215,7 +214,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         if match := re.match(self._channel_key_regex(), url):
             channel_key = match.group("channel_key")
-            self._raise_if_invalid_file(
+            self.raise_if_invalid_file(
                 self.channel_by_channel_id_file(channel_key),
                 url,
             )
@@ -230,7 +229,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             username_file = self.channel_by_username_file(
                 match.group("channel_username"),
             )
-            self._raise_if_invalid_file(username_file, url)
+            self.raise_if_invalid_file(username_file, url)
             show_key = get_first_item(username_file.parsed().items).id
             return ParsedURL(
                 show_key=show_key,
@@ -239,7 +238,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
 
         if match := re.match(self._channel_handle_regex(), url):
             handle_file = self.channel_by_handle_file(match.group("channel_handle"))
-            self._raise_if_invalid_file(handle_file, url)
+            self.raise_if_invalid_file(handle_file, url)
             show_key = get_first_item(handle_file.parsed().items).id
             return ParsedURL(
                 show_key=show_key,
@@ -256,7 +255,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         video_key: str | None = None,
     ) -> ParsedURL:
         playlist_items_file = self.playlist_items_file(playlist_key)
-        self._raise_if_invalid_file(playlist_items_file, url)
+        self.raise_if_invalid_file(playlist_items_file, url)
         first_item = get_first_item(playlist_items_file.parsed().items)
         if self._is_music_playlist_key(playlist_key):
             # Automatically generated music playlists have a
@@ -408,7 +407,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         show_key: str,
         season_key: str,
         name: str,
-        playlist: ChannelItem | PlaylistItem | PlaylistsItem,
+        playlist: ChannelItem | PlaylistsItem,
     ) -> None:
         if season_check := self._season_check(show, season_key, show_key):
             season = Season(

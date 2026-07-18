@@ -56,11 +56,11 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_series
 
-    # Need to use get_since_datetime instead of get so the new BrowseSeriesModel
-    # includes entries up to the previous BrowseSeriesModel.
+    # Need to use download_and_parse_since_datetime instead of download_and_parse so the
+    # new BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
     @override
     def _get(self) -> list[browse_series_models.BrowseSeriesModel]:
-        return chirashi().browse_series.get_since_datetime(
+        return chirashi().browse_series.download_and_parse_since_datetime(
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 

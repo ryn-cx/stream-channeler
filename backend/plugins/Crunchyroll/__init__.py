@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from loguru import logger
-from pydantic import BaseModel
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -28,31 +28,61 @@ from plugins.utils.base_plugin.watch_history import (
     WatchHistoryMixin,
 )
 
-if TYPE_CHECKING:
-    from plugins.Crunchyroll import Crunchyroll
+
+class CrunchyrollURLHandler(ABC):
+    def __init__(self, plugin: Crunchyroll, url: str) -> None:
+        self.plugin = plugin
+        self.validate_url(url)
+
+    @property
+    @abstractmethod
+    def show_key(self) -> str: ...
+
+    @abstractmethod
+    def import_results(self, show: Show) -> list[URLImportResult]: ...
+
+    @abstractmethod
+    def validate_url(self, url: str) -> None: ...
 
 
-class SeriesURL(BaseModel):
-    url: str
-    show_key: str
+class SeriesURLHandler(CrunchyrollURLHandler):
+    def __init__(self, plugin: Crunchyroll, url: str, show_key: str) -> None:
+        self._show_key = show_key
+        super().__init__(plugin, url)
 
-    def get_show_key(self, plugin: Crunchyroll) -> str:  # noqa: ARG002
-        return self.show_key
+    @property
+    def show_key(self) -> str:
+        return self._show_key
 
-    def generate_url_import_results(self, show: Show) -> list[URLImportResult]:
+    @show_key.setter
+    def show_key(self, value: str) -> None:
+        self._show_key = value
+
+    def validate_url(self, url: str) -> None:
+        plugin_file = self.plugin.series_file(self.show_key)
+        self.plugin.raise_if_invalid_file(plugin_file, url)
+
+    @override
+    def import_results(self, show: Show) -> list[URLImportResult]:
         return [URLImportResult(show=show, is_whitelist=False)]
 
 
-class EpisodeURL(BaseModel):
-    url: str
-    episode_key: str
+class EpisodeURLHandler(CrunchyrollURLHandler):
+    def __init__(self, plugin: Crunchyroll, url: str, episode_key: str) -> None:
+        self.episode_key = episode_key
+        super().__init__(plugin, url)
 
-    def get_show_key(self, plugin: Crunchyroll) -> str:
-        objects_file = plugin.objects_file(self.episode_key)
-        objects_file.download_if_outdated()
+    def validate_url(self, url: str) -> None:
+        objects_file = self.plugin.objects_file(self.episode_key)
+        self.plugin.raise_if_invalid_file(objects_file, url)
+
+    @property
+    def show_key(self) -> str:
+        objects_file = self.plugin.objects_file(self.episode_key)
         return objects_file.parsed().data[0].episode_metadata.series_id
 
-    def generate_url_import_results(self, show: Show) -> list[URLImportResult]:
+    @override
+    def import_results(self, show: Show) -> list[URLImportResult]:
         for season in show.seasons:
             for episode in season.episodes:
                 if episode.key == self.episode_key:
@@ -84,26 +114,19 @@ class Crunchyroll(WatchHistoryMixin, FileMixin, register=True):
 
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        parsed_url = self._parse_url(url)
-        show_key = parsed_url.get_show_key(self)
-        self._validate_url(show_key, url)
-        show = self._import_show(show_key)
-        return parsed_url.generate_url_import_results(show)
+        url_handler = self._get_url_handler(url)
+        show = self._import_show(url_handler.show_key)
+        return url_handler.import_results(show)
 
-    @override
-    def _parse_url(self, url: str) -> SeriesURL | EpisodeURL:
+    def _get_url_handler(self, url: str) -> CrunchyrollURLHandler:
         if match := re.match(self._series_url_regex(), url):
-            return SeriesURL(url=url, show_key=match.group("show_key"))
+            return SeriesURLHandler(self, url, match.group("show_key"))
 
         if match := re.match(self._watch_url_regex(), url):
-            return EpisodeURL(url=url, episode_key=match.group("episode_key"))
+            return EpisodeURLHandler(self, url, match.group("episode_key"))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    def _validate_url(self, show_key: str, url: str) -> None:
-        series_json = self.series_file(show_key)
-        self._raise_if_invalid_file(series_json, url)
 
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():

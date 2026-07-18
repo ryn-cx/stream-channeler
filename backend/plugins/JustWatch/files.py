@@ -55,7 +55,7 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     @override
     def _get(self) -> list[new_titles_models.NewTitlesResponse]:
-        return just_scrape().new_titles.get_all_for_date(
+        return just_scrape().new_titles.download_and_parse_for_date(
             available_to_packages=[self.source_key],
             filter_packages=[self.source_key],
             date=self.date,
@@ -80,7 +80,7 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
         end_date = self.end_datetime.date()
-        return just_scrape().new_title_buckets.get_all_since_date(end_date)
+        return just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
 
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
         return just_scrape().new_title_buckets.extract_edges(self.parsed())
@@ -127,7 +127,9 @@ class CustomSeasonEpisodes(
 
     @override
     def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
-        return just_scrape().custom_season_episodes.get_all(self.unique_identifier)
+        return just_scrape().custom_season_episodes.download_and_parse_all(
+            self.unique_identifier,
+        )
 
     def parsed_episodes(self) -> list[custom_season_episodes_models.Episode]:
         return just_scrape().custom_season_episodes.extract_episodes(self.parsed())

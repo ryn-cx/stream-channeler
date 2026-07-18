@@ -32,7 +32,7 @@ class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
     @override
     def _get(self) -> list[VideoEpisodesModel]:
-        return naphki().video_episodes.get_all(self.unique_identifier)
+        return naphki().video_episodes.download_and_parse_all(self.unique_identifier)
 
     def items(self) -> list[Item]:
         return [item for page in self.parsed() for item in page.items]
@@ -57,7 +57,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
         pages: list[VideoEpisodesModel] = []
         offset = 0
         while True:
-            page = naphki().video_episodes.get(offset=offset)
+            page = naphki().video_episodes.download_and_parse(offset=offset)
             pages.append(page)
             offset += page.pagination.count
             reached_datetime = any(

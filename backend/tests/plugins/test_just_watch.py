@@ -64,12 +64,9 @@ class BaseJustWatch(PluginValidator[JustWatch]):
     def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:
         validator = super().update_plugin_validator(session, plugin)
         validator.incremented(plugin.id, "update_at")
-        # All sources get re-upserted during update_plugin.
-        validator.incremented(Source, "data_timestamp")
-        validator.incremented(Source, "modified_at")
-        # Sources referenced by an unprocessed bucket are marked outdated.
         for source_key, _ in self._incomplete_bucket_source_dates(session, plugin):
             validator.populated(source_key, "update_at")
+            validator.incremented(source_key, "modified_at")
         return validator
 
     @override

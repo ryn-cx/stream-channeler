@@ -4,13 +4,13 @@ import time
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
-from typing import override
+from typing import Any, override
 
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
-from not_yt_dlapi.channel import Channels as ChannelsEndpoint
+from not_yt_dlapi.channel import Channel as ChannelEndpoint
 from not_yt_dlapi.channel.models import ChannelsModel
-from not_yt_dlapi.playlist.models import PlaylistModel
+from not_yt_dlapi.exceptions import ChannelNotFoundError, PlaylistNotFoundError
 from not_yt_dlapi.playlist_item import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_item.models import PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
@@ -35,7 +35,7 @@ from plugins.utils.get_around_client import get_around_client
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
-        settings.YOUTUBE_API_KEY,
+        api_key=settings.YOUTUBE_API_KEY,
         get_around_client=get_around_client(),
     )
 
@@ -47,43 +47,50 @@ def get_first_item[T](items: list[T] | None) -> T:
     return items[0]
 
 
+def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Merge paginated API responses into a single response with all items."""
+    merged = dict(pages[0])
+    merged["items"] = [item for page in pages for item in page.get("items", [])]
+    return merged
+
+
 class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT = not_yt_dlapi().channel
 
     @override
     def _get(self) -> ChannelsModel:
-        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
-        return endpoint.get(channel_id=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
+        return endpoint.download_and_parse(channel_id=self.unique_identifier)
 
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        return f"Channel '{self.unique_identifier}' not found."
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ChannelNotFoundError)
 
 
 class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT = not_yt_dlapi().channel
 
     @override
     def _get(self) -> ChannelsModel:
-        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
-        return endpoint.get(handle=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
+        return endpoint.download_and_parse(channel_handle=self.unique_identifier)
 
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        return f"Channel '{self.unique_identifier}' not found."
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ChannelNotFoundError)
 
 
 class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT = not_yt_dlapi().channel
 
     @override
     def _get(self) -> ChannelsModel:
-        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelsEndpoint)
-        return endpoint.get(username=self.unique_identifier)
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
+        return endpoint.download_and_parse(channel_username=self.unique_identifier)
 
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        return f"Channel '{self.unique_identifier}' not found."
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ChannelNotFoundError)
 
 
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
@@ -92,15 +99,22 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
     @override
     def _get(self) -> PlaylistsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
-        return endpoint.get_all(self.unique_identifier)
+        return endpoint.parse(
+            _merge_pages(endpoint.download_all(self.unique_identifier))
+        )
 
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        return f"No playlists found for channel '{self.unique_identifier}'."
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ChannelNotFoundError)
 
 
-class PlaylistInfo(GAPIJSON[PlaylistModel]):
-    API_ENDPOINT = not_yt_dlapi().playlist
+class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
+    API_ENDPOINT = not_yt_dlapi().playlists
+
+    @override
+    def _get(self) -> PlaylistsModel:
+        endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
+        return endpoint.download_and_parse(playlist_id=self.unique_identifier)
 
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
@@ -117,37 +131,49 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
 
         # If this is the first time downloading the file download everything.
         if not self._existing_database_record:
-            return endpoint.get_all(self.unique_identifier)
+            return endpoint.parse(
+                _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
+            )
 
         # If the entry is over a year old download a fresh copy to clean out deleted
         # videos.
         year_ago_datetime = tz_datetime.now() - timedelta(days=365)
         if self._existing_database_record.data_timestamp < year_ago_datetime:
-            return endpoint.get_all(self.unique_identifier)
+            return endpoint.parse(
+                _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
+            )
 
-        existing_items = self.parsed().items
-        existing_video_ids = {item.content_details.video_id for item in existing_items}
+        existing_items: list[dict[str, Any]] = json.loads(
+            self.database_record.content or "{}",
+        )["items"]
+        existing_video_ids = {
+            item["contentDetails"]["videoId"] for item in existing_items
+        }
 
-        page = endpoint.get(self.unique_identifier)
+        page = endpoint.download(self.unique_identifier)
 
         # TODO: noy_yt_dlapi needs to support fetching a specific page, until then
         # download all of the playlist videos if there are at least 50 new entries.
+        page_items: list[dict[str, Any]] = page["items"]
         if not any(
-            item.content_details.video_id in existing_video_ids for item in page.items
+            item["contentDetails"]["videoId"] in existing_video_ids
+            for item in page_items
         ):
-            return endpoint.get_all(self.unique_identifier)
+            return endpoint.parse(
+                _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
+            )
 
-        new_ids = {item.content_details.video_id for item in page.items}
-        page.items = list(page.items) + [
+        new_ids = {item["contentDetails"]["videoId"] for item in page_items}
+        page["items"] = list(page_items) + [
             item
             for item in existing_items
-            if item.content_details.video_id not in new_ids
+            if item["contentDetails"]["videoId"] not in new_ids
         ]
-        return page
+        return endpoint.parse(page)
 
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str:
-        return "The playlist identified with the request's <code>playlistId</code> parameter cannot be found."
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, PlaylistNotFoundError)
 
 
 class Videos(GAPIJSON[VideosModel]):
@@ -408,15 +434,20 @@ class FileMixin(BasePlugin, register=False):
         if outdated_ids:
             logger.info(f"Batch downloading {len(outdated_ids)} videos")
             start = time.monotonic()
-            responses = not_yt_dlapi().videos.download_multiple(outdated_ids)
+            pages = not_yt_dlapi().videos.download_all(outdated_ids)
             elapsed_time = time.monotonic() - start
             logger.info(
                 f"Batch downloaded {len(outdated_ids)} videos in {elapsed_time:.2f}s",
             )
 
-            for video_id, response in zip(outdated_ids, responses, strict=True):
+            responses_by_id: dict[str, dict[str, Any]] = {
+                item["id"]: {**page, "items": [item]}
+                for page in pages
+                for item in page.get("items", [])
+            }
+            for video_id in outdated_ids:
                 video_file = self.videos_file(video_id)
                 # write is called directly because of the way the files are batch downloaded.
-                video_file.write(json.dumps(response, default=str))
+                video_file.write(json.dumps(responses_by_id[video_id], default=str))
 
         return [self.videos_file(video_id).database_record for video_id in video_keys]
