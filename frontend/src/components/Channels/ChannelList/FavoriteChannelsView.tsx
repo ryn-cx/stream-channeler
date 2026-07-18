@@ -27,12 +27,17 @@ import { EmptyState } from "@/components/Common/EmptyState"
 import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
 import useAuth from "@/hooks/useAuth"
-import {
-  usePersistedJsonState,
-  usePersistedState,
-} from "@/hooks/usePersistedState"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
-export function FavoriteChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
+export function FavoriteChannelsView({
+  scopeTabs,
+  viewMode,
+  onViewModeChange,
+}: {
+  scopeTabs: ReactNode
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+}) {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
   const [pagination, setPagination] = useState<PaginationState>({
@@ -41,10 +46,6 @@ export function FavoriteChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
   })
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    "favorite-channels-list-view",
-    "browse",
-  )
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>(
       "favorite-channels-column-visibility",
@@ -60,7 +61,7 @@ export function FavoriteChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
         pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
       }))
     }
-    setViewMode(mode)
+    onViewModeChange(mode)
   }
 
   const columns = publicChannelColumns(isAdmin)

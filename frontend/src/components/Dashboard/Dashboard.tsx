@@ -1,16 +1,17 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import {
-  BookOpen,
   Filter,
   Layers,
   ListOrdered,
   MonitorPlay,
   Pencil,
   Plus,
+  Radio,
   Rocket,
   Search,
   Shuffle,
+  Tv,
 } from "lucide-react"
 import {
   Accordion,
@@ -58,8 +59,8 @@ export function Dashboard() {
         </p>
       </div>
 
-      {/* Two main action cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Main action cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link
           to="/onboarding"
           className="group flex flex-col items-center gap-4 p-8 border rounded-xl hover:border-primary hover:bg-accent/30 transition-all"
@@ -68,7 +69,7 @@ export function Dashboard() {
             <Rocket className="h-7 w-7 text-primary" />
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-semibold">Guided Setup</h2>
+            <h2 className="text-xl font-semibold">Create channel</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Create a channel, add shows, and pick a sort order in a few quick
               steps
@@ -76,26 +77,37 @@ export function Dashboard() {
           </div>
         </Link>
 
-        <button
-          type="button"
+        <Link
+          to="/channels"
+          search={{ view: "public" }}
           className="group flex flex-col items-center gap-4 p-8 border rounded-xl hover:border-primary hover:bg-accent/30 transition-all"
-          onClick={() => {
-            document
-              .getElementById("user-manual")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }}
         >
           <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <BookOpen className="h-7 w-7 text-primary" />
+            <Tv className="h-7 w-7 text-primary" />
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-semibold">User Manual</h2>
+            <h2 className="text-xl font-semibold">Public Channels</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Detailed guide covering channels, searching, sorting, filtering,
-              and more
+              Browse channels shared by other users for inspiration and ideas
             </p>
           </div>
-        </button>
+        </Link>
+
+        <Link
+          to="/remote"
+          className="group flex flex-col items-center gap-4 p-8 border rounded-xl hover:border-primary hover:bg-accent/30 transition-all"
+        >
+          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+            <Radio className="h-7 w-7 text-primary" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold">Stream Channeler Remote</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Play episodes back to back and queue shows for bulk import with a
+              companion userscript
+            </p>
+          </div>
+        </Link>
       </div>
 
       {/* User Manual */}

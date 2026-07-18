@@ -101,7 +101,7 @@ export function OnboardingCreateName() {
   return (
     <OnboardingShell currentStep={0}>
       <div className="space-y-6 text-center">
-        <h1 className="text-3xl font-bold">Create Your First Channel</h1>
+        <h1 className="text-3xl font-bold">Create A Channel</h1>
         <p className="text-muted-foreground">
           A channel is an automatically updated curated playlist of shows and
           movies that you pick. Give it a name to get started.

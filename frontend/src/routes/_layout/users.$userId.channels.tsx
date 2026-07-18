@@ -39,7 +39,11 @@ function UserChannels() {
       {isOwner && (
         <p className="-mt-4 px-[4%] text-sm text-muted-foreground">
           This page lists only your public channels. See{" "}
-          <Link to="/channels" className="underline hover:text-foreground">
+          <Link
+            to="/channels"
+            search={{ view: "owned" }}
+            className="underline hover:text-foreground"
+          >
             My Channels
           </Link>{" "}
           for all of your channels.

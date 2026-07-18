@@ -1,4 +1,5 @@
 // TODO: Validate
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type {
   ColumnFiltersState,
@@ -9,6 +10,7 @@ import type {
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Tv } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
+import { ChannelsService } from "@/client"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
 import { AllChannelsView } from "@/components/Channels/ChannelList/AllChannelsView"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
@@ -33,26 +35,26 @@ import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import {
-  usePersistedJsonState,
-  usePersistedState,
-} from "@/hooks/usePersistedState"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 type Scope = "owned" | "favorites" | "public" | "all"
 
 type ChannelsSearch = {
-  view?: "favorites" | "public" | "all"
+  view?: "owned" | "favorites" | "public" | "all"
+  mode?: ViewMode
 }
 
 export const Route = createFileRoute("/_layout/channels/")({
   component: Channels,
   validateSearch: (search: Record<string, unknown>): ChannelsSearch => ({
     view:
+      search.view === "owned" ||
       search.view === "favorites" ||
       search.view === "public" ||
       search.view === "all"
         ? search.view
         : undefined,
+    mode: search.mode === "table" ? "table" : undefined,
   }),
   head: () => ({
     meta: [
@@ -63,13 +65,17 @@ export const Route = createFileRoute("/_layout/channels/")({
   }),
 })
 
-function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
+function MyChannels({
+  scopeTabs,
+  viewMode,
+  onViewModeChange,
+}: {
+  scopeTabs: ReactNode
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+}) {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    "channels-list-view",
-    "browse",
-  )
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>("channels-column-visibility", {
       id: false,
@@ -90,7 +96,7 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
         pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
       }))
     }
-    setViewMode(mode)
+    onViewModeChange(mode)
   }
 
   const columns = ownedChannelColumns(isAdmin)
@@ -200,18 +206,76 @@ function MyChannels({ scopeTabs }: { scopeTabs: ReactNode }) {
   )
 }
 
+// When no scope is pinned in the URL, land on the most relevant populated tab:
+// favorites if the user has any, otherwise owned, otherwise public.
+function useDefaultScope(enabled: boolean): {
+  scope: Scope
+  isPending: boolean
+} {
+  const favoritesQuery = useQuery({
+    queryKey: ["channels", "favorites", "default-count"],
+    queryFn: () =>
+      ChannelsService.getChannels({ scope: "favorites", offset: 0, limit: 1 }),
+    enabled,
+    refetchOnWindowFocus: false,
+  })
+  const ownedQuery = useQuery({
+    queryKey: ["channels", "owned", "default-count"],
+    queryFn: () =>
+      ChannelsService.getChannels({ scope: "owned", offset: 0, limit: 1 }),
+    enabled,
+    refetchOnWindowFocus: false,
+  })
+
+  if ((favoritesQuery.data?.total_count ?? 0) > 0) {
+    return { scope: "favorites", isPending: false }
+  }
+  if ((ownedQuery.data?.total_count ?? 0) > 0) {
+    return { scope: "owned", isPending: false }
+  }
+
+  const isPending =
+    enabled && (favoritesQuery.isPending || ownedQuery.isPending)
+  return { scope: "public", isPending }
+}
+
 function Channels() {
   const search = Route.useSearch()
   const navigate = useNavigate()
   const loggedIn = isLoggedIn()
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const scope: Scope = loggedIn ? (search.view ?? "owned") : "public"
+
+  const needsDefaultScope = loggedIn && search.view === undefined
+  const { scope: defaultScope, isPending: defaultScopePending } =
+    useDefaultScope(needsDefaultScope)
+  const scope: Scope = loggedIn ? (search.view ?? defaultScope) : "public"
+  const viewMode: ViewMode = search.mode ?? "browse"
+
+  // Both tabs live in the URL, so each write preserves the other's value. The
+  // scope must be written explicitly — its default is resolved from channel counts,
+  // so an absent view would send the user back to that resolved tab rather than the
+  // one they clicked. The browse view stays a droppable default to keep the URL clean.
+  const buildSearch = (
+    nextScope: Scope,
+    nextMode: ViewMode,
+  ): ChannelsSearch => ({
+    view: nextScope,
+    mode: nextMode === "browse" ? undefined : nextMode,
+  })
 
   const setScope = (next: Scope) => {
     navigate({
       to: "/channels",
-      search: next === "owned" ? {} : { view: next },
+      search: buildSearch(next, viewMode),
+      replace: true,
+    })
+  }
+
+  const setViewMode = (mode: ViewMode) => {
+    navigate({
+      to: "/channels",
+      search: buildSearch(scope, mode),
       replace: true,
     })
   }
@@ -227,16 +291,43 @@ function Channels() {
     </Tabs>
   ) : null
 
+  // Hold on a neutral pending state until the counts decide the tab, so the page
+  // doesn't flash the fallback scope before settling on the resolved one.
+  if (defaultScopePending) {
+    return (
+      <div className="flex flex-col gap-6">
+        <ChannelsHeader scopeTabs={scopeTabs} />
+        <PendingChannelList />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {scope === "all" && isAdmin ? (
-        <AllChannelsView scopeTabs={scopeTabs} />
+        <AllChannelsView
+          scopeTabs={scopeTabs}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       ) : scope === "owned" ? (
-        <MyChannels scopeTabs={scopeTabs} />
+        <MyChannels
+          scopeTabs={scopeTabs}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       ) : scope === "favorites" ? (
-        <FavoriteChannelsView scopeTabs={scopeTabs} />
+        <FavoriteChannelsView
+          scopeTabs={scopeTabs}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       ) : (
-        <PublicChannelsView scopeTabs={scopeTabs} />
+        <PublicChannelsView
+          scopeTabs={scopeTabs}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       )}
     </div>
   )

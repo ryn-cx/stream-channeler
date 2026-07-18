@@ -75,6 +75,7 @@ function ChannelRow({
   const [showRightArrow, setShowRightArrow] = useState(true)
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
+  const isOwner = user?.id === channel.user_id
   const loggedIn = isLoggedIn()
 
   const defaultOrder = channel.default_order
@@ -174,7 +175,7 @@ function ChannelRow({
               <ChannelDescription channel={channel} />
               <ChannelShowsButton channelId={channel.id} />
               {loggedIn && <FavoriteChannel channelId={channel.id} />}
-              {isAdmin && (
+              {(isAdmin || isOwner) && (
                 <AdminEditChannel channel={channel as ChannelListOutput} />
               )}
             </>

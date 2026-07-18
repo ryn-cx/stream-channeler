@@ -26,22 +26,23 @@ import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
 import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
-import {
-  usePersistedJsonState,
-  usePersistedState,
-} from "@/hooks/usePersistedState"
+import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
-export function AllChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
+export function AllChannelsView({
+  scopeTabs,
+  viewMode,
+  onViewModeChange,
+}: {
+  scopeTabs: ReactNode
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+}) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: DEFAULT_BROWSE_PAGE_SIZE,
   })
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
-    "all-channels-list-view",
-    "browse",
-  )
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>("all-channels-column-visibility", {})
 
@@ -54,7 +55,7 @@ export function AllChannelsView({ scopeTabs }: { scopeTabs: ReactNode }) {
         pageSize: Math.min(current.pageSize, MAX_BROWSE_PAGE_SIZE),
       }))
     }
-    setViewMode(mode)
+    onViewModeChange(mode)
   }
 
   const query = useScopedChannels(
