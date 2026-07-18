@@ -199,6 +199,12 @@ export function WhitelistManager({
   }
 
   const getSeasonLabel = (season: WhitelistSeasonOutput) => {
+    const anySeasonHasNumber = whitelistData?.seasons.some(
+      (currentSeason) => currentSeason.season_number != null,
+    )
+    if (!anySeasonHasNumber) {
+      return season.name ?? ""
+    }
     const seasonNum = season.season_number ?? "?"
     const seasonName = season.name ? ` - ${season.name}` : ""
     return `Season ${seasonNum}${seasonName}`
