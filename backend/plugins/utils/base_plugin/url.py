@@ -14,7 +14,7 @@ class URLMixin(ABC):
     def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
 
-    @abstractmethod
+    # TODO: Replace with get_url_handler style
     def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.
 
@@ -25,6 +25,7 @@ class URLMixin(ABC):
             The parsed URL components. The exact type depends on the plugin implementation.
 
         """
+        raise NotImplementedError
 
     @classmethod
     def domains(cls) -> list[str]:
