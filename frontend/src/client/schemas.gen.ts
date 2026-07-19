@@ -312,6 +312,37 @@ export const ChannelEpisodesOutputSchema = {
     title: 'ChannelEpisodesOutput'
 } as const;
 
+export const ChannelFavoriteUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'ChannelFavoriteUpdate',
+    description: "Schema for a `User`'s private customization of a favorited `Channel`."
+} as const;
+
 export const ChannelListOutputSchema = {
     properties: {
         name: {
@@ -396,6 +427,28 @@ export const ChannelListOutputSchema = {
         score: {
             type: 'integer',
             title: 'Score'
+        },
+        custom_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom Name'
+        },
+        custom_channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Custom Channel Number'
         }
     },
     type: 'object',
@@ -1350,6 +1403,38 @@ export const ChannelQueueOutputSchema = {
     title: 'ChannelQueueOutput'
 } as const;
 
+export const ChannelShowGroupSchema = {
+    properties: {
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
+        },
+        channel_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Name'
+        },
+        shows: {
+            items: {
+                '$ref': '#/components/schemas/ShowPublic'
+            },
+            type: 'array',
+            title: 'Shows'
+        }
+    },
+    type: 'object',
+    required: ['channel_id', 'channel_name'],
+    title: 'ChannelShowGroup',
+    description: 'The regular shows contributed by one channel within a combined channel.'
+} as const;
+
 export const ChannelShowsOutputSchema = {
     properties: {
         shows: {
@@ -1375,6 +1460,13 @@ export const ChannelShowsOutputSchema = {
             },
             type: 'object',
             title: 'Sources'
+        },
+        groups: {
+            items: {
+                '$ref': '#/components/schemas/ChannelShowGroup'
+            },
+            type: 'array',
+            title: 'Groups'
         }
     },
     type: 'object',

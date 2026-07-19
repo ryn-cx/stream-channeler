@@ -65,6 +65,17 @@ class ChannelListOutput(BaseChannel):
     user_id: uuid.UUID | None
     username: str | None
     score: int
+    # The viewer's private overrides, only populated in the `favorites` scope. Each
+    # is `None` when unset; the frontend falls back to the shared field above.
+    custom_name: str | None = None
+    custom_channel_number: float | None = None
+
+
+class ChannelFavoriteUpdate(BaseInput):
+    """Schema for a `User`'s private customization of a favorited `Channel`."""
+
+    name: str | None = Field(default=None)
+    channel_number: float | None = Field(default=None)
 
 
 class ChannelPublicListOutput(BaseModel):
@@ -156,12 +167,23 @@ class ChannelEpisodesOutput(BaseModel):
     channels: dict[uuid.UUID, ChannelOutput]
 
 
+class ChannelShowGroup(BaseModel):
+    """The regular shows contributed by one channel within a combined channel."""
+
+    channel_id: uuid.UUID
+    channel_name: str | None
+    shows: list[ShowPublic] = Field(default_factory=list)
+
+
 class ChannelShowsOutput(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
     # Shows that don't belong to the channel but carry blacklist/whitelist entries for
     # episodes pulled in from other channels.
     filter_only_shows: list[ShowPublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    # The regular shows grouped by the channel they come from, with the channel this
+    # endpoint was called on first and combined channels after it, sorted by name.
+    groups: list[ChannelShowGroup] = Field(default_factory=list)
 
 
 class WhitelistEntryInput(BaseInput):

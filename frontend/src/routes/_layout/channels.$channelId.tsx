@@ -22,6 +22,7 @@ import {
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
+import { ChannelShowsButton } from "@/components/Channels/ChannelList/ChannelShowsButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -284,15 +285,15 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                 </>
               )}
 
-              {isOwner && (
-                <>
-                  <DropdownMenuSeparator />
-                  <ManageShowsButton
-                    channelId={channelId}
-                    variant="menu"
-                    combinedChannels={{ isLoggedIn: !!user }}
-                  />
-                </>
+              <DropdownMenuSeparator />
+              {isOwner ? (
+                <ManageShowsButton
+                  channelId={channelId}
+                  variant="menu"
+                  combinedChannels={{ isLoggedIn: !!user }}
+                />
+              ) : (
+                <ChannelShowsButton channelId={channelId} variant="menu" />
               )}
               <DropdownMenuSeparator />
 
@@ -338,11 +339,13 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               Cards
             </Button>
           )}
-          {isOwner && (
+          {isOwner ? (
             <ManageShowsButton
               channelId={channelId}
               combinedChannels={{ isLoggedIn: !!user }}
             />
+          ) : (
+            <ChannelShowsButton channelId={channelId} variant="button" />
           )}
           <EpisodeFilters
             key={orderPreset?.id ?? "channel"}

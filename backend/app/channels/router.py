@@ -32,6 +32,7 @@ from app.channels.schemas import (
     ChannelAdminUpdate,
     ChannelCreate,
     ChannelEpisodesOutput,
+    ChannelFavoriteUpdate,
     ChannelListOutput,
     ChannelOptions,
     ChannelOrderInput,
@@ -40,6 +41,7 @@ from app.channels.schemas import (
     ChannelQueueAdminUpdate,
     ChannelQueueOutput,
     ChannelReadOptions,
+    ChannelShowGroup,
     ChannelShowsOutput,
     ChannelsPublic,
     ChannelUpdate,
@@ -179,6 +181,28 @@ def favorite_channel(
         session.add(ChannelFavorite(user_id=current_user.id, channel_id=channel.id))
         session.commit()
     return Message(message="Channel favorited successfully")
+
+
+@channels_router.patch("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
+def update_favorite_channel(
+    session: SessionDep,
+    current_user: CurrentUser,
+    channel: ReadableChannel,
+    favorite_in: ChannelFavoriteUpdate,
+) -> Message:
+    """Set the `User`'s private name/number for a favorited `Channel`.
+
+    Favoriting the channel first if it isn't already, so personalizing it from the
+    favorites view can never race against the favorite not yet existing.
+    """
+    favorite = session.get(ChannelFavorite, (current_user.id, channel.id))
+    if favorite is None:
+        favorite = ChannelFavorite(user_id=current_user.id, channel_id=channel.id)
+        session.add(favorite)
+    favorite.name = favorite_in.name
+    favorite.channel_number = favorite_in.channel_number
+    session.commit()
+    return Message(message="Favorite updated successfully")
 
 
 @channels_router.delete("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
@@ -426,6 +450,9 @@ def get_channel_shows(
     # another channel only uses it for filtering.
     regular_shows: dict[uuid.UUID, ShowPublic] = {}
     filter_only_shows: dict[uuid.UUID, ShowPublic] = {}
+    # Regular shows kept per channel so they can be grouped by where they come from.
+    shows_by_channel: dict[uuid.UUID, dict[uuid.UUID, ShowPublic]] = {}
+    channel_names: dict[uuid.UUID, str | None] = {}
     for channel_show in channel_shows:
         show = channel_show.show
         source = show.source
@@ -438,6 +465,9 @@ def get_channel_shows(
             filter_only_shows.setdefault(show.id, ShowPublic.model_validate(show))
         else:
             regular_shows.setdefault(show.id, ShowPublic.model_validate(show))
+            channel_group = shows_by_channel.setdefault(channel_show.channel_id, {})
+            channel_group.setdefault(show.id, ShowPublic.model_validate(show))
+            channel_names.setdefault(channel_show.channel_id, channel_show.channel.name)
 
         if source.id not in output.sources:
             output.sources[source.id] = SourcePublic.model_validate(source)
@@ -447,6 +477,23 @@ def get_channel_shows(
         show
         for show_id, show in filter_only_shows.items()
         if show_id not in regular_shows
+    ]
+
+    # The channel the request was made on comes first; the rest follow by name.
+    def group_sort_key(group_channel_id: uuid.UUID) -> tuple[bool, str]:
+        is_not_primary = group_channel_id != channel.id
+        return (is_not_primary, (channel_names.get(group_channel_id) or "").lower())
+
+    output.groups = [
+        ChannelShowGroup(
+            channel_id=group_channel_id,
+            channel_name=channel_names.get(group_channel_id),
+            shows=sorted(
+                shows_by_channel[group_channel_id].values(),
+                key=lambda show: (show.name or "").lower(),
+            ),
+        )
+        for group_channel_id in sorted(shows_by_channel, key=group_sort_key)
     ]
 
     return output

@@ -497,6 +497,12 @@ class ChannelFavorite(TimestampIdAndHashMixin, table=True):
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     channel: Channel = Relationship(back_populates="favorites")
 
+    # The `User`'s private overrides for how this favorited `Channel` is shown to
+    # them. Each is `None` when the user hasn't customized it and the shared
+    # `Channel` value is used instead.
+    name: str | None = Field(default=None)
+    channel_number: float | None = Field(default=None)
+
     @property
     def parent(self) -> Channel:
         """Return the `Channel` that was favorited."""

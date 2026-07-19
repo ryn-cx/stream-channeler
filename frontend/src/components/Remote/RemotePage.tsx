@@ -18,9 +18,9 @@ export function RemotePage() {
           Stream Channeler Remote
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          A companion userscript that lets Stream Channeler play episodes back to
-          back across streaming sites and queue shows for bulk import while you
-          browse.
+          A companion userscript that lets Stream Channeler play episodes back
+          to back across streaming sites and queue shows for bulk import while
+          you browse.
         </p>
         <div className="flex flex-wrap gap-3 justify-center pt-2">
           <Button asChild size="lg">

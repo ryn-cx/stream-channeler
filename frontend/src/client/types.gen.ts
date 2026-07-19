@@ -64,6 +64,14 @@ export type ChannelEpisodesOutput = {
 };
 
 /**
+ * Schema for a `User`'s private customization of a favorited `Channel`.
+ */
+export type ChannelFavoriteUpdate = {
+    name?: (string | null);
+    channel_number?: (number | null);
+};
+
+/**
  * Schema for returning a `Channel` alongside its owner.
  *
  * `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
@@ -81,6 +89,8 @@ export type ChannelListOutput = {
     user_id: (string | null);
     username: (string | null);
     score: number;
+    custom_name?: (string | null);
+    custom_channel_number?: (number | null);
 };
 
 export type ChannelOptions = {
@@ -260,12 +270,22 @@ export type ChannelQueueOutput = {
     channel_id: string;
 };
 
+/**
+ * The regular shows contributed by one channel within a combined channel.
+ */
+export type ChannelShowGroup = {
+    channel_id: string;
+    channel_name: (string | null);
+    shows?: Array<ShowPublic>;
+};
+
 export type ChannelShowsOutput = {
     shows?: Array<ShowPublic>;
     filter_only_shows?: Array<ShowPublic>;
     sources?: {
         [key: string]: SourcePublic;
     };
+    groups?: Array<ChannelShowGroup>;
 };
 
 /**
@@ -1265,6 +1285,13 @@ export type ChannelsFavoriteChannelData = {
 };
 
 export type ChannelsFavoriteChannelResponse = (Message);
+
+export type ChannelsUpdateFavoriteChannelData = {
+    channelId: string;
+    requestBody: ChannelFavoriteUpdate;
+};
+
+export type ChannelsUpdateFavoriteChannelResponse = (Message);
 
 export type ChannelsUnfavoriteChannelData = {
     channelId: string;

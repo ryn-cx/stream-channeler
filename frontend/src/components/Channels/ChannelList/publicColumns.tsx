@@ -32,7 +32,9 @@ const publicColumns: ColumnDef<ChannelListOutput>[] = [
     enableColumnFilter: false,
     cell: ({ row }) => (
       <span className="text-muted-foreground tabular-nums">
-        {row.original.channel_number ?? "—"}
+        {row.original.custom_channel_number ??
+          row.original.channel_number ??
+          "—"}
       </span>
     ),
   },
@@ -54,7 +56,7 @@ const publicColumns: ColumnDef<ChannelListOutput>[] = [
           search={searchParams}
           className="hover:underline text-primary"
         >
-          {row.original.name}
+          {row.original.custom_name ?? row.original.name}
         </Link>
       )
     },
@@ -74,7 +76,9 @@ const publicColumns: ColumnDef<ChannelListOutput>[] = [
     enableSorting: false,
     enableColumnFilter: false,
     cell: ({ row }) => {
-      if (!row.original.user_id) {
+      // The API reveals an anonymous channel's real creator to admins and the
+      // owner, but this public listing must still present it anonymously.
+      if (!row.original.user_id || row.original.anonymous) {
         return <span className="text-muted-foreground">—</span>
       }
 

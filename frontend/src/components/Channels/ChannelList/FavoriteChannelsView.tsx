@@ -153,7 +153,7 @@ export function FavoriteChannelsView({
         </div>
       ) : (
         <>
-          <ChannelsBrowse channels={browseRows} readOnly />
+          <ChannelsBrowse channels={browseRows} readOnly personalizable />
           <BrowsePagination
             pagination={pagination}
             onPaginationChange={setPagination}

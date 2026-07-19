@@ -23,6 +23,7 @@ import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
+import EditFavoriteChannel from "./EditFavoriteChannel"
 import { FavoriteChannel } from "./FavoriteChannel"
 
 // Owner channels (full ChannelOutput) render edit controls; public channels
@@ -35,6 +36,9 @@ interface ChannelRowProps {
   readOnly?: boolean
   showCreatedBy?: boolean
   showChannelNumber?: boolean
+  // In the favorites view, offer the viewer's private customization (name/number/
+  // icon) and an extra edit button to change it.
+  personalizable?: boolean
 }
 
 function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
@@ -69,6 +73,7 @@ function ChannelRow({
   readOnly = false,
   showCreatedBy = true,
   showChannelNumber = true,
+  personalizable = false,
 }: ChannelRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
@@ -77,6 +82,14 @@ function ChannelRow({
   const isAdmin = user?.is_superuser ?? false
   const isOwner = user?.id === channel.user_id
   const loggedIn = isLoggedIn()
+
+  // A favorited channel can carry the viewer's private name/number, which are
+  // preferred over the channel's own values. They only arrive in the favorites
+  // scope, so elsewhere these fall back to the shared channel.
+  const listChannel = channel as ChannelListOutput
+  const displayName = listChannel.custom_name ?? channel.name
+  const displayNumber =
+    listChannel.custom_channel_number ?? channel.channel_number
 
   const defaultOrder = channel.default_order
     ? (() => {
@@ -156,9 +169,9 @@ function ChannelRow({
   return (
     <div className="group/row relative">
       <div className="flex items-center gap-3 mb-2 px-[4%]">
-        {showChannelNumber && channel.channel_number != null && (
+        {showChannelNumber && displayNumber != null && (
           <span className="text-2xl font-bold text-muted-foreground tabular-nums">
-            {channel.channel_number}
+            {displayNumber}
           </span>
         )}
         <Link
@@ -167,7 +180,7 @@ function ChannelRow({
           search={defaultOrder}
           className="text-2xl font-bold hover:text-primary transition-colors"
         >
-          {channel.name}
+          {displayName}
         </Link>
         <div className="flex">
           {readOnly ? (
@@ -175,6 +188,9 @@ function ChannelRow({
               <ChannelDescription channel={channel} />
               <ChannelShowsButton channelId={channel.id} />
               {loggedIn && <FavoriteChannel channelId={channel.id} />}
+              {personalizable && loggedIn && (
+                <EditFavoriteChannel channel={listChannel} />
+              )}
               {(isAdmin || isOwner) && (
                 <AdminEditChannel channel={channel as ChannelListOutput} />
               )}
@@ -196,18 +212,32 @@ function ChannelRow({
         </div>
       </div>
 
-      {readOnly && showCreatedBy && channel.user_id && (
-        <p className="px-[4%] mb-2 text-sm text-muted-foreground">
-          Created by{" "}
-          <Link
-            to="/users/$userId/channels"
-            params={{ userId: channel.user_id }}
-            className="underline hover:text-foreground"
-          >
-            {(channel as ChannelListOutput).username || "Unnamed User"}
-          </Link>
-        </p>
-      )}
+      {showCreatedBy &&
+        (readOnly ? (
+          // The API hands the real creator of an anonymous channel to admins and
+          // the owner, but a public listing must still present it anonymously, so
+          // the creator is hidden whenever the channel is anonymous.
+          channel.user_id &&
+          !channel.anonymous && (
+            <p className="px-[4%] mb-2 text-sm text-muted-foreground">
+              Created by{" "}
+              <Link
+                to="/users/$userId/channels"
+                params={{ userId: channel.user_id }}
+                className="underline hover:text-foreground"
+              >
+                {(channel as ChannelListOutput).username || "Unnamed User"}
+              </Link>
+            </p>
+          )
+        ) : // On the owner's own channels, mirror how others will see it: a private
+        // channel isn't visible to anyone else so it shows nothing, and an
+        // anonymous channel hides the creator's name.
+        channel.visibility === "private" ? null : (
+          <p className="px-[4%] mb-2 text-sm text-muted-foreground">
+            Created by {channel.anonymous ? "Anonymous" : user?.username}
+          </p>
+        ))}
 
       {orderRejected && !loadFailed && (
         <p className="px-[4%] mb-2 text-sm text-destructive">
@@ -282,6 +312,7 @@ interface ChannelsBrowseProps {
   readOnly?: boolean
   showCreatedBy?: boolean
   showChannelNumber?: boolean
+  personalizable?: boolean
 }
 
 // Public lists arrive already ordered by the server (score then id); owner lists
@@ -300,6 +331,7 @@ export function ChannelsBrowse({
   readOnly = false,
   showCreatedBy = true,
   showChannelNumber = true,
+  personalizable = false,
 }: ChannelsBrowseProps) {
   const [deleteChannel, setDeleteChannel] = useState<BrowseChannel | null>(null)
 
@@ -313,6 +345,7 @@ export function ChannelsBrowse({
           readOnly={readOnly}
           showCreatedBy={showCreatedBy}
           showChannelNumber={showChannelNumber}
+          personalizable={personalizable}
         />
       ))}
       {channels.length === 0 && (

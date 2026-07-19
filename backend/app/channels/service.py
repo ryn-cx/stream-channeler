@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import cache
 from uuid import UUID
 
-from sqlmodel import Session, col, delete
+from sqlmodel import Session, col, delete, select
 
 from app.channels.models import (
     Channel,
@@ -26,7 +26,7 @@ from app.channels.schemas import (
 )
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from app.schemas import ScopedReadOptions
+from app.schemas import RecordScope, ScopedReadOptions
 from app.seasons.models import Season
 from app.service import scoped_list_response
 from app.shows.models import Show
@@ -55,7 +55,7 @@ def scoped_channel_list_output(
     read_options: ScopedReadOptions,
 ) -> ChannelsPublic:
     """List `Channel`s for the requested scope."""
-    return scoped_list_response(
+    response = scoped_list_response(
         session=session,
         model=Channel,
         viewer=viewer,
@@ -64,7 +64,30 @@ def scoped_channel_list_output(
         response_model=ChannelsPublic,
         favorite_model=ChannelFavorite,
         favorite_record_id=ChannelFavorite.channel_id,
+        # On the public list, equally scored channels are shuffled rather than shown
+        # in a fixed order so no channel is permanently ranked above its peers.
+        random_tiebreaker=read_options.scope == RecordScope.public,
     )
+    # In the `favorites` scope, overlay each row with the viewer's private
+    # customization so their own name/number are what get displayed.
+    if read_options.scope == RecordScope.favorites and viewer is not None:
+        channel_ids = [row.id for row in response.data]
+        if channel_ids:
+            favorites = session.exec(
+                select(ChannelFavorite).where(
+                    ChannelFavorite.user_id == viewer.id,
+                    col(ChannelFavorite.channel_id).in_(channel_ids),
+                ),
+            ).all()
+            customization_by_channel = {
+                favorite.channel_id: favorite for favorite in favorites
+            }
+            for row in response.data:
+                favorite = customization_by_channel.get(row.id)
+                if favorite is not None:
+                    row.custom_name = favorite.name
+                    row.custom_channel_number = favorite.channel_number
+    return response
 
 
 def public_channel_output(

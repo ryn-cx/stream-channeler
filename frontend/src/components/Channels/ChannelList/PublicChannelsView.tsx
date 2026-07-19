@@ -158,7 +158,6 @@ export function PublicChannelsView({
             channels={browseRows}
             readOnly
             showChannelNumber={false}
-            showCreatedBy={false}
           />
 
           <BrowsePagination
