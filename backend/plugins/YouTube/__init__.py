@@ -321,7 +321,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             video_snippet = video_item.snippet
 
             duration = None
-            duration_timedelta = video_item.content_details.duration:
+            duration_timedelta = video_item.content_details.duration
             logger.info(
                 "String duration for video {}: {!r}",
                 video_item.id,
