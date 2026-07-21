@@ -147,9 +147,8 @@ class Settings(BaseSettings):
                 if name not in data:
                     try:
                         keyring_value = keyring.get_password(KEYRING_SERVICE, name)
-                    except NoKeyringError as error:
-                        message = f"Key missing from env: {name}."
-                        raise NoKeyringError(message) from error
+                    except NoKeyringError:
+                        keyring_value = None
                     if keyring_value:
                         data[name] = keyring_value
                 if name in data and data[name] == "changethis":
