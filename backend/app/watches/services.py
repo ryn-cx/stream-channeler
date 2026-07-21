@@ -44,12 +44,18 @@ def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
     )
 
 
-def _representative_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
+def _watched_identifiers_subquery(user_id: uuid.UUID):  # noqa: ANN202
+    return select(col(Watch.episode_identifier)).where(Watch.user_id == user_id)
+
+
+def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: ANN001, ANN202
     """One representative visible episode per `episode_identifier`.
 
     A watch keys on `episode_identifier`, which can resolve to an episode in every
     source that shares it. This picks a single visible episode per identifier so a
     watch can be joined to concrete media for display and visibility filtering.
+    Restricted to `identifiers` so it only resolves the identifiers actually in play
+    instead of the whole episode catalog.
     """
     return (
         select(
@@ -62,6 +68,7 @@ def _representative_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(Episode.deleted_at).is_(None))
         .where(_visible_plugin_condition(user_id))
+        .where(col(Episode.episode_identifier).in_(identifiers))
         .distinct(col(Episode.episode_identifier))
         .order_by(col(Episode.episode_identifier), col(Episode.id))
         .subquery()
@@ -69,7 +76,10 @@ def _representative_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
 
 
 def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
-    representative = _representative_episode_subquery(user_id)
+    representative = _representative_episode_subquery(
+        user_id,
+        _watched_identifiers_subquery(user_id),
+    )
     return (
         select(Watch)
         .join(
@@ -121,11 +131,12 @@ def _representative_episodes_by_identifier(
     """Load the representative visible `Episode` for each `episode_identifier`."""
     if not identifiers:
         return {}
-    representative = _representative_episode_subquery(user_id)
+    representative = _representative_episode_subquery(user_id, identifiers)
     episodes = session.exec(
-        select(Episode)
-        .join(representative, col(Episode.id) == representative.c.episode_id)
-        .where(col(Episode.episode_identifier).in_(identifiers)),
+        select(Episode).join(
+            representative,
+            col(Episode.id) == representative.c.episode_id,
+        ),
     ).all()
     return {episode.episode_identifier: episode for episode in episodes}
 

@@ -72,6 +72,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         UniqueConstraint("id"),
         *sortable_field_indexes("Episode", DIRECT_SORTABLE_FIELDS),
         Index("Episode-deleted_at-index", "deleted_at"),
+        Index("Episode-episode_identifier-index", "episode_identifier", "id"),
     )
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
