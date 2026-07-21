@@ -337,6 +337,7 @@ export type EpisodeCreate = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier: string;
 };
 
 /**
@@ -358,6 +359,7 @@ export type EpisodeListOutput = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier: string;
     id: string;
     season_id: string;
     username: (string | null);
@@ -389,6 +391,7 @@ export type EpisodeOutput = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier: string;
     id: string;
     season_id: string;
 };
@@ -422,6 +425,7 @@ export type EpisodeUpdate = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -440,6 +444,7 @@ export type EpisodeWithDetails = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier: string;
     id: string;
     season_id: string;
     watch_date?: (string | null);
@@ -1131,7 +1136,7 @@ export type WatchItem = {
     watch_date: string;
     verified: boolean;
     id: string;
-    episode_id: string;
+    episode_identifier: string;
 };
 
 /**
@@ -1141,7 +1146,7 @@ export type WatchOutput = {
     watch_date: string;
     verified: boolean;
     id: string;
-    episode_id: string;
+    episode_identifier: string;
     user_id: string;
 };
 
@@ -1175,6 +1180,7 @@ export type WhitelistEpisodeOutput = {
     release_date?: (string | null);
     air_date?: (string | null);
     tmdb_id?: (number | null);
+    episode_identifier: string;
     id: string;
     season_id: string;
     filtered: boolean;
@@ -1990,8 +1996,6 @@ export type WatchesDeleteWatchData = {
 };
 
 export type WatchesDeleteWatchResponse = (Message);
-
-export type WatchesSyncWatchesResponse = (Message);
 
 export type WatchesImportWatchHistoryData = {
     formData: Body_watches_import_watch_history;

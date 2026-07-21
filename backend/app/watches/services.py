@@ -1,8 +1,6 @@
 # TODO: Validate
 import uuid
-from collections import defaultdict
 from collections.abc import Sequence
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -39,29 +37,52 @@ if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
 
-def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
-    return (
-        select(Watch)
-        .join(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-        .join(Plugin)
-        .where(Watch.user_id == user_id)
-        .where(
-            or_(
-                col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
-                col(Plugin.user_id) == user_id,
-            ),
-        )
+def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
+    return or_(
+        col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
+        col(Plugin.user_id) == user_id,
     )
 
 
-def _episode_watch_select_statement(
-    session: Session,
-    user_id: uuid.UUID,
-) -> Sequence[Watch]:
-    return session.exec(_episode_watch_base_statement(user_id)).all()
+def _representative_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
+    """One representative visible episode per `episode_identifier`.
+
+    A watch keys on `episode_identifier`, which can resolve to an episode in every
+    source that shares it. This picks a single visible episode per identifier so a
+    watch can be joined to concrete media for display and visibility filtering.
+    """
+    return (
+        select(
+            col(Episode.episode_identifier).label("episode_identifier"),
+            col(Episode.id).label("episode_id"),
+        )
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(col(Episode.deleted_at).is_(None))
+        .where(_visible_plugin_condition(user_id))
+        .distinct(col(Episode.episode_identifier))
+        .order_by(col(Episode.episode_identifier), col(Episode.id))
+        .subquery()
+    )
+
+
+def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
+    representative = _representative_episode_subquery(user_id)
+    return (
+        select(Watch)
+        .join(
+            representative,
+            representative.c.episode_identifier == col(Watch.episode_identifier),
+        )
+        .join(Episode, col(Episode.id) == representative.c.episode_id)
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(Watch.user_id == user_id)
+    )
 
 
 def get_watched_episodes(
@@ -85,32 +106,61 @@ def get_watched_episodes(
             "episode": col(Episode.name),
         },
     )
-    output = _format_watched_episodes_data(rows)
+    output = _format_watched_episodes_data(session, user.id, rows)
     output.total_count = total_count
     output.filtered_count = filtered_count
     output.is_server_side = is_server_side
     return output
 
 
+def _representative_episodes_by_identifier(
+    session: Session,
+    user_id: uuid.UUID,
+    identifiers: set[str],
+) -> dict[str, Episode]:
+    """Load the representative visible `Episode` for each `episode_identifier`."""
+    if not identifiers:
+        return {}
+    representative = _representative_episode_subquery(user_id)
+    episodes = session.exec(
+        select(Episode)
+        .join(representative, col(Episode.id) == representative.c.episode_id)
+        .where(col(Episode.episode_identifier).in_(identifiers)),
+    ).all()
+    return {episode.episode_identifier: episode for episode in episodes}
+
+
 def _format_watched_episodes_data(
+    session: Session,
+    user_id: uuid.UUID,
     episode_watches: Sequence[Watch],
 ) -> WatchesListOutput:
-    episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
+    episodes_dict: dict[str, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
     shows_dict: dict[uuid.UUID, ShowPublic] = {}
     sources_dict: dict[uuid.UUID, SourcePublic] = {}
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
 
+    episode_by_identifier = _representative_episodes_by_identifier(
+        session,
+        user_id,
+        {watch.episode_identifier for watch in episode_watches},
+    )
+
     for episode_watch in episode_watches:
-        episode = episode_watch.episode
+        episode = episode_by_identifier.get(episode_watch.episode_identifier)
+        if episode is None:
+            continue
         season = episode.season
         show = season.show
         source = show.source
         plugin = source.plugin
 
-        if episode.id not in episodes_dict:
-            episodes_dict[episode.id] = EpisodeOutput.model_validate(episode)
+        if episode.episode_identifier not in episodes_dict:
+            episodes_dict[episode.episode_identifier] = EpisodeOutput.model_validate(
+                episode,
+            )
         if season.id not in seasons_dict:
             seasons_dict[season.id] = SeasonOutput.model_validate(season)
         if show.id not in shows_dict:
@@ -123,7 +173,7 @@ def _format_watched_episodes_data(
         watches.append(
             WatchItem(
                 id=episode_watch.id,
-                episode_id=episode.id,
+                episode_identifier=episode_watch.episode_identifier,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,
             ),
@@ -145,16 +195,14 @@ def create_watches(
     episode: Episode,
     watch_input: WatchCreate,
 ) -> list[WatchOutput]:
-    """Create watches for all episodes with the same key in the same plugin.
+    """Create a watch for the episode's `episode_identifier`.
 
-    Raises 409 Conflict if any matching episode already has an unverified watch.
+    Raises 409 Conflict if the identifier already has an unverified watch.
     """
-    all_episodes = get_matching_episodes(session, episode)
-    all_episode_ids = [episode.id for episode in all_episodes]
     existing_unverified = session.exec(
         select(Watch).where(
             Watch.user_id == user_id,
-            col(Watch.episode_id).in_(all_episode_ids),
+            Watch.episode_identifier == episode.episode_identifier,
             col(Watch.verified) == False,  # noqa: E712 - TODO: SQLAlchemy comparison requires == False
         ),
     ).first()
@@ -164,62 +212,17 @@ def create_watches(
             detail="Episode already has an unverified watch. Verify or delete it first.",
         )
 
-    created: list[Watch] = []
-    for target_episode in all_episodes:
-        watch = Watch.model_validate(
-            watch_input,
-            update={"episode_id": target_episode.id, "user_id": user_id},
-        )
-        session.add(watch)
-        created.append(watch)
+    watch = Watch.model_validate(
+        watch_input,
+        update={
+            "episode_identifier": episode.episode_identifier,
+            "user_id": user_id,
+        },
+    )
+    session.add(watch)
     session.commit()
-    for watch in created:
-        session.refresh(watch)
-    return [WatchOutput.model_validate(watch) for watch in created]
-
-
-def get_matching_episodes(
-    session: Session,
-    episode: Episode,
-) -> list[Episode]:
-    """Find every episode a watch should be applied to together.
-
-    Includes episodes with the same key in the same plugin, plus every episode in
-    any plugin that shares a non-null `tmdb_id` with it, so a watch stays in sync
-    for the same episode across every source.
-    """
-    plugin_id = episode.season.show.source.plugin_id
-    same_key_statement = (
-        select(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-        .where(Source.plugin_id == plugin_id)
-        .where(Episode.key == episode.key)
-    )
-    matches = {match.id: match for match in session.exec(same_key_statement).all()}
-    matches.setdefault(episode.id, episode)
-
-    if episode.tmdb_id is not None:
-        tmdb_statement = select(Episode).where(Episode.tmdb_id == episode.tmdb_id)
-        for match in session.exec(tmdb_statement).all():
-            matches.setdefault(match.id, match)
-
-    return list(matches.values())
-
-
-def get_matching_watches(session: Session, watch: Watch) -> list[Watch]:
-    """Get all watches with the same date, key, and plugin."""
-    episode_ids = [ep.id for ep in get_matching_episodes(session, watch.episode)]
-    return list(
-        session.exec(
-            select(Watch).where(
-                Watch.user_id == watch.user_id,
-                col(Watch.episode_id).in_(episode_ids),
-                Watch.watch_date == watch.watch_date,
-            ),
-        ).all(),
-    )
+    session.refresh(watch)
+    return [WatchOutput.model_validate(watch)]
 
 
 def update_watches(
@@ -227,101 +230,15 @@ def update_watches(
     input_watch: Watch,
     watch_input: WatchUpdate,
 ) -> list[WatchOutput]:
-    """Update a watch and all matching watches."""
-    all_watches = get_matching_watches(session, input_watch)
-    for watch in all_watches:
-        watch_input.update(session, watch)
-    return [WatchOutput.model_validate(watch) for watch in all_watches]
+    """Update a watch."""
+    watch_input.update(session, input_watch)
+    return [WatchOutput.model_validate(input_watch)]
 
 
 def delete_watches(session: Session, input_watch: Watch) -> Message:
-    """Delete a watch and all matching watches."""
-    all_watches = get_matching_watches(session, input_watch)
-    for watch in all_watches:
-        delete_record(session, watch)
-    if len(all_watches) > 1:
-        return Message(message=f"{len(all_watches)} watches deleted successfully")
+    """Delete a watch."""
+    delete_record(session, input_watch)
     return Message(message="Watch deleted successfully")
-
-
-def sync_episode_watches(session: Session, user_id: uuid.UUID) -> Message:
-    """Sync watches across episodes with the same key within the same plugin."""
-    watches = _episode_watch_select_statement(session, user_id)
-
-    grouped_watches: defaultdict[uuid.UUID, defaultdict[str, list[Watch]]] = (
-        defaultdict(
-            lambda: defaultdict(list),
-        )
-    )
-    for watch in watches:
-        plugin_id = watch.episode.season.show.source.plugin_id
-        grouped_watches[plugin_id][watch.episode.key].append(watch)
-
-    created = 0
-    # Go through all of the watches for each plugin at once.
-    for plugin_id, episode_watch_dict in grouped_watches.items():
-        episodes_by_key = _get_plugin_episodes_by_key(
-            session,
-            plugin_id,
-            list(episode_watch_dict.keys()),
-        )
-
-        existing_watch_dates = _get_existing_watch_dates(watches)
-
-        # Loop through every episode that has a watch.
-        for watched_episode_key, group_watches in episode_watch_dict.items():
-            # Loop through every watch for the episode.
-            for watch in group_watches:
-                # Go through every episode with the same key and create the watch if
-                # needed.
-                for episode in episodes_by_key[watched_episode_key]:
-                    # Use the watch date to determine if a watch already exists.
-                    if watch.watch_date in existing_watch_dates[episode.id]:
-                        continue
-
-                    session.add(
-                        Watch(
-                            user_id=user_id,
-                            episode_id=episode.id,
-                            watch_date=watch.watch_date,
-                            verified=watch.verified,
-                        ),
-                    )
-                    existing_watch_dates[episode.id].add(watch.watch_date)
-                    created += 1
-
-    session.commit()
-    return Message(message=f"Sync complete: {created} watches created")
-
-
-def _get_existing_watch_dates(
-    watches: Sequence[Watch],
-) -> defaultdict[uuid.UUID, set[datetime]]:
-    """Build a mapping of episode ID to set of watch dates."""
-    existing_watch_dates: defaultdict[uuid.UUID, set[datetime]] = defaultdict(set)
-    for watch in watches:
-        existing_watch_dates[watch.episode_id].add(watch.watch_date)
-    return existing_watch_dates
-
-
-def _get_plugin_episodes_by_key(
-    session: Session,
-    plugin_id: uuid.UUID,
-    episode_keys: list[str],
-) -> defaultdict[str, list[Episode]]:
-    """Fetch all non-deleted episodes for a plugin matching the given keys."""
-    episodes_by_key: defaultdict[str, list[Episode]] = defaultdict(list)
-    for episode in session.exec(
-        select(Episode)
-        .join(Season)
-        .join(Show)
-        .join(Source)
-        .where(Source.plugin_id == plugin_id)
-        .where(col(Episode.key).in_(episode_keys))
-        .where(col(Episode.deleted_at).is_(None)),
-    ).all():
-        episodes_by_key[episode.key].append(episode)
-    return episodes_by_key
 
 
 def get_plugins_with_import_watch_history(

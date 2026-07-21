@@ -21,15 +21,13 @@ def reimport_all_shows(session: Session) -> None:
         .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
         .where(
             User.email == PLUGIN_USER_EMAIL,
-            col(Show.url).is_not(None),
-            col(Show.deleted_at).is_(None),
         ),
     ).all()
 
     for show in shows:
         plugin_class = plugin_classes_by_key[show.source.plugin.key]
         plugin_instance = plugin_class(session)
-        plugin_instance.update_show(show)
+        plugin_instance.update_show(show, force=True)
         session.commit()
 
 

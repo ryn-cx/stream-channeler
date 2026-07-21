@@ -117,7 +117,13 @@ class Crunchyroll(
         ).upsert_and_set_update_at(self.plugin, source, self._source_files())
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
         series_data = self.series_file(show_key).parsed().data[0]
 
@@ -138,18 +144,29 @@ class Crunchyroll(
         show = self.tmdb.tmdb_merge_show(show, tmdb_show_id, tmdb_media_type)
         show_files = self._show_files(show_key)
         show = show.upsert_and_set_update_at(source, existing_show, show_files)
-        self._upsert_seasons(show, show_key)
+        self._upsert_seasons(show, show_key, force=force)
         self._set_weekly_updates_from_episodes(show)
 
         return show
 
-    def _upsert_seasons(self, show: Show, show_key: str) -> None:
+    def _upsert_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         media_type: Literal["movie", "tv"] = (
             "movie" if show.media_type == "Movie" else "tv"
         )
         seasons_file = self.seasons_file(show_key)
         for i, season_data in enumerate(seasons_file.parsed().data):
-            if season_check := self._season_check(show, season_data.id, show.key):
+            if season_check := self._season_check(
+                show,
+                season_data.id,
+                show.key,
+                force=force,
+            ):
                 season = Season(
                     key=season_data.id,
                     name=season_data.title,
@@ -172,11 +189,11 @@ class Crunchyroll(
             else:
                 season = season_check.record
 
-            self._upsert_episodes(season)
+            self._upsert_episodes(season, force=force)
 
         self.soft_delete_missing_seasons(show_key)
 
-    def _upsert_episodes(self, season: Season) -> None:
+    def _upsert_episodes(self, season: Season, *, force: bool = False) -> None:
         show_key = season.show.key
         media_type: Literal["movie", "tv"] = (
             "movie" if season.show.media_type == "Movie" else "tv"
@@ -187,6 +204,7 @@ class Crunchyroll(
                 episode_data.id,
                 season,
                 show_key,
+                force=force,
             )
             if not episode_check:
                 continue
@@ -201,6 +219,7 @@ class Crunchyroll(
                 sort_order=i,
                 release_date=episode_data.premium_available_date,
                 air_date=episode_data.episode_air_date,
+                episode_identifier=f"{self.plugin_key()} {episode_data.id}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )

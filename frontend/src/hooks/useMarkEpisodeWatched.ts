@@ -65,9 +65,7 @@ export function useMarkWatched(channelId: string | undefined) {
     },
     // Replace the optimistic value with the server's response on success
     onSuccess: (watchResults, episodeId) => {
-      const watchData = watchResults.find(
-        (watch) => watch.episode_id === episodeId,
-      )
+      const watchData = watchResults[0]
       if (watchData) {
         const patch = {
           watch_date: watchData.watch_date,

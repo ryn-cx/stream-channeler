@@ -44,24 +44,11 @@ export default function VerifyWatch({ id, verified }: VerifyWatchProps) {
       // Optimistically update to the new value
       context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
         if (!old) return old
-        const verifiedWatch = old.watches.find((w) => w.id === id)
-        if (!verifiedWatch) return old
-        const verifiedEpisode = old.episodes[verifiedWatch.episode_id]
-        const verifiedSeason = old.seasons[verifiedEpisode.season_id]
-        const verifiedShow = old.shows[verifiedSeason.show_id]
-        const verifiedSource = old.sources[verifiedShow.source_id]
         return {
           ...old,
-          watches: old.watches.map((w) => {
-            if (w.watch_date !== verifiedWatch.watch_date) return w
-            const episode = old.episodes[w.episode_id]
-            if (episode.key !== verifiedEpisode.key) return w
-            const season = old.seasons[episode.season_id]
-            const show = old.shows[season.show_id]
-            const source = old.sources[show.source_id]
-            if (source.plugin_id !== verifiedSource.plugin_id) return w
-            return { ...w, verified: true, pending: true }
-          }),
+          watches: old.watches.map((w) =>
+            w.id === id ? { ...w, verified: true, pending: true } : w,
+          ),
         }
       })
 

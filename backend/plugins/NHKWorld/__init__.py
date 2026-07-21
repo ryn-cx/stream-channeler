@@ -105,7 +105,13 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
         ).upsert_and_set_update_at(self.plugin, source, self._source_files())
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
         program = self.video_program_file(show_key).parsed()
         show = Show(
@@ -119,12 +125,18 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
             source_id=source.id,
         ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
 
-        self._upsert_season(show, show_key)
+        self._upsert_season(show, show_key, force=force)
 
         return show
 
-    def _upsert_season(self, show: Show, show_key: str) -> None:
-        if season_check := self._season_check(show, show_key, show_key):
+    def _upsert_season(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
+        if season_check := self._season_check(show, show_key, show_key, force=force):
             season_files = self._season_files(show_key, show_key)
             season = Season(
                 key=show_key,
@@ -136,10 +148,16 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
         else:
             season = season_check.record
 
-        self._upsert_episodes(season, show_key)
+        self._upsert_episodes(season, show_key, force=force)
         self.soft_delete_missing_seasons(show_key)
 
-    def _upsert_episodes(self, season: Season, show_key: str) -> None:
+    def _upsert_episodes(
+        self,
+        season: Season,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         # Episodes are listed newest to oldest.
         items = list(reversed(self.video_episodes_file(show_key).items()))
         for sort_order, item in enumerate(items):
@@ -149,6 +167,7 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
                 item.id,
                 season,
                 show_key,
+                force=force,
             )
             if not episode_check:
                 continue

@@ -85,7 +85,9 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()
-    mutation.mutate(data)
+    // Manually-added episodes have no cross-source content to sync with, so key
+    // the identifier on the episode's own unique key.
+    mutation.mutate({ ...data, episode_identifier: `Manual ${data.key}` })
   }
 
   return (

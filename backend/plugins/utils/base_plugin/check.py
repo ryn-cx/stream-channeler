@@ -44,16 +44,19 @@ type CheckResult[RecordT] = UpToDate[RecordT] | Outdated[RecordT]
 
 
 class CheckMixin(DownloadMixin):
-    def _show_chek(
+    def _show_check(
         self,
         source: Source,
         show_key: str,
+        *,
+        force: bool = False,
     ) -> CheckResult[Show]:
         """Return the show's existing entity, its data timestamp, and staleness."""
         existing_show = Show.get_from_memory(self.session, source, show_key)
         show_timestamp = self.show_data_timestamp(show_key)
         if (
-            existing_show
+            not force
+            and existing_show
             and existing_show.data_timestamp == show_timestamp
             and not existing_show.deleted_at
         ):
@@ -65,12 +68,15 @@ class CheckMixin(DownloadMixin):
         show: Show,
         season_key: str,
         show_key: str,
+        *,
+        force: bool = False,
     ) -> CheckResult[Season]:
         """Return the season's existing entity, its data timestamp, and staleness."""
         existing_season = Season.get_from_memory(self.session, show, season_key)
         season_timestamp = self.season_data_timestamp(season_key, show_key)
         if (
-            existing_season
+            not force
+            and existing_season
             and existing_season.data_timestamp == season_timestamp
             and not existing_season.deleted_at
         ):
@@ -82,6 +88,8 @@ class CheckMixin(DownloadMixin):
         episode_key: str,
         season: Season,
         show_key: str,
+        *,
+        force: bool = False,
     ) -> CheckResult[Episode]:
         """Return the episode's existing entity, its data timestamp, and staleness."""
         existing_episode = Episode.get_from_memory(self.session, season, episode_key)
@@ -91,7 +99,8 @@ class CheckMixin(DownloadMixin):
             show_key,
         )
         if (
-            existing_episode
+            not force
+            and existing_episode
             and existing_episode.data_timestamp == episode_timestamp
             and not existing_episode.deleted_at
         ):

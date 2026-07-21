@@ -1,10 +1,5 @@
 // TODO: Validate
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type {
   ColumnFiltersState,
@@ -13,7 +8,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Eye, RefreshCw, Upload } from "lucide-react"
+import { Eye, Upload } from "lucide-react"
 import { useState } from "react"
 
 import { WatchesService } from "@/client"
@@ -23,12 +18,9 @@ import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { EmptyState } from "@/components/Common/EmptyState"
 import { PageHeader } from "@/components/Common/PageHeader"
 import { Button } from "@/components/ui/button"
-import { LoadingButton } from "@/components/ui/loading-button"
 import { columns, type WatchWithDetails } from "@/components/Watches/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
-import useCustomToast from "@/hooks/useCustomToast"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
-import { handleError } from "@/utils"
 
 export const Route = createFileRoute("/_layout/watches")({
   component: Watches,
@@ -45,30 +37,6 @@ export const Route = createFileRoute("/_layout/watches")({
     ],
   }),
 })
-
-function SyncEpisodeWatchesButton() {
-  const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  const syncMutation = useMutation({
-    mutationFn: () => WatchesService.syncWatches(),
-    onSuccess: (result) => {
-      showSuccessToast(result.message)
-      queryClient.invalidateQueries({ queryKey: ["watches"] })
-    },
-    onError: handleError.bind(showErrorToast),
-  })
-
-  return (
-    <LoadingButton
-      loading={syncMutation.isPending}
-      onClick={() => syncMutation.mutate()}
-    >
-      <RefreshCw />
-      Sync Episode Watches
-    </LoadingButton>
-  )
-}
 
 function ImportWatchesButton() {
   return (
@@ -112,7 +80,7 @@ function WatchesTableContent() {
 
   const watchesWithDetails: WatchWithDetails[] = watches
     ? watches.watches.map((watch) => {
-        const episode = watches.episodes[watch.episode_id]
+        const episode = watches.episodes[watch.episode_identifier]
         const season = watches.seasons[episode.season_id]
         const show = watches.shows[season.show_id]
         const source = watches.sources[show.source_id]
@@ -134,7 +102,6 @@ function WatchesTableContent() {
   return (
     <>
       <PageHeader title="Watches">
-        <SyncEpisodeWatchesButton />
         <ImportWatchesButton />
         <ColumnVisibilityButton table={table} />
       </PageHeader>

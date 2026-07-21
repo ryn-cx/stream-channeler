@@ -13,7 +13,6 @@ from sqlmodel import (
     UniqueConstraint,
 )
 
-from app.episodes.models import Episode
 from app.models import TimestampIdAndHashMixin
 from app.users.models import User
 from app.utils import tz_datetime
@@ -31,11 +30,15 @@ class BaseWatch(SQLModel):
 
 class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
-        PrimaryKeyConstraint("user_id", "episode_id", "watch_date"),
+        PrimaryKeyConstraint("user_id", "episode_identifier", "watch_date"),
         UniqueConstraint("id"),
-        # Used in episode_selector._fetch_watches and episode_selector._build_last_watched
-        # to look up watches for a user across a set of episodes.
-        Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),
+        # Used in episode_selector and watch services to look up a user's watches
+        # across a set of episodes by their shared episode_identifier.
+        Index(
+            "Watch-user_id-episode_identifier-index",
+            "user_id",
+            "episode_identifier",
+        ),
         # Used in episode_selector._apply_hide_watched and
         # episode_selector._filter_show_counts to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
@@ -47,12 +50,7 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="watched_episodes")
 
-    episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
-    episode: Episode = Relationship(back_populates="watches")
-
-    @property
-    def parent(self) -> Episode:
-        return self.episode
+    episode_identifier: str = Field()
 
     def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id

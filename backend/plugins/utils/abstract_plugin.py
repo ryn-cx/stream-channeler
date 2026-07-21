@@ -126,7 +126,7 @@ class AbstractPlugin(ABC):
         """
         source.update_at = None
 
-    def update_show(self, show: Show) -> None:
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         """Update an existing show in the database.
 
         Called when `Show.update_at > datetime.now()`.
@@ -136,6 +136,7 @@ class AbstractPlugin(ABC):
 
         Args:
             show: The `Show` to update.
+            force: When True, re-upsert every record even if its data is unchanged.
 
         """
         show.update_at = None

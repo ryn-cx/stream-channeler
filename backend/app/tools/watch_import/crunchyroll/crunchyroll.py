@@ -56,7 +56,7 @@ def import_watches(session: Session, user: User) -> None:
     existing_watches: set[tuple[str, datetime]] = set()
     watch_statement = select(Watch).where(Watch.user_id == user.id)
     for watch in session.exec(watch_statement):
-        existing_watches.add((str(watch.episode_id), watch.watch_date))
+        existing_watches.add((watch.episode_identifier, watch.watch_date))
 
     entries = load_watch_history()
     added = 0
@@ -71,18 +71,18 @@ def import_watches(session: Session, user: User) -> None:
             continue
 
         watch_date = tz_datetime.fromisoformat(str(entry["date_played"]))
-        if (str(episode.id), watch_date) in existing_watches:
+        if (episode.episode_identifier, watch_date) in existing_watches:
             skipped_already_watched += 1
             continue
 
         episode_watch = Watch(
             user_id=user.id,
-            episode_id=episode.id,
+            episode_identifier=episode.episode_identifier,
             watch_date=watch_date,
             verified=True,
         )
         session.add(episode_watch)
-        existing_watches.add((str(episode.id), watch_date))
+        existing_watches.add((episode.episode_identifier, watch_date))
         added += 1
 
     session.commit()

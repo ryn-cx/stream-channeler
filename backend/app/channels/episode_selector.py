@@ -243,7 +243,7 @@ class _SortExpressionBuilder:
             return literal_column("0")
         started_query = (
             select(Watch.id)
-            .join(Episode, Watch.episode_id == Episode.id)  # type: ignore[arg-type]
+            .join(Episode, Watch.episode_identifier == Episode.episode_identifier)  # type: ignore[arg-type]
             .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
             .where(
                 and_(
@@ -428,7 +428,7 @@ class EpisodeQueryBuilder:
                 episode=episode,
                 channel_id=channels_by_episode[episode.id][0],
                 channel_ids=channels_by_episode[episode.id],
-                latest_watch=watches.get(episode.id),
+                latest_watch=watches.get(episode.episode_identifier),
             )
             for episode in ordered_episodes
         ]
@@ -436,22 +436,27 @@ class EpisodeQueryBuilder:
     def _get_latest_watches(
         self,
         episodes: Sequence[Episode],
-    ) -> dict[UUID, Watch]:
-        """Get the latest watch for all episodes."""
+    ) -> dict[str, Watch]:
+        """Get the latest watch keyed by `episode_identifier`."""
         if not self._user or not episodes:
             return {}
 
+        identifiers = [episode.episode_identifier for episode in episodes]
         watches = self._session.exec(
             select(Watch)
             .where(
-                col(Watch.episode_id).in_([episode.id for episode in episodes]),
+                col(Watch.episode_identifier).in_(identifiers),
                 Watch.user_id == self._user.id,
             )
-            .order_by(col(Watch.episode_id), desc(Watch.watch_date), desc(Watch.id))
-            .distinct(col(Watch.episode_id)),
+            .order_by(
+                col(Watch.episode_identifier),
+                desc(Watch.watch_date),
+                desc(Watch.id),
+            )
+            .distinct(col(Watch.episode_identifier)),
         ).all()
 
-        return {watch.episode_id: watch for watch in watches}
+        return {watch.episode_identifier: watch for watch in watches}
 
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
         return (
@@ -513,7 +518,7 @@ class EpisodeQueryBuilder:
 
         episode_last_watched_subquery = (
             select(
-                Watch.episode_id,
+                Watch.episode_identifier,
                 func.max(
                     case((col(Watch.verified).is_(True), Watch.watch_date)),
                 ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
@@ -523,13 +528,14 @@ class EpisodeQueryBuilder:
             )
             .select_from(Watch)
             .where(col(Watch.user_id) == self._user.id)
-            .group_by(col(Watch.episode_id))
+            .group_by(col(Watch.episode_identifier))
             .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
         )
 
         return query.outerjoin(
             episode_last_watched_subquery,
-            col(Episode.id) == episode_last_watched_subquery.c.episode_id,
+            col(Episode.episode_identifier)
+            == episode_last_watched_subquery.c.episode_identifier,
         )
 
     @staticmethod
@@ -641,19 +647,19 @@ class EpisodeQueryBuilder:
         )
         return query.where(~blacklisted_episodes.exists())
 
-    def _verified_watches_subquery(self) -> SelectOfScalar[UUID]:
+    def _verified_watches_subquery(self) -> SelectOfScalar[str]:
         user = self._require_user()
-        return select(Watch.episode_id).where(
+        return select(Watch.episode_identifier).where(
             and_(
                 Watch.user_id == user.id,
                 col(Watch.verified).is_(True),
             ),
         )
 
-    def _any_watches_subquery(self) -> SelectOfScalar[UUID]:
-        """Episodes with any watch (verified or not) for the current user."""
+    def _any_watches_subquery(self) -> SelectOfScalar[str]:
+        """Episode identifiers with any watch (verified or not) for the user."""
         user = self._require_user()
-        return select(Watch.episode_id).where(Watch.user_id == user.id)
+        return select(Watch.episode_identifier).where(Watch.user_id == user.id)
 
     def _hide_watched_condition(self) -> ColumnElement[bool] | None:
         # Watched = has a verified watch. Partially watched (unverified) and
@@ -667,14 +673,14 @@ class EpisodeQueryBuilder:
             watched_subquery = watched_subquery.where(
                 Watch.watch_date > max_watch_date,
             )
-        return col(Episode.id).not_in(watched_subquery)
+        return col(Episode.episode_identifier).not_in(watched_subquery)
 
     def _hide_unwatched_condition(self) -> ColumnElement[bool] | None:
         # Unwatched = no watch at all. Partially watched (unverified) and verified
         # episodes are kept.
         if not (self._user and self._channel_options.hide_unwatched):
             return None
-        return col(Episode.id).in_(self._any_watches_subquery())
+        return col(Episode.episode_identifier).in_(self._any_watches_subquery())
 
     def _hide_partially_watched_condition(self) -> ColumnElement[bool] | None:
         # Partially watched = has a watch but none verified. Unwatched and verified
@@ -682,8 +688,8 @@ class EpisodeQueryBuilder:
         if not (self._user and self._channel_options.hide_partially_watched):
             return None
         return or_(
-            col(Episode.id).not_in(self._any_watches_subquery()),
-            col(Episode.id).in_(self._verified_watches_subquery()),
+            col(Episode.episode_identifier).not_in(self._any_watches_subquery()),
+            col(Episode.episode_identifier).in_(self._verified_watches_subquery()),
         )
 
     def _filter_watched_episodes(
@@ -722,7 +728,7 @@ class EpisodeQueryBuilder:
             .join(
                 Watch,
                 and_(
-                    Watch.episode_id == Episode.id,
+                    Watch.episode_identifier == Episode.episode_identifier,
                     Watch.user_id == user.id,
                 ),
             )

@@ -31,35 +31,13 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
         "watches",
       ])
 
-      // Optimistically mark the watch (and siblings with the same plugin,
-      // episode key, and watch date) as pending.
-      const matchesDeletedSibling = (
-        watch: { episode_id: string; watch_date?: string | null },
-        deleted: { episode_id: string; watch_date?: string | null },
-        old: WatchesListOutput,
-      ) => {
-        if (watch.watch_date !== deleted.watch_date) return false
-        const episode = old.episodes[watch.episode_id]
-        const deletedEpisode = old.episodes[deleted.episode_id]
-        if (episode.key !== deletedEpisode.key) return false
-        const source =
-          old.sources[
-            old.shows[old.seasons[episode.season_id].show_id].source_id
-          ]
-        const deletedSource =
-          old.sources[
-            old.shows[old.seasons[deletedEpisode.season_id].show_id].source_id
-          ]
-        return source.plugin_id === deletedSource.plugin_id
-      }
+      // Optimistically mark the watch as pending.
       context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
         if (!old) return old
-        const deletedWatch = old.watches.find((w) => w.id === deletedId)
-        if (!deletedWatch) return old
         return {
           ...old,
           watches: old.watches.map((watch) =>
-            matchesDeletedSibling(watch, deletedWatch, old)
+            watch.id === deletedId
               ? ({ ...watch, pending: true } as typeof watch)
               : watch,
           ),
@@ -74,25 +52,9 @@ const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
       onSuccess()
       context.client.setQueryData<WatchesListOutput>(["watches"], (old) => {
         if (!old) return old
-        const deletedWatch = old.watches.find((w) => w.id === deletedId)
-        if (!deletedWatch) return old
-        const deletedEpisode = old.episodes[deletedWatch.episode_id]
-        const deletedSource =
-          old.sources[
-            old.shows[old.seasons[deletedEpisode.season_id].show_id].source_id
-          ]
         return {
           ...old,
-          watches: old.watches.filter((watch) => {
-            if (watch.watch_date !== deletedWatch.watch_date) return true
-            const episode = old.episodes[watch.episode_id]
-            if (episode.key !== deletedEpisode.key) return true
-            const source =
-              old.sources[
-                old.shows[old.seasons[episode.season_id].show_id].source_id
-              ]
-            return source.plugin_id !== deletedSource.plugin_id
-          }),
+          watches: old.watches.filter((watch) => watch.id !== deletedId),
         }
       })
     },

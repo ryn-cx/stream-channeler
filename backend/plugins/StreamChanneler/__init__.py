@@ -56,7 +56,13 @@ class StreamChanneler(BasePlugin, register=True):
         return []
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         msg = "StreamChanneler does not support upserting shows"
         raise NotImplementedError(msg)
 

@@ -101,12 +101,24 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
         ).upsert_and_set_update_at(self.plugin, source)
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         if self._is_movie(show_key):
-            return self._upsert_movie(source, show_key)
-        return self._upsert_tv_show(source, show_key)
+            return self._upsert_movie(source, show_key, force=force)
+        return self._upsert_tv_show(source, show_key, force=force)
 
-    def _upsert_tv_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_tv_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
         show_data = self._title_video(show_key)
         data_timestamp = self.show_data_timestamp(show_key)
@@ -127,13 +139,24 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
         show_files = self._show_files(show_key)
         show = show.upsert_and_set_update_at(source, existing_show, show_files)
 
-        self._upsert_tv_seasons(show, show_key)
+        self._upsert_tv_seasons(show, show_key, force=force)
         return show
 
-    def _upsert_tv_seasons(self, show: Show, show_key: str) -> None:
+    def _upsert_tv_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         for sort_order, season_data in enumerate(self._ordered_seasons(show_key)):
             season_key = self._season_key(show_key, season_data.video_id)
-            if season_check := self._season_check(show, season_key, show_key):
+            if season_check := self._season_check(
+                show,
+                season_key,
+                show_key,
+                force=force,
+            ):
                 season = Season(
                     key=season_key,
                     name=season_data.title,
@@ -158,7 +181,12 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
             else:
                 season = season_check.record
 
-            self._upsert_tv_episodes(season, show_key, season_data.video_id)
+            self._upsert_tv_episodes(
+                season,
+                show_key,
+                season_data.video_id,
+                force=force,
+            )
 
         self.soft_delete_missing_seasons(show_key)
 
@@ -167,6 +195,8 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
         season: Season,
         show_key: str,
         season_id: int,
+        *,
+        force: bool = False,
     ) -> None:
         for sort_order, episode_data in enumerate(
             self._season_episodes(show_key, season_id),
@@ -176,6 +206,7 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                 episode_key,
                 season,
                 show_key,
+                force=force,
             )
             if not episode_check:
                 continue
@@ -189,6 +220,7 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                 image_url=episode_data.merch_still300.url,
                 duration=episode_data.runtime_sec,
                 sort_order=sort_order,
+                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )
@@ -207,7 +239,13 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
 
         self.soft_delete_missing_episodes(season.key)
 
-    def _upsert_movie(self, source: Source, show_key: str) -> Show:
+    def _upsert_movie(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
         movie_data = self._title_video(show_key)
         data_timestamp = self.show_data_timestamp(show_key)
@@ -223,7 +261,7 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
             source_id=source.id,
         ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
 
-        self._upsert_movie_season(show, show_key, movie_data)
+        self._upsert_movie_season(show, show_key, movie_data, force=force)
         return show
 
     def _upsert_movie_season(
@@ -231,9 +269,11 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
         show: Show,
         show_key: str,
         movie_data: netflix_models.Video1,
+        *,
+        force: bool = False,
     ) -> None:
         season_key = self._season_key(show_key, show_key)
-        if season_check := self._season_check(show, season_key, show_key):
+        if season_check := self._season_check(show, season_key, show_key, force=force):
             season_files = self._season_files(season_key, show_key)
             season = Season(
                 key=season_key,
@@ -247,7 +287,12 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
             season = season_check.record
 
         episode_key = show_key
-        if episode_check := self._episode_check(episode_key, season, show_key):
+        if episode_check := self._episode_check(
+            episode_key,
+            season,
+            show_key,
+            force=force,
+        ):
             episode_files = self._episode_files(episode_key, season.key, show_key)
             Episode(
                 key=episode_key,
@@ -256,6 +301,7 @@ class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                 image_url=movie_data.billboard_or_story_art960.url,
                 episode_number=0,
                 sort_order=0,
+                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)

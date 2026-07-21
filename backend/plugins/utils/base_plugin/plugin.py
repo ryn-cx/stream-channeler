@@ -151,19 +151,21 @@ class BasePlugin(
         self,
         show: Show,
         update_at: datetime | None = None,
+        *,
+        force: bool = False,
     ) -> None:
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        self._upsert_show(show.source, show.key)
+        self._upsert_show(show.source, show.key, force=force)
 
     @override
-    def update_show(self, show: Show) -> None:
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         logger.info("Updating show: {}", show.key)
         show = self._preload_show(
             show.key,
             source_key=show.source.key,
         ).one()
-        self._preload_and_upsert_show(show, show.update_at)
+        self._preload_and_upsert_show(show, show.update_at, force=force)
 
     @override
     def update_season(self, season: Season) -> None:
@@ -214,6 +216,8 @@ class BasePlugin(
         self,
         source: Source,
         show_key: str,
+        *,
+        force: bool = False,
     ) -> Show: ...
 
     def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.

@@ -1765,11 +1765,15 @@ export const EpisodeCreateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key'],
+    required: ['key', 'episode_identifier'],
     title: 'EpisodeCreate',
     description: 'Schema for creating an `Episode`.'
 } as const;
@@ -1941,6 +1945,10 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2023,7 +2031,7 @@ export const EpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -2195,6 +2203,10 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2207,7 +2219,7 @@ export const EpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id'],
+    required: ['key', 'episode_identifier', 'id', 'season_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
 } as const;
@@ -2385,6 +2397,17 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        episode_identifier: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier'
         }
     },
     additionalProperties: false,
@@ -2560,6 +2583,10 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Tmdb Id'
         },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2620,7 +2647,7 @@ export const EpisodeWithDetailsSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'channel_id'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'channel_id'],
     title: 'EpisodeWithDetails'
 } as const;
 
@@ -6237,14 +6264,13 @@ export const WatchItemSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        episode_id: {
+        episode_identifier: {
             type: 'string',
-            format: 'uuid',
-            title: 'Episode Id'
+            title: 'Episode Identifier'
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_identifier'],
     title: 'WatchItem'
 } as const;
 
@@ -6264,10 +6290,9 @@ export const WatchOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        episode_id: {
+        episode_identifier: {
             type: 'string',
-            format: 'uuid',
-            title: 'Episode Id'
+            title: 'Episode Identifier'
         },
         user_id: {
             type: 'string',
@@ -6276,7 +6301,7 @@ export const WatchOutputSchema = {
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id', 'user_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_identifier', 'user_id'],
     title: 'WatchOutput',
     description: 'Schema for returning a `Watch`.'
 } as const;
@@ -6312,9 +6337,6 @@ export const WatchesListOutputSchema = {
         episodes: {
             additionalProperties: {
                 '$ref': '#/components/schemas/EpisodeOutput'
-            },
-            propertyNames: {
-                format: 'uuid'
             },
             type: 'object',
             title: 'Episodes'
@@ -6577,6 +6599,10 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -6605,7 +6631,7 @@ export const WhitelistEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'filtered'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered'],
     title: 'WhitelistEpisodeOutput'
 } as const;
 

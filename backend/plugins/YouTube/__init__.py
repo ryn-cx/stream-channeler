@@ -158,8 +158,14 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         ).upsert_and_set_update_at(self.plugin, source)
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
-        if show_check := self._show_chek(source, show_key):
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        if show_check := self._show_check(source, show_key, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
             channel_item = get_first_item(channel_file.parsed().items)
             show_files = self._show_files(show_key)
@@ -178,24 +184,32 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         else:
             show = show_check.record
 
-        self._upsert_seasons(show, show_key)
+        self._upsert_seasons(show, show_key, force=force)
         return show
 
-    def _upsert_seasons(self, show: Show, show_key: str) -> None:
-        self._upsert_channel_uploads_season(show, show_key)
-        self._upsert_playlist_seasons(show, show_key)
-        self._upsert_album_seasons(show, show_key)
+    def _upsert_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
+        self._upsert_channel_uploads_season(show, show_key, force=force)
+        self._upsert_playlist_seasons(show, show_key, force=force)
+        self._upsert_album_seasons(show, show_key, force=force)
         self.soft_delete_missing_seasons(show_key)
 
-    def _upsert_season(
+    def _upsert_season(  # noqa: PLR0913
         self,
         show: Show,
         show_key: str,
         season_key: str,
         name: str,
         playlist: ChannelItem | PlaylistsItem,
+        *,
+        force: bool = False,
     ) -> None:
-        if season_check := self._season_check(show, season_key, show_key):
+        if season_check := self._season_check(show, season_key, show_key, force=force):
             season_files = self._season_files(season_key, show_key)
             season = Season(
                 key=season_key,
@@ -208,9 +222,15 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             ).upsert_and_set_update_at(show, season_check.record, season_files)
         else:
             season = season_check.record
-        self._upsert_episodes(season, show_key)
+        self._upsert_episodes(season, show_key, force=force)
 
-    def _upsert_channel_uploads_season(self, show: Show, show_key: str) -> None:
+    def _upsert_channel_uploads_season(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         channel_item = get_first_item(
             self.channel_by_channel_id_file(show_key).parsed().items,
         )
@@ -223,9 +243,16 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             season_key=uploads_key,
             name=f"Uploads from {show.name}",
             playlist=channel_item,
+            force=force,
         )
 
-    def _upsert_album_seasons(self, show: Show, show_key: str) -> None:
+    def _upsert_album_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         for season_key in self._album_season_keys(show_key):
             playlist = get_first_item(
                 self.playlist_info_file(season_key).parsed().items,
@@ -236,9 +263,16 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 season_key=season_key,
                 name=playlist.snippet.title,
                 playlist=playlist,
+                force=force,
             )
 
-    def _upsert_playlist_seasons(self, show: Show, show_key: str) -> None:
+    def _upsert_playlist_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         channel_playlists_file = self.channel_playlists_file(show_key)
         if not channel_playlists_file.database_record.content:
             return
@@ -256,9 +290,16 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                     season_key=season_key,
                     name=playlist.snippet.title,
                     playlist=playlist,
+                    force=force,
                 )
 
-    def _upsert_episodes(self, season: Season, show_key: str) -> None:
+    def _upsert_episodes(
+        self,
+        season: Season,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         seen: set[str] = set()
         for item in self.playlist_items_file(season.key).parsed().items:
             episode_key = item.content_details.video_id
@@ -270,6 +311,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 episode_key,
                 season,
                 show_key,
+                force=force,
             )
             if not episode_check:
                 continue

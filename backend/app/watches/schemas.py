@@ -34,7 +34,7 @@ class WatchOutput(BaseWatch):
     """Schema for returning a `Watch`."""
 
     id: uuid.UUID
-    episode_id: uuid.UUID
+    episode_identifier: str
     user_id: uuid.UUID
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
     # the value will always be present so they need to be overridden.
@@ -44,7 +44,7 @@ class WatchOutput(BaseWatch):
 
 class WatchItem(BaseWatch):
     id: uuid.UUID
-    episode_id: uuid.UUID
+    episode_identifier: str
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -58,7 +58,7 @@ class WatchItem(BaseWatch):
 # TODO: This includes a lot of unused data.
 class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
-    episodes: dict[uuid.UUID, EpisodeOutput] = Field()
+    episodes: dict[str, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
     shows: dict[uuid.UUID, ShowPublic] = Field()
     sources: dict[uuid.UUID, SourcePublic] = Field()

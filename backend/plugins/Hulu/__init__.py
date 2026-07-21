@@ -94,12 +94,24 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
         ).upsert_and_set_update_at(self.plugin, source)
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         if self._is_movie(show_key):
-            return self._upsert_movie(source, show_key)
-        return self._upsert_tv_show(source, show_key)
+            return self._upsert_movie(source, show_key, force=force)
+        return self._upsert_tv_show(source, show_key, force=force)
 
-    def _upsert_tv_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_tv_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         series_id = self._content_id(show_key)
         existing_show = Show.get_from_memory(self.session, source, show_key)
         model = self._series_model(series_id)
@@ -122,15 +134,26 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
         show_files = self._show_files(show_key)
         show = show.upsert_and_set_update_at(source, existing_show, show_files)
 
-        self._upsert_tv_seasons(show, show_key)
+        self._upsert_tv_seasons(show, show_key, force=force)
         self._set_weekly_updates_from_episodes(show)
         return show
 
-    def _upsert_tv_seasons(self, show: Show, show_key: str) -> None:
+    def _upsert_tv_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
         series_id = self._content_id(show_key)
         for sort_order, season_number in enumerate(self._season_numbers(series_id)):
             season_key = self._season_key(show_key, season_number)
-            if season_check := self._season_check(show, season_key, show_key):
+            if season_check := self._season_check(
+                show,
+                season_key,
+                show_key,
+                force=force,
+            ):
                 season = Season(
                     key=season_key,
                     name=self._season_name(series_id, season_number),
@@ -155,7 +178,7 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
             else:
                 season = season_check.record
 
-            self._upsert_tv_episodes(season, show_key, season_number)
+            self._upsert_tv_episodes(season, show_key, season_number, force=force)
 
         self.soft_delete_missing_seasons(show_key)
 
@@ -164,11 +187,18 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
         season: Season,
         show_key: str,
         season_number: int,
+        *,
+        force: bool = False,
     ) -> None:
         series_id = self._content_id(show_key)
         for sort_order, item in enumerate(self._season_items(series_id, season_number)):
             episode_key = str(item.id)
-            episode_check = self._episode_check(episode_key, season, show_key)
+            episode_check = self._episode_check(
+                episode_key,
+                season,
+                show_key,
+                force=force,
+            )
             if not episode_check:
                 continue
 
@@ -182,6 +212,7 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
                 duration=item.duration,
                 release_date=item.premiere_date,
                 sort_order=sort_order,
+                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )
@@ -200,7 +231,13 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
 
         self.soft_delete_missing_episodes(season.key)
 
-    def _upsert_movie(self, source: Source, show_key: str) -> Show:
+    def _upsert_movie(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         movie_id = self._content_id(show_key)
         existing_show = Show.get_from_memory(self.session, source, show_key)
         model = self._movie_model(movie_id)
@@ -217,7 +254,7 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
             source_id=source.id,
         ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
 
-        self._upsert_movie_season(show, show_key, model)
+        self._upsert_movie_season(show, show_key, model, force=force)
         return show
 
     def _upsert_movie_season(
@@ -225,10 +262,12 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
         show: Show,
         show_key: str,
         model: MoviesModel,
+        *,
+        force: bool = False,
     ) -> None:
         movie_id = self._content_id(show_key)
         season_key = self._season_key(show_key, 0)
-        if season_check := self._season_check(show, season_key, show_key):
+        if season_check := self._season_check(show, season_key, show_key, force=force):
             season_files = self._season_files(season_key, show_key)
             season = Season(
                 key=season_key,
@@ -241,7 +280,12 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
         else:
             season = season_check.record
 
-        if episode_check := self._episode_check(movie_id, season, show_key):
+        if episode_check := self._episode_check(
+            movie_id,
+            season,
+            show_key,
+            force=force,
+        ):
             episode_files = self._episode_files(movie_id, season.key, show_key)
             Episode(
                 key=movie_id,
@@ -252,6 +296,7 @@ class Hulu(FileMixin, URLHandlerPlugin[HuluURLHandler], register=True):
                 duration=model.details.entity.duration,
                 episode_number=0,
                 sort_order=0,
+                episode_identifier=f"{self.plugin_key()} {movie_id}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)

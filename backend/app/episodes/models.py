@@ -25,7 +25,6 @@ from app.users.models import User
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelEpisodeFilter
-    from app.watches.models import Watch
 
 
 class BaseEpisode(BaseMediaMixin):
@@ -41,7 +40,7 @@ class BaseEpisode(BaseMediaMixin):
     release_date: datetime | None = DateTimeField(default=None)
     air_date: datetime | None = DateTimeField(default=None)
     tmdb_id: int | None = Field(default=None)
-    episode_identifier: str | None = Field(default=None)
+    episode_identifier: str
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
@@ -82,7 +81,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         back_populates="episode",
         cascade_delete=True,
     )
-    watches: list[Watch] = Relationship(back_populates="episode", cascade_delete=True)
 
     @override
     def _root_record(self, session: Session) -> Plugin:

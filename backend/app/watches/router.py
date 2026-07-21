@@ -20,7 +20,6 @@ from app.watches.services import (
     delete_watches,
     get_installed_plugin,
     get_watched_episodes,
-    sync_episode_watches,
     update_watches,
 )
 
@@ -63,15 +62,6 @@ def update_watch(
 def delete_watch(session: SessionDep, watch: EditableWatch) -> Message:
     """Delete a watch and all sibling watches by its id."""
     return delete_watches(session, watch)
-
-
-@watches_router.post("/sync")
-def sync_watches(
-    session: SessionDep,
-    current_user: CurrentUser,
-) -> Message:
-    """Sync watches across episodes with the same key within the same plugin."""
-    return sync_episode_watches(session, current_user.id)
 
 
 # TODO: Add tests

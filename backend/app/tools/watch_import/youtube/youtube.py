@@ -75,13 +75,13 @@ def import_watches(session: Session, user: User) -> None:
     for episode in session.exec(statement):
         episodes_by_key[episode.key] = episode
 
-    # Load episode IDs that already have any watch record for this user
+    # Load episode identifiers that already have any watch record for this user
     existing_watched_episodes: set[str] = set()
-    watch_statement = select(Watch.episode_id).where(
+    watch_statement = select(Watch.episode_identifier).where(
         Watch.user_id == user.id,
     )
-    for episode_id in session.exec(watch_statement):
-        existing_watched_episodes.add(str(episode_id))
+    for episode_identifier in session.exec(watch_statement):
+        existing_watched_episodes.add(episode_identifier)
 
     entries = load_watch_history()
     added = 0
@@ -94,19 +94,19 @@ def import_watches(session: Session, user: User) -> None:
             skipped_not_found += 1
             continue
 
-        if str(episode.id) in existing_watched_episodes:
+        if episode.episode_identifier in existing_watched_episodes:
             skipped_already_watched += 1
             continue
 
         watch_date = dateutil_parser.parse(date_string, tzinfos=TZINFOS)
         episode_watch = Watch(
             user_id=user.id,
-            episode_id=episode.id,
+            episode_identifier=episode.episode_identifier,
             watch_date=watch_date,
             verified=False,
         )
         session.add(episode_watch)
-        existing_watched_episodes.add(str(episode.id))
+        existing_watched_episodes.add(episode.episode_identifier)
         added += 1
 
     session.commit()

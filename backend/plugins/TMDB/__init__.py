@@ -221,9 +221,7 @@ class TMDB(FileMixin, register=True):
                 episode.release_date = episode.release_date or movie_release
                 episode.air_date = episode.air_date or movie_release
                 episode.tmdb_id = episode.tmdb_id or movie.id
-                episode.episode_identifier = (
-                    episode.episode_identifier or f"TMDB {movie.id}"
-                )
+                episode.episode_identifier = f"TMDB {movie.id}"
             return episode
 
         if not (season_number and episode_number):
@@ -254,9 +252,7 @@ class TMDB(FileMixin, register=True):
             episode.release_date = episode.release_date or air
             episode.air_date = episode.air_date or air
             episode.tmdb_id = episode.tmdb_id or episode_detail.id
-            episode.episode_identifier = (
-                episode.episode_identifier or f"TMDB {episode_detail.id}"
-            )
+            episode.episode_identifier = f"TMDB {episode_detail.id}"
         return episode
 
     def _find_episode_by_name(
@@ -304,7 +300,13 @@ class TMDB(FileMixin, register=True):
         return r"(?!)"
 
     @override
-    def _upsert_show(self, source: Source, show_key: str) -> Show:
+    def _upsert_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         raise NotImplementedError(LOOKUP_ONLY_MESSAGE)
 
     @override
@@ -316,7 +318,7 @@ class TMDB(FileMixin, register=True):
         raise NotImplementedError(LOOKUP_ONLY_MESSAGE)
 
     @override
-    def update_show(self, show: Show) -> None:
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         raise NotImplementedError(LOOKUP_ONLY_MESSAGE)
 
     @override
