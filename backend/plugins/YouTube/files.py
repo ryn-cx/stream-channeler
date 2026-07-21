@@ -408,6 +408,14 @@ class FileMixin(BasePlugin, register=False):
         video_keys: list[str] = []
         for season_key in season_keys:
             playlist_items_file = self.playlist_items_file(season_key)
+            if not playlist_items_file.database_record.content:
+                msg = (
+                    f"PlaylistItems file for season {season_key!r} has empty content "
+                    f"(file key {playlist_items_file.file_key()!r}, extra "
+                    f"{playlist_items_file.database_record.extra!r}). The playlist was "
+                    f"likely not found when downloaded."
+                )
+                raise ValueError(msg)
             for item in playlist_items_file.parsed().items:
                 video_id = item.content_details.video_id
                 if self._video_is_valid(item.snippet.title) and video_id not in seen:
