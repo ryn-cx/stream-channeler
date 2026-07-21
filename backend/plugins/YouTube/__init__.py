@@ -8,6 +8,7 @@ from typing import Any, ClassVar, override
 from loguru import logger
 from not_yt_dlapi.channel.models import Item as ChannelItem
 from not_yt_dlapi.playlists.models import Item as PlaylistsItem
+from pydantic import TypeAdapter
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -327,8 +328,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                         video_item.id,
                         duration_timedelta,
                     )
-                else:
-                    duration = int(duration_timedelta.total_seconds())
+            duration = int(duration_timedelta.total_seconds())
 
             episode_files = self._episode_files(episode_key, season.key, show_key)
             Episode(
