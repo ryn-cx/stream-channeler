@@ -1,9 +1,10 @@
+# TODO: Validate
 import secrets
 import warnings
 from typing import Annotated, Any, Literal, Self
 
-from get_around import KEYRING_SERVICE
 import keyring
+from get_around import KEYRING_SERVICE
 from keyring.errors import NoKeyringError
 from pydantic import (
     AnyUrl,
@@ -126,12 +127,12 @@ class Settings(BaseSettings):
 
         return self
 
-    YOUTUBE_API_KEY: str
-    GET_AROUND_SERVER: str
-    CF_ACCESS_CLIENT_ID: str
-    CF_ACCESS_CLIENT_SECRET: str
-    PROXY: str
-    TMDB_API_READ_TOKEN: str
+    YOUTUBE_API_KEY: str = ""
+    GET_AROUND_SERVER: str = ""
+    CF_ACCESS_CLIENT_ID: str = ""
+    CF_ACCESS_CLIENT_SECRET: str = ""
+    PROXY: str = ""
+    TMDB_API_READ_TOKEN: str = ""
 
     # TODO: This function sucks
     @model_validator(mode="before")
