@@ -1,6 +1,7 @@
 .vscode/*
 !.vscode/extensions.json
 .env.test
+.env.local
 node_modules/
 /test-results/
 /playwright-report/
