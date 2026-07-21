@@ -166,6 +166,7 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
                 duration=video.duration,
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
+                episode_identifier=f"NHKWorld {item.id}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)
