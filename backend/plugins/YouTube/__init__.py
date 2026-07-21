@@ -321,12 +321,12 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             video_snippet = video_item.snippet
 
             duration = None
-            if duration_timedelta := video_item.content_details.duration:
-                logger.info(
-                    "String duration for video {}: {!r}",
-                    video_item.id,
-                    duration_timedelta,
-                )
+            duration_timedelta = video_item.content_details.duration:
+            logger.info(
+                "String duration for video {}: {!r}",
+                video_item.id,
+                duration_timedelta,
+            )
             duration = int(duration_timedelta.total_seconds())
 
             episode_files = self._episode_files(episode_key, season.key, show_key)
