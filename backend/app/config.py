@@ -2,8 +2,9 @@ import secrets
 import warnings
 from typing import Annotated, Any, Literal, Self
 
-import keyring
 from get_around import KEYRING_SERVICE
+import keyring
+from keyring.errors import NoKeyringError
 from pydantic import (
     AnyUrl,
     BeforeValidator,
@@ -144,7 +145,11 @@ class Settings(BaseSettings):
                 "TMDB_API_READ_TOKEN",
             ):
                 if name not in data:
-                    keyring_value = keyring.get_password(KEYRING_SERVICE, name)
+                    try:
+                        keyring_value = keyring.get_password(KEYRING_SERVICE, name)
+                    except NoKeyringError as error:
+                        message = f"Key missing from env: {name}."
+                        raise NoKeyringError(message) from error
                     if keyring_value:
                         data[name] = keyring_value
                 if name in data and data[name] == "changethis":
