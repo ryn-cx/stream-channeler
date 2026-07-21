@@ -15,6 +15,7 @@ load_models()
 
 
 def reimport_all_shows(session: Session) -> None:
+    plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
     shows = session.exec(
         Show.select_with_plugin()
         .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
@@ -26,13 +27,10 @@ def reimport_all_shows(session: Session) -> None:
     ).all()
 
     for show in shows:
-        if show.url is None:
-            continue
-        for plugin in plugins:
-            if plugin.is_valid_url_format(show.url) and plugin.implements("import_url"):
-                plugin_instance = plugin(session)
-                plugin_instance.import_url(show.url)
-                session.commit()
+        plugin_class = plugin_classes_by_key[show.source.plugin.key]
+        plugin_instance = plugin_class(session)
+        plugin_instance.update_show(show)
+        session.commit()
 
 
 if __name__ == "__main__":
