@@ -336,7 +336,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 duration=duration,
                 image_url=self._best_thumbnail_url(video_snippet.thumbnails),
                 sort_order=item.snippet.position,
-                episode_identifier=f"Youtube {video_item.id}",
+                episode_identifier=f"{self.plugin_key()} {video_item.id}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)
