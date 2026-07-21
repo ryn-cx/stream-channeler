@@ -336,6 +336,7 @@ export type EpisodeCreate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -356,6 +357,7 @@ export type EpisodeListOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
     id: string;
     season_id: string;
     username: (string | null);
@@ -386,6 +388,7 @@ export type EpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
     id: string;
     season_id: string;
 };
@@ -418,6 +421,7 @@ export type EpisodeUpdate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
 };
 
 export type EpisodeWithDetails = {
@@ -435,6 +439,7 @@ export type EpisodeWithDetails = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
     id: string;
     season_id: string;
     watch_date?: (string | null);
@@ -613,6 +618,10 @@ export type PluginSearchInformation = {
 
 /**
  * Search result from a plugin.
+ *
+ * Every plugin searches a single source (its own platform), so a result maps
+ * directly to an importable URL. TMDB is the only multi-source search and has
+ * its own dedicated endpoints instead of implementing this.
  */
 export type PluginSearchResult = {
     title: string;
@@ -620,25 +629,17 @@ export type PluginSearchResult = {
     year?: (number | null);
     image_url?: (string | null);
     media_type?: (string | null);
-    sources?: Array<PluginSearchResultSource>;
 };
 
 /**
  * Results from a search query.
  */
 export type PluginSearchResults = {
-    has_source_selection: boolean;
     results: Array<PluginSearchResult>;
 };
 
-/**
- * Source information for a search result.
- *
- * Used for plugins that support multiple sources.
- */
-export type PluginSearchResultSource = {
-    name: string;
-    icon_url?: (string | null);
+export type PluginSearchUrl = {
+    url?: (string | null);
 };
 
 /**
@@ -697,6 +698,7 @@ export type SeasonCreate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -713,6 +715,7 @@ export type SeasonListOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
+    tmdb_id?: (number | null);
     show_id: string;
     id: string;
     username: (string | null);
@@ -737,6 +740,7 @@ export type SeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
+    tmdb_id?: (number | null);
     show_id: string;
     id: string;
 };
@@ -765,6 +769,7 @@ export type SeasonUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -782,6 +787,7 @@ export type ShowCreate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -799,6 +805,7 @@ export type ShowListPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
+    tmdb_id?: (number | null);
     source_id: string;
     id: string;
     username: (string | null);
@@ -822,6 +829,7 @@ export type ShowPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
+    tmdb_id?: (number | null);
     source_id: string;
     id: string;
 };
@@ -851,6 +859,7 @@ export type ShowUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
+    tmdb_id?: (number | null);
 };
 
 export type SortKeyInput = {
@@ -954,6 +963,50 @@ export type SourceUpdate = {
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
+};
+
+/**
+ * Rich detail for a single movie or TV show plus its US watch providers.
+ */
+export type TMDBMediaInfo = {
+    title?: (string | null);
+    tagline?: (string | null);
+    overview?: (string | null);
+    poster_url?: (string | null);
+    backdrop_url?: (string | null);
+    year?: (number | null);
+    end_year?: (number | null);
+    status?: (string | null);
+    rating?: (number | null);
+    vote_count?: (number | null);
+    number_of_seasons?: (number | null);
+    number_of_episodes?: (number | null);
+    runtime?: (number | null);
+    genres?: Array<(string)>;
+    providers?: Array<TMDBWatchProviderItem>;
+};
+
+/**
+ * A single TMDB multi-source search result.
+ */
+export type TMDBSearchResultItem = {
+    tmdb_id: number;
+    media_type: 'movie' | 'tv';
+    title: string;
+    year?: (number | null);
+    image_url?: (string | null);
+};
+
+export type media_type = 'movie' | 'tv';
+
+/**
+ * A place to watch a title, marked with the plugin that supports it.
+ */
+export type TMDBWatchProviderItem = {
+    name: string;
+    icon_url?: (string | null);
+    plugin_key?: (string | null);
+    search_url?: (string | null);
 };
 
 export type Token = {
@@ -1121,6 +1174,7 @@ export type WhitelistEpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
+    tmdb_id?: (number | null);
     id: string;
     season_id: string;
     filtered: boolean;
@@ -1138,6 +1192,7 @@ export type WhitelistSeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
+    tmdb_id?: (number | null);
     show_id: string;
     id: string;
     filtered: boolean;
@@ -1161,6 +1216,7 @@ export type WhitelistShowOutput = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
+    tmdb_id?: (number | null);
     source_id: string;
     id: string;
     is_whitelist: boolean;
@@ -1638,12 +1694,32 @@ export type PluginsMatchUrlResponse = (PluginURLMatch);
 
 export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
 
+export type PluginsSearchUrlData = {
+    pluginKey: string;
+    query: string;
+};
+
+export type PluginsSearchUrlResponse = (PluginSearchUrl);
+
 export type PluginsSearchPluginData = {
     pluginKey: string;
     query: string;
 };
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
+
+export type PluginsTmdbSearchData = {
+    query: string;
+};
+
+export type PluginsTmdbSearchResponse = (Array<TMDBSearchResultItem>);
+
+export type PluginsTmdbMediaInfoData = {
+    mediaType: 'movie' | 'tv';
+    tmdbId: number;
+};
+
+export type PluginsTmdbMediaInfoResponse = ((TMDBMediaInfo | null));
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

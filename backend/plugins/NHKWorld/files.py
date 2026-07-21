@@ -7,7 +7,6 @@ from naphki import Naphki
 from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes.models import Item, VideoEpisodesModel
 from naphki.video_programs.models import VideoProgramsModel
-from sqlmodel import col, select
 
 from app.files.models import File
 from app.utils import tz_datetime
@@ -118,24 +117,18 @@ class FileMixin(BasePlugin, register=False):
             lambda: NewVideoEpisodes(self.session, self.plugin, str_datetime),
         )
 
-    # TODO: Consider making this a generic function
-    def latest_new_video_episodes_file(self) -> NewVideoEpisodes:
-        """Return the latest new video episodes file, downloading one if none exist."""
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{NewVideoEpisodes.__name__}/"),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        if file := self.session.exec(statement).first():
+    def latest_new_video_episodes_file(self) -> NewVideoEpisodes | None:
+        """Return the latest new video episodes file, or None if none exists."""
+        if file := self.preload_latest_file(NewVideoEpisodes):
             return self.new_video_episodes_file(file)
-        feed = self.new_video_episodes_file(tz_datetime.now())
-        feed.download_if_outdated()
-        return feed
+        return None
 
-    # TODO: Consider if a _source_files function should exist.
+    @override
+    def _source_files(self) -> Sequence[NewVideoEpisodes]:
+        if file := self.latest_new_video_episodes_file():
+            return [file]
+        return []
+
     @override
     def _show_files(self, show_key: str) -> Sequence[VideoProgram]:
         # Required to detect changes to the show.

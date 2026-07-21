@@ -1,17 +1,21 @@
 # TODO: Validate
+from __future__ import annotations
+
 import re
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any, override
 
-from sqlalchemy.orm import joinedload
-from sqlmodel import select
-
-from app.episodes.models import Episode
-from app.plugins.models import Plugin as PluginModel
-from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.StreamChanneler.handlers import (
+    EpisodeURLHandler,
+    PluginURLHandler,
+    SeasonURLHandler,
+    ShowURLHandler,
+    SourceURLHandler,
+    StreamChannelerURLHandler,
+)
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
@@ -74,115 +78,20 @@ class StreamChanneler(BasePlugin, register=True):
         )
 
     @override
-    def _parse_url(self, url: str) -> dict[str, str]:
+    def import_url(self, url: str) -> list[URLImportResult]:
+        return self._get_url_handler(url).import_results()
+
+    def _get_url_handler(self, url: str) -> StreamChannelerURLHandler:
         match = re.match(self._url_regex(), url)
         if not match:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)
-        return {
-            "media_type": match.group("media_type"),
-            "media_id": match.group("media_id"),
+        handlers: dict[str, type[StreamChannelerURLHandler]] = {
+            "plugin": PluginURLHandler,
+            "source": SourceURLHandler,
+            "show": ShowURLHandler,
+            "season": SeasonURLHandler,
+            "episode": EpisodeURLHandler,
         }
-
-    @override
-    def import_url(self, url: str) -> list[URLImportResult]:
-        parsed = self._parse_url(url)
-        media_type = parsed["media_type"]
-        media_id = uuid.UUID(parsed["media_id"])
-
-        handlers: dict[str, Callable[[uuid.UUID, str], list[URLImportResult]]] = {
-            "show": self._import_show,
-            "season": self._import_season,
-            "episode": self._import_episode,
-            "source": self._import_source,
-            "plugin": self._import_plugin,
-        }
-        return handlers[media_type](media_id, url)
-
-    def _import_plugin(
-        self,
-        plugin_id: uuid.UUID,
-        url: str,
-    ) -> list[URLImportResult]:
-        plugin_entity = self.session.exec(
-            select(PluginModel)
-            .where(PluginModel.id == plugin_id)
-            .options(joinedload(PluginModel.sources).joinedload(Source.shows)),  # type: ignore[arg-type]
-        ).first()
-        if not plugin_entity:
-            msg = f"Plugin not found: {url}"
-            raise InvalidURLError(msg)
-        return [
-            URLImportResult(show=show, is_whitelist=False)
-            for source in plugin_entity.sources
-            for show in source.shows
-        ]
-
-    def _import_source(
-        self,
-        source_id: uuid.UUID,
-        url: str,
-    ) -> list[URLImportResult]:
-        source = self.session.exec(
-            select(Source)
-            .where(Source.id == source_id)
-            .options(
-                joinedload(Source.shows),  # type: ignore[arg-type]
-            ),
-        ).first()
-        if not source:
-            msg = f"Source not found: {url}"
-            raise InvalidURLError(msg)
-        return [URLImportResult(show=show, is_whitelist=False) for show in source.shows]
-
-    def _import_show(
-        self,
-        show_id: uuid.UUID,
-        url: str,
-    ) -> list[URLImportResult]:
-        show = (
-            self.session.exec(select(Show).where(Show.id == show_id)).unique().first()
-        )
-
-        if not show:
-            msg = f"Show not found: {url}"
-            raise InvalidURLError(msg)
-        return [URLImportResult(show=show, is_whitelist=False)]
-
-    def _import_season(
-        self,
-        season_id: uuid.UUID,
-        url: str,
-    ) -> list[URLImportResult]:
-        season = self.session.exec(
-            select(Season)
-            .where(Season.id == season_id)
-            .options(joinedload(Season.show)),  # type: ignore[arg-type]
-        ).first()
-        if not season:
-            msg = f"Season not found: {url}"
-            raise InvalidURLError(msg)
-        return [
-            URLImportResult(show=season.show, seasons=[season], is_whitelist=True),
-        ]
-
-    def _import_episode(
-        self,
-        episode_id: uuid.UUID,
-        url: str,
-    ) -> list[URLImportResult]:
-        episode = self.session.exec(
-            select(Episode)
-            .where(Episode.id == episode_id)
-            .options(joinedload(Episode.season).joinedload(Season.show)),  # type: ignore[arg-type]
-        ).first()
-        if not episode:
-            msg = f"Episode not found: {url}"
-            raise InvalidURLError(msg)
-        return [
-            URLImportResult(
-                show=episode.season.show,
-                episodes=[episode],
-                is_whitelist=True,
-            ),
-        ]
+        handler_class = handlers[match.group("media_type")]
+        return handler_class(self, url, uuid.UUID(match.group("media_id")))

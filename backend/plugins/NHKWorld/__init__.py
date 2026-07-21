@@ -1,7 +1,9 @@
-import re
+# TODO: Validate
+from __future__ import annotations
+
 from collections.abc import Sequence
 from datetime import timedelta
-from typing import override
+from typing import ClassVar, override
 
 from loguru import logger
 from naphki.video_episodes import models as video_episodes_models
@@ -13,16 +15,19 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
+from plugins.NHKWorld.handlers import NHKWorldURLHandler, ShowURLHandler
 from plugins.utils.abstract_plugin import (
-    InvalidURLError,
     PluginSearchResult,
     PluginSearchResults,
-    URLImportResult,
 )
+from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
-class NHKWorld(FileMixin, register=True):
+class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
     _VERSION = "0.0.1"
+
+    # TODO: Add support for single episodes
+    _URL_HANDLERS: ClassVar[tuple[type[NHKWorldURLHandler], ...]] = (ShowURLHandler,)
 
     @classmethod
     def import_url_instructions(cls) -> str:
@@ -32,37 +37,11 @@ class NHKWorld(FileMixin, register=True):
         )
 
     @override
-    def import_url(self, url: str) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
-        self._validate_url(show_key, url)
-        show = self._import_show(show_key)
-        return [URLImportResult(show=show, is_whitelist=False)]
-
-    @override
-    def _parse_url(self, url: str) -> str:
-        # TODO: Add support for single episodes
-        if match := re.match(self._url_regex(), url):
-            return match.group("show_key")
-
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    def _validate_url(self, show_key: str, url: str) -> None:
-        show_file = self.video_program_file(show_key)
-        # TODO: Will an error be raised naturally so this is no longer needed?
-        self.raise_if_invalid_file(show_file, url)
-
-    def _import_show(self, show_key: str) -> Show:
-        if show := self._preload_show(show_key).one_or_none():
-            return show
-
-        _cache = self._download_show_files_and_children(show_key)
-        return self._upsert_show(self.source, show_key=show_key)
-
-    @override
     def update_source(self, source: Source) -> None:
-        latest_feed_file = self.latest_new_video_episodes_file()
-        new_feed_file = self.new_video_episodes_file(latest_feed_file.data_timestamp)
+        if source.data_timestamp is None:
+            msg = "Cannot update source without a data timestamp."
+            raise ValueError(msg)
+        new_feed_file = self.new_video_episodes_file(source.data_timestamp)
         new_feed_file.download_if_outdated(source.update_at)
         self._process_new_episodes_files(source)
         self._upsert_source()
@@ -98,19 +77,6 @@ class NHKWorld(FileMixin, register=True):
     def _domain(cls) -> str:
         return "www3.nhk.or.jp"
 
-    @classmethod
-    @override
-    def _url_regex(cls) -> str:
-        # Example URLs:
-        #   https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
-        return (
-            cls._domain_regex()
-            + r"\/nhkworld\/en\/shows\/"
-            # Need to differentiate show URLs and episode URLs
-            # Episode URL: https://www3.nhk.or.jp/nhkworld/en/shows/5001461/
-            + r"(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)\/?(?:$|[?#])"
-        )
-
     def _get_image_url(
         self,
         images: Sequence[
@@ -123,7 +89,10 @@ class NHKWorld(FileMixin, register=True):
         return self.build_url(largest.url)
 
     def _upsert_source(self) -> Source:
-        data_timestamp = self.latest_new_video_episodes_file().data_timestamp
+        if not (latest_feed_file := self.latest_new_video_episodes_file()):
+            latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
+            latest_feed_file.download_if_outdated()
+        data_timestamp = latest_feed_file.data_timestamp
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
@@ -133,7 +102,7 @@ class NHKWorld(FileMixin, register=True):
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
-        ).upsert(self.plugin, source)
+        ).upsert_and_set_update_at(self.plugin, source, self._source_files())
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
@@ -148,7 +117,7 @@ class NHKWorld(FileMixin, register=True):
             media_type="TV Show",
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
-        ).upsert(source, existing_show)
+        ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
 
         self._upsert_season(show, show_key)
 
@@ -156,13 +125,14 @@ class NHKWorld(FileMixin, register=True):
 
     def _upsert_season(self, show: Show, show_key: str) -> None:
         if season_check := self._season_check(show, show_key, show_key):
+            season_files = self._season_files(show_key, show_key)
             season = Season(
                 key=show_key,
                 sort_order=0,
                 url=show.url,
                 data_timestamp=season_check.data_timestamp,
                 show_id=show.id,
-            ).upsert(show, season_check.record)
+            ).upsert_and_set_update_at(show, season_check.record, season_files)
         else:
             season = season_check.record
 
@@ -184,6 +154,7 @@ class NHKWorld(FileMixin, register=True):
                 continue
 
             video = item.video
+            episode_files = self._episode_files(item.id, season.key, show_key)
             Episode(
                 key=item.id,
                 name=item.title,
@@ -197,7 +168,7 @@ class NHKWorld(FileMixin, register=True):
                 episode_number=sort_order + 1,
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
-            ).upsert(season, episode_check.record)
+            ).upsert_and_set_update_at(season, episode_check.record, episode_files)
 
         self.soft_delete_missing_episodes(season.key)
 
@@ -216,4 +187,4 @@ class NHKWorld(FileMixin, register=True):
             )
             for hit in parsed.hits.hits
         ]
-        return PluginSearchResults(has_source_selection=False, results=results)
+        return PluginSearchResults(results=results)

@@ -1,8 +1,9 @@
 # TODO: Validate
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, override
+from typing import Any, ClassVar, cast, override
 
 from loguru import logger
 from sqlmodel import Session
@@ -16,11 +17,15 @@ from app.sources.models import Source
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    InvalidURLError,
+    URLImportResult,
+)
 from plugins.utils.base_plugin.check import CheckMixin
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
-from plugins.utils.base_plugin.url import URLMixin
+from plugins.utils.base_plugin.url import URLHandler, URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 
 
@@ -72,6 +77,8 @@ class BasePlugin(
 
     def initialize_plugin(self) -> None:
         """Create the `Plugin` record(s) and set `self.plugin`."""
+        if hasattr(self, "plugin") and self.plugin:
+            return
         plugin_user = get_or_create_plugin_user(session=self.session)
         if existing_plugin := Plugin.get(self.session, plugin_user, self.plugin_key()):
             self.plugin = existing_plugin
@@ -80,6 +87,9 @@ class BasePlugin(
 
     def initialize_source(self) -> None:
         """Create the `Source` record(s) and set `self.source`."""
+        if hasattr(self, "source") and self.source:
+            return
+
         if existing_source := Source.get(self.session, self.plugin, self.plugin_key()):
             self.source = existing_source
         else:
@@ -98,7 +108,7 @@ class BasePlugin(
             visibility=Visibility.unlisted,
             anonymous=False,
             user_id=plugin_user.id,
-        ).upsert(plugin_user, existing_plugin)
+        ).upsert_and_set_update_at(plugin_user, existing_plugin)
 
     @staticmethod
     def _existing_data_timestamp_or_now(record: BaseMediaMixin | None) -> datetime:
@@ -192,6 +202,13 @@ class BasePlugin(
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
         episode.update_at = tz_datetime.max()
 
+    def _import_show(self, show_key: str) -> Show:
+        if show := self._preload_show(show_key).one_or_none():
+            return show
+
+        _cache = self._download_show_files_and_children(show_key)
+        return self._upsert_show(self.source, show_key)
+
     @abstractmethod
     def _upsert_show(
         self,
@@ -261,3 +278,32 @@ class BasePlugin(
         if not file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)
+
+
+class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=False):
+    _URL_HANDLERS: ClassVar[tuple[type[URLHandler[Any]], ...]]
+
+    def _get_url_handler(self, url: str) -> HandlerT:
+        domain_regex = self._domain_regex()
+        for handler_class in self._URL_HANDLERS:
+            if match := re.match(handler_class.url_regex(domain_regex), url):
+                return cast("HandlerT", handler_class(self, url, match.group(1)))  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    @classmethod
+    @override
+    def _url_regex(cls) -> str:
+        domain_regex = cls._domain_regex()
+        alternatives = "|".join(
+            handler_class.url_regex(domain_regex) for handler_class in cls._URL_HANDLERS
+        )
+        return f"(?:{alternatives})"
+
+    @override
+    def import_url(self, url: str) -> list[URLImportResult]:
+        handler = self._get_url_handler(url)
+        handler.validate_url()
+        show = self._import_show(handler.show_key)
+        return handler.import_results(show)

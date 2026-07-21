@@ -25,12 +25,23 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import (
     init_db,
     savepoint_session,
     test_engine,
 )
 from tests.plugins.plugin_validator.serialization import SerializationMixin
+
+
+def _plugin_class(plugin_key: str) -> type[BasePlugin]:
+    """Return the registered plugin class for a plugin key."""
+    import_plugins()
+    for plugin_class in plugins:
+        if plugin_class.plugin_key() == plugin_key:
+            return plugin_class  # type: ignore[return-value]
+    msg = f"No plugin registered for key {plugin_key!r}"
+    raise ValueError(msg)
 
 
 class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
@@ -144,13 +155,19 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         )
 
     def _export_database_files(self, session: Session) -> None:
-        """Export all files from the database to disk."""
-        plugin = self.select_plugin_with_children(session)
+        """Export every plugin's files to disk, grouped into per-plugin folders.
+
+        A scraper can download files owned by another plugin (e.g. the TMDB
+        metadata files used as a fallback), so all files are exported, each under
+        its own plugin's folder, rather than only the plugin under test's files.
+        """
         all_file_dicts: list[dict[str, Any]] = []
-        for file in plugin.files:
+        statement = select(File, Plugin.key).join(Plugin)
+        for file, plugin_key in session.exec(statement).all():
             file_dict = file.model_dump(exclude={"plugin_id"})
+            file_dict["plugin_key"] = plugin_key
             all_file_dicts.append(file_dict)
-            self._export_database_file(file)
+            self._export_database_file(file, plugin_key)
 
         combined_path = self.combined_files_path()
         combined_path.parent.mkdir(parents=True, exist_ok=True)
@@ -159,27 +176,25 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
-    def _export_database_file(self, file: File) -> None:
-        """Export a single file from the database to disk."""
+    def _export_database_file(self, file: File, plugin_key: str) -> None:
+        """Export a single file from the database to its owning plugin's folder."""
         # Make the file names NTFS compatible.
         file_id = file.key.replace(":", " - ")
+        plugin_directory = self.files_directory_path() / plugin_key
 
         # Export the full file (metadata + content) as JSON for importing.
-        metadata_path = self.files_directory_path() / f"{file_id}.metadata.json"
+        metadata = file.model_dump(exclude={"plugin_id"})
+        metadata["plugin_key"] = plugin_key
+        metadata_path = plugin_directory / f"{file_id}.metadata.json"
         if not metadata_path.exists():
             metadata_path.parent.mkdir(parents=True, exist_ok=True)
             metadata_path.write_text(
-                json.dumps(
-                    file.model_dump(exclude={"plugin_id"}),
-                    default=str,
-                    indent=2,
-                    sort_keys=True,
-                ),
+                json.dumps(metadata, default=str, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
 
         # Also export the raw content file for easy inspection.
-        content_path = self.files_directory_path() / file_id
+        content_path = plugin_directory / file_id
         content_path.parent.mkdir(parents=True, exist_ok=True)
         file_content = file.content
         if content_path.suffix == ".json":
@@ -218,48 +233,74 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             return None
         return max(search_timestamps) + timedelta(seconds=1)
 
+    def _load_exported_files(self) -> list[dict[str, Any]]:
+        """Load the exported file records, preferring the combined file."""
+        if self.combined_files_path().exists():
+            combined_content = self.combined_files_path().read_text(encoding="utf-8")
+            return json.loads(combined_content)
+        return [
+            json.loads(file_path.read_text(encoding="utf-8"))
+            for file_path in self.files_directory_path().rglob("*.metadata.json")
+        ]
+
     def _import_files(self, session: Session) -> None:
-        """Import all exported files into the database."""
+        """Import all exported files into the database, keyed to their own plugin."""
         logger.info(f"Importing files for {type(self).__name__}")
+
+        all_files = self._load_exported_files()
+        plugin_user = get_or_create_plugin_user(session=session)
 
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
         def no_operation(_plugin: BasePlugin) -> None:
             """No operation function."""
 
-        initialize_source = self.plugin_class.initialize_source
-        self.plugin_class.initialize_source = no_operation  # type: ignore[assignment]
-        plugin = self.plugin_class(session)
+        # A file can belong to a different plugin than the one under test (e.g. TMDB
+        # fallback files), so create a record for each owning plugin. Sources are
+        # only initialized for the plugin under test, at the end.
+        plugin_keys = {
+            file_data.get("plugin_key", self.plugin_class.plugin_key())
+            for file_data in all_files
+        }
+        plugin_keys.add(self.plugin_class.plugin_key())
 
-        plugin_user = get_or_create_plugin_user(session=session)
-        plugin_db_record = Plugin.get_one(
-            session,
-            plugin_user,
-            self.plugin_class.plugin_key(),
-        )
+        plugin_records: dict[str, Plugin] = {}
+        plugin_under_test: BasePlugin | None = None
+        for plugin_key in plugin_keys:
+            plugin_class = _plugin_class(plugin_key)
+            initialize_source = plugin_class.initialize_source
+            plugin_class.initialize_source = no_operation  # type: ignore[assignment]
+            try:
+                plugin_instance = plugin_class(session)
+            finally:
+                plugin_class.initialize_source = initialize_source  # type: ignore[method-assign]
+            if plugin_key == self.plugin_class.plugin_key():
+                plugin_under_test = plugin_instance
+            plugin_records[plugin_key] = Plugin.get_one(
+                session,
+                plugin_user,
+                plugin_key,
+            )
 
-        if self.combined_files_path().exists():
-            combined_content = self.combined_files_path().read_text(encoding="utf-8")
-            all_files: list[dict[str, Any]] = json.loads(combined_content)
-        else:
-            all_files = []
-            for file_path in self.files_directory_path().rglob("*.metadata.json"):
-                file_content = file_path.read_text(encoding="utf-8")
-                all_files.append(json.loads(file_content))
-
-        existing_keys = {file.key for file in plugin_db_record.files}
+        existing_keys = {
+            plugin_key: {file.key for file in record.files}
+            for plugin_key, record in plugin_records.items()
+        }
         for file_data in all_files:
-            if file_data["key"] not in existing_keys:
-                plugin_db_record.files.append(File(**file_data))
+            plugin_key = file_data.pop("plugin_key", self.plugin_class.plugin_key())
+            record = plugin_records[plugin_key]
+            if file_data["key"] not in existing_keys[plugin_key]:
+                record.files.append(File(**file_data))
+                existing_keys[plugin_key].add(file_data["key"])
 
         # Files imported from JSON have raw Python types. Expiring forces SQLAlchemy to
         # re-read from the DB with proper type coercion. This is required to validate
         # datetime values.
         session.expire_all()
 
-        # Files are imported so now initialize_source can be run.
-        self.plugin_class.initialize_source = initialize_source  # type: ignore[method-assign]
-        plugin.initialize_source()
+        # Files are imported so now the plugin under test's source can be run.
+        assert plugin_under_test is not None
+        plugin_under_test.initialize_source()
 
         session.commit()  # Set the rollback point.
 

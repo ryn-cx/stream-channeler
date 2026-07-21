@@ -30,6 +30,7 @@ class BaseShow(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     icon: str | None = Field(default=None, max_length=32)
+    tmdb_id: int | None = Field(default=None)
 
 
 if TYPE_CHECKING:

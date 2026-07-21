@@ -34,6 +34,7 @@ class BaseSeason(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
+    tmdb_id: int | None = Field(default=None)
 
 
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):

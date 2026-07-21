@@ -1,7 +1,9 @@
 # TODO: Validate
-import re
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from typing import ClassVar, override
+from urllib.parse import quote_plus
 
 from meshfilm.lodp_title_and_plans_page import models as netflix_models
 
@@ -11,50 +13,74 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Netflix.files import FileMixin
-from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from plugins.Netflix.handlers import NetflixURLHandler, TitleURLHandler
+from plugins.utils.abstract_plugin import (
+    PluginSearchResult,
+    PluginSearchResults,
+)
+from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+
+_SEARCH_MAX_AGE = timedelta(days=30)
 
 
-class Netflix(FileMixin, register=True):
+class Netflix(FileMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
     _VERSION = "0.0.1"
+    TMDB_PROVIDER_NAMES = ("Netflix", "Netflix Standard with Ads")
+
+    _URL_HANDLERS: ClassVar[tuple[type[NetflixURLHandler], ...]] = (TitleURLHandler,)
+
+    # Netflix tags each search result with the media type of its title.
+    _SEARCH_MEDIA_TYPES: ClassVar[dict[str, str]] = {
+        "Show": "TV Show",
+        "Movie": "Movie",
+    }
+
+    @classmethod
+    @override
+    def search_url(cls, query: str) -> str:
+        return f"https://www.netflix.com/search?q={quote_plus(query)}"
+
+    @override
+    def search(self, query: str) -> PluginSearchResults:
+        """Search Netflix's movies and TV shows.
+
+        Netflix returns movies and shows intermixed. Suggestion entities
+        (collections, autocomplete) carry no title and are skipped.
+        """
+        search_file = self.search_file(query)
+        search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
+
+        results: list[PluginSearchResult] = []
+        for section in search_file.parsed().data.page.sections.edges:
+            for entity in section.node.entities.edges:
+                unified_entity = entity.node.unified_entity
+                if unified_entity is None:
+                    continue
+                media_type = self._SEARCH_MEDIA_TYPES.get(
+                    unified_entity.field__typename,
+                )
+                if media_type is None:
+                    continue
+                title = entity.node.display_string
+                artwork = entity.node.contextual_artwork
+                results.append(
+                    PluginSearchResult(
+                        title=title,
+                        url=self._show_url(str(unified_entity.video_id)),
+                        image_url=artwork.artwork.url if artwork else None,
+                        media_type=media_type,
+                    ),
+                )
+        return PluginSearchResults(results=results)
 
     @classmethod
     def import_url_instructions(cls) -> str:
         return "> [!TIP/Title]\n> `https://www.netflix.com/title/80240027`\n\n"
 
-    @override
-    def import_url(self, url: str) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
-        self._validate_url(show_key, url)
-        show = self._import_show(show_key)
-        return [URLImportResult(show=show, is_whitelist=False)]
-
-    @override
-    def _parse_url(self, url: str) -> str:
-        if match := re.match(self._url_regex(), url):
-            return match.group("title_key")
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    def _validate_url(self, show_key: str, url: str) -> None:
-        self.raise_if_invalid_file(self.title_file(show_key), url)
-
-    def _import_show(self, show_key: str) -> Show:
-        if show := self._preload_show(show_key).one_or_none():
-            return show
-
-        _cache = self._download_show_files_and_children(show_key)
-        return self._upsert_show(self.source, show_key)
-
     @classmethod
     @override
     def _domain(cls) -> str:
         return "netflix.com"
-
-    @classmethod
-    @override
-    def _url_regex(cls) -> str:
-        # Example URL: https://www.netflix.com/title/80240027
-        return cls._domain_regex() + r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
     @classmethod
     def _show_url(cls, show_key: str) -> str:
@@ -72,7 +98,7 @@ class Netflix(FileMixin, register=True):
             favicon_url="https://www.netflix.com/favicon.ico",
             data_timestamp=tz_datetime.now(),
             plugin_id=self.plugin.id,
-        ).upsert(self.plugin, source)
+        ).upsert_and_set_update_at(self.plugin, source)
 
     @override
     def _upsert_show(self, source: Source, show_key: str) -> Show:
@@ -84,18 +110,22 @@ class Netflix(FileMixin, register=True):
         existing_show = Show.get_from_memory(self.session, source, show_key)
         show_data = self._title_video(show_key)
         data_timestamp = self.show_data_timestamp(show_key)
+        tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
 
         show = Show(
             key=show_key,
             name=show_data.title,
             description=show_data.short_synopsis,
+            media_type="TV Show",
             url=self._show_url(show_key),
             image_url=show_data.billboard_or_story_art960.url,
-            media_type="TV Show",
             data_timestamp=data_timestamp,
             update_at=self._next_update_at(show_key, data_timestamp),
             source_id=source.id,
-        ).upsert(source, existing_show)
+        )
+        show = self.tmdb.tmdb_merge_show(show, tmdb_id)
+        show_files = self._show_files(show_key)
+        show = show.upsert_and_set_update_at(source, existing_show, show_files)
 
         self._upsert_tv_seasons(show, show_key)
         return show
@@ -111,12 +141,20 @@ class Netflix(FileMixin, register=True):
                     sort_order=sort_order,
                     url=self._show_url(show_key),
                     data_timestamp=season_check.data_timestamp,
-                    update_at=self._next_update_at(
-                        show_key,
-                        season_check.data_timestamp,
-                    ),
                     show_id=show.id,
-                ).upsert(show, season_check.record)
+                )
+                season = self.tmdb.tmdb_merge_season(
+                    season,
+                    show.tmdb_id,
+                    sort_order + 1,
+                    "tv",
+                )
+                season_files = self._season_files(season_key, show_key)
+                season = season.upsert_and_set_update_at(
+                    show,
+                    season_check.record,
+                    season_files,
+                )
             else:
                 season = season_check.record
 
@@ -142,19 +180,30 @@ class Netflix(FileMixin, register=True):
             if not episode_check:
                 continue
 
-            Episode(
+            episode = Episode(
                 key=episode_key,
                 name=episode_data.title,
-                description=episode_data.short_synopsis,
-                url=self._episode_url(episode_key),
-                image_url=episode_data.merch_still300.url,
                 episode_number=episode_data.number,
-                sort_order=sort_order,
+                url=self._episode_url(episode_key),
+                description=episode_data.short_synopsis,
+                image_url=episode_data.merch_still300.url,
                 duration=episode_data.runtime_sec,
+                sort_order=sort_order,
                 data_timestamp=episode_check.data_timestamp,
-                update_at=self._next_update_at(show_key, episode_check.data_timestamp),
                 season_id=season.id,
-            ).upsert(season, episode_check.record)
+            )
+            episode = self.tmdb.tmdb_merge_episode(
+                episode,
+                season.show.tmdb_id,
+                season.season_number,
+                episode_data.number,
+            )
+            episode_files = self._episode_files(episode_key, season.key, show_key)
+            episode.upsert_and_set_update_at(
+                season,
+                episode_check.record,
+                episode_files,
+            )
 
         self.soft_delete_missing_episodes(season.key)
 
@@ -172,7 +221,7 @@ class Netflix(FileMixin, register=True):
             data_timestamp=data_timestamp,
             update_at=self._next_update_at(show_key, data_timestamp),
             source_id=source.id,
-        ).upsert(source, existing_show)
+        ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
 
         self._upsert_movie_season(show, show_key, movie_data)
         return show
@@ -185,20 +234,21 @@ class Netflix(FileMixin, register=True):
     ) -> None:
         season_key = self._season_key(show_key, show_key)
         if season_check := self._season_check(show, season_key, show_key):
+            season_files = self._season_files(season_key, show_key)
             season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 url=self._show_url(show_key),
                 data_timestamp=season_check.data_timestamp,
-                update_at=self._next_update_at(show_key, season_check.data_timestamp),
                 show_id=show.id,
-            ).upsert(show, season_check.record)
+            ).upsert_and_set_update_at(show, season_check.record, season_files)
         else:
             season = season_check.record
 
         episode_key = show_key
         if episode_check := self._episode_check(episode_key, season, show_key):
+            episode_files = self._episode_files(episode_key, season.key, show_key)
             Episode(
                 key=episode_key,
                 name=movie_data.title,
@@ -207,9 +257,8 @@ class Netflix(FileMixin, register=True):
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=episode_check.data_timestamp,
-                update_at=self._next_update_at(show_key, episode_check.data_timestamp),
                 season_id=season.id,
-            ).upsert(season, episode_check.record)
+            ).upsert_and_set_update_at(season, episode_check.record, episode_files)
 
         self.soft_delete_missing_episodes(season.key)
         self.soft_delete_missing_seasons(show_key)

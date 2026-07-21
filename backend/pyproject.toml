@@ -13,7 +13,6 @@ dependencies = [
   "fastapi[standard]<0.129.0,>=0.128.0",
   "httpx<1.0.0,>=0.25.1",
   "jinja2<4.0.0,>=3.1.4",
-  "just-scrape",
   "loguru>=0.7.3",
   "meshfilm",
   "naphki",
@@ -28,6 +27,8 @@ dependencies = [
   "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
   "sqlmodel<1.0.0,>=0.0.21",
   "tenacity<9.0.0,>=8.2.3",
+  "tminidb",
+  "wholoo",
   "yt-dlapi",
 ]
 
@@ -81,7 +82,6 @@ ignore = [
   "B904",  # Allow raising exceptions without from e, for HTTPException
 
   # Additional ignores.
-  "D",  # Existing code does not contain docstrings.
   # Too many false positives.
   "TC001",
   "TC002",
@@ -102,10 +102,11 @@ convention = "google"
 error-on-warning = true
 
 [tool.uv.sources]
-just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
 meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }
+tminidb = { git = "https://github.com/ryn-cx/tminidb" }
+wholoo = { git = "https://github.com/ryn-cx/wholoo" }

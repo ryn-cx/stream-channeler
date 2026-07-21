@@ -182,18 +182,30 @@ def get_matching_episodes(
     session: Session,
     episode: Episode,
 ) -> list[Episode]:
-    """Find all episodes with the same key in the same plugin."""
+    """Find every episode a watch should be applied to together.
+
+    Includes episodes with the same key in the same plugin, plus every episode in
+    any plugin that shares a non-null `tmdb_id` with it, so a watch stays in sync
+    for the same episode across every source.
+    """
     plugin_id = episode.season.show.source.plugin_id
-    return list(
-        session.exec(
-            select(Episode)
-            .join(Season)
-            .join(Show)
-            .join(Source)
-            .where(Source.plugin_id == plugin_id)
-            .where(Episode.key == episode.key),
-        ).all(),
+    same_key_statement = (
+        select(Episode)
+        .join(Season)
+        .join(Show)
+        .join(Source)
+        .where(Source.plugin_id == plugin_id)
+        .where(Episode.key == episode.key)
     )
+    matches = {match.id: match for match in session.exec(same_key_statement).all()}
+    matches.setdefault(episode.id, episode)
+
+    if episode.tmdb_id is not None:
+        tmdb_statement = select(Episode).where(Episode.tmdb_id == episode.tmdb_id)
+        for match in session.exec(tmdb_statement).all():
+            matches.setdefault(match.id, match)
+
+    return list(matches.values())
 
 
 def get_matching_watches(session: Session, watch: Watch) -> list[Watch]:

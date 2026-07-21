@@ -1,7 +1,32 @@
 # TODO: Validate
 import re
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
+
+from app.shows.models import Show
+from plugins.utils.abstract_plugin import URLImportResult
+
+
+class URLHandler[PluginT](ABC):
+    _PATH_REGEX: ClassVar[str]
+
+    def __init__(self, plugin: PluginT, url: str) -> None:
+        self.plugin = plugin
+        self.url = url
+
+    @classmethod
+    def url_regex(cls, domain_regex: str) -> str:
+        return domain_regex + cls._PATH_REGEX
+
+    @property
+    @abstractmethod
+    def show_key(self) -> str: ...
+
+    @abstractmethod
+    def validate_url(self) -> None: ...
+
+    def import_results(self, show: Show) -> list[URLImportResult]:
+        return [URLImportResult(show=show, is_whitelist=False)]
 
 
 class URLMixin(ABC):

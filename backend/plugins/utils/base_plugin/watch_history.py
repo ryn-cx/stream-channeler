@@ -53,29 +53,36 @@ class WatchHistoryMixin(WatchMixin):
         skipped_watches: list[WatchImportResult] = []
 
         for entry in parsed_entries:
-            if not (episode := episodes_on_database.get(entry.episode_key)):
+            if not (episodes := episodes_on_database.get(entry.episode_key)):
                 skipped_watches.append(entry.import_result)
                 continue
 
-            watched_dates = watched_episode_dates.setdefault(str(episode.id), [])
-            if new_only and watched_dates:
-                existing_watches.append(entry.import_result)
-                continue
+            # A single entry can match the same episode across several sources (via
+            # tmdb_id), so record a watch for each and report the entry as added when
+            # any new watch was created, otherwise as already existing.
+            added_any = False
+            for episode in episodes:
+                watched_dates = watched_episode_dates.setdefault(str(episode.id), [])
+                if new_only and watched_dates:
+                    continue
+                if entry.watch_date in watched_dates:
+                    continue
 
-            if entry.watch_date in watched_dates:
-                existing_watches.append(entry.import_result)
-                continue
+                self.session.add(
+                    Watch(
+                        user_id=user.id,
+                        episode_id=episode.id,
+                        watch_date=entry.watch_date,
+                        verified=verified,
+                    ),
+                )
+                watched_dates.append(entry.watch_date)
+                added_any = True
 
-            self.session.add(
-                Watch(
-                    user_id=user.id,
-                    episode_id=episode.id,
-                    watch_date=entry.watch_date,
-                    verified=verified,
-                ),
-            )
-            watched_dates.append(entry.watch_date)
-            added_watches.append(entry.import_result)
+            if added_any:
+                added_watches.append(entry.import_result)
+            else:
+                existing_watches.append(entry.import_result)
 
         return WatchImportResults(
             added=added_watches,

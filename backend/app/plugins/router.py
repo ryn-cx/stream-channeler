@@ -13,6 +13,7 @@ from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
+from app.plugins import service
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
@@ -22,9 +23,13 @@ from app.plugins.schemas import (
     PluginListOutput,
     PluginOutput,
     PluginSearchInformation,
+    PluginSearchUrl,
     PluginsPublic,
     PluginUpdate,
     PluginURLMatch,
+    TMDBMediaInfo,
+    TMDBMediaType,
+    TMDBSearchResultItem,
 )
 from app.schemas import Message
 from app.users.models import User
@@ -140,6 +145,19 @@ def search_information(
     ]
 
 
+@plugins_router.get("/search-url")
+def search_url(
+    plugin_key: str,
+    query: str,
+    _current_user: CurrentUser,
+) -> PluginSearchUrl:
+    """Return a plugin website's own search-page URL for `query`."""
+    for plugin_cls in sorted_plugins():
+        if plugin_cls.plugin_key() == plugin_key:
+            return PluginSearchUrl(url=plugin_cls.search_url(query))
+    raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
+
+
 @plugins_router.get("/search")
 def search_plugin(
     plugin_key: str,
@@ -158,6 +176,27 @@ def search_plugin(
             return plugin_cls(session).search(query)
 
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
+
+
+@plugins_router.get("/tmdb/search")
+def tmdb_search(
+    query: str,
+    session: SessionDep,
+    _current_user: CurrentUser,
+) -> list[TMDBSearchResultItem]:
+    """Search movies and TV across all of TMDB, ranked by title similarity."""
+    return service.tmdb_search(session, query)
+
+
+@plugins_router.get("/tmdb/media-info")
+def tmdb_media_info(
+    media_type: TMDBMediaType,
+    tmdb_id: int,
+    session: SessionDep,
+    _current_user: CurrentUser,
+) -> TMDBMediaInfo | None:
+    """Return rich detail and US watch providers for one TMDB movie or TV show."""
+    return service.tmdb_media_info(session, media_type, tmdb_id)
 
 
 # Registered after the literal paths above so that they are matched first.

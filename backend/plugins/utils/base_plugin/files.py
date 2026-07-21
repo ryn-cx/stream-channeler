@@ -50,11 +50,16 @@ class BaseFile[T](ABC):
 
     @property
     def database_record(self) -> File:
-        """Return the underlying database File object."""
-        if not self._existing_database_record:
-            msg = "File has not been downloaded yet."
+        """Return the underlying database File object.
+
+        The file must already be downloaded; callers are responsible for calling
+        `download_if_outdated()` first. Reading a record never triggers a download.
+        """
+        record = self._existing_database_record
+        if record is None:
+            msg = f"{self.file_key()} has not been downloaded."
             raise ValueError(msg)
-        return self._existing_database_record
+        return record
 
     @property
     def data_timestamp(self) -> datetime:
@@ -154,7 +159,7 @@ class BaseFile[T](ABC):
             content=content,
             data_timestamp=tz_datetime.now(),
             plugin_id=self.__plugin.id,
-        ).upsert(self.__plugin, self._existing_database_record)
+        ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
 
         self._cached_parsed = None
         self.__session.commit()

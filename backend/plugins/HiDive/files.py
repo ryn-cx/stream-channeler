@@ -1,8 +1,11 @@
 # TODO: Validate
+from __future__ import annotations
+
+import re
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import override
+from typing import Any, Literal, override
 
 from diving_board import DivingBoard
 from diving_board.schedule import models as schedule_models
@@ -10,14 +13,17 @@ from diving_board.search import models as search_models
 from diving_board.season import models as season_models
 from diving_board.series import models as series_models
 from diving_board.vod import models as vod_models
-from sqlmodel import Session, col, select
+from diving_board.vod.hero.models import VodHeroModel
+from sqlmodel import Session
 
 from app.files.models import File
 from app.plugins.models import Plugin
+from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
+from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
+    BaseFile,
     GAPIListJSON,
     PartialGAPIJSON,
 )
@@ -94,18 +100,15 @@ class Search(GAPIJSON[search_models.SearchModel]):
     API_ENDPOINT = diving_board().search
 
 
-class FileMixin(BasePlugin, register=False):
-    @override
-    def __init__(self, session: Session) -> None:
-        super().__init__(session)
-        self._media_type_value: str | None = None
+class HiDiveFiles(TMDBMixin, register=False):
+    _media_type_value: str | None = None
 
-    @property
-    def _media_type(self) -> str:
-        if self._media_type_value is None:
-            msg = "Media type has not been set."
-            raise AttributeError(msg)
-        return self._media_type_value
+    def _is_movie(self) -> bool:
+        if self._media_type_value not in ("Movie", "Series"):
+            msg = f"Invalid media type: {self._media_type_value}"
+            raise RuntimeError(msg)
+
+        return self._media_type_value == "Movie"
 
     def season_file(self, season_key: str | int) -> Season:
         """Return a cached Season for the given season key."""
@@ -154,87 +157,17 @@ class FileMixin(BasePlugin, register=False):
             lambda: Search(self.session, self.plugin, query),
         )
 
-    def preload_latest_schedule_file(self) -> File | None:
-        """Return the most recent schedule File from the database, or None."""
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{Schedule.__name__}/"),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        return self.session.exec(statement).first()
-
-    def get_latest_schedule_file(self) -> Schedule:
-        """Return the latest schedule file, downloading a fresh one if none exist."""
-        if file := self.preload_latest_schedule_file():
+    def get_latest_schedule_file(self) -> Schedule | None:
+        """Return the latest schedule file, or None if none exists."""
+        if file := self.preload_latest_file(Schedule):
             return self.schedule_file(file)
-        schedule = self.schedule_file(tz_datetime.now())
-        schedule.download_if_outdated()
-        return schedule
+        return None
 
     @override
-    def _show_files(
-        self,
-        show_key: str,
-    ) -> Sequence[Season | Series | Vod]:
-        if self._media_type == "Movie":
-            return [self.vod_file(show_key)]
-        return [self.series_file(show_key)]
-
-    @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[Season | Vod]:
-        if self._media_type == "Movie":
-            return [self.vod_file(season_key)]
-        return [
-            # Required to detect new episodes and changes to the season.
-            self.season_file(season_key),
-        ]
-
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[Season | Vod]:
-        if self._media_type == "Movie":
-            return [self.vod_file(episode_key)]
-        return [
-            # Required to detect changes to the episode information.
-            self.vod_file(episode_key),
-            self.season_file(season_key),
-        ]
-
-    @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
-        # TODO: Is this seperate check needed?
-        if self._media_type == "Movie":
-            return [show_key]
-        series_data = self.series_file(show_key).parsed()
-        return [str(item.id) for item in self._series_season_items(series_data)]
-
-    @override
-    def _episode_keys_from_file(
-        self,
-        season_keys: str | list[str],
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        episode_keys: list[str] = []
-        for season_key in season_keys:
-            if self._media_type == "Movie":
-                episode_keys.append(season_key)
-                continue
-            season_data = self.season_file(season_key).parsed()
-            bucket = diving_board().season.extract_bucket_season(season_data)
-            episode_keys.extend(str(item.id) for item in bucket.attributes.items)
-        return episode_keys
+    def _source_files(self) -> Sequence[Schedule]:
+        if file := self.get_latest_schedule_file():
+            return [file]
+        return []
 
     @staticmethod
     def _series_season_items(
@@ -255,3 +188,132 @@ class FileMixin(BasePlugin, register=False):
                 return element.attributes.image.attributes.source
         msg = "No image element found in series file."
         raise ValueError(msg)
+
+    @staticmethod
+    def _movie_title(hero: VodHeroModel) -> str:
+        """Return the movie's title from the VOD's own hero action."""
+        for action in hero.attributes.actions:
+            data = action.attributes.action.data
+            if data.type == "VOD":
+                return data.title
+        msg = "No VOD action found in movie hero."
+        raise ValueError(msg)
+
+    @override
+    def _fetch_tmdb_id(
+        self,
+        show_key: str,
+        existing_show: Show | None = None,
+    ) -> int | None:
+        if existing_show and existing_show.tmdb_id:
+            return existing_show.tmdb_id
+        media_type: Literal["movie", "tv"]
+        if self._is_movie():
+            self.vod_file(show_key).download_if_outdated()
+            hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
+            name = self._movie_title(hero)
+            media_type = "movie"
+        else:
+            self.series_file(show_key).download_if_outdated()
+            name = self.series_file(show_key).parsed().metadata.series.title
+            media_type = "tv"
+        return self._tmdb_search_media(name, media_type)
+
+    @override
+    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
+        if self._is_movie():
+            return None
+        for season_info in self._series_season_items(
+            self.series_file(show_key).parsed(),
+        ):
+            if str(season_info.id) == season_key:
+                return season_info.season_number
+        return None
+
+    @override
+    def _get_episode_number(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> int | None:
+        if self._is_movie():
+            return None
+        bucket = diving_board().season.extract_bucket_season(
+            self.season_file(season_key).parsed(),
+        )
+        for item in bucket.attributes.items:
+            if str(item.id) == episode_key:
+                match = re.match(r"^E(\d+)", item.title) if item.title else None
+                return int(match.group(1)) if match else None
+        return None
+
+    @override
+    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+        return "movie" if self._is_movie() else "tv"
+
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.vod_file(show_key)]
+        else:
+            base_files = [self.series_file(show_key)]
+        return self._append_tmdb_show_file(base_files, show_key)
+
+    @override
+    def _season_files(
+        self,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.vod_file(season_key)]
+        else:
+            # The season file detects new episodes and changes to the season.
+            base_files = [self.season_file(season_key)]
+        return self._append_tmdb_season_file(base_files, season_key, show_key)
+
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.vod_file(episode_key)]
+        else:
+            # The vod file detects changes to the episode information.
+            base_files = [self.vod_file(episode_key), self.season_file(season_key)]
+        return self._append_tmdb_episode_file(
+            base_files,
+            episode_key,
+            season_key,
+            show_key,
+        )
+
+    @override
+    def _season_keys_from_file(self, show_key: str) -> list[str]:
+        if self._is_movie():
+            return [show_key]
+        series_data = self.series_file(show_key).parsed()
+        return [str(item.id) for item in self._series_season_items(series_data)]
+
+    @override
+    def _episode_keys_from_file(
+        self,
+        season_keys: str | list[str],
+    ) -> list[str]:
+        if isinstance(season_keys, str):
+            season_keys = [season_keys]
+        if self._is_movie():
+            return list(season_keys)
+        episode_keys: list[str] = []
+        for season_key in season_keys:
+            season_data = self.season_file(season_key).parsed()
+            bucket = diving_board().season.extract_bucket_season(season_data)
+            episode_keys.extend(str(item.id) for item in bucket.attributes.items)
+        return episode_keys

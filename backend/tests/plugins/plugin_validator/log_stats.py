@@ -69,14 +69,16 @@ def _log_sql_statement_count(
 
     event.listen(Engine, "before_cursor_execute", count_queries)
     event.listen(Engine, "before_cursor_execute", log_queries)
-    yield
-    event.remove(Engine, "before_cursor_execute", count_queries)
-    event.remove(Engine, "before_cursor_execute", log_queries)
-    logger.info(f"SQL statements executed: {stats['sql_statements']} [{label}]")
-    (stats_directory / "sql_statements.log").write_text(
-        "\n\n".join(stack_traces),
-        encoding="utf-8",
-    )
+    try:
+        yield
+    finally:
+        event.remove(Engine, "before_cursor_execute", count_queries)
+        event.remove(Engine, "before_cursor_execute", log_queries)
+        logger.info(f"SQL statements executed: {stats['sql_statements']} [{label}]")
+        (stats_directory / "sql_statements.log").write_text(
+            "\n\n".join(stack_traces),
+            encoding="utf-8",
+        )
 
 
 @contextmanager

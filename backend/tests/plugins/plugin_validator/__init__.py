@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from freezegun import freeze_time
+from sqlalchemy import inspect as sa_inspect
 from sqlmodel import Session
 
 from app.episodes.models import Episode
@@ -23,12 +24,12 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin import BasePlugin
 from tests.app.utils.utils import build_random_model
-from tests.plugins.plugin_validator.database import DatabaseMixin
-from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.context_managers import (
     mock_update,
     track_downloads,
 )
+from tests.plugins.plugin_validator.database import DatabaseMixin
+from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.validator import Validator
 
 
@@ -195,9 +196,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         """Mark an entity as outdated, run its update, and validate the result."""
         assert entity.data_timestamp
         outdated_threshold = entity.data_timestamp
-        if isinstance(entity, (Show, Season, Episode)):
-            entity.extra = "Outdated"
-            outdated_threshold = self._newest_descendant_timestamp(entity)
         entity.update_at = outdated_threshold + timedelta(seconds=1)
         validator = validator or self._get_validator(session, entity)
         update = self._get_update_function(session, entity)
@@ -205,6 +203,22 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         maybe_mock_wrapper = mock_update() if use_mock_update else nullcontext()
         with maybe_mock_wrapper, log_stats(self):
             update()
+            # for dirty_obj in session.dirty:
+            #     state = sa_inspect(dirty_obj)
+            #     changes = {
+            #         attr.key: {
+            #             "in_memory_old": attr.history.deleted,
+            #             "new": attr.history.added,
+            #             "committed": state.committed_state.get(attr.key, "<not loaded>"),
+            #         }
+            #         for attr in state.attrs
+            #         if attr.history.has_changes()
+            #     }
+            #     if changes:
+            #         print(
+            #             f"DIRTY {type(dirty_obj).__name__} "
+            #             f"{getattr(dirty_obj, 'key', dirty_obj)}: {changes}",
+            #         )
             session.flush()
 
         msg = f"Failed updating: {entity}"

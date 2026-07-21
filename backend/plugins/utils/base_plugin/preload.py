@@ -148,6 +148,25 @@ class PreloadMixin(ABC):
         )
         return [factory(file) for file in self.session.exec(statement).all()]
 
+    def preload_latest_file(
+        self,
+        file_class: type[BaseFile[Any]],
+        *,
+        extra: str | None = None,
+    ) -> File | None:
+        """Return the most recent File of `file_class` from the database, or None."""
+        statement = (
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{file_class.__name__}/"),
+            )
+            .order_by(col(File.data_timestamp).desc())
+        )
+        if extra is not None:
+            statement = statement.where(col(File.extra) == extra)
+        return self.session.exec(statement).first()
+
     def get_incomplete_files[T: BaseFile[Any]](
         self,
         file_class: type[T],

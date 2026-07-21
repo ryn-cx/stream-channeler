@@ -45,7 +45,7 @@ class CrunchyrollUpdateSourceTest(
 
         # Source.update will mock download a new BrowseSeries that includes a mock new
         # entry for the show. When a new entry for a show is added both the show and the
-        # season will have their update_at value set.
+        # season will have their update_at value set to the timestamp for that show.
         validator = validator.incremented(Season, "modified_at")
         validator = validator.incremented(Show, "modified_at")
         validator = validator.decremented(Show, "update_at")
@@ -70,7 +70,7 @@ class CrunchyrollUpdateSourceTest(
         source: Source,
         timestamp: datetime,
     ) -> None:
-        existing_browse = plugin_instance.get_latest_browse_file()
+        existing_browse = plugin_instance.get_newest_browse_file(strict=True)
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]
         first_entry.id = source.shows[0].key
@@ -79,20 +79,20 @@ class CrunchyrollUpdateSourceTest(
 
 
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GQWH0MXPQ"
-    show_slug = "anime-azurlane-slow-ahead"
-    search_query = "Anime AzurLane: Slow Ahead!"
-    search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
+    parse_url_response = "GT00371881"
+    show_slug = "though-i-am-an-inept-villainess"
+    search_query = "Though I Am an Inept Villainess"
+    search_url = "https://www.crunchyroll.com/series/GT00371881"
 
 
 class TestAiringMultipleSeasonsShow(
     CrunchyrollStandardTests,
     CrunchyrollUpdateSourceTest,
 ):
-    parse_url_response = "G9VHN91DJ"
-    show_slug = "the-angel-next-door-spoils-me-rotten"
-    search_query = "The Angel Next Door Spoils Me Rotten"
-    search_url = "https://www.crunchyroll.com/series/G9VHN91DJ"
+    parse_url_response = "GQWH0MXPQ"
+    show_slug = "anime-azurlane-slow-ahead"
+    search_query = "Anime AzurLane: Slow Ahead!"
+    search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
 
 
 class TestCompletedSingleSeasonShow(
@@ -125,6 +125,33 @@ class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
         "/watch/{episode_key}/",
         "/watch/{episode_key}/{episode_slug}",
     )
+
+
+class TestMovie(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    parse_url_response = "GMTE00335490"
+    show_slug = "spy-x-family-code-white"
+    search_query = "Spy x Family: Code White"
+    search_url = "https://www.crunchyroll.com/series/GMTE00335490"
+
+
+class TestMovieEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    parse_url_response = "GMEE00380050JAJP"
+    show_slug = "x-the-movie"
+    episode_key = "GMEE00380050JAJP"
+    episode_slug = "x-the-movie"
+    urls = (
+        "/watch/{episode_key}",
+        "/watch/{episode_key}/",
+        "/watch/{episode_key}/{episode_slug}",
+    )
+    search_query = "X: The Movie"
+
+
+class TestTMDBMismatch(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+    parse_url_response = "GG5H5XQX4"
+    show_slug = "frieren-beyond-journeys-end"
+    search_query = "Frieren: Beyond Journey's End"
+    search_url = "https://www.crunchyroll.com/series/GG5H5XQX4"
 
 
 class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):

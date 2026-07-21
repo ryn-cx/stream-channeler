@@ -1,5 +1,5 @@
 # TODO: Validate
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, overload
@@ -16,19 +16,20 @@ from plugins.utils.base_plugin.files import BaseFile
 class DownloadMixin(ABC):
     session: Session
 
-    @abstractmethod
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the show."""
+        msg = "This plugin does not have show specific files."
+        raise NotImplementedError(msg)
 
-    @abstractmethod
     def _season_files(
         self,
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the season."""
+        msg = "This plugin does not have season specific files."
+        raise NotImplementedError(msg)
 
-    @abstractmethod
     def _episode_files(
         self,
         episode_key: str,
@@ -36,14 +37,18 @@ class DownloadMixin(ABC):
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the episode."""
+        msg = "This plugin does not have episode specific files."
+        raise NotImplementedError(msg)
 
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the plugin."""
-        raise NotImplementedError("This plugin does not have plugin specific files.")  # noqa: EM101 - TODO: Assign message to a variable
+        msg = "This plugin does not have plugin specific files."
+        raise NotImplementedError(msg)
 
-    def _source_files(self, source_key: str) -> Sequence[BaseFile[Any]]:
+    def _source_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the source."""
-        raise NotImplementedError("This plugin does not have source specific files.")  # noqa: EM101 - TODO: Assign message to a variable
+        msg = "This plugin does not have source specific files."
+        raise NotImplementedError(msg)
 
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:
@@ -54,9 +59,9 @@ class DownloadMixin(ABC):
         """Return the data timestamp for the plugin's files."""
         return self._file_timestamp(self._plugin_files())
 
-    def source_data_timestamp(self, source_key: str) -> datetime:
+    def source_data_timestamp(self) -> datetime:
         """Return the data timestamp for the source's files."""
-        return self._file_timestamp(self._source_files(source_key))
+        return self._file_timestamp(self._source_files())
 
     def show_data_timestamp(self, show_key: str) -> datetime:
         """Return the data timestamp for the show's files."""
@@ -87,14 +92,14 @@ class DownloadMixin(ABC):
         return [file.database_record for file in files]
 
     @staticmethod
-    def _key(record: str | Show | Season | Episode) -> str:
+    def _get_key(record: str | Show | Season | Episode) -> str:
         """Return the record's key, accepting either the key or the record itself."""
         return record if isinstance(record, str) else record.key
 
-    def _show_key(self, season: str | Season, show: str | Show | None) -> str:
+    def _get_show_key(self, season: str | Season, show: str | Show | None) -> str:
         """Return the show key, deriving it from a `Season` when `show` is omitted."""
         if show is not None:
-            return self._key(show)
+            return self._get_key(show)
         if isinstance(season, Season):
             return season.show.key
         msg = "show is required when season is passed as a key."
@@ -105,7 +110,7 @@ class DownloadMixin(ABC):
         show: str | Show,
         update_at: datetime | None = None,
     ) -> list[File]:
-        show_key = self._key(show)
+        show_key = self._get_key(show)
         _cache = self._preload_show_files(show_key)
         show_files = self._show_files(show_key)
         all_files = self._download_outdated_files(show_files, update_at)
@@ -134,8 +139,8 @@ class DownloadMixin(ABC):
         show: str | Show | None = None,
         update_at: datetime | None = None,
     ) -> list[File]:
-        season_key = self._key(season)
-        show_key = self._show_key(season, show)
+        season_key = self._get_key(season)
+        show_key = self._get_show_key(season, show)
         _cache = self._preload_season_files([season_key], show_key)
         season_files = self._season_files(season_key, show_key)
         all_files = self._download_outdated_files(season_files, update_at)
@@ -176,16 +181,16 @@ class DownloadMixin(ABC):
         show: str | Show | None = None,
         update_at: datetime | None = None,
     ) -> list[File]:
-        episode_key = self._key(episode)
+        episode_key = self._get_key(episode)
         if season is not None:
-            season_key = self._key(season)
+            season_key = self._get_key(season)
         elif isinstance(episode, Episode):
             season_key = episode.season.key
         else:
             msg = "season is required when episode is passed as a key."
             raise TypeError(msg)
         if show is not None:
-            show_key = self._key(show)
+            show_key = self._get_key(show)
         elif isinstance(season, Season):
             show_key = season.show.key
         elif isinstance(episode, Episode):
@@ -201,7 +206,7 @@ class DownloadMixin(ABC):
         self,
         show: str | Show,
     ) -> list[File]:
-        show_key = self._key(show)
+        show_key = self._get_key(show)
         season_keys = self._season_keys_from_file(show_key)
         _cache = self._preload_season_files(season_keys, show_key)
         all_files: list[File] = []
@@ -241,8 +246,8 @@ class DownloadMixin(ABC):
         show: str | Show | None = None,
         preloaded_files: Sequence[File] | None = None,
     ) -> list[File]:
-        season_key = self._key(season)
-        show_key = self._show_key(season, show)
+        season_key = self._get_key(season)
+        show_key = self._get_show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
         _cache = self._preload_episode_files(
             video_keys,
@@ -324,8 +329,10 @@ class DownloadMixin(ABC):
         ]
         return self._get_files_by_keys(file_keys)
 
-    @abstractmethod
-    def _season_keys_from_file(self, show_key: str) -> list[str]: ...
+    def _season_keys_from_file(self, show_key: str) -> list[str]:
+        msg = "This plugin does not have season keys from file."
+        raise NotImplementedError(msg)
 
-    @abstractmethod
-    def _episode_keys_from_file(self, season_keys: str | list[str]) -> list[str]: ...
+    def _episode_keys_from_file(self, season_keys: str | list[str]) -> list[str]:
+        msg = "This plugin does not have episode keys from file."
+        raise NotImplementedError(msg)

@@ -40,6 +40,8 @@ class BaseEpisode(BaseMediaMixin):
     duration: int | None = Field(ge=0, default=None)
     release_date: datetime | None = DateTimeField(default=None)
     air_date: datetime | None = DateTimeField(default=None)
+    tmdb_id: int | None = Field(default=None)
+    episode_identifier: str | None = Field(default=None)
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):

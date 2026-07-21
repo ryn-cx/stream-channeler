@@ -18,8 +18,11 @@ def mock_update() -> Generator[None]:
     def _mock(self: BaseFile[Any], update_at: datetime | None = None) -> None:
         if not self.is_outdated(update_at):
             return
-        logger.debug(f"Mock Updating {self.database_record.key}")
-        self.database_record.data_timestamp += timedelta(minutes=1)
+        record = self._existing_database_record
+        if record is None:
+            return
+        logger.debug(f"Mock Updating {record.key}")
+        record.data_timestamp += timedelta(minutes=1)
 
     with patch.object(BaseFile, "download_if_outdated", _mock):
         yield

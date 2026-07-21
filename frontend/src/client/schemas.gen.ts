@@ -1754,6 +1754,17 @@ export const EpisodeCreateSchema = {
                 }
             ],
             title: 'Air Date'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -1918,6 +1929,17 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Air Date'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         id: {
             type: 'string',
@@ -2162,6 +2184,17 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2341,6 +2374,17 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Air Date'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -2504,6 +2548,17 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Air Date'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         id: {
             type: 'string',
@@ -3409,54 +3464,20 @@ export const PluginSearchResultSchema = {
                 }
             ],
             title: 'Media Type'
-        },
-        sources: {
-            items: {
-                '$ref': '#/components/schemas/PluginSearchResultSource'
-            },
-            type: 'array',
-            title: 'Sources',
-            default: []
         }
     },
     type: 'object',
     required: ['title', 'url'],
     title: 'PluginSearchResult',
-    description: 'Search result from a plugin.'
-} as const;
+    description: `Search result from a plugin.
 
-export const PluginSearchResultSourceSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        icon_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon Url'
-        }
-    },
-    type: 'object',
-    required: ['name'],
-    title: 'PluginSearchResultSource',
-    description: `Source information for a search result.
-
-Used for plugins that support multiple sources.`
+Every plugin searches a single source (its own platform), so a result maps
+directly to an importable URL. TMDB is the only multi-source search and has
+its own dedicated endpoints instead of implementing this.`
 } as const;
 
 export const PluginSearchResultsSchema = {
     properties: {
-        has_source_selection: {
-            type: 'boolean',
-            title: 'Has Source Selection'
-        },
         results: {
             items: {
                 '$ref': '#/components/schemas/PluginSearchResult'
@@ -3466,9 +3487,27 @@ export const PluginSearchResultsSchema = {
         }
     },
     type: 'object',
-    required: ['has_source_selection', 'results'],
+    required: ['results'],
     title: 'PluginSearchResults',
     description: 'Results from a search query.'
+} as const;
+
+export const PluginSearchUrlSchema = {
+    properties: {
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    title: 'PluginSearchUrl'
 } as const;
 
 export const PluginURLMatchSchema = {
@@ -3772,6 +3811,17 @@ export const SeasonCreateSchema = {
                 }
             ],
             title: 'Season Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -3889,6 +3939,17 @@ export const SeasonListOutputSchema = {
                 }
             ],
             title: 'Season Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         show_id: {
             type: 'string',
@@ -4070,6 +4131,17 @@ export const SeasonOutputSchema = {
             ],
             title: 'Season Number'
         },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -4202,6 +4274,17 @@ export const SeasonUpdateSchema = {
                 }
             ],
             title: 'Season Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -4357,6 +4440,17 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Icon'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -4486,6 +4580,17 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Icon'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         source_id: {
             type: 'string',
@@ -4663,6 +4768,17 @@ export const ShowPublicSchema = {
             ],
             title: 'Icon'
         },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -4807,6 +4923,17 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Icon'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         }
     },
     additionalProperties: false,
@@ -5408,6 +5535,263 @@ export const SourcesPublicSchema = {
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'SourcesPublic',
     description: 'Schema for returning a list of `Source`s.'
+} as const;
+
+export const TMDBMediaInfoSchema = {
+    properties: {
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        tagline: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tagline'
+        },
+        overview: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Overview'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        backdrop_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Backdrop Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        end_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'End Year'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
+        rating: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rating'
+        },
+        vote_count: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vote Count'
+        },
+        number_of_seasons: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Number Of Seasons'
+        },
+        number_of_episodes: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Number Of Episodes'
+        },
+        runtime: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime'
+        },
+        genres: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Genres',
+            default: []
+        },
+        providers: {
+            items: {
+                '$ref': '#/components/schemas/TMDBWatchProviderItem'
+            },
+            type: 'array',
+            title: 'Providers',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'TMDBMediaInfo',
+    description: 'Rich detail for a single movie or TV show plus its US watch providers.'
+} as const;
+
+export const TMDBSearchResultItemSchema = {
+    properties: {
+        tmdb_id: {
+            type: 'integer',
+            title: 'Tmdb Id'
+        },
+        media_type: {
+            type: 'string',
+            enum: ['movie', 'tv'],
+            title: 'Media Type'
+        },
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        }
+    },
+    type: 'object',
+    required: ['tmdb_id', 'media_type', 'title'],
+    title: 'TMDBSearchResultItem',
+    description: 'A single TMDB multi-source search result.'
+} as const;
+
+export const TMDBWatchProviderItemSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        icon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Icon Url'
+        },
+        plugin_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Key'
+        },
+        search_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Search Url'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'TMDBWatchProviderItem',
+    description: 'A place to watch a title, marked with the plugin that supports it.'
 } as const;
 
 export const TokenSchema = {
@@ -6182,6 +6566,17 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -6322,6 +6717,17 @@ export const WhitelistSeasonOutputSchema = {
                 }
             ],
             title: 'Season Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         show_id: {
             type: 'string',
@@ -6496,6 +6902,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Icon'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         source_id: {
             type: 'string',

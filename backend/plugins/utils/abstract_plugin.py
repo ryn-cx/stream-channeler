@@ -3,7 +3,7 @@
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from pydantic import BaseModel, Field
 
@@ -24,6 +24,11 @@ if TYPE_CHECKING:
 
 class AbstractPlugin(ABC):
     """Base class every plugin must implement."""
+
+    # The names TMDB uses for this plugin's website in its watch-provider data.
+    # A plugin may map to several (e.g. Netflix's base and ad-supported tiers);
+    # empty when the plugin has no matching TMDB provider.
+    TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
     @abstractmethod
@@ -175,6 +180,7 @@ class AbstractPlugin(ABC):
         """
         file.update_at = None
 
+    # TODO: Consider automatically setting the update_at values to max here.
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:  # noqa: ARG002 - `plugin` is used by overrides.
         """Handle a failure while updating a `Plugin`.
 
@@ -246,6 +252,15 @@ class AbstractPlugin(ABC):
         """Search for media."""
         msg = "search is not supported by this plugin."
         raise NotImplementedError(msg)
+
+    @classmethod
+    def search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
+        """Return the plugin website's own search-page URL for `query`.
+
+        Lets a user open the source site's search directly to find and copy an
+        importable URL. Returns None when the site has no such search page.
+        """
+        return None
 
     @override
     def __init_subclass__(cls, *, register: bool = True, **kwargs: Any) -> None:
@@ -321,20 +336,13 @@ class URLImportResult(BaseModel):
     """
 
 
-class PluginSearchResultSource(BaseModel):
-    """Source information for a search result.
-
-    Used for plugins that support multiple sources.
-    """
-
-    name: str
-    """Name of the source."""
-    icon_url: str | None = None
-    """URL for an icon representing the source."""
-
-
 class PluginSearchResult(BaseModel):
-    """Search result from a plugin."""
+    """Search result from a plugin.
+
+    Every plugin searches a single source (its own platform), so a result maps
+    directly to an importable URL. TMDB is the only multi-source search and has
+    its own dedicated endpoints instead of implementing this.
+    """
 
     title: str
     """Title of the search result."""
@@ -346,12 +354,9 @@ class PluginSearchResult(BaseModel):
     """URL of the image representing the search result."""
     media_type: str | None = None
     """Media type of the search result."""
-    sources: list[PluginSearchResultSource] = Field(default=[])
 
 
 class PluginSearchResults(BaseModel):
     """Results from a search query."""
 
-    has_source_selection: bool
-    """Whether the user needs to select a source before adding the URL."""
     results: list[PluginSearchResult]

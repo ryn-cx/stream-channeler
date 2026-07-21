@@ -26,8 +26,10 @@ def parse_cors(v: str | list[str] | None) -> list[str] | str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
+        # Top level env files (one level above ./backend/). `.env` holds committed
+        # `changethis` placeholders; `.env.local` (gitignored) overrides them with
+        # real secrets for local dev. Later files win.
+        env_file=("../.env", "../.env.local"),
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -128,6 +130,7 @@ class Settings(BaseSettings):
     CF_ACCESS_CLIENT_ID: str
     CF_ACCESS_CLIENT_SECRET: str
     PROXY: str
+    TMDB_API_READ_TOKEN: str
 
     # TODO: This function sucks
     @model_validator(mode="before")
@@ -138,12 +141,18 @@ class Settings(BaseSettings):
                 "GET_AROUND_SERVER",
                 "CF_ACCESS_CLIENT_ID",
                 "CF_ACCESS_CLIENT_SECRET",
+                "TMDB_API_READ_TOKEN",
             ):
-                if name in data:
-                    continue
-                keyring_value = keyring.get_password(KEYRING_SERVICE, name)
-                if keyring_value is not None:
-                    data[name] = keyring_value
+                if name not in data:
+                    keyring_value = keyring.get_password(KEYRING_SERVICE, name)
+                    if keyring_value:
+                        data[name] = keyring_value
+                if name in data and data[name] == "changethis":
+                    message = (
+                        f'The value of {name} is "changethis", '
+                        "it must be set to a real value."
+                    )
+                    raise ValueError(message)
         return data
 
 

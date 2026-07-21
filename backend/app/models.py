@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 from enum import StrEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 from sqlalchemy import util
 from sqlmodel import DateTime, Field, Index, Session, SQLModel
@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 # because the official example for implementing a DateTime field also ignore the error:
 # https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
 DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
+
+
+class SupportsDataTimestamp(Protocol):
+    @property
+    def data_timestamp(self) -> datetime: ...
 
 
 def sortable_field_indexes(
@@ -304,8 +309,13 @@ class MediaMixin[
         """
         return session.identity_map[(cls, (parent.id, key), None)]
 
-    def set_update_at(self, new_update_at_value: datetime | None) -> None:
+    def set_update_at(
+        self,
+        new_update_at_value: datetime | None,
+        files: Sequence[SupportsDataTimestamp] | None = None,
+    ) -> None:
         """Set `update_at` based its current value and `new_update_at_value`."""
+        files = files or []
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.
         if (
@@ -315,12 +325,26 @@ class MediaMixin[
         ):
             self.update_at = None
 
+        # If every file is newer than the existing update_at the update has been
+        # completed and update_at can be cleared.
+        if (
+            self.update_at
+            and files
+            and all(file.data_timestamp > self.update_at for file in files)
+        ):
+            self.update_at = None
+
         if not new_update_at_value:
             return
 
         # If the existing data_timestamp is newer than the new update_at value update_at
         # can be ignored because the data is already up to date.
         if self.data_timestamp and self.data_timestamp >= new_update_at_value:
+            return
+
+        # If every file is newer than the new update_at value the data is already up to
+        # date and the new value can be ignored.
+        if files and all(file.data_timestamp > new_update_at_value for file in files):
             return
 
         # If the new update_at is before the existing update_at the existing update_at
@@ -363,17 +387,33 @@ class MediaMixin[
             # id:  automatically generated when making a model, but that value should
             # only be used for new entries. When upserting the original id should be
             # preserved.
-            # update_at: set manually with set_update_at.
             # created_at: set by the database.
             # modified_at: set by the database.
-            protected_keys.update({"id", "update_at", "created_at", "modified_at"})
+            protected_keys = protected_keys | {"id", "created_at", "modified_at"}
             dumped = self.model_dump(exclude=protected_keys)
             existing_record.sqlmodel_update(dumped)
-            existing_record.set_update_at(self.update_at)
             return existing_record
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]
         return self
+
+    def upsert_and_set_update_at(
+        self,
+        parent: ParentT,
+        existing_record: Self | None,
+        files: Sequence[SupportsDataTimestamp] | None = None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        """Upsert and automatically set the `update_at` timestamp."""
+        if protected_keys is None:
+            protected_keys = {"update_at"}
+        else:
+            protected_keys.add("update_at")
+
+        record = self.upsert(parent, existing_record, protected_keys)
+        if existing_record:
+            record.set_update_at(self.update_at, files)
+        return record
 
     def soft_delete(
         self,

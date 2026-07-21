@@ -1,9 +1,8 @@
-"""Crunchyroll plugin files."""
-
+# TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import override
+from typing import Any, Literal, overload, override
 
 from chirashi import Chirashi
 from chirashi.browse_series import models as browse_series_models
@@ -12,12 +11,12 @@ from chirashi.search import models as search_models
 from chirashi.season_episodes import models as episodes_models
 from chirashi.seasons import models as seasons_models
 from chirashi.series import models as series_models
-from sqlmodel import col, select
 
 from app.files.models import File
+from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
+from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -27,7 +26,7 @@ def chirashi() -> Chirashi:
 
 
 class Series(GAPIJSON[series_models.SeriesModel]):
-    # Occurs when a user puts in an invalid URL.
+    # Occurs when a user puts in an invalid series URL.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = chirashi().series
 
@@ -36,7 +35,7 @@ class Series(GAPIJSON[series_models.SeriesModel]):
 
 
 class Objects(GAPIJSON[objects_models.ObjectsModel]):
-    # Occurs when a user puts in an invalid URL.
+    # Occurs when a user puts in an invalid episode URL.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = chirashi().objects
 
@@ -64,8 +63,7 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
-    def datums(self) -> list[browse_series_models.Datum]:
-        """Extract all of the datum entries from BrowseSeries."""
+    def extract_datums(self) -> list[browse_series_models.Datum]:
         return chirashi().browse_series.compile_entries(self.parsed())
 
 
@@ -73,9 +71,8 @@ class Search(GAPIJSON[search_models.SearchModel]):
     API_ENDPOINT = chirashi().search
 
 
-class FileMixin(BasePlugin, register=False):
+class FileMixin(TMDBMixin, register=False):
     def series_file(self, show_key: str) -> Series:
-        """Return a cached Series for the given show key."""
         return self._get_cached_file(
             Series,
             show_key,
@@ -83,7 +80,6 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def objects_file(self, episode_key: str) -> Objects:
-        """Return a cached Objects file for the given episode key."""
         return self._get_cached_file(
             Objects,
             episode_key,
@@ -91,7 +87,6 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def seasons_file(self, show_key: str) -> Seasons:
-        """Return a cached Seasons file the given show key."""
         return self._get_cached_file(
             Seasons,
             show_key,
@@ -99,7 +94,6 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def episodes_file(self, season_key: str) -> SeasonEpisodes:
-        """Return a cached Episodes file for the given season key."""
         return self._get_cached_file(
             SeasonEpisodes,
             season_key,
@@ -107,7 +101,6 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def browse_file(self, browse_datetime: datetime | File) -> BrowseSeries:
-        """Return a cached Browse file for the given datetime or existing File."""
         if isinstance(browse_datetime, File):
             str_datetime = BrowseSeries.file_key_to_unique_identifier(
                 browse_datetime.key,
@@ -121,7 +114,6 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def search_file(self, query: str) -> Search:
-        """Return a cached Search file for the given query."""
         return self._get_cached_file(
             Search,
             query,
@@ -129,30 +121,81 @@ class FileMixin(BasePlugin, register=False):
         )
 
     @override
-    def _source_files(self, source_key: str) -> Sequence[BrowseSeries]:
-        return [self.get_latest_browse_file(is_completed=True)]
+    def _source_files(self) -> Sequence[BrowseSeries]:
+        if file := self.get_newest_browse_file(is_completed=True):
+            return [file]
+        return []
 
     @override
-    def _show_files(self, show_key: str) -> Sequence[Series | Seasons]:
-        return [
-            # Required to detect new seasons.
-            self.seasons_file(show_key),
-            # Required to detect changes to the show.
-            self.series_file(show_key),
-        ]
+    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+        self.series_file(show_key).download_if_outdated()
+        series = self.series_file(show_key).parsed().data[0]
+        return "movie" if "type:movie" in series.keywords else "tv"
+
+    @override
+    def _fetch_tmdb_id(
+        self,
+        show_key: str,
+        existing_show: Show | None = None,
+    ) -> int | None:
+        if existing_show and existing_show.tmdb_id:
+            return existing_show.tmdb_id
+        self.series_file(show_key).download_if_outdated()
+        series = self.series_file(show_key).parsed().data[0]
+        return self._tmdb_search_media(
+            series.title,
+            self._tmdb_media_type(show_key),
+            series.series_launch_year,
+        )
+
+    @override
+    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
+        for season_data in self.seasons_file(show_key).parsed().data:
+            if season_data.id == season_key:
+                return season_data.season_number
+        msg = f"Season with key {season_key} not found for show {show_key}"
+        raise ValueError(msg)
+
+    @override
+    def _get_episode_number(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> int | None:
+        for episode_data in self.episodes_file(season_key).parsed().data:
+            if episode_data.id == episode_key:
+                return episode_data.episode_number
+        return None
+
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+        return self._append_tmdb_show_file(
+            [
+                # Required to detect new seasons.
+                self.seasons_file(show_key),
+                # Required to detect changes to the show.
+                self.series_file(show_key),
+            ],
+            show_key,
+        )
 
     @override
     def _season_files(
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[Seasons | SeasonEpisodes]:
-        return [
-            # Required to detect new episodes.
-            self.episodes_file(season_key),
-            # Required to detect changes to the season.
-            self.seasons_file(show_key),
-        ]
+    ) -> Sequence[BaseFile[Any]]:
+        return self._append_tmdb_season_file(
+            [
+                # Required to detect new episodes.
+                self.episodes_file(season_key),
+                # Required to detect changes to the season.
+                self.seasons_file(show_key),
+            ],
+            season_key,
+            show_key,
+        )
 
     @override
     def _episode_files(
@@ -160,8 +203,13 @@ class FileMixin(BasePlugin, register=False):
         episode_key: str,
         season_key: str,
         show_key: str,
-    ) -> Sequence[SeasonEpisodes]:
-        return [self.episodes_file(season_key)]
+    ) -> Sequence[BaseFile[Any]]:
+        return self._append_tmdb_episode_file(
+            [self.episodes_file(season_key)],
+            episode_key,
+            season_key,
+            show_key,
+        )
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
@@ -182,35 +230,33 @@ class FileMixin(BasePlugin, register=False):
             for episode in self.episodes_file(season_key).parsed().data
         ]
 
-    def preload_latest_browse_file(self, *, is_completed: bool = False) -> File | None:
-        """Return the most recent browse File from the database, or None.
+    @overload
+    def get_newest_browse_file(
+        self,
+        *,
+        is_completed: bool = ...,
+        strict: Literal[True],
+    ) -> BrowseSeries: ...
 
-        Args:
-            is_completed: If True, only completed browse files are preloaded.
-        """
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{BrowseSeries.__name__}/"),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        if is_completed:
-            statement = statement.where(col(File.extra) == "Completed")
-        return self.session.exec(statement).first()
+    @overload
+    def get_newest_browse_file(
+        self,
+        *,
+        is_completed: bool = ...,
+        strict: Literal[False] = ...,
+    ) -> BrowseSeries | None: ...
 
-    def get_latest_browse_file(self, *, is_completed: bool = False) -> BrowseSeries:
-        """Return the latest browse file, downloading one if none exist.
-
-        Args:
-            is_completed: If True, only completed browse files are returned.
-        """
-        if file := self.preload_latest_browse_file(is_completed=is_completed):
+    def get_newest_browse_file(
+        self,
+        *,
+        is_completed: bool = False,
+        strict: bool = False,
+    ) -> BrowseSeries | None:
+        extra = "Completed" if is_completed else None
+        if file := self.preload_latest_file(BrowseSeries, extra=extra):
             return self.browse_file(file)
-        browse = self.browse_file(tz_datetime.now())
-        browse.download_if_outdated()
 
-        if is_completed:
-            browse.database_record.extra = "Completed"
-        return browse
+        if strict:
+            msg = "No browse file found."
+            raise FileNotFoundError(msg)
+        return None

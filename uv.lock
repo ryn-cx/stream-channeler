@@ -69,7 +69,6 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "jinja2" },
-    { name = "just-scrape" },
     { name = "loguru" },
     { name = "meshfilm" },
     { name = "naphki" },
@@ -84,6 +83,8 @@ dependencies = [
     { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "sqlmodel" },
     { name = "tenacity" },
+    { name = "tminidb" },
+    { name = "wholoo" },
     { name = "yt-dlapi" },
 ]
 
@@ -111,7 +112,6 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0,<0.129.0" },
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
-    { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
     { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
@@ -126,6 +126,8 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.0.0,<3.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.21,<1.0.0" },
     { name = "tenacity", specifier = ">=8.2.3,<9.0.0" },
+    { name = "tminidb", git = "https://github.com/ryn-cx/tminidb" },
+    { name = "wholoo", git = "https://github.com/ryn-cx/wholoo" },
     { name = "yt-dlapi", git = "https://github.com/ryn-cx/yt-dlapi" },
 ]
 
@@ -509,7 +511,7 @@ wheels = [
 [[package]]
 name = "degenson"
 version = "1.3.0"
-source = { git = "https://github.com/ryn-cx/DeGenSON#0461782f9019773dafe059c7c654eec216edb50e" }
+source = { git = "https://github.com/ryn-cx/DeGenSON#6dcc30690592cb0beb9ea94a608db6dca36a077a" }
 
 [[package]]
 name = "detect-installer"
@@ -709,7 +711,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#e223122aae8e4bb85fdd62bc678dc1ddd48bed19" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#f2801ba70c720bc9a07b392ed1cda72527b4d83c" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -969,15 +971,6 @@ wheels = [
 ]
 
 [[package]]
-name = "just-scrape"
-version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#35f894dc43e77bf4a21f14c32404cfd80316c3c6" }
-dependencies = [
-    { name = "get-around" },
-    { name = "good-ass-pydantic-integrator" },
-]
-
-[[package]]
 name = "keyring"
 version = "25.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1147,7 +1140,7 @@ wheels = [
 [[package]]
 name = "meshfilm"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/meshfilm#4e49632b316a9de2d8aacf9f0551f9797fecc80b" }
+source = { git = "https://github.com/ryn-cx/meshfilm#ec6bd91d2add6f2c5eee931041f421097662c850" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1195,7 +1188,7 @@ wheels = [
 [[package]]
 name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/naphki#1e5dde28279fda5362d7ad5e3d365fdd71bc186c" }
+source = { git = "https://github.com/ryn-cx/naphki#8ab5126b629cd86bf29612e8f51d9fe22732a138" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1204,7 +1197,7 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#59d77a7f785f920e0281292ebfa3c5a54a88910d" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#557582f0ff5b5ac8ed0cb0d09c12f1c62c00cf44" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1888,6 +1881,15 @@ wheels = [
 ]
 
 [[package]]
+name = "tminidb"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/tminidb#d13b891c64520bfaef21d9578ac3691b632e5848" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
 name = "ty"
 version = "0.0.43"
 source = { registry = "https://pypi.org/simple" }
@@ -2090,6 +2092,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/b6/b9afed2afadddaf5ebb2afa801abf4b0868f42f8539bfe4b071b5266c9fe/websockets-16.0-cp314-cp314t-win32.whl", hash = "sha256:5a4b4cc550cb665dd8a47f868c8d04c8230f857363ad3c9caf7a0c3bf8c61ca6", size = 178085, upload-time = "2026-01-10T09:23:33.816Z" },
     { url = "https://files.pythonhosted.org/packages/9f/3e/28135a24e384493fa804216b79a6a6759a38cc4ff59118787b9fb693df93/websockets-16.0-cp314-cp314t-win_amd64.whl", hash = "sha256:b14dc141ed6d2dde437cddb216004bcac6a1df0935d79656387bd41632ba0bbd", size = 178531, upload-time = "2026-01-10T09:23:35.016Z" },
     { url = "https://files.pythonhosted.org/packages/6f/28/258ebab549c2bf3e64d2b0217b973467394a9cea8c42f70418ca2c5d0d2e/websockets-16.0-py3-none-any.whl", hash = "sha256:1637db62fad1dc833276dded54215f2c7fa46912301a24bd94d45d46a011ceec", size = 171598, upload-time = "2026-01-10T09:23:45.395Z" },
+]
+
+[[package]]
+name = "wholoo"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/wholoo#38dbd9b994b1a85258b15622e2b447d5015590e7" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]

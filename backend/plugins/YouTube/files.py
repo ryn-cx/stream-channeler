@@ -100,7 +100,7 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
     def _get(self) -> PlaylistsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
         return endpoint.parse(
-            _merge_pages(endpoint.download_all(self.unique_identifier))
+            _merge_pages(endpoint.download_all(self.unique_identifier)),
         )
 
     @override
@@ -285,8 +285,11 @@ class FileMixin(BasePlugin, register=False):
         )
 
     @staticmethod
-    def _is_music_playlist_key(key: str) -> bool:
+    def is_music_playlist_key(key: str) -> bool:
         return key.startswith("OLAK5uy_")
+
+    def record_album_playlist_key(self, playlist_key: str) -> None:
+        self._imported_album_playlist_keys.add(playlist_key)
 
     def _channel_has_only_uploads(self, show_key: str) -> bool:
         channel_playlists_file = self.channel_playlists_file(show_key)
@@ -325,7 +328,7 @@ class FileMixin(BasePlugin, register=False):
         ]
         # Album playlists are auto-generated and not listed by the channel, so the album
         # name comes from the playlist itself rather than the channel playlists file.
-        if self._is_music_playlist_key(season_key):
+        if self.is_music_playlist_key(season_key):
             files.append(self.playlist_info_file(season_key))
         return files
 
@@ -343,7 +346,7 @@ class FileMixin(BasePlugin, register=False):
         """Check if a video is valid for importing."""
         return video_title not in ("Deleted video", "Private video")
 
-    def _get_channel_uploads_playlist_key(self, show_key: str) -> str:
+    def channel_uploads_playlist_key(self, show_key: str) -> str:
         """Return the playlist ID for the channel's uploads."""
         return show_key[:1] + "U" + show_key[2:]
 
@@ -360,7 +363,7 @@ class FileMixin(BasePlugin, register=False):
         # uploads are downloaded first because that will maximize the batch sizes and
         # minimize the number of API calls.
         if int(channel_item.statistics.video_count) > 0:
-            season_keys.append(self._get_channel_uploads_playlist_key(show_key))
+            season_keys.append(self.channel_uploads_playlist_key(show_key))
 
         channel_playlists_file = self.channel_playlists_file(show_key)
         if channel_playlists_file.database_record.content:
@@ -388,7 +391,7 @@ class FileMixin(BasePlugin, register=False):
             for season in existing_show.seasons:
                 if (
                     season.deleted_at is None
-                    and self._is_music_playlist_key(season.key)
+                    and self.is_music_playlist_key(season.key)
                     and season.key not in season_keys
                 ):
                     season_keys.append(season.key)
@@ -420,8 +423,8 @@ class FileMixin(BasePlugin, register=False):
         preloaded_files: Sequence[File] | None = None,
     ) -> list[File]:
         """Batch download all videos for a season in a single API call."""
-        season_key = self._key(season)
-        show_key = self._show_key(season, show)
+        season_key = self._get_key(season)
+        show_key = self._get_show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key)
         self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
 
