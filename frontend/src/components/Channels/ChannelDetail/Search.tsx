@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 // TMDB is the multi-source aggregator search; every other plugin searches its
@@ -80,6 +81,62 @@ function AddToQueueButton({
   )
 }
 
+// A result card that sizes itself to the image's real aspect ratio. Sources
+// return different shapes (2:3 posters, 16:9 stills), so instead of forcing a
+// fixed portrait box the card measures each image on load and matches it,
+// widening for landscape art so it isn't shrunk into a tall column.
+const PORTRAIT_WIDTH = 144
+const LANDSCAPE_WIDTH = 256
+const DEFAULT_ASPECT_RATIO = 2 / 3
+
+function ResultCard({
+  imageUrl,
+  title,
+  subtitle,
+  onClick,
+  footer,
+}: {
+  imageUrl?: string | null
+  title: string
+  subtitle: React.ReactNode
+  onClick?: () => void
+  footer?: React.ReactNode
+}) {
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null)
+  const isLandscape = aspectRatio != null && aspectRatio > 1
+  const Wrapper = onClick ? "button" : "div"
+
+  return (
+    <Wrapper
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      style={{ width: isLandscape ? LANDSCAPE_WIDTH : PORTRAIT_WIDTH }}
+      className={cn(
+        "border rounded-lg flex flex-col items-center text-center p-3 shrink-0",
+        onClick && "hover:bg-accent/50 transition-colors cursor-pointer",
+      )}
+    >
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={title}
+          onLoad={(event) => {
+            const { naturalWidth, naturalHeight } = event.currentTarget
+            if (naturalHeight > 0) {
+              setAspectRatio(naturalWidth / naturalHeight)
+            }
+          }}
+          style={{ aspectRatio: aspectRatio ?? DEFAULT_ASPECT_RATIO }}
+          className="w-full rounded object-cover bg-muted mb-2"
+        />
+      )}
+      <p className="font-medium text-sm leading-tight line-clamp-2">{title}</p>
+      <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+      {footer}
+    </Wrapper>
+  )
+}
+
 function PluginResultCard({
   result,
   channelId,
@@ -88,23 +145,17 @@ function PluginResultCard({
   channelId: string
 }) {
   return (
-    <div className="border rounded-lg flex flex-col items-center text-center p-3 w-36 shrink-0">
-      {result.image_url && (
-        <img
-          src={result.image_url}
-          alt={result.title}
-          className="w-full aspect-2/3 rounded object-contain bg-muted mb-2"
-        />
-      )}
-      <p className="font-medium text-sm leading-tight line-clamp-2">
-        {result.title}
-      </p>
-      <p className="text-xs text-muted-foreground mt-1">
-        {result.media_type}
-        {result.year && ` (${result.year})`}
-      </p>
-      <AddToQueueButton url={result.url} channelId={channelId} />
-    </div>
+    <ResultCard
+      imageUrl={result.image_url}
+      title={result.title}
+      subtitle={
+        <>
+          {result.media_type}
+          {result.year && ` (${result.year})`}
+        </>
+      }
+      footer={<AddToQueueButton url={result.url} channelId={channelId} />}
+    />
   )
 }
 
@@ -587,27 +638,18 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
       {tmdbResults && tmdbResults.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {tmdbResults.map((result) => (
-            <button
+            <ResultCard
               key={`${result.media_type}-${result.tmdb_id}`}
-              type="button"
-              className="border rounded-lg flex flex-col items-center text-center p-3 w-36 shrink-0 hover:bg-accent/50 transition-colors cursor-pointer"
+              imageUrl={result.image_url}
+              title={result.title}
+              subtitle={
+                <>
+                  {mediaTypeLabel(result.media_type)}
+                  {result.year && ` (${result.year})`}
+                </>
+              }
               onClick={() => setSelectedResult(result)}
-            >
-              {result.image_url && (
-                <img
-                  src={result.image_url}
-                  alt={result.title}
-                  className="w-full aspect-2/3 rounded object-cover mb-2"
-                />
-              )}
-              <p className="font-medium text-sm leading-tight line-clamp-2">
-                {result.title}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {mediaTypeLabel(result.media_type)}
-                {result.year && ` (${result.year})`}
-              </p>
-            </button>
+            />
           ))}
         </div>
       )}
@@ -615,26 +657,11 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
       {pluginResults && pluginResults.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {pluginResults.map((result, index) => (
-            <div
+            <PluginResultCard
               key={`${result.url}-${index}`}
-              className="border rounded-lg flex flex-col items-center text-center p-3 w-36 shrink-0"
-            >
-              {result.image_url && (
-                <img
-                  src={result.image_url}
-                  alt={result.title}
-                  className="w-full aspect-2/3 rounded object-contain bg-muted mb-2"
-                />
-              )}
-              <p className="font-medium text-sm leading-tight line-clamp-2">
-                {result.title}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {result.media_type}
-                {result.year && ` (${result.year})`}
-              </p>
-              <AddToQueueButton url={result.url} channelId={channelId} />
-            </div>
+              result={result}
+              channelId={channelId}
+            />
           ))}
         </div>
       )}

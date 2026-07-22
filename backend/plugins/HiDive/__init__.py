@@ -18,7 +18,6 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.HiDive.files import (
-    HiDiveFiles,
     Schedule,
     diving_board,
 )
@@ -28,16 +27,16 @@ from plugins.HiDive.handlers import (
     SeasonURLHandler,
     SeriesURLHandler,
 )
+from plugins.HiDive.helpers import HelperMixin
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
-    URLImportResult,
 )
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
 # TODO: Add support for individual episodes of a series.
-class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
+class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True):
     """HiDive plugin."""
 
     _VERSION = "0.0.1"
@@ -73,15 +72,6 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
             "> [!TIP/Movie]\n"
             "> `https://www.hidive.com/video/586784`\n\n"
         )
-
-    # Must be overridden so media type can be set
-    @override
-    def import_url(self, url: str) -> list[URLImportResult]:
-        handler = self._get_url_handler(url)
-        handler.validate_url()
-        self._media_type_value = handler.media_type
-        show = self._import_show(handler.show_key)
-        return handler.import_results(show)
 
     @override
     def update_source(self, source: Source) -> None:
@@ -150,8 +140,11 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
         force: bool = False,
     ) -> Show:
         if self._is_movie():
-            return self._upsert_movie_show(source, show_key, force=force)
-        return self._upsert_series_show(source, show_key, force=force)
+            show = self._upsert_movie_show(source, show_key, force=force)
+        else:
+            show = self._upsert_series_show(source, show_key, force=force)
+        self._soft_delete_missing(show_key)
+        return show
 
     def _upsert_series_show(
         self,
@@ -160,23 +153,26 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
         *,
         force: bool = False,
     ) -> Show:
-        existing_show = Show.get_from_memory(self.session, source, show_key)
-        series_data = self.series_file(show_key).parsed()
+        if show_check := self._show_check(source, show_key, force=force):
+            series_data = self.series_file(show_key).parsed()
+            show = Show(
+                key=show_key,
+                name=series_data.metadata.series.title,
+                media_type="Series",
+                url=self._show_url(show_key),
+                image_url=self._series_image_url(series_data),
+                data_timestamp=show_check.data_timestamp,
+                source_id=source.id,
+            )
+            show = self._merge_and_upsert_show(
+                show,
+                source,
+                show_check.record,
+                show_key,
+            )
+        else:
+            show = show_check.record
 
-        show = Show(
-            key=show_key,
-            name=series_data.metadata.series.title,
-            media_type="Series",
-            url=self._show_url(show_key),
-            image_url=self._series_image_url(series_data),
-            data_timestamp=self.show_data_timestamp(show_key),
-            source_id=source.id,
-        )
-
-        tmdb_show_id = self._fetch_tmdb_id(show_key, existing_show)
-        show = self.tmdb.tmdb_merge_show(show, tmdb_show_id)
-        show_files = self._show_files(show_key)
-        show = show.upsert_and_set_update_at(source, existing_show, show_files)
         self._upsert_series_seasons(show, show_key, force=force)
         self._set_weekly_updates_from_episodes(show)
 
@@ -189,24 +185,28 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
         *,
         force: bool = False,
     ) -> Show:
-        existing_show = Show.get_from_memory(self.session, source, show_key)
-        hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
+        if show_check := self._show_check(source, show_key, force=force):
+            hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
+            show = Show(
+                key=show_key,
+                name=self._movie_title(hero),
+                description=self._movie_description(hero),
+                url=self._show_url(show_key, "Movie"),
+                image_url=hero.attributes.image.attributes.source,
+                media_type="Movie",
+                data_timestamp=show_check.data_timestamp,
+                source_id=source.id,
+            )
+            show = self._merge_and_upsert_show(
+                show,
+                source,
+                show_check.record,
+                show_key,
+                "movie",
+            )
+        else:
+            show = show_check.record
 
-        show = Show(
-            key=show_key,
-            name=self._movie_title(hero),
-            description=self._movie_description(hero),
-            url=self._show_url(show_key, "Movie"),
-            image_url=hero.attributes.image.attributes.source,
-            media_type="Movie",
-            data_timestamp=self.show_data_timestamp(show_key),
-            source_id=source.id,
-        )
-
-        tmdb_show_id = self._fetch_tmdb_id(show_key, existing_show)
-        show = self.tmdb.tmdb_merge_show(show, tmdb_show_id, "movie")
-        show_files = self._show_files(show_key)
-        show = show.upsert_and_set_update_at(source, existing_show, show_files)
         self._upsert_movie_seasons(show, show_key, force=force)
 
         return show
@@ -241,23 +241,16 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
                     data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
                 )
-                season = self.tmdb.tmdb_merge_season(
+                season = self._merge_and_upsert_season(
                     season,
-                    show.tmdb_id,
-                    season_info.season_number,
-                    "tv",
-                )
-                season = season.upsert_and_set_update_at(
                     show,
                     season_check.record,
-                    self._season_files(season_key, show_key),
+                    show_key,
                 )
             else:
                 season = season_check.record
 
             self._upsert_series_episodes(season, show_key, force=force)
-
-        self.soft_delete_missing_seasons(show_key)
 
     def _upsert_movie_seasons(
         self,
@@ -287,23 +280,17 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
                     data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
                 )
-                season = self.tmdb.tmdb_merge_season(
+                season = self._merge_and_upsert_season(
                     season,
-                    show.tmdb_id,
-                    season.season_number,
-                    "movie",
-                )
-                season = season.upsert_and_set_update_at(
                     show,
                     season_check.record,
-                    self._season_files(season_key, show_key),
+                    show_key,
+                    "movie",
                 )
             else:
                 season = season_check.record
 
             self._upsert_movie_episode(season, show_key, force=force)
-
-        self.soft_delete_missing_seasons(show_key)
 
     def _upsert_series_episodes(
         self,
@@ -347,20 +334,12 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )
-            episode = self.tmdb.tmdb_merge_episode(
+            self._merge_and_upsert_episode(
                 episode,
-                season.show.tmdb_id,
-                season.season_number,
-                episode_number,
-            )
-            episode_files = self._episode_files(episode_key, season.key, show_key)
-            episode.upsert_and_set_update_at(
                 season,
                 episode_check.record,
-                episode_files,
+                show_key,
             )
-
-        self.soft_delete_missing_episodes(season.key)
 
     def _upsert_movie_episode(
         self,
@@ -404,45 +383,13 @@ class HiDive(HiDiveFiles, URLHandlerPlugin[HiDiveURLHandler], register=True):
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )
-            episode = self.tmdb.tmdb_merge_episode(
+            self._merge_and_upsert_episode(
                 episode,
-                season.show.tmdb_id,
-                season.season_number,
-                episode.episode_number,
-                "movie",
-            )
-            episode_files = self._episode_files(episode_key, season.key, show_key)
-            episode.upsert_and_set_update_at(
                 season,
                 episode_check.record,
-                episode_files,
+                show_key,
+                "movie",
             )
-
-        self.soft_delete_missing_episodes(season.key)
-
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type_value = show.media_type
-
-    # Must be overridden so media type can be set
-    @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._set_media_type_from_show(show)
-        super().update_show(show, force=force)
-
-    # Must be overridden so media type can be set
-    @override
-    def update_season(self, season: SeasonModel) -> None:
-        self._set_media_type_from_show(season.show)
-        super().update_season(season)
-
-    # Must be overridden so media type can be set
-    @override
-    def update_episode(self, episode: Episode) -> None:
-        self._set_media_type_from_show(episode.season.show)
-        super().update_episode(episode)
 
     @staticmethod
     def _extract_release_date(vod_data: vod_models.VodModel) -> datetime | None:

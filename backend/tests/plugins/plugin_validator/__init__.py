@@ -320,6 +320,7 @@ class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
         expected_results = json.loads(self.import_url_results_file_path().read_text())
         assert self._simplify_import_url_results(results) == expected_results
+        assert False
 
 
 class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):

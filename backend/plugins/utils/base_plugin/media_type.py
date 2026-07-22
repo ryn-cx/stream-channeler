@@ -1,0 +1,52 @@
+# TODO: Validate
+from __future__ import annotations
+
+from abc import abstractmethod
+from typing import Any, ClassVar, override
+
+from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from plugins.utils.abstract_plugin import URLImportResult
+from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.utils.base_plugin.url import URLHandler
+
+
+class MediaTypeURLHandler[PluginT](URLHandler[PluginT]):
+    media_type: ClassVar[str]
+
+
+class MediaTypeMixin:
+    _media_type_value: str | None = None
+
+    @abstractmethod
+    def _set_media_type_from_show(self, show: Show) -> None: ...
+
+
+class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
+    MediaTypeMixin,
+    URLHandlerPlugin[HandlerT],
+    register=False,
+):
+    @override
+    def import_url(self, url: str) -> list[URLImportResult]:
+        handler = self._get_url_handler(url)
+        handler.validate_url()
+        self._media_type_value = handler.media_type
+        show = self._import_show(handler.show_key)
+        return handler.import_results(show)
+
+    @override
+    def update_show(self, show: Show, *, force: bool = False) -> None:
+        self._set_media_type_from_show(show)
+        super().update_show(show, force=force)
+
+    @override
+    def update_season(self, season: Season) -> None:
+        self._set_media_type_from_show(season.show)
+        super().update_season(season)
+
+    @override
+    def update_episode(self, episode: Episode) -> None:
+        self._set_media_type_from_show(episode.season.show)
+        super().update_episode(episode)

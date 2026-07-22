@@ -2,7 +2,10 @@
 from collections.abc import Sequence
 from typing import Any, Literal, override
 
+from app.episodes.models import Episode
+from app.seasons.models import Season
 from app.shows.models import Show
+from app.sources.models import Source
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import EpisodeDetail, MovieDetails, SeasonDetail, ShowDetail
 from plugins.utils.base_plugin import BasePlugin
@@ -44,6 +47,54 @@ class TMDBMixin(BasePlugin, register=False):
         existing_show: Show | None = None,
     ) -> int | None:
         raise NotImplementedError
+
+    def _merge_and_upsert_show(
+        self,
+        show: Show,
+        source: Source,
+        existing_show: Show | None,
+        show_key: str,
+        tmdb_media_type: Literal["movie", "tv"] = "tv",
+    ) -> Show:
+        tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
+        show = self.tmdb.tmdb_merge_show(show, tmdb_id, tmdb_media_type)
+        show_files = self._show_files(show_key)
+        return show.upsert_and_set_update_at(source, existing_show, show_files)
+
+    def _merge_and_upsert_season(
+        self,
+        season: Season,
+        show: Show,
+        existing_season: Season | None,
+        show_key: str,
+        tmdb_media_type: Literal["movie", "tv"] = "tv",
+    ) -> Season:
+        season = self.tmdb.tmdb_merge_season(
+            season,
+            show.tmdb_id,
+            season.season_number,
+            tmdb_media_type,
+        )
+        season_files = self._season_files(season.key, show_key)
+        return season.upsert_and_set_update_at(show, existing_season, season_files)
+
+    def _merge_and_upsert_episode(
+        self,
+        episode: Episode,
+        season: Season,
+        existing_episode: Episode | None,
+        show_key: str,
+        tmdb_media_type: Literal["movie", "tv"] = "tv",
+    ) -> Episode:
+        episode = self.tmdb.tmdb_merge_episode(
+            episode,
+            season.show.tmdb_id,
+            season.season_number,
+            episode.episode_number,
+            tmdb_media_type,
+        )
+        episode_files = self._episode_files(episode.key, season.key, show_key)
+        return episode.upsert_and_set_update_at(season, existing_episode, episode_files)
 
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         raise NotImplementedError

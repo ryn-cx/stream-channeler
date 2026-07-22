@@ -264,12 +264,7 @@ class DownloadMixin(ABC):
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:
         if not file_keys:
             return []
-        # TODO: Fix these type errors
-        statement = (
-            select(File)
-            .where(File.plugin == self.plugin)  # type: ignore[attr-defined]
-            .where(col(File.key).in_(file_keys))
-        )
+        statement = select(File).where(col(File.key).in_(file_keys))
         return self.session.exec(statement).all()
 
     def _preload_show_files(

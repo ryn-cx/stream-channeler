@@ -16,12 +16,13 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.files import BrowseSeries, FileMixin
+from plugins.Crunchyroll.files import BrowseSeries
 from plugins.Crunchyroll.handlers import (
     CrunchyrollURLHandler,
     EpisodeURLHandler,
     SeriesURLHandler,
 )
+from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
@@ -35,7 +36,7 @@ from plugins.utils.base_plugin.watch_history import (
 
 class Crunchyroll(
     WatchHistoryMixin,
-    FileMixin,
+    HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,
 ):
@@ -98,7 +99,7 @@ class Crunchyroll(
             browse_json.database_record.extra = "Completed"
 
     def _upsert_source(self) -> Source:
-        if not ( latest_browse_file := self.get_newest_browse_file()):
+        if not (latest_browse_file := self.get_newest_browse_file()):
             latest_browse_file = self.browse_file(tz_datetime.now())
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
@@ -124,27 +125,35 @@ class Crunchyroll(
         *,
         force: bool = False,
     ) -> Show:
-        existing_show = Show.get_from_memory(self.session, source, show_key)
-        series_data = self.series_file(show_key).parsed().data[0]
+        if show_check := self._show_check(source, show_key, force=force):
+            series_data = self.series_file(show_key).parsed().data[0]
+            show = Show(
+                key=series_data.id,
+                name=series_data.title,
+                description=series_data.description,
+                media_type="Movie"
+                if "type:movie" in series_data.keywords
+                else "Series",
+                url=self._show_url(series_data.id),
+                data_timestamp=show_check.data_timestamp,
+                source_id=source.id,
+            )
 
-        show = Show(
-            key=series_data.id,
-            name=series_data.title,
-            description=series_data.description,
-            media_type="Movie" if "type:movie" in series_data.keywords else "Series",
-            url=self._show_url(series_data.id),
-            data_timestamp=self.show_data_timestamp(show_key),
-            source_id=source.id,
-        )
+            tmdb_media_type: Literal["movie", "tv"] = (
+                "movie" if show.media_type == "Movie" else "tv"
+            )
+            show = self._merge_and_upsert_show(
+                show,
+                source,
+                show_check.record,
+                show_key,
+                tmdb_media_type,
+            )
+        else:
+            show = show_check.record
 
-        tmdb_media_type: Literal["movie", "tv"] = (
-            "movie" if show.media_type == "Movie" else "tv"
-        )
-        tmdb_show_id = self._fetch_tmdb_id(show_key, existing_show)
-        show = self.tmdb.tmdb_merge_show(show, tmdb_show_id, tmdb_media_type)
-        show_files = self._show_files(show_key)
-        show = show.upsert_and_set_update_at(source, existing_show, show_files)
         self._upsert_seasons(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
         self._set_weekly_updates_from_episodes(show)
 
         return show
@@ -175,23 +184,17 @@ class Crunchyroll(
                     data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
                 )
-                season = self.tmdb.tmdb_merge_season(
+                season = self._merge_and_upsert_season(
                     season,
-                    show.tmdb_id,
-                    season_data.season_number,
-                    media_type,
-                )
-                season = season.upsert_and_set_update_at(
                     show,
                     season_check.record,
-                    self._season_files(season_data.id, show_key),
+                    show_key,
+                    media_type,
                 )
             else:
                 season = season_check.record
 
             self._upsert_episodes(season, force=force)
-
-        self.soft_delete_missing_seasons(show_key)
 
     def _upsert_episodes(self, season: Season, *, force: bool = False) -> None:
         show_key = season.show.key
@@ -223,20 +226,13 @@ class Crunchyroll(
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             )
-            episode = self.tmdb.tmdb_merge_episode(
+            self._merge_and_upsert_episode(
                 episode,
-                season.show.tmdb_id,
-                season.season_number,
-                episode_data.episode_number,
-                media_type,
-            )
-            episode.upsert_and_set_update_at(
                 season,
                 episode_check.record,
-                self._episode_files(episode_data.id, season.key, show_key),
+                show_key,
+                media_type,
             )
-
-        self.soft_delete_missing_episodes(season.key)
 
     @override
     def search(self, query: str) -> PluginSearchResults:

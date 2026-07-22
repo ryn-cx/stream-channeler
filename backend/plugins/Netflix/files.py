@@ -7,7 +7,6 @@ from meshfilm import Meshfilm
 from meshfilm.lodp_title_and_plans_page import models as netflix_models
 from meshfilm.search_page_results import models as search_models
 
-from app.shows.models import Show
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
 from plugins.utils.get_around_client import get_around_client
@@ -87,42 +86,6 @@ class FileMixin(TMDBMixin, register=False):
     def _split_season_key(season_key: str) -> tuple[str, str]:
         show_key, _, season_id = season_key.partition(":")
         return show_key, season_id
-
-    # TMDB is only used for TV shows; movies have no TMDB tv match so they keep
-    # using Netflix's own data.
-    @override
-    def _fetch_tmdb_id(
-        self,
-        show_key: str,
-        existing_show: Show | None = None,
-    ) -> int | None:
-        if existing_show and existing_show.tmdb_id is not None:
-            return existing_show.tmdb_id
-        self.title_file(show_key).download_if_outdated()
-        if self._is_movie(show_key):
-            return None
-        return self._tmdb_search_media(self._title_video(show_key).title)
-
-    @override
-    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
-        _, season_id = self._split_season_key(season_key)
-        for index, season in enumerate(self._ordered_seasons(show_key)):
-            if str(season.video_id) == season_id:
-                return index + 1
-        return None
-
-    @override
-    def _get_episode_number(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> int | None:
-        _, season_id = self._split_season_key(season_key)
-        for episode in self._season_episodes(show_key, int(season_id)):
-            if str(episode.video_id) == episode_key:
-                return episode.number
-        return None
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:

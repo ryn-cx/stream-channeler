@@ -2,18 +2,16 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
-from plugins.utils.base_plugin.url import URLHandler
+from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 
 if TYPE_CHECKING:
     from plugins.HiDive import HiDive
     from plugins.utils.base_plugin.files import BaseFile
 
 
-class HiDiveURLHandler(URLHandler["HiDive"]):
-    media_type: Literal["Series", "Movie"]
-
+class HiDiveURLHandler(MediaTypeURLHandler["HiDive"]):
     def __init__(self, plugin: HiDive, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)

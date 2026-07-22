@@ -12,9 +12,9 @@ from wholoo.season.models import SeasonModel
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
-from app.shows.models import Show
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, PartialGAPIJSON
+from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -54,7 +54,7 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
         return self.API_ENDPOINT.download_and_parse(self.series_id, self.season_number)
 
 
-class FileMixin(TMDBMixin, register=False):
+class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def series_file(self, series_id: str) -> Series:
         return self._get_cached_file(
             Series,
@@ -83,16 +83,12 @@ class FileMixin(TMDBMixin, register=False):
             lambda: SeasonFile(self.session, self.plugin, series_id, season_number),
         )
 
-    @staticmethod
-    def _content_type(show_key: str) -> str:
-        return show_key.split("/", 1)[0]
+    def _is_movie(self) -> bool:
+        if self._media_type_value not in ("movie", "series"):
+            msg = f"Invalid media type: {self._media_type_value}"
+            raise RuntimeError(msg)
 
-    @staticmethod
-    def _content_id(show_key: str) -> str:
-        return show_key.split("/", 1)[1]
-
-    def _is_movie(self, show_key: str) -> bool:
-        return self._content_type(show_key) == "movie"
+        return self._media_type_value == "movie"
 
     @staticmethod
     def _season_key(show_key: str, season_number: int) -> str:
@@ -105,9 +101,6 @@ class FileMixin(TMDBMixin, register=False):
 
     def _series_model(self, series_id: str) -> TVModel:
         return self.series_file(series_id).parsed()
-
-    def _movie_model(self, movie_id: str) -> MoviesModel:
-        return self.movie_file(movie_id).parsed()
 
     def _season_numbers(self, series_id: str) -> list[int]:
         numbers: dict[int, None] = {}
@@ -126,58 +119,23 @@ class FileMixin(TMDBMixin, register=False):
         return parsed.series_grouping_metadata.grouping_name
 
     @override
-    def _fetch_tmdb_id(
-        self,
-        show_key: str,
-        existing_show: Show | None = None,
-    ) -> int | None:
-        if existing_show and existing_show.tmdb_id is not None:
-            return existing_show.tmdb_id
-        if self._is_movie(show_key):
-            return None
-        series_id = self._content_id(show_key)
-        self.series_file(series_id).download_if_outdated()
-        entity = self._series_model(series_id).details.entity
-        return self._tmdb_search_media(entity.name)
-
-    @override
-    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
-        _, season_number = self._split_season_key(season_key)
-        return season_number
-
-    @override
-    def _get_episode_number(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> int | None:
-        _, season_number = self._split_season_key(season_key)
-        series_id = self._content_id(show_key)
-        for item in self._season_items(series_id, season_number):
-            if str(item.id) == episode_key:
-                return int(item.number)
-        return None
-
-    @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        if self._is_movie(show_key):
-            return [self.movie_file(self._content_id(show_key))]
-        return self._append_tmdb_show_file(
-            [self.series_file(self._content_id(show_key))],
-            show_key,
-        )
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.movie_file(show_key)]
+        else:
+            base_files = [self.series_file(show_key)]
+        return self._append_tmdb_show_file(base_files, show_key)
 
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        if self._is_movie(show_key):
-            return [self.movie_file(self._content_id(show_key))]
-        _, season_number = self._split_season_key(season_key)
-        return self._append_tmdb_season_file(
-            [self.season_file(self._content_id(show_key), season_number)],
-            season_key,
-            show_key,
-        )
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.movie_file(show_key)]
+        else:
+            _, season_number = self._split_season_key(season_key)
+            base_files = [self.season_file(show_key, season_number)]
+        return self._append_tmdb_season_file(base_files, season_key, show_key)
 
     @override
     def _episode_files(
@@ -186,11 +144,14 @@ class FileMixin(TMDBMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        if self._is_movie(show_key):
-            return [self.movie_file(self._content_id(show_key))]
-        _, season_number = self._split_season_key(season_key)
+        base_files: list[BaseFile[Any]]
+        if self._is_movie():
+            base_files = [self.movie_file(show_key)]
+        else:
+            _, season_number = self._split_season_key(season_key)
+            base_files = [self.season_file(show_key, season_number)]
         return self._append_tmdb_episode_file(
-            [self.season_file(self._content_id(show_key), season_number)],
+            base_files,
             episode_key,
             season_key,
             show_key,
@@ -198,11 +159,11 @@ class FileMixin(TMDBMixin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        if self._is_movie(show_key):
+        if self._is_movie():
             return [self._season_key(show_key, 0)]
         return [
             self._season_key(show_key, season_number)
-            for season_number in self._season_numbers(self._content_id(show_key))
+            for season_number in self._season_numbers(show_key)
         ]
 
     @override
@@ -212,14 +173,10 @@ class FileMixin(TMDBMixin, register=False):
         episode_keys: list[str] = []
         for season_key in season_keys:
             show_key, season_number = self._split_season_key(season_key)
-            if self._is_movie(show_key):
-                episode_keys.append(self._content_id(show_key))
+            if self._is_movie():
+                episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(item.id)
-                    for item in self._season_items(
-                        self._content_id(show_key),
-                        season_number,
-                    )
+                    str(item.id) for item in self._season_items(show_key, season_number)
                 ]
         return episode_keys

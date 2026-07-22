@@ -254,6 +254,11 @@ class BasePlugin(
             ):
                 obj.soft_delete_missing_children(episode_keys)
 
+    def _soft_delete_missing(self, show_key: str) -> None:
+        self.soft_delete_missing_seasons(show_key)
+        for season_key in self._season_keys_from_file(show_key):
+            self.soft_delete_missing_episodes(season_key)
+
     @classmethod
     @override
     def plugin_key(cls) -> str:

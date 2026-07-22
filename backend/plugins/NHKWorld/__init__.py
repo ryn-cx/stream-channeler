@@ -112,20 +112,27 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
         *,
         force: bool = False,
     ) -> Show:
-        existing_show = Show.get_from_memory(self.session, source, show_key)
-        program = self.video_program_file(show_key).parsed()
-        show = Show(
-            key=program.id,
-            name=program.title,
-            description=program.description,
-            url=self.build_url(program.url),
-            image_url=self._get_image_url(program.images.portrait),
-            media_type="TV Show",
-            data_timestamp=self.show_data_timestamp(show_key),
-            source_id=source.id,
-        ).upsert_and_set_update_at(source, existing_show, self._show_files(show_key))
+        if show_check := self._show_check(source, show_key, force=force):
+            program = self.video_program_file(show_key).parsed()
+            show = Show(
+                key=program.id,
+                name=program.title,
+                description=program.description,
+                url=self.build_url(program.url),
+                image_url=self._get_image_url(program.images.portrait),
+                media_type="TV Show",
+                data_timestamp=show_check.data_timestamp,
+                source_id=source.id,
+            ).upsert_and_set_update_at(
+                source,
+                show_check.record,
+                self._show_files(show_key),
+            )
+        else:
+            show = show_check.record
 
         self._upsert_season(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
 
         return show
 
@@ -149,7 +156,6 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
             season = season_check.record
 
         self._upsert_episodes(season, show_key, force=force)
-        self.soft_delete_missing_seasons(show_key)
 
     def _upsert_episodes(
         self,
@@ -189,8 +195,6 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)
-
-        self.soft_delete_missing_episodes(season.key)
 
     @override
     def search(self, query: str) -> PluginSearchResults:

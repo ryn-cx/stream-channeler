@@ -16,7 +16,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.YouTube.files import FileMixin, get_first_item
+from plugins.YouTube.files import get_first_item
 from plugins.YouTube.handlers import (
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
@@ -26,10 +26,11 @@ from plugins.YouTube.handlers import (
     VideoURLHandler,
     YouTubeURLHandler,
 )
+from plugins.YouTube.helpers import HelperMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
 
-class YouTube(WatchHistoryMixin, FileMixin, register=True):
+class YouTube(WatchHistoryMixin, HelperMixin, register=True):
     """YouTube plugin."""
 
     _VERSION = "0.0.1"
@@ -186,6 +187,8 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             show = show_check.record
 
         self._upsert_seasons(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
+
         return show
 
     def _upsert_seasons(
@@ -198,7 +201,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
         self._upsert_channel_uploads_season(show, show_key, force=force)
         self._upsert_playlist_seasons(show, show_key, force=force)
         self._upsert_album_seasons(show, show_key, force=force)
-        self.soft_delete_missing_seasons(show_key)
 
     def _upsert_season(  # noqa: PLR0913
         self,
@@ -323,7 +325,7 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
             duration_timedelta = video_item.content_details.duration
             duration = None
             if duration_timedelta:
-               duration = int(duration_timedelta.total_seconds())
+                duration = int(duration_timedelta.total_seconds())
 
             episode_files = self._episode_files(episode_key, season.key, show_key)
             Episode(
@@ -340,7 +342,6 @@ class YouTube(WatchHistoryMixin, FileMixin, register=True):
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,
             ).upsert_and_set_update_at(season, episode_check.record, episode_files)
-        self.soft_delete_missing_episodes(season.key)
 
     @override
     def update_season(self, season: Season) -> None:
