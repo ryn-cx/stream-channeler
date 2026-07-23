@@ -28,7 +28,7 @@ import { FavoriteChannel } from "./FavoriteChannel"
 
 // Owner channels (full ChannelOutput) render edit controls; public channels
 // (ChannelListOutput) are read-only and only need the display fields both share.
-type BrowseChannel = ChannelOutput | ChannelListOutput
+export type BrowseChannel = ChannelOutput | ChannelListOutput
 
 interface ChannelRowProps {
   channel: BrowseChannel
@@ -315,12 +315,17 @@ interface ChannelsBrowseProps {
   personalizable?: boolean
 }
 
-// Public lists arrive already ordered by the server (score then id); owner lists
-// have no inherent order, so they are sorted by channel number before paging.
-export function sortOwnedChannels<T extends BrowseChannel>(channels: T[]): T[] {
+// Default channel-list order: by channel number ascending. Favorites prefer the
+// viewer's own `custom_channel_number`, and a channel with no number is treated as
+// 999 so it sorts after the numbered ones.
+export function sortChannelsByNumber<T extends BrowseChannel>(channels: T[]): T[] {
+  const effectiveNumber = (channel: T): number => {
+    const listChannel = channel as ChannelListOutput
+    return listChannel.custom_channel_number ?? channel.channel_number ?? 999
+  }
   return [...channels].sort((first, second) => {
-    const firstNumber = first.channel_number ?? Number.MAX_SAFE_INTEGER
-    const secondNumber = second.channel_number ?? Number.MAX_SAFE_INTEGER
+    const firstNumber = effectiveNumber(first)
+    const secondNumber = effectiveNumber(second)
     if (firstNumber !== secondNumber) return firstNumber - secondNumber
     return (first.name ?? "").localeCompare(second.name ?? "")
   })

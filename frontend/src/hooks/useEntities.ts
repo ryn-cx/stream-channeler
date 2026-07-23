@@ -1,3 +1,4 @@
+// TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 
 import {
@@ -37,4 +38,11 @@ export function useSeason(seasonId: string | undefined) {
     queryFn: () => SeasonsService.getSeason({ seasonId: seasonId! }),
     enabled: !!seasonId,
   })
+}
+
+export function useSearchablePlugins() {
+  return useQuery({
+    queryKey: ["searchable-plugins"],
+    queryFn: () => PluginsService.searchInformation(),
+   })
 }

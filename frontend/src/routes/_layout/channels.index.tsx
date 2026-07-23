@@ -8,22 +8,18 @@ import type {
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Tv } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { type ReactNode, useState } from "react"
 import { ChannelsService } from "@/client"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
 import { AllChannelsView } from "@/components/Channels/ChannelList/AllChannelsView"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
-import {
-  ChannelsBrowse,
-  sortOwnedChannels,
-} from "@/components/Channels/ChannelList/ChannelsBrowse"
+import { ChannelsBrowseSection } from "@/components/Channels/ChannelList/ChannelsBrowseSection"
 import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
 import { ownedChannelColumns } from "@/components/Channels/ChannelList/columns"
 import { FavoriteChannelsView } from "@/components/Channels/ChannelList/FavoriteChannelsView"
 import { PublicChannelsView } from "@/components/Channels/ChannelList/PublicChannelsView"
 import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
 import {
-  BrowsePagination,
   MAX_BROWSE_PAGE_SIZE,
   useBrowsePagination,
 } from "@/components/Common/BrowsePagination"
@@ -112,17 +108,9 @@ function MyChannels({
 
   const isServer = query.data?.is_server_side ?? false
   const tableData = query.data?.data ?? []
-  const pageStart = pagination.pageIndex * pagination.pageSize
-  // The server already returns browse's page in its own order; only a
-  // client-side list needs sorting by channel number and slicing here.
-  const ordered = useMemo(
-    () => (isServer ? tableData : sortOwnedChannels(tableData)),
-    [isServer, tableData],
-  )
-  const pageChannels = isServer
-    ? ordered
-    : ordered.slice(pageStart, pageStart + pagination.pageSize)
-  const rowCount = isServer ? (query.data?.filtered_count ?? 0) : ordered.length
+  const rowCount = isServer
+    ? (query.data?.filtered_count ?? 0)
+    : tableData.length
 
   const table = useReactTable({
     data: tableData,
@@ -191,14 +179,14 @@ function MyChannels({
           />
         </div>
       ) : (
-        <>
-          <ChannelsBrowse channels={pageChannels} />
-          <BrowsePagination
-            pagination={pagination}
-            onPaginationChange={setPagination}
-            rowCount={rowCount}
-          />
-        </>
+        <ChannelsBrowseSection
+          rows={tableData}
+          isServer={isServer}
+          serverRowCount={rowCount}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          sortByNumber
+        />
       )}
     </div>
   )

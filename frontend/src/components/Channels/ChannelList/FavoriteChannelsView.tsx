@@ -12,12 +12,11 @@ import { useState } from "react"
 
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
-import { ChannelsBrowse } from "@/components/Channels/ChannelList/ChannelsBrowse"
+import { ChannelsBrowseSection } from "@/components/Channels/ChannelList/ChannelsBrowseSection"
 import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
 import { publicChannelColumns } from "@/components/Channels/ChannelList/publicColumns"
 import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
 import {
-  BrowsePagination,
   DEFAULT_BROWSE_PAGE_SIZE,
   MAX_BROWSE_PAGE_SIZE,
 } from "@/components/Common/BrowsePagination"
@@ -79,10 +78,6 @@ export function FavoriteChannelsView({
 
   const isServer = query.data?.is_server_side ?? false
   const allRows = query.data?.data ?? []
-  const pageStart = pagination.pageIndex * pagination.pageSize
-  const browseRows = isServer
-    ? allRows
-    : allRows.slice(pageStart, pageStart + pagination.pageSize)
   const rowCount = isServer ? (query.data?.filtered_count ?? 0) : allRows.length
 
   const table = useReactTable({
@@ -152,14 +147,16 @@ export function FavoriteChannelsView({
           />
         </div>
       ) : (
-        <>
-          <ChannelsBrowse channels={browseRows} readOnly personalizable />
-          <BrowsePagination
-            pagination={pagination}
-            onPaginationChange={setPagination}
-            rowCount={rowCount}
-          />
-        </>
+        <ChannelsBrowseSection
+          rows={allRows}
+          isServer={isServer}
+          serverRowCount={rowCount}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+          sortByNumber
+          readOnly
+          personalizable
+        />
       )}
     </div>
   )

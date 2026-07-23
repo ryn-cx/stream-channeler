@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
+import { useSearchablePlugins } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
@@ -551,10 +552,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   const { showErrorToast } = useCustomToast()
   const addUrlMutation = useAddToQueue(channelId)
 
-  const { data: searchablePlugins } = useQuery({
-    queryKey: ["searchable-plugins"],
-    queryFn: () => PluginsService.searchInformation(),
-  })
+  const { data: searchablePlugins } = useSearchablePlugins()
 
   const plugins = searchablePlugins ?? []
   // Plugins that search in-app vs. plugins that only expose a website search

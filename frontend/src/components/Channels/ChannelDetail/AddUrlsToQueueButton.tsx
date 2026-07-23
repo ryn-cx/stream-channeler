@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useSearchablePlugins } from "@/hooks/useEntities"
 import { ManageShowsTabs } from "./ManageShowsTabs"
 
 interface ManageShowsButtonProps {
@@ -29,6 +30,7 @@ export function ManageShowsButton({
   combinedChannels,
 }: ManageShowsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
+  useSearchablePlugins()
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
