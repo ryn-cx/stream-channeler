@@ -619,6 +619,7 @@ export type PluginOutput = {
 export type PluginSearchInformation = {
     plugin_key: string;
     name: string;
+    manual_search_only?: boolean;
 };
 
 /**

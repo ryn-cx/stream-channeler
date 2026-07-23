@@ -54,7 +54,7 @@ class TMDBMixin(BasePlugin, register=False):
         source: Source,
         existing_show: Show | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"] = "tv",
+        tmdb_media_type: Literal["movie", "tv"],
     ) -> Show:
         tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
         show = self.tmdb.tmdb_merge_show(show, tmdb_id, tmdb_media_type)
@@ -67,7 +67,7 @@ class TMDBMixin(BasePlugin, register=False):
         show: Show,
         existing_season: Season | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"] = "tv",
+        tmdb_media_type: Literal["movie", "tv"],
     ) -> Season:
         season = self.tmdb.tmdb_merge_season(
             season,
@@ -84,7 +84,7 @@ class TMDBMixin(BasePlugin, register=False):
         season: Season,
         existing_episode: Episode | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"] = "tv",
+        tmdb_media_type: Literal["movie", "tv"],
     ) -> Episode:
         episode = self.tmdb.tmdb_merge_episode(
             episode,

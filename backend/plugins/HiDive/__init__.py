@@ -169,6 +169,7 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
                 source,
                 show_check.record,
                 show_key,
+                "tv",
             )
         else:
             show = show_check.record
@@ -246,6 +247,7 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
                     show,
                     season_check.record,
                     show_key,
+                    "tv",
                 )
             else:
                 season = season_check.record
@@ -339,6 +341,7 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
                 season,
                 episode_check.record,
                 show_key,
+                "tv",
             )
 
     def _upsert_movie_episode(

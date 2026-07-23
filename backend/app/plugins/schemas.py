@@ -64,6 +64,7 @@ class PluginImportURLInformation(BaseModel):
 class PluginSearchInformation(BaseModel):
     plugin_key: str
     name: str
+    manual_search_only: bool = False
 
 
 class PluginURLMatch(BaseModel):

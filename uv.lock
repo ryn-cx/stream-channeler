@@ -71,6 +71,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "loguru" },
     { name = "meshfilm" },
+    { name = "minbo" },
     { name = "naphki" },
     { name = "not-yt-dlapi" },
     { name = "psycopg", extra = ["binary"] },
@@ -114,6 +115,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
+    { name = "minbo", git = "https://github.com/ryn-cx/minbo" },
     { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
     { name = "not-yt-dlapi", git = "https://github.com/ryn-cx/not-yt-dlapi" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
@@ -1141,6 +1143,15 @@ wheels = [
 name = "meshfilm"
 version = "0.1.0"
 source = { git = "https://github.com/ryn-cx/meshfilm#ec6bd91d2add6f2c5eee931041f421097662c850" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
+name = "minbo"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/minbo#881c880913ea3420d25185253e60d7796180524b" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

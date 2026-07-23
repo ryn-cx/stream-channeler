@@ -134,8 +134,7 @@ def match_url(
 def search_information(
     _current_user: CurrentUser,
 ) -> list[PluginSearchInformation]:
-    """Return information about all plugins that support searching."""
-    return [
+    in_app_search = [
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
@@ -143,6 +142,17 @@ def search_information(
         for plugin_cls in sorted_plugins()
         if plugin_cls.implements("search")
     ]
+    manual_search = [
+        PluginSearchInformation(
+            plugin_key=plugin_cls.plugin_key(),
+            name=plugin_cls.plugin_key(),
+            manual_search_only=True,
+        )
+        for plugin_cls in sorted_plugins()
+        if not plugin_cls.implements("search")
+        and plugin_cls.implements("search_url")
+    ]
+    return in_app_search + manual_search
 
 
 @plugins_router.get("/search-url")

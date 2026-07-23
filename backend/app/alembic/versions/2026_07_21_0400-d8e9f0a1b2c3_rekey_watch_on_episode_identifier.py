@@ -54,8 +54,17 @@ def upgrade():
     )
 
     op.drop_index('Watch-user_id-episode_id-index', table_name='watch')
-    op.drop_constraint('episodewatch_episode_id_fkey', 'watch', type_='foreignkey')
-    op.drop_constraint('episodewatch_pkey', 'watch', type_='primary')
+    # Databases created from the squashed initial migration name these
+    # constraints `watch_*`; databases that predate the `episodewatch` -> `watch`
+    # table rename keep the old `episodewatch_*` names. Drop whichever exists.
+    op.execute(
+        'ALTER TABLE watch DROP CONSTRAINT IF EXISTS episodewatch_episode_id_fkey',
+    )
+    op.execute(
+        'ALTER TABLE watch DROP CONSTRAINT IF EXISTS watch_episode_id_fkey',
+    )
+    op.execute('ALTER TABLE watch DROP CONSTRAINT IF EXISTS episodewatch_pkey')
+    op.execute('ALTER TABLE watch DROP CONSTRAINT IF EXISTS watch_pkey')
     op.drop_column('watch', 'episode_id')
 
     op.alter_column(

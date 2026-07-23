@@ -4,6 +4,7 @@
 import re
 from datetime import timedelta
 from typing import Any, ClassVar, override
+from urllib.parse import quote
 
 from loguru import logger
 from not_yt_dlapi.channel.models import Item as ChannelItem
@@ -78,6 +79,11 @@ class YouTube(WatchHistoryMixin, HelperMixin, register=True):
             "> `https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
             "> `https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`"
         )
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url(f"results?search_query={quote(query)}")
 
     @classmethod
     @override

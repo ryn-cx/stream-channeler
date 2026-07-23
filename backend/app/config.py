@@ -124,6 +124,13 @@ class Settings(BaseSettings):
             "FIRST_SUPERUSER_PASSWORD",
             self.FIRST_SUPERUSER_PASSWORD,
         )
+        self._check_default_secret("GET_AROUND_SERVER", self.GET_AROUND_SERVER)
+        self._check_default_secret("CF_ACCESS_CLIENT_ID", self.CF_ACCESS_CLIENT_ID)
+        self._check_default_secret(
+            "CF_ACCESS_CLIENT_SECRET",
+            self.CF_ACCESS_CLIENT_SECRET,
+        )
+        self._check_default_secret("TMDB_API_READ_TOKEN", self.TMDB_API_READ_TOKEN)
 
         return self
 
@@ -152,12 +159,6 @@ class Settings(BaseSettings):
                         keyring_value = None
                     if keyring_value:
                         data[name] = keyring_value
-                if name in data and data[name] == "changethis":
-                    message = (
-                        f'The value of {name} is "changethis", '
-                        "it must be set to a real value."
-                    )
-                    raise ValueError(message)
         return data
 
 

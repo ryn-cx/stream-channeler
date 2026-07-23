@@ -21,7 +21,9 @@ import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -554,9 +556,46 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     queryFn: () => PluginsService.searchInformation(),
   })
 
+  const plugins = searchablePlugins ?? []
+  // Plugins that search in-app vs. plugins that only expose a website search
+  // page. The latter are offered under a "Manual Search Only" header and open
+  // their search page in a new tab instead of showing in-app results.
+  const inAppPlugins = plugins.filter((plugin) => !plugin.manual_search_only)
+  const manualPlugins = plugins.filter((plugin) => plugin.manual_search_only)
+  const searchablePluginKeys = new Set(
+    inAppPlugins.map((plugin) => plugin.plugin_key),
+  )
+  const manualPluginKeys = new Set(
+    manualPlugins.map((plugin) => plugin.plugin_key),
+  )
+
   const runSearch = async (key: string, rawQuery: string) => {
     const trimmed = rawQuery.trim()
     if (!trimmed) return
+
+    // Manual-search-only plugins have no in-app search; open their website's
+    // search page in a new tab. The tab is opened synchronously so the browser
+    // keeps it tied to the click and doesn't block it as a popup.
+    if (manualPluginKeys.has(key)) {
+      const newTab = window.open("", "_blank")
+      if (newTab) newTab.opener = null
+      try {
+        const { url } = await PluginsService.searchUrl({
+          pluginKey: key,
+          query: trimmed,
+        })
+        if (url) {
+          if (newTab) newTab.location.href = url
+        } else {
+          newTab?.close()
+          showErrorToast("No search page available")
+        }
+      } catch {
+        newTab?.close()
+        showErrorToast("Search failed")
+      }
+      return
+    }
 
     setIsSearching(true)
     setTmdbResults(null)
@@ -594,11 +633,6 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
 
   const handleSearch = () => runSearch(pluginKey, searchQuery)
 
-  const plugins = searchablePlugins ?? []
-  const searchablePluginKeys = new Set(
-    plugins.map((plugin) => plugin.plugin_key),
-  )
-
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -626,11 +660,21 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={TMDB_KEY}>TMDB (Search Multiple)</SelectItem>
-            {plugins.map((plugin) => (
+            {inAppPlugins.map((plugin) => (
               <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
                 {plugin.name}
               </SelectItem>
             ))}
+            {manualPlugins.length > 0 && (
+              <SelectGroup>
+                <SelectLabel>External Search Only</SelectLabel>
+                {manualPlugins.map((plugin) => (
+                  <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
+                    {plugin.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
           </SelectContent>
         </Select>
       </div>

@@ -15,6 +15,7 @@ dependencies = [
   "jinja2<4.0.0,>=3.1.4",
   "loguru>=0.7.3",
   "meshfilm",
+  "minbo",
   "naphki",
   "not-yt-dlapi",
   "psycopg[binary]<4.0.0,>=3.1.13",
@@ -110,3 +111,4 @@ yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
 meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }
 tminidb = { git = "https://github.com/ryn-cx/tminidb" }
 wholoo = { git = "https://github.com/ryn-cx/wholoo" }
+minbo = { git = "https://github.com/ryn-cx/minbo" }

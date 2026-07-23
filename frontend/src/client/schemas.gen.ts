@@ -3442,6 +3442,11 @@ export const PluginSearchInformationSchema = {
         name: {
             type: 'string',
             title: 'Name'
+        },
+        manual_search_only: {
+            type: 'boolean',
+            title: 'Manual Search Only',
+            default: false
         }
     },
     type: 'object',

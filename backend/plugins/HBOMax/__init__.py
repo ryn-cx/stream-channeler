@@ -1,4 +1,5 @@
-"""Hulu plugin."""
+# TODO: Validate
+"""HBO Max plugin."""
 
 from __future__ import annotations
 
@@ -6,64 +7,58 @@ from datetime import timedelta
 from typing import override
 from urllib.parse import quote
 
-from wholoo.movies.models import MoviesModel
-from wholoo.search.models import Result
+from minbo.movies.models import Idref14 as MovieContent
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
-from plugins.Hulu.handlers import HuluURLHandler, MovieURLHandler, SeriesURLHandler
-from plugins.Hulu.helpers import HelperMixin
-from plugins.utils.abstract_plugin import (
-    PluginSearchResult,
-    PluginSearchResults,
-)
+from plugins.HBOMax.handlers import HBOMaxURLHandler, MovieURLHandler, ShowURLHandler
+from plugins.HBOMax.helpers import HelperMixin
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
-class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
-    """Hulu plugin."""
+class HBOMax(HelperMixin, MediaTypeImportMixin[HBOMaxURLHandler], register=True):
+    """HBO Max plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS = (SeriesURLHandler, MovieURLHandler)
-    TMDB_PROVIDER_NAMES = ("Hulu",)
+    _URL_HANDLERS = (MovieURLHandler, ShowURLHandler)
+    TMDB_PROVIDER_NAMES = ("HBO Max", "Max")
 
     @classmethod
     @override
-    def _domain(cls) -> str:
-        return "hulu.com"
+    def domains(cls) -> list[str]:
+        return ["play.hbomax.com", "hbomax.com"]
 
     @classmethod
-    def _show_url(cls, show_key: str, media_type: str) -> str:
-        return cls.build_url(f"{media_type}/{show_key}")
+    def _show_url(cls, show_key: str) -> str:
+        return cls.build_url(f"show/{show_key}")
 
     @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        return cls.build_url(f"watch/{episode_key}")
-
-    @staticmethod
-    def _image_url(path: str) -> str:
-        operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
-        return f"{path}&operations={operations}"
+    def _movie_url(cls, movie_key: str) -> str:
+        return cls.build_url(f"movie/{movie_key}")
 
     @override
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
             "> [!TIP/Series]\n"
-            "> `https://www.hulu.com/series/fdeb1018-4472-442f-ba94-fb087cdea069`\n\n"
+            "> `https://play.hbomax.com/show/ab553cdc-e15d-4597-b65f-bec9201fd2dd`\n\n"
             "> [!TIP/Movie]\n"
-            "> `https://www.hulu.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981`\n\n"
+            "> `https://play.hbomax.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981`\n\n"
         )
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url(f"search/result?q={quote(query)}")
 
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="Hulu",
-            favicon_url="https://www.hulu.com/favicon.ico",
+            name="HBO Max",
+            favicon_url="https://www.hbomax.com/favicon.ico",
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 
@@ -80,6 +75,7 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         else:
             show = self._upsert_series_show(source, show_key, force=force)
         self._soft_delete_missing(show_key)
+        self._set_weekly_updates_from_episodes(show, update_show=False)
         return show
 
     def _upsert_series_show(
@@ -90,17 +86,17 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         force: bool = False,
     ) -> Show:
         if show_check := self._show_check(source, show_key, force=force):
-            model = self._series_model(show_key)
-            entity = model.details.entity
+            content = self._show_content(show_key)
             show = Show(
                 key=show_key,
-                name=model.name,
-                description=entity.description,
+                name=content.title.full,
+                description=content.summary.full,
                 media_type="TV Show",
-                url=self._show_url(show_key, "series"),
-                image_url=self._image_url(model.artwork.program_tile.path),
+                url=self._show_url(show_key),
+                image_url=content.image_url_link,
                 data_timestamp=show_check.data_timestamp,
                 source_id=source.id,
+                update_at=show_check.data_timestamp + timedelta(days=30),
             )
             show = self._merge_and_upsert_show(
                 show,
@@ -113,7 +109,6 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
             show = show_check.record
 
         self._upsert_tv_seasons(show, show_key, force=force)
-        show.set_update_at(show_check.data_timestamp + timedelta(days=30))
 
         return show
 
@@ -124,17 +119,18 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         *,
         force: bool = False,
     ) -> Show:
-        model = self._movie_model(show_key)
+        content = self._movie_content(show_key)
         if show_check := self._show_check(source, show_key, force=force):
             show = Show(
                 key=show_key,
-                name=model.name,
-                description=model.details.entity.description,
-                url=self._show_url(show_key, "movie"),
-                image_url=self._image_url(model.artwork.program_tile.path),
+                name=content.title.full,
+                description=content.summary.full,
                 media_type="Movie",
+                url=self._movie_url(show_key),
+                image_url=content.image_url_link,
                 data_timestamp=show_check.data_timestamp,
                 source_id=source.id,
+                update_at=show_check.data_timestamp + timedelta(days=30),
             )
             show = self._merge_and_upsert_show(
                 show,
@@ -165,12 +161,13 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
                 show_key,
                 force=force,
             ):
+                entry = self._season_entry(show_key, season_number)
                 season = Season(
                     key=season_key,
-                    name=self._season_name(show_key, season_number),
+                    name=entry.title.full,
                     season_number=season_number,
                     sort_order=sort_order,
-                    url=self._show_url(show_key, "series"),
+                    url=self._show_url(show_key),
                     data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
                 )
@@ -193,14 +190,14 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         *,
         force: bool = False,
     ) -> None:
-        model = self._movie_model(show_key)
+        content = self._movie_content(show_key)
         season_key = self._season_key(show_key, 0)
         if season_check := self._season_check(show, season_key, show_key, force=force):
             season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                url=self._show_url(show_key, "movie"),
+                url=self._movie_url(show_key),
                 data_timestamp=season_check.data_timestamp,
                 show_id=show.id,
             )
@@ -214,7 +211,7 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         else:
             season = season_check.record
 
-        self._upsert_movie_episode(season, show_key, model, force=force)
+        self._upsert_movie_episode(season, show_key, content, force=force)
 
     def _upsert_tv_episodes(
         self,
@@ -224,9 +221,9 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, item in enumerate(self._season_items(show_key, season_number)):
-            season.set_update_at(item.bundle.availability.start_date)
-            episode_key = str(item.id)
+        episodes = self._season_episodes(show_key, season_number)
+        for sort_order, item in enumerate(episodes):
+            episode_key = self._episode_key(season.key, item.episode_number)
             episode_check = self._episode_check(
                 episode_key,
                 season,
@@ -238,13 +235,12 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
 
             episode = Episode(
                 key=episode_key,
-                name=item.name,
-                episode_number=int(item.number),
-                url=self._episode_url(episode_key),
-                description=item.description,
-                image_url=self._image_url(item.artwork.video_horizontal_hero.path),
-                duration=item.duration,
-                release_date=item.premiere_date,
+                name=str(item.title.full),
+                episode_number=item.episode_number,
+                url=item.episode_url,
+                description=item.summary.full,
+                image_url=item.images.default,
+                release_date=item.offering_dates.start_date,
                 sort_order=sort_order,
                 episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
@@ -262,7 +258,7 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         self,
         season: Season,
         show_key: str,
-        model: MoviesModel,
+        content: MovieContent,
         *,
         force: bool = False,
     ) -> None:
@@ -274,11 +270,10 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         ):
             episode = Episode(
                 key=show_key,
-                name=model.name,
-                description=model.details.entity.description,
-                url=self._episode_url(show_key),
-                image_url=self._image_url(model.artwork.program_tile.path),
-                duration=model.details.entity.duration,
+                name=content.title.full,
+                description=content.summary.full,
+                url=self._movie_url(show_key),
+                image_url=content.image_url_link,
                 episode_number=0,
                 sort_order=0,
                 episode_identifier=f"{self.plugin_key()} {show_key}",
@@ -292,27 +287,3 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
                 show_key,
                 "movie",
             )
-
-    @override
-    def search(self, query: str) -> PluginSearchResults:
-        search_file = self.search_file(query)
-        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        results = [
-            self._search_result(result)
-            for group in search_file.parsed().groups
-            for result in group.results
-            if result.metrics_info.target_type in ("series", "movie")
-        ]
-        return PluginSearchResults(results=results)
-
-    def _search_result(self, result: Result) -> PluginSearchResult:
-        metrics = result.metrics_info
-        content_type = metrics.target_type
-        premiere_date = result.entity_metadata.premiere_date
-        return PluginSearchResult(
-            title=metrics.target_name,
-            url=self._show_url(str(metrics.target_id), content_type),
-            year=premiere_date.year if premiere_date else None,
-            image_url=self._image_url(result.visuals.artwork.horizontal.image.path),
-            media_type="Movie" if content_type == "movie" else "Series",
-        )

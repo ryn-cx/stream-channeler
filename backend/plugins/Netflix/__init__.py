@@ -140,6 +140,7 @@ class Netflix(HelperMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                 source,
                 show_check.record,
                 show_key,
+                "tv",
             )
         else:
             show = show_check.record
@@ -177,6 +178,7 @@ class Netflix(HelperMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                     show,
                     season_check.record,
                     show_key,
+                    "tv",
                 )
             else:
                 season = season_check.record
@@ -227,6 +229,7 @@ class Netflix(HelperMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
                 season,
                 episode_check.record,
                 show_key,
+                "tv",
             )
 
     def _upsert_movie(
