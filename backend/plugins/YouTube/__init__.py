@@ -338,7 +338,7 @@ class YouTube(WatchHistoryMixin, HelperMixin, register=True):
                 key=video_item.id,
                 name=video_snippet.title,
                 url=self.build_url(f"watch?v={video_item.id}"),
-                description=video_snippet.description,
+                description=video_snippet.description.replace("\x00", ""),
                 release_date=video_snippet.published_at,
                 air_date=video_snippet.published_at,
                 duration=duration,
