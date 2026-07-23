@@ -92,8 +92,8 @@ def regenerate_stale_models(session: Session) -> None:
 
         try:
             raw_json = json.loads(content)
-        except json.JSONDecodeError as error:
-            logger.error(f"Could not decode {plugin_record.key}/{key}: {error}")
+        except json.JSONDecodeError:
+            logger.error(f"Could not decode {plugin_record.key}/{key}")
             continue
 
         try:
@@ -101,15 +101,9 @@ def regenerate_stale_models(session: Session) -> None:
             continue
         except Exception as error:  # noqa: BLE001 - Any parse failure means the model is stale.
             regenerated_count += 1
-            logger.warning(f"Parse failed for {plugin_record.key}/{key}: {error}")
+            logger.warning(f"Parse failed for {plugin_record.key}/{key}")
 
-        try:
-            _parse_file(file_class, raw_json, update_model=True)
-            logger.info(f"Regenerated model for {file_class.__name__}")
-        except Exception as error:  # noqa: BLE001 - Keep going even if regeneration fails.
-            logger.error(
-                f"Model regeneration failed for {plugin_record.key}/{key}: {error}",
-            )
+        _parse_file(file_class, raw_json, update_model=True)
 
     logger.info(f"Reparse completed with {regenerated_count} model regenerations")
 
