@@ -1,14 +1,11 @@
 // TODO: Validate
-import { useMutation } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { ChannelsService } from "@/client"
-import type { ChannelTableData } from "@/components/Channels/ChannelList/columns"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
+import { useDeleteTableRow } from "@/components/Common/useDeleteTableRow"
 
 interface DeleteChannelProps {
   id: string
@@ -32,51 +29,11 @@ const DeleteChannel = ({
       setInternalOpen(open)
     }
   }
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  const mutation = useMutation({
+  const mutation = useDeleteTableRow({
     mutationFn: (channelId: string) =>
       ChannelsService.deleteChannel({ channelId }),
-    // When mutate is called:
-    onMutate: async (_channelId, context) => {
-      // Cancel any outgoing refetches
-      // (so they don't overwrite our optimistic update)
-      await context.client.cancelQueries({ queryKey: ["channels"] })
-
-      // Snapshot the previous value
-      const previousChannels = context.client.getQueryData<
-        Array<ChannelTableData>
-      >(["channels"])
-
-      // Optimistically mark as pending
-      context.client.setQueryData<Array<ChannelTableData>>(
-        ["channels"],
-        (old) => old!.map((c) => (c.id === id ? { ...c, pending: true } : c)),
-      )
-
-      // Return a result with the snapshotted value
-      return { previousChannels }
-    },
-    onSuccess: (_data, _channelId, _onMutateResult, context) => {
-      showSuccessToast("The channel was deleted successfully")
-      onSuccess()
-      context.client.setQueryData<Array<ChannelTableData>>(
-        ["channels"],
-        (old) => old?.filter((c) => c.id !== id),
-      )
-    },
-    // If the mutation fails,
-    // use the result returned from onMutate to roll back
-    onError: (error, _channelId, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channels"],
-        onMutateResult?.previousChannels,
-      )
-      handleError.call(showErrorToast, error as any)
-    },
-    // Always refetch after error or success:
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({ queryKey: ["channels"] }),
+    rowId: id,
+    successMessage: "The channel was deleted successfully",
   })
 
   return (
@@ -95,7 +52,7 @@ const DeleteChannel = ({
         title="Delete Channel"
         description="This channel will be permanently deleted. Are you sure? You will not be able to undo this action."
         confirmLabel="Delete"
-        onConfirm={() => mutation.mutate(id)}
+        onConfirm={() => mutation.mutate(id, { onSuccess: () => onSuccess() })}
       />
     </>
   )

@@ -6,6 +6,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react"
+import type { Dispatch, SetStateAction } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +23,35 @@ import {
 export const BROWSE_PAGE_SIZES = [10, 25, 50, 100]
 export const MAX_BROWSE_PAGE_SIZE = 100
 export const DEFAULT_BROWSE_PAGE_SIZE = 10
+
+function readStoredBrowsePageSize(storageKey: string): number {
+  const stored = localStorage.getItem(storageKey)
+  if (stored !== null) {
+    const parsed = Number(stored)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.min(parsed, MAX_BROWSE_PAGE_SIZE)
+    }
+  }
+  return DEFAULT_BROWSE_PAGE_SIZE
+}
+
+// Persists the browse page size to localStorage so "per page" survives reloads
+// and navigation, mirroring how the table view persists its own page size. The
+// page index stays ephemeral so a fresh visit always starts on the first page.
+export function useBrowsePagination(
+  storageKey: string,
+): [PaginationState, Dispatch<SetStateAction<PaginationState>>] {
+  const [pagination, setPagination] = useState<PaginationState>(() => ({
+    pageIndex: 0,
+    pageSize: readStoredBrowsePageSize(storageKey),
+  }))
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, `${pagination.pageSize}`)
+  }, [storageKey, pagination.pageSize])
+
+  return [pagination, setPagination]
+}
 
 export function BrowsePagination({
   pagination,

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type {
   ColumnFiltersState,
-  PaginationState,
   SortingState,
   VisibilityState,
 } from "@tanstack/react-table"
@@ -25,8 +24,8 @@ import { PublicChannelsView } from "@/components/Channels/ChannelList/PublicChan
 import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
 import {
   BrowsePagination,
-  DEFAULT_BROWSE_PAGE_SIZE,
   MAX_BROWSE_PAGE_SIZE,
+  useBrowsePagination,
 } from "@/components/Common/BrowsePagination"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
@@ -80,10 +79,9 @@ function MyChannels({
     usePersistedJsonState<VisibilityState>("channels-column-visibility", {
       id: false,
     })
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: DEFAULT_BROWSE_PAGE_SIZE,
-  })
+  const [pagination, setPagination] = useBrowsePagination(
+    "channels-own-browse-page-size",
+  )
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
 
