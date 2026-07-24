@@ -26,6 +26,7 @@ import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboardin
 import { Route as LayoutFilesRouteImport } from './routes/_layout/files'
 import { Route as LayoutEpisodesRouteImport } from './routes/_layout/episodes'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
+import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
 import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
@@ -136,6 +137,11 @@ const LayoutEpisodesRoute = LayoutEpisodesRouteImport.update({
 const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutCreditsRoute = LayoutCreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
   '/channel-orders': typeof LayoutChannelOrdersRoute
+  '/credits': typeof LayoutCreditsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/episodes': typeof LayoutEpisodesRoute
   '/files': typeof LayoutFilesRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
+  '/credits': typeof LayoutCreditsRoute
   '/dashboard': typeof LayoutDashboardRoute
   '/episodes': typeof LayoutEpisodesRoute
   '/files': typeof LayoutFilesRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
+  '/_layout/credits': typeof LayoutCreditsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
   '/_layout/episodes': typeof LayoutEpisodesRoute
   '/_layout/files': typeof LayoutFilesRoute
@@ -432,6 +441,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/channel-orders'
+    | '/credits'
     | '/dashboard'
     | '/episodes'
     | '/files'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/channel-orders'
+    | '/credits'
     | '/dashboard'
     | '/episodes'
     | '/files'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/channel-orders'
+    | '/_layout/credits'
     | '/_layout/dashboard'
     | '/_layout/episodes'
     | '/_layout/files'
@@ -686,6 +698,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof LayoutDashboardRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/credits': {
+      id: '/_layout/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof LayoutCreditsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/channel-orders': {
@@ -920,6 +939,7 @@ const LayoutOnboardingRouteWithChildren =
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
+  LayoutCreditsRoute: typeof LayoutCreditsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
   LayoutEpisodesRoute: typeof LayoutEpisodesRoute
   LayoutFilesRoute: typeof LayoutFilesRoute
@@ -953,6 +973,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
+  LayoutCreditsRoute: LayoutCreditsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,
   LayoutEpisodesRoute: LayoutEpisodesRoute,
   LayoutFilesRoute: LayoutFilesRoute,

@@ -1,4 +1,5 @@
 // TODO: Validate
+import { Link } from "@tanstack/react-router"
 import { FaGithub } from "react-icons/fa"
 
 const socialLinks = [
@@ -19,6 +20,12 @@ export function Footer() {
           Stream Channeler - {currentYear}
         </p>
         <div className="flex items-center gap-4">
+          <Link
+            to="/credits"
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
+            Credits
+          </Link>
           {socialLinks.map(({ icon: Icon, href, label }) => (
             <a
               key={label}
