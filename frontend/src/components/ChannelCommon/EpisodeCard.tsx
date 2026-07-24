@@ -103,6 +103,8 @@ interface EpisodeCardProps {
   topLeftBadge?: React.ReactNode
   /** Click handler for the card itself. Ignored when in edit-order mode. */
   onClick?: () => void
+  /** Fades the card out to show it has already been clicked. */
+  dimmed?: boolean
   /** Whether the card is currently in reorder mode. */
   editOrder?: boolean
   /** Position in the list — required for reorder callbacks to work. */
@@ -116,6 +118,7 @@ export function EpisodeCard({
   menuItems,
   topLeftBadge,
   onClick,
+  dimmed,
   editOrder,
   index,
   onMove,
@@ -141,9 +144,9 @@ export function EpisodeCard({
 
   return (
     <Card
-      className={`group overflow-hidden cursor-pointer hover:bg-accent transition-colors p-0 bg-card no-border rounded-lg ${
-        editOrder ? "ring-2 ring-green-600/60" : ""
-      }`}
+      className={`group overflow-hidden cursor-pointer hover:bg-accent transition p-0 bg-card no-border rounded-lg ${
+        dimmed ? "opacity-40" : ""
+      } ${editOrder ? "ring-2 ring-green-600/60" : ""}`}
       onClick={() => {
         if (editOrder) return
         onClick?.()

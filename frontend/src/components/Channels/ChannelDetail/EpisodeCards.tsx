@@ -58,6 +58,7 @@ export function EpisodeCard({
 }) {
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
+  const [clicked, setClicked] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
 
@@ -163,6 +164,7 @@ export function EpisodeCard({
   })
 
   const onCardClick = () => {
+    setClicked(true)
     watchedMutation.mutate(episode.id)
     if (episode.url) {
       window.open(episode.url, "_blank", "noopener,noreferrer")
@@ -257,6 +259,7 @@ export function EpisodeCard({
         menuItems={menuItems}
         topLeftBadge={topLeftBadge}
         onClick={onCardClick}
+        dimmed={clicked}
         editOrder={editOrder}
         index={index}
         onMove={onMove}
