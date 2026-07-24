@@ -338,6 +338,8 @@ class YouTube(WatchHistoryMixin, HelperMixin, register=True):
                 key=video_item.id,
                 name=video_snippet.title,
                 url=self.build_url(f"watch?v={video_item.id}"),
+                # A YouTube video with a null character in the description caused
+                # importing to hang so it needs to be stripped out.
                 description=video_snippet.description.replace("\x00", ""),
                 release_date=video_snippet.published_at,
                 air_date=video_snippet.published_at,
