@@ -1599,11 +1599,6 @@ export class PluginsService {
     
     /**
      * Search Information
-     * Return searchable plugins: in-app search first, then manual-search-only.
-     *
-     * A plugin that only exposes a website search page (a `search_url` but no
-     * `search`) is still listed, after the in-app search plugins, so the frontend
-     * can offer it under a "Manual Search Only" header.
      * @returns PluginSearchInformation Successful Response
      * @throws ApiError
      */

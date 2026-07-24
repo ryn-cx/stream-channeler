@@ -318,7 +318,9 @@ interface ChannelsBrowseProps {
 // Default channel-list order: by channel number ascending. Favorites prefer the
 // viewer's own `custom_channel_number`, and a channel with no number is treated as
 // 999 so it sorts after the numbered ones.
-export function sortChannelsByNumber<T extends BrowseChannel>(channels: T[]): T[] {
+export function sortChannelsByNumber<T extends BrowseChannel>(
+  channels: T[],
+): T[] {
   const effectiveNumber = (channel: T): number => {
     const listChannel = channel as ChannelListOutput
     return listChannel.custom_channel_number ?? channel.channel_number ?? 999

@@ -44,5 +44,5 @@ export function useSearchablePlugins() {
   return useQuery({
     queryKey: ["searchable-plugins"],
     queryFn: () => PluginsService.searchInformation(),
-   })
+  })
 }
