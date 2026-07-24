@@ -596,7 +596,7 @@ export function ManageShowsTabs({
             <p className="text-sm text-muted-foreground">No items in queue</p>
           ) : (
             <div className="border rounded-lg">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
                     <TableHead>URL</TableHead>
@@ -607,7 +607,9 @@ export function ManageShowsTabs({
                 <TableBody>
                   {queueEntries.map((entry: ChannelQueueOutput) => (
                     <TableRow key={entry.id}>
-                      <TableCell className="truncate">{entry.url}</TableCell>
+                      <TableCell className="truncate" title={entry.url}>
+                        {entry.url}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(entry.status)}>
                           {entry.status}

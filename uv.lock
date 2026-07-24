@@ -69,6 +69,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "kneeminus" },
     { name = "loguru" },
     { name = "meshfilm" },
     { name = "minbo" },
@@ -113,6 +114,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0,<0.129.0" },
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
+    { name = "kneeminus", git = "https://github.com/ryn-cx/knee-minus" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
     { name = "minbo", git = "https://github.com/ryn-cx/minbo" },
@@ -987,6 +989,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/43/4b/674af6ef2f97d56f0ab5153bf0bfa28ccb6c3ed4d1babf4305449668807b/keyring-25.7.0.tar.gz", hash = "sha256:fe01bd85eb3f8fb3dd0405defdeac9a5b4f6f0439edbb3149577f244a2e8245b", size = 63516, upload-time = "2025-11-16T16:26:09.482Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/81/db/e655086b7f3a705df045bf0933bdd9c2f79bb3c97bfef1384598bb79a217/keyring-25.7.0-py3-none-any.whl", hash = "sha256:be4a0b195f149690c166e850609a477c532ddbfbaed96a404d4e43f8d5e2689f", size = 39160, upload-time = "2025-11-16T16:26:08.402Z" },
+]
+
+[[package]]
+name = "kneeminus"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/knee-minus#f8b2edff06f538b49e543f52d8159590266fc32e" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]

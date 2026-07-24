@@ -51,6 +51,13 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
     parse_url_response = ("channel_handle", channel_name)
 
 
+# Caused a crash.
+class TestVideoWith0x00CharacterInDescription(StandardTests[YouTube], ChannelNameValidator):
+    channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
+    channel_name = "PhotoLukeHawaii"
+    parse_url_response = ("channel_handle", channel_name)
+
+
 class TestChannelWithVideoInMultiplePlaylists(
     StandardTests[YouTube],
     ChannelNameValidator,
