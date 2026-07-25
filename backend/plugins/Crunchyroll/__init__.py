@@ -74,7 +74,7 @@ class Crunchyroll(
         if source.data_timestamp is None:
             msg = "Cannot update source without a data timestamp."
             raise ValueError(msg)
-        new_browse_file = self.browse_file(source.data_timestamp)
+        new_browse_file = self.browse_series_file(source.data_timestamp)
         new_browse_file.download_if_outdated()
         self._process_new_browse_files(source)
         self._upsert_source()
@@ -82,7 +82,7 @@ class Crunchyroll(
     def _process_new_browse_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self.get_incomplete_files(BrowseSeries, self.browse_file):
+        for browse_json in self.get_incomplete_files(BrowseSeries, self.browse_series_file):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.extract_datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -100,7 +100,7 @@ class Crunchyroll(
 
     def _upsert_source(self) -> Source:
         if not (latest_browse_file := self.get_newest_browse_file()):
-            latest_browse_file = self.browse_file(tz_datetime.now())
+            latest_browse_file = self.browse_series_file(tz_datetime.now())
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
@@ -201,7 +201,7 @@ class Crunchyroll(
         media_type: Literal["movie", "tv"] = (
             "movie" if season.show.media_type == "Movie" else "tv"
         )
-        episodes_data = self.episodes_file(season.key).parsed()
+        episodes_data = self.season_episodes_file(season.key).parsed()
         for i, episode_data in enumerate(episodes_data.data):
             episode_check = self._episode_check(
                 episode_data.id,

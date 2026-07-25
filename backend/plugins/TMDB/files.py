@@ -1,3 +1,4 @@
+# TODO: Validate
 from datetime import date, datetime
 from functools import cache
 from typing import Any, ClassVar, Literal, overload, override
@@ -75,26 +76,32 @@ def air_datetime(air_date: date | None) -> datetime | None:
 
 
 class _TMDBEndpointFile[T: BaseModel](GAPIJSON[T]):
+    """TMDB endpoint file."""
     API_ENDPOINT: ClassVar[Any]
 
 
 class MovieDetails(_TMDBEndpointFile[MovieDetailsModel]):
+    """Movie details file."""
     API_ENDPOINT = tminidb_client().movie_details
 
 
 class TvSeriesDetails(_TMDBEndpointFile[TvSeriesDetailsModel]):
+    """TV series details file."""
     API_ENDPOINT = tminidb_client().tv_series_details
 
 
 class MovieWatchProviders(_TMDBEndpointFile[MovieWatchProvidersModel]):
+    """Movie watch providers file."""
     API_ENDPOINT = tminidb_client().movie_watch_providers
 
 
 class TvWatchProviders(_TMDBEndpointFile[TvWatchProvidersModel]):
+    """TV watch providers file."""
     API_ENDPOINT = tminidb_client().tv_watch_providers
 
 
 class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
+    """Show detail file."""
     API_ENDPOINT = tminidb_client().tv_series_details
 
     def __init__(self, session: Session, plugin: Plugin, tmdb_id: int) -> None:
@@ -102,6 +109,7 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
 
 
 class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):
+    """Season detail file."""
     API_ENDPOINT = tminidb_client().tv_season_details
 
     def __init__(
@@ -124,6 +132,7 @@ class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):
 
 
 class EpisodeDetail(_TMDBEndpointFile[TvEpisodeDetailsModel]):
+    """Episode detail file."""
     API_ENDPOINT = tminidb_client().tv_episode_details
 
     def __init__(
@@ -153,6 +162,7 @@ class EpisodeDetail(_TMDBEndpointFile[TvEpisodeDetailsModel]):
 
 
 class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
+    """Multi search file."""
     API_ENDPOINT = tminidb_client().search_multi
 
     def __init__(self, session: Session, plugin: Plugin, query: str) -> None:
@@ -165,6 +175,7 @@ class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
 
 
 class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
+    """Movie search file."""
     API_ENDPOINT = tminidb_client().search_movie
 
     def __init__(
@@ -185,6 +196,7 @@ class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
 
 
 class TvSearch(_TMDBEndpointFile[SearchTvModel]):
+    """TV search file."""
     API_ENDPOINT = tminidb_client().search_tv
 
     def __init__(
@@ -205,6 +217,7 @@ class TvSearch(_TMDBEndpointFile[SearchTvModel]):
 
 class FileMixin(BasePlugin, register=False):
     def multi_search_file(self, query: str) -> MultiSearch:
+        """Returns MultiSearch file."""
         return self._get_cached_file(
             MultiSearch,
             query,
@@ -212,6 +225,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def movie_search_file(self, query: str, year: int | None = None) -> MovieSearch:
+        """Returns MovieSearch file."""
         return self._get_cached_file(
             MovieSearch,
             (query, year),
@@ -219,6 +233,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def tv_search_file(self, query: str, year: int | None = None) -> TvSearch:
+        """Returns TvSearch file."""
         return self._get_cached_file(
             TvSearch,
             (query, year),
@@ -226,6 +241,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def movie_detail_file(self, tmdb_id: int) -> MovieDetails:
+        """Returns MovieDetails file."""
         return self._get_cached_file(
             MovieDetails,
             tmdb_id,
@@ -233,6 +249,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def show_detail_file(self, tmdb_id: int) -> ShowDetail:
+        """Returns ShowDetail file."""
         return self._get_cached_file(
             ShowDetail,
             tmdb_id,
@@ -244,6 +261,7 @@ class FileMixin(BasePlugin, register=False):
         tmdb_show_id: int,
         season_number: int,
     ) -> SeasonDetail:
+        """Returns SeasonDetail file."""
         return self._get_cached_file(
             SeasonDetail,
             (tmdb_show_id, season_number),
@@ -261,6 +279,7 @@ class FileMixin(BasePlugin, register=False):
         season_number: int,
         episode_number: int,
     ) -> EpisodeDetail:
+        """Returns EpisodeDetail file."""
         return self._get_cached_file(
             EpisodeDetail,
             (tmdb_show_id, season_number, episode_number),
@@ -274,6 +293,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def tv_detail_file(self, tmdb_id: int) -> TvSeriesDetails:
+        """Returns TvSeriesDetails file."""
         return self._get_cached_file(
             TvSeriesDetails,
             tmdb_id,
@@ -281,6 +301,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def movie_watch_providers_file(self, tmdb_id: int) -> MovieWatchProviders:
+        """Returns MovieWatchProviders file."""
         return self._get_cached_file(
             MovieWatchProviders,
             tmdb_id,
@@ -288,6 +309,7 @@ class FileMixin(BasePlugin, register=False):
         )
 
     def tv_watch_providers_file(self, tmdb_id: int) -> TvWatchProviders:
+        """Returns TvWatchProviders file."""
         return self._get_cached_file(
             TvWatchProviders,
             tmdb_id,
@@ -311,6 +333,7 @@ class FileMixin(BasePlugin, register=False):
         media_type: Literal["movie", "tv"],
         tmdb_id: int,
     ) -> MovieDetails | TvSeriesDetails:
+        """Returns MovieDetails or TvSeriesDetails file."""
         if media_type == "movie":
             return self.movie_detail_file(tmdb_id)
         return self.tv_detail_file(tmdb_id)
@@ -332,6 +355,7 @@ class FileMixin(BasePlugin, register=False):
         media_type: Literal["movie", "tv"],
         tmdb_id: int,
     ) -> MovieWatchProviders | TvWatchProviders:
+        """Returns MovieWatchProviders or TvWatchProviders file."""
         if media_type == "movie":
             return self.movie_watch_providers_file(tmdb_id)
         return self.tv_watch_providers_file(tmdb_id)

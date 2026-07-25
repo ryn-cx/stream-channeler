@@ -55,6 +55,7 @@ def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
+    """Channel by channel ID file."""
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -68,6 +69,7 @@ class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
 
 
 class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
+    """Channel by handle file."""
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -81,6 +83,7 @@ class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
 
 
 class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
+    """Channel by username file."""
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -94,6 +97,7 @@ class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
 
 
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
+    """Channel playlists file."""
     API_ENDPOINT = not_yt_dlapi().playlists
 
     @override
@@ -109,6 +113,7 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
 
 
 class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
+    """Playlist info file."""
     API_ENDPOINT = not_yt_dlapi().playlists
 
     @override
@@ -118,6 +123,7 @@ class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
 
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
+    """Playlist items file."""
     API_ENDPOINT = not_yt_dlapi().playlist_items
 
     # Due to API limits this function merges new videos with existing videos instead of
@@ -177,10 +183,13 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
 
 
 class Videos(GAPIJSON[VideosModel]):
+    """Videos file."""
     API_ENDPOINT = not_yt_dlapi().videos
 
 
 class PlaylistFeed(XMLFile):
+    """Playlist feed file."""
+
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):

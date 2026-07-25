@@ -43,7 +43,7 @@ class HelperMixin(FileMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> int | None:
-        for episode_data in self.episodes_file(season_key).parsed().data:
+        for episode_data in self.season_episodes_file(season_key).parsed().data:
             if episode_data.id == episode_key:
                 return episode_data.episode_number
         return None

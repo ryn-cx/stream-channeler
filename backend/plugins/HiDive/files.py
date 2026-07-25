@@ -34,6 +34,7 @@ def diving_board() -> DivingBoard:
 
 
 class Season(PartialGAPIJSON[season_models.SeasonModel]):
+    """Season file."""
     # Occurs when the user imports an invalid TV show url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().season
@@ -45,6 +46,7 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
 
 
 class Vod(PartialGAPIJSON[vod_models.VodModel]):
+    """Vod file."""
     # Occurs when the user imports an invalid movie url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().vod
@@ -56,6 +58,7 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
 
 
 class Series(PartialGAPIJSON[series_models.SeriesModel]):
+    """Series file."""
     # Occurs when the user imports an invalid series url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().series
@@ -67,6 +70,7 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
 
 
 class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
+    """Schedule file."""
     API_ENDPOINT = diving_board().schedule
 
     def __init__(
@@ -95,6 +99,7 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
 
 
 class Search(GAPIJSON[search_models.SearchModel]):
+    """Search file."""
     API_ENDPOINT = diving_board().search
 
 

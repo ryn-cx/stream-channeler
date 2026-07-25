@@ -24,18 +24,22 @@ def wholoo() -> Wholoo:
 
 
 class Series(GAPIJSON[TVModel]):
+    """Series file."""
     API_ENDPOINT = wholoo().tv
 
 
 class Movie(GAPIJSON[MoviesModel]):
+    """Movie file."""
     API_ENDPOINT = wholoo().movies
 
 
 class SearchFile(GAPIJSON[SearchModel]):
+    """Search file."""
     API_ENDPOINT = wholoo().search
 
 
 class SeasonFile(PartialGAPIJSON[SeasonModel]):
+    """Season file."""
     API_ENDPOINT = wholoo().tv.season
 
     def __init__(
@@ -56,6 +60,7 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
 
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def series_file(self, series_id: str) -> Series:
+        """Returns Series file."""
         return self._get_cached_file(
             Series,
             series_id,
@@ -63,6 +68,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         )
 
     def search_file(self, query: str) -> SearchFile:
+        """Returns SearchFile file."""
         return self._get_cached_file(
             SearchFile,
             query,
@@ -70,6 +76,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         )
 
     def movie_file(self, movie_id: str) -> Movie:
+        """Returns Movie file."""
         return self._get_cached_file(
             Movie,
             movie_id,
@@ -77,6 +84,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         )
 
     def season_file(self, series_id: str, season_number: int) -> SeasonFile:
+        """Returns SeasonFile file."""
         return self._get_cached_file(
             SeasonFile,
             (series_id, season_number),

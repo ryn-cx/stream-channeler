@@ -58,7 +58,7 @@ class CrunchyrollUpdateSourceTest(
         parsed: list[BrowseSeriesModel],
         timestamp: datetime,
     ) -> None:
-        new_browse = plugin_instance.browse_file(timestamp)
+        new_browse = plugin_instance.browse_series_file(timestamp)
         dumped = chirashi().browse_series.model_dump(parsed)
         new_browse.write(dumped)
         new_browse.database_record.data_timestamp = timestamp

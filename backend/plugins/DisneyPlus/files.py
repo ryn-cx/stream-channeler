@@ -27,6 +27,7 @@ def kneeminus() -> KneeMinus:
 
 
 class EntityFile(PartialGAPIJSON[EntityModel]):
+    """Entity file."""
     API_ENDPOINT = kneeminus().entity
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
 
@@ -40,6 +41,7 @@ class EntityFile(PartialGAPIJSON[EntityModel]):
 
 
 class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
+    """Season entity file."""
     API_ENDPOINT = kneeminus().entity
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
 
@@ -64,6 +66,7 @@ class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
 
 class FileMixin(TMDBMixin, register=False):
     def entity_file(self, entity_id: str) -> EntityFile:
+        """Returns EntityFile file."""
         return self._get_cached_file(
             EntityFile,
             entity_id,
@@ -71,6 +74,7 @@ class FileMixin(TMDBMixin, register=False):
         )
 
     def season_file(self, entity_id: str, season_id: str) -> SeasonEntityFile:
+        """Returns SeasonEntityFile file."""
         return self._get_cached_file(
             SeasonEntityFile,
             (entity_id, season_id),

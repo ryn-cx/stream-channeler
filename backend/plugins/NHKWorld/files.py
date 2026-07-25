@@ -21,12 +21,14 @@ def naphki() -> Naphki:
 
 
 class VideoProgram(GAPIJSON[VideoProgramsModel]):
+    """Video program file."""
     # Occurs when a user puts in an invalid URL.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = naphki().video_programs
 
 
 class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
+    """Video episodes file."""
     API_ENDPOINT = naphki().video_episodes
 
     @override
@@ -38,10 +40,12 @@ class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
 
 class ShowsSearch(GAPIJSON[ShowsSearchModel]):
+    """Shows search file."""
     API_ENDPOINT = naphki().shows_search
 
 
 class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
+    """New video episodes file."""
     IMMUTABLE = True
     API_ENDPOINT = naphki().video_episodes
 

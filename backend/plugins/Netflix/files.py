@@ -18,10 +18,12 @@ def meshfilm() -> Meshfilm:
 
 
 class Title(GAPIJSON[netflix_models.LodpTitleAndPlansPageModel]):
+    """Title file."""
     API_ENDPOINT = meshfilm().lodp_title_and_plans_page
 
 
 class Search(GAPIJSON[search_models.SearchPageResultsModel]):
+    """Search file."""
     API_ENDPOINT = meshfilm().search_page_results
 
 

@@ -24,10 +24,12 @@ def minbo() -> MinBO:
 
 
 class ShowFile(GAPIJSON[ShowModel]):
+    """Show file."""
     API_ENDPOINT = minbo().show
 
 
 class SeasonFile(PartialGAPIJSON[ShowModel]):
+    """Season file."""
     API_ENDPOINT = minbo().show
 
     def __init__(
@@ -50,11 +52,13 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
 
 
 class MovieFile(GAPIJSON[MoviesModel]):
+    """Movie file."""
     API_ENDPOINT = minbo().movie
 
 
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def show_file(self, show_id: str) -> ShowFile:
+        """Returns ShowFile file."""
         return self._get_cached_file(
             ShowFile,
             show_id,
@@ -62,6 +66,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         )
 
     def season_file(self, show_id: str, season_number: int) -> SeasonFile:
+        """Returns SeasonFile file."""
         return self._get_cached_file(
             SeasonFile,
             (show_id, season_number),
@@ -69,6 +74,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         )
 
     def movie_file(self, movie_id: str) -> MovieFile:
+        """Returns MovieFile file."""
         return self._get_cached_file(
             MovieFile,
             movie_id,

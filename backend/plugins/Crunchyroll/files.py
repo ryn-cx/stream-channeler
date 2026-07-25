@@ -6,6 +6,7 @@ from typing import Any, Literal, overload, override
 
 from chirashi import Chirashi
 from chirashi.browse_series import models as browse_series_models
+from chirashi.exceptions import EpisodeNotFoundError, SeriesNotFoundError
 from chirashi.objects import models as objects_models
 from chirashi.search import models as search_models
 from chirashi.season_episodes import models as episodes_models
@@ -25,53 +26,66 @@ def chirashi() -> Chirashi:
 
 
 class Series(GAPIJSON[series_models.SeriesModel]):
-    # Occurs when a user puts in an invalid series URL.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    """Series file."""
     API_ENDPOINT = chirashi().series
+
+    # Occurs when a user puts in an invalid series URL.
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeriesNotFoundError)
 
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid series_id {self.unique_identifier}"
 
 
 class Objects(GAPIJSON[objects_models.ObjectsModel]):
-    # Occurs when a user puts in an invalid episode URL.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    """Objects file."""
     API_ENDPOINT = chirashi().objects
+
+    # Occurs when a user puts in an invalid episode URL.
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, EpisodeNotFoundError)
 
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid episode_id {self.unique_identifier}"
 
 
 class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
+    """Seasons file."""
     API_ENDPOINT = chirashi().seasons
 
 
 class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
+    """Season episodes file."""
     API_ENDPOINT = chirashi().season_episodes
 
 
 class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
+    """Browse series file."""
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_series
 
-    # Need to use download_and_parse_since_datetime instead of download_and_parse so the
+    # Need to use download_and_parse_until_datetime instead of download_and_parse so the
     # new BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
     @override
     def _get(self) -> list[browse_series_models.BrowseSeriesModel]:
-        return chirashi().browse_series.download_and_parse_since_datetime(
+        return chirashi().browse_series.download_and_parse_until_datetime(
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
     def extract_datums(self) -> list[browse_series_models.Datum]:
-        return chirashi().browse_series.compile_entries(self.parsed())
+        return chirashi().browse_series.extract_data(self.parsed())
 
 
 class Search(GAPIJSON[search_models.SearchModel]):
+    """Search file."""
     API_ENDPOINT = chirashi().search
 
 
 class FileMixin(TMDBMixin, register=False):
     def series_file(self, show_key: str) -> Series:
+        """Returns Series file."""
         return self._get_cached_file(
             Series,
             show_key,
@@ -79,6 +93,7 @@ class FileMixin(TMDBMixin, register=False):
         )
 
     def objects_file(self, episode_key: str) -> Objects:
+        """Returns Objects file."""
         return self._get_cached_file(
             Objects,
             episode_key,
@@ -86,20 +101,23 @@ class FileMixin(TMDBMixin, register=False):
         )
 
     def seasons_file(self, show_key: str) -> Seasons:
+        """Returns Seasons file."""
         return self._get_cached_file(
             Seasons,
             show_key,
             lambda: Seasons(self.session, self.plugin, show_key),
         )
 
-    def episodes_file(self, season_key: str) -> SeasonEpisodes:
+    def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
+        """Returns SeasonEpisodes file."""
         return self._get_cached_file(
             SeasonEpisodes,
             season_key,
             lambda: SeasonEpisodes(self.session, self.plugin, season_key),
         )
 
-    def browse_file(self, browse_datetime: datetime | File) -> BrowseSeries:
+    def browse_series_file(self, browse_datetime: datetime | File) -> BrowseSeries:
+        """Returns BrowseSeries file."""
         if isinstance(browse_datetime, File):
             str_datetime = BrowseSeries.file_key_to_unique_identifier(
                 browse_datetime.key,
@@ -113,6 +131,7 @@ class FileMixin(TMDBMixin, register=False):
         )
 
     def search_file(self, query: str) -> Search:
+        """Returns Search file."""
         return self._get_cached_file(
             Search,
             query,
@@ -146,7 +165,7 @@ class FileMixin(TMDBMixin, register=False):
         return self._append_tmdb_season_file(
             [
                 # Required to detect new episodes.
-                self.episodes_file(season_key),
+                self.season_episodes_file(season_key),
                 # Required to detect changes to the season.
                 self.seasons_file(show_key),
             ],
@@ -162,7 +181,7 @@ class FileMixin(TMDBMixin, register=False):
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_episode_file(
-            [self.episodes_file(season_key)],
+            [self.season_episodes_file(season_key)],
             episode_key,
             season_key,
             show_key,
@@ -184,7 +203,7 @@ class FileMixin(TMDBMixin, register=False):
         return [
             episode.id
             for season_key in season_keys
-            for episode in self.episodes_file(season_key).parsed().data
+            for episode in self.season_episodes_file(season_key).parsed().data
         ]
 
     @overload
@@ -209,9 +228,10 @@ class FileMixin(TMDBMixin, register=False):
         is_completed: bool = False,
         strict: bool = False,
     ) -> BrowseSeries | None:
+        """Returns newest BrowseSeries file."""
         extra = "Completed" if is_completed else None
         if file := self.preload_latest_file(BrowseSeries, extra=extra):
-            return self.browse_file(file)
+            return self.browse_series_file(file)
 
         if strict:
             msg = "No browse file found."
