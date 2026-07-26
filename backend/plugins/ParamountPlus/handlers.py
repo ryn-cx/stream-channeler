@@ -1,0 +1,46 @@
+# TODO: Validate
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
+
+if TYPE_CHECKING:
+    from plugins.ParamountPlus import ParamountPlus
+
+_SHOW_SLUG_REGEX = r"[a-z0-9-]+"
+_MOVIE_ID_REGEX = r"[A-Za-z0-9]+"
+
+
+class ParamountPlusURLHandler(MediaTypeURLHandler["ParamountPlus"]):
+    def __init__(self, plugin: ParamountPlus, url: str, key: str) -> None:
+        self._key = key
+        super().__init__(plugin, url)
+
+    @property
+    def show_key(self) -> str:
+        return self._key
+
+
+class ShowURLHandler(ParamountPlusURLHandler):
+    media_type = "series"
+    # https://www.paramountplus.com/shows/south-park/
+    _PATH_REGEX = rf"\/shows\/(?P<show_id>{_SHOW_SLUG_REGEX})(?:\/|$)"
+
+    def validate_url(self) -> None:
+        self.plugin.raise_if_invalid_file(
+            self.plugin.show_page_file(self._key),
+            self.url,
+        )
+
+
+class MovieURLHandler(ParamountPlusURLHandler):
+    media_type = "movie"
+    # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
+    _PATH_REGEX = rf"\/movies\/video\/(?P<movie_id>{_MOVIE_ID_REGEX})(?:\/|$)"
+
+    def validate_url(self) -> None:
+        self.plugin.raise_if_invalid_file(
+            self.plugin.movie_file(self._key),
+            self.url,
+        )

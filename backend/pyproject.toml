@@ -15,6 +15,7 @@ dependencies = [
   "jinja2<4.0.0,>=3.1.4",
   "kneeminus",
   "loguru>=0.7.3",
+  "lxml>=5.0.0",
   "meshfilm",
   "minbo",
   "naphki",
@@ -30,6 +31,7 @@ dependencies = [
   "sqlmodel<1.0.0,>=0.0.21",
   "tenacity<9.0.0,>=8.2.3",
   "tminidb",
+  "trivial-minus",
   "wholoo",
   "yt-dlapi",
 ]
@@ -114,3 +116,4 @@ tminidb = { git = "https://github.com/ryn-cx/tminidb" }
 wholoo = { git = "https://github.com/ryn-cx/wholoo" }
 minbo = { git = "https://github.com/ryn-cx/minbo" }
 kneeminus = { git = "https://github.com/ryn-cx/knee-minus" }
+trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }

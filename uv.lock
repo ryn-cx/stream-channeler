@@ -71,6 +71,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "kneeminus" },
     { name = "loguru" },
+    { name = "lxml" },
     { name = "meshfilm" },
     { name = "minbo" },
     { name = "naphki" },
@@ -86,6 +87,7 @@ dependencies = [
     { name = "sqlmodel" },
     { name = "tenacity" },
     { name = "tminidb" },
+    { name = "trivial-minus" },
     { name = "wholoo" },
     { name = "yt-dlapi" },
 ]
@@ -116,6 +118,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "kneeminus", git = "https://github.com/ryn-cx/knee-minus" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "lxml", specifier = ">=5.0.0" },
     { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
     { name = "minbo", git = "https://github.com/ryn-cx/minbo" },
     { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
@@ -131,6 +134,7 @@ requires-dist = [
     { name = "sqlmodel", specifier = ">=0.0.21,<1.0.0" },
     { name = "tenacity", specifier = ">=8.2.3,<9.0.0" },
     { name = "tminidb", git = "https://github.com/ryn-cx/tminidb" },
+    { name = "trivial-minus", git = "https://github.com/ryn-cx/trivial-minus" },
     { name = "wholoo", git = "https://github.com/ryn-cx/wholoo" },
     { name = "yt-dlapi", git = "https://github.com/ryn-cx/yt-dlapi" },
 ]
@@ -1906,6 +1910,15 @@ wheels = [
 name = "tminidb"
 version = "0.1.0"
 source = { git = "https://github.com/ryn-cx/tminidb#d13b891c64520bfaef21d9578ac3691b632e5848" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
+name = "trivial-minus"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/trivial-minus#a86c9d70a9839e57ad1d377efaad945c80b7c6e6" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

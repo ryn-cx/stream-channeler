@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Protocol, final, overload, override
 from xml.etree.ElementTree import Element, fromstring
 
+from bs4 import BeautifulSoup
 from good_ass_pydantic_integrator.constants import INPUT_TYPE
 from loguru import logger
 from pydantic import BaseModel
@@ -238,6 +239,31 @@ class XMLFile(BaseFile[Element], ABC):
     @override
     def _identifier_suffix(cls) -> str:
         return ".xml"
+
+
+class HTMLFile(BaseFile[BeautifulSoup], ABC):
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
+        self.unique_identifier = unique_identifier
+        super().__init__(session, plugin)
+
+    def parsed(self) -> BeautifulSoup:
+        """Return the parsed content of the file."""
+        if self._cached_parsed is None:
+            if not (content := self.database_record.content):
+                msg = "File content is empty, cannot parse."
+                raise ValueError(msg)
+            self._cached_parsed = BeautifulSoup(content, "html.parser")
+        return self._cached_parsed
+
+    @classmethod
+    @override
+    def _identifier_suffix(cls) -> str:
+        return ".html"
 
 
 class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
