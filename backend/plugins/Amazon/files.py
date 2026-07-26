@@ -112,8 +112,17 @@ class DetailPage(HTMLFile):
     def _body(self) -> dict[str, Any]:
         return self._hydration()["init"]["preparations"]["body"]
 
+    def _page_id(self) -> str:
+        # The URL ASIN can differ from the page Amazon resolves to (redirects),
+        # so the hydration data is keyed by the page's own title id.
+        header_detail = self._body()["atf"]["state"]["detail"]["headerDetail"]
+        page_id = self._body()["atf"]["state"].get("pageTitleId")
+        if page_id in header_detail:
+            return page_id
+        return next(iter(header_detail))
+
     def _header(self) -> dict[str, Any]:
-        return self._body()["atf"]["state"]["detail"]["headerDetail"][self.asin]
+        return self._body()["atf"]["state"]["detail"]["headerDetail"][self._page_id()]
 
     def entity_type(self) -> str:
         return self._header()["entityType"]
@@ -138,7 +147,8 @@ class DetailPage(HTMLFile):
         return self._header().get("seasonNumber")
 
     def seasons(self) -> list[AmazonSeason]:
-        entries = self._body()["atf"]["state"].get("seasons", {}).get(self.asin, [])
+        seasons_by_id = self._body()["atf"]["state"].get("seasons", {})
+        entries = seasons_by_id.get(self._page_id(), [])
         return [
             AmazonSeason(
                 asin=entry["seasonId"],
