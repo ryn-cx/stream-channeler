@@ -95,7 +95,7 @@ function SignUp() {
             <FormTextField
               control={form.control}
               name="username"
-              label="Username (optional)"
+              label="Username"
               data-testid="username-input"
               placeholder="User"
               type="text"

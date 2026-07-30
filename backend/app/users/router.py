@@ -74,6 +74,13 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
             detail="The user with this email already exists in the system.",
         )
 
+    user = user_service.get_user_by_username(session=session, username=user_in.username)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The user with this username already exists in the system.",
+        )
+
     user = user_service.create_user(session=session, user_create=user_in)
     if settings.emails_enabled and user_in.email:
         email_data = email_service.generate_new_account_email(
@@ -106,6 +113,16 @@ def update_user_me(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists",
+            )
+    if user_in.username:
+        existing_user = user_service.get_user_by_username(
+            session=session,
+            username=user_in.username,
+        )
+        if existing_user and existing_user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this username already exists",
             )
     user_data = user_in.model_dump(exclude_unset=True)
     current_user.sqlmodel_update(user_data)
@@ -253,6 +270,12 @@ def register_user(session: SessionDep, user_in: UserRegister) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The user with this email already exists in the system",
         )
+    user = user_service.get_user_by_username(session=session, username=user_in.username)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The user with this username already exists in the system",
+        )
     user_create = UserCreate.model_validate(user_in)
     return user_service.create_user(session=session, user_create=user_create)
 
@@ -339,6 +362,17 @@ def update_user(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists",
+            )
+
+    if user_in.username:
+        existing_user = user_service.get_user_by_username(
+            session=session,
+            username=user_in.username,
+        )
+        if existing_user and existing_user.id != db_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User with this username already exists",
             )
 
     return user_service.update_user(

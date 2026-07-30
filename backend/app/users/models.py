@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Index, text
 from sqlmodel import Field, PrimaryKeyConstraint, Relationship, SQLModel
 
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
@@ -24,7 +24,7 @@ class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_active: bool = True
     is_superuser: bool = False
-    username: str = Field(unique=True, index=True, max_length=255)
+    username: str = Field(max_length=255)
     server_side_threshold: int = Field(
         default=10_000,
         ge=0,
@@ -34,6 +34,10 @@ class UserBase(SQLModel):
 
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
+    __table_args__ = (
+        Index("ix_user_username_lower", text("lower(username)"), unique=True),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     created_at: datetime | None = Field(

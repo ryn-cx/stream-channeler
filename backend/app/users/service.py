@@ -56,6 +56,11 @@ def get_user_by_email(*, session: Session, email: str) -> User | None:
     return session.exec(statement).first()
 
 
+def get_user_by_username(*, session: Session, username: str) -> User | None:
+    statement = select(User).where(func.lower(User.username) == func.lower(username))
+    return session.exec(statement).first()
+
+
 def stored_preferences(
     rows: Iterable[UserSourcePreference],
 ) -> list[SourcePreference]:
