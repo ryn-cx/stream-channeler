@@ -1,12 +1,14 @@
 # TODO: Validate
 import secrets
+from collections.abc import Iterable
 
 from sqlmodel import Session, func, select
 
 from app.auth.security import get_password_hash
+from app.sources.service import OTHER_SOURCE_KEY, official_source_keys
 from app.users.constants import PLUGIN_USER_EMAIL
-from app.users.models import User
-from app.users.schemas import UserCreate, UserUpdate
+from app.users.models import User, UserSourcePreference
+from app.users.schemas import SourcePreference, UserCreate, UserUpdate
 
 
 def get_or_create_plugin_user(*, session: Session) -> User:
@@ -51,3 +53,44 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> User
 def get_user_by_email(*, session: Session, email: str) -> User | None:
     statement = select(User).where(func.lower(User.email) == func.lower(email))
     return session.exec(statement).first()
+
+
+def stored_preferences(
+    rows: Iterable[UserSourcePreference],
+) -> list[SourcePreference]:
+    """Convert a user's stored preference rows into ordered `SourcePreference`s."""
+    return [
+        SourcePreference(source_key=row.source_key, enabled=row.enabled)
+        for row in sorted(rows, key=lambda row: row.priority)
+    ]
+
+
+def effective_source_preferences(
+    stored: list[SourcePreference],
+) -> list[SourcePreference]:
+    """Return the full ordered preference list (every official key plus `Other`).
+
+    The stored order and enabled flags win for keys that still exist; any official
+    key the user has not stored is appended (enabled), and `Other` is guaranteed to
+    be present as the final fallback. Unknown/stale keys are dropped.
+    """
+    stored_by_key = {preference.source_key: preference for preference in stored}
+    default_order = [*official_source_keys(), OTHER_SOURCE_KEY]
+    valid_keys = set(default_order)
+
+    ordered_keys: list[str] = []
+    for preference in stored:
+        source_key = preference.source_key
+        if source_key in valid_keys and source_key not in ordered_keys:
+            ordered_keys.append(source_key)
+    for key in default_order:
+        if key not in ordered_keys:
+            ordered_keys.append(key)
+
+    return [
+        SourcePreference(
+            source_key=key,
+            enabled=stored_by_key[key].enabled if key in stored_by_key else True,
+        )
+        for key in ordered_keys
+    ]

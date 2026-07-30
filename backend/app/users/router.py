@@ -20,10 +20,14 @@ from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
+from app.sources.models import Source
+from app.sources.service import OTHER_SOURCE_KEY, official_source_keys
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
-from app.users.models import User
+from app.users.models import User, UserSourcePreference
 from app.users.schemas import (
+    SourcePreference,
+    SourcePreferenceOutput,
     UserCreate,
     UserPublic,
     UserRegister,
@@ -136,6 +140,95 @@ def update_password_me(
     session.add(current_user)
     session.commit()
     return Message(message="Password updated successfully")
+
+
+def _source_preference_outputs(
+    session: SessionDep,
+    preferences: list[SourcePreference],
+) -> list[SourcePreferenceOutput]:
+    """Attach each source's favicon (from its official `Source`) for display."""
+    plugin_user = user_service.get_or_create_plugin_user(session=session)
+    keys = [preference.source_key for preference in preferences]
+    favicon_rows = session.exec(
+        select(Source.key, Source.favicon_url)  # type: ignore[call-overload]
+        .select_from(Source)
+        .join(Plugin)
+        .where(
+            col(Plugin.user_id) == plugin_user.id,
+            col(Source.key).in_(keys),
+        ),
+    ).all()
+    favicons = dict(favicon_rows)
+    return [
+        SourcePreferenceOutput(
+            source_key=preference.source_key,
+            enabled=preference.enabled,
+            favicon_url=favicons.get(preference.source_key),
+        )
+        for preference in preferences
+    ]
+
+
+@users_router.get("/me/source-preferences")
+def read_source_preferences(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[SourcePreferenceOutput]:
+    """Get the current user's source priority and enable/disable preferences.
+
+    Always returns every official source plus `Other`, in priority order.
+    """
+    return _source_preference_outputs(
+        session,
+        user_service.effective_source_preferences(
+            user_service.stored_preferences(current_user.source_preferences),
+        ),
+    )
+
+
+@users_router.put("/me/source-preferences")
+def update_source_preferences(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    preferences: list[SourcePreference],
+) -> list[SourcePreferenceOutput]:
+    """Replace the current user's source preferences (priority order + enabled)."""
+    allowed_keys = {*official_source_keys(), OTHER_SOURCE_KEY}
+    seen: set[str] = set()
+    for preference in preferences:
+        if preference.source_key not in allowed_keys:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Unknown source '{preference.source_key}'.",
+            )
+        if preference.source_key in seen:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Duplicate source '{preference.source_key}'.",
+            )
+        seen.add(preference.source_key)
+
+    for existing in list(current_user.source_preferences):
+        session.delete(existing)
+    session.flush()
+    for index, preference in enumerate(preferences):
+        session.add(
+            UserSourcePreference(
+                user_id=current_user.id,
+                source_key=preference.source_key,
+                priority=index,
+                enabled=preference.enabled,
+            ),
+        )
+    session.commit()
+    session.refresh(current_user)
+    return _source_preference_outputs(
+        session,
+        user_service.effective_source_preferences(
+            user_service.stored_preferences(current_user.source_preferences),
+        ),
+    )
 
 
 @users_router.get("/me", response_model=UserPublic)

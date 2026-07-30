@@ -5336,6 +5336,53 @@ export const SourceListPublicSchema = {
     description: 'Schema for returning a list of `Source`s, with parent information.'
 } as const;
 
+export const SourcePreferenceSchema = {
+    properties: {
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
+        },
+        enabled: {
+            type: 'boolean',
+            title: 'Enabled',
+            default: true
+        }
+    },
+    type: 'object',
+    required: ['source_key'],
+    title: 'SourcePreference',
+    description: "A single source's position (by list order) and global enabled state."
+} as const;
+
+export const SourcePreferenceOutputSchema = {
+    properties: {
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
+        },
+        enabled: {
+            type: 'boolean',
+            title: 'Enabled',
+            default: true
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        }
+    },
+    type: 'object',
+    required: ['source_key'],
+    title: 'SourcePreferenceOutput',
+    description: "A source preference enriched with the source's favicon for display."
+} as const;
+
 export const SourcePublicSchema = {
     properties: {
         key: {

@@ -4,13 +4,23 @@ import { createFileRoute } from "@tanstack/react-router"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import Preferences from "@/components/UserSettings/Preferences"
+import SourcePreferences from "@/components/UserSettings/SourcePreferences"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 
+function PreferencesTab() {
+  return (
+    <div className="flex flex-col gap-8">
+      <Preferences />
+      <SourcePreferences />
+    </div>
+  )
+}
+
 const tabsConfig = [
   { value: "my-profile", title: "My profile", component: UserInformation },
-  { value: "preferences", title: "Preferences", component: Preferences },
+  { value: "preferences", title: "Preferences", component: PreferencesTab },
   { value: "password", title: "Password", component: ChangePassword },
   { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
 ]

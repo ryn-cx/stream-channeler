@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Check, ChevronRight, PartyPopper } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelOutput, SortKeyInput, Visibility } from "@/client"
+import type { ChannelOutput, Visibility } from "@/client"
 import { ChannelOrdersService, ChannelsService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { parseOrderConfig } from "@/lib/channelOrder"
 import {
   VISIBILITY_OPTIONS,
   visibilityDescription,
@@ -409,28 +408,27 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
   })
 
   const saveSortMutation = useMutation({
-    mutationFn: (sortBy: SortKeyInput[]) =>
+    mutationFn: (orderPresetId: string) =>
       ChannelsService.updateChannelDefaultOrder({
         channelId,
-        requestBody: { sortBy } as any,
+        requestBody: { orderPresetId },
       }),
-    onSuccess: (_data, sortBy) => {
+    onSuccess: (_data, orderPresetId) => {
       navigate({
         to: "/onboarding/$channelId/done",
         params: { channelId },
-        search: { sortBy },
+        search: { orderPresetId },
       })
     },
     onError: handleError.bind(showErrorToast),
   })
 
   const handleSave = () => {
-    const order = orders.find((option) => option.id === selectedOrderId)
-    if (!order) {
+    if (!selectedOrderId) {
       showErrorToast("Please select a sort option")
       return
     }
-    saveSortMutation.mutate(parseOrderConfig(order.config).sortBy ?? [])
+    saveSortMutation.mutate(selectedOrderId)
   }
 
   return (
@@ -516,10 +514,10 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
 
 export function OnboardingDone({
   channelId,
-  sortBy,
+  orderPresetId,
 }: {
   channelId: string
-  sortBy?: SortKeyInput[]
+  orderPresetId?: string
 }) {
   const navigate = useNavigate()
 
@@ -552,7 +550,7 @@ export function OnboardingDone({
             <Link
               to="/channels/$channelId"
               params={{ channelId }}
-              search={sortBy ? { sortBy } : undefined}
+              search={orderPresetId ? { orderPresetId } : undefined}
             >
               View Your Channel
               <ChevronRight className="h-4 w-4 ml-1" />

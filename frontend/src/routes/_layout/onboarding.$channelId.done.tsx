@@ -1,11 +1,10 @@
 // TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import type { SortKeyInput } from "@/client"
 import { OnboardingDone } from "@/components/Onboarding/Onboarding"
 import { isLoggedIn } from "@/hooks/useAuth"
 
 type DoneSearch = {
-  sortBy?: SortKeyInput[]
+  orderPresetId?: string
 }
 
 export const Route = createFileRoute("/_layout/onboarding/$channelId/done")({
@@ -16,7 +15,7 @@ export const Route = createFileRoute("/_layout/onboarding/$channelId/done")({
     }
   },
   validateSearch: (search: Record<string, unknown>): DoneSearch => ({
-    sortBy: search.sortBy as SortKeyInput[] | undefined,
+    orderPresetId: search.orderPresetId as string | undefined,
   }),
   head: () => ({
     meta: [{ title: "All Set - Stream Channeler" }],
@@ -25,6 +24,6 @@ export const Route = createFileRoute("/_layout/onboarding/$channelId/done")({
 
 function RouteComponent() {
   const { channelId } = Route.useParams()
-  const { sortBy } = Route.useSearch()
-  return <OnboardingDone channelId={channelId} sortBy={sortBy} />
+  const { orderPresetId } = Route.useSearch()
+  return <OnboardingDone channelId={channelId} orderPresetId={orderPresetId} />
 }

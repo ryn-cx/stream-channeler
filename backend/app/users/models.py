@@ -1,12 +1,15 @@
+"""User models."""
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, PrimaryKeyConstraint, Relationship, SQLModel
 
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
+from app.models import TimestampIdAndHashMixin
 from app.utils import tz_datetime
 
 if TYPE_CHECKING:
@@ -55,6 +58,10 @@ class User(UserBase, table=True):
         back_populates="user",
         cascade_delete=True,
     )
+    source_preferences: list[UserSourcePreference] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
 
     def add_child(self, child: Plugin | Channel | ChannelOrder) -> None:
         from app.channel_orders.models import ChannelOrder  # noqa: PLC0415
@@ -66,3 +73,24 @@ class User(UserBase, table=True):
             self.channel_orders.append(child)
         else:
             self.plugins.append(child)
+
+
+class BaseUserSourcePreference(SQLModel):
+    """Base model for a `User`'s `Source` preferences."""
+
+    source_key: str = Field()
+    enabled: bool = Field(default=True)
+
+
+class UserSourcePreference(
+    BaseUserSourcePreference,
+    TimestampIdAndHashMixin,
+    table=True,
+):
+    """Model for a `User`'s `Source` preferences."""
+
+    __table_args__ = PrimaryKeyConstraint("user_id", "source_key")
+
+    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    priority: int = Field()
+    user: User = Relationship(back_populates="source_preferences")

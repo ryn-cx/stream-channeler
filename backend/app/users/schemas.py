@@ -1,3 +1,4 @@
+# TODO: Validate
 import uuid
 from datetime import datetime
 
@@ -6,7 +7,7 @@ from sqlmodel import Field, SQLModel
 
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.schemas import make_model_with_all_fields_optional
-from app.users.models import UserBase
+from app.users.models import BaseUserSourcePreference, UserBase
 
 
 # Properties to receive via API on creation
@@ -44,3 +45,11 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+class SourcePreference(BaseUserSourcePreference):
+    pass
+
+
+class SourcePreferenceOutput(SourcePreference):
+    favicon_url: str | None = None

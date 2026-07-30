@@ -932,6 +932,23 @@ export type SourceListPublic = {
 };
 
 /**
+ * A single source's position (by list order) and global enabled state.
+ */
+export type SourcePreference = {
+    source_key: string;
+    enabled?: boolean;
+};
+
+/**
+ * A source preference enriched with the source's favicon for display.
+ */
+export type SourcePreferenceOutput = {
+    source_key: string;
+    enabled?: boolean;
+    favicon_url?: (string | null);
+};
+
+/**
  * Schema for returning a `Source`.
  */
 export type SourcePublic = {
@@ -1917,6 +1934,14 @@ export type UsersUpdatePasswordMeData = {
 };
 
 export type UsersUpdatePasswordMeResponse = (Message);
+
+export type UsersReadSourcePreferencesResponse = (Array<SourcePreferenceOutput>);
+
+export type UsersUpdateSourcePreferencesData = {
+    requestBody: Array<SourcePreference>;
+};
+
+export type UsersUpdateSourcePreferencesResponse = (Array<SourcePreferenceOutput>);
 
 export type UsersRegisterUserData = {
     requestBody: UserRegister;
