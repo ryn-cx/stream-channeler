@@ -20,12 +20,7 @@ from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
-from app.sources.service import (
-    OTHER_SOURCE_KEY,
-    official_source_keys,
-    source_favicons,
-    source_names,
-)
+from app.sources.service import OTHER_SOURCE_KEY, sources_by_key
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User, UserSourcePreference
@@ -147,32 +142,38 @@ def update_password_me(
 
 
 def _source_preference_outputs(
+    session: SessionDep,
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
-    """Attach each source's plugin display name and favicon for display."""
-    favicons = source_favicons()
-    names = source_names()
-    return [
-        SourcePreferenceOutput(
-            source_key=preference.source_key,
-            enabled=preference.enabled,
-            name=names.get(preference.source_key),
-            favicon_url=favicons.get(preference.source_key),
+    """Attach each source's stored display name and favicon for display."""
+    sources = sources_by_key(session)
+    outputs: list[SourcePreferenceOutput] = []
+    for preference in preferences:
+        source = sources.get(preference.source_key)
+        outputs.append(
+            SourcePreferenceOutput(
+                source_key=preference.source_key,
+                enabled=preference.enabled,
+                name=source.name if source else None,
+                favicon_url=source.favicon_url if source else None,
+            ),
         )
-        for preference in preferences
-    ]
+    return outputs
 
 
 @users_router.get("/me/source-preferences")
 def read_source_preferences(
+    session: SessionDep,
     current_user: CurrentUser,
 ) -> list[SourcePreferenceOutput]:
     """Get the current user's source priority and enable/disable preferences.
 
-    Always returns every official source plus `Other`, in priority order.
+    Always returns every stored source plus `Other`, in priority order.
     """
     return _source_preference_outputs(
+        session,
         user_service.effective_source_preferences(
+            session,
             user_service.stored_preferences(current_user.source_preferences),
         ),
     )
@@ -186,7 +187,7 @@ def update_source_preferences(
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
     """Replace the current user's source preferences (priority order + enabled)."""
-    allowed_keys = {*official_source_keys(), OTHER_SOURCE_KEY}
+    allowed_keys = {*sources_by_key(session), OTHER_SOURCE_KEY}
     seen: set[str] = set()
     for preference in preferences:
         if preference.source_key not in allowed_keys:
@@ -216,7 +217,9 @@ def update_source_preferences(
     session.commit()
     session.refresh(current_user)
     return _source_preference_outputs(
+        session,
         user_service.effective_source_preferences(
+            session,
             user_service.stored_preferences(current_user.source_preferences),
         ),
     )

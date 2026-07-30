@@ -15,6 +15,7 @@ import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
 import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
+import { CommentsDialog } from "@/components/Channels/ChannelDetail/CommentsDialog"
 import {
   columns,
   type EpisodeWithDetails,
@@ -347,6 +348,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           ) : (
             <ChannelShowsButton channelId={channelId} variant="button" />
           )}
+          <CommentsDialog channelId={channelId} channelName={channel?.name} />
           <EpisodeFilters
             key={orderPreset?.id ?? "channel"}
             filterParams={filterParams}

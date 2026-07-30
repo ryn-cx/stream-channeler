@@ -34,6 +34,7 @@ def init_db(session: Session) -> None:
     if not user:
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,
+            username=settings.FIRST_SUPERUSER_USERNAME,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )

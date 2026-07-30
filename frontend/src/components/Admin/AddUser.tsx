@@ -24,7 +24,7 @@ import { handleError } from "@/utils"
 const formSchema = z
   .object({
     email: z.email({ message: "Invalid email address" }),
-    username: z.string().optional(),
+    username: z.string().min(1, "Username is required"),
     password: z
       .string()
       .min(1, { message: "Password is required" })

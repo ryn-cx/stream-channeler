@@ -28,6 +28,7 @@ import { Route as LayoutEpisodesRouteImport } from './routes/_layout/episodes'
 import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
 import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
+import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
@@ -147,6 +148,11 @@ const LayoutCreditsRoute = LayoutCreditsRouteImport.update({
 const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
   id: '/channel-orders',
   path: '/channel-orders',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
+  id: '/channel-comments',
+  path: '/channel-comments',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
+  '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
   '/dashboard': typeof LayoutDashboardRoute
@@ -344,6 +351,7 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
   '/dashboard': typeof LayoutDashboardRoute
@@ -391,6 +399,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
+  '/_layout/channel-comments': typeof LayoutChannelCommentsRoute
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
   '/_layout/credits': typeof LayoutCreditsRoute
   '/_layout/dashboard': typeof LayoutDashboardRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/channel-comments'
     | '/channel-orders'
     | '/credits'
     | '/dashboard'
@@ -484,6 +494,7 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/channel-comments'
     | '/channel-orders'
     | '/credits'
     | '/dashboard'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/channel-comments'
     | '/_layout/channel-orders'
     | '/_layout/credits'
     | '/_layout/dashboard'
@@ -712,6 +724,13 @@ declare module '@tanstack/react-router' {
       path: '/channel-orders'
       fullPath: '/channel-orders'
       preLoaderRoute: typeof LayoutChannelOrdersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/channel-comments': {
+      id: '/_layout/channel-comments'
+      path: '/channel-comments'
+      fullPath: '/channel-comments'
+      preLoaderRoute: typeof LayoutChannelCommentsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admin': {
@@ -938,6 +957,7 @@ const LayoutOnboardingRouteWithChildren =
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
+  LayoutChannelCommentsRoute: typeof LayoutChannelCommentsRoute
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
   LayoutCreditsRoute: typeof LayoutCreditsRoute
   LayoutDashboardRoute: typeof LayoutDashboardRoute
@@ -972,6 +992,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
+  LayoutChannelCommentsRoute: LayoutChannelCommentsRoute,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
   LayoutCreditsRoute: LayoutCreditsRoute,
   LayoutDashboardRoute: LayoutDashboardRoute,

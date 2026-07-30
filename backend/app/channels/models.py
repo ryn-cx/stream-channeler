@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.interfaces import ORMOption
     from sqlalchemy.sql.selectable import ForUpdateParameter
 
+    from app.comments.models import Comment
+
 
 class BaseChannel(SQLModel):
     """Base model representing a Channel."""
@@ -78,6 +80,10 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         },
     )
     favorites: list[ChannelFavorite] = Relationship(
+        back_populates="channel",
+        cascade_delete=True,
+    )
+    comments: list[Comment] = Relationship(
         back_populates="channel",
         cascade_delete=True,
     )

@@ -33,6 +33,33 @@ export type ChannelAdminUpdate = {
 };
 
 /**
+ * Schema for a `Comment` shown outside of its own channel's page.
+ */
+export type ChannelCommentOutput = {
+    body: string;
+    id: string;
+    channel_id: string;
+    parent_comment_id: (string | null);
+    user_id: string;
+    author: string;
+    created_at: string;
+    modified_at: string;
+    reply_count?: number;
+    replies?: Array<CommentOutput>;
+    channel_name: (string | null);
+    is_read: boolean;
+};
+
+/**
+ * Schema for returning every `Comment` left on a `User`'s `Channel`s.
+ */
+export type ChannelCommentsListOutput = {
+    comments?: Array<ChannelCommentOutput>;
+    total_count?: number;
+    unread_count?: number;
+};
+
+/**
  * Schema for creating a `Channel`.
  */
 export type ChannelCreate = {
@@ -316,6 +343,54 @@ export type ChannelUpdate = {
 export type CombinedChannelOutput = {
     id: string;
     name: (string | null);
+};
+
+/**
+ * Schema for creating a `Comment`.
+ */
+export type CommentCreate = {
+    body: string;
+    parent_comment_id?: (string | null);
+};
+
+/**
+ * Schema for returning a `Comment`.
+ *
+ * A channel's comment list only returns top level comments, leaving `replies`
+ * empty and using `reply_count` to say whether there is a thread to expand. The
+ * thread endpoint fills `replies` with the whole tree below a comment.
+ */
+export type CommentOutput = {
+    body: string;
+    id: string;
+    channel_id: string;
+    parent_comment_id: (string | null);
+    user_id: string;
+    author: string;
+    created_at: string;
+    modified_at: string;
+    reply_count?: number;
+    replies?: Array<CommentOutput>;
+};
+
+/**
+ * Which comments a listing returns.
+ */
+export type CommentScope = 'owned' | 'all';
+
+/**
+ * Schema for returning one page of `Comment`s.
+ */
+export type CommentsListOutput = {
+    comments?: Array<CommentOutput>;
+    total_count?: number;
+};
+
+/**
+ * Schema for updating a `Comment`.
+ */
+export type CommentUpdate = {
+    body?: (string | null);
 };
 
 /**
@@ -1048,7 +1123,7 @@ export type UserCreate = {
     email: string;
     is_active?: boolean;
     is_superuser?: boolean;
-    username?: (string | null);
+    username: string;
     server_side_threshold?: number;
     password: string;
 };
@@ -1057,7 +1132,7 @@ export type UserPublic = {
     email: string;
     is_active?: boolean;
     is_superuser?: boolean;
-    username?: (string | null);
+    username: string;
     server_side_threshold?: number;
     id: string;
     created_at?: (string | null);
@@ -1066,7 +1141,7 @@ export type UserPublic = {
 export type UserRegister = {
     email: string;
     password: string;
-    username?: (string | null);
+    username: string;
 };
 
 export type UsersPublic = {
@@ -1525,6 +1600,57 @@ export type ChannelsAdminDeleteChannelQueueData = {
 };
 
 export type ChannelsAdminDeleteChannelQueueResponse = (Message);
+
+export type CommentsReadMyChannelCommentsData = {
+    limit?: number;
+    offset?: number;
+    scope?: CommentScope;
+    unreadOnly?: boolean;
+};
+
+export type CommentsReadMyChannelCommentsResponse = (ChannelCommentsListOutput);
+
+export type CommentsReadCommentRepliesData = {
+    commentId: string;
+};
+
+export type CommentsReadCommentRepliesResponse = (CommentsListOutput);
+
+export type CommentsReadUnreadCommentCountResponse = (number);
+
+export type CommentsMarkCommentsReadData = {
+    commentId?: (string | null);
+};
+
+export type CommentsMarkCommentsReadResponse = (Message);
+
+export type CommentsUpdateChannelCommentData = {
+    commentId: string;
+    requestBody: CommentUpdate;
+};
+
+export type CommentsUpdateChannelCommentResponse = (CommentOutput);
+
+export type CommentsDeleteChannelCommentData = {
+    commentId: string;
+};
+
+export type CommentsDeleteChannelCommentResponse = (Message);
+
+export type CommentsReadChannelCommentsData = {
+    channelId: string;
+    limit?: number;
+    offset?: number;
+};
+
+export type CommentsReadChannelCommentsResponse = (CommentsListOutput);
+
+export type CommentsCreateChannelCommentData = {
+    channelId: string;
+    requestBody: CommentCreate;
+};
+
+export type CommentsCreateChannelCommentResponse = (CommentOutput);
 
 export type EpisodesGetEpisodesData = {
     filterOptions?: string;

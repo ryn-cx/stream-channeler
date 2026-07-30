@@ -9,7 +9,6 @@ the per-channel `source_ids` filter still stacks on top.
 
 import uuid
 
-import pytest
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder
@@ -17,43 +16,39 @@ from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
 from app.models import Visibility
 from app.shows.models import Show
-from app.sources.service import official_source_keys
+from app.users import service as user_service
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
 from tests.app.channels.utils import create_random_channel, create_random_channel_show
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
+from tests.app.sources.utils import create_random_source
 from tests.app.users.utils import create_random_user
 
 SHARED_IDENTIFIER = "TMDB shared-episode"
-_MINIMUM_SOURCES = 2
-
-
-def _two_official_keys() -> tuple[str, str]:
-    keys = official_source_keys()
-    if len(keys) < _MINIMUM_SOURCES:
-        pytest.skip("needs at least two official source plugins")
-    return keys[0], keys[1]
+SOURCE_KEY_A = "DedupTestSourceA"
+SOURCE_KEY_B = "DedupTestSourceB"
 
 
 def _build_duplicated_channel(
     session: Session,
     user: User,
 ) -> tuple[Channel, dict[str, Show]]:
-    """A channel with the same episode imported from two official sources."""
+    """A channel with the same episode imported from two installed sources."""
     channel = create_random_channel(session, user, is_public=False)
+    plugin_user = user_service.get_or_create_plugin_user(session=session)
     shows: dict[str, Show] = {}
-    for key in _two_official_keys():
+    for key in (SOURCE_KEY_A, SOURCE_KEY_B):
         plugin = create_random_plugin(
             session,
-            user,
-            key=key,
+            plugin_user,
             visibility=Visibility.public,
         )
+        source = create_random_source(session, plugin, key=key)
         channel_show = create_random_channel_show(
             session,
             channel,
-            plugin,
+            source,
             is_whitelist=False,
         )
         create_random_episode(
@@ -102,21 +97,20 @@ def test_duplicate_episode_collapses_to_priority_source(
 ) -> None:
     user = create_random_user(session_scoped_session)
     channel, shows = _build_duplicated_channel(session_scoped_session, user)
-    key_a, key_b = _two_official_keys()
 
-    # Prioritize key_b over key_a.
+    # Prioritize SOURCE_KEY_B over SOURCE_KEY_A.
     _set_preferences(
         session_scoped_session,
         user,
         [
-            SourcePreference(source_key=key_b, enabled=True),
-            SourcePreference(source_key=key_a, enabled=True),
+            SourcePreference(source_key=SOURCE_KEY_B, enabled=True),
+            SourcePreference(source_key=SOURCE_KEY_A, enabled=True),
         ],
     )
 
     show_ids = _selected_show_ids(session_scoped_session, channel, user)
 
-    assert show_ids == [shows[key_b].id]
+    assert show_ids == [shows[SOURCE_KEY_B].id]
 
 
 def test_disabled_source_is_hidden_globally(
@@ -124,21 +118,21 @@ def test_disabled_source_is_hidden_globally(
 ) -> None:
     user = create_random_user(session_scoped_session)
     channel, shows = _build_duplicated_channel(session_scoped_session, user)
-    key_a, key_b = _two_official_keys()
 
-    # key_b is the higher priority but globally disabled, so key_a wins instead.
+    # SOURCE_KEY_B is the higher priority but globally disabled, so
+    # SOURCE_KEY_A wins instead.
     _set_preferences(
         session_scoped_session,
         user,
         [
-            SourcePreference(source_key=key_b, enabled=False),
-            SourcePreference(source_key=key_a, enabled=True),
+            SourcePreference(source_key=SOURCE_KEY_B, enabled=False),
+            SourcePreference(source_key=SOURCE_KEY_A, enabled=True),
         ],
     )
 
     show_ids = _selected_show_ids(session_scoped_session, channel, user)
 
-    assert show_ids == [shows[key_a].id]
+    assert show_ids == [shows[SOURCE_KEY_A].id]
 
 
 def test_channel_source_filter_stacks_on_top_of_preferences(
@@ -146,23 +140,22 @@ def test_channel_source_filter_stacks_on_top_of_preferences(
 ) -> None:
     user = create_random_user(session_scoped_session)
     channel, shows = _build_duplicated_channel(session_scoped_session, user)
-    key_a, key_b = _two_official_keys()
 
-    # Globally key_b wins, but the channel blacklists key_b's source, so the
-    # per-channel filter narrows the result to key_a.
+    # Globally SOURCE_KEY_B wins, but the channel blacklists its source, so the
+    # per-channel filter narrows the result to SOURCE_KEY_A.
     _set_preferences(
         session_scoped_session,
         user,
         [
-            SourcePreference(source_key=key_b, enabled=True),
-            SourcePreference(source_key=key_a, enabled=True),
+            SourcePreference(source_key=SOURCE_KEY_B, enabled=True),
+            SourcePreference(source_key=SOURCE_KEY_A, enabled=True),
         ],
     )
     options = ChannelOptions(
-        source_ids=[shows[key_b].source_id],
+        source_ids=[shows[SOURCE_KEY_B].source_id],
         source_ids_is_blacklist=True,
     )
 
     show_ids = _selected_show_ids(session_scoped_session, channel, user, options)
 
-    assert show_ids == [shows[key_a].id]
+    assert show_ids == [shows[SOURCE_KEY_A].id]

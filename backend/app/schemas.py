@@ -1,3 +1,4 @@
+# TODO: Validate
 """Shared schemas."""
 
 from enum import StrEnum
@@ -10,6 +11,7 @@ from sqlmodel import Session, SQLModel
 
 from app.channel_orders.models import ChannelOrder
 from app.channels.models import Channel
+from app.comments.models import Comment
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
 from app.files.models import File
@@ -22,7 +24,16 @@ from app.users.models import User
 from app.watches.models import Watch
 
 USER_OWNED_MODELS = (
-    Episode | Season | Show | Source | Plugin | Channel | Watch | File | ChannelOrder
+    Episode
+    | Season
+    | Show
+    | Source
+    | Plugin
+    | Channel
+    | Watch
+    | File
+    | ChannelOrder
+    | Comment
 )
 
 
@@ -176,7 +187,7 @@ class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
         return existing_record
 
 
-class BaseUpdateWithoutKey[ModelT: Channel | Watch | ChannelOrder](BaseInput):
+class BaseUpdateWithoutKey[ModelT: Channel | Watch | ChannelOrder | Comment](BaseInput):
     """Base update schemas for models without a key field."""
 
     def update(self, session: Session, existing_record: ModelT) -> ModelT:

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, EpisodesGetShowEpisodesData, EpisodesGetShowEpisodesResponse, EpisodesGetSourceEpisodesData, EpisodesGetSourceEpisodesResponse, EpisodesGetPluginEpisodesData, EpisodesGetPluginEpisodesResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, FilesGetPluginFilesData, FilesGetPluginFilesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchUrlData, PluginsSearchUrlResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsTmdbSearchData, PluginsTmdbSearchResponse, PluginsTmdbMediaInfoData, PluginsTmdbMediaInfoResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, SeasonsGetSourceSeasonsData, SeasonsGetSourceSeasonsResponse, SeasonsGetPluginSeasonsData, SeasonsGetPluginSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, ShowsGetPluginShowsData, ShowsGetPluginShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
+import type { ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, EpisodesGetShowEpisodesData, EpisodesGetShowEpisodesResponse, EpisodesGetSourceEpisodesData, EpisodesGetSourceEpisodesResponse, EpisodesGetPluginEpisodesData, EpisodesGetPluginEpisodesResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, FilesGetPluginFilesData, FilesGetPluginFilesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchUrlData, PluginsSearchUrlResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsTmdbSearchData, PluginsTmdbSearchResponse, PluginsTmdbMediaInfoData, PluginsTmdbMediaInfoResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, SeasonsGetSourceSeasonsData, SeasonsGetSourceSeasonsResponse, SeasonsGetPluginSeasonsData, SeasonsGetPluginSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, ShowsGetPluginShowsData, ShowsGetPluginShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
 
 export class ChannelOrdersService {
     /**
@@ -954,6 +954,186 @@ export class ChannelsService {
             path: {
                 queue_id: data.queueId
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class CommentsService {
+    /**
+     * Read My Channel Comments
+     * Get one page of the `Comment`s on the `User`'s `Channel`s, or on all of them.
+     * @param data The data for the request.
+     * @param data.offset
+     * @param data.limit
+     * @param data.scope
+     * @param data.unreadOnly
+     * @returns ChannelCommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readMyChannelComments(data: CommentsReadMyChannelCommentsData = {}): CancelablePromise<CommentsReadMyChannelCommentsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/mine',
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                scope: data.scope,
+                unread_only: data.unreadOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Comment Replies
+     * Get the whole thread below a `Comment`, nested by parent.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns CommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readCommentReplies(data: CommentsReadCommentRepliesData): CancelablePromise<CommentsReadCommentRepliesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/{comment_id}/replies',
+            path: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Unread Comment Count
+     * Get how many comment notifications the `User` has not read.
+     * @returns number Successful Response
+     * @throws ApiError
+     */
+    public static readUnreadCommentCount(): CancelablePromise<CommentsReadUnreadCommentCountResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/unread-count'
+        });
+    }
+    
+    /**
+     * Mark Comments Read
+     * Mark one comment notification read, or every unread one when omitted.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static markCommentsRead(data: CommentsMarkCommentsReadData = {}): CancelablePromise<CommentsMarkCommentsReadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/comments/read',
+            query: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Comment
+     * Update a `Comment` written by the `User`.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @param data.requestBody
+     * @returns CommentOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelComment(data: CommentsUpdateChannelCommentData): CancelablePromise<CommentsUpdateChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/comments/{comment_id}',
+            path: {
+                comment_id: data.commentId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel Comment
+     * Delete a `Comment` written by the `User` and every reply to it.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannelComment(data: CommentsDeleteChannelCommentData): CancelablePromise<CommentsDeleteChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/comments/{comment_id}',
+            path: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Channel Comments
+     * Get one page of the top level `Comment`s on a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @returns CommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readChannelComments(data: CommentsReadChannelCommentsData): CancelablePromise<CommentsReadChannelCommentsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/comments',
+            path: {
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Channel Comment
+     * Leave a `Comment` on a `Channel` the `User` can read.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns CommentOutput Successful Response
+     * @throws ApiError
+     */
+    public static createChannelComment(data: CommentsCreateChannelCommentData): CancelablePromise<CommentsCreateChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/comments',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -2342,7 +2522,7 @@ export class UsersService {
      * Read Source Preferences
      * Get the current user's source priority and enable/disable preferences.
      *
-     * Always returns every official source plus `Other`, in priority order.
+     * Always returns every stored source plus `Other`, in priority order.
      * @returns SourcePreferenceOutput Successful Response
      * @throws ApiError
      */

@@ -28,14 +28,19 @@ def user_authentication_headers(
 def create_random_user(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     return user_service.create_user(session=session, user_create=user_in)
 
 
 def create_random_superuser(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password, is_superuser=True)
+    user_in = UserCreate(
+        email=email,
+        username=random_lower_string(),
+        password=password,
+        is_superuser=True,
+    )
     return user_service.create_user(session=session, user_create=user_in)
 
 
@@ -48,7 +53,7 @@ def authentication_token_from_email(
     password = random_lower_string()
     user = user_service.get_user_by_email(session=session, email=email)
     if not user:
-        user_in_create = UserCreate(email=email, password=password)
+        user_in_create = UserCreate(email=email, username=random_lower_string(), password=password)
         user = user_service.create_user(session=session, user_create=user_in_create)
     else:
         user_in_update = UserUpdate(password=password)
@@ -75,7 +80,7 @@ class CreatedUser(BaseModel):
 def create_random_user_alt(client: TestClient, session: Session) -> CreatedUser:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=session, user_create=user_in)
     headers = user_authentication_headers(client=client, email=email, password=password)
     return CreatedUser(id=user.id, email=email, password=password, headers=headers)

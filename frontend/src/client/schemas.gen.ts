@@ -186,6 +186,113 @@ export const ChannelAdminUpdateSchema = {
     description: 'Schema for an admin updating any field on a `Channel`.'
 } as const;
 
+export const ChannelCommentOutputSchema = {
+    properties: {
+        body: {
+            type: 'string',
+            minLength: 1,
+            title: 'Body'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
+        },
+        parent_comment_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Comment Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        author: {
+            type: 'string',
+            title: 'Author'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        reply_count: {
+            type: 'integer',
+            title: 'Reply Count',
+            default: 0
+        },
+        replies: {
+            items: {
+                '$ref': '#/components/schemas/CommentOutput'
+            },
+            type: 'array',
+            title: 'Replies'
+        },
+        channel_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Name'
+        },
+        is_read: {
+            type: 'boolean',
+            title: 'Is Read'
+        }
+    },
+    type: 'object',
+    required: ['body', 'id', 'channel_id', 'parent_comment_id', 'user_id', 'author', 'created_at', 'modified_at', 'channel_name', 'is_read'],
+    title: 'ChannelCommentOutput',
+    description: "Schema for a `Comment` shown outside of its own channel's page."
+} as const;
+
+export const ChannelCommentsListOutputSchema = {
+    properties: {
+        comments: {
+            items: {
+                '$ref': '#/components/schemas/ChannelCommentOutput'
+            },
+            type: 'array',
+            title: 'Comments'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count',
+            default: 0
+        },
+        unread_count: {
+            type: 'integer',
+            title: 'Unread Count',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'ChannelCommentsListOutput',
+    description: "Schema for returning every `Comment` left on a `User`'s `Channel`s."
+} as const;
+
 export const ChannelCreateSchema = {
     properties: {
         name: {
@@ -1598,6 +1705,151 @@ export const CombinedChannelOutputSchema = {
     required: ['id', 'name'],
     title: 'CombinedChannelOutput',
     description: 'Schema for returning a channel combined into another channel.'
+} as const;
+
+export const CommentCreateSchema = {
+    properties: {
+        body: {
+            type: 'string',
+            minLength: 1,
+            title: 'Body'
+        },
+        parent_comment_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Comment Id'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['body'],
+    title: 'CommentCreate',
+    description: 'Schema for creating a `Comment`.'
+} as const;
+
+export const CommentOutputSchema = {
+    properties: {
+        body: {
+            type: 'string',
+            minLength: 1,
+            title: 'Body'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        channel_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Channel Id'
+        },
+        parent_comment_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Parent Comment Id'
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        author: {
+            type: 'string',
+            title: 'Author'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        reply_count: {
+            type: 'integer',
+            title: 'Reply Count',
+            default: 0
+        },
+        replies: {
+            items: {
+                '$ref': '#/components/schemas/CommentOutput'
+            },
+            type: 'array',
+            title: 'Replies'
+        }
+    },
+    type: 'object',
+    required: ['body', 'id', 'channel_id', 'parent_comment_id', 'user_id', 'author', 'created_at', 'modified_at'],
+    title: 'CommentOutput',
+    description: `Schema for returning a \`Comment\`.
+
+A channel's comment list only returns top level comments, leaving \`replies\`
+empty and using \`reply_count\` to say whether there is a thread to expand. The
+thread endpoint fills \`replies\` with the whole tree below a comment.`
+} as const;
+
+export const CommentScopeSchema = {
+    type: 'string',
+    enum: ['owned', 'all'],
+    title: 'CommentScope',
+    description: 'Which comments a listing returns.'
+} as const;
+
+export const CommentUpdateSchema = {
+    properties: {
+        body: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Body'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'CommentUpdate',
+    description: 'Schema for updating a `Comment`.'
+} as const;
+
+export const CommentsListOutputSchema = {
+    properties: {
+        comments: {
+            items: {
+                '$ref': '#/components/schemas/CommentOutput'
+            },
+            type: 'array',
+            title: 'Comments'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'CommentsListOutput',
+    description: 'Schema for returning one page of `Comment`s.'
 } as const;
 
 export const EpisodeCreateSchema = {
@@ -5967,15 +6219,8 @@ export const UserCreateSchema = {
             default: false
         },
         username: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
             title: 'Username'
         },
         server_side_threshold: {
@@ -5993,7 +6238,7 @@ export const UserCreateSchema = {
         }
     },
     type: 'object',
-    required: ['email', 'password'],
+    required: ['email', 'username', 'password'],
     title: 'UserCreate'
 } as const;
 
@@ -6016,15 +6261,8 @@ export const UserPublicSchema = {
             default: false
         },
         username: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
             title: 'Username'
         },
         server_side_threshold: {
@@ -6053,7 +6291,7 @@ export const UserPublicSchema = {
         }
     },
     type: 'object',
-    required: ['email', 'id'],
+    required: ['email', 'username', 'id'],
     title: 'UserPublic'
 } as const;
 
@@ -6072,20 +6310,13 @@ export const UserRegisterSchema = {
             title: 'Password'
         },
         username: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
             title: 'Username'
         }
     },
     type: 'object',
-    required: ['email', 'password'],
+    required: ['email', 'password', 'username'],
     title: 'UserRegister'
 } as const;
 

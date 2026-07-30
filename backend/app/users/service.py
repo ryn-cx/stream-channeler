@@ -5,8 +5,8 @@ from collections.abc import Iterable
 from sqlmodel import Session, func, select
 
 from app.auth.security import get_password_hash
-from app.sources.service import OTHER_SOURCE_KEY, official_source_keys
-from app.users.constants import PLUGIN_USER_EMAIL
+from app.sources.service import OTHER_SOURCE_KEY, source_keys
+from app.users.constants import PLUGIN_USER_EMAIL, PLUGIN_USER_USERNAME
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference, UserCreate, UserUpdate
 
@@ -18,6 +18,7 @@ def get_or_create_plugin_user(*, session: Session) -> User:
             session=session,
             user_create=UserCreate(
                 email=PLUGIN_USER_EMAIL,
+                username=PLUGIN_USER_USERNAME,
                 password=secrets.token_urlsafe(32),
                 is_superuser=False,
             ),
@@ -66,16 +67,17 @@ def stored_preferences(
 
 
 def effective_source_preferences(
+    session: Session,
     stored: list[SourcePreference],
 ) -> list[SourcePreference]:
-    """Return the full ordered preference list (every official key plus `Other`).
+    """Return the full ordered preference list (every stored source plus `Other`).
 
-    The stored order and enabled flags win for keys that still exist; any official
+    The stored order and enabled flags win for keys that still exist; any source
     key the user has not stored is appended (enabled), and `Other` is guaranteed to
     be present as the final fallback. Unknown/stale keys are dropped.
     """
     stored_by_key = {preference.source_key: preference for preference in stored}
-    default_order = [*official_source_keys(), OTHER_SOURCE_KEY]
+    default_order = [*source_keys(session), OTHER_SOURCE_KEY]
     valid_keys = set(default_order)
 
     ordered_keys: list[str] = []

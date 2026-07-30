@@ -1,46 +1,37 @@
 # TODO: Validate
 """Source service functions."""
 
-from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.manage_plugins import sorted_plugins
+from sqlmodel import Session, col, func, select
+
+from app.plugins.models import Plugin
+from app.sources.models import Source
+from app.users.constants import PLUGIN_USER_EMAIL
+from app.users.models import User
 
 OTHER_SOURCE_KEY = "Other"
 
 
-def _owns_source(plugin: type[AbstractPlugin]) -> bool:
-    """Return whether the plugin creates a `Source` of its own."""
-    from plugins.utils.base_plugin.plugin import BasePlugin  # noqa: PLC0415
+def sources_by_key(session: Session) -> dict[str, Source]:
+    """Return the installed plugins' stored `Source`s, keyed by source key.
 
-    return (
-        issubclass(plugin, BasePlugin)
-        and plugin.initialize_source is BasePlugin.initialize_source
-    )
-
-
-def official_source_keys() -> list[str]:
-    """Return the keys of every plugin that can own episodes.
-
-    Lookup-only plugins (e.g. TMDB) never own a `Source`, so URL import support is
-    required. JustWatch does import URLs, but only through other plugins, so
-    plugins without a `Source` of their own are excluded as well.
+    Only sources owned by the plugin user count as installed sources; a source
+    imported under a user's own plugin is private to them and is left out. A
+    plugin that splits its media across several sources (e.g. Amazon Prime
+    Video's channels) is represented by each of those sources.
     """
-    return [
-        plugin.plugin_key()
-        for plugin in sorted_plugins()
-        if plugin.implements("import_url") and _owns_source(plugin)
-    ]
+    sources = session.exec(
+        select(Source)
+        .join(Plugin, col(Source.plugin_id) == Plugin.id)
+        .join(User, col(Plugin.user_id) == User.id)
+        .where(
+            col(Source.deleted_at).is_(None),
+            func.lower(User.email) == PLUGIN_USER_EMAIL,
+        )
+        .order_by(col(Source.name), col(Source.key)),
+    ).all()
+    return {source.key: source for source in sources}
 
 
-def source_favicons() -> dict[str, str | None]:
-    """Return every plugin's favicon URL, keyed by its source key."""
-    return {plugin.plugin_key(): plugin.FAVICON_URL for plugin in sorted_plugins()}
-
-
-def source_names() -> dict[str, str]:
-    """Return every plugin's display name, keyed by its source key."""
-    return {plugin.plugin_key(): plugin.plugin_name() for plugin in sorted_plugins()}
-
-
-def source_names() -> dict[str, str]:
-    """Return every plugin's display name, keyed by its source key."""
-    return {plugin.plugin_key(): plugin.plugin_name() for plugin in sorted_plugins()}
+def source_keys(session: Session) -> list[str]:
+    """Return the key of every installed plugin's `Source`, ordered for display."""
+    return list(sources_by_key(session))

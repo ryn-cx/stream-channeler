@@ -45,6 +45,10 @@ class TestMultipleSeasonsSeries(EntityURLs, DisneyPlusStandardTests):
     entity_id = "e316aa0d-6df1-445b-98d9-ea1d165bcf81"
 
 
+class TestTemp(EntityURLs, DisneyPlusStandardTests):
+    entity_id = "8eb7e28e-c013-4c11-b355-b8b297d78cb4"
+
+
 class TestMovie(EntityURLs, DisneyPlusStandardTests):
     entity_id = "6e497c43-d4da-4e12-b100-d4d38dc2a7ff"
 

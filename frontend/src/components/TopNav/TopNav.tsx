@@ -7,6 +7,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  MessageSquare,
   Plug,
   Radio,
   Settings,
@@ -47,6 +48,7 @@ const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "Channels", path: "/channels" },
   { icon: Eye, title: "Watches", path: "/watches" },
+  { icon: MessageSquare, title: "Comments", path: "/channel-comments" },
   { icon: ListOrdered, title: "Orders", path: "/channel-orders" },
   { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]

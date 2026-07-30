@@ -63,16 +63,19 @@ class SourceDedupConfig:
     enabled_keys: set[str]
     other_enabled: bool
 
-    def priority_for(self, plugin_key: str | None) -> int:
-        """Return the priority of a plugin key, falling back to `Other`."""
-        if plugin_key is None:
+    def priority_for(self, source_key: str | None) -> int:
+        """Return the priority of a source key, falling back to `Other`."""
+        if source_key is None:
             return self.other_priority
-        return self.priority.get(plugin_key, self.other_priority)
+        return self.priority.get(source_key, self.other_priority)
 
 
-def source_dedup_config(stored: list[SourcePreference]) -> SourceDedupConfig:
+def source_dedup_config(
+    session: SessionDep,
+    stored: list[SourcePreference],
+) -> SourceDedupConfig:
     """Resolve a user's effective preferences into priorities and enabled sets."""
-    preferences = effective_source_preferences(stored)
+    preferences = effective_source_preferences(session, stored)
     priority = {
         preference.source_key: index for index, preference in enumerate(preferences)
     }
@@ -102,7 +105,7 @@ def source_dedup_config(stored: list[SourcePreference]) -> SourceDedupConfig:
 
 def deduplicate_episodes(
     episodes: list[Episode],
-    plugin_key_by_episode_id: dict[UUID, str],
+    source_key_by_episode_id: dict[UUID, str],
     config: SourceDedupConfig,
 ) -> list[Episode]:
     """Return `episodes` with no repeated `episode_identifier`.
@@ -112,7 +115,7 @@ def deduplicate_episodes(
     """
 
     def priority(episode: Episode) -> int:
-        return config.priority_for(plugin_key_by_episode_id.get(episode.id))
+        return config.priority_for(source_key_by_episode_id.get(episode.id))
 
     best_by_identifier: dict[str, Episode] = {}
     for episode in episodes:
@@ -404,6 +407,7 @@ class EpisodeQueryBuilder:
         self._channel_options = self._filter_channel_options(channel_options)
         self._channel_ids = self._resolve_channel_ids(channel)
         self._source_config: SourceDedupConfig = source_dedup_config(
+            session,
             stored_preferences(self._user.source_preferences) if self._user else [],
         )
         self._sort_expressions = _SortExpressionBuilder(
@@ -932,31 +936,30 @@ class EpisodeQueryBuilder:
         """Globally hide episodes from sources the user has disabled.
 
         Stacks on top of the channel's own source filtering: an episode must pass
-        both this and the per-channel `source_ids` filter. `Plugin` is already
+        both this and the per-channel `source_ids` filter. `Source` is already
         joined by `_filter_by_plugin_visibility`.
         """
         config = self._source_config
         if config.other_enabled:
             if config.disabled_keys:
-                query = query.where(col(Plugin.key).not_in(config.disabled_keys))
+                query = query.where(col(Source.key).not_in(config.disabled_keys))
         else:
-            query = query.where(col(Plugin.key).in_(config.enabled_keys))
+            query = query.where(col(Source.key).in_(config.enabled_keys))
         return query
 
-    def _plugin_keys_by_episode(
+    def _source_keys_by_episode(
         self,
         episodes: Sequence[Episode],
     ) -> dict[UUID, str]:
-        """Map each episode id to its owning plugin's key."""
+        """Map each episode id to its owning source's key."""
         if not episodes:
             return {}
         rows = self._session.exec(
-            select(Episode.id, Plugin.key)  # type: ignore[call-overload]
+            select(Episode.id, Source.key)  # type: ignore[call-overload]
             .select_from(Episode)
             .join(Season)
             .join(Show)
             .join(Source)
-            .join(Plugin)
             .where(col(Episode.id).in_([episode.id for episode in episodes])),
         ).all()
         return dict(rows)
@@ -966,8 +969,8 @@ class EpisodeQueryBuilder:
         episodes: list[Episode],
     ) -> list[Episode]:
         """Collapse episodes sharing an `episode_identifier` by source priority."""
-        plugin_keys = self._plugin_keys_by_episode(episodes)
-        return deduplicate_episodes(episodes, plugin_keys, self._source_config)
+        source_keys = self._source_keys_by_episode(episodes)
+        return deduplicate_episodes(episodes, source_keys, self._source_config)
 
     def _sort_episodes(
         self,
