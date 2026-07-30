@@ -25,21 +25,25 @@ def wholoo() -> Wholoo:
 
 class Series(GAPIJSON[TVModel]):
     """Series file."""
+
     API_ENDPOINT = wholoo().tv
 
 
 class Movie(GAPIJSON[MoviesModel]):
     """Movie file."""
+
     API_ENDPOINT = wholoo().movies
 
 
 class SearchFile(GAPIJSON[SearchModel]):
     """Search file."""
+
     API_ENDPOINT = wholoo().search
 
 
 class SeasonFile(PartialGAPIJSON[SeasonModel]):
     """Season file."""
+
     API_ENDPOINT = wholoo().tv.season
 
     def __init__(
@@ -61,35 +65,19 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def series_file(self, series_id: str) -> Series:
         """Returns Series file."""
-        return self._get_cached_file(
-            Series,
-            series_id,
-            lambda: Series(self.session, self.plugin, series_id),
-        )
+        return self._file(Series, series_id)
 
     def search_file(self, query: str) -> SearchFile:
         """Returns SearchFile file."""
-        return self._get_cached_file(
-            SearchFile,
-            query,
-            lambda: SearchFile(self.session, self.plugin, query),
-        )
+        return self._file(SearchFile, query)
 
     def movie_file(self, movie_id: str) -> Movie:
         """Returns Movie file."""
-        return self._get_cached_file(
-            Movie,
-            movie_id,
-            lambda: Movie(self.session, self.plugin, movie_id),
-        )
+        return self._file(Movie, movie_id)
 
     def season_file(self, series_id: str, season_number: int) -> SeasonFile:
         """Returns SeasonFile file."""
-        return self._get_cached_file(
-            SeasonFile,
-            (series_id, season_number),
-            lambda: SeasonFile(self.session, self.plugin, series_id, season_number),
-        )
+        return self._file(SeasonFile, series_id, season_number)
 
     def _is_movie(self) -> bool:
         if self._media_type_value not in ("movie", "series"):

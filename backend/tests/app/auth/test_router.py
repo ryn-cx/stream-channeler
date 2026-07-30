@@ -162,7 +162,12 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     bcrypt_hash = bcrypt_hasher.hash(password)
     assert bcrypt_hash.startswith("$2")  # bcrypt hashes start with $2
 
-    user = User(email=email, hashed_password=bcrypt_hash, is_active=True)
+    user = User(
+        email=email,
+        username=random_lower_string(),
+        hashed_password=bcrypt_hash,
+        is_active=True,
+    )
     session_scoped_session.add(user)
     session_scoped_session.commit()
     session_scoped_session.refresh(user)
@@ -202,7 +207,12 @@ def test_login_with_argon2_password_keeps_hash(
     assert argon2_hash.startswith("$argon2")
 
     # Create user with argon2 hash
-    user = User(email=email, hashed_password=argon2_hash, is_active=True)
+    user = User(
+        email=email,
+        username=random_lower_string(),
+        hashed_password=argon2_hash,
+        is_active=True,
+    )
     session_scoped_session.add(user)
     session_scoped_session.commit()
     session_scoped_session.refresh(user)

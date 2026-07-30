@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -18,6 +18,7 @@ class AmazonURLHandler(URLHandler["Amazon"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -30,6 +31,7 @@ class DetailURLHandler(AmazonURLHandler):
     # The title slug Amazon puts in front of /dp/ is decorative, only the ASIN matters.
     _PATH_REGEX = rf"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/(?P<asin>{_ASIN_REGEX})"
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.detail_page(self._key),

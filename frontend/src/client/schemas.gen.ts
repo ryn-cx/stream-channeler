@@ -6578,13 +6578,18 @@ export const WatchItemSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_identifier'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'episode_identifier'],
     title: 'WatchItem'
 } as const;
 
@@ -6604,6 +6609,11 @@ export const WatchOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -6615,7 +6625,7 @@ export const WatchOutputSchema = {
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_identifier', 'user_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'episode_identifier', 'user_id'],
     title: 'WatchOutput',
     description: 'Schema for returning a `Watch`.'
 } as const;

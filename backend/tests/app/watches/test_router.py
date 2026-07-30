@@ -10,7 +10,6 @@ from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.schemas import PluginOutput
-from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
@@ -37,7 +36,7 @@ from tests.app.utils.route_assertions import (
     assert_success,
     assert_success_list,
 )
-from tests.app.utils.utils import build_random_model, dump_random_model
+from tests.app.utils.utils import dump_random_model
 from tests.app.watches.utils import create_random_watch
 
 
@@ -101,7 +100,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         *,
         sibling_count: int,
     ) -> None:
-        """Test that creating a watch creates watches for all matching episodes."""
+        """Test that creating a watch only writes a row for the chosen episode."""
         initial_test_data = self.create_test_data(
             session_scoped_client,
             session_scoped_session,
@@ -113,10 +112,16 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         # Get values then delete existing watch so multiple will be created at once.
         plugin = initial_test_data.record.episode.season.show.source.plugin
         key = initial_test_data.record.episode.key
+        identifier = initial_test_data.record.episode.episode_identifier
         session_scoped_session.delete(initial_test_data.record)
 
         sibling_episodes = [
-            create_random_episode(session_scoped_session, plugin, key=key)
+            create_random_episode(
+                session_scoped_session,
+                plugin,
+                key=key,
+                episode_identifier=identifier,
+            )
             for _ in range(sibling_count)
         ]
 
@@ -141,11 +146,13 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 Source.plugin_id == plugin.id,
             ),
         ).all()
+        # The watch links to one episode; the siblings sharing its
+        # `episode_identifier` are resolved when the watches are read instead.
         watched_episode_ids = {watch.episode_id for watch in watches}
-        assert len(watches) == sibling_count + 1
-        assert initial_test_data.record.episode.id in watched_episode_ids
+        assert len(watches) == 1
+        assert watched_episode_ids == {initial_test_data.record.episode.id}
         for episode in sibling_episodes:
-            assert episode.id in watched_episode_ids
+            assert episode.id not in watched_episode_ids
 
     def test_create_watch_rejects_when_unverified_exists(
         self,
@@ -191,6 +198,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             session_scoped_session,
             initial_test_data.record.episode.season.show.source.plugin,
             key=initial_test_data.record.episode.key,
+            episode_identifier=initial_test_data.record.episode.episode_identifier,
         )
 
         with self.assert_no_db_change(session_scoped_session):
@@ -355,190 +363,11 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
 
 
 class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
-    @pytest.mark.parametrize("sibling_count", [1, 2])
-    def test_update_watch_updates_siblings(
-        self,
-        session_scoped_client: TestClient,
-        session_scoped_session: Session,
-        *,
-        sibling_count: int,
-    ) -> None:
-        initial_test_data = self.create_test_data(
-            session_scoped_client,
-            session_scoped_session,
-            user_is_owner=True,
-            user_is_authenticated=True,
-            record_is_public=False,
-        )
-        plugin = initial_test_data.record.episode.season.show.source.plugin
-        episode_key = initial_test_data.record.episode.key
-        sibling_episodes = [
-            create_random_episode(session_scoped_session, plugin, key=episode_key)
-            for _ in range(sibling_count)
-        ]
-
-        # Delete existing watch because it is only for a single episode.
-        session_scoped_session.delete(initial_test_data.record)
-
-        # Create all of the watches with the same values so they will all by synced
-        # together.
-        watch_template = build_random_model(Watch)
-        all_episodes = [initial_test_data.record.episode, *sibling_episodes]
-        created_watches = [
-            create_random_watch(
-                session_scoped_session,
-                episode,
-                watch_user=initial_test_data.user,
-                watch_date=watch_template.watch_date,
-                verified=watch_template.verified,
-            )
-            for episode in all_episodes
-        ]
-
-        update_model = WatchUpdate(
-            watch_date=build_random_model(Watch).watch_date,
-            verified=not watch_template.verified,
-        )
-        update_results = assert_success_list(
-            client=session_scoped_client,
-            method="patch",
-            url=self.generic_record_url(created_watches[0].id),
-            output_schema=WatchOutput,
-            headers=initial_test_data.headers,
-            parameters=update_model.model_dump(mode="json", exclude_unset=True),
-        )
-
-        assert len(update_results) == sibling_count + 1
-
-        for result in update_results:
-            assert result.watch_date == update_model.watch_date
-            assert result.verified == update_model.verified
-
-    def test_update_watch_does_not_edit_other_watches(
-        self,
-        session_scoped_client: TestClient,
-        session_scoped_session: Session,
-    ) -> None:
-        """Updating a watch should not affect watches with a different date."""
-        initial_test_data = self.create_test_data(
-            session_scoped_client,
-            session_scoped_session,
-            user_is_owner=True,
-            user_is_authenticated=True,
-            record_is_public=False,
-        )
-        other_watch = create_random_watch(
-            session_scoped_session,
-            initial_test_data.record.episode,
-            watch_user=initial_test_data.user,
-        )
-
-        update_model = WatchUpdate(
-            watch_date=build_random_model(Watch).watch_date,
-            verified=not initial_test_data.record.verified,
-        )
-        assert_success_list(
-            client=session_scoped_client,
-            method="patch",
-            url=self.generic_record_url(initial_test_data.record.id),
-            output_schema=WatchOutput,
-            headers=initial_test_data.headers,
-            parameters=update_model.model_dump(mode="json", exclude_unset=True),
-        )
-
-        assert other_watch == self.get_record_from_db(
-            session_scoped_session,
-            other_watch.id,
-        )
+    pass
 
 
 class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
-    @pytest.mark.parametrize("sibling_count", [1, 2])
-    def test_delete_watch_deletes_siblings(
-        self,
-        session_scoped_client: TestClient,
-        session_scoped_session: Session,
-        *,
-        sibling_count: int,
-    ) -> None:
-        """Deleting a watch should delete all sibling watches with the same date."""
-        initial_test_data = self.create_test_data(
-            session_scoped_client,
-            session_scoped_session,
-            user_is_owner=True,
-            user_is_authenticated=True,
-            record_is_public=False,
-        )
-        plugin = initial_test_data.record.episode.season.show.source.plugin
-        episode_key = initial_test_data.record.episode.key
-        sibling_episodes = [
-            create_random_episode(session_scoped_session, plugin, key=episode_key)
-            for _ in range(sibling_count)
-        ]
-
-        # Delete existing watch because it is only for a single episode.
-        session_scoped_session.delete(initial_test_data.record)
-
-        # Create all of the watches with the same values so they will all be synced
-        # together.
-        watch_template = build_random_model(Watch)
-        all_episodes = [initial_test_data.record.episode, *sibling_episodes]
-        created_watches = [
-            create_random_watch(
-                session_scoped_session,
-                episode,
-                watch_user=initial_test_data.user,
-                watch_date=watch_template.watch_date,
-                verified=watch_template.verified,
-            )
-            for episode in all_episodes
-        ]
-
-        assert_success(
-            client=session_scoped_client,
-            method="delete",
-            url=self.generic_record_url(created_watches[0].id),
-            output_schema=Message,
-            headers=initial_test_data.headers,
-        )
-
-        for watch in created_watches:
-            result = session_scoped_session.exec(
-                select(Watch).where(Watch.id == watch.id),
-            ).first()
-            assert result is None
-
-    def test_delete_watch_does_not_delete_other_watches(
-        self,
-        session_scoped_client: TestClient,
-        session_scoped_session: Session,
-    ) -> None:
-        """Deleting a watch should not affect watches with a different date."""
-        initial_test_data = self.create_test_data(
-            session_scoped_client,
-            session_scoped_session,
-            user_is_owner=True,
-            user_is_authenticated=True,
-            record_is_public=False,
-        )
-        other_watch = create_random_watch(
-            session_scoped_session,
-            initial_test_data.record.episode,
-            watch_user=initial_test_data.user,
-        )
-
-        assert_success(
-            client=session_scoped_client,
-            method="delete",
-            url=self.generic_record_url(initial_test_data.record.id),
-            output_schema=Message,
-            headers=initial_test_data.headers,
-        )
-
-        assert other_watch == self.get_record_from_db(
-            session_scoped_session,
-            other_watch.id,
-        )
+    pass
 
 
 class TestSyncWatches:

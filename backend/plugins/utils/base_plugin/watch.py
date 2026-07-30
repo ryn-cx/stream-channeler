@@ -43,7 +43,9 @@ class WatchMixin(ABC):
         episodes_by_key: dict[str, Episode],
     ) -> dict[str, list[datetime]]:
         """Load watched dates grouped by `episode_identifier`."""
-        identifiers = {episode.episode_identifier for episode in episodes_by_key.values()}
+        identifiers = {
+            episode.episode_identifier for episode in episodes_by_key.values()
+        }
         if not identifiers:
             return {}
         statement = select(Watch.episode_identifier, Watch.watch_date).where(

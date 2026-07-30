@@ -1,5 +1,6 @@
 # TODO: Validate
 from typing import Literal, override
+from urllib.parse import quote
 
 from wholoo.movies.models import MoviesModel
 
@@ -59,3 +60,16 @@ class HelperMixin(FileMixin, register=False):
     @override
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if self._is_movie() else "tv"
+
+    @classmethod
+    def _show_url(cls, show_key: str, media_type: str) -> str:
+        return cls.build_url(f"{media_type}/{show_key}")
+
+    @classmethod
+    def _episode_url(cls, episode_key: str) -> str:
+        return cls.build_url(f"watch/{episode_key}")
+
+    @staticmethod
+    def _image_url(path: str) -> str:
+        operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
+        return f"{path}&operations={operations}"

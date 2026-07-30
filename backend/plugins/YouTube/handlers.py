@@ -71,6 +71,7 @@ class VideoURLHandler(YouTubeURLHandler):
         return self._match.group("video_key")
 
     @property
+    @override
     def show_key(self) -> str:
         videos_file = self.plugin.videos_file(self.video_key)
         return videos_file.parsed().items[0].snippet.channel_id
@@ -79,6 +80,7 @@ class VideoURLHandler(YouTubeURLHandler):
     def playlist_key(self) -> str:
         return self.plugin.channel_uploads_playlist_key(self.show_key)
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.videos_file(self.video_key),
@@ -97,6 +99,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
         return self._match.group("playlist_key")
 
     @property
+    @override
     def show_key(self) -> str:
         playlist_items_file = self.plugin.playlist_items_file(self.playlist_key)
         first_item = get_first_item(playlist_items_file.parsed().items)
@@ -115,6 +118,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
             return owner_channel_id
         return first_item.snippet.channel_id
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.playlist_items_file(self.playlist_key),
@@ -181,9 +185,11 @@ class ChannelKeyURLHandler(ChannelURLHandler):
     _PATH_REGEX = r"\/channel\/(?P<channel_key>UC.{22})(?:$|\/)"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._match.group("channel_key")
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_channel_id_file(self.show_key),
@@ -196,12 +202,14 @@ class ChannelUsernameURLHandler(ChannelURLHandler):
     _PATH_REGEX = r"\/user\/(?P<channel_username>.+?)(?:$|\/)"
 
     @property
+    @override
     def show_key(self) -> str:
         username_file = self.plugin.channel_by_username_file(
             self._match.group("channel_username"),
         )
         return get_first_item(username_file.parsed().items).id
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_username_file(
@@ -218,12 +226,14 @@ class ChannelHandleURLHandler(ChannelURLHandler):
     _PATH_REGEX = r"\/(?:c\/|@)?(?P<channel_handle>.+?)(?:$|\/)"
 
     @property
+    @override
     def show_key(self) -> str:
         handle_file = self.plugin.channel_by_handle_file(
             self._match.group("channel_handle"),
         )
         return get_first_item(handle_file.parsed().items).id
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_handle_file(self._match.group("channel_handle")),

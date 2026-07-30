@@ -56,6 +56,7 @@ def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
 
 class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
     """Channel by channel ID file."""
+
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -70,6 +71,7 @@ class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
 
 class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
     """Channel by handle file."""
+
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -84,6 +86,7 @@ class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
 
 class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
     """Channel by username file."""
+
     API_ENDPOINT = not_yt_dlapi().channel
 
     @override
@@ -98,6 +101,7 @@ class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
 
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
     """Channel playlists file."""
+
     API_ENDPOINT = not_yt_dlapi().playlists
 
     @override
@@ -114,6 +118,7 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
 
 class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
     """Playlist info file."""
+
     API_ENDPOINT = not_yt_dlapi().playlists
 
     @override
@@ -124,6 +129,7 @@ class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
 
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
     """Playlist items file."""
+
     API_ENDPOINT = not_yt_dlapi().playlist_items
 
     # Due to API limits this function merges new videos with existing videos instead of
@@ -184,6 +190,7 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
 
 class Videos(GAPIJSON[VideosModel]):
     """Videos file."""
+
     API_ENDPOINT = not_yt_dlapi().videos
 
 
@@ -231,67 +238,35 @@ class FileMixin(BasePlugin, register=False):
 
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         """Return a cached ChannelByChannelId for the given show key."""
-        return self._get_cached_file(
-            ChannelByChannelId,
-            show_key,
-            lambda: ChannelByChannelId(self.session, self.plugin, show_key),
-        )
+        return self._file(ChannelByChannelId, show_key)
 
     def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
         """Return a cached ChannelByHandle for the given channel handle."""
-        return self._get_cached_file(
-            ChannelByHandle,
-            channel_handle,
-            lambda: ChannelByHandle(self.session, self.plugin, channel_handle),
-        )
+        return self._file(ChannelByHandle, channel_handle)
 
     def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
         """Return a cached ChannelByUsername for the given channel username."""
-        return self._get_cached_file(
-            ChannelByUsername,
-            channel_username,
-            lambda: ChannelByUsername(self.session, self.plugin, channel_username),
-        )
+        return self._file(ChannelByUsername, channel_username)
 
     def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
         """Return a cached ChannelPlaylists for the given show key."""
-        return self._get_cached_file(
-            ChannelPlaylists,
-            show_key,
-            lambda: ChannelPlaylists(self.session, self.plugin, show_key),
-        )
+        return self._file(ChannelPlaylists, show_key)
 
     def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
         """Return a cached PlaylistInfo for the given playlist key."""
-        return self._get_cached_file(
-            PlaylistInfo,
-            playlist_key,
-            lambda: PlaylistInfo(self.session, self.plugin, playlist_key),
-        )
+        return self._file(PlaylistInfo, playlist_key)
 
     def playlist_items_file(self, season_key: str) -> PlaylistItems:
         """Return a cached PlaylistItems for the given season key."""
-        return self._get_cached_file(
-            PlaylistItems,
-            season_key,
-            lambda: PlaylistItems(self.session, self.plugin, season_key),
-        )
+        return self._file(PlaylistItems, season_key)
 
     def videos_file(self, episode_key: str) -> Videos:
         """Return a cached Videos for the given episode key."""
-        return self._get_cached_file(
-            Videos,
-            episode_key,
-            lambda: Videos(self.session, self.plugin, episode_key),
-        )
+        return self._file(Videos, episode_key)
 
     def playlist_feed_file(self, season_key: str) -> PlaylistFeed:
         """Return a cached PlaylistFeed for the given season key."""
-        return self._get_cached_file(
-            PlaylistFeed,
-            season_key,
-            lambda: PlaylistFeed(self.session, self.plugin, season_key),
-        )
+        return self._file(PlaylistFeed, season_key)
 
     @staticmethod
     def is_music_playlist_key(key: str) -> bool:

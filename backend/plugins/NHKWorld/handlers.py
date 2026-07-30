@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -21,9 +21,11 @@ class ShowURLHandler(NHKWorldURLHandler):
     _PATH_REGEX = r"\/nhkworld\/en\/shows\/(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)\/?(?:$|[?#])"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.video_program_file(self._key),

@@ -36,6 +36,11 @@ from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
 
+# The episode a watch points at. Watches link to a specific episode, but they still
+# count for every episode sharing that episode's `episode_identifier`, so reads join
+# through this alias to reach the identifier a watch stands for.
+WatchedEpisode = aliased(Episode)
+
 # Labels used to compose raw SQL references from Postgres subquery + column
 # names. Callers of `literal_column` below rely on the producing subquery
 # being materialised with exactly these names; keep them in sync.
@@ -534,21 +539,22 @@ class EpisodeQueryBuilder:
             return {}
 
         identifiers = [episode.episode_identifier for episode in episodes]
-        watches = self._session.exec(
-            select(Watch)
+        rows = self._session.exec(
+            select(WatchedEpisode.episode_identifier, Watch)  # type: ignore[call-overload]
+            .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
             .where(
-                col(Watch.episode_identifier).in_(identifiers),
+                col(WatchedEpisode.episode_identifier).in_(identifiers),
                 Watch.user_id == self._user.id,
             )
             .order_by(
-                col(Watch.episode_identifier),
+                col(WatchedEpisode.episode_identifier),
                 desc(Watch.watch_date),
                 desc(Watch.id),
             )
-            .distinct(col(Watch.episode_identifier)),
+            .distinct(col(WatchedEpisode.episode_identifier)),
         ).all()
 
-        return {watch.episode_identifier: watch for watch in watches}
+        return dict(rows)
 
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
         return (
@@ -610,7 +616,7 @@ class EpisodeQueryBuilder:
 
         episode_last_watched_subquery = (
             select(
-                Watch.episode_identifier,
+                WatchedEpisode.episode_identifier,
                 func.max(
                     case((col(Watch.verified).is_(True), Watch.watch_date)),
                 ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
@@ -619,8 +625,9 @@ class EpisodeQueryBuilder:
                 ).label(EPISODE_LAST_WATCH_INCOMPLETE_COLUMN),
             )
             .select_from(Watch)
+            .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
             .where(col(Watch.user_id) == self._user.id)
-            .group_by(col(Watch.episode_identifier))
+            .group_by(col(WatchedEpisode.episode_identifier))
             .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
         )
 
@@ -741,17 +748,25 @@ class EpisodeQueryBuilder:
 
     def _verified_watches_subquery(self) -> SelectOfScalar[str]:
         user = self._require_user()
-        return select(Watch.episode_identifier).where(
-            and_(
-                Watch.user_id == user.id,
-                col(Watch.verified).is_(True),
-            ),
+        return (
+            select(WatchedEpisode.episode_identifier)
+            .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
+            .where(
+                and_(
+                    Watch.user_id == user.id,
+                    col(Watch.verified).is_(True),
+                ),
+            )
         )
 
     def _any_watches_subquery(self) -> SelectOfScalar[str]:
         """Episode identifiers with any watch (verified or not) for the user."""
         user = self._require_user()
-        return select(Watch.episode_identifier).where(Watch.user_id == user.id)
+        return (
+            select(WatchedEpisode.episode_identifier)
+            .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
+            .where(Watch.user_id == user.id)
+        )
 
     def _hide_watched_condition(self) -> ColumnElement[bool] | None:
         # Watched = has a verified watch. Partially watched (unverified) and

@@ -1,8 +1,12 @@
 # TODO: Validate
 from typing import Literal, override
+from urllib.parse import quote
 
 from app.shows.models import Show
 from plugins.Pluto.files import FileMixin
+
+# The website serves every on-demand page under a locale segment.
+_LOCALE = "en"
 
 
 class HelperMixin(FileMixin, register=False):
@@ -48,3 +52,34 @@ class HelperMixin(FileMixin, register=False):
             if episode.field_id == episode_key:
                 return episode.number
         return None
+
+    @classmethod
+    def _series_url(cls, show_key: str) -> str:
+        return cls.build_url(f"{_LOCALE}/on-demand/series/{show_key}/details")
+
+    @classmethod
+    def _movie_url(cls, show_key: str) -> str:
+        return cls.build_url(f"{_LOCALE}/on-demand/movies/{show_key}/details")
+
+    @classmethod
+    def _season_url(cls, show_key: str, season_number: int) -> str:
+        return cls.build_url(
+            f"{_LOCALE}/on-demand/series/{show_key}/season/{season_number}",
+        )
+
+    @classmethod
+    def _episode_url(
+        cls,
+        show_key: str,
+        season_number: int,
+        episode_key: str,
+    ) -> str:
+        return cls.build_url(
+            f"{_LOCALE}/on-demand/series/{show_key}/season/{season_number}"
+            f"/episode/{episode_key}",
+        )
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url(f"{_LOCALE}/search?query={quote(query)}")

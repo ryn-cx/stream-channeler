@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.Roku.files import content_id
 from plugins.utils.base_plugin.url import URLHandler
@@ -20,12 +20,14 @@ class RokuURLHandler(URLHandler["Roku"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         # A season or an episode URL is imported as the series it belongs to.
         if series := self.plugin.content_file(self._key).parsed().series:
             return content_id(series.meta.id)
         return self._key
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.content_file(self._key),

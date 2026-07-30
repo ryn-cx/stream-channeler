@@ -21,9 +21,11 @@ class TubiURLHandler(URLHandler["Tubi"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.content_file(self._key),

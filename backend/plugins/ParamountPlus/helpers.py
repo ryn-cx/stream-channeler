@@ -48,3 +48,16 @@ class HelperMixin(FileMixin, register=False):
     @override
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if self._is_movie() else "tv"
+
+    @classmethod
+    def _show_url(cls, show_key: str) -> str:
+        return cls.build_url(f"shows/{show_key}/")
+
+    @classmethod
+    def _movie_url(cls, movie_key: str) -> str:
+        return cls.build_url(f"movies/video/{movie_key}/")
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url("search/")

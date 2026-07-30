@@ -13,7 +13,7 @@ from tests.utils.utils import random_email, random_lower_string
 def test_create_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=db, user_create=user_in)
     assert user.email == email
     assert hasattr(user, "hashed_password")
@@ -22,7 +22,7 @@ def test_create_user(db: Session) -> None:
 def test_authenticate_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=db, user_create=user_in)
     authenticated_user = auth_service.authenticate(
         session=db,
@@ -43,7 +43,7 @@ def test_not_authenticate_user(db: Session) -> None:
 def test_check_if_user_is_active(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=db, user_create=user_in)
     assert user.is_active is True
 
@@ -67,7 +67,7 @@ def test_check_if_user_is_superuser(db: Session) -> None:
 def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(email=username, username=random_lower_string(), password=password)
     user = user_service.create_user(session=db, user_create=user_in)
     assert user.is_superuser is False
 
@@ -86,7 +86,7 @@ def test_get_user(db: Session) -> None:
 def test_get_user_by_email_case_insensitive(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=db, user_create=user_in)
     found_user = user_service.get_user_by_email(session=db, email=email.upper())
     assert found_user

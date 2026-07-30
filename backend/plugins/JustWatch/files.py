@@ -42,8 +42,4 @@ class UrlTitleDetails(GAPIJSON[UrlTitleDetailsResponse]):
 class FileMixin(BasePlugin, register=False):
     def url_title_details_file(self, full_path: str) -> UrlTitleDetails:
         """Contains a title's metadata and every offer JustWatch has for it."""
-        return self._get_cached_file(
-            UrlTitleDetails,
-            full_path,
-            lambda: UrlTitleDetails(self.session, self.plugin, full_path),
-        )
+        return self._file(UrlTitleDetails, full_path)

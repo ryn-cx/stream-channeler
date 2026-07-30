@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -19,6 +19,7 @@ class DisneyPlusURLHandler(URLHandler["DisneyPlus"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -30,6 +31,7 @@ class EntityURLHandler(DisneyPlusURLHandler):
         rf"{_LOCALE_REGEX}\/browse\/entity-(?P<entity_id>{_UUID_REGEX})(?:\/|$)"
     )
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.entity_file(self._key),

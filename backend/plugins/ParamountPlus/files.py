@@ -141,6 +141,7 @@ class MovieFile(GAPIJSON[MovieModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid movie_id {self.unique_identifier}"
 
@@ -148,27 +149,15 @@ class MovieFile(GAPIJSON[MovieModel]):
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def show_page_file(self, show_id: str) -> ShowPage:
         """Returns ShowPage file."""
-        return self._get_cached_file(
-            ShowPage,
-            show_id,
-            lambda: ShowPage(self.session, self.plugin, show_id),
-        )
+        return self._file(ShowPage, show_id)
 
     def episodes_file(self, show_id: str, season_number: int) -> EpisodesFile:
         """Returns EpisodesFile file."""
-        return self._get_cached_file(
-            EpisodesFile,
-            (show_id, season_number),
-            lambda: EpisodesFile(self.session, self.plugin, show_id, season_number),
-        )
+        return self._file(EpisodesFile, show_id, season_number)
 
     def movie_file(self, movie_id: str) -> MovieFile:
         """Returns MovieFile file."""
-        return self._get_cached_file(
-            MovieFile,
-            movie_id,
-            lambda: MovieFile(self.session, self.plugin, movie_id),
-        )
+        return self._file(MovieFile, movie_id)
 
     def _is_movie(self) -> bool:
         if self._media_type_value not in ("movie", "series"):

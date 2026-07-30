@@ -232,11 +232,7 @@ class DetailPage(HTMLFile):
 class FileMixin(TMDBMixin, register=False):
     def detail_page(self, asin: str) -> DetailPage:
         """Returns DetailPage file."""
-        return self._get_cached_file(
-            DetailPage,
-            asin,
-            lambda: DetailPage(self.session, self.plugin, asin),
-        )
+        return self._file(DetailPage, asin)
 
     def _is_movie(self, show_key: str) -> bool:
         return self.detail_page(show_key).entity_type() == "Movie"

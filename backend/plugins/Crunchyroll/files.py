@@ -27,6 +27,7 @@ def chirashi() -> Chirashi:
 
 class Series(GAPIJSON[series_models.SeriesModel]):
     """Series file."""
+
     API_ENDPOINT = chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
@@ -34,12 +35,14 @@ class Series(GAPIJSON[series_models.SeriesModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid series_id {self.unique_identifier}"
 
 
 class Objects(GAPIJSON[objects_models.ObjectsModel]):
     """Objects file."""
+
     API_ENDPOINT = chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
@@ -47,22 +50,26 @@ class Objects(GAPIJSON[objects_models.ObjectsModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EpisodeNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid episode_id {self.unique_identifier}"
 
 
 class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
     """Seasons file."""
+
     API_ENDPOINT = chirashi().seasons
 
 
 class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
     """Season episodes file."""
+
     API_ENDPOINT = chirashi().season_episodes
 
 
 class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     """Browse series file."""
+
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_series
 
@@ -80,63 +87,41 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
 
 class Search(GAPIJSON[search_models.SearchModel]):
     """Search file."""
+
     API_ENDPOINT = chirashi().search
 
 
 class FileMixin(TMDBMixin, register=False):
     def series_file(self, show_key: str) -> Series:
         """Returns Series file."""
-        return self._get_cached_file(
-            Series,
-            show_key,
-            lambda: Series(self.session, self.plugin, show_key),
-        )
+        return self._file(Series, show_key)
 
     def objects_file(self, episode_key: str) -> Objects:
         """Returns Objects file."""
-        return self._get_cached_file(
-            Objects,
-            episode_key,
-            lambda: Objects(self.session, self.plugin, episode_key),
-        )
+        return self._file(Objects, episode_key)
 
     def seasons_file(self, show_key: str) -> Seasons:
         """Returns Seasons file."""
-        return self._get_cached_file(
-            Seasons,
-            show_key,
-            lambda: Seasons(self.session, self.plugin, show_key),
-        )
+        return self._file(Seasons, show_key)
 
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
         """Returns SeasonEpisodes file."""
-        return self._get_cached_file(
-            SeasonEpisodes,
-            season_key,
-            lambda: SeasonEpisodes(self.session, self.plugin, season_key),
-        )
+        return self._file(SeasonEpisodes, season_key)
 
-    def browse_series_file(self, browse_datetime: datetime | File) -> BrowseSeries:
+    def browse_series_file(self, browse_datetime: datetime) -> BrowseSeries:
         """Returns BrowseSeries file."""
-        if isinstance(browse_datetime, File):
-            str_datetime = BrowseSeries.file_key_to_unique_identifier(
-                browse_datetime.key,
-            )
-        else:
-            str_datetime = str(browse_datetime)
-        return self._get_cached_file(
+        return self._file(BrowseSeries, str(browse_datetime))
+
+    def browse_series_file_from_record(self, record: File) -> BrowseSeries:
+        """Returns the BrowseSeries file for an existing `File` record."""
+        return self._file(
             BrowseSeries,
-            str_datetime,
-            lambda: BrowseSeries(self.session, self.plugin, str_datetime),
+            BrowseSeries.file_key_to_unique_identifier(record.key),
         )
 
     def search_file(self, query: str) -> Search:
         """Returns Search file."""
-        return self._get_cached_file(
-            Search,
-            query,
-            lambda: Search(self.session, self.plugin, query),
-        )
+        return self._file(Search, query)
 
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
@@ -231,7 +216,7 @@ class FileMixin(TMDBMixin, register=False):
         """Returns newest BrowseSeries file."""
         extra = "Completed" if is_completed else None
         if file := self.preload_latest_file(BrowseSeries, extra=extra):
-            return self.browse_series_file(file)
+            return self.browse_series_file_from_record(file)
 
         if strict:
             msg = "No browse file found."

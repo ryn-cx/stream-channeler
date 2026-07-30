@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 
@@ -23,6 +23,7 @@ class BaseSeriesURLHandler(HiDiveURLHandler):
     @abstractmethod
     def _validation_file(self) -> BaseFile[Any]: ...
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(self._validation_file(), self.url)
 
@@ -32,6 +33,7 @@ class SeriesURLHandler(BaseSeriesURLHandler):
     _PATH_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -47,6 +49,7 @@ class SeasonURLHandler(BaseSeriesURLHandler):
     _PATH_REGEX = r"\/season\/(?P<season_key>\d+)(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         season_data = self.plugin.season_file(self._key).parsed()
         return str(season_data.metadata.series.series_id)
@@ -61,8 +64,10 @@ class MovieURLHandler(HiDiveURLHandler):
     _PATH_REGEX = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(self.plugin.vod_file(self._key), self.url)

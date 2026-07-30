@@ -35,6 +35,7 @@ def diving_board() -> DivingBoard:
 
 class Season(PartialGAPIJSON[season_models.SeasonModel]):
     """Season file."""
+
     # Occurs when the user imports an invalid TV show url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().season
@@ -47,6 +48,7 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
 
 class Vod(PartialGAPIJSON[vod_models.VodModel]):
     """Vod file."""
+
     # Occurs when the user imports an invalid movie url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().vod
@@ -59,6 +61,7 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
 
 class Series(PartialGAPIJSON[series_models.SeriesModel]):
     """Series file."""
+
     # Occurs when the user imports an invalid series url.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().series
@@ -71,6 +74,7 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
 
 class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
     """Schedule file."""
+
     API_ENDPOINT = diving_board().schedule
 
     def __init__(
@@ -100,6 +104,7 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
 
 class Search(GAPIJSON[search_models.SearchModel]):
     """Search file."""
+
     API_ENDPOINT = diving_board().search
 
 
@@ -114,29 +119,17 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
     def season_file(self, season_key: str | int) -> Season:
         """Return a cached Season for the given season key."""
         key = str(season_key)
-        return self._get_cached_file(
-            Season,
-            key,
-            lambda: Season(self.session, self.plugin, key),
-        )
+        return self._file(Season, key)
 
     def vod_file(self, vod_key: str | int) -> Vod:
         """Return a cached Vod for the given vod key."""
         key = str(vod_key)
-        return self._get_cached_file(
-            Vod,
-            key,
-            lambda: Vod(self.session, self.plugin, key),
-        )
+        return self._file(Vod, key)
 
     def series_file(self, series_key: str | int) -> Series:
         """Return a cached Series for the given series key."""
         key = str(series_key)
-        return self._get_cached_file(
-            Series,
-            key,
-            lambda: Series(self.session, self.plugin, key),
-        )
+        return self._file(Series, key)
 
     def schedule_file(self, input_date: datetime | File) -> Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
@@ -144,19 +137,11 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
             input_date = datetime.fromisoformat(
                 Schedule.file_key_to_unique_identifier(input_date.key),
             )
-        return self._get_cached_file(
-            Schedule,
-            input_date,
-            lambda: Schedule(self.session, self.plugin, input_date),
-        )
+        return self._file(Schedule, input_date)
 
     def search_file(self, query: str) -> Search:
         """Return a cached Search for the given query."""
-        return self._get_cached_file(
-            Search,
-            query,
-            lambda: Search(self.session, self.plugin, query),
-        )
+        return self._file(Search, query)
 
     def get_latest_schedule_file(self) -> Schedule | None:
         """Return the latest schedule file, or None if none exists."""

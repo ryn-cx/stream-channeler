@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -36,6 +37,10 @@ from plugins.utils.manage_plugins import import_plugins, plugins
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
+# The episode a watch points at; reads still group watches by that episode's
+# `episode_identifier` so a watch counts across every source sharing it.
+WatchedEpisode = aliased(Episode)
+
 
 def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
     return or_(
@@ -45,7 +50,11 @@ def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
 
 
 def _watched_identifiers_subquery(user_id: uuid.UUID):  # noqa: ANN202
-    return select(col(Watch.episode_identifier)).where(Watch.user_id == user_id)
+    return (
+        select(col(WatchedEpisode.episode_identifier))
+        .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
+        .where(Watch.user_id == user_id)
+    )
 
 
 def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: ANN001, ANN202
@@ -82,9 +91,11 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     )
     return (
         select(Watch)
+        .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
         .join(
             representative,
-            representative.c.episode_identifier == col(Watch.episode_identifier),
+            representative.c.episode_identifier
+            == col(WatchedEpisode.episode_identifier),
         )
         .join(Episode, col(Episode.id) == representative.c.episode_id)
         .join(Season, col(Season.id) == col(Episode.season_id))
@@ -156,11 +167,13 @@ def _format_watched_episodes_data(
     episode_by_identifier = _representative_episodes_by_identifier(
         session,
         user_id,
-        {watch.episode_identifier for watch in episode_watches},
+        {watch.episode.episode_identifier for watch in episode_watches},
     )
 
     for episode_watch in episode_watches:
-        episode = episode_by_identifier.get(episode_watch.episode_identifier)
+        episode = episode_by_identifier.get(
+            episode_watch.episode.episode_identifier,
+        )
         if episode is None:
             continue
         season = episode.season
@@ -184,7 +197,8 @@ def _format_watched_episodes_data(
         watches.append(
             WatchItem(
                 id=episode_watch.id,
-                episode_identifier=episode_watch.episode_identifier,
+                episode_id=episode_watch.episode_id,
+                episode_identifier=episode_watch.episode.episode_identifier,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,
             ),
@@ -211,9 +225,11 @@ def create_watches(
     Raises 409 Conflict if the identifier already has an unverified watch.
     """
     existing_unverified = session.exec(
-        select(Watch).where(
+        select(Watch)
+        .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
+        .where(
             Watch.user_id == user_id,
-            Watch.episode_identifier == episode.episode_identifier,
+            col(WatchedEpisode.episode_identifier) == episode.episode_identifier,
             col(Watch.verified) == False,  # noqa: E712 - TODO: SQLAlchemy comparison requires == False
         ),
     ).first()
@@ -226,7 +242,7 @@ def create_watches(
     watch = Watch.model_validate(
         watch_input,
         update={
-            "episode_identifier": episode.episode_identifier,
+            "episode_id": episode.id,
             "user_id": user_id,
         },
     )

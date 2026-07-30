@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 
@@ -23,6 +23,7 @@ class PlutoURLHandler(MediaTypeURLHandler["Pluto"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -36,6 +37,7 @@ class MovieURLHandler(PlutoURLHandler):
         rf"{_DETAILS_REGEX}(?:\/|$)"
     )
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.items_file(self._key),
@@ -53,6 +55,7 @@ class SeriesURLHandler(PlutoURLHandler):
         rf"{_SEASON_REGEX}{_DETAILS_REGEX}(?:\/|$)"
     )
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.seasons_file(self._key),

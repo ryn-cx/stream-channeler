@@ -19,30 +19,24 @@ def meshfilm() -> Meshfilm:
 
 class Title(GAPIJSON[netflix_models.LodpTitleAndPlansPageModel]):
     """Title file."""
+
     API_ENDPOINT = meshfilm().lodp_title_and_plans_page
 
 
 class Search(GAPIJSON[search_models.SearchPageResultsModel]):
     """Search file."""
+
     API_ENDPOINT = meshfilm().search_page_results
 
 
 class FileMixin(TMDBMixin, register=False):
     def title_file(self, title_key: str) -> Title:
         """Contains all of a Netflix title's data (show, seasons, episodes)."""
-        return self._get_cached_file(
-            Title,
-            title_key,
-            lambda: Title(self.session, self.plugin, title_key),
-        )
+        return self._file(Title, title_key)
 
     def search_file(self, query: str) -> Search:
         """Contains Netflix's movie and TV search results for a query."""
-        return self._get_cached_file(
-            Search,
-            query,
-            lambda: Search(self.session, self.plugin, query),
-        )
+        return self._file(Search, query)
 
     def _title_video(self, show_key: str) -> netflix_models.Video1:
         parsed = self.title_file(show_key).parsed()

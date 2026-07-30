@@ -84,14 +84,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         cascade_delete=True,
     )
 
-    watches: list[Watch] = Relationship(
-        sa_relationship_kwargs={
-            "primaryjoin": (
-                "foreign(Watch.episode_identifier) == Episode.episode_identifier"
-            ),
-            "viewonly": True,
-        },
-    )
+    watches: list[Watch] = Relationship(back_populates="episode", cascade_delete=True)
 
     @override
     def _root_record(self, session: Session) -> Plugin:

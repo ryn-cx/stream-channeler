@@ -21,9 +21,11 @@ class SeriesURLHandler(CrunchyrollURLHandler):
     _PATH_REGEX = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
+    @override
     def validate_url(self) -> None:
         plugin_file = self.plugin.series_file(self._key)
         self.plugin.raise_if_invalid_file(plugin_file, self.url)
@@ -34,10 +36,12 @@ class EpisodeURLHandler(CrunchyrollURLHandler):
     _PATH_REGEX = r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         objects_file = self.plugin.objects_file(self._key)
         return objects_file.parsed().data[0].episode_metadata.series_id
 
+    @override
     def validate_url(self) -> None:
         objects_file = self.plugin.objects_file(self._key)
         self.plugin.raise_if_invalid_file(objects_file, self.url)

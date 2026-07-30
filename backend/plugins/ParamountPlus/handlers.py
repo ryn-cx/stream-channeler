@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 
@@ -18,6 +18,7 @@ class ParamountPlusURLHandler(MediaTypeURLHandler["ParamountPlus"]):
         super().__init__(plugin, url)
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -27,6 +28,7 @@ class ShowURLHandler(ParamountPlusURLHandler):
     # https://www.paramountplus.com/shows/south-park/
     _PATH_REGEX = rf"\/shows\/(?P<show_id>{_SHOW_SLUG_REGEX})(?:\/|$)"
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.show_page_file(self._key),
@@ -39,6 +41,7 @@ class MovieURLHandler(ParamountPlusURLHandler):
     # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
     _PATH_REGEX = rf"\/movies\/video\/(?P<movie_id>{_MOVIE_ID_REGEX})(?:\/|$)"
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.movie_file(self._key),

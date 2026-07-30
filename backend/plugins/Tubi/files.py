@@ -35,6 +35,7 @@ class ContentFile(GAPIJSON[ContentModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ContentNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid content_id {self.unique_identifier}"
 
@@ -42,11 +43,7 @@ class ContentFile(GAPIJSON[ContentModel]):
 class FileMixin(TMDBMixin, register=False):
     def content_file(self, content_id: str) -> ContentFile:
         """Contains all of a Tubi title's data (title, seasons, episodes)."""
-        return self._get_cached_file(
-            ContentFile,
-            content_id,
-            lambda: ContentFile(self.session, self.plugin, content_id),
-        )
+        return self._file(ContentFile, content_id)
 
     def _content(self, content_id: str) -> ContentModel:
         return self.content_file(content_id).parsed()

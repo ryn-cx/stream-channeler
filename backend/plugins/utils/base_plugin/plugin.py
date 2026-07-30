@@ -45,7 +45,7 @@ class BasePlugin(
         self.session = session
         self._source: Source | None = None
         self._file_cache: dict[tuple[type, object], Any] = {}
-        self._weakref_file_cache: dict[tuple[type, object], Any] = {}
+        self._weakref_file_cache: dict[object, Any] = {}
         self.initialize_database()
         self._validate_plugin_version()
 
@@ -269,18 +269,18 @@ class BasePlugin(
         """Return the name of the plugin."""
         return cls.__name__
 
-    def _get_cached_file[T](
+    def _file[FileT: BaseFile[Any]](
         self,
-        file_type: type[T],
-        key: object,
-        factory: Callable[[], T],
-    ) -> T:
-        cache_key = (file_type, key)
+        file_type: Callable[..., FileT],
+        *identifiers: object,
+    ) -> FileT:
+        """Return the cached `file_type` instance for `identifiers`."""
+        cache_key = (file_type, identifiers)
         if cached := self._weakref_file_cache.get(cache_key):
             return cached
-        obj = factory()
-        self._weakref_file_cache[cache_key] = obj
-        return obj
+        file = file_type(self.session, self.plugin, *identifiers)
+        self._weakref_file_cache[cache_key] = file
+        return file
 
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()

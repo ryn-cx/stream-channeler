@@ -48,19 +48,11 @@ class SeasonEpisodesFile(BaseContentFile):
 class FileMixin(TMDBMixin, register=False):
     def content_file(self, content_key: str) -> ContentFile:
         """Returns ContentFile file."""
-        return self._get_cached_file(
-            ContentFile,
-            content_key,
-            lambda: ContentFile(self.session, self.plugin, content_key),
-        )
+        return self._file(ContentFile, content_key)
 
     def season_episodes_file(self, episode_key: str) -> SeasonEpisodesFile:
         """Returns SeasonEpisodesFile file."""
-        return self._get_cached_file(
-            SeasonEpisodesFile,
-            episode_key,
-            lambda: SeasonEpisodesFile(self.session, self.plugin, episode_key),
-        )
+        return self._file(SeasonEpisodesFile, episode_key)
 
     def _content(self, content_key: str) -> ContentModel:
         return self.content_file(content_key).parsed()

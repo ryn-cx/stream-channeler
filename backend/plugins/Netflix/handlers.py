@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -19,9 +19,11 @@ class TitleURLHandler(NetflixURLHandler):
     _PATH_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
     @property
+    @override
     def show_key(self) -> str:
         return self._key
 
+    @override
     def validate_url(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.title_file(self._key),

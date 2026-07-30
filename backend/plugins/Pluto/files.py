@@ -33,6 +33,7 @@ class ItemsFile(PartialGAPIJSON[ItemsModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ItemNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid item_id {self.unique_identifier}"
 
@@ -50,6 +51,7 @@ class SeasonsFile(GAPIJSON[SeasonsModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid series_id {self.unique_identifier}"
 
@@ -57,19 +59,11 @@ class SeasonsFile(GAPIJSON[SeasonsModel]):
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def items_file(self, item_id: str) -> ItemsFile:
         """Contains the metadata of a single on-demand movie."""
-        return self._get_cached_file(
-            ItemsFile,
-            item_id,
-            lambda: ItemsFile(self.session, self.plugin, item_id),
-        )
+        return self._file(ItemsFile, item_id)
 
     def seasons_file(self, series_id: str) -> SeasonsFile:
         """Contains a series' metadata, its seasons, and all of their episodes."""
-        return self._get_cached_file(
-            SeasonsFile,
-            series_id,
-            lambda: SeasonsFile(self.session, self.plugin, series_id),
-        )
+        return self._file(SeasonsFile, series_id)
 
     def _item(self, show_key: str) -> Item:
         return self.items_file(show_key).parsed().items[0]

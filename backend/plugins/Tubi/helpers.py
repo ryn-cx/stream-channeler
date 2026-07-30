@@ -1,6 +1,7 @@
 # TODO: Validate
 import re
 from typing import Literal, override
+from urllib.parse import quote
 
 from app.shows.models import Show
 from plugins.Tubi.files import FileMixin
@@ -56,3 +57,20 @@ class HelperMixin(FileMixin, register=False):
             if episode.id == episode_key:
                 return int(episode.episode_number)
         return None
+
+    @classmethod
+    def _series_url(cls, show_key: str) -> str:
+        return cls.build_url(f"series/{show_key}")
+
+    @classmethod
+    def _movie_url(cls, show_key: str) -> str:
+        return cls.build_url(f"movies/{show_key}")
+
+    @classmethod
+    def _episode_url(cls, episode_key: str) -> str:
+        return cls.build_url(f"tv-shows/{episode_key}")
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url(f"search/{quote(query)}")

@@ -57,3 +57,16 @@ class HelperMixin(FileMixin, register=False):
             if str(episode.field_id) == episode_key:
                 return index + 1
         return None
+
+    @classmethod
+    def _show_url(cls, entity_id: str) -> str:
+        return cls.build_url(f"browse/entity-{entity_id}")
+
+    @classmethod
+    def _video_url(cls, episode_id: str) -> str:
+        return cls.build_url(f"play/{episode_id}")
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url("browse/search")

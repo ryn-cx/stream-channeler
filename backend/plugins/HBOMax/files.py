@@ -25,11 +25,13 @@ def minbo() -> MinBO:
 
 class ShowFile(GAPIJSON[ShowModel]):
     """Show file."""
+
     API_ENDPOINT = minbo().show
 
 
 class SeasonFile(PartialGAPIJSON[ShowModel]):
     """Season file."""
+
     API_ENDPOINT = minbo().show
 
     def __init__(
@@ -53,33 +55,22 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
 
 class MovieFile(GAPIJSON[MoviesModel]):
     """Movie file."""
+
     API_ENDPOINT = minbo().movie
 
 
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def show_file(self, show_id: str) -> ShowFile:
         """Returns ShowFile file."""
-        return self._get_cached_file(
-            ShowFile,
-            show_id,
-            lambda: ShowFile(self.session, self.plugin, show_id),
-        )
+        return self._file(ShowFile, show_id)
 
     def season_file(self, show_id: str, season_number: int) -> SeasonFile:
         """Returns SeasonFile file."""
-        return self._get_cached_file(
-            SeasonFile,
-            (show_id, season_number),
-            lambda: SeasonFile(self.session, self.plugin, show_id, season_number),
-        )
+        return self._file(SeasonFile, show_id, season_number)
 
     def movie_file(self, movie_id: str) -> MovieFile:
         """Returns MovieFile file."""
-        return self._get_cached_file(
-            MovieFile,
-            movie_id,
-            lambda: MovieFile(self.session, self.plugin, movie_id),
-        )
+        return self._file(MovieFile, movie_id)
 
     def _is_movie(self) -> bool:
         if self._media_type_value not in ("movie", "series"):

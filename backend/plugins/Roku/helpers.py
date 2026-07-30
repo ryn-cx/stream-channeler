@@ -46,3 +46,16 @@ class HelperMixin(FileMixin, register=False):
             if content_id(episode.meta.id) == episode_key:
                 return int(episode.episode_number)
         return None
+
+    @classmethod
+    def _show_url(cls, show_key: str) -> str:
+        return cls.build_url(f"details/{show_key}")
+
+    @classmethod
+    def _video_url(cls, episode_key: str) -> str:
+        return cls.build_url(f"watch/{episode_key}")
+
+    @override
+    @classmethod
+    def search_url(cls, query: str) -> str | None:
+        return cls.build_url("search")

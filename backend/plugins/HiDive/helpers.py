@@ -90,3 +90,17 @@ class HelperMixin(HiDiveFiles, register=False):
     @override
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if self._is_movie() else "tv"
+
+    @classmethod
+    def _show_url(cls, key: str | int, media_type: str = "Series") -> str:
+        if media_type == "Movie":
+            return cls.build_url(f"video/{key}")
+        return cls.build_url(f"series/{key}")
+
+    @classmethod
+    def _season_url(cls, season_key: str | int) -> str:
+        return cls.build_url(f"season/{season_key}")
+
+    @classmethod
+    def _episode_url(cls, episode_key: str | int) -> str:
+        return cls.build_url(f"video/{episode_key}")

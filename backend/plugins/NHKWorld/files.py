@@ -5,7 +5,9 @@ from typing import override
 
 from naphki import Naphki
 from naphki.shows_search.models import ShowsSearchModel
+from naphki.video_episodes import models as video_episodes_models
 from naphki.video_episodes.models import Item, VideoEpisodesModel
+from naphki.video_programs import models as video_programs_models
 from naphki.video_programs.models import VideoProgramsModel
 
 from app.files.models import File
@@ -22,6 +24,7 @@ def naphki() -> Naphki:
 
 class VideoProgram(GAPIJSON[VideoProgramsModel]):
     """Video program file."""
+
     # Occurs when a user puts in an invalid URL.
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = naphki().video_programs
@@ -29,6 +32,7 @@ class VideoProgram(GAPIJSON[VideoProgramsModel]):
 
 class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     """Video episodes file."""
+
     API_ENDPOINT = naphki().video_episodes
 
     @override
@@ -41,11 +45,13 @@ class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
 class ShowsSearch(GAPIJSON[ShowsSearchModel]):
     """Shows search file."""
+
     API_ENDPOINT = naphki().shows_search
 
 
 class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     """New video episodes file."""
+
     IMMUTABLE = True
     API_ENDPOINT = naphki().video_episodes
 
@@ -81,27 +87,15 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 class FileMixin(BasePlugin, register=False):
     def video_program_file(self, show_key: str) -> VideoProgram:
         """Contains a single show's information."""
-        return self._get_cached_file(
-            VideoProgram,
-            show_key,
-            lambda: VideoProgram(self.session, self.plugin, show_key),
-        )
+        return self._file(VideoProgram, show_key)
 
     def video_episodes_file(self, program_id: str) -> VideoEpisodes:
         """Contains a show's episodes."""
-        return self._get_cached_file(
-            VideoEpisodes,
-            program_id,
-            lambda: VideoEpisodes(self.session, self.plugin, program_id),
-        )
+        return self._file(VideoEpisodes, program_id)
 
     def shows_search_file(self, query: str) -> ShowsSearch:
         """Contains results for a search query."""
-        return self._get_cached_file(
-            ShowsSearch,
-            query,
-            lambda: ShowsSearch(self.session, self.plugin, query),
-        )
+        return self._file(ShowsSearch, query)
 
     # TODO: Consider making this a generic function
     def new_video_episodes_file(
@@ -115,11 +109,7 @@ class FileMixin(BasePlugin, register=False):
             )
         else:
             str_datetime = str(feed_datetime)
-        return self._get_cached_file(
-            NewVideoEpisodes,
-            str_datetime,
-            lambda: NewVideoEpisodes(self.session, self.plugin, str_datetime),
-        )
+        return self._file(NewVideoEpisodes, str_datetime)
 
     def latest_new_video_episodes_file(self) -> NewVideoEpisodes | None:
         """Return the latest new video episodes file, or None if none exists."""
@@ -176,3 +166,14 @@ class FileMixin(BasePlugin, register=False):
             for season_key in season_keys
             for item in self.video_episodes_file(season_key).items()
         ]
+
+    def _get_image_url(
+        self,
+        images: Sequence[
+            video_programs_models.PortraitItem
+            | video_programs_models.LandscapeItem
+            | video_episodes_models.Image
+        ],
+    ) -> str:
+        largest = max(images, key=lambda image: image.width)
+        return self.build_url(largest.url)
