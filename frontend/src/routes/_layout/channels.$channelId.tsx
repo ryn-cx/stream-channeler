@@ -348,7 +348,6 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           ) : (
             <ChannelShowsButton channelId={channelId} variant="button" />
           )}
-          <CommentsDialog channelId={channelId} channelName={channel?.name} />
           <EpisodeFilters
             key={orderPreset?.id ?? "channel"}
             filterParams={filterParams}
@@ -370,6 +369,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             />
           )}
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
+          <CommentsDialog channelId={channelId} channelName={channel?.name} />
         </div>
       </div>
 

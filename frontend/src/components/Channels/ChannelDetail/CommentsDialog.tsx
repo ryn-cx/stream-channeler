@@ -6,6 +6,10 @@ import { useState } from "react"
 
 import { type CommentOutput, CommentsService } from "@/client"
 import { ModalContent } from "@/components/Common/ModalContent"
+import {
+  type TriggerVariant,
+  VariantTrigger,
+} from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -191,11 +195,13 @@ function CommentNode({
 interface CommentsDialogProps {
   channelId: string
   channelName?: string | null
+  variant?: TriggerVariant
 }
 
 export function CommentsDialog({
   channelId,
   channelName,
+  variant = "button",
 }: CommentsDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [page, setPage] = useState(0)
@@ -257,10 +263,12 @@ export function CommentsDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MessageSquare className="size-4" />
-          Comments
-        </Button>
+        <VariantTrigger
+          variant={variant}
+          icon={MessageSquare}
+          label="Comments"
+          iconTitle="Comments"
+        />
       </DialogTrigger>
       <ModalContent size="3xl">
         <DialogHeader>
