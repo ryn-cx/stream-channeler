@@ -1,12 +1,9 @@
 # TODO: Validate
 # pyright: reportArgumentType=false
 
-import signal
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from functools import partial
-from types import FrameType
 from typing import Any
 
 from loguru import logger
@@ -39,24 +36,6 @@ load_models()
 # Every media class updated by this script; typed as the shared `MediaMixin` base so
 # `select_with_plugin()` resolves to a single return type rather than a union.
 MediaClass = type[MediaMixin[Any, Any]]
-
-
-# The stop event is set on the first Ctrl+C. Worker threads check it between items and
-# stop after committing their current item, so an interrupt never discards in-progress
-# downloads.
-def request_stop(  # noqa: D103
-    stop_event: threading.Event,
-    _signum: int,
-    _frame: FrameType | None,
-) -> None:
-    if not stop_event.is_set():
-        logger.warning(
-            "Stop requested - each plugin will finish and commit its current item, "
-            "then exit. Press Ctrl+C again to force quit (may lose in-progress work).",
-        )
-        stop_event.set()
-        # Restore the default handler so a second Ctrl+C force-quits immediately.
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def _channel_inclusion_clause() -> ColumnElement[bool]:
@@ -382,11 +361,5 @@ def run_forever(stop_event: threading.Event) -> None:  # noqa: D103
 if __name__ == "__main__":
     configure_logging()
 
-    # Worker threads can't be interrupted by Ctrl+C (the signal only reaches the main
-    # thread), so handle SIGINT cooperatively: the first Ctrl+C flags every worker to
-    # stop after committing its current item rather than forcing a kill that would abort
-    # in-progress downloads.
-    _stop_event = threading.Event()
-    signal.signal(signal.SIGINT, partial(request_stop, _stop_event))
-    run_forever(_stop_event)
+    run_forever(threading.Event())
     logger.info("Outdated source update process stopped")
