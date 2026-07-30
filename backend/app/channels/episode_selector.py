@@ -325,7 +325,7 @@ class _SortExpressionBuilder:
             return literal_column("0")
         started_query = (
             select(Watch.id)
-            .join(Episode, Watch.episode_identifier == Episode.episode_identifier)  # type: ignore[arg-type]
+            .join(Watch.episodes)  # type: ignore[arg-type]
             .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
             .where(
                 and_(
@@ -813,13 +813,7 @@ class EpisodeQueryBuilder:
             select(Show.id)
             .join(Season, col(Show.id) == Season.show_id)
             .join(Episode, col(Season.id) == Episode.season_id)
-            .join(
-                Watch,
-                and_(
-                    Watch.episode_identifier == Episode.episode_identifier,
-                    Watch.user_id == user.id,
-                ),
-            )
+            .join(Episode.watches.and_(Watch.user_id == user.id))  # type: ignore[attr-defined]
             .distinct()
         )
 

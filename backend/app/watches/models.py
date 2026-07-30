@@ -1,6 +1,7 @@
 # TODO: Validate
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import (
     DateTime,
@@ -16,6 +17,9 @@ from sqlmodel import (
 from app.models import TimestampIdAndHashMixin
 from app.users.models import User
 from app.utils import tz_datetime
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
 
 
 class BaseWatch(SQLModel):
@@ -39,6 +43,9 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
             "user_id",
             "episode_identifier",
         ),
+        # Used by the Episode.watches relationship, which resolves watches for an
+        # episode without scoping to a user.
+        Index("Watch-episode_identifier-index", "episode_identifier"),
         # Used in episode_selector._apply_hide_watched and
         # episode_selector._filter_show_counts to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
@@ -51,6 +58,15 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     user: User = Relationship(back_populates="watched_episodes")
 
     episode_identifier: str = Field()
+
+    episodes: list[Episode] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": (
+                "foreign(Episode.episode_identifier) == Watch.episode_identifier"
+            ),
+            "viewonly": True,
+        },
+    )
 
     def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id

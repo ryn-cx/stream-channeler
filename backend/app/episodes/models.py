@@ -25,6 +25,7 @@ from app.users.models import User
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelEpisodeFilter
+    from app.watches.models import Watch
 
 
 class BaseEpisode(BaseMediaMixin):
@@ -81,6 +82,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     channel_filters: list[ChannelEpisodeFilter] = Relationship(
         back_populates="episode",
         cascade_delete=True,
+    )
+
+    watches: list[Watch] = Relationship(
+        sa_relationship_kwargs={
+            "primaryjoin": (
+                "foreign(Watch.episode_identifier) == Episode.episode_identifier"
+            ),
+            "viewonly": True,
+        },
     )
 
     @override
