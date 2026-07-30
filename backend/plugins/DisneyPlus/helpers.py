@@ -1,11 +1,22 @@
 # TODO: Validate
+import re
 from typing import Literal, override
 
 from app.shows.models import Show
 from plugins.DisneyPlus.files import FileMixin
 
+# Season names are the only place the real season number appears, the position of a
+# season in the list is not reliable because shows can start at a season other than 1.
+_SEASON_NUMBER_REGEX = re.compile(r"\d+")
+
 
 class HelperMixin(FileMixin, register=False):
+    @staticmethod
+    def _season_number_from_name(name: str, fallback: int) -> int:
+        if number := _SEASON_NUMBER_REGEX.search(name):
+            return int(number.group())
+        return fallback
+
     @override
     def _fetch_tmdb_id(
         self,
@@ -31,7 +42,7 @@ class HelperMixin(FileMixin, register=False):
         _, season_id = self._split_season_key(season_key)
         for index, season in enumerate(self._seasons(show_key)):
             if str(season.id) == season_id:
-                return index + 1
+                return self._season_number_from_name(season.name, index + 1)
         return None
 
     @override

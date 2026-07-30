@@ -125,7 +125,10 @@ class DisneyPlus(HelperMixin, URLHandlerPlugin[DisneyPlusURLHandler], register=T
                 season = Season(
                     key=season_key,
                     name=season_entry.name,
-                    season_number=sort_order + 1,
+                    season_number=self._season_number_from_name(
+                        season_entry.name,
+                        sort_order + 1,
+                    ),
                     sort_order=sort_order,
                     url=self._show_url(show_key),
                     data_timestamp=season_check.data_timestamp,
