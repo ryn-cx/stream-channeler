@@ -3,7 +3,7 @@ import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Any, override
+from typing import Any, cast, override
 
 from bs4 import BeautifulSoup, Tag
 from bs4.filter import SoupStrainer
@@ -37,6 +37,25 @@ def _pick_image(images: dict[str, Any]) -> str | None:
         if url := images.get(key):
             return url
     return None
+
+
+# Prime itself is offered through the same subscription payload as a channel, but a
+# title included with Prime belongs to Prime Video rather than a separate source.
+_PRIME_BENEFIT_IDS = frozenset({"Prime"})
+
+
+def _channel_name(label: str) -> str:
+    name = label.split("{lineBreak}", 1)[0].removeprefix("Watch with ").strip()
+    if not name:
+        msg = f"No channel name in {label!r}"
+        raise ValueError(msg)
+    return name
+
+
+@dataclass
+class AmazonChannel:
+    benefit_id: str
+    name: str
 
 
 @dataclass
@@ -145,6 +164,35 @@ class DetailPage(HTMLFile):
 
     def season_number(self) -> int | None:
         return self._header().get("seasonNumber")
+
+    def _subscriptions(self) -> list[dict[str, Any]]:
+        actions = self._body()["atf"]["state"]["action"]["atf"].get(self._page_id(), {})
+        found: list[dict[str, Any]] = []
+
+        def collect(node: object) -> None:
+            if isinstance(node, dict):
+                mapping = cast("dict[str, Any]", node)
+                if isinstance(subscription := mapping.get("subscription"), dict):
+                    found.append(cast("dict[str, Any]", subscription))
+                for value in mapping.values():
+                    collect(value)
+            elif isinstance(node, list):
+                for value in cast("list[Any]", node):
+                    collect(value)
+
+        collect(actions)
+        return found
+
+    def channel(self) -> AmazonChannel | None:
+        """Return the Amazon Channel this title needs, or None when it is included."""
+        for subscription in self._subscriptions():
+            benefit_id = subscription.get("benefitId")
+            label = subscription.get("label")
+            if benefit_id in _PRIME_BENEFIT_IDS:
+                continue
+            if benefit_id and label:
+                return AmazonChannel(benefit_id, _channel_name(label))
+        return None
 
     def seasons(self) -> list[AmazonSeason]:
         seasons_by_id = self._body()["atf"]["state"].get("seasons", {})

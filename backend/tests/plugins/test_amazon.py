@@ -30,6 +30,8 @@ class DetailURLs:
         "/dp/{asin}",
         "/dp/{asin}?lv=shuf&channelId=500&plpRedirect=mhFallback",
         "/gp/video/detail/{asin}",
+        # The title slug in front of /dp/ is decorative, so any slug resolves the ASIN.
+        "/Justice-League-Unlimited-Season-1/dp/{asin}",
     )
 
 
@@ -39,6 +41,12 @@ class TestSeries(DetailURLs, AmazonStandardTests):
 
 class TestPaidShow(DetailURLs, AmazonStandardTests):
     asin = "0GK0W5DZFOWP14GMAR51GE1AYD"
+
+
+# Watching this needs an HBO Max subscription through Prime Video, so it belongs to
+# its own source rather than to Prime Video.
+class TestChannelShow(DetailURLs, AmazonStandardTests):
+    asin = "B003LJVNEY"
 
 
 class InvalidAmazonValidator(InvalidURLValidator[Amazon]):
