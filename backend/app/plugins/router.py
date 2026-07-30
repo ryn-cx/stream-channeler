@@ -112,6 +112,7 @@ def import_url_information(
         PluginImportURLInformation(
             name=plugin_cls.plugin_key(),
             instructions=plugin_cls.import_url_instructions(),
+            favicon_url=plugin_cls.FAVICON_URL,
         )
         for plugin_cls in sorted_plugins()
         if plugin_cls.implements("import_url")
@@ -138,6 +139,7 @@ def search_information(
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
+            favicon_url=plugin_cls.FAVICON_URL,
         )
         for plugin_cls in sorted_plugins()
         if plugin_cls.implements("search")
@@ -147,6 +149,7 @@ def search_information(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
             manual_search_only=True,
+            favicon_url=plugin_cls.FAVICON_URL,
         )
         for plugin_cls in sorted_plugins()
         if not plugin_cls.implements("search")

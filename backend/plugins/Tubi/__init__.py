@@ -1,71 +1,74 @@
 # TODO: Validate
-"""Paramount+ plugin."""
+"""Tubi plugin."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 from typing import ClassVar, override
+from urllib.parse import quote
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.ParamountPlus.handlers import (
+from plugins.Tubi.handlers import (
+    EpisodeURLHandler,
     MovieURLHandler,
-    ParamountPlusURLHandler,
-    ShowURLHandler,
+    SeriesURLHandler,
+    TubiURLHandler,
 )
-from plugins.ParamountPlus.helpers import HelperMixin
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.Tubi.helpers import HelperMixin
+from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+
+_SERIES_UPDATE_INTERVAL = timedelta(days=7)
+_MOVIE_UPDATE_INTERVAL = timedelta(days=30)
 
 
-class ParamountPlus(
-    HelperMixin,
-    MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=True,
-):
-    """Paramount+ plugin."""
+class Tubi(HelperMixin, URLHandlerPlugin[TubiURLHandler], register=True):
+    """Tubi plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[ParamountPlusURLHandler], ...]] = (
+    _URL_HANDLERS: ClassVar[tuple[type[TubiURLHandler], ...]] = (
         MovieURLHandler,
-        ShowURLHandler,
+        SeriesURLHandler,
+        EpisodeURLHandler,
     )
-    TMDB_PROVIDER_NAMES = ("Paramount Plus", "Paramount+", "Paramount+ Amazon Channel")
-    FAVICON_URL = "https://www.paramountplus.com/favicon.ico"
+    TMDB_PROVIDER_NAMES = ("Tubi TV", "Tubi")
+    FAVICON_URL = "https://tubitv.com/favicon.ico"
 
     @classmethod
     @override
     def _domain(cls) -> str:
-        return "paramountplus.com"
+        return "tubitv.com"
 
     @classmethod
-    def _show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"shows/{show_key}/")
+    def _series_url(cls, show_key: str) -> str:
+        return cls.build_url(f"series/{show_key}")
 
     @classmethod
-    def _movie_url(cls, movie_key: str) -> str:
-        return cls.build_url(f"movies/video/{movie_key}/")
+    def _movie_url(cls, show_key: str) -> str:
+        return cls.build_url(f"movies/{show_key}")
+
+    @classmethod
+    def _episode_url(cls, episode_key: str) -> str:
+        return cls.build_url(f"tv-shows/{episode_key}")
 
     @override
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
             "> [!TIP/Series]\n"
-            "> `https://www.paramountplus.com/shows/south-park/`\n\n"
+            "> `https://tubitv.com/series/300006854/scooby-doo-where-are-you`\n\n"
             "> [!TIP/Movie]\n"
-            "> `https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/`\n\n"
+            "> `https://tubitv.com/movies/100029837/megamind`\n\n"
+            "> [!TIP/Episode]\n"
+            "> `https://tubitv.com/tv-shows/595036`\n\n"
         )
 
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:
-        return cls.build_url("search/")
-
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Paramount+"
+        return cls.build_url(f"search/{quote(query)}")
 
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -84,12 +87,11 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> Show:
-        if self._is_movie():
+        if self._is_movie(show_key):
             show = self._upsert_movie(source, show_key, force=force)
         else:
             show = self._upsert_series_show(source, show_key, force=force)
         self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
         return show
 
     def _upsert_series_show(
@@ -100,17 +102,17 @@ class ParamountPlus(
         force: bool = False,
     ) -> Show:
         if show_check := self._show_check(source, show_key, force=force):
-            first_season = self._season_numbers(show_key)[0]
-            first_episode = self._season_episodes(show_key, first_season)[0]
+            content = self._content(show_key)
             show = Show(
                 key=show_key,
-                name=first_episode.series_title,
+                name=content.title,
+                description=content.description,
                 media_type="TV Show",
-                url=self._show_url(show_key),
-                image_url=first_episode.thumb.large,
+                url=self._series_url(show_key),
+                image_url=self._first_image(content.backgrounds),
                 data_timestamp=show_check.data_timestamp,
+                update_at=show_check.data_timestamp + _SERIES_UPDATE_INTERVAL,
                 source_id=source.id,
-                update_at=show_check.data_timestamp + timedelta(days=7),
             )
             show = self._merge_and_upsert_show(
                 show,
@@ -122,32 +124,31 @@ class ParamountPlus(
         else:
             show = show_check.record
 
-        self._upsert_tv_seasons(show, show_key, force=force)
+        self._upsert_series_seasons(show, show_key, force=force)
 
         return show
 
-    def _upsert_tv_seasons(
+    def _upsert_series_seasons(
         self,
         show: Show,
         show_key: str,
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, season_number in enumerate(self._season_numbers(show_key)):
-            season_key = self._season_key(show_key, season_number)
+        for sort_order, season_content in enumerate(self._seasons(show_key)):
+            season_key = self._season_key(show_key, season_content.id)
             if season_check := self._season_check(
                 show,
                 season_key,
                 show_key,
                 force=force,
             ):
-                episodes = self._season_episodes(show_key, season_number)
                 season = Season(
                     key=season_key,
-                    name=episodes[0].season_title if episodes else None,
-                    season_number=season_number,
+                    name=season_content.title,
+                    season_number=int(season_content.id),
                     sort_order=sort_order,
-                    url=self._show_url(show_key),
+                    url=self._series_url(show_key),
                     data_timestamp=season_check.data_timestamp,
                     show_id=show.id,
                 )
@@ -161,19 +162,25 @@ class ParamountPlus(
             else:
                 season = season_check.record
 
-            self._upsert_tv_episodes(season, show_key, season_number, force=force)
+            self._upsert_series_episodes(
+                season,
+                show_key,
+                season_content.id,
+                force=force,
+            )
 
-    def _upsert_tv_episodes(
+    def _upsert_series_episodes(
         self,
         season: Season,
         show_key: str,
-        season_number: int,
+        season_id: str,
         *,
         force: bool = False,
     ) -> None:
-        episodes = self._season_episodes(show_key, season_number)
-        for sort_order, item in enumerate(episodes):
-            episode_key = item.content_id
+        for sort_order, episode_content in enumerate(
+            self._season_episodes(show_key, season_id),
+        ):
+            episode_key = episode_content.id
             episode_check = self._episode_check(
                 episode_key,
                 season,
@@ -185,14 +192,12 @@ class ParamountPlus(
 
             episode = Episode(
                 key=episode_key,
-                name=item.title,
-                episode_number=int(item.episode_number),
-                url=item.url,
-                description=item.description,
-                image_url=item.thumb.large,
-                duration=item.duration_raw,
-                release_date=item.airdate_iso,
-                air_date=item.airdate_iso,
+                name=self._episode_name(episode_content.title),
+                description=episode_content.description,
+                episode_number=int(episode_content.episode_number),
+                url=self._episode_url(episode_key),
+                image_url=self._first_image(episode_content.thumbnails),
+                duration=episode_content.duration,
                 sort_order=sort_order,
                 episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
@@ -213,18 +218,18 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> Show:
-        movie = self._movie_model(show_key)
+        content = self._content(show_key)
         if show_check := self._show_check(source, show_key, force=force):
             show = Show(
                 key=show_key,
-                name=movie.name,
-                description=movie.description,
+                name=content.title,
+                description=content.description,
                 media_type="Movie",
                 url=self._movie_url(show_key),
-                image_url=movie.image,
+                image_url=self._first_image(content.backgrounds),
                 data_timestamp=show_check.data_timestamp,
+                update_at=show_check.data_timestamp + _MOVIE_UPDATE_INTERVAL,
                 source_id=source.id,
-                update_at=show_check.data_timestamp + timedelta(days=30),
             )
             show = self._merge_and_upsert_show(
                 show,
@@ -247,7 +252,7 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> None:
-        season_key = self._season_key(show_key, 0)
+        season_key = self._movie_season_key(show_key)
         if season_check := self._season_check(show, season_key, show_key, force=force):
             season = Season(
                 key=season_key,
@@ -282,16 +287,16 @@ class ParamountPlus(
             show_key,
             force=force,
         ):
-            movie = self._movie_model(show_key)
+            content = self._content(show_key)
             episode = Episode(
                 key=show_key,
-                name=movie.name,
-                description=movie.description,
-                url=self._movie_url(show_key),
-                image_url=movie.image,
+                name=content.title,
+                description=content.description,
                 episode_number=0,
+                url=self._movie_url(show_key),
+                image_url=self._first_image(content.backgrounds),
+                duration=content.duration,
                 sort_order=0,
-                release_date=movie.date_published,
                 episode_identifier=f"{self.plugin_key()} {show_key}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,

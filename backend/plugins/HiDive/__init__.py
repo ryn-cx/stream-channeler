@@ -42,6 +42,11 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
     _VERSION = "0.0.1"
     _URL_HANDLERS = (SeriesURLHandler, SeasonURLHandler, MovieURLHandler)
     TMDB_PROVIDER_NAMES = ("HIDIVE",)
+    # TODO: Don't hardcode the favicon URL
+    FAVICON_URL = (
+        "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
+        "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
+    )
 
     @classmethod
     @override
@@ -111,6 +116,11 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
 
             schedule_file.database_record.extra = "Completed"
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "HIDIVE"
+
     def _upsert_source(self) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
             latest_schedule_file = self.schedule_file(tz_datetime.now())
@@ -120,12 +130,8 @@ class HiDive(HelperMixin, MediaTypeImportMixin[HiDiveURLHandler], register=True)
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name=self.plugin_key(),
-            # TODO: Don't hardcode the favicon URL
-            favicon_url=(
-                "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
-                "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
-            ),
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,

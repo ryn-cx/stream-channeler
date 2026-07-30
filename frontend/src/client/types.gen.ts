@@ -575,6 +575,7 @@ export type PluginCreate = {
 export type PluginImportURLInformation = {
     name: string;
     instructions: string;
+    favicon_url?: (string | null);
 };
 
 export type PluginImportWatchHistoryInformation = {
@@ -620,6 +621,7 @@ export type PluginSearchInformation = {
     plugin_key: string;
     name: string;
     manual_search_only?: boolean;
+    favicon_url?: (string | null);
 };
 
 /**
@@ -931,17 +933,11 @@ export type SourceListPublic = {
     plugin_name: (string | null);
 };
 
-/**
- * A single source's position (by list order) and global enabled state.
- */
 export type SourcePreference = {
     source_key: string;
     enabled?: boolean;
 };
 
-/**
- * A source preference enriched with the source's favicon for display.
- */
 export type SourcePreferenceOutput = {
     source_key: string;
     enabled?: boolean;

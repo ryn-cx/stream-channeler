@@ -20,6 +20,7 @@ class DisneyPlus(HelperMixin, URLHandlerPlugin[DisneyPlusURLHandler], register=T
     _VERSION = "0.0.1"
     _URL_HANDLERS = (EntityURLHandler,)
     TMDB_PROVIDER_NAMES = ("Disney+",)
+    FAVICON_URL = "https://www.disneyplus.com/favicon.ico"
 
     @classmethod
     @override
@@ -47,12 +48,17 @@ class DisneyPlus(HelperMixin, URLHandlerPlugin[DisneyPlusURLHandler], register=T
     def search_url(cls, query: str) -> str | None:
         return cls.build_url("browse/search")
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "Disney+"
+
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="Disney+",
-            favicon_url="https://www.disneyplus.com/favicon.ico",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 

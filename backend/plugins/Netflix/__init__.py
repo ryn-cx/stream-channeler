@@ -26,6 +26,7 @@ _SEARCH_MAX_AGE = timedelta(days=30)
 class Netflix(HelperMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
     _VERSION = "0.0.1"
     TMDB_PROVIDER_NAMES = ("Netflix", "Netflix Standard with Ads")
+    FAVICON_URL = "https://www.netflix.com/favicon.ico"
 
     _URL_HANDLERS: ClassVar[tuple[type[NetflixURLHandler], ...]] = (TitleURLHandler,)
 
@@ -94,8 +95,8 @@ class Netflix(HelperMixin, URLHandlerPlugin[NetflixURLHandler], register=True):
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="Netflix",
-            favicon_url="https://www.netflix.com/favicon.ico",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             data_timestamp=tz_datetime.now(),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)

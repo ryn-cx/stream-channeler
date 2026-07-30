@@ -18,6 +18,7 @@ import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelQueueOutput } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
+import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -116,10 +117,7 @@ export function ManageShowsTabs({
 
   const { data: urlImportPlugins } = useQuery({
     queryKey: ["url-import-plugins"],
-    queryFn: () =>
-      PluginsService.importUrlInformation() as unknown as Promise<
-        Array<{ name: string; instructions: string }>
-      >,
+    queryFn: () => PluginsService.importUrlInformation(),
   })
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
@@ -403,7 +401,10 @@ export function ManageShowsTabs({
                 <SelectItem value="__none__">Choose a site...</SelectItem>
                 {(urlImportPlugins ?? []).map((plugin) => (
                   <SelectItem key={plugin.name} value={plugin.name}>
-                    {plugin.name}
+                    <SourceOptionLabel
+                      name={plugin.name}
+                      faviconUrl={plugin.favicon_url}
+                    />
                   </SelectItem>
                 ))}
               </SelectContent>

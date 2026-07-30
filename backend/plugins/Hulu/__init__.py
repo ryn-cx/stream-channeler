@@ -29,6 +29,7 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
     _VERSION = "0.0.1"
     _URL_HANDLERS = (SeriesURLHandler, MovieURLHandler)
     TMDB_PROVIDER_NAMES = ("Hulu",)
+    FAVICON_URL = "https://www.hulu.com/favicon.ico"
 
     @classmethod
     @override
@@ -62,8 +63,8 @@ class Hulu(HelperMixin, MediaTypeImportMixin[HuluURLHandler], register=True):
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="Hulu",
-            favicon_url="https://www.hulu.com/favicon.ico",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 

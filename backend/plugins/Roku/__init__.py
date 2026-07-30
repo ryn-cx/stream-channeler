@@ -1,5 +1,5 @@
 # TODO: Validate
-"""Paramount+ plugin."""
+"""The Roku Channel plugin."""
 
 from __future__ import annotations
 
@@ -10,62 +10,59 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.ParamountPlus.handlers import (
-    MovieURLHandler,
-    ParamountPlusURLHandler,
-    ShowURLHandler,
+from plugins.Roku.files import content_id
+from plugins.Roku.handlers import (
+    DetailsURLHandler,
+    RokuURLHandler,
+    WatchURLHandler,
 )
-from plugins.ParamountPlus.helpers import HelperMixin
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.Roku.helpers import HelperMixin
+from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
-class ParamountPlus(
-    HelperMixin,
-    MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=True,
-):
-    """Paramount+ plugin."""
+class Roku(HelperMixin, URLHandlerPlugin[RokuURLHandler], register=True):
+    """The Roku Channel plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[ParamountPlusURLHandler], ...]] = (
-        MovieURLHandler,
-        ShowURLHandler,
+    _URL_HANDLERS: ClassVar[tuple[type[RokuURLHandler], ...]] = (
+        DetailsURLHandler,
+        WatchURLHandler,
     )
-    TMDB_PROVIDER_NAMES = ("Paramount Plus", "Paramount+", "Paramount+ Amazon Channel")
-    FAVICON_URL = "https://www.paramountplus.com/favicon.ico"
+    TMDB_PROVIDER_NAMES = ("The Roku Channel",)
+    FAVICON_URL = "https://therokuchannel.roku.com/favicon.ico"
 
     @classmethod
     @override
     def _domain(cls) -> str:
-        return "paramountplus.com"
+        return "therokuchannel.roku.com"
 
     @classmethod
     def _show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"shows/{show_key}/")
+        return cls.build_url(f"details/{show_key}")
 
     @classmethod
-    def _movie_url(cls, movie_key: str) -> str:
-        return cls.build_url(f"movies/video/{movie_key}/")
+    def _video_url(cls, episode_key: str) -> str:
+        return cls.build_url(f"watch/{episode_key}")
 
     @override
     @classmethod
     def import_url_instructions(cls) -> str:
         return (
-            "> [!TIP/Series]\n"
-            "> `https://www.paramountplus.com/shows/south-park/`\n\n"
-            "> [!TIP/Movie]\n"
-            "> `https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/`\n\n"
+            "> [!TIP/Series or Movie]\n"
+            "> `https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae/fawlty-towers`\n\n"
+            "> [!TIP/Episode]\n"
+            "> `https://therokuchannel.roku.com/watch/fa455123ce5c5aee995fcf6fd1165e33`\n\n"
         )
 
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:
-        return cls.build_url("search/")
+        return cls.build_url("search")
 
     @classmethod
     @override
     def plugin_name(cls) -> str:
-        return "Paramount+"
+        return "The Roku Channel"
 
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -84,7 +81,7 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> Show:
-        if self._is_movie():
+        if self._is_movie(show_key):
             show = self._upsert_movie(source, show_key, force=force)
         else:
             show = self._upsert_series_show(source, show_key, force=force)
@@ -100,14 +97,14 @@ class ParamountPlus(
         force: bool = False,
     ) -> Show:
         if show_check := self._show_check(source, show_key, force=force):
-            first_season = self._season_numbers(show_key)[0]
-            first_episode = self._season_episodes(show_key, first_season)[0]
+            content = self._content(show_key)
             show = Show(
                 key=show_key,
-                name=first_episode.series_title,
+                name=content.title,
+                description=content.description,
                 media_type="TV Show",
                 url=self._show_url(show_key),
-                image_url=first_episode.thumb.large,
+                image_url=content.image_map.detail_poster.path,
                 data_timestamp=show_check.data_timestamp,
                 source_id=source.id,
                 update_at=show_check.data_timestamp + timedelta(days=7),
@@ -141,10 +138,8 @@ class ParamountPlus(
                 show_key,
                 force=force,
             ):
-                episodes = self._season_episodes(show_key, season_number)
                 season = Season(
                     key=season_key,
-                    name=episodes[0].season_title if episodes else None,
                     season_number=season_number,
                     sort_order=sort_order,
                     url=self._show_url(show_key),
@@ -171,9 +166,10 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> None:
-        episodes = self._season_episodes(show_key, season_number)
-        for sort_order, item in enumerate(episodes):
-            episode_key = item.content_id
+        for sort_order, item in enumerate(
+            self._season_episodes(show_key, season_number),
+        ):
+            episode_key = content_id(item.meta.id)
             episode_check = self._episode_check(
                 episode_key,
                 season,
@@ -187,12 +183,12 @@ class ParamountPlus(
                 key=episode_key,
                 name=item.title,
                 episode_number=int(item.episode_number),
-                url=item.url,
+                url=self._video_url(episode_key),
                 description=item.description,
-                image_url=item.thumb.large,
-                duration=item.duration_raw,
-                release_date=item.airdate_iso,
-                air_date=item.airdate_iso,
+                image_url=item.image_map.grid.path,
+                duration=item.view_options[0].media.duration,
+                release_date=item.release_date,
+                air_date=item.release_date,
                 sort_order=sort_order,
                 episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=episode_check.data_timestamp,
@@ -213,15 +209,15 @@ class ParamountPlus(
         *,
         force: bool = False,
     ) -> Show:
-        movie = self._movie_model(show_key)
+        content = self._content(show_key)
         if show_check := self._show_check(source, show_key, force=force):
             show = Show(
                 key=show_key,
-                name=movie.name,
-                description=movie.description,
+                name=content.title,
+                description=content.description,
                 media_type="Movie",
-                url=self._movie_url(show_key),
-                image_url=movie.image,
+                url=self._show_url(show_key),
+                image_url=content.image_map.detail_poster.path,
                 data_timestamp=show_check.data_timestamp,
                 source_id=source.id,
                 update_at=show_check.data_timestamp + timedelta(days=30),
@@ -253,7 +249,7 @@ class ParamountPlus(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                url=self._movie_url(show_key),
+                url=self._show_url(show_key),
                 data_timestamp=season_check.data_timestamp,
                 show_id=show.id,
             )
@@ -282,16 +278,17 @@ class ParamountPlus(
             show_key,
             force=force,
         ):
-            movie = self._movie_model(show_key)
+            content = self._content(show_key)
             episode = Episode(
                 key=show_key,
-                name=movie.name,
-                description=movie.description,
-                url=self._movie_url(show_key),
-                image_url=movie.image,
+                name=content.title,
+                description=content.description,
+                url=self._video_url(show_key),
+                image_url=content.image_map.detail_poster.path,
+                duration=content.run_time_seconds,
                 episode_number=0,
                 sort_order=0,
-                release_date=movie.date_published,
+                release_date=content.release_date,
                 episode_identifier=f"{self.plugin_key()} {show_key}",
                 data_timestamp=episode_check.data_timestamp,
                 season_id=season.id,

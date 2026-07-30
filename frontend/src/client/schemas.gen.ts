@@ -3205,6 +3205,17 @@ export const PluginImportURLInformationSchema = {
         instructions: {
             type: 'string',
             title: 'Instructions'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
         }
     },
     type: 'object',
@@ -3447,6 +3458,17 @@ export const PluginSearchInformationSchema = {
             type: 'boolean',
             title: 'Manual Search Only',
             default: false
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
         }
     },
     type: 'object',
@@ -5350,8 +5372,7 @@ export const SourcePreferenceSchema = {
     },
     type: 'object',
     required: ['source_key'],
-    title: 'SourcePreference',
-    description: "A single source's position (by list order) and global enabled state."
+    title: 'SourcePreference'
 } as const;
 
 export const SourcePreferenceOutputSchema = {
@@ -5379,8 +5400,7 @@ export const SourcePreferenceOutputSchema = {
     },
     type: 'object',
     required: ['source_key'],
-    title: 'SourcePreferenceOutput',
-    description: "A source preference enriched with the source's favicon for display."
+    title: 'SourcePreferenceOutput'
 } as const;
 
 export const SourcePublicSchema = {

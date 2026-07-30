@@ -13,13 +13,17 @@ dependencies = [
   "fastapi[standard]<0.129.0,>=0.128.0",
   "httpx<1.0.0,>=0.25.1",
   "jinja2<4.0.0,>=3.1.4",
+  "just-scrape",
   "kneeminus",
   "loguru>=0.7.3",
   "lxml>=5.0.0",
   "meshfilm",
   "minbo",
+  "nana",
   "naphki",
   "not-yt-dlapi",
+  "notaplanet",
+  "plugi",
   "psycopg[binary]<4.0.0,>=3.1.13",
   "pwdlib[argon2,bcrypt]>=0.3.0",
   "pydantic>=2.11",
@@ -117,3 +121,7 @@ wholoo = { git = "https://github.com/ryn-cx/wholoo" }
 minbo = { git = "https://github.com/ryn-cx/minbo" }
 kneeminus = { git = "https://github.com/ryn-cx/knee-minus" }
 trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }
+nana = { git = "https://github.com/ryn-cx/nana" }
+plugi = { git = "https://github.com/ryn-cx/plugi" }
+notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
+just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }

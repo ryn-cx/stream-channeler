@@ -45,6 +45,10 @@ class Crunchyroll(
     _VERSION = "0.0.1"
     import_watch_history_file_extension = ".json"
     TMDB_PROVIDER_NAMES = ("Crunchyroll",)
+    # TODO: Don't hardcode the favicon URL
+    FAVICON_URL = (
+        "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png"
+    )
 
     _URL_HANDLERS = (SeriesURLHandler, EpisodeURLHandler)
 
@@ -82,7 +86,10 @@ class Crunchyroll(
     def _process_new_browse_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
 
-        for browse_json in self.get_incomplete_files(BrowseSeries, self.browse_series_file):
+        for browse_json in self.get_incomplete_files(
+            BrowseSeries,
+            self.browse_series_file,
+        ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             for release in browse_json.extract_datums():
                 if show := Show.get_from_memory(self.session, source, release.id):
@@ -107,11 +114,8 @@ class Crunchyroll(
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name=self.plugin_key(),
-            # TODO: Don't hardcode the favicon URL
-            favicon_url=self.build_url(
-                "build/assets/img/favicons/favicon-v2-96x96.png",
-            ),
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             data_timestamp=data_timestamp,
             update_at=data_timestamp + timedelta(days=1),
             plugin_id=self.plugin.id,

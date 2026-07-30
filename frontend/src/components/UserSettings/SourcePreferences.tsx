@@ -1,4 +1,4 @@
-// TODO: Validate
+﻿// TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, ChevronUp, Globe } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -12,8 +12,11 @@ import { handleError } from "@/utils"
 
 const OTHER_SOURCE_KEY = "Other"
 
-function sourceLabel(key: string): string {
-  return key === OTHER_SOURCE_KEY ? "Other (custom media)" : key
+function sourceLabel(preference: SourcePreferenceOutput): string {
+  if (preference.source_key === OTHER_SOURCE_KEY) {
+    return "Other (custom media)"
+  }
+  return preference.name ?? preference.source_key
 }
 
 const SourcePreferences = () => {
@@ -84,14 +87,14 @@ const SourcePreferences = () => {
             <Checkbox
               checked={preference.enabled ?? true}
               onCheckedChange={() => toggle(index)}
-              aria-label={`Enable ${sourceLabel(preference.source_key)}`}
+              aria-label={`Enable ${sourceLabel(preference)}`}
             />
             <Button
               variant="ghost"
               size="icon-sm"
               disabled={index === 0}
               onClick={() => move(index, -1)}
-              aria-label={`Move ${sourceLabel(preference.source_key)} up`}
+              aria-label={`Move ${sourceLabel(preference)} up`}
             >
               <ChevronUp className="h-4 w-4" />
             </Button>
@@ -100,7 +103,7 @@ const SourcePreferences = () => {
               size="icon-sm"
               disabled={index === preferences.length - 1}
               onClick={() => move(index, 1)}
-              aria-label={`Move ${sourceLabel(preference.source_key)} down`}
+              aria-label={`Move ${sourceLabel(preference)} down`}
             >
               <ChevronDown className="h-4 w-4" />
             </Button>
@@ -114,7 +117,7 @@ const SourcePreferences = () => {
               <Globe className="size-4 shrink-0 text-muted-foreground" />
             )}
             <span className="flex-1 truncate">
-              {sourceLabel(preference.source_key)}
+              {sourceLabel(preference)}
             </span>
           </li>
         ))}

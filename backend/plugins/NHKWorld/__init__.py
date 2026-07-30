@@ -28,6 +28,8 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
 
     # TODO: Add support for single episodes
     _URL_HANDLERS: ClassVar[tuple[type[NHKWorldURLHandler], ...]] = (ShowURLHandler,)
+    # TODO: Don't hardcode the favicon URL
+    FAVICON_URL = "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
 
     @classmethod
     def import_url_instructions(cls) -> str:
@@ -88,6 +90,11 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
         largest = max(images, key=lambda image: image.width)
         return self.build_url(largest.url)
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "NHK World"
+
     def _upsert_source(self) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
@@ -96,9 +103,8 @@ class NHKWorld(FileMixin, URLHandlerPlugin[NHKWorldURLHandler], register=True):
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="NHK World",
-            # TODO: Don't hardcode the favicon URL
-            favicon_url=self.build_url("nhkworld/common/site_images/nw_webapp.ico"),
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,

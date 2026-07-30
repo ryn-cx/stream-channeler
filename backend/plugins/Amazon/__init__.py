@@ -34,6 +34,7 @@ class Amazon(HelperMixin, URLHandlerPlugin[AmazonURLHandler], register=True):
     _VERSION = "0.0.1"
     _URL_HANDLERS: ClassVar[tuple[type[AmazonURLHandler], ...]] = (DetailURLHandler,)
     TMDB_PROVIDER_NAMES = ("Amazon Prime Video", "Amazon Video", "Prime Video")
+    FAVICON_URL = "https://www.amazon.com/favicon.ico"
 
     @classmethod
     @override
@@ -59,12 +60,17 @@ class Amazon(HelperMixin, URLHandlerPlugin[AmazonURLHandler], register=True):
             f"s?url=search-alias%3Dinstant-video&field-keywords={quote_plus(query)}",
         )
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "Amazon Prime Video"
+
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="Amazon Prime Video",
-            favicon_url="https://www.amazon.com/favicon.ico",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 

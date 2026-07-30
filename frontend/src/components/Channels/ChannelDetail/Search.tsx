@@ -9,6 +9,7 @@ import type {
   TMDBWatchProviderItem,
 } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
+import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -660,7 +661,10 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
             <SelectItem value={TMDB_KEY}>TMDB (Search Multiple)</SelectItem>
             {inAppPlugins.map((plugin) => (
               <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                {plugin.name}
+                <SourceOptionLabel
+                  name={plugin.name}
+                  faviconUrl={plugin.favicon_url}
+                />
               </SelectItem>
             ))}
             {manualPlugins.length > 0 && (
@@ -668,7 +672,10 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
                 <SelectLabel>External Search Only</SelectLabel>
                 {manualPlugins.map((plugin) => (
                   <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                    {plugin.name}
+                    <SourceOptionLabel
+                      name={plugin.name}
+                      faviconUrl={plugin.favicon_url}
+                    />
                   </SelectItem>
                 ))}
               </SelectGroup>

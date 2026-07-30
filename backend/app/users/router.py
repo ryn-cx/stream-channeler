@@ -20,8 +20,12 @@ from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
-from app.sources.models import Source
-from app.sources.service import OTHER_SOURCE_KEY, official_source_keys
+from app.sources.service import (
+    OTHER_SOURCE_KEY,
+    official_source_keys,
+    source_favicons,
+    source_names,
+)
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User, UserSourcePreference
@@ -143,26 +147,16 @@ def update_password_me(
 
 
 def _source_preference_outputs(
-    session: SessionDep,
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
-    """Attach each source's favicon (from its official `Source`) for display."""
-    plugin_user = user_service.get_or_create_plugin_user(session=session)
-    keys = [preference.source_key for preference in preferences]
-    favicon_rows = session.exec(
-        select(Source.key, Source.favicon_url)  # type: ignore[call-overload]
-        .select_from(Source)
-        .join(Plugin)
-        .where(
-            col(Plugin.user_id) == plugin_user.id,
-            col(Source.key).in_(keys),
-        ),
-    ).all()
-    favicons = dict(favicon_rows)
+    """Attach each source's plugin display name and favicon for display."""
+    favicons = source_favicons()
+    names = source_names()
     return [
         SourcePreferenceOutput(
             source_key=preference.source_key,
             enabled=preference.enabled,
+            name=names.get(preference.source_key),
             favicon_url=favicons.get(preference.source_key),
         )
         for preference in preferences
@@ -171,7 +165,6 @@ def _source_preference_outputs(
 
 @users_router.get("/me/source-preferences")
 def read_source_preferences(
-    session: SessionDep,
     current_user: CurrentUser,
 ) -> list[SourcePreferenceOutput]:
     """Get the current user's source priority and enable/disable preferences.
@@ -179,7 +172,6 @@ def read_source_preferences(
     Always returns every official source plus `Other`, in priority order.
     """
     return _source_preference_outputs(
-        session,
         user_service.effective_source_preferences(
             user_service.stored_preferences(current_user.source_preferences),
         ),
@@ -224,7 +216,6 @@ def update_source_preferences(
     session.commit()
     session.refresh(current_user)
     return _source_preference_outputs(
-        session,
         user_service.effective_source_preferences(
             user_service.stored_preferences(current_user.source_preferences),
         ),

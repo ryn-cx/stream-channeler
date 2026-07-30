@@ -24,6 +24,7 @@ class HBOMax(HelperMixin, MediaTypeImportMixin[HBOMaxURLHandler], register=True)
     _VERSION = "0.0.1"
     _URL_HANDLERS = (MovieURLHandler, ShowURLHandler)
     TMDB_PROVIDER_NAMES = ("HBO Max", "Max")
+    FAVICON_URL = "https://www.hbomax.com/favicon.ico"
 
     @classmethod
     @override
@@ -53,12 +54,17 @@ class HBOMax(HelperMixin, MediaTypeImportMixin[HBOMaxURLHandler], register=True)
     def search_url(cls, query: str) -> str | None:
         return cls.build_url(f"search/result?q={quote(query)}")
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "HBO Max"
+
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name="HBO Max",
-            favicon_url="https://www.hbomax.com/favicon.ico",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 

@@ -59,12 +59,14 @@ class PluginImportWatchHistoryInformation(BaseModel):
 class PluginImportURLInformation(BaseModel):
     name: str
     instructions: str
+    favicon_url: str | None = None
 
 
 class PluginSearchInformation(BaseModel):
     plugin_key: str
     name: str
     manual_search_only: bool = False
+    favicon_url: str | None = None
 
 
 class PluginURLMatch(BaseModel):

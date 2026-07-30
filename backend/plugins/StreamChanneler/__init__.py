@@ -24,6 +24,11 @@ from plugins.utils.base_plugin.files import BaseFile
 class StreamChanneler(BasePlugin, register=True):
     _VERSION = "0.0.1"
 
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "Stream Channeler"
+
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 
     @override

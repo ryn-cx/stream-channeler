@@ -69,13 +69,17 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "just-scrape" },
     { name = "kneeminus" },
     { name = "loguru" },
     { name = "lxml" },
     { name = "meshfilm" },
     { name = "minbo" },
+    { name = "nana" },
     { name = "naphki" },
     { name = "not-yt-dlapi" },
+    { name = "notaplanet" },
+    { name = "plugi" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2", "bcrypt"] },
     { name = "pydantic" },
@@ -116,13 +120,17 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0,<0.129.0" },
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
+    { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "kneeminus", git = "https://github.com/ryn-cx/knee-minus" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lxml", specifier = ">=5.0.0" },
     { name = "meshfilm", git = "https://github.com/ryn-cx/meshfilm" },
     { name = "minbo", git = "https://github.com/ryn-cx/minbo" },
+    { name = "nana", git = "https://github.com/ryn-cx/nana" },
     { name = "naphki", git = "https://github.com/ryn-cx/naphki" },
     { name = "not-yt-dlapi", git = "https://github.com/ryn-cx/not-yt-dlapi" },
+    { name = "notaplanet", git = "https://github.com/ryn-cx/notaplanet" },
+    { name = "plugi", git = "https://github.com/ryn-cx/plugi" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
     { name = "pwdlib", extras = ["argon2", "bcrypt"], specifier = ">=0.3.0" },
     { name = "pydantic", specifier = ">=2.11" },
@@ -979,6 +987,15 @@ wheels = [
 ]
 
 [[package]]
+name = "just-scrape"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/just-scrape#35f894dc43e77bf4a21f14c32404cfd80316c3c6" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
 name = "keyring"
 version = "25.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1212,6 +1229,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nana"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/nana#810c2dcd4691491aad58a57cad022123036ece6b" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
 name = "naphki"
 version = "0.1.0"
 source = { git = "https://github.com/ryn-cx/naphki#8ab5126b629cd86bf29612e8f51d9fe22732a138" }
@@ -1228,6 +1254,15 @@ dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
     { name = "google-api-python-client" },
+]
+
+[[package]]
+name = "notaplanet"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/notaplanet#b2ca67f96c8f7dc1695ea2a47e4b4ba20f59c1da" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]
@@ -1264,6 +1299,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "plugi"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/plugi#a5ceaf0c5bdb754cf28731801dd5e7cc7f138072" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]

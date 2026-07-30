@@ -30,6 +30,10 @@ class AbstractPlugin(ABC):
     # empty when the plugin has no matching TMDB provider.
     TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
 
+    # The favicon shown next to this plugin's name in the UI; None when the plugin
+    # has no icon of its own.
+    FAVICON_URL: ClassVar[str | None] = None
+
     @classmethod
     @abstractmethod
     def plugin_key(cls) -> str:

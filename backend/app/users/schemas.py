@@ -52,4 +52,5 @@ class SourcePreference(BaseUserSourcePreference):
 
 
 class SourcePreferenceOutput(SourcePreference):
+    name: str | None = None
     favicon_url: str | None = None

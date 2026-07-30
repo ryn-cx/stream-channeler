@@ -36,6 +36,11 @@ class YouTube(WatchHistoryMixin, HelperMixin, register=True):
 
     _VERSION = "0.0.1"
 
+    # TODO: Don't hardcode the favicon URL
+    FAVICON_URL = (
+        "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
+    )
+
     # _playlist_video before _video and _username before _handle due to regex overlap.
     _URL_HANDLERS: ClassVar[tuple[type[YouTubeURLHandler], ...]] = (
         PlaylistVideoURLHandler,
@@ -158,9 +163,8 @@ class YouTube(WatchHistoryMixin, HelperMixin, register=True):
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
         return Source(
             key=self.plugin_key(),
-            name=self.plugin_key(),
-            # TODO: Don't hardcode the favicon URL
-            favicon_url="https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png",
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
             data_timestamp=self._existing_data_timestamp_or_now(source),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
