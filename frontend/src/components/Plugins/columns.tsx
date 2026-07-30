@@ -13,7 +13,10 @@ import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
-export function pluginColumns(scope: OwnerView): ColumnDef<PluginTableData>[] {
+export function pluginColumns(
+  _scope: OwnerView,
+  isAdmin = false,
+): ColumnDef<PluginTableData>[] {
   return [
     {
       accessorKey: "username",
@@ -39,6 +42,18 @@ export function pluginColumns(scope: OwnerView): ColumnDef<PluginTableData>[] {
             >
               {label}
             </Link>
+            {isAdmin && (
+              <TooltipIconLink label="Files">
+                <Link
+                  to="/plugin/$pluginId/files"
+                  params={{ pluginId: row.original.id }}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Files"
+                >
+                  <FileText className="size-4" />
+                </Link>
+              </TooltipIconLink>
+            )}
             <TooltipIconLink label="Shows">
               <Link
                 to="/plugin/$pluginId/shows"
@@ -69,18 +84,6 @@ export function pluginColumns(scope: OwnerView): ColumnDef<PluginTableData>[] {
                 <Film className="size-4" />
               </Link>
             </TooltipIconLink>
-            {scope === "official" && (
-              <TooltipIconLink label="Files">
-                <Link
-                  to="/plugin/$pluginId/files"
-                  params={{ pluginId: row.original.id }}
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label="Files"
-                >
-                  <FileText className="size-4" />
-                </Link>
-              </TooltipIconLink>
-            )}
           </div>
         )
       },

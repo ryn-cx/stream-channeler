@@ -1,3 +1,4 @@
+// TODO: Validate
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Puzzle } from "lucide-react"
 
@@ -12,7 +13,7 @@ import {
   type PluginTableData,
   pluginColumns,
 } from "@/components/Plugins/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/plugins")({
   component: PluginPage,
@@ -28,11 +29,14 @@ export const Route = createFileRoute("/_layout/plugins")({
 })
 
 function PluginPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.is_superuser ?? false
+
   return (
     <MediaListPage<PluginTableData>
       title="Plugins"
       path="/plugins"
-      columns={pluginColumns}
+      columns={(scope) => pluginColumns(scope, isAdmin)}
       columnVisibilityKey="plugins-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Puzzle}
@@ -42,7 +46,7 @@ function PluginPage() {
           scope,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, pluginColumns(scope)),
+          ...serializeTableQuery(params, pluginColumns(scope, isAdmin)),
         })
         return {
           data: result.data,
