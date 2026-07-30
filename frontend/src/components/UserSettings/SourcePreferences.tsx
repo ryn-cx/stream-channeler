@@ -116,9 +116,7 @@ const SourcePreferences = () => {
             ) : (
               <Globe className="size-4 shrink-0 text-muted-foreground" />
             )}
-            <span className="flex-1 truncate">
-              {sourceLabel(preference)}
-            </span>
+            <span className="flex-1 truncate">{sourceLabel(preference)}</span>
           </li>
         ))}
       </ul>

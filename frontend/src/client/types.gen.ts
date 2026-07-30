@@ -941,6 +941,7 @@ export type SourcePreference = {
 export type SourcePreferenceOutput = {
     source_key: string;
     enabled?: boolean;
+    name?: (string | null);
     favicon_url?: (string | null);
 };
 

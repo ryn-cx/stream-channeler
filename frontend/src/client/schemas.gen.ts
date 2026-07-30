@@ -5386,6 +5386,17 @@ export const SourcePreferenceOutputSchema = {
             title: 'Enabled',
             default: true
         },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
         favicon_url: {
             anyOf: [
                 {
