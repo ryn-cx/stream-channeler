@@ -37,6 +37,10 @@ class TestSeries(DetailURLs, AmazonStandardTests):
     asin = "B095RHJ52R"
 
 
+class TestPaidShow(DetailURLs, AmazonStandardTests):
+    asin = "0GK0W5DZFOWP14GMAR51GE1AYD"
+
+
 class InvalidAmazonValidator(InvalidURLValidator[Amazon]):
     plugin_class = Amazon
 

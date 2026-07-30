@@ -8,7 +8,8 @@ from plugins.utils.base_plugin.url import URLHandler
 if TYPE_CHECKING:
     from plugins.Amazon import Amazon
 
-_ASIN_REGEX = r"[A-Z0-9]{10}"
+# A plain ASIN is 10 characters, but a deep link uses a longer encrypted title id.
+_ASIN_REGEX = r"[A-Z0-9]{10,}"
 
 
 class AmazonURLHandler(URLHandler["Amazon"]):
@@ -24,6 +25,7 @@ class AmazonURLHandler(URLHandler["Amazon"]):
 class DetailURLHandler(AmazonURLHandler):
     # https://www.amazon.com/dp/B095RHJ52R
     # https://www.amazon.com/gp/video/detail/B095RHJ52R
+    # https://www.amazon.com/gp/video/detail/0GK0W5DZFOWP14GMAR51GE1AYD
     _PATH_REGEX = rf"\/(?:dp|gp\/video\/detail)\/(?P<asin>{_ASIN_REGEX})"
 
     def validate_url(self) -> None:
