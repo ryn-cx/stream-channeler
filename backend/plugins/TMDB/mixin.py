@@ -110,8 +110,11 @@ class TMDBMixin(BasePlugin, register=False):
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:  # noqa: ARG002
         return "tv"
 
+    def _existing_show(self, show_key: str) -> Show | None:
+        return self._preload_show(show_key).one_or_none()
+
     def _tmdb_show_file(self, show_key: str) -> ShowDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key)
+        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":
@@ -123,7 +126,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> SeasonDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key)
+        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":
@@ -141,7 +144,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> EpisodeDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key)
+        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":
