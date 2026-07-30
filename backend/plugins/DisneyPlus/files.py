@@ -5,14 +5,13 @@ from typing import Any, override
 from uuid import UUID
 
 from kneeminus import KneeMinus
-from kneeminus.entity.grouped_models import (
+from kneeminus.entity.models import (
     DetailEntityHero,
-    GroupedMainContentModel,
+    EntityModel,
     MediaDetails,
 )
-from kneeminus.entity.grouped_models import Episode as EntityEpisode
-from kneeminus.entity.grouped_models import Season as EntitySeason
-from kneeminus.entity.models import EntityModel
+from kneeminus.entity.models import Episode as EntityEpisode
+from kneeminus.entity.models import Season as EntitySeason
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
@@ -81,17 +80,11 @@ class FileMixin(TMDBMixin, register=False):
             lambda: SeasonEntityFile(self.session, self.plugin, entity_id, season_id),
         )
 
-    def _grouped(self, entity_id: str) -> GroupedMainContentModel:
-        return kneeminus().entity.extract(self.entity_file(entity_id).parsed())
+    def _grouped(self, entity_id: str) -> EntityModel:
+        return self.entity_file(entity_id).parsed()
 
-    def _season_grouped(
-        self,
-        entity_id: str,
-        season_id: str,
-    ) -> GroupedMainContentModel:
-        return kneeminus().entity.extract(
-            self.season_file(entity_id, season_id).parsed()
-        )
+    def _season_grouped(self, entity_id: str, season_id: str) -> EntityModel:
+        return self.season_file(entity_id, season_id).parsed()
 
     def _media_details(self, show_key: str) -> MediaDetails:
         return self._grouped(show_key).media_details

@@ -998,7 +998,7 @@ wheels = [
 [[package]]
 name = "kneeminus"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/knee-minus#d1fa838204dbf5affb514b5eabec17b950197cf8" }
+source = { git = "https://github.com/ryn-cx/knee-minus#7026b68c5dcc464d518ab8eceaae08a77bb082ce" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
