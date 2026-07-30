@@ -1,8 +1,9 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
 import { openPluginSources } from "./utils/media"
 import { createUser } from "./utils/privateApi"
-import { randomEmail, randomName, randomPassword } from "./utils/random"
+import { randomEmail, randomUsername, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Sources page is accessible and shows correct title", async ({ page }) => {
@@ -33,7 +34,7 @@ test.describe("Sources management", () => {
   })
 
   test("Create a new source successfully", async ({ page }) => {
-    const name = randomName("Source")
+    const name = randomUsername("Source")
 
     await page.getByRole("button", { name: "Add Source" }).click()
     await page.getByLabel("Name").fill(name)
@@ -74,7 +75,7 @@ test.describe("Sources management", () => {
     let sourceName: string
 
     test.beforeEach(async ({ page }) => {
-      sourceName = randomName("Source")
+      sourceName = randomUsername("Source")
 
       await page.getByRole("button", { name: "Add Source" }).click()
       await page.getByLabel("Name").fill(sourceName)
@@ -88,7 +89,7 @@ test.describe("Sources management", () => {
       const sourceRow = page.getByRole("row").filter({ hasText: sourceName })
       await sourceRow.getByRole("button", { name: "Edit Source" }).click()
 
-      const updatedName = randomName("Source")
+      const updatedName = randomUsername("Source")
       await page.getByLabel("Name").fill(updatedName)
       await page.getByRole("button", { name: "Save" }).click()
 

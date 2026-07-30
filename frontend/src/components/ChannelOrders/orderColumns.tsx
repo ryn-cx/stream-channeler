@@ -73,7 +73,7 @@ export function OrderRowActions({
 
 function ownerLabel(order: OrderRow): string {
   const username = "username" in order ? order.username : null
-  return order.anonymous ? "Anonymous" : username?.trim() || "N/A"
+  return order.anonymous ? "Anonymous" : (username ?? "N/A")
 }
 
 function scoreColumn(): ColumnDef<OrderRow> {

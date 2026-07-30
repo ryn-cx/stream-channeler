@@ -1,8 +1,9 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
 import { openSeasonEpisodes } from "./utils/media"
 import { createUser } from "./utils/privateApi"
-import { randomEmail, randomName, randomPassword } from "./utils/random"
+import { randomEmail, randomUsername, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Episodes page is accessible and shows correct title", async ({
@@ -35,7 +36,7 @@ test.describe("Episodes management", () => {
   })
 
   test("Create a new episode successfully", async ({ page }) => {
-    const name = randomName("Episode")
+    const name = randomUsername("Episode")
 
     await page.getByRole("button", { name: "Add Episode" }).click()
     await page.getByLabel("Name").fill(name)
@@ -76,7 +77,7 @@ test.describe("Episodes management", () => {
     let episodeName: string
 
     test.beforeEach(async ({ page }) => {
-      episodeName = randomName("Episode")
+      episodeName = randomUsername("Episode")
 
       await page.getByRole("button", { name: "Add Episode" }).click()
       await page.getByLabel("Name").fill(episodeName)
@@ -90,7 +91,7 @@ test.describe("Episodes management", () => {
       const episodeRow = page.getByRole("row").filter({ hasText: episodeName })
       await episodeRow.getByRole("button", { name: "Edit Episode" }).click()
 
-      const updatedName = randomName("Episode")
+      const updatedName = randomUsername("Episode")
       await page.getByLabel("Name").fill(updatedName)
       await page.getByRole("button", { name: "Save" }).click()
 

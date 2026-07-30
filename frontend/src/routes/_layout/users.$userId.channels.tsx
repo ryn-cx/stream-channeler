@@ -29,9 +29,7 @@ function UserChannels() {
   if (!data) return <PendingChannelList />
 
   const firstChannel = data.data[0]
-  const username = firstChannel
-    ? firstChannel.username || "Unnamed User"
-    : "this user"
+  const username = firstChannel?.username ?? "this user"
 
   return (
     <div className="flex flex-col gap-6">

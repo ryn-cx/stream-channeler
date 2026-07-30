@@ -1,6 +1,6 @@
+# TODO: Validate
 """YouTube plugin."""
 
-# TODO: Validate
 import re
 from datetime import timedelta
 from typing import ClassVar, override

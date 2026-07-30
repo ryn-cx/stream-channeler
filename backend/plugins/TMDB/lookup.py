@@ -1,5 +1,4 @@
 # TODO: Validate
-# TODO: Validate
 from datetime import timedelta
 from typing import Literal
 

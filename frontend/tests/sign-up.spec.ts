@@ -1,3 +1,4 @@
+// TODO: Validate
 import { expect, type Page, test } from "@playwright/test"
 
 import { randomEmail, randomPassword } from "./utils/random"

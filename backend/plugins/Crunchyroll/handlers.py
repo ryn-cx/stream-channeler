@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
@@ -10,13 +11,13 @@ if TYPE_CHECKING:
     from plugins.Crunchyroll import Crunchyroll
 
 
-class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
+class BaseCrunchyrollURLHandler(URLHandler["Crunchyroll"]):
     def __init__(self, plugin: Crunchyroll, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
-class SeriesURLHandler(CrunchyrollURLHandler):
+class SeriesURLHandler(BaseCrunchyrollURLHandler):
     # https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
     _PATH_REGEX = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
 
@@ -31,7 +32,7 @@ class SeriesURLHandler(CrunchyrollURLHandler):
         self.plugin.raise_if_invalid_file(plugin_file, self.url)
 
 
-class EpisodeURLHandler(CrunchyrollURLHandler):
+class EpisodeURLHandler(BaseCrunchyrollURLHandler):
     # https://www.crunchyroll.com/watch/GE00375439JAJP/taiyaki-takoyaki-odango
     _PATH_REGEX = r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
 

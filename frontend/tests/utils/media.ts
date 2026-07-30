@@ -1,6 +1,7 @@
+// TODO: Validate
 import { expect, type Page } from "@playwright/test"
 import { showAllResults } from "./dataTable"
-import { randomName } from "./random"
+import { randomUsername } from "./random"
 
 /**
  * Helpers that build the parent chain through the UI. Sources live under a
@@ -40,7 +41,7 @@ export async function openPluginSources(page: Page) {
   await page.goto("/plugins")
   await createAndOpen(page, {
     addButton: "Add Plugin",
-    name: randomName("Plugin"),
+    name: randomUsername("Plugin"),
     createdToast: "Plugin created successfully",
     heading: "Sources",
   })
@@ -51,7 +52,7 @@ export async function openSourceShows(page: Page) {
   await openPluginSources(page)
   await createAndOpen(page, {
     addButton: "Add Source",
-    name: randomName("Source"),
+    name: randomUsername("Source"),
     createdToast: "Source created successfully",
     heading: "Shows",
   })
@@ -62,7 +63,7 @@ export async function openShowSeasons(page: Page) {
   await openSourceShows(page)
   await createAndOpen(page, {
     addButton: "Add Show",
-    name: randomName("Show"),
+    name: randomUsername("Show"),
     createdToast: "Show created successfully",
     heading: "Seasons",
   })
@@ -73,7 +74,7 @@ export async function openSeasonEpisodes(page: Page) {
   await openShowSeasons(page)
   await createAndOpen(page, {
     addButton: "Add Season",
-    name: randomName("Season"),
+    name: randomUsername("Season"),
     createdToast: "Season created successfully",
     heading: "Episodes",
   })

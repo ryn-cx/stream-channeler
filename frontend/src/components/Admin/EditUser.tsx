@@ -25,7 +25,7 @@ import { handleError } from "@/utils"
 const formSchema = z
   .object({
     email: z.email({ message: "Invalid email address" }),
-    username: z.string().optional(),
+    username: z.string().min(1, "Username is required"),
     password: z
       .string()
       .min(8, { message: "Password must be at least 8 characters" })
@@ -57,7 +57,7 @@ const EditUser = ({ user }: EditUserProps) => {
     criteriaMode: "all",
     defaultValues: {
       email: user.email,
-      username: user.username ?? undefined,
+      username: user.username,
       is_superuser: user.is_superuser,
       is_active: user.is_active,
     },

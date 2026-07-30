@@ -1,3 +1,4 @@
+# TODO: Validate
 """Season models."""
 
 import uuid

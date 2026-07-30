@@ -88,7 +88,7 @@ const publicColumns: ColumnDef<ChannelListOutput>[] = [
           params={{ userId: row.original.user_id }}
           className="underline hover:text-foreground"
         >
-          {row.original.username || "Unnamed User"}
+          {row.original.username}
         </Link>
       )
     },

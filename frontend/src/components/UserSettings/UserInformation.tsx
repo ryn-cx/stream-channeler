@@ -19,11 +19,10 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
-  username: z.string().max(30).optional(),
+  username: z.string().min(1, "Username is required").max(30),
   email: z.email({ message: "Invalid email address" }),
 })
 
@@ -40,7 +39,7 @@ const UserInformation = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      username: currentUser?.username ?? undefined,
+      username: currentUser?.username,
       email: currentUser?.email,
     },
   })
@@ -104,14 +103,7 @@ const UserInformation = () => {
               ) : (
                 <FormItem>
                   <FormLabel>Username</FormLabel>
-                  <p
-                    className={cn(
-                      "py-2 truncate max-w-sm",
-                      !field.value && "text-muted-foreground",
-                    )}
-                  >
-                    {field.value || "N/A"}
-                  </p>
+                  <p className="py-2 truncate max-w-sm">{field.value}</p>
                 </FormItem>
               )
             }

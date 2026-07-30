@@ -1,8 +1,9 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
 import { openShowSeasons } from "./utils/media"
 import { createUser } from "./utils/privateApi"
-import { randomEmail, randomName, randomPassword } from "./utils/random"
+import { randomEmail, randomUsername, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Seasons page is accessible and shows correct title", async ({ page }) => {
@@ -33,7 +34,7 @@ test.describe("Seasons management", () => {
   })
 
   test("Create a new season successfully", async ({ page }) => {
-    const name = randomName("Season")
+    const name = randomUsername("Season")
 
     await page.getByRole("button", { name: "Add Season" }).click()
     await page.getByLabel("Name").fill(name)
@@ -74,7 +75,7 @@ test.describe("Seasons management", () => {
     let seasonName: string
 
     test.beforeEach(async ({ page }) => {
-      seasonName = randomName("Season")
+      seasonName = randomUsername("Season")
 
       await page.getByRole("button", { name: "Add Season" }).click()
       await page.getByLabel("Name").fill(seasonName)
@@ -88,7 +89,7 @@ test.describe("Seasons management", () => {
       const seasonRow = page.getByRole("row").filter({ hasText: seasonName })
       await seasonRow.getByRole("button", { name: "Edit Season" }).click()
 
-      const updatedName = randomName("Season")
+      const updatedName = randomUsername("Season")
       await page.getByLabel("Name").fill(updatedName)
       await page.getByRole("button", { name: "Save" }).click()
 

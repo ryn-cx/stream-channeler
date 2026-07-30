@@ -11,14 +11,9 @@ export const columns: ColumnDef<UserTableData>[] = [
     accessorKey: "username",
     header: "Username",
     cell: ({ row }) => {
-      const username = row.original.username
       return (
         <div className="flex items-center gap-2">
-          <span
-            className={cn("font-medium", !username && "text-muted-foreground")}
-          >
-            {username || "N/A"}
-          </span>
+          <span className="font-medium">{row.original.username}</span>
           {row.original.isCurrentUser && (
             <Badge variant="outline" className="text-xs">
               You

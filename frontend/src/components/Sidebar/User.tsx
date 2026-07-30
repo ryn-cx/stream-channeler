@@ -21,7 +21,7 @@ import useAuth from "@/hooks/useAuth"
 import { getInitials } from "@/utils"
 
 interface UserInfoProps {
-  username?: string
+  username: string
   email?: string
 }
 
@@ -30,7 +30,7 @@ function UserInfo({ username, email }: UserInfoProps) {
     <div className="flex items-center gap-2.5 w-full min-w-0">
       <Avatar className="size-8">
         <AvatarFallback className="bg-zinc-600 text-white">
-          {getInitials(username || "User")}
+          {getInitials(username)}
         </AvatarFallback>
       </Avatar>
       <div className="flex flex-col items-start min-w-0">

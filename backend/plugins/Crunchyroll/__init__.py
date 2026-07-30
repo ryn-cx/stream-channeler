@@ -6,13 +6,13 @@ from __future__ import annotations
 from typing import override
 
 from plugins.Crunchyroll.handlers import (
-    CrunchyrollURLHandler,
+    BaseCrunchyrollURLHandler,
     EpisodeURLHandler,
     SeriesURLHandler,
 )
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.search import SearchMixin
-from plugins.Crunchyroll.source import SourceMixin
+from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -22,16 +22,15 @@ class Crunchyroll(
     WatchHistoryMixin,
     SearchMixin,
     UpsertMixin,
-    SourceMixin,
+    UpdateMixin,
     HelperMixin,
-    URLHandlerPlugin[CrunchyrollURLHandler],
+    URLHandlerPlugin[BaseCrunchyrollURLHandler],
     register=True,
 ):
     """Crunchyroll plugin."""
 
     _VERSION = "0.0.1"
     TMDB_PROVIDER_NAMES = ("Crunchyroll",)
-    # TODO: Don't hardcode the favicon URL
     FAVICON_URL = (
         "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png"
     )

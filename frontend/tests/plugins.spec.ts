@@ -1,7 +1,8 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
 import { createUser } from "./utils/privateApi"
-import { randomEmail, randomName, randomPassword } from "./utils/random"
+import { randomEmail, randomUsername, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Plugins page is accessible and shows correct title", async ({ page }) => {
@@ -30,7 +31,7 @@ test.describe("Plugins management", () => {
   })
 
   test("Create a new plugin successfully", async ({ page }) => {
-    const name = randomName("Plugin")
+    const name = randomUsername("Plugin")
 
     await page.getByRole("button", { name: "Add Plugin" }).click()
     await page.getByLabel("Name").fill(name)
@@ -71,7 +72,7 @@ test.describe("Plugins management", () => {
     let pluginName: string
 
     test.beforeEach(async ({ page }) => {
-      pluginName = randomName("Plugin")
+      pluginName = randomUsername("Plugin")
 
       await page.getByRole("button", { name: "Add Plugin" }).click()
       await page.getByLabel("Name").fill(pluginName)
@@ -85,7 +86,7 @@ test.describe("Plugins management", () => {
       const pluginRow = page.getByRole("row").filter({ hasText: pluginName })
       await pluginRow.getByRole("button", { name: "Edit plugin" }).click()
 
-      const updatedName = randomName("Plugin")
+      const updatedName = randomUsername("Plugin")
       await page.getByLabel("Name").fill(updatedName)
       await page.getByRole("button", { name: "Save" }).click()
 

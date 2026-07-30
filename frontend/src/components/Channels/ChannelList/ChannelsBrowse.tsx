@@ -226,7 +226,7 @@ function ChannelRow({
                 params={{ userId: channel.user_id }}
                 className="underline hover:text-foreground"
               >
-                {(channel as ChannelListOutput).username || "Unnamed User"}
+                {(channel as ChannelListOutput).username}
               </Link>
             </p>
           )
