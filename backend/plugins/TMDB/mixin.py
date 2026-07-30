@@ -110,11 +110,28 @@ class TMDBMixin(BasePlugin, register=False):
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:  # noqa: ARG002
         return "tv"
 
+    _tmdb_id_cache: dict[str, int | None]
+
     def _existing_show(self, show_key: str) -> Show | None:
         return self._preload_show(show_key).one_or_none()
 
+    def _cached_tmdb_id(self, show_key: str) -> int | None:
+        """Resolve the TMDB id once per show key for the life of the plugin.
+
+        Every file listing resolves the id, so without caching a show with many
+        episodes repeats the same lookup for each of them.
+        """
+        if not hasattr(self, "_tmdb_id_cache"):
+            self._tmdb_id_cache = {}
+        if show_key not in self._tmdb_id_cache:
+            self._tmdb_id_cache[show_key] = self._fetch_tmdb_id(
+                show_key,
+                self._existing_show(show_key),
+            )
+        return self._tmdb_id_cache[show_key]
+
     def _tmdb_show_file(self, show_key: str) -> ShowDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
+        tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":
@@ -126,7 +143,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> SeasonDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
+        tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":
@@ -144,7 +161,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> EpisodeDetail | MovieDetails | None:
-        tmdb_id = self._fetch_tmdb_id(show_key, self._existing_show(show_key))
+        tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
         if self._tmdb_media_type(show_key) == "movie":

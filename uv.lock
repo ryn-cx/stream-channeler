@@ -727,7 +727,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#fb54e496080a0a7ece57128776f453e1e58ef171" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#1409a90fb6636180bda87aed136042d6a8240b00" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -1231,7 +1231,7 @@ wheels = [
 [[package]]
 name = "nana"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/nana#810c2dcd4691491aad58a57cad022123036ece6b" }
+source = { git = "https://github.com/ryn-cx/nana#e95b91a40be336a3092f34bd76c342b554314a5b" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
