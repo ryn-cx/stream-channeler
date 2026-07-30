@@ -89,7 +89,7 @@ class UserSourcePreference(
 ):
     """Model for a `User`'s `Source` preferences."""
 
-    __table_args__ = PrimaryKeyConstraint("user_id", "source_key")
+    __table_args__ = (PrimaryKeyConstraint("user_id", "source_key"),)
 
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     priority: int = Field()
