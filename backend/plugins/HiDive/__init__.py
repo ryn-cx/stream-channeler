@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HiDive.handlers import (
+from plugins.HiDive.url_handlers import (
     HiDiveURLHandler,
     MovieURLHandler,
     SeasonURLHandler,

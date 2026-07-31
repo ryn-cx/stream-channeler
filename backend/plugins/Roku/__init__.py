@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.Roku.handlers import (
+from plugins.Roku.url_handlers import (
     DetailsURLHandler,
     RokuURLHandler,
     WatchURLHandler,

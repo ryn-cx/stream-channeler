@@ -125,7 +125,7 @@ class FileMixin(TMDBMixin, register=False):
 
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
-        if file := self.get_newest_browse_file(is_completed=True):
+        if file := self.find_newest_browse_file(is_completed=True):
             return [file]
         return []
 
@@ -192,7 +192,7 @@ class FileMixin(TMDBMixin, register=False):
         ]
 
     @overload
-    def get_newest_browse_file(
+    def find_newest_browse_file(
         self,
         *,
         is_completed: bool = ...,
@@ -200,14 +200,14 @@ class FileMixin(TMDBMixin, register=False):
     ) -> BrowseSeries: ...
 
     @overload
-    def get_newest_browse_file(
+    def find_newest_browse_file(
         self,
         *,
         is_completed: bool = ...,
         strict: Literal[False] = ...,
     ) -> BrowseSeries | None: ...
 
-    def get_newest_browse_file(
+    def find_newest_browse_file(
         self,
         *,
         is_completed: bool = False,

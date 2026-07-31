@@ -38,7 +38,7 @@ _AVAILABLE_MONETIZATION_TYPES = (
     "FAST",
 )
 
-_PATH_REGEX = r"(\/[a-z]{2}\/(?:movie|tv-show)\/[^?#]+?)\/?(?:[?#].*)?$"
+_URL_REGEX = r"(\/[a-z]{2}\/(?:movie|tv-show)\/[^?#]+?)\/?(?:[?#].*)?$"
 
 
 class JustWatch(FileMixin, register=True):
@@ -61,7 +61,7 @@ class JustWatch(FileMixin, register=True):
     @classmethod
     @override
     def _url_regex(cls) -> str:
-        return cls._domain_regex() + _PATH_REGEX
+        return cls._domain_regex() + _URL_REGEX
 
     @override
     @classmethod

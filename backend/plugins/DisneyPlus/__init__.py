@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.handlers import DisneyPlusURLHandler, EntityURLHandler
+from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
 from plugins.DisneyPlus.helpers import HelperMixin
 from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin

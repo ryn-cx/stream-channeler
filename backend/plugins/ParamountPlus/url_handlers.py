@@ -26,10 +26,10 @@ class ParamountPlusURLHandler(MediaTypeURLHandler["ParamountPlus"]):
 class ShowURLHandler(ParamountPlusURLHandler):
     media_type = "series"
     # https://www.paramountplus.com/shows/south-park/
-    _PATH_REGEX = rf"\/shows\/(?P<show_id>{_SHOW_SLUG_REGEX})(?:\/|$)"
+    _URL_REGEX = rf"\/shows\/(?P<show_id>{_SHOW_SLUG_REGEX})(?:\/|$)"
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.show_page_file(self._key),
             self.url,
@@ -39,10 +39,10 @@ class ShowURLHandler(ParamountPlusURLHandler):
 class MovieURLHandler(ParamountPlusURLHandler):
     media_type = "movie"
     # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
-    _PATH_REGEX = rf"\/movies\/video\/(?P<movie_id>{_MOVIE_ID_REGEX})(?:\/|$)"
+    _URL_REGEX = rf"\/movies\/video\/(?P<movie_id>{_MOVIE_ID_REGEX})(?:\/|$)"
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.movie_file(self._key),
             self.url,

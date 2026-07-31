@@ -13,10 +13,12 @@ from plugins.Crunchyroll.helpers import HelperMixin
 
 
 class UpsertMixin(HelperMixin, register=False):
+    """Mixin containing all upsert functions."""
+
     def _upsert_source(self) -> Source:
         # If this is the first time the source is upserted an initial browse file needs
         # to be downloaded.
-        if not (latest_browse_file := self.get_newest_browse_file()):
+        if not (latest_browse_file := self.find_newest_browse_file()):
             latest_browse_file = self.browse_series_file(tz_datetime.now())
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
@@ -39,30 +41,27 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        show: Show
-        tmdb_media_type: Literal["movie", "tv"]
-        if show_check := self._show_check(source, show_key, force=force):
-            series_data = self.series_file(show_key).parsed().data[0]
-            tmdb_media_type = self._series_tmdb_media_type(series_data)
-            show = Show(
+        tmdb_media_type = self._tmdb_media_type(show_key)
+
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            series_data = self._series_datum(show_key)
+            new_show = Show(
                 key=series_data.id,
                 name=series_data.title,
                 description=series_data.description,
-                media_type="Movie" if tmdb_media_type == "movie" else "Series",
+                media_type="Movie" if self._is_movie(show_key) else "Series",
                 url=self._show_url(series_data.id),
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
             show = self._merge_and_upsert_show(
-                show,
+                new_show,
                 source,
-                show_check.record,
+                show,
                 show_key,
                 tmdb_media_type,
             )
-        else:
-            show = show_check.record
-            tmdb_media_type = self._show_tmdb_media_type(show)
 
         self._upsert_seasons(show, tmdb_media_type, force=force)
         self._soft_delete_missing(show_key)
@@ -79,30 +78,26 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         seasons_file = self.seasons_file(show.key)
         for index, season_data in enumerate(seasons_file.parsed().data):
-            season: Season
-            if season_check := self._season_check(
-                show,
-                season_data.id,
-                show.key,
-                force=force,
-            ):
-                season = Season(
+            season = Season.get_from_memory(self.session, show, season_data.id)
+            if self._season_is_outdated(season, force=force):
+                new_season = Season(
                     key=season_data.id,
                     name=season_data.title,
                     season_number=season_data.season_number,
                     sort_order=index,
-                    data_timestamp=season_check.data_timestamp,
+                    data_timestamp=self.season_data_timestamp(
+                        season_data.id,
+                        show.key,
+                    ),
                     show_id=show.id,
                 )
                 season = self._merge_and_upsert_season(
-                    season,
+                    new_season,
                     show,
-                    season_check.record,
+                    season,
                     show.key,
                     tmdb_media_type,
                 )
-            else:
-                season = season_check.record
 
             self._upsert_episodes(season, show.key, tmdb_media_type, force=force)
 
@@ -116,15 +111,10 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         episodes_data = self.season_episodes_file(season.key).parsed()
         for index, episode_data in enumerate(episodes_data.data):
-            episode_check = self._episode_check(
-                episode_data.id,
-                season,
-                show_key,
-                force=force,
-            )
-            if not episode_check:
+            episode = Episode.get_from_memory(self.session, season, episode_data.id)
+            if not self._episode_is_outdated(episode, force=force):
                 continue
-            episode = Episode(
+            new_episode = Episode(
                 key=episode_data.id,
                 name=episode_data.title,
                 episode_number=episode_data.episode_number,
@@ -136,13 +126,17 @@ class UpsertMixin(HelperMixin, register=False):
                 release_date=episode_data.premium_available_date,
                 air_date=episode_data.episode_air_date,
                 episode_identifier=f"{self.plugin_key()} {episode_data.id}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    episode_data.id,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(
-                episode,
+                new_episode,
                 season,
-                episode_check.record,
+                episode,
                 show_key,
                 tmdb_media_type,
             )

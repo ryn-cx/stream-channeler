@@ -27,10 +27,10 @@ class SeriesURLHandler(HuluURLHandler):
     media_type = "series"
     # https://www.hulu.com/series/fdeb1018-4472-442f-ba94-fb087cdea069
     # https://www.hulu.com/series/rick-and-morty-4e0f6374-fc81-4da2-b7a9-f7f8c29e7acc
-    _PATH_REGEX = rf"\/series\/{_SLUG_REGEX}(?P<series_id>{_UUID_REGEX})"
+    _URL_REGEX = rf"\/series\/{_SLUG_REGEX}(?P<series_id>{_UUID_REGEX})"
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.series_file(self._key),
             self.url,
@@ -41,10 +41,10 @@ class MovieURLHandler(HuluURLHandler):
     media_type = "movie"
     # https://www.hulu.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981
     # https://www.hulu.com/movie/the-wolf-of-wallstreet-4ee4f57e-19bd-493f-96f9-ad3e753af981
-    _PATH_REGEX = rf"\/movie\/{_SLUG_REGEX}(?P<movie_id>{_UUID_REGEX})"
+    _URL_REGEX = rf"\/movie\/{_SLUG_REGEX}(?P<movie_id>{_UUID_REGEX})"
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.movie_file(self._key),
             self.url,

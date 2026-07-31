@@ -19,7 +19,7 @@ class ShowURLHandler(NHKWorldURLHandler):
     # https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
     # The lookahead requires a non-numeric character so this matches show slugs but
     # not numeric episode URLs like https://www3.nhk.or.jp/nhkworld/en/shows/5001461/
-    _PATH_REGEX = r"\/nhkworld\/en\/shows\/(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)\/?(?:$|[?#])"
+    _URL_REGEX = r"\/nhkworld\/en\/shows\/(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)\/?(?:$|[?#])"
 
     @property
     @override
@@ -27,7 +27,7 @@ class ShowURLHandler(NHKWorldURLHandler):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.video_program_file(self._key),
             self.url,

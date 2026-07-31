@@ -17,7 +17,7 @@ class NetflixURLHandler(URLHandler["Netflix"]):
 
 class TitleURLHandler(NetflixURLHandler):
     # https://www.netflix.com/title/80240027
-    _PATH_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
+    _URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
     @property
     @override
@@ -25,7 +25,7 @@ class TitleURLHandler(NetflixURLHandler):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.title_file(self._key),
             self.url,

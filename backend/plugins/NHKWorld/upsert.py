@@ -19,7 +19,8 @@ class UpsertMixin(FileMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if show_check := self._show_check(source, show_key, force=force):
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
             program = self.video_program_file(show_key).parsed()
             show = Show(
                 key=program.id,
@@ -28,15 +29,13 @@ class UpsertMixin(FileMixin, register=False):
                 url=self.build_url(program.url),
                 image_url=self._get_image_url(program.images.portrait),
                 media_type="TV Show",
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             ).upsert_and_set_update_at(
                 source,
-                show_check.record,
+                show,
                 self._show_files(show_key),
             )
-        else:
-            show = show_check.record
 
         self._upsert_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -50,17 +49,16 @@ class UpsertMixin(FileMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        if season_check := self._season_check(show, show_key, show_key, force=force):
+        season = Season.get_from_memory(self.session, show, show_key)
+        if self._season_is_outdated(season, force=force):
             season_files = self._season_files(show_key, show_key)
             season = Season(
                 key=show_key,
                 sort_order=0,
                 url=show.url,
-                data_timestamp=season_check.data_timestamp,
+                data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
-            ).upsert_and_set_update_at(show, season_check.record, season_files)
-        else:
-            season = season_check.record
+            ).upsert_and_set_update_at(show, season, season_files)
 
         self._upsert_episodes(season, show_key, force=force)
 
@@ -76,13 +74,8 @@ class UpsertMixin(FileMixin, register=False):
         for sort_order, item in enumerate(items):
             season.set_update_at(item.video.expired_at)
 
-            episode_check = self._episode_check(
-                item.id,
-                season,
-                show_key,
-                force=force,
-            )
-            if not episode_check:
+            episode = Episode.get_from_memory(self.session, season, item.id)
+            if not self._episode_is_outdated(episode, force=force):
                 continue
 
             video = item.video
@@ -99,6 +92,10 @@ class UpsertMixin(FileMixin, register=False):
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
                 episode_identifier=f"NHKWorld {item.id}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    item.id,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
-            ).upsert_and_set_update_at(season, episode_check.record, episode_files)
+            ).upsert_and_set_update_at(season, episode, episode_files)

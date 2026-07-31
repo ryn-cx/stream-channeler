@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.Pluto.handlers import MovieURLHandler, PlutoURLHandler, SeriesURLHandler
+from plugins.Pluto.url_handlers import MovieURLHandler, PlutoURLHandler, SeriesURLHandler
 from plugins.Pluto.helpers import HelperMixin
 from plugins.Pluto.source import SourceMixin
 from plugins.Pluto.upsert import UpsertMixin

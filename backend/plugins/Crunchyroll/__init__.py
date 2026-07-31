@@ -1,14 +1,13 @@
 # TODO: Validate
-"""Crunchyroll plugin."""
 
 from __future__ import annotations
 
 from typing import override
 
-from plugins.Crunchyroll.handlers import (
-    BaseCrunchyrollURLHandler,
-    EpisodeURLHandler,
-    SeriesURLHandler,
+from plugins.Crunchyroll.url_handlers import (
+    CrunchyrollURLHandler,
+    CrunchyrollEpisodeURLHandler,
+    CrunchyrollSeriesURLHandler,
 )
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.search import SearchMixin
@@ -24,7 +23,7 @@ class Crunchyroll(
     UpsertMixin,
     UpdateMixin,
     HelperMixin,
-    URLHandlerPlugin[BaseCrunchyrollURLHandler],
+    URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,
 ):
     """Crunchyroll plugin."""
@@ -35,7 +34,7 @@ class Crunchyroll(
         "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png"
     )
 
-    _URL_HANDLERS = (SeriesURLHandler, EpisodeURLHandler)
+    _URL_HANDLERS = (CrunchyrollSeriesURLHandler, CrunchyrollEpisodeURLHandler)
 
     @classmethod
     @override
@@ -47,5 +46,9 @@ class Crunchyroll(
     def import_url_instructions(cls) -> str:
         return (
             "> [!TIP/Series]\n"
+            "> `https://www.crunchyroll.com/series/GEXH3W29Z`\n"
             "> `https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project`\n\n"
+            "> [!TIP/Episode]\n"
+            "> `https://www.crunchyroll.com/watch/GVWU8XW1Z`\n"
+            "> `https://www.crunchyroll.com/watch/GVWU8XW1Z/this-is-compass20`\n\n"
         )

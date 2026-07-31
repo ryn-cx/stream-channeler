@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Hulu.handlers import HuluURLHandler, MovieURLHandler, SeriesURLHandler
+from plugins.Hulu.url_handlers import HuluURLHandler, MovieURLHandler, SeriesURLHandler
 from plugins.Hulu.helpers import HelperMixin
 from plugins.Hulu.search import SearchMixin
 from plugins.Hulu.source import SourceMixin

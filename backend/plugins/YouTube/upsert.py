@@ -22,7 +22,8 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if show_check := self._show_check(source, show_key, force=force):
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
             channel_item = get_first_item(channel_file.parsed().items)
             show_files = self._show_files(show_key)
@@ -34,12 +35,10 @@ class UpsertMixin(HelperMixin, register=False):
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp + timedelta(days=30),
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
-            ).upsert_and_set_update_at(source, show_check.record, show_files)
-        else:
-            show = show_check.record
+            ).upsert_and_set_update_at(source, show, show_files)
 
         self._upsert_seasons(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -67,19 +66,19 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        if season_check := self._season_check(show, season_key, show_key, force=force):
+        season = Season.get_from_memory(self.session, show, season_key)
+        if self._season_is_outdated(season, force=force):
             season_files = self._season_files(season_key, show_key)
+            data_timestamp = self.season_data_timestamp(season_key, show_key)
             season = Season(
                 key=season_key,
                 name=name,
                 url=self._playlist_url(season_key),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=season_check.data_timestamp,
-                update_at=season_check.data_timestamp + timedelta(hours=1),
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + timedelta(hours=1),
                 show_id=show.id,
-            ).upsert_and_set_update_at(show, season_check.record, season_files)
-        else:
-            season = season_check.record
+            ).upsert_and_set_update_at(show, season, season_files)
         self._upsert_episodes(season, show_key, force=force)
 
     def _upsert_channel_uploads_season(
@@ -165,13 +164,8 @@ class UpsertMixin(HelperMixin, register=False):
                 continue
             seen.add(episode_key)
 
-            episode_check = self._episode_check(
-                episode_key,
-                season,
-                show_key,
-                force=force,
-            )
-            if not episode_check:
+            episode = Episode.get_from_memory(self.session, season, episode_key)
+            if not self._episode_is_outdated(episode, force=force):
                 continue
 
             video_item = self.videos_file(episode_key).parsed().items[0]
@@ -196,6 +190,10 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=self._best_thumbnail_url(video_snippet.thumbnails),
                 sort_order=item.snippet.position,
                 episode_identifier=f"{self.plugin_key()} {video_item.id}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    episode_key,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
-            ).upsert_and_set_update_at(season, episode_check.record, episode_files)
+            ).upsert_and_set_update_at(season, episode, episode_files)

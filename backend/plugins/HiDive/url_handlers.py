@@ -24,13 +24,13 @@ class BaseSeriesURLHandler(HiDiveURLHandler):
     def _validation_file(self) -> BaseFile[Any]: ...
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(self._validation_file(), self.url)
 
 
 class SeriesURLHandler(BaseSeriesURLHandler):
     # https://www.hidive.com/series/1286
-    _PATH_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
+    _URL_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
 
     @property
     @override
@@ -46,7 +46,7 @@ class SeriesURLHandler(BaseSeriesURLHandler):
 # intuitive user experience.
 class SeasonURLHandler(BaseSeriesURLHandler):
     # https://www.hidive.com/season/20022
-    _PATH_REGEX = r"\/season\/(?P<season_key>\d+)(?:\/|$)"
+    _URL_REGEX = r"\/season\/(?P<season_key>\d+)(?:\/|$)"
 
     @property
     @override
@@ -61,7 +61,7 @@ class SeasonURLHandler(BaseSeriesURLHandler):
 class MovieURLHandler(HiDiveURLHandler):
     media_type = "Movie"
     # https://www.hidive.com/video/586784
-    _PATH_REGEX = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
+    _URL_REGEX = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
 
     @property
     @override
@@ -69,5 +69,5 @@ class MovieURLHandler(HiDiveURLHandler):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(self.plugin.vod_file(self._key), self.url)

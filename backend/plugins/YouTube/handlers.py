@@ -41,7 +41,7 @@ class YouTubeURLHandler(URLHandler["YouTube"]):
 
     @classmethod
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:  # noqa: ARG003
-        return long_domain_regex + cls._PATH_REGEX
+        return long_domain_regex + cls._URL_REGEX
 
     @property
     @abstractmethod
@@ -56,14 +56,14 @@ class VideoURLHandler(YouTubeURLHandler):
     # https://www.youtube.com/watch?v=jNQXAC9IVRw
     # https://www.youtube.com/shorts/jNQXAC9IVRw
     # https://youtu.be/jNQXAC9IVRw
-    _PATH_REGEX = r"(?P<video_key>[A-Za-z0-9_-]{11})(?:$|[?&])"
+    _URL_REGEX = r"(?P<video_key>[A-Za-z0-9_-]{11})(?:$|[?&])"
 
     @classmethod
     @override
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:
         long_paths = rf"{long_domain_regex}\/(?:watch\?v=|shorts\/)"
         short_path = rf"{short_domain_regex}\/"
-        return rf"(?:{long_paths}|{short_path})" + cls._PATH_REGEX
+        return rf"(?:{long_paths}|{short_path})" + cls._URL_REGEX
 
     @property
     @override
@@ -81,7 +81,7 @@ class VideoURLHandler(YouTubeURLHandler):
         return self.plugin.channel_uploads_playlist_key(self.show_key)
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.videos_file(self.video_key),
             self.url,
@@ -119,7 +119,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
         return first_item.snippet.channel_id
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.playlist_items_file(self.playlist_key),
             self.url,
@@ -128,7 +128,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
 
 class PlaylistURLHandler(PlaylistBasedURLHandler):
     # https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
-    _PATH_REGEX = r"\/playlist\?list=(?P<playlist_key>(?:PL|OLAK5uy_)[^&]+)"
+    _URL_REGEX = r"\/playlist\?list=(?P<playlist_key>(?:PL|OLAK5uy_)[^&]+)"
 
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
@@ -139,7 +139,7 @@ class PlaylistURLHandler(PlaylistBasedURLHandler):
 class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
-    _PATH_REGEX = (
+    _URL_REGEX = (
         r"\/(?:watch\?v=)?(?P<video_key>[A-Za-z0-9_-]{11})[?&]"
         r"list=(?P<playlist_key>(?:PL|OLAK5uy_)[^&]+)"
     )
@@ -147,7 +147,7 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     @classmethod
     @override
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:
-        return rf"(?:{long_domain_regex}|{short_domain_regex})" + cls._PATH_REGEX
+        return rf"(?:{long_domain_regex}|{short_domain_regex})" + cls._URL_REGEX
 
     @property
     @override
@@ -182,7 +182,7 @@ class ChannelURLHandler(YouTubeURLHandler):
 
 class ChannelKeyURLHandler(ChannelURLHandler):
     # https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A
-    _PATH_REGEX = r"\/channel\/(?P<channel_key>UC.{22})(?:$|\/)"
+    _URL_REGEX = r"\/channel\/(?P<channel_key>UC.{22})(?:$|\/)"
 
     @property
     @override
@@ -190,7 +190,7 @@ class ChannelKeyURLHandler(ChannelURLHandler):
         return self._match.group("channel_key")
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_channel_id_file(self.show_key),
             self.url,
@@ -199,7 +199,7 @@ class ChannelKeyURLHandler(ChannelURLHandler):
 
 class ChannelUsernameURLHandler(ChannelURLHandler):
     # https://www.youtube.com/user/jawed
-    _PATH_REGEX = r"\/user\/(?P<channel_username>.+?)(?:$|\/)"
+    _URL_REGEX = r"\/user\/(?P<channel_username>.+?)(?:$|\/)"
 
     @property
     @override
@@ -210,7 +210,7 @@ class ChannelUsernameURLHandler(ChannelURLHandler):
         return get_first_item(username_file.parsed().items).id
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_username_file(
                 self._match.group("channel_username"),
@@ -223,7 +223,7 @@ class ChannelHandleURLHandler(ChannelURLHandler):
     # https://www.youtube.com/@jawed
     # https://www.youtube.com/c/jawed
     # https://www.youtube.com/jawed
-    _PATH_REGEX = r"\/(?:c\/|@)?(?P<channel_handle>.+?)(?:$|\/)"
+    _URL_REGEX = r"\/(?:c\/|@)?(?P<channel_handle>.+?)(?:$|\/)"
 
     @property
     @override
@@ -234,7 +234,7 @@ class ChannelHandleURLHandler(ChannelURLHandler):
         return get_first_item(handle_file.parsed().items).id
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.channel_by_handle_file(self._match.group("channel_handle")),
             self.url,

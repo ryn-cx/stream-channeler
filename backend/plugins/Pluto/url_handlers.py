@@ -32,13 +32,13 @@ class MovieURLHandler(PlutoURLHandler):
     media_type = "movie"
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
     # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
-    _PATH_REGEX = (
+    _URL_REGEX = (
         rf"{_LOCALE_REGEX}\/on-demand\/movies\/(?P<movie_id>{_ITEM_ID_REGEX})"
         rf"{_DETAILS_REGEX}(?:\/|$)"
     )
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.items_file(self._key),
             self.url,
@@ -50,13 +50,13 @@ class SeriesURLHandler(PlutoURLHandler):
     # https://pluto.tv/en/on-demand/series/5ef05c6acdce3c001a779a79/details
     # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1
     # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1/episode/5ef05c6ecdce3c001a779a95
-    _PATH_REGEX = (
+    _URL_REGEX = (
         rf"{_LOCALE_REGEX}\/on-demand\/series\/(?P<series_id>{_ITEM_ID_REGEX})"
         rf"{_SEASON_REGEX}{_DETAILS_REGEX}(?:\/|$)"
     )
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.seasons_file(self._key),
             self.url,

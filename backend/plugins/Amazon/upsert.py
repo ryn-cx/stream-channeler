@@ -49,27 +49,27 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> Show:
         page = self.detail_page(show_key)
-        if show_check := self._show_check(source, show_key, force=force):
-            show = Show(
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
                 key=show_key,
                 name=page.series_title(),
                 description=page.synopsis(),
                 media_type="TV Show",
                 url=self._detail_url(show_key),
                 image_url=page.image_url(),
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=show_check.data_timestamp + timedelta(days=7),
+                update_at=data_timestamp + timedelta(days=7),
             )
             show = self._merge_and_upsert_show(
-                show,
+                new_show,
                 source,
-                show_check.record,
+                show,
                 show_key,
                 "tv",
             )
-        else:
-            show = show_check.record
 
         self._upsert_tv_seasons(show, force=force)
 
@@ -83,30 +83,24 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         for sort_order, season_entry in enumerate(self._season_entries(show.key)):
             season_key = season_entry.asin
-            if season_check := self._season_check(
-                show,
-                season_key,
-                show.key,
-                force=force,
-            ):
-                season = Season(
+            season = Season.get_from_memory(self.session, show, season_key)
+            if self._season_is_outdated(season, force=force):
+                new_season = Season(
                     key=season_key,
                     name=season_entry.name,
                     season_number=season_entry.season_number,
                     sort_order=sort_order,
                     url=self._detail_url(season_key),
-                    data_timestamp=season_check.data_timestamp,
+                    data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
                 season = self._merge_and_upsert_season(
-                    season,
+                    new_season,
                     show,
-                    season_check.record,
+                    season,
                     show.key,
                     "tv",
                 )
-            else:
-                season = season_check.record
 
             self._upsert_tv_episodes(season, season_key, show.key, force=force)
 
@@ -119,16 +113,11 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         for sort_order, item in enumerate(self.detail_page(season_key).episodes()):
-            episode_check = self._episode_check(
-                item.asin,
-                season,
-                show_key,
-                force=force,
-            )
-            if not episode_check:
+            episode = Episode.get_from_memory(self.session, season, item.asin)
+            if not self._episode_is_outdated(episode, force=force):
                 continue
 
-            episode = Episode(
+            new_episode = Episode(
                 key=item.asin,
                 name=item.title,
                 episode_number=item.episode_number,
@@ -140,13 +129,17 @@ class UpsertMixin(HelperMixin, register=False):
                 air_date=_parse_date(item.release_date),
                 sort_order=sort_order,
                 episode_identifier=f"{self.plugin_key()} {item.asin}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    item.asin,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(
-                episode,
+                new_episode,
                 season,
-                episode_check.record,
+                episode,
                 show_key,
                 "tv",
             )
@@ -159,27 +152,27 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> Show:
         page = self.detail_page(show_key)
-        if show_check := self._show_check(source, show_key, force=force):
-            show = Show(
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
                 key=show_key,
                 name=page.title(),
                 description=page.synopsis(),
                 media_type="Movie",
                 url=self._detail_url(show_key),
                 image_url=page.image_url(),
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=show_check.data_timestamp + timedelta(days=30),
+                update_at=data_timestamp + timedelta(days=30),
             )
             show = self._merge_and_upsert_show(
-                show,
+                new_show,
                 source,
-                show_check.record,
+                show,
                 show_key,
                 "movie",
             )
-        else:
-            show = show_check.record
 
         self._upsert_movie_season(show, force=force)
 
@@ -191,24 +184,23 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        if season_check := self._season_check(show, show.key, show.key, force=force):
-            season = Season(
+        season = Season.get_from_memory(self.session, show, show.key)
+        if self._season_is_outdated(season, force=force):
+            new_season = Season(
                 key=show.key,
                 season_number=0,
                 sort_order=0,
                 url=self._detail_url(show.key),
-                data_timestamp=season_check.data_timestamp,
+                data_timestamp=self.season_data_timestamp(show.key, show.key),
                 show_id=show.id,
             )
             season = self._merge_and_upsert_season(
-                season,
+                new_season,
                 show,
-                season_check.record,
+                season,
                 show.key,
                 "movie",
             )
-        else:
-            season = season_check.record
 
         self._upsert_movie_episode(season, show.key, force=force)
 
@@ -219,14 +211,10 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        if episode_check := self._episode_check(
-            show_key,
-            season,
-            show_key,
-            force=force,
-        ):
+        episode = Episode.get_from_memory(self.session, season, show_key)
+        if self._episode_is_outdated(episode, force=force):
             page = self.detail_page(show_key)
-            episode = Episode(
+            new_episode = Episode(
                 key=show_key,
                 name=page.title(),
                 description=page.synopsis(),
@@ -236,13 +224,17 @@ class UpsertMixin(HelperMixin, register=False):
                 sort_order=0,
                 release_date=_parse_date(page.release_date()),
                 episode_identifier=f"{self.plugin_key()} {show_key}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    show_key,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(
-                episode,
+                new_episode,
                 season,
-                episode_check.record,
+                episode,
                 show_key,
                 "movie",
             )

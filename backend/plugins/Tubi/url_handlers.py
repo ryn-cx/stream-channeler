@@ -26,7 +26,7 @@ class TubiURLHandler(URLHandler["Tubi"]):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.content_file(self._key),
             self.url,
@@ -35,17 +35,17 @@ class TubiURLHandler(URLHandler["Tubi"]):
 
 class MovieURLHandler(TubiURLHandler):
     # https://tubitv.com/movies/100029837/megamind
-    _PATH_REGEX = rf"\/movies\/(?P<movie_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
+    _URL_REGEX = rf"\/movies\/(?P<movie_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
 
 
 class SeriesURLHandler(TubiURLHandler):
     # https://tubitv.com/series/300006854/scooby-doo-where-are-you
-    _PATH_REGEX = rf"\/series\/(?P<series_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
+    _URL_REGEX = rf"\/series\/(?P<series_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
 
 
 class EpisodeURLHandler(TubiURLHandler):
     # https://tubitv.com/tv-shows/595036/s01-e01-what-a-night-for-a-knight
-    _PATH_REGEX = (
+    _URL_REGEX = (
         rf"\/tv-shows\/(?P<episode_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
     )
 

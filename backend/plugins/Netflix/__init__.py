@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.Netflix.handlers import NetflixURLHandler, TitleURLHandler
+from plugins.Netflix.url_handlers import NetflixURLHandler, TitleURLHandler
 from plugins.Netflix.helpers import HelperMixin
 from plugins.Netflix.search import SearchMixin
 from plugins.Netflix.source import SourceMixin

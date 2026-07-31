@@ -71,7 +71,7 @@ class CrunchyrollUpdateSourceTest(
         source: Source,
         timestamp: datetime,
     ) -> None:
-        existing_browse = plugin_instance.get_newest_browse_file(strict=True)
+        existing_browse = plugin_instance.find_newest_browse_file(strict=True)
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]
         first_entry.id = source.shows[0].key

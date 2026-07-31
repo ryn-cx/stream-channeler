@@ -8,24 +8,32 @@ from plugins.utils.abstract_plugin import URLImportResult
 
 
 class URLHandler[PluginT](ABC):
-    _PATH_REGEX: ClassVar[str]
+    """Abstract base class for URL handlers."""
+
+    _URL_REGEX: ClassVar[str]
+    """The URL regex pattern for the handler."""
 
     def __init__(self, plugin: PluginT, url: str) -> None:
+        """Initialize the URL handler."""
         self.plugin = plugin
         self.url = url
 
     @classmethod
     def url_regex(cls, domain_regex: str) -> str:
-        return domain_regex + cls._PATH_REGEX
+        """Returns the full URL regex for the handler."""
+        return domain_regex + cls._URL_REGEX
 
     @property
     @abstractmethod
-    def show_key(self) -> str: ...
+    def show_key(self) -> str:
+        """Return the show key extracted from the URL."""
 
     @abstractmethod
-    def validate_url(self) -> None: ...
+    def raise_if_invalid(self) -> None:
+        """Raises an exception if the URL is invalid."""
 
     def import_results(self, show: Show) -> list[URLImportResult]:
+        """Returns the import results for the URL."""
         return [URLImportResult(show=show, is_whitelist=False)]
 
 

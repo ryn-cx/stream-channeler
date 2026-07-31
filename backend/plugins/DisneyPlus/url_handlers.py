@@ -27,12 +27,12 @@ class DisneyPlusURLHandler(URLHandler["DisneyPlus"]):
 class EntityURLHandler(DisneyPlusURLHandler):
     # https://www.disneyplus.com/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     # https://www.disneyplus.com/en-gb/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
-    _PATH_REGEX = (
+    _URL_REGEX = (
         rf"{_LOCALE_REGEX}\/browse\/entity-(?P<entity_id>{_UUID_REGEX})(?:\/|$)"
     )
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.entity_file(self._key),
             self.url,

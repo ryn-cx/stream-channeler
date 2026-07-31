@@ -1,4 +1,4 @@
-# TODO: Validate
+"""Crunchyroll URL handlers."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
@@ -11,15 +11,24 @@ if TYPE_CHECKING:
     from plugins.Crunchyroll import Crunchyroll
 
 
-class BaseCrunchyrollURLHandler(URLHandler["Crunchyroll"]):
+class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
+    """Base URL handler for the Crunchyroll plugin."""
+
+    @override
     def __init__(self, plugin: Crunchyroll, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
-class SeriesURLHandler(BaseCrunchyrollURLHandler):
-    # https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece
-    _PATH_REGEX = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
+class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
+    """Crunchyroll series URL handler.
+
+    Supported URL Formats:
+        - https://www.crunchyroll.com/series/GEXH3W29Z
+        - https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project
+    """
+
+    _URL_REGEX = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
 
     @property
     @override
@@ -27,14 +36,20 @@ class SeriesURLHandler(BaseCrunchyrollURLHandler):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         plugin_file = self.plugin.series_file(self._key)
         self.plugin.raise_if_invalid_file(plugin_file, self.url)
 
 
-class EpisodeURLHandler(BaseCrunchyrollURLHandler):
-    # https://www.crunchyroll.com/watch/GE00375439JAJP/taiyaki-takoyaki-odango
-    _PATH_REGEX = r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
+class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
+    """Crunchyroll episode URL handler.
+
+    Supported URL Formats:
+        - https://www.crunchyroll.com/watch/GVWU8XW1Z
+        - https://www.crunchyroll.com/watch/GVWU8XW1Z/this-is-compass20
+    """
+
+    _URL_REGEX = r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
 
     @property
     @override
@@ -43,7 +58,7 @@ class EpisodeURLHandler(BaseCrunchyrollURLHandler):
         return objects_file.parsed().data[0].episode_metadata.series_id
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         objects_file = self.plugin.objects_file(self._key)
         self.plugin.raise_if_invalid_file(objects_file, self.url)
 

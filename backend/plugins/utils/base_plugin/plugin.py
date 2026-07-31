@@ -313,6 +313,6 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         handler = self._get_url_handler(url)
-        handler.validate_url()
+        handler.raise_if_invalid()
         show = self._import_show(handler.show_key)
         return handler.import_results(show)

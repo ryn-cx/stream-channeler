@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.ParamountPlus.handlers import (
+from plugins.ParamountPlus.url_handlers import (
     MovieURLHandler,
     ParamountPlusURLHandler,
     ShowURLHandler,

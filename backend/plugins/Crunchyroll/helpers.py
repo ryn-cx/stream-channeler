@@ -8,24 +8,16 @@ from plugins.Crunchyroll.files import FileMixin
 
 
 class HelperMixin(FileMixin, register=False):
-    def _series_data(self, show_key: str) -> series_models.Datum:
+    def _series_datum(self, show_key: str) -> series_models.Datum:
         series_file = self.series_file(show_key)
-        series_file.download_if_outdated()
         return series_file.parsed().data[0]
 
-    @staticmethod
-    def _series_tmdb_media_type(
-        series: series_models.Datum,
-    ) -> Literal["movie", "tv"]:
-        return "movie" if "type:movie" in series.keywords else "tv"
-
-    @staticmethod
-    def _show_tmdb_media_type(show: Show) -> Literal["movie", "tv"]:
-        return "movie" if show.media_type == "Movie" else "tv"
+    def _is_movie(self, show_key: str) -> bool:
+        return "type:movie" in self._series_datum(show_key).keywords
 
     @override
     def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return self._series_tmdb_media_type(self._series_data(show_key))
+        return "movie" if self._is_movie(show_key) else "tv"
 
     @override
     def _fetch_tmdb_id(
@@ -35,10 +27,10 @@ class HelperMixin(FileMixin, register=False):
     ) -> int | None:
         if existing_show and existing_show.tmdb_id:
             return existing_show.tmdb_id
-        series = self._series_data(show_key)
+        series = self._series_datum(show_key)
         return self._tmdb_search_media(
             series.title,
-            self._series_tmdb_media_type(series),
+            self._tmdb_media_type(show_key),
             series.series_launch_year,
         )
 

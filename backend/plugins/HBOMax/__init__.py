@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HBOMax.handlers import HBOMaxURLHandler, MovieURLHandler, ShowURLHandler
+from plugins.HBOMax.url_handlers import HBOMaxURLHandler, MovieURLHandler, ShowURLHandler
 from plugins.HBOMax.helpers import HelperMixin
 from plugins.HBOMax.source import SourceMixin
 from plugins.HBOMax.upsert import UpsertMixin

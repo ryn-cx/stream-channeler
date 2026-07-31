@@ -28,7 +28,7 @@ class RokuURLHandler(URLHandler["Roku"]):
         return self._key
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.content_file(self._key),
             self.url,
@@ -38,7 +38,7 @@ class RokuURLHandler(URLHandler["Roku"]):
 class DetailsURLHandler(RokuURLHandler):
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae/fawlty-towers
-    _PATH_REGEX = (
+    _URL_REGEX = (
         rf"\/details\/(?P<details_content_id>{_CONTENT_ID_REGEX})"
         rf"(?:\/{_SLUG_REGEX})?(?:\/|$)"
     )
@@ -46,4 +46,4 @@ class DetailsURLHandler(RokuURLHandler):
 
 class WatchURLHandler(RokuURLHandler):
     # https://therokuchannel.roku.com/watch/db1607f1cff2522bb795382bb4b5bcae
-    _PATH_REGEX = rf"\/watch\/(?P<watch_content_id>{_CONTENT_ID_REGEX})(?:\/|$)"
+    _URL_REGEX = rf"\/watch\/(?P<watch_content_id>{_CONTENT_ID_REGEX})(?:\/|$)"

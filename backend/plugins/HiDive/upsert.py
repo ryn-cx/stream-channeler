@@ -43,26 +43,25 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if show_check := self._show_check(source, show_key, force=force):
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
             series_data = self.series_file(show_key).parsed()
-            show = Show(
+            new_show = Show(
                 key=show_key,
                 name=series_data.metadata.series.title,
                 media_type="Series",
                 url=self._show_url(show_key),
                 image_url=self._series_image_url(series_data),
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
             show = self._merge_and_upsert_show(
-                show,
+                new_show,
                 source,
-                show_check.record,
+                show,
                 show_key,
                 "tv",
             )
-        else:
-            show = show_check.record
 
         self._upsert_series_seasons(show, force=force)
         self._set_weekly_updates_from_episodes(show)
@@ -76,27 +75,26 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if show_check := self._show_check(source, show_key, force=force):
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
             hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
-            show = Show(
+            new_show = Show(
                 key=show_key,
                 name=self._movie_title(hero),
                 description=self._movie_description(hero),
                 url=self._show_url(show_key, "Movie"),
                 image_url=hero.attributes.image.attributes.source,
                 media_type="Movie",
-                data_timestamp=show_check.data_timestamp,
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
             show = self._merge_and_upsert_show(
-                show,
+                new_show,
                 source,
-                show_check.record,
+                show,
                 show_key,
                 "movie",
             )
-        else:
-            show = show_check.record
 
         self._upsert_movie_seasons(show, force=force)
 
@@ -115,31 +113,25 @@ class UpsertMixin(HelperMixin, register=False):
             season_data = self.season_file(season_key).parsed()
             hero = diving_board().season.extract_hero(season_data)
 
-            if season_check := self._season_check(
-                show,
-                season_key,
-                show.key,
-                force=force,
-            ):
-                season = SeasonModel(
+            season = SeasonModel.get_from_memory(self.session, show, season_key)
+            if self._season_is_outdated(season, force=force):
+                new_season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
                     season_number=season_info.season_number,
                     sort_order=sort_order,
                     url=self._season_url(season_key),
                     image_url=hero.attributes.image.attributes.source,
-                    data_timestamp=season_check.data_timestamp,
+                    data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
                 season = self._merge_and_upsert_season(
-                    season,
+                    new_season,
                     show,
-                    season_check.record,
+                    season,
                     show.key,
                     "tv",
                 )
-            else:
-                season = season_check.record
 
             self._upsert_series_episodes(season, show.key, force=force)
 
@@ -154,31 +146,25 @@ class UpsertMixin(HelperMixin, register=False):
         ):
             hero = diving_board().vod.extract_hero(self.vod_file(show.key).parsed())
 
-            if season_check := self._season_check(
-                show,
-                season_key,
-                show.key,
-                force=force,
-            ):
-                season = SeasonModel(
+            season = SeasonModel.get_from_memory(self.session, show, season_key)
+            if self._season_is_outdated(season, force=force):
+                new_season = SeasonModel(
                     key=season_key,
                     name=self._movie_title(hero),
                     season_number=0,
                     sort_order=sort_order,
                     url=self._show_url(show.key, "Movie"),
                     image_url=hero.attributes.image.attributes.source,
-                    data_timestamp=season_check.data_timestamp,
+                    data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
                 season = self._merge_and_upsert_season(
-                    season,
+                    new_season,
                     show,
-                    season_check.record,
+                    season,
                     show.key,
                     "movie",
                 )
-            else:
-                season = season_check.record
 
             self._upsert_movie_episode(season, show.key, force=force)
 
@@ -193,13 +179,8 @@ class UpsertMixin(HelperMixin, register=False):
         bucket = diving_board().season.extract_bucket_season(season_data)
         for sort_order, item in enumerate(bucket.attributes.items):
             episode_key = str(item.id)
-            episode_check = self._episode_check(
-                episode_key,
-                season,
-                show_key,
-                force=force,
-            )
-            if not episode_check:
+            episode = Episode.get_from_memory(self.session, season, episode_key)
+            if not self._episode_is_outdated(episode, force=force):
                 continue
 
             vod_data = self.vod_file(episode_key).parsed()
@@ -209,7 +190,7 @@ class UpsertMixin(HelperMixin, register=False):
             episode_match = re.match(r"^E(\d+)", item.title) if item.title else None
             episode_number = int(episode_match.group(1)) if episode_match else None
 
-            episode = Episode(
+            new_episode = Episode(
                 key=episode_key,
                 name=item.title,
                 episode_number=episode_number,
@@ -221,13 +202,17 @@ class UpsertMixin(HelperMixin, register=False):
                 release_date=release_date,
                 air_date=release_date,
                 episode_identifier=f"{self.plugin_key()} {episode_key}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    episode_key,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(
-                episode,
+                new_episode,
                 season,
-                episode_check.record,
+                episode,
                 show_key,
                 "tv",
             )
@@ -243,12 +228,8 @@ class UpsertMixin(HelperMixin, register=False):
         vod_data = self.vod_file(episode_key).parsed()
         hero = diving_board().vod.extract_hero(vod_data)
 
-        if episode_check := self._episode_check(
-            episode_key,
-            season,
-            show_key,
-            force=force,
-        ):
+        episode = Episode.get_from_memory(self.session, season, episode_key)
+        if self._episode_is_outdated(episode, force=force):
             release_date = self._extract_release_date(vod_data)
 
             # TODO: This is ugly
@@ -259,7 +240,7 @@ class UpsertMixin(HelperMixin, register=False):
             else:
                 duration = None
 
-            episode = Episode(
+            new_episode = Episode(
                 key=episode_key,
                 name=self._movie_title(hero),
                 description=self._movie_description(hero),
@@ -271,13 +252,17 @@ class UpsertMixin(HelperMixin, register=False):
                 release_date=release_date,
                 air_date=release_date,
                 episode_identifier=f"{self.plugin_key()} {episode_key}",
-                data_timestamp=episode_check.data_timestamp,
+                data_timestamp=self.episode_data_timestamp(
+                    episode_key,
+                    season.key,
+                    show_key,
+                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(
-                episode,
+                new_episode,
                 season,
-                episode_check.record,
+                episode,
                 show_key,
                 "movie",
             )

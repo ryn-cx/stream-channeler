@@ -29,10 +29,10 @@ class DetailURLHandler(AmazonURLHandler):
     # https://www.amazon.com/gp/video/detail/0GK0W5DZFOWP14GMAR51GE1AYD
     # https://www.amazon.com/Justice-League-Unlimited-Season-1/dp/B003LJVNEY
     # The title slug Amazon puts in front of /dp/ is decorative, only the ASIN matters.
-    _PATH_REGEX = rf"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/(?P<asin>{_ASIN_REGEX})"
+    _URL_REGEX = rf"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/(?P<asin>{_ASIN_REGEX})"
 
     @override
-    def validate_url(self) -> None:
+    def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
             self.plugin.detail_page(self._key),
             self.url,

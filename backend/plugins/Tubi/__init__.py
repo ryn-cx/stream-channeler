@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.Tubi.handlers import (
+from plugins.Tubi.url_handlers import (
     EpisodeURLHandler,
     MovieURLHandler,
     SeriesURLHandler,
