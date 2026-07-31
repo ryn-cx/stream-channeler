@@ -76,7 +76,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._playlist_url(season_key),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + timedelta(hours=1),
+                update_at=data_timestamp + timedelta(hours=6),
                 show_id=show.id,
             ).upsert_and_set_update_at(show, season, season_files)
         self._upsert_episodes(season, show_key, force=force)
