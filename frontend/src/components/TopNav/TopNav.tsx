@@ -148,7 +148,7 @@ function UserMenu() {
         >
           <Avatar className="size-8">
             <AvatarFallback className="bg-zinc-600 text-white text-xs">
-              {getInitials(currentUser.username || "User")}
+              {getInitials(currentUser.username)}
             </AvatarFallback>
           </Avatar>
         </Button>
