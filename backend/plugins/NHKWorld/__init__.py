@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
-from plugins.NHKWorld.files import FileMixin
+from plugins.NHKWorld.helpers import HelperMixin
 from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
 from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
@@ -15,7 +15,7 @@ class NHKWorld(
     SourceMixin,
     UpsertMixin,
     SearchMixin,
-    FileMixin,
+    HelperMixin,
     URLHandlerPlugin[NHKWorldURLHandler],
     register=True,
 ):

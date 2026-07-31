@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import override
+from typing import Any, override
 
 from naphki import Naphki
 from naphki.shows_search.models import ShowsSearchModel
@@ -13,8 +13,8 @@ from naphki.video_programs.models import VideoProgramsModel
 
 from app.files.models import File
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, GAPIListJSON
+from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -85,7 +85,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
         return [item for page in self.parsed() for item in page.items]
 
 
-class FileMixin(BasePlugin, register=False):
+class FileMixin(TMDBMixin, register=False):
     def video_program_file(self, show_key: str) -> VideoProgram:
         """Contains a single show's information."""
         return self._file(VideoProgram, show_key)
@@ -125,22 +125,29 @@ class FileMixin(BasePlugin, register=False):
         return []
 
     @override
-    def _show_files(self, show_key: str) -> Sequence[VideoProgram]:
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the show.
-        return [self.video_program_file(show_key)]
+        return self._append_tmdb_show_file(
+            [self.video_program_file(show_key)],
+            show_key,
+        )
 
     @override
     def _season_files(
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[VideoEpisodes | VideoProgram]:
-        return [
-            # Required to detect changes to the season.
-            self.video_program_file(show_key),
-            # Required to detect new episodes.
-            self.video_episodes_file(show_key),
-        ]
+    ) -> Sequence[BaseFile[Any]]:
+        return self._append_tmdb_season_file(
+            [
+                # Required to detect changes to the season.
+                self.video_program_file(show_key),
+                # Required to detect new episodes.
+                self.video_episodes_file(show_key),
+            ],
+            season_key,
+            show_key,
+        )
 
     @override
     def _episode_files(
@@ -148,9 +155,14 @@ class FileMixin(BasePlugin, register=False):
         episode_key: str,
         season_key: str,
         show_key: str,
-    ) -> Sequence[VideoEpisodes]:
+    ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode.
-        return [self.video_episodes_file(show_key)]
+        return self._append_tmdb_episode_file(
+            [self.video_episodes_file(show_key)],
+            episode_key,
+            season_key,
+            show_key,
+        )
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:

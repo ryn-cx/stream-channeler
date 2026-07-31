@@ -7,10 +7,10 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.NHKWorld.files import FileMixin
+from plugins.NHKWorld.helpers import HelperMixin
 
 
-class UpsertMixin(FileMixin, register=False):
+class UpsertMixin(HelperMixin, register=False):
     @override
     def _upsert_show(
         self,
@@ -22,7 +22,7 @@ class UpsertMixin(FileMixin, register=False):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             program = self.video_program_file(show_key).parsed()
-            show = Show(
+            new_show = Show(
                 key=program.id,
                 name=program.title,
                 description=program.description,
@@ -31,10 +31,13 @@ class UpsertMixin(FileMixin, register=False):
                 media_type="TV Show",
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
-            ).upsert_and_set_update_at(
+            )
+            show = self._merge_and_upsert_show(
+                new_show,
                 source,
                 show,
-                self._show_files(show_key),
+                show_key,
+                "tv",
             )
 
         self._upsert_season(show, show_key, force=force)
@@ -51,14 +54,20 @@ class UpsertMixin(FileMixin, register=False):
     ) -> None:
         season = Season.get_from_memory(self.session, show, show_key)
         if self._season_is_outdated(season, force=force):
-            season_files = self._season_files(show_key, show_key)
-            season = Season(
+            new_season = Season(
                 key=show_key,
                 sort_order=0,
                 url=show.url,
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
-            ).upsert_and_set_update_at(show, season, season_files)
+            )
+            season = self._merge_and_upsert_season(
+                new_season,
+                show,
+                season,
+                show_key,
+                "tv",
+            )
 
         self._upsert_episodes(season, show_key, force=force)
 
@@ -79,8 +88,7 @@ class UpsertMixin(FileMixin, register=False):
                 continue
 
             video = item.video
-            episode_files = self._episode_files(item.id, season.key, show_key)
-            Episode(
+            new_episode = Episode(
                 key=item.id,
                 name=item.title,
                 url=self.build_url(item.url),
@@ -98,4 +106,11 @@ class UpsertMixin(FileMixin, register=False):
                     show_key,
                 ),
                 season_id=season.id,
-            ).upsert_and_set_update_at(season, episode, episode_files)
+            )
+            self._merge_and_upsert_episode(
+                new_episode,
+                season,
+                episode,
+                show_key,
+                "tv",
+            )
