@@ -182,7 +182,6 @@ function HeroWithActions({
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
   const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
-  const watchedMutation = useMarkWatched(channelId)
 
   useEffect(() => {
     document.title = `${channel.name} - Stream Channeler`
@@ -216,6 +215,10 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
         ) as Partial<ChannelSearchParams>),
       }
     : search
+
+  // Declared after the preset resolves so the hero's Play button hides the
+  // episode when the effective filters exclude watched ones.
+  const watchedMutation = useMarkWatched(channelId, filterParams.hideWatched)
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     id: false,
@@ -427,7 +430,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             <HeroWithActions
               episode={heroEpisode}
               channelId={channelId}
-              hideWatched={search.hideWatched}
+              hideWatched={filterParams.hideWatched}
               onPlay={() => {
                 watchedMutation.mutate(heroEpisode.id)
                 if (heroEpisode.url) {
@@ -473,7 +476,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           <EpisodeCards
             episodes={episodesWithDetails}
             channelId={channelId}
-            hideWatched={search.hideWatched}
+            hideWatched={filterParams.hideWatched}
             editOrder={editOrder}
           />
         )}

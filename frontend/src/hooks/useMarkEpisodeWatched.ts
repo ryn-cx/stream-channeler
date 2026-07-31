@@ -14,7 +14,23 @@ function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
   }
 }
 
-export function useMarkWatched(channelId: string | undefined) {
+function removeEpisodeFromData(oldData: any, episodeId: string) {
+  if (!oldData) return oldData
+  return {
+    ...oldData,
+    episodes: oldData.episodes.filter((ep: any) => ep.id !== episodeId),
+  }
+}
+
+/**
+ * @param hideWatched Whether the active filters exclude watched episodes, in
+ * which case the episode is dropped from the cache rather than marked, so it
+ * disappears the way a refetch would have removed it.
+ */
+export function useMarkWatched(
+  channelId: string | undefined,
+  hideWatched?: boolean,
+) {
   const { showSuccessToast, showErrorToast, showWarningToast } =
     useCustomToast()
   const queryClient = useQueryClient()
@@ -48,16 +64,21 @@ export function useMarkWatched(channelId: string | undefined) {
         verified: false,
       }
 
-      // Optimistically update all matching cache entries
+      // Optimistically update all matching cache entries. When the active
+      // filters hide watched episodes the entry is removed instead, otherwise it
+      // would linger until something else refetched the list.
+      const applyOptimisticUpdate = (oldData: any) =>
+        hideWatched
+          ? removeEpisodeFromData(oldData, episodeId)
+          : updateEpisodeInData(oldData, episodeId, optimisticPatch)
+
       queryClient.setQueriesData(
         { queryKey: ["episodes", channelId] },
-        (oldData: any) =>
-          updateEpisodeInData(oldData, episodeId, optimisticPatch),
+        applyOptimisticUpdate,
       )
       queryClient.setQueriesData(
         { queryKey: ["episodes-preview", channelId] },
-        (oldData: any) =>
-          updateEpisodeInData(oldData, episodeId, optimisticPatch),
+        applyOptimisticUpdate,
       )
 
       // Return a result with the snapshotted value

@@ -41,7 +41,7 @@ export function useEpisodeActions({
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const watchedMutation = useMarkWatched(channelId)
+  const watchedMutation = useMarkWatched(channelId, hideWatched)
 
   const queryClient = useQueryClient()
   const verifyMutation = useMutation({
