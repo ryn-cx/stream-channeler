@@ -23,10 +23,6 @@ class HelperMixin(FileMixin, register=False):
     def search_url(cls, query: str) -> str | None:
         return cls.build_url(f"results?search_query={quote(query)}")
 
-    @classmethod
-    def _playlist_url(cls, playlist_key: str) -> str:
-        return cls.build_url(f"playlist?list={playlist_key}")
-
     @staticmethod
     def _best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
         # It sounds wrong but standard is a higher resolution than high.

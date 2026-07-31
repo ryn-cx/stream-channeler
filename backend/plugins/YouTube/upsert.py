@@ -73,7 +73,7 @@ class UpsertMixin(HelperMixin, register=False):
             season = Season(
                 key=season_key,
                 name=name,
-                url=self._playlist_url(season_key),
+                url=self.build_url(f"playlist?list={season_key}"),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),

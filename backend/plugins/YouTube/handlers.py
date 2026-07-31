@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
-from plugins.YouTube.files import get_first_item
+from plugins.YouTube.files import get_first_item, is_music_playlist_key
 
 if TYPE_CHECKING:
     from app.shows.models import Show
@@ -103,7 +103,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
     def show_key(self) -> str:
         playlist_items_file = self.plugin.playlist_items_file(self.playlist_key)
         first_item = get_first_item(playlist_items_file.parsed().items)
-        if self.plugin.is_music_playlist_key(self.playlist_key):
+        if is_music_playlist_key(self.playlist_key):
             # Automatically generated music playlists have a
             # first_item.snippet.channel_id value of UCBR8-60-B28hp2BmDPdntcQ which is
             # the official YouTube channel

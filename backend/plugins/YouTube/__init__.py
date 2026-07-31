@@ -149,9 +149,16 @@ class YouTube(
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         playlist_feed = self.playlist_feed_file(season.key)
-        old_video_ids: set[str] = set()
-        if not playlist_feed.is_outdated() and playlist_feed.database_record.content:
-            old_video_ids = set(playlist_feed.video_ids())
+        # Without a stored feed there is nothing to compare the download against, so
+        # this run only stores the feed and the next one checks it for new videos.
+        # Treating every entry as new here would re-download the playlist items that
+        # were already downloaded when the season was imported.
+        has_stored_feed = bool(
+            not playlist_feed.is_outdated() and playlist_feed.database_record.content,
+        )
+        old_video_ids: set[str] = (
+            set(playlist_feed.video_ids()) if has_stored_feed else set()
+        )
         playlist_feed.download_if_outdated(season.update_at)
 
         # A failed fetch leaves the stored feed untouched, so it is still outdated.
@@ -164,7 +171,9 @@ class YouTube(
             season.update_at = tz_datetime.now() + timedelta(hours=1)
             return
 
-        new_video_ids = set(playlist_feed.video_ids()) - old_video_ids
+        new_video_ids: set[str] = (
+            set(playlist_feed.video_ids()) - old_video_ids if has_stored_feed else set()
+        )
         if new_video_ids:
             logger.info(
                 "Found {} new videos in season {}: {}",

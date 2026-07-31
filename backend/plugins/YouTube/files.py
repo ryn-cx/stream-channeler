@@ -40,6 +40,11 @@ def not_yt_dlapi() -> NotYTDLAPI:
     )
 
 
+def is_music_playlist_key(key: str) -> bool:
+    """Report whether a playlist key belongs to an auto-generated album."""
+    return key.startswith("OLAK5uy_")
+
+
 def get_first_item[T](items: list[T] | None) -> T:
     if not items:
         msg = "Expected at least one item, got none"
@@ -148,9 +153,13 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
             )
 
         # If the entry is over a year old download a fresh copy to clean out deleted
-        # videos.
+        # videos. Album playlists are auto-generated and never change, so re-paging
+        # them would spend quota to rediscover the same tracks.
         year_ago_datetime = tz_datetime.now() - timedelta(days=365)
-        if self._existing_database_record.data_timestamp < year_ago_datetime:
+        if (
+            not is_music_playlist_key(self.unique_identifier)
+            and self._existing_database_record.data_timestamp < year_ago_datetime
+        ):
             return endpoint.parse(
                 _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
             )
@@ -268,10 +277,6 @@ class FileMixin(BasePlugin, register=False):
         """Return a cached PlaylistFeed for the given season key."""
         return self._file(PlaylistFeed, season_key)
 
-    @staticmethod
-    def is_music_playlist_key(key: str) -> bool:
-        return key.startswith("OLAK5uy_")
-
     @override
     def _show_files(
         self,
@@ -300,7 +305,7 @@ class FileMixin(BasePlugin, register=False):
         ]
         # Album playlists are auto-generated and not listed by the channel, so the album
         # name comes from the playlist itself rather than the channel playlists file.
-        if self.is_music_playlist_key(season_key):
+        if is_music_playlist_key(season_key):
             files.append(self.playlist_info_file(season_key))
         return files
 
@@ -363,7 +368,7 @@ class FileMixin(BasePlugin, register=False):
             for season in existing_show.seasons:
                 if (
                     season.deleted_at is None
-                    and self.is_music_playlist_key(season.key)
+                    and is_music_playlist_key(season.key)
                     and season.key not in season_keys
                 ):
                     season_keys.append(season.key)
