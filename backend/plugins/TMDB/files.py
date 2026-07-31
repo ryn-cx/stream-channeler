@@ -111,7 +111,30 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
     API_ENDPOINT = tminidb_client().tv_series_details
 
     def __init__(self, session: Session, plugin: Plugin, tmdb_id: int) -> None:
+        self.session = session
+        self.plugin = plugin
+        self.tmdb_id = tmdb_id
         super().__init__(session, plugin, str(tmdb_id))
+
+    @override
+    def _download(self) -> None:
+        super()._download()
+        for season in self.parsed().seasons:
+            season_file = SeasonDetail(
+                self.session,
+                self.plugin,
+                self.tmdb_id,
+                season.season_number,
+            )
+            season_file.download_if_outdated()
+            for episode in season_file.parsed().episodes:
+                EpisodeDetail(
+                    self.session,
+                    self.plugin,
+                    self.tmdb_id,
+                    season.season_number,
+                    episode.episode_number,
+                ).download_if_outdated()
 
 
 class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):
