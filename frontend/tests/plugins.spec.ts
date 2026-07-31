@@ -2,7 +2,7 @@
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
 import { createUser } from "./utils/privateApi"
-import { randomEmail, randomUsername, randomPassword } from "./utils/random"
+import { randomEmail, randomPassword, randomUsername } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Plugins page is accessible and shows correct title", async ({ page }) => {

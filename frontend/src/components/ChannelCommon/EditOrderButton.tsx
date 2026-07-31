@@ -1,21 +1,31 @@
 // TODO: Validate
 import { Check, Move } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import {
+  type TriggerVariant,
+  VariantTrigger,
+} from "@/components/Common/VariantTrigger"
 
 interface EditOrderButtonProps {
   editOrder: boolean
   onToggle: () => void
+  variant?: TriggerVariant
 }
 
-export function EditOrderButton({ editOrder, onToggle }: EditOrderButtonProps) {
+export function EditOrderButton({
+  editOrder,
+  onToggle,
+  variant = "button",
+}: EditOrderButtonProps) {
   return (
-    <Button
-      onClick={onToggle}
+    <VariantTrigger
+      variant={variant}
+      icon={editOrder ? Check : Move}
+      label={editOrder ? "Done" : "Edit Order"}
       title={editOrder ? "Finish reordering" : "Reorder episodes"}
-    >
-      {editOrder ? <Check /> : <Move />}
-      {editOrder ? "Done" : "Edit Order"}
-    </Button>
+      iconTitle={editOrder ? "Finish reordering" : "Reorder episodes"}
+      onClick={onToggle}
+      onSelect={onToggle}
+    />
   )
 }

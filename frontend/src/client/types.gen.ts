@@ -244,6 +244,9 @@ export type ChannelOrderUpdate = {
 
 /**
  * Schema for returning a `Channel`.
+ *
+ * `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
+ * owns the record or is an admin.
  */
 export type ChannelOutput = {
     name?: (string | null);
@@ -254,6 +257,7 @@ export type ChannelOutput = {
     anonymous: boolean;
     id: string;
     user_id: (string | null);
+    username?: (string | null);
     score: number;
 };
 

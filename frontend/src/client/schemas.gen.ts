@@ -1326,6 +1326,17 @@ export const ChannelOutputSchema = {
             ],
             title: 'User Id'
         },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        },
         score: {
             type: 'integer',
             title: 'Score'
@@ -1334,7 +1345,10 @@ export const ChannelOutputSchema = {
     type: 'object',
     required: ['visibility', 'anonymous', 'id', 'user_id', 'score'],
     title: 'ChannelOutput',
-    description: 'Schema for returning a `Channel`.'
+    description: `Schema for returning a \`Channel\`.
+
+\`user_id\` and \`username\` are redacted on anonymous \`Channel\`s unless the viewer
+owns the record or is an admin.`
 } as const;
 
 export const ChannelPublicListOutputSchema = {
@@ -6221,6 +6235,7 @@ export const UserCreateSchema = {
         username: {
             type: 'string',
             maxLength: 255,
+            minLength: 1,
             title: 'Username'
         },
         server_side_threshold: {
@@ -6263,6 +6278,7 @@ export const UserPublicSchema = {
         username: {
             type: 'string',
             maxLength: 255,
+            minLength: 1,
             title: 'Username'
         },
         server_side_threshold: {
@@ -6312,6 +6328,7 @@ export const UserRegisterSchema = {
         username: {
             type: 'string',
             maxLength: 255,
+            minLength: 1,
             title: 'Username'
         }
     },
@@ -6349,7 +6366,8 @@ export const UserUpdateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -6388,7 +6406,8 @@ export const UserUpdateMeSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'

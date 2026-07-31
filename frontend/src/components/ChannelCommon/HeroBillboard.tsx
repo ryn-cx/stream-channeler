@@ -1,8 +1,12 @@
 // TODO: Validate
-import { ChevronLeft, ExternalLink, Play, SkipForward } from "lucide-react"
+import { ChevronLeft, MoreVertical, Play, SkipForward } from "lucide-react"
 
 import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeCard"
 import { formatDuration } from "@/components/ChannelCommon/formatters"
+import {
+  type ActionMenuItem,
+  ResponsiveActionMenu,
+} from "@/components/Common/ResponsiveActionMenu"
 import { Button } from "@/components/ui/button"
 
 interface HeroBillboardProps {
@@ -14,6 +18,10 @@ interface HeroBillboardProps {
   onBack: () => void
   hasNext: boolean
   hasPrev: boolean
+  /** Same actions the episode cards offer, shown in the top-right menu. */
+  menuItems?: ActionMenuItem[]
+  /** Top-left overlay, e.g. the "Last Watched" badge the cards show. */
+  topLeftBadge?: React.ReactNode
 }
 
 export function HeroBillboard({
@@ -23,6 +31,8 @@ export function HeroBillboard({
   onBack,
   hasNext,
   hasPrev,
+  menuItems,
+  topLeftBadge,
 }: HeroBillboardProps) {
   const imageUrl =
     episode.image_url ||
@@ -43,6 +53,29 @@ export function HeroBillboard({
       {/* Gradient overlays - always dark so text is readable in both themes */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+
+      {topLeftBadge ? (
+        <div className="absolute top-0 left-0 z-10">{topLeftBadge}</div>
+      ) : null}
+
+      {/* Same actions as the cards, scaled up to suit the billboard. */}
+      {menuItems && menuItems.length > 0 && (
+        <div className="absolute top-2 right-2 md:top-6 md:right-6 z-10">
+          <ResponsiveActionMenu
+            items={menuItems}
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-10 md:size-12 rounded-full bg-background/80 hover:bg-background/90 backdrop-blur-sm [&_svg]:size-5 md:[&_svg]:size-6"
+              >
+                <MoreVertical />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            }
+          />
+        </div>
+      )}
 
       <div className="relative h-full flex flex-col">
         <div className="hidden md:block flex-1" />
@@ -68,17 +101,18 @@ export function HeroBillboard({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1 md:mt-2">
-            {hasPrev && (
-              <Button
-                size="default"
-                variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
-                onClick={onBack}
-              >
-                <ChevronLeft className="size-5" />
-                Back
-              </Button>
-            )}
+            {/* Back and Next stay mounted so the buttons between them keep
+                their position; each is disabled when there is nowhere to go. */}
+            <Button
+              size="default"
+              variant="secondary"
+              className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4 disabled:opacity-40"
+              onClick={onBack}
+              disabled={!hasPrev}
+            >
+              <ChevronLeft className="size-5" />
+              Back
+            </Button>
             <Button
               size="default"
               className="bg-white text-black hover:bg-white/80 font-semibold gap-2 md:h-10 md:px-4"
@@ -87,30 +121,16 @@ export function HeroBillboard({
               <Play className="size-5 fill-current" />
               Play
             </Button>
-            {episode.url && (
-              <Button
-                size="default"
-                variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
-                onClick={() =>
-                  window.open(episode.url!, "_blank", "noopener,noreferrer")
-                }
-              >
-                <ExternalLink className="size-5" />
-                Open
-              </Button>
-            )}
-            {hasNext && (
-              <Button
-                size="default"
-                variant="secondary"
-                className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4"
-                onClick={onSkip}
-              >
-                <SkipForward className="size-5" />
-                Next
-              </Button>
-            )}
+            <Button
+              size="default"
+              variant="secondary"
+              className="bg-zinc-500/50 hover:bg-zinc-500/70 text-white gap-2 md:h-10 md:px-4 disabled:opacity-40"
+              onClick={onSkip}
+              disabled={!hasNext}
+            >
+              <SkipForward className="size-5" />
+              Next
+            </Button>
           </div>
         </div>
       </div>

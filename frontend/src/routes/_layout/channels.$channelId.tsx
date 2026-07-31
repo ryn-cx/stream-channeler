@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
@@ -13,6 +13,8 @@ import {
 } from "@/client"
 import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
 import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
+import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
+import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { CommentsDialog } from "@/components/Channels/ChannelDetail/CommentsDialog"
@@ -139,6 +141,44 @@ function getEpisodesQueryOptions(
 
 type ViewMode = "table" | "cards"
 
+/** Wraps the billboard so the episode action hook only runs when there is a
+ * hero episode to act on. */
+function HeroWithActions({
+  episode,
+  channelId,
+  hideWatched,
+  ...heroProps
+}: {
+  episode: EpisodeWithDetails
+  channelId: string
+  hideWatched?: boolean
+  onPlay: () => void
+  onSkip: () => void
+  onBack: () => void
+  hasNext: boolean
+  hasPrev: boolean
+}) {
+  const { menuItems, dialogs } = useEpisodeActions({
+    episode,
+    channelId,
+    hideWatched,
+  })
+
+  return (
+    <>
+      <HeroBillboard
+        episode={episode}
+        menuItems={menuItems}
+        topLeftBadge={
+          episode.watch_date ? <LastWatchedBadge episode={episode} /> : null
+        }
+        {...heroProps}
+      />
+      {dialogs}
+    </>
+  )
+}
+
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
   const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
@@ -224,37 +264,29 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
 
   return (
     <div className="flex flex-col">
-      {/* Hero billboard */}
-      {showHero && heroEpisode && (
-        <HeroBillboard
-          episode={heroEpisode}
-          onPlay={() => {
-            watchedMutation.mutate(heroEpisode.id)
-            if (heroEpisode.url) {
-              window.open(heroEpisode.url, "_blank", "noopener,noreferrer")
-            }
-            if (hasNextHero) setHeroIndex(heroIndex + 1)
-          }}
-          onSkip={() => {
-            if (hasNextHero) setHeroIndex(heroIndex + 1)
-          }}
-          onBack={() => {
-            if (hasPrevHero) setHeroIndex(heroIndex - 1)
-          }}
-          hasNext={hasNextHero}
-          hasPrev={hasPrevHero}
-        />
-      )}
-
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 px-[4%] py-4">
-        <h1 className="text-2xl font-bold tracking-tight mr-2">
-          {channel.name}
-        </h1>
+        {user && <FavoriteChannel channelId={channel.id} />}
+
+        <div className="mr-2">
+          <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
+          {/* The API only sends a username when the owner is public, so an
+              anonymous channel simply has nothing to show here. */}
+          {channel.username && channel.user_id && (
+            <p className="text-xs text-muted-foreground">
+              by{" "}
+              <Link
+                to="/users/$userId/channels"
+                params={{ userId: channel.user_id }}
+                className="underline hover:text-foreground"
+              >
+                {channel.username}
+              </Link>
+            </p>
+          )}
+        </div>
 
         <ChannelDescription channel={channel} />
-
-        {user && <FavoriteChannel channelId={channel.id} />}
 
         {(isOwner || user?.is_superuser) && <EditChannel channel={channel} />}
 
@@ -308,13 +340,28 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                 isOwner={isOwner}
               />
 
-              {isOwner && (
+              {viewMode === "cards" && (
+                <EditOrderButton
+                  editOrder={editOrder}
+                  onToggle={() => setEditOrder(!editOrder)}
+                  variant="menu"
+                />
+              )}
+
+              {isOwner && viewMode === "cards" && editOrder && (
                 <SaveOrderButton
                   channelId={channelId}
                   episodes={episodesData?.episodes ?? []}
                   variant="menu"
                 />
               )}
+
+              <DropdownMenuSeparator />
+              <CommentsDialog
+                channelId={channelId}
+                channelName={channel?.name}
+                variant="menu"
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -372,6 +419,34 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           <CommentsDialog channelId={channelId} channelName={channel?.name} />
         </div>
       </div>
+
+      {/* Hero billboard - inset to line up with the card grid below it */}
+      {showHero && heroEpisode && (
+        <div className="px-[4%] pb-4">
+          <div className="overflow-hidden rounded-lg">
+            <HeroWithActions
+              episode={heroEpisode}
+              channelId={channelId}
+              hideWatched={search.hideWatched}
+              onPlay={() => {
+                watchedMutation.mutate(heroEpisode.id)
+                if (heroEpisode.url) {
+                  window.open(heroEpisode.url, "_blank", "noopener,noreferrer")
+                }
+                if (hasNextHero) setHeroIndex(heroIndex + 1)
+              }}
+              onSkip={() => {
+                if (hasNextHero) setHeroIndex(heroIndex + 1)
+              }}
+              onBack={() => {
+                if (hasPrevHero) setHeroIndex(heroIndex - 1)
+              }}
+              hasNext={hasNextHero}
+              hasPrev={hasPrevHero}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div

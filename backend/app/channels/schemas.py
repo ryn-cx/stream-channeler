@@ -46,10 +46,15 @@ class ChannelUpdate(
 
 
 class ChannelOutput(BaseChannel):
-    """Schema for returning a `Channel`."""
+    """Schema for returning a `Channel`.
+
+    `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
+    owns the record or is an admin.
+    """
 
     id: uuid.UUID
     user_id: uuid.UUID | None
+    username: str | None = None
     score: int
 
 

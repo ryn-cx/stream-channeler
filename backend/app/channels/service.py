@@ -41,11 +41,13 @@ def viewer_is_privileged(channel: Channel, viewer: User | None) -> bool:
 
 def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
     output = ChannelOutput.model_validate(channel)
+    output.username = channel.user.username
     if not channel.anonymous:
         return output
     if viewer_is_privileged(channel, viewer):
         return output
     output.user_id = None
+    output.username = None
     return output
 
 

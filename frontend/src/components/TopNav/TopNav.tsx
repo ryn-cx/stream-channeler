@@ -197,7 +197,9 @@ export function TopNav() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-colors duration-300",
+        // Below the z-50 overlay primitives (dialog/sheet/dropdown/popover) so
+        // menus opened near the top of the page are not painted over.
+        "fixed top-0 left-0 right-0 z-40 transition-colors duration-300",
         scrolled
           ? "bg-background/95 backdrop-blur-md border-b border-border/50"
           : "bg-gradient-to-b from-background/80 to-transparent",
