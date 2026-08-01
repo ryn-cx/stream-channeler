@@ -54,8 +54,6 @@ def is_music_playlist_key(key: str) -> bool:
 # channel exposes and can only be reached by importing them one at a time.
 _STANDALONE_VIDEO_CHANNEL_KEYS = frozenset({"UCuVPpxrm2VAgpH3Ktln4HXg"})
 
-_VIDEO_KEY_LENGTH = 11
-
 
 def is_standalone_video_channel(channel_key: str) -> bool:
     """Report whether a channel's videos are imported one video at a time.
@@ -72,7 +70,9 @@ def is_video_key(key: str) -> bool:
     A standalone video is its own show, season and episode, all keyed by the video,
     and every channel and playlist key is longer than a video key.
     """
-    return len(key) == _VIDEO_KEY_LENGTH
+    # Videos are always 11 characters long and channels/playlists are never 11
+    # characters long.
+    return len(key) == 11  # noqa: PLR2004
 
 
 # The reasons YouTube gives when the API key has spent its daily quota. The quota

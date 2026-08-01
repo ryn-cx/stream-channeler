@@ -126,8 +126,8 @@ class YouTube(
 
     # A YouTube show is always imported for a specific playlist.
     def _import_show(self, show_key: str, playlist_key: str) -> Show:  # type: ignore[override]
-        show = self._preload_show(show_key, preload_episodes=True).one_or_none()
-        if not show:
+        show_preload = self._preload_show(show_key, preload_episodes=True)
+        if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
             return self._upsert_show(self.source, show_key)
 

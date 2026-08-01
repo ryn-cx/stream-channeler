@@ -25,11 +25,17 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        # A video from a channel that never lists it is imported as its own show, into
-        # that channel's own source rather than the one it was requested for.
         if is_video_key(show_key):
-            return self._upsert_video_show(show_key, force=force)
+            return self._upsert_movie_show(show_key, force=force)
+        return self._upsert_channel_show(source, show_key, force=force)
 
+    def _upsert_channel_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
@@ -53,7 +59,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
-    def _upsert_video_show(
+    def _upsert_movie_show(
         self,
         show_key: str,
         *,
@@ -78,16 +84,18 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="YouTube Video",
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _VIDEO_UPDATE_INTERVAL,
+                # Movies are only updated once a year to make sure they are still
+                # available.
+                update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             ).upsert_and_set_update_at(source, show, self._show_files(show_key))
 
-        self._upsert_video_season(show, show_key, force=force)
+        self._upsert_movie_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
         return show
 
-    def _upsert_video_season(
+    def _upsert_movie_season(
         self,
         show: Show,
         show_key: str,
@@ -104,7 +112,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"watch?v={show_key}"),
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _VIDEO_UPDATE_INTERVAL,
+                update_at=data_timestamp,
                 show_id=show.id,
             ).upsert_and_set_update_at(
                 show,
