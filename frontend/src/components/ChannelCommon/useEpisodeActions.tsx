@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
+import { isHiddenByWatchFilters, type WatchFilters } from "@/lib/watchFilters"
 import { handleError } from "@/utils"
 
 interface UseEpisodeActionsOptions {
@@ -23,7 +24,7 @@ interface UseEpisodeActionsOptions {
   channelId: string
   nextEpisodeId?: string | undefined
   onNextEpisode?: (currentEpisodeId: string) => void
-  hideWatched?: boolean
+  watchFilters?: WatchFilters
 }
 
 /**
@@ -36,12 +37,12 @@ export function useEpisodeActions({
   channelId,
   nextEpisodeId,
   onNextEpisode,
-  hideWatched,
+  watchFilters,
 }: UseEpisodeActionsOptions) {
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const watchedMutation = useMarkWatched(channelId, hideWatched)
+  const watchedMutation = useMarkWatched(channelId, watchFilters)
 
   const queryClient = useQueryClient()
   const verifyMutation = useMutation({
@@ -62,7 +63,9 @@ export function useEpisodeActions({
         { queryKey: ["episodes", channelId] },
         (oldData) => {
           if (!oldData) return oldData
-          if (hideWatched) {
+          // Verifying leaves the episode watched, so it only drops out when
+          // that is the state the filters hide.
+          if (isHiddenByWatchFilters("watched", watchFilters)) {
             return {
               ...oldData,
               episodes: oldData.episodes.filter((ep) => ep.id !== episode.id),
@@ -107,6 +110,14 @@ export function useEpisodeActions({
         oldData: ChannelEpisodesOutput | undefined,
       ): ChannelEpisodesOutput | undefined => {
         if (!oldData) return oldData
+        // Deleting the watch leaves the episode unwatched, so it only drops out
+        // when that is the state the filters hide.
+        if (isHiddenByWatchFilters("unwatched", watchFilters)) {
+          return {
+            ...oldData,
+            episodes: oldData.episodes.filter((ep) => ep.id !== episode.id),
+          }
+        }
         return {
           ...oldData,
           episodes: oldData.episodes.map((ep) =>

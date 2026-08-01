@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useParams } from "@tanstack/react-router"
+import { useParams, useSearch } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
@@ -13,6 +13,7 @@ import type {
 import { CopyId } from "@/components/Common/CopyId"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { cn } from "@/lib/utils"
+import type { WatchFilters } from "@/lib/watchFilters"
 
 export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
   season: SeasonOutput
@@ -24,7 +25,8 @@ export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
 
 function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
   const { channelId } = useParams({ strict: false })
-  const mutation = useMarkWatched(channelId)
+  const watchFilters = useSearch({ strict: false }) as WatchFilters
+  const mutation = useMarkWatched(channelId, watchFilters)
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()

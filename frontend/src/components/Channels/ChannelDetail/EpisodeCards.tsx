@@ -14,12 +14,13 @@ import {
 import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
 import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
 import useCustomToast from "@/hooks/useCustomToast"
+import type { WatchFilters } from "@/lib/watchFilters"
 import type { EpisodeWithDetails } from "./columns"
 
 interface EpisodeCardsProps {
   episodes: EpisodeWithDetails[]
   channelId: string
-  hideWatched?: boolean
+  watchFilters?: WatchFilters
   editOrder?: boolean
 }
 
@@ -28,7 +29,7 @@ export function EpisodeCard({
   channelId,
   nextEpisodeId,
   onNextEpisode,
-  hideWatched,
+  watchFilters,
   editOrder,
   onMove,
   onDrop,
@@ -38,7 +39,7 @@ export function EpisodeCard({
   channelId: string
   nextEpisodeId?: string | undefined
   onNextEpisode?: (currentEpisodeId: string) => void
-  hideWatched?: boolean
+  watchFilters?: WatchFilters
   editOrder?: boolean
   onMove?: (index: number, direction: MoveDirection) => void
   onDrop?: (fromIndex: number, toIndex: number) => void
@@ -50,7 +51,7 @@ export function EpisodeCard({
     channelId,
     nextEpisodeId,
     onNextEpisode,
-    hideWatched,
+    watchFilters,
   })
 
   const onCardClick = () => {
@@ -87,7 +88,7 @@ export function EpisodeCard({
 export function EpisodeCards({
   episodes,
   channelId,
-  hideWatched,
+  watchFilters,
   editOrder,
 }: EpisodeCardsProps) {
   const queryClient = useQueryClient()
@@ -222,7 +223,7 @@ export function EpisodeCards({
           channelId={channelId}
           nextEpisodeId={nextEpisodeMap.get(episode.id)}
           onNextEpisode={handleNextEpisode}
-          hideWatched={hideWatched}
+          watchFilters={watchFilters}
           editOrder={editOrder}
           onMove={handleArrowMove}
           onDrop={moveEpisode}

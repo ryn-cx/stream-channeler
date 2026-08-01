@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { WatchesService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
+import { isHiddenByWatchFilters, type WatchFilters } from "@/lib/watchFilters"
 import { handleError } from "@/utils"
 
 function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
@@ -23,13 +24,13 @@ function removeEpisodeFromData(oldData: any, episodeId: string) {
 }
 
 /**
- * @param hideWatched Whether the active filters exclude watched episodes, in
- * which case the episode is dropped from the cache rather than marked, so it
- * disappears the way a refetch would have removed it.
+ * @param watchFilters The channel's active watch filters. Marking an episode
+ * watched leaves it partially watched, so it is dropped from the cache only when
+ * those are the episodes the filters hide.
  */
 export function useMarkWatched(
   channelId: string | undefined,
-  hideWatched?: boolean,
+  watchFilters?: WatchFilters,
 ) {
   const { showSuccessToast, showErrorToast, showWarningToast } =
     useCustomToast()
@@ -64,11 +65,11 @@ export function useMarkWatched(
         verified: false,
       }
 
-      // Optimistically update all matching cache entries. When the active
-      // filters hide watched episodes the entry is removed instead, otherwise it
-      // would linger until something else refetched the list.
+      // Optimistically update all matching cache entries, dropping the episode
+      // when the filters hide the state it ends up in, so the list matches what
+      // the next fetch would return.
       const applyOptimisticUpdate = (oldData: any) =>
-        hideWatched
+        isHiddenByWatchFilters("partiallyWatched", watchFilters)
           ? removeEpisodeFromData(oldData, episodeId)
           : updateEpisodeInData(oldData, episodeId, optimisticPatch)
 

@@ -44,6 +44,7 @@ import useAuth from "@/hooks/useAuth"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { usePersistedState } from "@/hooks/usePersistedState"
 import { parseOrderConfig } from "@/lib/channelOrder"
+import type { WatchFilters } from "@/lib/watchFilters"
 
 function getChannelQueryOptions(channelId: string) {
   return {
@@ -146,12 +147,12 @@ type ViewMode = "table" | "cards"
 function HeroWithActions({
   episode,
   channelId,
-  hideWatched,
+  watchFilters,
   ...heroProps
 }: {
   episode: EpisodeWithDetails
   channelId: string
-  hideWatched?: boolean
+  watchFilters?: WatchFilters
   onPlay: () => void
   onSkip: () => void
   onBack: () => void
@@ -161,7 +162,7 @@ function HeroWithActions({
   const { menuItems, dialogs } = useEpisodeActions({
     episode,
     channelId,
-    hideWatched,
+    watchFilters,
   })
 
   return (
@@ -216,9 +217,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
       }
     : search
 
-  // Declared after the preset resolves so the hero's Play button hides the
-  // episode when the effective filters exclude watched ones.
-  const watchedMutation = useMarkWatched(channelId, filterParams.hideWatched)
+  const watchedMutation = useMarkWatched(channelId, filterParams)
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     id: false,
@@ -430,7 +429,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             <HeroWithActions
               episode={heroEpisode}
               channelId={channelId}
-              hideWatched={filterParams.hideWatched}
+              watchFilters={filterParams}
               onPlay={() => {
                 watchedMutation.mutate(heroEpisode.id)
                 if (heroEpisode.url) {
@@ -476,7 +475,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           <EpisodeCards
             episodes={episodesWithDetails}
             channelId={channelId}
-            hideWatched={filterParams.hideWatched}
+            watchFilters={filterParams}
             editOrder={editOrder}
           />
         )}
