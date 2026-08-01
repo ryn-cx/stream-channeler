@@ -31,11 +31,6 @@ class Amazon(
     def _domain(cls) -> str:
         return "amazon.com"
 
-    @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return "> [!TIP/Series or Movie]\n> `https://www.amazon.com/dp/B095RHJ52R`\n\n"
-
     @classmethod
     @override
     def plugin_name(cls) -> str:

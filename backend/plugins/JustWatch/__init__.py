@@ -64,20 +64,6 @@ class JustWatch(FileMixin, register=True):
         return cls._domain_regex() + _URL_REGEX
 
     @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "Imports a title from every other plugin that has it, based on where "
-            "JustWatch says it is available to stream.\n\n"
-            "> [!TIP/Movie]\n"
-            "> `https://www.justwatch.com/us/movie/megamind`\n\n"
-            "> [!TIP/Show]\n"
-            "> `https://www.justwatch.com/us/tv-show/scooby-doo-where-are-you`\n\n"
-            "> [!TIP/Season]\n"
-            "> `https://www.justwatch.com/us/tv-show/strip-law/season-1`\n\n"
-        )
-
-    @override
     def import_url(self, url: str) -> list[URLImportResult]:
         details_file = self.url_title_details_file(self._full_path(url))
         details_file.download_if_outdated(tz_datetime.now() - _DETAILS_MAX_AGE)

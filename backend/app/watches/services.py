@@ -281,7 +281,7 @@ def get_plugins_with_import_watch_history(
     return [
         plugin_cls
         for plugin_cls in plugins
-        if plugin_cls.implements("import_watch_history_instructions")
+        if plugin_cls.implements("import_watch_history")
         and Plugin.get(session, plugin_user, plugin_cls.plugin_key())
     ]
 

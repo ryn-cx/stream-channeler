@@ -3,6 +3,8 @@
 
 import inspect
 from abc import ABC, abstractmethod
+from functools import cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from pydantic import BaseModel, Field
@@ -109,12 +111,29 @@ class AbstractPlugin(ABC):
         raise error
 
     @classmethod
+    def _read_instructions_file(cls, file_name: str, default: str) -> str:
+        """Return the contents of `file_name` from the plugin's directory."""
+        instructions_file = Path(inspect.getfile(cls)).parent / file_name
+        if not instructions_file.is_file():
+            return default
+        return instructions_file.read_text(encoding="utf-8")
+
+    # The markdown file, stored next to the plugin, describing the URLs it supports.
+    IMPORT_URL_INSTRUCTIONS_FILE: ClassVar[str] = "import_url_instructions.md"
+
+    @classmethod
+    @cache
     def import_url_instructions(cls) -> str:
         """Markdown describing what URLs this plugin supports.
 
-        Override to include example URLs so users know what to paste.
+        Read once per plugin from `IMPORT_URL_INSTRUCTIONS_FILE`, so the examples can
+        be edited without touching the plugin. Add that file to include example URLs
+        so users know what to paste.
         """
-        return "This plugin does not have specific URL import instructions."
+        return cls._read_instructions_file(
+            cls.IMPORT_URL_INSTRUCTIONS_FILE,
+            "This plugin does not have specific URL import instructions.",
+        )
 
     def update_plugin(self, plugin: Plugin) -> None:
         """Update an existing plugin in the database.
@@ -242,10 +261,25 @@ class AbstractPlugin(ABC):
 
     import_watch_history_file_extension: str
 
+    # The markdown file, stored next to the plugin, describing how to export a watch
+    # history. Whether a plugin can import one is decided by `import_watch_history`,
+    # not by this file existing.
+    IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE: ClassVar[str] = (
+        "import_watch_history_instructions.md"
+    )
+
     @classmethod
+    @cache
     def import_watch_history_instructions(cls) -> str:
-        """Markdown text describing how to export and upload watch history."""
-        return "This plugin does not have specific watch history import instructions."
+        """Markdown text describing how to export and upload watch history.
+
+        Read once per plugin from `IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE`, so the
+        steps can be edited without touching the plugin.
+        """
+        return cls._read_instructions_file(
+            cls.IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE,
+            "This plugin does not have specific watch history import instructions.",
+        )
 
     def import_watch_history(
         self,

@@ -15,19 +15,6 @@ from plugins.utils.base_plugin.watch_history import (
 class WatchHistoryMixin(BaseWatchHistoryMixin):
     import_watch_history_file_extension = ".json"
 
-    @classmethod
-    def import_watch_history_instructions(cls) -> str:
-        return (
-            "1. Go to [takeout.google.com](https://takeout.google.com)\n"
-            "2. Deselect all products, then select only 'YouTube and YouTube Music'\n"
-            "3. Click 'All YouTube data included', then select only 'history'\n"
-            "4. Choose JSON format (not HTML)\n"
-            "5. Export and download the archive\n"
-            "6. Extract the archive and find "
-            "'watch-history.json'\n"
-            "7. Upload that file here"
-        )
-
     @override
     def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
         """Parse YouTube watch history from Google Takeout JSON content."""

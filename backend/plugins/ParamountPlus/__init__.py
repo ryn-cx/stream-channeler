@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from typing import ClassVar, override
 
+from plugins.ParamountPlus.helpers import HelperMixin
+from plugins.ParamountPlus.source import SourceMixin
+from plugins.ParamountPlus.upsert import UpsertMixin
 from plugins.ParamountPlus.url_handlers import (
     MovieURLHandler,
     ParamountPlusURLHandler,
     ShowURLHandler,
 )
-from plugins.ParamountPlus.helpers import HelperMixin
-from plugins.ParamountPlus.source import SourceMixin
-from plugins.ParamountPlus.upsert import UpsertMixin
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
@@ -37,16 +37,6 @@ class ParamountPlus(
     @override
     def _domain(cls) -> str:
         return "paramountplus.com"
-
-    @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Series]\n"
-            "> `https://www.paramountplus.com/shows/south-park/`\n\n"
-            "> [!TIP/Movie]\n"
-            "> `https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/`\n\n"
-        )
 
     @classmethod
     @override

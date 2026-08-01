@@ -5,18 +5,18 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HiDive.url_handlers import (
-    HiDiveURLHandler,
-    MovieURLHandler,
-    SeasonURLHandler,
-    SeriesURLHandler,
-)
 from plugins.HiDive.helpers import HelperMixin
 from plugins.HiDive.search import SearchMixin
 
 # TODO: Add support for individual episodes of a series.
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
+from plugins.HiDive.url_handlers import (
+    HiDiveURLHandler,
+    MovieURLHandler,
+    SeasonURLHandler,
+    SeriesURLHandler,
+)
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
@@ -43,17 +43,6 @@ class HiDive(
     @override
     def _domain(cls) -> str:
         return "hidive.com"
-
-    @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Series]\n"
-            "> `https://www.hidive.com/series/1286`\n"
-            "> `https://www.hidive.com/season/20022`\n\n"
-            "> [!TIP/Movie]\n"
-            "> `https://www.hidive.com/video/586784`\n\n"
-        )
 
     @classmethod
     @override

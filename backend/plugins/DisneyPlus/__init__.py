@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
 from plugins.DisneyPlus.helpers import HelperMixin
 from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin
+from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
@@ -30,14 +30,6 @@ class DisneyPlus(
     @override
     def _domain(cls) -> str:
         return "disneyplus.com"
-
-    @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Series or Movie]\n"
-            "> `https://www.disneyplus.com/browse/entity-cac75c8f-a9e2-4d95-ac73-1cf1cc7b9568`\n\n"
-        )
 
     @classmethod
     @override

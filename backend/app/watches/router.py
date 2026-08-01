@@ -82,7 +82,7 @@ def import_watch_history(
             status_code=404,
             detail=f"Plugin '{params.plugin_key}' not found.",
         )
-    if not plugin.implements("import_watch_history_instructions"):
+    if not plugin.implements("import_watch_history"):
         raise HTTPException(
             status_code=422,
             detail=f"Plugin '{params.plugin_key}' does not support watch history import.",

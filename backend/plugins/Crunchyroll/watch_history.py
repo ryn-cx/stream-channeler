@@ -18,15 +18,6 @@ from plugins.utils.base_plugin.watch_history import (
 class WatchHistoryMixin(BaseWatchHistoryMixin, HelperMixin, register=False):
     import_watch_history_file_extension = ".json"
 
-    @classmethod
-    @override
-    def import_watch_history_instructions(cls) -> str:
-        return (
-            "1. Use [Itamae](https://github.com/ryn-cx/itamae) to download "
-            "your Crunchyroll watch history\n"
-            "2. Upload the file here"
-        )
-
     @override
     def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
         return [

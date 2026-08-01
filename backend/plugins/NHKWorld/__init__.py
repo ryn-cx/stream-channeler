@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import ClassVar, override
 
 from plugins.NHKWorld.helpers import HelperMixin
-from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
 from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
+from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
@@ -25,13 +25,6 @@ class NHKWorld(
     _URL_HANDLERS: ClassVar[tuple[type[NHKWorldURLHandler], ...]] = (ShowURLHandler,)
     # TODO: Don't hardcode the favicon URL
     FAVICON_URL = "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
-
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Show]\n"
-            "> `https://www3.nhk.or.jp/nhkworld/en/shows/japanologyplus/`\n\n"
-        )
 
     @classmethod
     @override

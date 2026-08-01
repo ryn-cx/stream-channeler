@@ -70,31 +70,6 @@ class YouTube(
     def domains(cls) -> list[str]:
         return [cls.__long_domain(), cls.__short_domain()]
 
-    @override
-    @classmethod
-    def import_url_instructions(cls) -> str:
-        return (
-            "> [!TIP/Channel]\n"
-            "> `https://www.youtube.com/@jawed`\n"
-            "> `https://www.youtube.com/jawed`\n"
-            "> `https://www.youtube.com/c/jawed`\n"
-            "> `https://www.youtube.com/user/jawed`\n"
-            "> `https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A`\n"
-            "> [!TIP/Playlist]\n"
-            "> `https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
-            "> [!TIP/Video]\n"
-            "> `https://www.youtube.com/watch?v=jNQXAC9IVRw`\n"
-            "> `https://youtu.be/jNQXAC9IVRw`\n"
-            "> `https://www.youtube.com/shorts/jNQXAC9IVRw`\n"
-            "> [!TIP/Video in Playlist]\n"
-            "> `https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
-            "> `https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
-            "> [!CAUTION/Not Supported: Shows]\n"
-            "> `https://www.youtube.com/playlist?list=TVSHI1FGTrUgFn4lRj_kLDPqR3ZC_PDpPGEPg`\n"
-            "> `https://www.youtube.com/show/SC76ETXKYZoiPWiG6TLxkBLA`\n"
-            "> Unfortunately, YouTube does not include show information in their API. As an alternative you can add all of the episodes of the show into a playlist and import that instead."
-        )
-
     @classmethod
     @override
     def _url_regex(cls) -> str:
