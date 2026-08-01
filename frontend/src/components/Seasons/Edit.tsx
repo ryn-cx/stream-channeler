@@ -25,6 +25,7 @@ const formSchema = z.object({
   url: optionalString,
   image_url: optionalString,
   sort_order: optionalInt,
+  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
@@ -50,6 +51,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       url: season.url ?? "",
       image_url: season.image_url ?? "",
       sort_order: season.sort_order ?? "",
+      tmdb_id: season.tmdb_id ?? "",
       data_timestamp: season.data_timestamp?.slice(0, 16) ?? "",
       update_at: season.update_at?.slice(0, 16) ?? "",
       key: season.key ?? "",
@@ -109,6 +111,12 @@ const EditSeason = ({ season }: EditSeasonProps) => {
         label="Image URL"
         placeholder="https://..."
         type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="TMDB ID"
+        placeholder="12345"
+        type="number"
       />
       <FormTextField
         control={form.control}

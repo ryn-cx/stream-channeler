@@ -170,6 +170,16 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
+    accessorKey: "tmdb_id",
+    header: "TMDB ID",
+    meta: { filterVariant: "range" },
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.tmdb_id ?? "-"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "episode_identifier",
     header: "Episode Identifier",
     cell: ({ row }) => (

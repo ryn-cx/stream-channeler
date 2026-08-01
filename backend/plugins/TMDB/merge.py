@@ -32,18 +32,11 @@ def _find_by_name[NamedType: _Named](
     if not name:
         return None
 
-    exact_matches = [candidate for candidate in candidates if candidate.name == name]
-    if len(exact_matches) == 1:
-        return exact_matches[0]
-
     target = _plaintext(name)
-    fuzzy_matches = [
+    matches = [
         candidate for candidate in candidates if _plaintext(candidate.name) == target
     ]
-    if len(fuzzy_matches) == 1:
-        return fuzzy_matches[0]
-
-    return None
+    return matches[0] if len(matches) == 1 else None
 
 
 class MergeMixin(LookupMixin, register=False):
@@ -176,22 +169,33 @@ class MergeMixin(LookupMixin, register=False):
         episode_number: int | None,
         episode_name: str | None,
     ) -> TvSeasonEpisode | None:
-        if season_number and self.has_season(tmdb_id, season_number):
-            episodes = self.season_detail_file(tmdb_id, season_number).parsed().episodes
-            if episode_number:
-                episode_detail = next(
-                    (
-                        candidate
-                        for candidate in episodes
-                        if candidate.episode_number == episode_number
-                    ),
-                    None,
-                )
-                if episode_detail:
-                    return episode_detail
-            return _find_by_name(episodes, episode_name)
+        episodes = self._all_episodes(tmdb_id)
 
-        return _find_by_name(self._all_episodes(tmdb_id), episode_name)
+        if episode_detail := _find_by_name(episodes, episode_name):
+            return episode_detail
+
+        return self._episode_by_number(tmdb_id, season_number, episode_number)
+
+    def _episode_by_number(
+        self,
+        tmdb_id: int,
+        season_number: int | None,
+        episode_number: int | None,
+    ) -> TvSeasonEpisode | None:
+        if not season_number or not episode_number:
+            return None
+        if not self.has_season(tmdb_id, season_number):
+            return None
+
+        episodes = self.season_detail_file(tmdb_id, season_number).parsed().episodes
+        return next(
+            (
+                candidate
+                for candidate in episodes
+                if candidate.episode_number == episode_number
+            ),
+            None,
+        )
 
     def _all_episodes(self, tmdb_id: int) -> list[TvSeasonEpisode]:
         episodes: list[TvSeasonEpisode] = []

@@ -113,7 +113,16 @@ class TMDBMixin(BasePlugin, register=False):
     _tmdb_id_cache: dict[str, int | None]
 
     def _existing_show(self, show_key: str) -> Show | None:
-        return self._preload_show(show_key).one_or_none()
+        """Return a stored `Show` for `show_key`, preferring one with a `tmdb_id`.
+
+        A plugin can hold the same `show_key` under more than one `Source`, so
+        there can be several copies of the same title. They all resolve to the
+        same TMDB entry, which is the only thing the caller reads.
+        """
+        shows = self._preload_show(show_key).all()
+        if not shows:
+            return None
+        return next((show for show in shows if show.tmdb_id), shows[0])
 
     def _cached_tmdb_id(self, show_key: str) -> int | None:
         """Resolve the TMDB id once per show key for the life of the plugin.

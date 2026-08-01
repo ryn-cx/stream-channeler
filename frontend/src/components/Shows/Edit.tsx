@@ -11,7 +11,12 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
-import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
+import {
+  nullifyBlanks,
+  optionalInt,
+  optionalString,
+  requiredKey,
+} from "@/lib/formSchemas"
 
 import type { ShowTableData } from "./columns"
 
@@ -23,6 +28,7 @@ const formSchema = z.object({
   url: optionalString,
   image_url: optionalString,
   icon: optionalString,
+  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
 })
@@ -49,6 +55,7 @@ const EditShow = ({ show }: EditShowProps) => {
       url: show.url ?? "",
       image_url: show.image_url ?? "",
       icon: show.icon ?? "",
+      tmdb_id: show.tmdb_id ?? "",
       data_timestamp: show.data_timestamp?.slice(0, 16) ?? "",
       update_at: show.update_at?.slice(0, 16) ?? "",
     },
@@ -114,6 +121,12 @@ const EditShow = ({ show }: EditShowProps) => {
         type="url"
       />
       <FormEmojiField control={form.control} name="icon" label="Icon" />
+      <FormTextField
+        control={form.control}
+        label="TMDB ID"
+        placeholder="12345"
+        type="number"
+      />
       <FormTextField
         control={form.control}
         label="Data Timestamp"

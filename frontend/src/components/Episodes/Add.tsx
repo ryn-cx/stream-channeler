@@ -38,6 +38,7 @@ const formSchema = z.object({
   air_date: optionalString,
   duration: optionalNonNegativeInt,
   sort_order: optionalInt,
+  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
@@ -72,6 +73,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
       air_date: "",
       duration: "",
       sort_order: "",
+      tmdb_id: "",
       data_timestamp: "",
       update_at: "",
       key: crypto.randomUUID(),
@@ -159,6 +161,12 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
         name="duration"
         label="Duration (seconds)"
         placeholder="0"
+        type="number"
+      />
+      <FormTextField
+        control={form.control}
+        label="TMDB ID"
+        placeholder="12345"
         type="number"
       />
       <FormTextField

@@ -11,7 +11,7 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { DialogTrigger } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
-import { optionalString, requiredKey } from "@/lib/formSchemas"
+import { optionalInt, optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
@@ -21,6 +21,7 @@ const formSchema = z.object({
   description: optionalString,
   url: optionalString,
   image_url: optionalString,
+  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
 })
@@ -49,6 +50,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
       description: "",
       url: "",
       image_url: "",
+      tmdb_id: "",
       data_timestamp: "",
       update_at: "",
     },
@@ -119,6 +121,12 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
         label="Image URL"
         placeholder="https://..."
         type="url"
+      />
+      <FormTextField
+        control={form.control}
+        label="TMDB ID"
+        placeholder="12345"
+        type="number"
       />
       <FormTextField
         control={form.control}

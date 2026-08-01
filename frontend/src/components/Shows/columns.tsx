@@ -97,6 +97,16 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "tmdb_id",
+    header: "TMDB ID",
+    meta: { filterVariant: "range" },
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.tmdb_id ?? "-"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
     meta: { filterVariant: "dateRange" },

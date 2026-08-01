@@ -39,6 +39,7 @@ const formSchema = z.object({
   air_date: optionalString,
   duration: optionalNonNegativeInt,
   sort_order: optionalInt,
+  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
@@ -70,6 +71,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       air_date: episode.air_date ?? "",
       duration: episode.duration ?? "",
       sort_order: episode.sort_order ?? "",
+      tmdb_id: episode.tmdb_id ?? "",
       data_timestamp: episode.data_timestamp?.slice(0, 16) ?? "",
       update_at: episode.update_at?.slice(0, 16) ?? "",
       key: episode.key ?? "",
@@ -148,6 +150,12 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         name="duration"
         label="Duration (seconds)"
         placeholder="0"
+        type="number"
+      />
+      <FormTextField
+        control={form.control}
+        label="TMDB ID"
+        placeholder="12345"
         type="number"
       />
       <FormTextField
