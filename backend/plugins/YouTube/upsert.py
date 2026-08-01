@@ -9,8 +9,11 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.YouTube.files import get_first_item
+from plugins.YouTube.files import get_first_item, is_video_key
 from plugins.YouTube.helpers import HelperMixin
+
+# A single video changes far less often than a channel or playlist does.
+_VIDEO_UPDATE_INTERVAL = timedelta(days=7)
 
 
 class UpsertMixin(HelperMixin, register=False):
@@ -22,6 +25,11 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
+        # A video from a channel that never lists it is imported as its own show, into
+        # that channel's own source rather than the one it was requested for.
+        if is_video_key(show_key):
+            return self._upsert_video_show(show_key, force=force)
+
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
@@ -44,6 +52,66 @@ class UpsertMixin(HelperMixin, register=False):
         self._soft_delete_missing(show_key)
 
         return show
+
+    def _upsert_video_show(
+        self,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        video_item = get_first_item(self.videos_file(show_key).parsed().items)
+        source = self._standalone_video_source(
+            video_item.snippet.channel_id,
+            video_item.snippet.channel_title,
+        )
+
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            show = Show(
+                key=show_key,
+                name=video_item.snippet.title,
+                # A YouTube video with a null character in the description caused
+                # importing to hang so it needs to be stripped out.
+                description=video_item.snippet.description.replace("\x00", ""),
+                url=self.build_url(f"watch?v={show_key}"),
+                media_type="YouTube Video",
+                image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _VIDEO_UPDATE_INTERVAL,
+                source_id=source.id,
+            ).upsert_and_set_update_at(source, show, self._show_files(show_key))
+
+        self._upsert_video_season(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
+
+        return show
+
+    def _upsert_video_season(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
+        season = Season.get_from_memory(self.session, show, show_key)
+        if self._season_is_outdated(season, force=force):
+            video_item = get_first_item(self.videos_file(show_key).parsed().items)
+            data_timestamp = self.season_data_timestamp(show_key, show_key)
+            season = Season(
+                key=show_key,
+                name=video_item.snippet.title,
+                url=self.build_url(f"watch?v={show_key}"),
+                image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _VIDEO_UPDATE_INTERVAL,
+                show_id=show.id,
+            ).upsert_and_set_update_at(
+                show,
+                season,
+                self._season_files(show_key, show_key),
+            )
+        self._upsert_episodes(season, show_key, force=force)
 
     def _upsert_seasons(
         self,
@@ -157,43 +225,64 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
+        # A season that is a single video holds only that video.
+        if is_video_key(season.key):
+            self._upsert_episode(season, show_key, season.key, 0, force=force)
+            return
+
         seen: set[str] = set()
         for item in self.playlist_items_file(season.key).parsed().items:
             episode_key = item.content_details.video_id
             if not self._video_is_valid(item.snippet.title) or episode_key in seen:
                 continue
             seen.add(episode_key)
+            self._upsert_episode(
+                season,
+                show_key,
+                episode_key,
+                item.snippet.position,
+                force=force,
+            )
 
-            episode = Episode.get_from_memory(self.session, season, episode_key)
-            if not self._episode_is_outdated(episode, force=force):
-                continue
+    def _upsert_episode(
+        self,
+        season: Season,
+        show_key: str,
+        episode_key: str,
+        sort_order: int | None,
+        *,
+        force: bool = False,
+    ) -> None:
+        episode = Episode.get_from_memory(self.session, season, episode_key)
+        if not self._episode_is_outdated(episode, force=force):
+            return
 
-            video_item = self.videos_file(episode_key).parsed().items[0]
-            video_snippet = video_item.snippet
+        video_item = get_first_item(self.videos_file(episode_key).parsed().items)
+        video_snippet = video_item.snippet
 
-            duration_timedelta = video_item.content_details.duration
-            duration = None
-            if duration_timedelta:
-                duration = int(duration_timedelta.total_seconds())
+        duration_timedelta = video_item.content_details.duration
+        duration = None
+        if duration_timedelta:
+            duration = int(duration_timedelta.total_seconds())
 
-            episode_files = self._episode_files(episode_key, season.key, show_key)
-            Episode(
-                key=video_item.id,
-                name=video_snippet.title,
-                url=self.build_url(f"watch?v={video_item.id}"),
-                # A YouTube video with a null character in the description caused
-                # importing to hang so it needs to be stripped out.
-                description=video_snippet.description.replace("\x00", ""),
-                release_date=video_snippet.published_at,
-                air_date=video_snippet.published_at,
-                duration=duration,
-                image_url=self._best_thumbnail_url(video_snippet.thumbnails),
-                sort_order=item.snippet.position,
-                episode_identifier=f"{self.plugin_key()} {video_item.id}",
-                data_timestamp=self.episode_data_timestamp(
-                    episode_key,
-                    season.key,
-                    show_key,
-                ),
-                season_id=season.id,
-            ).upsert_and_set_update_at(season, episode, episode_files)
+        episode_files = self._episode_files(episode_key, season.key, show_key)
+        Episode(
+            key=video_item.id,
+            name=video_snippet.title,
+            url=self.build_url(f"watch?v={video_item.id}"),
+            # A YouTube video with a null character in the description caused
+            # importing to hang so it needs to be stripped out.
+            description=video_snippet.description.replace("\x00", ""),
+            release_date=video_snippet.published_at,
+            air_date=video_snippet.published_at,
+            duration=duration,
+            image_url=self._best_thumbnail_url(video_snippet.thumbnails),
+            sort_order=sort_order,
+            episode_identifier=f"{self.plugin_key()} {video_item.id}",
+            data_timestamp=self.episode_data_timestamp(
+                episode_key,
+                season.key,
+                show_key,
+            ),
+            season_id=season.id,
+        ).upsert_and_set_update_at(season, episode, episode_files)

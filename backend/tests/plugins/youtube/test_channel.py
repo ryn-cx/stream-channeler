@@ -52,7 +52,9 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
 
 
 # Caused a crash.
-class TestVideoWith0x00CharacterInDescription(StandardTests[YouTube], ChannelNameValidator):
+class TestVideoWith0x00CharacterInDescription(
+    StandardTests[YouTube], ChannelNameValidator
+):
     channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
     channel_name = "PhotoLukeHawaii"
     parse_url_response = ("channel_handle", channel_name)
@@ -115,6 +117,17 @@ class TestChannelWithoutPlaylists(StandardTests[YouTube], ChannelNameValidator):
     channel_key = "UCVlx-IvZ_TBWRKU0UQCaueQ"
     channel_name = "chad"
     parse_url_response = ("channel_handle", channel_name)
+
+
+# The official YouTube Movies & TV channel truncates every listing it exposes, so
+# importing the channel would import almost none of the videos it owns. Its videos are
+# imported one at a time instead, as shows of their own.
+class TestStandaloneVideoChannel(InvalidYouTubeURLValidator):
+    channel_key = "UCuVPpxrm2VAgpH3Ktln4HXg"
+    urls = (
+        f"youtube.com/channel/{channel_key}",
+        f"youtube.com/channel/{channel_key}/videos",
+    )
 
 
 class TestInvalidChannelName(InvalidYouTubeURLValidator):

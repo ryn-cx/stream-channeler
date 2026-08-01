@@ -2,12 +2,29 @@
 from typing import Any, override
 from urllib.parse import quote
 
+from app.sources.models import Source
 from plugins.YouTube.files import FileMixin
 
 
 class HelperMixin(FileMixin, register=False):
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._imported_album_playlist_keys.add(playlist_key)
+
+    def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:
+        """Return the `Source` for videos that are imported one video at a time.
+
+        A channel whose videos are imported individually holds licensed titles rather
+        than the uploads of a creator, so it gets a `Source` of its own.
+        """
+        source_key = f"{self.plugin_key()}:{channel_key}"
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
+        return Source(
+            key=source_key,
+            name=channel_name,
+            favicon_url=self.FAVICON_URL,
+            data_timestamp=self._existing_data_timestamp_or_now(source),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
 
     def _channel_has_only_uploads(self, show_key: str) -> bool:
         channel_playlists_file = self.channel_playlists_file(show_key)

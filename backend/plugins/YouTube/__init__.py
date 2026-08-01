@@ -7,11 +7,12 @@ from typing import ClassVar, override
 
 from loguru import logger
 
+from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.YouTube.files import get_first_item
+from plugins.YouTube.files import get_first_item, is_quota_error, is_video_key
 from plugins.YouTube.handlers import (
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
@@ -25,6 +26,9 @@ from plugins.YouTube.helpers import HelperMixin
 from plugins.YouTube.source import SourceMixin
 from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
+
+_QUOTA_RETRY_DELAY = timedelta(hours=24)
+_VIDEO_SEASON_UPDATE_DELAY = timedelta(days=7)
 
 
 class YouTube(
@@ -84,7 +88,11 @@ class YouTube(
             "> `https://www.youtube.com/shorts/jNQXAC9IVRw`\n"
             "> [!TIP/Video in Playlist]\n"
             "> `https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
-            "> `https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`"
+            "> `https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`\n"
+            "> [!CAUTION/Not Supported: Shows]\n"
+            "> `https://www.youtube.com/playlist?list=TVSHI1FGTrUgFn4lRj_kLDPqR3ZC_PDpPGEPg`\n"
+            "> `https://www.youtube.com/show/SC76ETXKYZoiPWiG6TLxkBLA`\n"
+            "> Unfortunately, YouTube does not include show information in their API. As an alternative you can add all of the episodes of the show into a playlist and import that instead."
         )
 
     @classmethod
@@ -122,7 +130,27 @@ class YouTube(
         show = self._import_show(handler.show_key, handler.playlist_key)
         return handler.import_results(show)
 
-    def _import_show(self, show_key: str, playlist_key: str) -> Show:
+    @override
+    def on_import_url_failure(
+        self,
+        queue_item: ChannelQueue,
+        error: Exception,
+    ) -> None:
+        if not is_quota_error(error):
+            raise error
+
+        import_at = tz_datetime.now() + _QUOTA_RETRY_DELAY
+        logger.warning(
+            "YouTube API quota is spent, delaying the import of {} until {}.",
+            queue_item.url,
+            import_at,
+        )
+        queue_item.status = URLStatus.PENDING
+        queue_item.import_at = import_at
+        queue_item.note = "YouTube API quota exceeded, retrying in 24 hours."
+
+    # A YouTube show is always imported for a specific playlist.
+    def _import_show(self, show_key: str, playlist_key: str) -> Show:  # type: ignore[override]
         show = self._preload_show(show_key, preload_episodes=True).one_or_none()
         if not show:
             _cache = self._download_show_files_and_children(show_key)
@@ -148,6 +176,16 @@ class YouTube(
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
+        # A season that is a single video has no feed to check for new videos.
+        if is_video_key(season.key):
+            self._download_season_files_and_children(
+                season,
+                update_at=season.update_at,
+            )
+            self._preload_and_upsert_show(season.show)
+            season.update_at = tz_datetime.now() + _VIDEO_SEASON_UPDATE_DELAY
+            return
+
         playlist_feed = self.playlist_feed_file(season.key)
         # Without a stored feed there is nothing to compare the download against, so
         # this run only stores the feed and the next one checks it for new videos.

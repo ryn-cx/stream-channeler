@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelQueueAdminOutput } from "@/client"
+import { DateCell } from "@/components/Common/TableCells"
 import { ChannelQueueActions } from "./ChannelQueueActions"
 
 export const channelQueueColumns: ColumnDef<ChannelQueueAdminOutput>[] = [
@@ -58,6 +59,12 @@ export const channelQueueColumns: ColumnDef<ChannelQueueAdminOutput>[] = [
     header: "Status",
     meta: { filterVariant: "select" },
     filterFn: "equalsString",
+  },
+  {
+    accessorKey: "import_at",
+    header: "Import At",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => <DateCell value={row.original.import_at} />,
   },
   {
     id: "note",

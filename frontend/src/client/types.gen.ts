@@ -276,6 +276,7 @@ export type ChannelQueueAdminOutput = {
     url: string;
     status: URLStatus;
     note?: (string | null);
+    import_at?: (string | null);
     id: string;
     channel_id: string;
     created_at: string;
@@ -291,12 +292,14 @@ export type ChannelQueueAdminOutput = {
 export type ChannelQueueAdminUpdate = {
     status?: (URLStatus | null);
     note?: (string | null);
+    import_at?: (string | null);
 };
 
 export type ChannelQueueOutput = {
     url: string;
     status: URLStatus;
     note?: (string | null);
+    import_at?: (string | null);
     id: string;
     channel_id: string;
 };

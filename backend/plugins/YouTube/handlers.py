@@ -3,15 +3,26 @@ from __future__ import annotations
 
 import re
 from abc import abstractmethod
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
-from plugins.utils.abstract_plugin import URLImportResult
+from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
-from plugins.YouTube.files import get_first_item, is_music_playlist_key
+from plugins.YouTube.files import (
+    get_first_item,
+    is_music_playlist_key,
+    is_standalone_video_channel,
+    is_video_key,
+)
 
 if TYPE_CHECKING:
     from app.shows.models import Show
+    from plugins.utils.base_plugin.files import BaseFile
     from plugins.YouTube import YouTube
+    from plugins.YouTube.files import (
+        ChannelByChannelId,
+        ChannelByHandle,
+        ChannelByUsername,
+    )
 
 
 def _single_video_import_results(
@@ -74,11 +85,19 @@ class VideoURLHandler(YouTubeURLHandler):
     @override
     def show_key(self) -> str:
         videos_file = self.plugin.videos_file(self.video_key)
-        return videos_file.parsed().items[0].snippet.channel_id
+        channel_key = videos_file.parsed().items[0].snippet.channel_id
+        # A channel that never lists this video cannot be imported to reach it, so the
+        # video is imported as a show of its own instead.
+        if is_standalone_video_channel(channel_key):
+            return self.video_key
+        return channel_key
 
     @property
     def playlist_key(self) -> str:
-        return self.plugin.channel_uploads_playlist_key(self.show_key)
+        show_key = self.show_key
+        if is_video_key(show_key):
+            return show_key
+        return self.plugin.channel_uploads_playlist_key(show_key)
 
     @override
     def raise_if_invalid(self) -> None:
@@ -161,9 +180,27 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
 
 class ChannelURLHandler(YouTubeURLHandler):
     @property
+    @abstractmethod
+    def _channel_file(self) -> BaseFile[Any]:
+        """Return the file that resolves the URL to a channel."""
+
+    @property
     @override
     def playlist_key(self) -> str:
         return self.plugin.channel_uploads_playlist_key(self.show_key)
+
+    @override
+    def raise_if_invalid(self) -> None:
+        self.plugin.raise_if_invalid_file(self._channel_file, self.url)
+
+        # The channel only lists a fraction of the videos it owns, so importing it
+        # would import almost none of them. Its videos are imported one at a time.
+        if is_standalone_video_channel(self.show_key):
+            msg = (
+                f"{self.show_key} does not list most of the videos it owns, so import "
+                f"the URL of an individual video instead of the channel: {self.url}"
+            )
+            raise InvalidURLError(msg)
 
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
@@ -189,12 +226,10 @@ class ChannelKeyURLHandler(ChannelURLHandler):
     def show_key(self) -> str:
         return self._match.group("channel_key")
 
+    @property
     @override
-    def raise_if_invalid(self) -> None:
-        self.plugin.raise_if_invalid_file(
-            self.plugin.channel_by_channel_id_file(self.show_key),
-            self.url,
-        )
+    def _channel_file(self) -> ChannelByChannelId:
+        return self.plugin.channel_by_channel_id_file(self.show_key)
 
 
 class ChannelUsernameURLHandler(ChannelURLHandler):
@@ -204,18 +239,13 @@ class ChannelUsernameURLHandler(ChannelURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        username_file = self.plugin.channel_by_username_file(
-            self._match.group("channel_username"),
-        )
-        return get_first_item(username_file.parsed().items).id
+        return get_first_item(self._channel_file.parsed().items).id
 
+    @property
     @override
-    def raise_if_invalid(self) -> None:
-        self.plugin.raise_if_invalid_file(
-            self.plugin.channel_by_username_file(
-                self._match.group("channel_username"),
-            ),
-            self.url,
+    def _channel_file(self) -> ChannelByUsername:
+        return self.plugin.channel_by_username_file(
+            self._match.group("channel_username"),
         )
 
 
@@ -228,14 +258,9 @@ class ChannelHandleURLHandler(ChannelURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        handle_file = self.plugin.channel_by_handle_file(
-            self._match.group("channel_handle"),
-        )
-        return get_first_item(handle_file.parsed().items).id
+        return get_first_item(self._channel_file.parsed().items).id
 
+    @property
     @override
-    def raise_if_invalid(self) -> None:
-        self.plugin.raise_if_invalid_file(
-            self.plugin.channel_by_handle_file(self._match.group("channel_handle")),
-            self.url,
-        )
+    def _channel_file(self) -> ChannelByHandle:
+        return self.plugin.channel_by_handle_file(self._match.group("channel_handle"))

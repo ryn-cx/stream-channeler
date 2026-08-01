@@ -417,6 +417,9 @@ class BaseChannelQueue(SQLModel):
     url: str = Field()
     status: URLStatus = Field()
     note: str | None = Field(default=None)
+    # The earliest time the URL may be imported. Set by a plugin that wants the
+    # import retried later, such as after its API's daily quota runs out.
+    import_at: datetime | None = DateTimeField(default=None)
 
 
 class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):

@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import {
@@ -53,6 +54,9 @@ export function EditChannelQueueDialog({
 
   const [status, setStatus] = useState<URLStatus>(queueEntry.status)
   const [note, setNote] = useState(queueEntry.note ?? "")
+  const [importAt, setImportAt] = useState(
+    queueEntry.import_at?.slice(0, 16) ?? "",
+  )
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -61,6 +65,7 @@ export function EditChannelQueueDialog({
         requestBody: {
           status,
           note: note.trim() === "" ? null : note.trim(),
+          import_at: importAt === "" ? null : importAt,
         },
       }),
     onSuccess: () => {
@@ -101,6 +106,19 @@ export function EditChannelQueueDialog({
             </Select>
             <p className="text-sm text-muted-foreground">
               Set to Pending to re-queue the URL for import.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-queue-import-at">Import At</Label>
+            <Input
+              id="edit-queue-import-at"
+              type="datetime-local"
+              value={importAt}
+              onChange={(event) => setImportAt(event.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              The URL is not imported before this time. Clear it to import on
+              the next run.
             </p>
           </div>
           <div className="space-y-1.5">

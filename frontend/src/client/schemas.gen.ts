@@ -1391,6 +1391,18 @@ export const ChannelQueueAdminOutputSchema = {
             ],
             title: 'Note'
         },
+        import_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Import At'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -1480,6 +1492,18 @@ export const ChannelQueueAdminUpdateSchema = {
                 }
             ],
             title: 'Note'
+        },
+        import_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Import At'
         }
     },
     additionalProperties: false,
@@ -1507,6 +1531,18 @@ export const ChannelQueueOutputSchema = {
                 }
             ],
             title: 'Note'
+        },
+        import_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Import At'
         },
         id: {
             type: 'string',

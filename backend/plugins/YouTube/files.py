@@ -10,7 +10,11 @@ from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel import Channel as ChannelEndpoint
 from not_yt_dlapi.channel.models import ChannelsModel
-from not_yt_dlapi.exceptions import ChannelNotFoundError, PlaylistNotFoundError
+from not_yt_dlapi.exceptions import (
+    ChannelNotFoundError,
+    NotYTDLAPIError,
+    PlaylistNotFoundError,
+)
 from not_yt_dlapi.playlist_item import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_item.models import PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
@@ -43,6 +47,45 @@ def not_yt_dlapi() -> NotYTDLAPI:
 def is_music_playlist_key(key: str) -> bool:
     """Report whether a playlist key belongs to an auto-generated album."""
     return key.startswith("OLAK5uy_")
+
+
+# The official YouTube Movies & TV channel. Its uploads playlist and playlist listing
+# are truncated, so most of the videos it owns are missing from every listing the
+# channel exposes and can only be reached by importing them one at a time.
+_STANDALONE_VIDEO_CHANNEL_KEYS = frozenset({"UCuVPpxrm2VAgpH3Ktln4HXg"})
+
+_VIDEO_KEY_LENGTH = 11
+
+
+def is_standalone_video_channel(channel_key: str) -> bool:
+    """Report whether a channel's videos are imported one video at a time.
+
+    A video from such a channel becomes a show of its own instead of an episode of
+    the channel, so importing one only ever adds the video that was asked for.
+    """
+    return channel_key in _STANDALONE_VIDEO_CHANNEL_KEYS
+
+
+def is_video_key(key: str) -> bool:
+    """Report whether a key belongs to a video rather than a channel or playlist.
+
+    A standalone video is its own show, season and episode, all keyed by the video,
+    and every channel and playlist key is longer than a video key.
+    """
+    return len(key) == _VIDEO_KEY_LENGTH
+
+
+# The reasons YouTube gives when the API key has spent its daily quota. The quota
+# resets at midnight Pacific Time, so nothing else will succeed until then.
+_QUOTA_REASONS = frozenset({"dailyLimitExceeded", "quotaExceeded"})
+
+
+def is_quota_error(error: BaseException) -> bool:
+    """Report whether `error` is the YouTube API refusing calls until quota resets."""
+    if not isinstance(error, NotYTDLAPIError):
+        return False
+    errors = error.response.get("error", {}).get("errors", [])
+    return any(item.get("reason") in _QUOTA_REASONS for item in errors)
 
 
 def get_first_item[T](items: list[T] | None) -> T:
@@ -171,26 +214,36 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
             item["contentDetails"]["videoId"] for item in existing_items
         }
 
-        page = endpoint.download(self.unique_identifier)
-
-        # TODO: noy_yt_dlapi needs to support fetching a specific page, until then
-        # download all of the playlist videos if there are at least 50 new entries.
-        page_items: list[dict[str, Any]] = page["items"]
-        if not any(
-            item["contentDetails"]["videoId"] in existing_video_ids
-            for item in page_items
-        ):
-            return endpoint.parse(
-                _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
+        pages: list[dict[str, Any]] = []
+        page_token: str | None = None
+        reached_existing_video = False
+        while not reached_existing_video:
+            page = endpoint.download(self.unique_identifier, page_token=page_token)
+            pages.append(page)
+            # Everything from the first already stored video onwards is already stored,
+            # so the remaining pages do not need to be spent on.
+            reached_existing_video = any(
+                item["contentDetails"]["videoId"] in existing_video_ids
+                for item in page["items"]
             )
+            page_token = page.get("nextPageToken")
+            if not page_token:
+                break
 
-        new_ids = {item["contentDetails"]["videoId"] for item in page_items}
-        page["items"] = list(page_items) + [
+        merged = _merge_pages(pages)
+        # Paging to the end of the playlist without reaching a stored video means the
+        # download covers the whole playlist, so keeping the stored items would keep
+        # videos that have since been removed.
+        if not reached_existing_video:
+            return endpoint.parse(merged)
+
+        new_ids = {item["contentDetails"]["videoId"] for item in merged["items"]}
+        merged["items"] = merged["items"] + [
             item
             for item in existing_items
             if item["contentDetails"]["videoId"] not in new_ids
         ]
-        return endpoint.parse(page)
+        return endpoint.parse(merged)
 
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
@@ -281,7 +334,10 @@ class FileMixin(BasePlugin, register=False):
     def _show_files(
         self,
         show_key: str,
-    ) -> Sequence[ChannelByChannelId | ChannelPlaylists | PlaylistItems]:
+    ) -> Sequence[ChannelByChannelId | ChannelPlaylists | PlaylistItems | Videos]:
+        # A show that is a single video is described by the video itself.
+        if is_video_key(show_key):
+            return [self.videos_file(show_key)]
         return [
             # Required to detect new seasons (playlists).
             self.channel_playlists_file(show_key),
@@ -295,7 +351,10 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo]:
+    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo | Videos]:
+        # A season that is a single video is described by the video itself.
+        if is_video_key(season_key):
+            return [self.videos_file(season_key)]
         files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
@@ -329,6 +388,10 @@ class FileMixin(BasePlugin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
+        # A show that is a single video has that video as its only season.
+        if is_video_key(show_key):
+            return [show_key]
+
         channel_item = get_first_item(
             self.channel_by_channel_id_file(show_key).parsed().items,
         )
@@ -384,6 +447,13 @@ class FileMixin(BasePlugin, register=False):
         seen: set[str] = set()
         video_keys: list[str] = []
         for season_key in season_keys:
+            # A season that is a single video holds only that video.
+            if is_video_key(season_key):
+                if season_key not in seen:
+                    seen.add(season_key)
+                    video_keys.append(season_key)
+                continue
+
             playlist_items_file = self.playlist_items_file(season_key)
             if not playlist_items_file.database_record.content:
                 msg = (

@@ -5,7 +5,7 @@ import traceback
 from uuid import UUID
 
 from loguru import logger
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, or_, select
 
 from app.channels.models import (
     Channel,
@@ -18,6 +18,7 @@ from app.channels.models import (
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -62,7 +63,13 @@ def _group_pending_urls_by_plugin(
     unmatched: list[ChannelQueue] = []
     pending = session.exec(
         select(ChannelQueue)
-        .where(col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]))
+        .where(
+            col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
+            or_(
+                col(ChannelQueue.import_at).is_(None),
+                col(ChannelQueue.import_at) <= tz_datetime.now(),
+            ),
+        )
         .order_by(col(ChannelQueue.created_at).asc()),
     ).all()
     for item in pending:
@@ -90,18 +97,26 @@ def _import_one(
         queue_item.status = URLStatus.IMPORTING
         import_results = plugin_class(session).import_url(queue_item.url)
         add_results_to_channel(session, import_results, queue_item.channel)
-    except InvalidURLError:
+    except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")
         queue_item.status = URLStatus.FAILED
-        queue_item.note = "Invalid URL."
+        # The plugin explains why the URL cannot be imported, which is the only place
+        # the user is told what to do instead.
+        queue_item.note = str(error) or "Invalid URL."
         session.commit()
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         logger.exception(f"[{plugin_key}] Error importing: {queue_item.url}")
+        # Roll back partial changes, then let the plugin decide how to reschedule
+        # the failed URL.
         session.rollback()
-        queue_item.status = URLStatus.FAILED
-        queue_item.note = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__),
-        )
+        session.refresh(queue_item)
+        try:
+            plugin_class(session).on_import_url_failure(queue_item, error)
+        except Exception:  # noqa: BLE001 - The plugin re-raised its default.
+            queue_item.status = URLStatus.FAILED
+            queue_item.note = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__),
+            )
         session.commit()
     else:
         queue_item.status = URLStatus.IMPORTED

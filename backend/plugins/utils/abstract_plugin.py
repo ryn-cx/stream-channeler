@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from pydantic import BaseModel, Field
 
+from app.channels.models import ChannelQueue
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
@@ -93,6 +94,19 @@ class AbstractPlugin(ABC):
         """
         msg = "import_url is not supported by this plugin."
         raise NotImplementedError(msg)
+
+    def on_import_url_failure(
+        self,
+        queue_item: ChannelQueue,  # noqa: ARG002 - `queue_item` is used by overrides.
+        error: Exception,
+    ) -> None:
+        """Handle a failure while importing a URL from a `Channel`'s queue.
+
+        By default the error is re-raised so the caller applies its default
+        handling, which marks the URL as failed. Override to reschedule the URL
+        instead, by setting `queue_item.status` and `queue_item.import_at`.
+        """
+        raise error
 
     @classmethod
     def import_url_instructions(cls) -> str:

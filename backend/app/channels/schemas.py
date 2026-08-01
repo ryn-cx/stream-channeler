@@ -145,6 +145,7 @@ class ChannelQueueAdminUpdate(BaseInput):
 
     status: URLStatus | None = Field(default=None)
     note: str | None = Field(default=None)
+    import_at: datetime | None = Field(default=None)
 
 
 class ChannelOrderInput(BaseInput):
