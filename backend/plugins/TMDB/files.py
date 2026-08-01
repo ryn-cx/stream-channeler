@@ -1,4 +1,5 @@
 # TODO: Validate
+from collections.abc import Generator
 from datetime import date, datetime
 from functools import cache
 from typing import Any, ClassVar, Literal, overload, override
@@ -19,7 +20,7 @@ from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import GAPIJSON
+from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
 from plugins.utils.base_plugin.plugin import BasePlugin
 
 LOOKUP_ONLY_MESSAGE = (
@@ -116,9 +117,7 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
         self.tmdb_id = tmdb_id
         super().__init__(session, plugin, str(tmdb_id))
 
-    @override
-    def _download(self) -> None:
-        super()._download()
+    def _child_files(self) -> Generator[BaseFile[Any]]:
         for season in self.parsed().seasons:
             season_file = SeasonDetail(
                 self.session,
@@ -126,15 +125,29 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
                 self.tmdb_id,
                 season.season_number,
             )
-            season_file.download_if_outdated()
+            yield season_file
+            if season_file.is_outdated():
+                continue
             for episode in season_file.parsed().episodes:
-                EpisodeDetail(
+                yield EpisodeDetail(
                     self.session,
                     self.plugin,
                     self.tmdb_id,
                     season.season_number,
                     episode.episode_number,
-                ).download_if_outdated()
+                )
+
+    @override
+    def _download(self) -> None:
+        super()._download()
+        for child_file in self._child_files():
+            child_file.download_if_outdated()
+
+    @override
+    def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
+        if super().is_outdated(minimum_timestamp):
+            return True
+        return any(child_file.is_outdated() for child_file in self._child_files())
 
 
 class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):
