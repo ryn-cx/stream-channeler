@@ -2035,6 +2035,11 @@ export const EpisodeCreateSchema = {
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
         }
     },
     additionalProperties: false,
@@ -2214,6 +2219,11 @@ export const EpisodeListOutputSchema = {
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
         },
         id: {
             type: 'string',
@@ -2473,6 +2483,11 @@ export const EpisodeOutputSchema = {
             type: 'string',
             title: 'Episode Identifier'
         },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2674,6 +2689,11 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
         }
     },
     additionalProperties: false,
@@ -2852,6 +2872,11 @@ export const EpisodeWithDetailsSchema = {
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
         },
         id: {
             type: 'string',
@@ -6945,6 +6970,11 @@ export const WhitelistEpisodeOutputSchema = {
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked',
+            default: false
         },
         id: {
             type: 'string',

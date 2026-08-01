@@ -170,6 +170,31 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
+    accessorKey: "episode_identifier",
+    header: "Episode Identifier",
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.episode_identifier} />
+    ),
+  },
+  {
+    accessorFn: (row) => (row.episode_identifier_locked ? "true" : "false"),
+    id: "episode_identifier_locked",
+    header: "Identifier Locked",
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Yes", value: "true" },
+        { label: "No", value: "false" },
+      ],
+    },
+    filterFn: "equalsString",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.episode_identifier_locked ? "Yes" : "No"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => <TruncatedCell value={row.original.id} />,

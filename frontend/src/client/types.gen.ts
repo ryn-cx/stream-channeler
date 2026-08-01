@@ -417,6 +417,7 @@ export type EpisodeCreate = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier: string;
+    episode_identifier_locked?: boolean;
 };
 
 /**
@@ -439,6 +440,7 @@ export type EpisodeListOutput = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier: string;
+    episode_identifier_locked?: boolean;
     id: string;
     season_id: string;
     username: (string | null);
@@ -471,6 +473,7 @@ export type EpisodeOutput = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier: string;
+    episode_identifier_locked?: boolean;
     id: string;
     season_id: string;
 };
@@ -505,6 +508,7 @@ export type EpisodeUpdate = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier?: (string | null);
+    episode_identifier_locked?: boolean;
 };
 
 export type EpisodeWithDetails = {
@@ -524,6 +528,7 @@ export type EpisodeWithDetails = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier: string;
+    episode_identifier_locked?: boolean;
     id: string;
     season_id: string;
     watch_date?: (string | null);
@@ -1277,6 +1282,7 @@ export type WhitelistEpisodeOutput = {
     air_date?: (string | null);
     tmdb_id?: (number | null);
     episode_identifier: string;
+    episode_identifier_locked?: boolean;
     id: string;
     season_id: string;
     filtered: boolean;

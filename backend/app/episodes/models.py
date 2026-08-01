@@ -43,6 +43,7 @@ class BaseEpisode(BaseMediaMixin):
     air_date: datetime | None = DateTimeField(default=None)
     tmdb_id: int | None = Field(default=None)
     episode_identifier: str
+    episode_identifier_locked: bool = Field(default=False)
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
@@ -127,6 +128,24 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @override
     def children(self) -> list[Never]:
         return []
+
+    @override
+    def upsert(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        parent: Season,
+        existing_record: Self | None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        """Upsert the `Episode`, keeping a locked `episode_identifier` intact.
+
+        `episode_identifier_locked` is only ever set by a `User`, so it is always
+        protected, and while it is set the automatically detected
+        `episode_identifier` never replaces the one the `User` chose.
+        """
+        protected_keys = set(protected_keys or ()) | {"episode_identifier_locked"}
+        if existing_record and existing_record.episode_identifier_locked:
+            protected_keys.add("episode_identifier")
+        return super().upsert(parent, existing_record, protected_keys)
 
     def __str__(self) -> str:
         """Return a string representation of the `Episode`."""
