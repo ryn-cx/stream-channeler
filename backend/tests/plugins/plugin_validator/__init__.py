@@ -332,10 +332,7 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         with log_stats(self):
             results = self.plugin_class(session_with_files).import_url(self.url)
 
-        database_dump_content = self.database_dump_file_path().read_text()
-        database_dump_data = json.loads(database_dump_content)
-
-        original_plugin = self._load_model(Plugin, database_dump_data)
+        original_plugin = self.load_database_dump_plugin()
         validator = self.import_url_validator()
         validator.validate(
             original_plugin,

@@ -39,12 +39,23 @@ _RAW_SUFFIX = ".raw"
 
 
 def _plugin_class(plugin_key: str) -> type[BasePlugin]:
-    """Return the registered plugin class for a plugin key."""
+    """Return the plugin class for a plugin key.
+
+    Unregistered plugins are included because a registered plugin can create
+    records owned by one (e.g. JustWatch creating Disney+ sources).
+    """
     import_plugins()
     for plugin_class in plugins:
         if plugin_class.plugin_key() == plugin_key:
             return plugin_class  # type: ignore[return-value]
-    msg = f"No plugin registered for key {plugin_key!r}"
+
+    remaining: list[type[BasePlugin]] = [BasePlugin]
+    while remaining:
+        plugin_class = remaining.pop()
+        remaining.extend(plugin_class.__subclasses__())
+        if plugin_class.plugin_key() == plugin_key:
+            return plugin_class
+    msg = f"No plugin found for key {plugin_key!r}"
     raise ValueError(msg)
 
 
@@ -118,17 +129,24 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return a plugin with all children selectinloaded."""
-        select_statement = (
-            select(Plugin)
-            .where(Plugin.key == self.plugin_class.plugin_key())
-            .options(
-                selectinload(Plugin.sources)  # type: ignore[arg-type]
-                .selectinload(Source.shows)  # type: ignore[arg-type]
-                .selectinload(Show.seasons)  # type: ignore[arg-type]
-                .selectinload(Season.episodes),  # type: ignore[arg-type]
-            )
+        select_statement = self._plugin_with_children_statement().where(
+            Plugin.key == self.plugin_class.plugin_key(),
         )
         return session.exec(select_statement).one()
+
+    def select_plugins_with_children(self, session: Session) -> list[Plugin]:
+        """Return every plugin in the database with all children selectinloaded."""
+        statement = self._plugin_with_children_statement().order_by(Plugin.key)  # type: ignore[arg-type]
+        return list(session.exec(statement).all())
+
+    @staticmethod
+    def _plugin_with_children_statement() -> Any:
+        return select(Plugin).options(
+            selectinload(Plugin.sources)  # type: ignore[arg-type]
+            .selectinload(Source.shows)  # type: ignore[arg-type]
+            .selectinload(Show.seasons)  # type: ignore[arg-type]
+            .selectinload(Season.episodes),  # type: ignore[arg-type]
+        )
 
     def _export_all_files(self, session: Session) -> None:
         """Export all files from the database and the verification file for to disk."""
@@ -136,16 +154,35 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         self._export_database_dump_file(session)
 
     def _export_database_dump_file(self, session: Session) -> None:
-        """Export the database dump file to disk if it does not already exist."""
+        """Export the database dump file to disk if it does not already exist.
+
+        A scraper can create records owned by another plugin (e.g. the TMDB
+        metadata fallback), so every plugin is dumped, not only the one under test.
+        """
         if self.database_dump_file_path().exists():
             return
-        plugin = self.select_plugin_with_children(session)
-        plugin_dict = self._dump_model(plugin)
+        plugin_dicts = [
+            self._dump_model(plugin)
+            for plugin in self.select_plugins_with_children(session)
+        ]
         self.database_dump_file_path().parent.mkdir(parents=True, exist_ok=True)
         self.database_dump_file_path().write_text(
-            json.dumps(plugin_dict, default=str, indent=2),
+            json.dumps(plugin_dicts, default=str, indent=2),
             encoding="utf-8",
         )
+
+    def load_database_dump(self) -> list[dict[str, Any]]:
+        """Load every plugin's dumped state from the database dump file."""
+        return json.loads(self.database_dump_file_path().read_text(encoding="utf-8"))
+
+    def load_database_dump_plugin(self) -> Plugin:
+        """Load the plugin under test from the database dump file."""
+        plugin_key = self.plugin_class.plugin_key()
+        for plugin_dict in self.load_database_dump():
+            if plugin_dict["key"] == plugin_key:
+                return self._load_model(Plugin, plugin_dict)
+        msg = f"No dumped plugin for key {plugin_key!r}"
+        raise ValueError(msg)
 
     @staticmethod
     def _simplify_import_url_results(

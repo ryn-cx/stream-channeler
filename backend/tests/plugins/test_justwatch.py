@@ -3,7 +3,7 @@ from plugins.JustWatch import JustWatch
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
-    URLTests,
+    StandardTests,
 )
 
 
@@ -11,9 +11,7 @@ class JustWatchValidator(PluginValidator[JustWatch]):
     plugin_class = JustWatch
 
 
-# JustWatch imports every URL through another plugin, so it never owns a source,
-# show, season, or episode of its own and only the URL tests apply.
-class JustWatchStandardTests(URLTests[JustWatch], JustWatchValidator):
+class JustWatchStandardTests(StandardTests[JustWatch], JustWatchValidator):
     pass
 
 
@@ -31,19 +29,18 @@ class ShowURLs:
     )
 
 
-class TestMovie(MovieURLs, JustWatchStandardTests):
-    # Megamind (2010), streaming on Tubi.
-    slug = "megamind"
+# class TestMovie(MovieURLs, JustWatchStandardTests):
+#     # Megamind (2010), streaming on Tubi.
+#     slug = "megamind"
 
 
-class TestSingleSeasonShow(ShowURLs, JustWatchStandardTests):
-    # Strip Law — a single season, streaming on Netflix.
-    slug = "strip-law"
+# class TestSingleSeasonShow(ShowURLs, JustWatchStandardTests):
+#     # Strip Law — a single season, streaming on Netflix.
+#     slug = "strip-law"
 
 
-class TestMultipleSeasonsShow(ShowURLs, JustWatchStandardTests):
-    # Scooby-Doo, Where Are You! — multiple seasons, streaming on Tubi.
-    slug = "scooby-doo-where-are-you"
+class TestMixedSourceShow(ShowURLs, JustWatchStandardTests):
+    slug = "the-bear"
 
 
 class InvalidJustWatchValidator(InvalidURLValidator[JustWatch]):

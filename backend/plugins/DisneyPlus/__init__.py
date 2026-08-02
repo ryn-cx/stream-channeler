@@ -1,5 +1,10 @@
 # TODO: Validate
-"""Disney+ plugin."""
+"""Disney+ plugin.
+
+Should be considered permenently broken because there is no obvious way to get
+information on episodes after episode 24, so it is not registered and Disney+
+titles are imported from JustWatch instead.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +22,7 @@ class DisneyPlus(
     UpsertMixin,
     HelperMixin,
     URLHandlerPlugin[DisneyPlusURLHandler],
-    register=True,
+    register=False,
 ):
     """Disney+ plugin."""
 

@@ -37,6 +37,26 @@ class SeriesURLHandler(HuluURLHandler):
         )
 
 
+class WatchURLHandler(HuluURLHandler):
+    media_type = "series"
+    # https://www.hulu.com/watch/60da223c-d2a0-411a-95c9-665a839371f9
+    # A watch URL points at a single episode, so the series it belongs to has to be
+    # looked up before the show can be imported.
+    _URL_REGEX = rf"\/watch\/(?P<episode_id>{_UUID_REGEX})"
+
+    @property
+    @override
+    def show_key(self) -> str:
+        return self.plugin.episode_hub_file(self._key).series_id()
+
+    @override
+    def raise_if_invalid(self) -> None:
+        self.plugin.raise_if_invalid_file(
+            self.plugin.episode_hub_file(self._key),
+            self.url,
+        )
+
+
 class MovieURLHandler(HuluURLHandler):
     media_type = "movie"
     # https://www.hulu.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981

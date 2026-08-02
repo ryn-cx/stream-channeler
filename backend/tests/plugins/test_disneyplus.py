@@ -1,6 +1,8 @@
 # TODO: Validate
 from typing import override
 
+import pytest
+
 from app.shows.models import Show
 from plugins.DisneyPlus import DisneyPlus
 from tests.plugins.plugin_validator import (
@@ -9,6 +11,11 @@ from tests.plugins.plugin_validator import (
     StandardTests,
 )
 from tests.plugins.plugin_validator.validator import Validator
+
+pytest.skip(
+    "Disney+ is not a registered plugin, its titles are imported from JustWatch.",
+    allow_module_level=True,
+)
 
 
 class DisneyPlusValidator(PluginValidator[DisneyPlus]):
@@ -51,6 +58,16 @@ class TestTemp(EntityURLs, DisneyPlusStandardTests):
 
 class TestMovie(EntityURLs, DisneyPlusStandardTests):
     entity_id = "6e497c43-d4da-4e12-b100-d4d38dc2a7ff"
+
+
+class TestTVShowPaginatedEpisode(EntityURLs, DisneyPlusStandardTests):
+    """Test a series whose season has more episodes than a page lists.
+
+    The page only lists 24 episodes of a season, so the rest of this season's 65
+    episodes have to be read separately.
+    """
+
+    entity_id = "1a16953a-f763-49fe-bb80-d40bfb015c06"
 
 
 class InvalidDisneyPlusValidator(InvalidURLValidator[DisneyPlus]):

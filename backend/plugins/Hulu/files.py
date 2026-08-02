@@ -1,7 +1,7 @@
 # TODO: Validate
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, override
+from typing import Any, cast, override
 
 from sqlmodel import Session
 from wholoo import Wholoo
@@ -13,7 +13,12 @@ from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
 from plugins.TMDB.mixin import TMDBMixin
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, PartialGAPIJSON
+from plugins.utils.base_plugin.files import (
+    GAPIJSON,
+    BaseFile,
+    JSONFile,
+    PartialGAPIJSON,
+)
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
@@ -21,6 +26,18 @@ from plugins.utils.get_around_client import get_around_client
 @cache
 def wholoo() -> Wholoo:
     return Wholoo(get_around_client=get_around_client())
+
+
+# The details hub for a single episode, which is the only place the id of the series
+# an episode belongs to can be looked up.
+_EPISODE_HUB_URL = "https://discover.hulu.com/content/v5/hubs/episode"
+_EPISODE_HUB_PARAMS = {
+    "schema": "3",
+    "limit": "1999",
+    "device_info": "web:4.44.1",
+    "referralHost": "production",
+    "pageType": "DETAILS",
+}
 
 
 class Series(GAPIJSON[TVModel]):
@@ -62,10 +79,44 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
         return self.API_ENDPOINT.download_and_parse(self.series_id, self.season_number)
 
 
+class EpisodeHub(JSONFile[dict[str, Any]]):
+    """Episode file."""
+
+    # TODO: Add this to Wholoo so it has full type support.
+    def __init__(self, session: Session, plugin: Plugin, episode_id: str) -> None:
+        self.unique_identifier = episode_id
+        super().__init__(session, plugin)
+
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            self.write(
+                wholoo().download(
+                    f"{_EPISODE_HUB_URL}/{self.unique_identifier}",
+                    f"https://www.hulu.com/watch/{self.unique_identifier}",
+                    params=_EPISODE_HUB_PARAMS,
+                    log_id=f"EpisodeHub/{self.unique_identifier}",
+                ),
+            )
+
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return cast("dict[str, Any]", raw)
+
+    def series_id(self) -> str:
+        """Return the id of the series the episode belongs to."""
+        entity = self.parsed()["details"]["vod_items"]["focus"]["entity"]
+        return str(entity["series_id"])
+
+
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
     def series_file(self, series_id: str) -> Series:
         """Returns Series file."""
         return self._file(Series, series_id)
+
+    def episode_hub_file(self, episode_id: str) -> EpisodeHub:
+        """Returns EpisodeHub file."""
+        return self._file(EpisodeHub, episode_id)
 
     def search_file(self, query: str) -> SearchFile:
         """Returns SearchFile file."""

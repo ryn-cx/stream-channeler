@@ -44,6 +44,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
@@ -62,6 +67,27 @@ interface Show {
 interface Source {
   favicon_url?: string | null
   name: string | null
+}
+
+/** The source's favicon, naming the source when it is hovered. */
+function SourceFavicon({ source }: { source: Source | undefined }) {
+  if (!source?.favicon_url) return null
+
+  const favicon = (
+    <img
+      src={source.favicon_url}
+      alt={`${source.name} favicon`}
+      className="size-4 shrink-0"
+    />
+  )
+  if (!source.name) return favicon
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{favicon}</TooltipTrigger>
+      <TooltipContent>{source.name}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 function getStatusBadgeVariant(status: string) {
@@ -464,13 +490,7 @@ export function ManageShowsTabs({
                       <TableRow key={show.id}>
                         <TableCell className="whitespace-normal">
                           <div className="flex items-center gap-2">
-                            {source?.favicon_url && (
-                              <img
-                                src={source.favicon_url}
-                                alt={`${source.name} favicon`}
-                                className="size-4 shrink-0"
-                              />
-                            )}
+                            <SourceFavicon source={source} />
                             <span className="wrap-break-word">
                               {show.name ?? ""}
                             </span>
@@ -531,13 +551,7 @@ export function ManageShowsTabs({
                         <TableRow key={show.id}>
                           <TableCell className="whitespace-normal">
                             <div className="flex items-center gap-2">
-                              {source?.favicon_url && (
-                                <img
-                                  src={source.favicon_url}
-                                  alt={`${source.name} favicon`}
-                                  className="size-4 shrink-0"
-                                />
-                              )}
+                              <SourceFavicon source={source} />
                               <span className="wrap-break-word">
                                 {show.name ?? ""}
                               </span>

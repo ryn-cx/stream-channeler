@@ -53,13 +53,30 @@ def import_plugins() -> None:
 plugins: set[type[AbstractPlugin]] = set()
 """Track all of the plugins that have been registered."""
 
+user_plugins: set[type[AbstractPlugin]] = set()
+"""The plugins that are available to every user."""
+
+superuser_plugins: set[type[AbstractPlugin]] = set()
+"""The plugins that are only available to superusers."""
+
 
 def register_plugins(plugin: type[AbstractPlugin]) -> None:
     """Register all plugins in the plugins folder."""
     plugins.add(plugin)
+    if plugin.SUPERUSER_ONLY:
+        superuser_plugins.add(plugin)
+    else:
+        user_plugins.add(plugin)
 
 
 def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()
     return sorted(plugins, key=lambda plugin: plugin.plugin_key())
+
+
+def sorted_plugins_for_user(*, is_superuser: bool) -> list[type[AbstractPlugin]]:
+    """Return the plugins the requesting user may use, sorted by their plugin_key."""
+    import_plugins()
+    available = user_plugins | superuser_plugins if is_superuser else user_plugins
+    return sorted(available, key=lambda plugin: plugin.plugin_key())
