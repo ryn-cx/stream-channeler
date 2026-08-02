@@ -6,6 +6,9 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Amazon.files import FileMixin
 
+# Names the source that holds the titles that have to be bought or rented.
+_PURCHASE_SOURCE_SUFFIX = "Purchase"
+
 
 class HelperMixin(FileMixin, register=False):
     @override
@@ -56,21 +59,40 @@ class HelperMixin(FileMixin, register=False):
             f"s?url=search-alias%3Dinstant-video&field-keywords={quote_plus(query)}",
         )
 
-    def _channel_source(self, show_key: str, default: Source) -> Source:
-        """Return the `Source` for a title, split out per Amazon Channel.
+    def _title_sources(self, show_key: str, default: Source) -> list[Source]:
+        """Return every `Source` a title belongs to, by how it can be watched.
 
-        A title that needs its own subscription (e.g. HBO Max through Prime Video)
-        is not part of Prime Video itself, so it gets a `Source` of its own.
+        A title is often offered more than one way, such as with a channel
+        subscription and as a purchase, and each way is a source of its own so the
+        title is found however the user can watch it. Only a title included with
+        Prime belongs to Prime Video itself.
         """
-        channel = self.detail_page(show_key).channel()
-        if channel is None:
-            return default
+        detail_page = self.detail_page(show_key)
+        sources = [
+            self._extra_source(
+                f"{self.plugin_key()}:{channel.benefit_id}",
+                f"{self.plugin_name()} ({channel.name})",
+            )
+            for channel in detail_page.channels()
+        ]
+        if detail_page.included_with_prime():
+            sources.append(default)
+        if detail_page.purchasable():
+            sources.append(
+                self._extra_source(
+                    f"{self.plugin_key()}:{_PURCHASE_SOURCE_SUFFIX}",
+                    f"{self.plugin_name()} ({_PURCHASE_SOURCE_SUFFIX})",
+                ),
+            )
+        # A title with no way to watch it listed still belongs somewhere.
+        return sources or [default]
 
-        source_key = f"{self.plugin_key()}:{channel.benefit_id}"
+    def _extra_source(self, source_key: str, name: str) -> Source:
+        """Return one of the plugin's `Source`s other than its default one."""
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
             key=source_key,
-            name=f"{self.plugin_name()} ({channel.name})",
+            name=name,
             favicon_url=self.FAVICON_URL,
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, existing_source)

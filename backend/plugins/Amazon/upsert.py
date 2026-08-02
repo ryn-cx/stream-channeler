@@ -32,14 +32,39 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        source = self._channel_source(show_key, source)
-        if self._is_movie(show_key):
-            show = self._upsert_movie(source, show_key, force=force)
-        else:
-            show = self._upsert_series_show(source, show_key, force=force)
+        return self._upsert_shows(source, show_key, force=force)[0]
+
+    def _upsert_shows(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> list[Show]:
+        """Upsert a title into every source it belongs to.
+
+        A title that can be watched more than one way belongs to a source for each
+        of them, so it is found however the user can watch it.
+        """
+        shows = [
+            self._upsert_title(title_source, show_key, force=force)
+            for title_source in self._title_sources(show_key, source)
+        ]
         self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
-        return show
+        for show in shows:
+            self._set_weekly_updates_from_episodes(show, update_show=False)
+        return shows
+
+    def _upsert_title(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        if self._is_movie(show_key):
+            return self._upsert_movie(source, show_key, force=force)
+        return self._upsert_series_show(source, show_key, force=force)
 
     def _upsert_series_show(
         self,

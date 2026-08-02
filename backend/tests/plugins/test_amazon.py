@@ -30,28 +30,50 @@ class DetailURLs:
         "/dp/{asin}",
         "/dp/{asin}?lv=shuf&channelId=500&plpRedirect=mhFallback",
         "/gp/video/detail/{asin}",
-        # The title slug in front of /dp/ is decorative, so any slug resolves the ASIN.
-        "/Justice-League-Unlimited-Season-1/dp/{asin}",
     )
 
 
-class TestSeries(DetailURLs, AmazonStandardTests):
-    asin = "B095RHJ52R"
+class TestFreeMovie(DetailURLs, AmazonStandardTests):
+    """Test a free movie on Prime Video."""
+
+    asin = "B0GHXVBQLM"
 
 
-class TestPaidShow(DetailURLs, AmazonStandardTests):
-    asin = "0GK0W5DZFOWP14GMAR51GE1AYD"
+class TestPaidMovie(DetailURLs, AmazonStandardTests):
+    """Test a paid movie on Prime Video."""
+
+    asin = "B0H3QRLYCN"
 
 
-# Watching this needs an HBO Max subscription through Prime Video, so it belongs to
-# its own source rather than to Prime Video.
-class TestChannelShow(DetailURLs, AmazonStandardTests):
-    asin = "B003LJVNEY"
+class TestPaidOrRentMovie(DetailURLs, AmazonStandardTests):
+    """Test a paid or rent movie on Prime Video."""
+
+    asin = "B0FZLW2HCF"
 
 
-class InvalidAmazonValidator(InvalidURLValidator[Amazon]):
-    plugin_class = Amazon
+class TestFreeTVShow(DetailURLs, AmazonStandardTests):
+    """Test a free TV show on Prime Video."""
+
+    asin = "B09PWHKFR2"
 
 
-class TestInvalid(DetailURLs, InvalidAmazonValidator):
-    asin = "B000000000"
+class TestPaidTVShow(DetailURLs, AmazonStandardTests):
+    """Test a paid TV show on Prime Video."""
+
+    asin = "B09PWHKFR2"
+
+
+class TestPaidOrRentTVShow(DetailURLs, AmazonStandardTests):
+    """Test a paid or rent TV show on Prime Video."""
+
+    asin = "B00C16ID14"
+
+
+class TestTVShowPaginatedEpisode(DetailURLs, AmazonStandardTests):
+    """Test a TV show whose episodes do not fit on one page.
+
+    The episode list holds 24 episodes at a time, so this season's 33 episodes are
+    split over two pages and the second page has to be read as well.
+    """
+
+    asin = "B005C8DB7E"

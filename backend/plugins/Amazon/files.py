@@ -2,6 +2,7 @@
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from http import HTTPStatus
 from typing import Any, cast, override
 
@@ -11,7 +12,7 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from plugins.TMDB.mixin import TMDBMixin
-from plugins.utils.base_plugin.files import BaseFile, HTMLFile
+from plugins.utils.base_plugin.files import BaseFile, HTMLFile, JSONFile
 from plugins.utils.get_around_client import get_around_client
 
 _HYDRATION_SCRIPT_ID = "dv-web-page-hydration-data"
@@ -42,6 +43,21 @@ def _pick_image(images: dict[str, Any]) -> str | None:
 # Prime itself is offered through the same subscription payload as a channel, but a
 # title included with Prime belongs to Prime Video rather than a separate source.
 _PRIME_BENEFIT_IDS = frozenset({"Prime"})
+
+# The payload a title carries when it is offered for sale or for rent.
+_PURCHASE_DATA_KEY = "purchaseData"
+
+
+def _episode_from_detail(asin: str, detail: dict[str, Any]) -> AmazonEpisode:
+    return AmazonEpisode(
+        asin=asin,
+        title=detail["title"],
+        episode_number=detail["episodeNumber"],
+        synopsis=detail.get("synopsis"),
+        duration=detail.get("duration"),
+        release_date=detail.get("releaseDate"),
+        image_url=_pick_image(detail.get("images", {})),
+    )
 
 
 def _channel_name(label: str) -> str:
@@ -81,6 +97,8 @@ class DetailPage(HTMLFile):
 
     def __init__(self, session: Session, plugin: Plugin, asin: str) -> None:
         self.asin = asin
+        self.session = session
+        self.plugin = plugin
         self._hydration_cache: dict[str, Any] | None = None
         super().__init__(session, plugin, asin)
 
@@ -104,6 +122,25 @@ class DetailPage(HTMLFile):
                 return
             response.raise_for_status()
             self.write(response.text)
+
+        for page in self._episode_pages():
+            page.download_if_outdated()
+
+    def _episode_pages(self) -> list[EpisodeListPage]:
+        if not self.database_record.content:
+            return []
+        return [
+            EpisodeListPage(self.session, self.plugin, self.asin, index)
+            for index in range(len(self.episode_page_tokens()))
+        ]
+
+    @override
+    def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
+        if super().is_outdated(minimum_timestamp):
+            return True
+        # The episode list is only ever downloaded alongside this page, so a
+        # missing page of it makes this page outdated as well.
+        return any(page.is_outdated() for page in self._episode_pages())
 
     @override
     def parsed(self) -> BeautifulSoup:
@@ -183,16 +220,52 @@ class DetailPage(HTMLFile):
         collect(actions)
         return found
 
-    def channel(self) -> AmazonChannel | None:
-        """Return the Amazon Channel this title needs, or None when it is included."""
+    def channels(self) -> list[AmazonChannel]:
+        """Return every Amazon Channel this title can be watched with.
+
+        A channel is listed more than once when it offers the title in more than
+        one way, and only the first listing names the channel.
+        """
+        channels: list[AmazonChannel] = []
+        seen: set[str] = set()
         for subscription in self._subscriptions():
             benefit_id = subscription.get("benefitId")
             label = subscription.get("label")
-            if benefit_id in _PRIME_BENEFIT_IDS:
+            if not benefit_id or not label:
                 continue
-            if benefit_id and label:
-                return AmazonChannel(benefit_id, _channel_name(label))
-        return None
+            if benefit_id in _PRIME_BENEFIT_IDS or benefit_id in seen:
+                continue
+            seen.add(benefit_id)
+            channels.append(AmazonChannel(benefit_id, _channel_name(label)))
+        return channels
+
+    def included_with_prime(self) -> bool:
+        """Report whether a Prime subscription is enough to watch this title."""
+        return any(
+            subscription.get("benefitId") in _PRIME_BENEFIT_IDS
+            for subscription in self._subscriptions()
+        )
+
+    def purchasable(self) -> bool:
+        """Report whether this title can be bought or rented.
+
+        A title can be offered both ways, such as with a channel subscription and
+        as a purchase, so this is asked on top of the other ways to watch it.
+        """
+        actions = self._body()["atf"]["state"]["action"]["atf"].get(self._page_id(), {})
+
+        def has_purchase_data(node: object) -> bool:
+            if isinstance(node, dict):
+                mapping = cast("dict[str, Any]", node)
+                if isinstance(mapping.get(_PURCHASE_DATA_KEY), dict):
+                    return True
+                return any(has_purchase_data(value) for value in mapping.values())
+            if isinstance(node, list):
+                values: list[Any] = node
+                return any(has_purchase_data(value) for value in values)
+            return False
+
+        return has_purchase_data(actions)
 
     def seasons(self) -> list[AmazonSeason]:
         seasons_by_id = self._body()["atf"]["state"].get("seasons", {})
@@ -206,27 +279,83 @@ class DetailPage(HTMLFile):
             for entry in entries
         ]
 
+    def episode_page_tokens(self) -> list[str]:
+        """Return the token of every page the episode list is split over.
+
+        The page only carries the episodes of the page it opens on, so every page
+        is read from the episode list endpoint rather than from the page itself.
+        """
+        actions = self._body()["btf"]["state"].get("episodeList", {}).get("actions", {})
+        return [page["token"] for page in actions.get("episodePages", [])]
+
     def episodes(self) -> list[AmazonEpisode]:
-        state = self._body()["btf"]["state"]
-        details = state.get("detail", {}).get("detail", {})
-        asins = state.get("episodeList", {}).get("cardTitleIds", [])
-        result: list[AmazonEpisode] = []
-        for asin in asins:
-            detail = details.get(asin)
-            if detail is None:
-                continue
-            result.append(
-                AmazonEpisode(
-                    asin=asin,
-                    title=detail["title"],
-                    episode_number=detail["episodeNumber"],
-                    synopsis=detail.get("synopsis"),
-                    duration=detail.get("duration"),
-                    release_date=detail.get("releaseDate"),
-                    image_url=_pick_image(detail.get("images", {})),
-                ),
+        """Return every episode of the season, across all of its pages."""
+        episodes: list[AmazonEpisode] = []
+        seen: set[str] = set()
+        for page in self._episode_pages():
+            for episode in page.episodes():
+                if episode.asin not in seen:
+                    seen.add(episode.asin)
+                    episodes.append(episode)
+        return episodes
+
+
+class EpisodeListPage(JSONFile[dict[str, Any]]):
+    """One page of a season's episode list.
+
+    Only the first page is part of the detail page, so the rest are asked for with
+    the token the detail page carries for them.
+    """
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        asin: str,
+        page_index: int,
+    ) -> None:
+        self.asin = asin
+        self.page_index = page_index
+        self.session = session
+        self.plugin = plugin
+        self.unique_identifier = f"{asin}/{page_index}"
+        super().__init__(session, plugin)
+
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return cast("dict[str, Any]", raw)
+
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            detail_page = DetailPage(self.session, self.plugin, self.asin)
+            token = detail_page.episode_page_tokens()[self.page_index]
+            widgets = json.dumps(
+                [{"widgetType": "EpisodeList", "widgetToken": token}],
             )
-        return result
+            response = get_around_client().get(
+                "https://www.amazon.com/gp/video/api/getDetailWidgets",
+                params={"titleID": self.asin, "isTvodOnRow": "", "widgets": widgets},
+                headers={
+                    **_PAGE_HEADERS,
+                    "Accept": "*/*",
+                    # The endpoint only answers requests the page itself would make.
+                    "x-requested-with": "XMLHttpRequest",
+                    "Referer": f"https://www.amazon.com/gp/video/detail/{self.asin}",
+                },
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            self.write(response.text)
+
+    def episodes(self) -> list[AmazonEpisode]:
+        """Return the episodes this page holds."""
+        episode_list = self.parsed().get("widgets", {}).get("episodeList", {})
+        return [
+            _episode_from_detail(entry["detail"]["catalogId"], entry["detail"])
+            for entry in episode_list.get("episodes", [])
+            if entry.get("detail")
+        ]
 
 
 class FileMixin(TMDBMixin, register=False):
