@@ -10,6 +10,7 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.Hulu.helpers import HelperMixin
 
 
@@ -161,8 +162,13 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
+        now = tz_datetime.now()
         for sort_order, item in enumerate(self._season_items(show_key, season_number)):
-            season.set_update_at(item.bundle.availability.start_date)
+            start_date = item.bundle.availability.start_date
+            if start_date > now:
+                season.set_update_at(start_date)
+                continue
+
             episode_key = str(item.id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(episode, force=force):
