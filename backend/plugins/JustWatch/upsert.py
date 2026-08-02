@@ -39,12 +39,25 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         existing_show = Show.get_from_memory(self.session, source, show_key)
 
-        parsed_json = self.url_title_details_file(show_key).parsed()
         offer = next(
-            offer
-            for offer_source_key, offer in self._sources_with_offers(show_key)
-            if offer_source_key == source.key
+            (
+                offer
+                for offer_source_key, offer in self._sources_with_offers(show_key)
+                if offer_source_key == source.key
+            ),
+            None,
         )
+
+        # A source that stopped offering the title has nothing left to import, so the
+        # show it was imported into is soft deleted.
+        if offer is None:
+            if existing_show is None:
+                msg = f"Source {source.key} has no offer for show {show_key}."
+                raise ValueError(msg)
+            existing_show.soft_delete()
+            return existing_show
+
+        parsed_json = self.url_title_details_file(show_key).parsed()
         media_type = self._media_type(show_key)
         new_show = Show(
             key=show_key,

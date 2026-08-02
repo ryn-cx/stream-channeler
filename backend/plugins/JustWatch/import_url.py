@@ -44,17 +44,21 @@ class ImportURLMixin(
         return results
 
     def _import_shows(self, show_key: str, source_keys: list[str]) -> list[Show]:
-        """Import the title from JustWatch's own data for `source_keys`."""
+        """Import the title from JustWatch's own data for `source_keys`.
+
+        A title picks up and loses offers over time, so a title that is already
+        stored for one source still has to be imported for any source it has since
+        become available on.
+        """
         if not source_keys:
             return []
 
-        existing_shows = [
-            show
+        existing_shows = {
+            show.source.key: show
             for show in self._preload_show(show_key, preload_source=True).all()
-            if show.source.key in source_keys
-        ]
-        if existing_shows:
-            return existing_shows
+        }
+        if all(source_key in existing_shows for source_key in source_keys):
+            return [existing_shows[source_key] for source_key in source_keys]
 
         _cache = (
             self._download_show_files_and_children(show_key),
