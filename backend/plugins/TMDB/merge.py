@@ -197,7 +197,19 @@ class MergeMixin(LookupMixin, register=False):
             None,
         )
 
+    _all_episodes_cache: dict[int, list[TvSeasonEpisode]]
+
     def _all_episodes(self, tmdb_id: int) -> list[TvSeasonEpisode]:
+        """Return every episode of a show, read once for the life of the plugin.
+
+        Every episode of a show looks its name up in the same list, so without
+        caching a show re-reads all of its season files once per episode.
+        """
+        if not hasattr(self, "_all_episodes_cache"):
+            self._all_episodes_cache = {}
+        if tmdb_id in self._all_episodes_cache:
+            return self._all_episodes_cache[tmdb_id]
+
         episodes: list[TvSeasonEpisode] = []
         for season in self.show_detail_file(tmdb_id).parsed().seasons:
             season_detail = self.season_detail_file(
@@ -205,4 +217,5 @@ class MergeMixin(LookupMixin, register=False):
                 season.season_number,
             ).parsed()
             episodes.extend(season_detail.episodes)
+        self._all_episodes_cache[tmdb_id] = episodes
         return episodes

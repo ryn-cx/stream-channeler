@@ -9,11 +9,20 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.YouTube.files import get_first_item, is_video_key
+from plugins.YouTube.files import (
+    get_first_item,
+    has_tmdb_entry,
+    is_show_key,
+    is_show_season_key,
+    is_video_key,
+    split_show_season_key,
+)
 from plugins.YouTube.helpers import HelperMixin
 
 # A single video changes far less often than a channel or playlist does.
 _VIDEO_UPDATE_INTERVAL = timedelta(days=7)
+# A show only changes when a season or an episode is added to it.
+_SERIES_UPDATE_INTERVAL = timedelta(days=7)
 
 
 class UpsertMixin(HelperMixin, register=False):
@@ -27,7 +36,75 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         if is_video_key(show_key):
             return self._upsert_movie_show(show_key, force=force)
+        if is_show_key(show_key):
+            return self._upsert_series_show(show_key, force=force)
         return self._upsert_channel_show(source, show_key, force=force)
+
+    def _upsert_series_show(
+        self,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        show_page = self.show_page_file(show_key)
+        # Every episode belongs to the same channel the movies do, so a show is
+        # imported into the same source they are.
+        first_episode = get_first_item(self.show_episode_keys(show_key))
+        video_item = get_first_item(self.videos_file(first_episode).parsed().items)
+        source = self._standalone_video_source(
+            video_item.snippet.channel_id,
+            video_item.snippet.channel_title,
+        )
+
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
+                key=show_key,
+                name=show_page.title(),
+                url=self.build_url(f"show/{show_key}"),
+                media_type="YouTube Show",
+                data_timestamp=data_timestamp,
+                # A show only changes when a season is added to it.
+                update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                source_id=source.id,
+            )
+            show = self._merge_and_upsert_show(new_show, source, show, show_key, "tv")
+
+        self._upsert_series_seasons(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
+
+        return show
+
+    def _upsert_series_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
+        for season_key in self._season_keys_from_file(show_key):
+            _, season_number = split_show_season_key(season_key)
+            season = Season.get_from_memory(self.session, show, season_key)
+            if self._season_is_outdated(season, show_key, force=force):
+                data_timestamp = self.season_data_timestamp(season_key, show_key)
+                new_season = Season(
+                    key=season_key,
+                    name=f"Season {season_number}",
+                    season_number=int(season_number),
+                    url=self.build_url(f"show/{show_key}?season={season_number}"),
+                    data_timestamp=data_timestamp,
+                    update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                    show_id=show.id,
+                )
+                season = self._merge_and_upsert_season(
+                    new_season,
+                    show,
+                    season,
+                    show_key,
+                    "tv",
+                )
+            self._upsert_episodes(season, show_key, force=force)
 
     def _upsert_channel_show(
         self,
@@ -74,7 +151,7 @@ class UpsertMixin(HelperMixin, register=False):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             data_timestamp = self.show_data_timestamp(show_key)
-            show = Show(
+            new_show = Show(
                 key=show_key,
                 name=video_item.snippet.title,
                 # A YouTube video with a null character in the description caused
@@ -88,7 +165,14 @@ class UpsertMixin(HelperMixin, register=False):
                 # available.
                 update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
-            ).upsert_and_set_update_at(source, show, self._show_files(show_key))
+            )
+            show = self._merge_and_upsert_show(
+                new_show,
+                source,
+                show,
+                show_key,
+                "movie",
+            )
 
         self._upsert_movie_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -103,10 +187,10 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         season = Season.get_from_memory(self.session, show, show_key)
-        if self._season_is_outdated(season, force=force):
+        if self._season_is_outdated(season, show_key, force=force):
             video_item = get_first_item(self.videos_file(show_key).parsed().items)
             data_timestamp = self.season_data_timestamp(show_key, show_key)
-            season = Season(
+            new_season = Season(
                 key=show_key,
                 name=video_item.snippet.title,
                 url=self.build_url(f"watch?v={show_key}"),
@@ -114,10 +198,13 @@ class UpsertMixin(HelperMixin, register=False):
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp,
                 show_id=show.id,
-            ).upsert_and_set_update_at(
+            )
+            season = self._merge_and_upsert_season(
+                new_season,
                 show,
                 season,
-                self._season_files(show_key, show_key),
+                show_key,
+                "movie",
             )
         self._upsert_episodes(season, show_key, force=force)
 
@@ -143,7 +230,7 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, force=force):
+        if self._season_is_outdated(season, show_key, force=force):
             season_files = self._season_files(season_key, show_key)
             data_timestamp = self.season_data_timestamp(season_key, show_key)
             season = Season(
@@ -238,6 +325,19 @@ class UpsertMixin(HelperMixin, register=False):
             self._upsert_episode(season, show_key, season.key, 0, force=force)
             return
 
+        # A season of a show holds the episodes its page lists, in page order.
+        if is_show_season_key(season.key):
+            episode_keys = self._season_episode_keys(season.key)
+            for position, episode_key in enumerate(episode_keys):
+                self._upsert_episode(
+                    season,
+                    show_key,
+                    episode_key,
+                    position,
+                    force=force,
+                )
+            return
+
         seen: set[str] = set()
         for item in self.playlist_items_file(season.key).parsed().items:
             episode_key = item.content_details.video_id
@@ -262,7 +362,7 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, episode_key)
-        if not self._episode_is_outdated(episode, force=force):
+        if not self._episode_is_outdated(episode, season.key, show_key, force=force):
             return
 
         video_item = get_first_item(self.videos_file(episode_key).parsed().items)
@@ -273,8 +373,7 @@ class UpsertMixin(HelperMixin, register=False):
         if duration_timedelta:
             duration = int(duration_timedelta.total_seconds())
 
-        episode_files = self._episode_files(episode_key, season.key, show_key)
-        Episode(
+        new_episode = Episode(
             key=video_item.id,
             name=video_snippet.title,
             url=self.build_url(f"watch?v={video_item.id}"),
@@ -286,6 +385,7 @@ class UpsertMixin(HelperMixin, register=False):
             duration=duration,
             image_url=self._best_thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
+            episode_number=self._get_episode_number(episode_key, season.key, show_key),
             episode_identifier=f"{self.plugin_key()} {video_item.id}",
             data_timestamp=self.episode_data_timestamp(
                 episode_key,
@@ -293,4 +393,18 @@ class UpsertMixin(HelperMixin, register=False):
                 show_key,
             ),
             season_id=season.id,
-        ).upsert_and_set_update_at(season, episode, episode_files)
+        )
+
+        # Only a movie or a show has a TMDB entry to cross reference against.
+        if not has_tmdb_entry(show_key):
+            episode_files = self._episode_files(episode_key, season.key, show_key)
+            new_episode.upsert_and_set_update_at(season, episode, episode_files)
+            return
+
+        self._merge_and_upsert_episode(
+            new_episode,
+            season,
+            episode,
+            show_key,
+            self._tmdb_media_type(show_key),
+        )

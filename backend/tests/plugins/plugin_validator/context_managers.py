@@ -39,7 +39,8 @@ def track_downloads() -> Generator[list[str]]:
     original_download_if_outdated = BaseFile[Any].download_if_outdated
 
     def _track_downloads(
-        self: BaseFile[Any], update_at: datetime | None = None
+        self: BaseFile[Any],
+        update_at: datetime | None = None,
     ) -> None:
         was_outdated = self.is_outdated(update_at)
         original_download_if_outdated(self, update_at)

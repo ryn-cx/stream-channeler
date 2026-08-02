@@ -3,7 +3,7 @@ import json
 from collections.abc import Generator
 from contextlib import suppress
 from datetime import datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import pytest
@@ -32,6 +32,10 @@ from tests.conftest import (
     test_engine,
 )
 from tests.plugins.plugin_validator.serialization import SerializationMixin
+
+# Distinguishes an exported file's content from its metadata, which is stored under
+# the file's own name.
+_RAW_SUFFIX = ".raw"
 
 
 def _plugin_class(plugin_key: str) -> type[BasePlugin]:
@@ -74,12 +78,31 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         return variants[0] if variants else None
 
     def files_directory_path(self) -> Path:
-        """Path to the directory where all files for the test class are stored."""
-        return TEST_FILES_FOLDER / self.plugin_class.plugin_key() / type(self).__name__
+        """Path to the directory where all files for the test class are stored.
+
+        The test's file name is a folder of its own so two test classes that share
+        a name but live in different files do not share a directory.
+        """
+        test_class = type(self)
+        file_name = test_class.__module__.rsplit(".", maxsplit=1)[-1]
+        return (
+            TEST_FILES_FOLDER
+            / self.plugin_class.plugin_key()
+            / file_name
+            / test_class.__name__
+        )
 
     def stats_directory_path(self, label: str) -> Path:
-        """Path to the directory where stats for a specific test are stored."""
+        """Path to the directory where a specific test's profiling output is stored."""
         return self.files_directory_path() / "stats" / label
+
+    def stats_file_path(self) -> Path:
+        """Path to the file holding the stats of every test of the test class."""
+        return self.files_directory_path() / "stats.json"
+
+    def slow_stats_file_path(self) -> Path:
+        """Path to the file holding the stats of every test that got worse."""
+        return self.files_directory_path() / "slow.json"
 
     def database_dump_file_path(self) -> Path:
         """Path to the file that has the expected output for the test class."""
@@ -176,6 +199,12 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
+    @staticmethod
+    def _raw_content_name(file_id: str) -> str:
+        """Return the name the raw content of `file_id` is stored under."""
+        path = PurePosixPath(file_id)
+        return str(path.with_name(f"{path.stem}{_RAW_SUFFIX}{path.suffix}"))
+
     def _export_database_file(self, file: File, plugin_key: str) -> None:
         """Export a single file from the database to its owning plugin's folder."""
         # Make the file names NTFS compatible.
@@ -185,7 +214,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         # Export the full file (metadata + content) as JSON for importing.
         metadata = file.model_dump(exclude={"plugin_id"})
         metadata["plugin_key"] = plugin_key
-        metadata_path = plugin_directory / f"{file_id}.metadata.json"
+        metadata_path = plugin_directory / file_id
         if not metadata_path.exists():
             metadata_path.parent.mkdir(parents=True, exist_ok=True)
             metadata_path.write_text(
@@ -194,10 +223,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             )
 
         # Also export the raw content file for easy inspection.
-        content_path = plugin_directory / file_id
+        content_path = plugin_directory / self._raw_content_name(file_id)
         content_path.parent.mkdir(parents=True, exist_ok=True)
         file_content = file.content
-        if content_path.suffix == ".json":
+        if content_path.suffixes[-1:] == [".json"]:
             with suppress(json.JSONDecodeError):
                 file_content = json.dumps(json.loads(file_content or ""), indent=2)
         content_path.write_text(file_content or "", encoding="utf-8")
@@ -240,8 +269,26 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             return json.loads(combined_content)
         return [
             json.loads(file_path.read_text(encoding="utf-8"))
-            for file_path in self.files_directory_path().rglob("*.metadata.json")
+            for file_path in self._exported_metadata_paths()
         ]
+
+    def _exported_metadata_paths(self) -> list[Path]:
+        """Return the metadata file of every exported file.
+
+        Every exported file is stored in the folder of the plugin that owns it, as
+        its metadata under the file's own name and its content alongside it under a
+        `.raw` name.
+        """
+        root = self.files_directory_path()
+        return sorted(
+            path
+            for path in root.rglob("*")
+            if path.is_file()
+            # The test's own output sits in the root and in the stats folder.
+            and path.parent != root
+            and path.relative_to(root).parts[0] != "stats"
+            and _RAW_SUFFIX not in path.suffixes
+        )
 
     def _import_files(self, session: Session) -> None:
         """Import all exported files into the database, keyed to their own plugin."""

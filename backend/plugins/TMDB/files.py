@@ -1,11 +1,11 @@
 # TODO: Validate
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from datetime import date, datetime
 from functools import cache
 from typing import Any, ClassVar, Literal, overload, override
 
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, col, or_, select
 from tminidb import TMiniDB
 from tminidb.movie_details.models import MovieDetailsModel
 from tminidb.movie_watch_providers.models import MovieWatchProvidersModel
@@ -18,6 +18,7 @@ from tminidb.tv_series_details.models import TvSeriesDetailsModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
 from app.config import settings
+from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
@@ -115,9 +116,29 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
         self.session = session
         self.plugin = plugin
         self.tmdb_id = tmdb_id
+        self._children_are_stored = False
+        self._child_records: Sequence[File] = []
         super().__init__(session, plugin, str(tmdb_id))
 
+    def _preload_child_records(self) -> None:
+        """Load every child's record in one query.
+
+        Each child is looked up by key, which is a query each unless the record is
+        already in the session.
+        """
+        statement = select(File).where(
+            File.plugin_id == self.plugin.id,
+            or_(
+                col(File.key).startswith(f"{SeasonDetail.__name__}/{self.tmdb_id}/"),
+                col(File.key).startswith(f"{EpisodeDetail.__name__}/{self.tmdb_id}/"),
+            ),
+        )
+        # The session only holds records weakly, so they have to be kept alive for
+        # the lookups to find them.
+        self._child_records = self.session.exec(statement).all()
+
     def _child_files(self) -> Generator[BaseFile[Any]]:
+        self._preload_child_records()
         for season in self.parsed().seasons:
             season_file = SeasonDetail(
                 self.session,
@@ -147,7 +168,14 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         if super().is_outdated(minimum_timestamp):
             return True
-        return any(child_file.is_outdated() for child_file in self._child_files())
+        # Walking the children is expensive and they are only ever added by
+        # `_download`, so once they are all stored the walk cannot find anything.
+        if self._children_are_stored:
+            return False
+        self._children_are_stored = not any(
+            child_file.is_outdated() for child_file in self._child_files()
+        )
+        return not self._children_are_stored
 
 
 class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):

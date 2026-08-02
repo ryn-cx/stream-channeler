@@ -1,10 +1,12 @@
 # TODO: Validate
 import json
+import re
 import time
 from collections.abc import Sequence
 from datetime import timedelta
 from functools import cache
-from typing import Any, override
+from typing import Any, cast, override
+from urllib.parse import parse_qs, urlparse
 
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
@@ -24,13 +26,16 @@ from sqlmodel import Session
 
 from app.config import settings
 from app.files.models import File
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
+from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
+    BaseFile,
     GAPIJSONNoGet,
+    HTMLFile,
     XMLFile,
 )
 from plugins.utils.get_around_client import get_around_client
@@ -73,6 +78,36 @@ def is_video_key(key: str) -> bool:
     # Videos are always 11 characters long and channels/playlists are never 11
     # characters long.
     return len(key) == 11  # noqa: PLR2004
+
+
+def is_show_key(key: str) -> bool:
+    """Report whether a key belongs to a show page."""
+    return key.startswith("SC")
+
+
+def show_season_key(show_key: str, season_number: str) -> str:
+    """Return the season key for one season of a show."""
+    return f"{show_key}/{season_number}"
+
+
+def is_show_season_key(key: str) -> bool:
+    """Report whether a key belongs to one season of a show."""
+    return is_show_key(key) and "/" in key
+
+
+def split_show_season_key(season_key: str) -> tuple[str, str]:
+    """Split a season key back into its show key and season number."""
+    show_key, _, season_number = season_key.partition("/")
+    return show_key, season_number
+
+
+def has_tmdb_entry(show_key: str) -> bool:
+    """Report whether a show is the sort of title TMDB lists.
+
+    A movie or a show is licensed content TMDB knows about, where a channel is the
+    uploads of a creator and has nothing to cross reference against.
+    """
+    return is_video_key(show_key) or is_show_key(show_key)
 
 
 # The reasons YouTube gives when the API key has spent its daily quota. The quota
@@ -292,7 +327,114 @@ class PlaylistFeed(XMLFile):
         return result
 
 
-class FileMixin(BasePlugin, register=False):
+def _find_renderer(node: object, name: str) -> dict[str, Any] | None:
+    """Return the first renderer called `name` anywhere in the page data."""
+    if isinstance(node, dict):
+        contents = cast("dict[str, Any]", node)
+        renderer = contents.get(name)
+        if isinstance(renderer, dict):
+            return cast("dict[str, Any]", renderer)
+        for value in contents.values():
+            if found := _find_renderer(value, name):
+                return found
+    elif isinstance(node, list):
+        values: list[Any] = node
+        for value in values:
+            if found := _find_renderer(value, name):
+                return found
+    return None
+
+
+class ShowPage(HTMLFile):
+    """Show page file.
+
+    The API has no concept of a show, so a show and its seasons are read from the
+    page YouTube serves for it.
+    """
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        show_key: str,
+        season_number: str | None = None,
+    ) -> None:
+        self.show_key = show_key
+        self.season_number = season_number
+        identifier = (
+            show_key if season_number is None else f"{show_key}/{season_number}"
+        )
+        super().__init__(session, plugin, identifier)
+
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            params = (
+                {} if self.season_number is None else {"season": self.season_number}
+            )
+            response = get_around_client().get(
+                f"https://www.youtube.com/show/{self.show_key}",
+                params=params,
+            )
+            if not response.is_success:
+                logger.warning(
+                    "ShowPage fetch for {} returned HTTP {}; keeping the existing page.",
+                    self.unique_identifier,
+                    response.status_code,
+                )
+                return
+            self.write(response.text)
+
+    def _content(self) -> str:
+        return self.database_record.content or ""
+
+    def _initial_data(self) -> dict[str, Any]:
+        match = re.search(r"var ytInitialData = (\{.*?\});</script>", self._content())
+        if not match:
+            msg = f"Show page {self.unique_identifier} has no page data."
+            raise ValueError(msg)
+        return cast("dict[str, Any]", json.loads(match.group(1)))
+
+    def title(self) -> str | None:
+        """Return the name of the show.
+
+        The show's own title is the first one on the page; every later one belongs
+        to an episode or a streaming service.
+        """
+        match = re.search(r'"title":\s*\{"simpleText":"([^"]+)"', self._content())
+        return json.loads(f'"{match.group(1)}"') if match else None
+
+    def season_numbers(self) -> list[str]:
+        """Return the season numbers the show lists, in the order it lists them."""
+        sub_menu = _find_renderer(self._initial_data(), "sortFilterSubMenuRenderer")
+        if not sub_menu:
+            return []
+
+        season_numbers: list[str] = []
+        for item in sub_menu.get("subMenuItems", []):
+            url: str = item["navigationEndpoint"]["commandMetadata"][
+                "webCommandMetadata"
+            ]["url"]
+            season = parse_qs(urlparse(url).query).get("season", [])
+            if season and season[0] not in season_numbers:
+                season_numbers.append(season[0])
+        return season_numbers
+
+    def episode_keys(self) -> list[str]:
+        """Return the video keys of the episodes of the season this page shows."""
+        video_list = _find_renderer(self._initial_data(), "playlistVideoListRenderer")
+        if not video_list:
+            return []
+
+        episode_keys: list[str] = []
+        for content in video_list.get("contents", []):
+            video = content.get("playlistVideoRenderer")
+            if video and video["videoId"] not in episode_keys:
+                episode_keys.append(video["videoId"])
+        return episode_keys
+
+
+class FileMixin(TMDBMixin, register=False):
     @override
     def __init__(self, session: Session) -> None:
         super().__init__(session)
@@ -330,14 +472,31 @@ class FileMixin(BasePlugin, register=False):
         """Return a cached PlaylistFeed for the given season key."""
         return self._file(PlaylistFeed, season_key)
 
-    @override
-    def _show_files(
+    def show_page_file(
         self,
         show_key: str,
-    ) -> Sequence[ChannelByChannelId | ChannelPlaylists | PlaylistItems | Videos]:
+        season_number: str | None = None,
+    ) -> ShowPage:
+        """Return a cached ShowPage for the given show key and season."""
+        return self._file(ShowPage, show_key, season_number)
+
+    def show_episode_keys(self, show_key: str) -> list[str]:
+        """Return the episode keys of every season of a show, in season order."""
+        return self._episode_keys_from_file(self._season_keys_from_file(show_key))
+
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+        # A movie and a show are cross referenced against TMDB, where a channel is
+        # a creator's uploads and has nothing to cross reference against.
         # A show that is a single video is described by the video itself.
         if is_video_key(show_key):
-            return [self.videos_file(show_key)]
+            return self._append_tmdb_show_file([self.videos_file(show_key)], show_key)
+        # A show has no API of its own, so its page lists its seasons.
+        if is_show_key(show_key):
+            return self._append_tmdb_show_file(
+                [self.show_page_file(show_key)],
+                show_key,
+            )
         return [
             # Required to detect new seasons (playlists).
             self.channel_playlists_file(show_key),
@@ -351,10 +510,21 @@ class FileMixin(BasePlugin, register=False):
         self,
         season_key: str,
         show_key: str,
-    ) -> Sequence[ChannelPlaylists | PlaylistItems | PlaylistInfo | Videos]:
+    ) -> Sequence[BaseFile[Any]]:
         # A season that is a single video is described by the video itself.
         if is_video_key(season_key):
-            return [self.videos_file(season_key)]
+            return self._append_tmdb_season_file(
+                [self.videos_file(season_key)],
+                season_key,
+                show_key,
+            )
+        # A season of a show is described by the page for that season.
+        if is_show_season_key(season_key):
+            return self._append_tmdb_season_file(
+                [self.show_page_file(*split_show_season_key(season_key))],
+                season_key,
+                show_key,
+            )
         files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
@@ -374,9 +544,17 @@ class FileMixin(BasePlugin, register=False):
         episode_key: str,
         season_key: str,
         show_key: str,
-    ) -> Sequence[Videos]:
+    ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode (video).
-        return [self.videos_file(episode_key)]
+        files = [self.videos_file(episode_key)]
+        if not has_tmdb_entry(show_key):
+            return files
+        return self._append_tmdb_episode_file(
+            files,
+            episode_key,
+            season_key,
+            show_key,
+        )
 
     def _video_is_valid(self, video_title: str) -> bool:
         """Check if a video is valid for importing."""
@@ -391,6 +569,14 @@ class FileMixin(BasePlugin, register=False):
         # A show that is a single video has that video as its only season.
         if is_video_key(show_key):
             return [show_key]
+
+        # A show has one season for every season its page lists.
+        if is_show_key(show_key):
+            show_page = self.show_page_file(show_key)
+            return [
+                show_season_key(show_key, season_number)
+                for season_number in show_page.season_numbers()
+            ]
 
         channel_item = get_first_item(
             self.channel_by_channel_id_file(show_key).parsed().items,
@@ -447,28 +633,37 @@ class FileMixin(BasePlugin, register=False):
         seen: set[str] = set()
         video_keys: list[str] = []
         for season_key in season_keys:
-            # A season that is a single video holds only that video.
-            if is_video_key(season_key):
-                if season_key not in seen:
-                    seen.add(season_key)
-                    video_keys.append(season_key)
-                continue
-
-            playlist_items_file = self.playlist_items_file(season_key)
-            if not playlist_items_file.database_record.content:
-                msg = (
-                    f"PlaylistItems file for season {season_key!r} has empty content "
-                    f"(file key {playlist_items_file.file_key()!r}, extra "
-                    f"{playlist_items_file.database_record.extra!r}). The playlist was "
-                    f"likely not found when downloaded."
-                )
-                raise ValueError(msg)
-            for item in playlist_items_file.parsed().items:
-                video_id = item.content_details.video_id
-                if self._video_is_valid(item.snippet.title) and video_id not in seen:
-                    seen.add(video_id)
-                    video_keys.append(video_id)
+            for video_key in self._season_episode_keys(season_key):
+                if video_key not in seen:
+                    seen.add(video_key)
+                    video_keys.append(video_key)
         return video_keys
+
+    def _season_episode_keys(self, season_key: str) -> list[str]:
+        """Return the episode keys held by a single season."""
+        # A season that is a single video holds only that video.
+        if is_video_key(season_key):
+            return [season_key]
+
+        # A season of a show holds the episodes listed on its page.
+        if is_show_season_key(season_key):
+            show_page = self.show_page_file(*split_show_season_key(season_key))
+            return show_page.episode_keys()
+
+        playlist_items_file = self.playlist_items_file(season_key)
+        if not playlist_items_file.database_record.content:
+            msg = (
+                f"PlaylistItems file for season {season_key!r} has empty content "
+                f"(file key {playlist_items_file.file_key()!r}, extra "
+                f"{playlist_items_file.database_record.extra!r}). The playlist was "
+                f"likely not found when downloaded."
+            )
+            raise ValueError(msg)
+        return [
+            item.content_details.video_id
+            for item in playlist_items_file.parsed().items
+            if self._video_is_valid(item.snippet.title)
+        ]
 
     @override
     def _download_all_episode_files(

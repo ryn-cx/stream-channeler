@@ -1,14 +1,65 @@
 # TODO: Validate
-from typing import Any, override
+from typing import Any, Literal, override
 from urllib.parse import quote
 
+from app.shows.models import Show
 from app.sources.models import Source
-from plugins.YouTube.files import FileMixin
+from plugins.YouTube.files import (
+    FileMixin,
+    get_first_item,
+    is_show_key,
+    is_show_season_key,
+    is_video_key,
+    split_show_season_key,
+)
 
 
 class HelperMixin(FileMixin, register=False):
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._imported_album_playlist_keys.add(playlist_key)
+
+    @override
+    def _fetch_tmdb_id(
+        self,
+        show_key: str,
+        existing_show: Show | None = None,
+    ) -> int | None:
+        if existing_show and existing_show.tmdb_id:
+            return existing_show.tmdb_id
+
+        if is_video_key(show_key):
+            video_item = get_first_item(self.videos_file(show_key).parsed().items)
+            return self._tmdb_search_media(video_item.snippet.title, "movie")
+
+        if is_show_key(show_key):
+            title = self.show_page_file(show_key).title()
+            return self._tmdb_search_media(title) if title else None
+
+        return None
+
+    @override
+    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+        return "movie" if is_video_key(show_key) else "tv"
+
+    @override
+    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
+        if is_show_season_key(season_key):
+            return int(split_show_season_key(season_key)[1])
+        return None
+
+    @override
+    def _get_episode_number(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> int | None:
+        if not is_show_season_key(season_key):
+            return None
+        episode_keys = self._season_episode_keys(season_key)
+        if episode_key not in episode_keys:
+            return None
+        return episode_keys.index(episode_key) + 1
 
     def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:
         """Return the `Source` for videos that are imported one video at a time.

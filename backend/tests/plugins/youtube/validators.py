@@ -6,6 +6,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.YouTube import YouTube
+from plugins.YouTube.files import is_show_season_key
 from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
 from tests.plugins.plugin_validator.validator import Validator
 
@@ -38,8 +39,8 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output = super().update_season_validator(season)
         # Season update_at is recalculated from the RSS feed in update_season.
         output.incremented(season.id, "update_at")
-        # The show is also re-upserted during update_season.
-        output.incremented(season.show.id, "data_timestamp", "modified_at")
+        # # The show is also re-upserted during update_season.
+        # output.incremented(season.show.id, "data_timestamp", "modified_at")
         return output
 
     @override
@@ -52,9 +53,12 @@ class YouTubeValidator(PluginValidator[YouTube]):
     @override
     def deleted_episode_validator(self, episode: Episode) -> Validator:
         output = super().deleted_episode_validator(episode)
-        # update_season re-derives the target season's update_at from the RSS feed,
-        # which also bumps its modified_at.
-        output.incremented(episode.season.id, "update_at", "modified_at")
+        # A season of a show is read from the show's page, which has no feed to
+        # re-derive an update_at from, so the season is left as it is. Every other
+        # season has its update_at re-derived from its feed, which also bumps its
+        # modified_at.
+        if not is_show_season_key(episode.season.key):
+            output.incremented(episode.season.id, "update_at", "modified_at")
         return output
 
 

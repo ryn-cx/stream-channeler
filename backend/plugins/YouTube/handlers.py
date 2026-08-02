@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, override
+from urllib.parse import parse_qs, urlparse
 
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
@@ -12,6 +13,7 @@ from plugins.YouTube.files import (
     is_music_playlist_key,
     is_standalone_video_channel,
     is_video_key,
+    show_season_key,
 )
 
 if TYPE_CHECKING:
@@ -176,6 +178,48 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return _single_video_import_results(show, self.playlist_key, self.video_key)
+
+
+class ShowURLHandler(YouTubeURLHandler):
+    # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw
+    # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw?season=23&sbp=...
+    _URL_REGEX = r"\/show\/(?P<show_key>SC[A-Za-z0-9_-]+?)(?:$|[/?])"
+
+    @property
+    @override
+    def show_key(self) -> str:
+        return self._match.group("show_key")
+
+    @property
+    def _season_number(self) -> str | None:
+        """Return the season the URL asks for, or None when it asks for the show."""
+        season = parse_qs(urlparse(self.url).query).get("season", [])
+        return season[0] if season else None
+
+    @property
+    @override
+    def playlist_key(self) -> str:
+        season_number = self._season_number
+        if season_number is None:
+            return self.show_key
+        return show_season_key(self.show_key, season_number)
+
+    @override
+    def raise_if_invalid(self) -> None:
+        show_page = self.plugin.show_page_file(self.show_key)
+        self.plugin.raise_if_invalid_file(show_page, self.url)
+        if not show_page.season_numbers():
+            msg = f"Invalid {self.plugin.plugin_key()} URL: {self.url}"
+            raise InvalidURLError(msg)
+
+    @override
+    def import_results(self, show: Show) -> list[URLImportResult]:
+        # A URL for one season only asks for that season, where a URL for the show
+        # asks for all of it.
+        if self._season_number is None:
+            return [URLImportResult(show=show, is_whitelist=False)]
+        seasons = [season for season in show.seasons if season.key == self.playlist_key]
+        return [URLImportResult(show=show, seasons=seasons, is_whitelist=True)]
 
 
 class ChannelURLHandler(YouTubeURLHandler):

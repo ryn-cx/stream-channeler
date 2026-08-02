@@ -53,7 +53,8 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
 
 # Caused a crash.
 class TestVideoWith0x00CharacterInDescription(
-    StandardTests[YouTube], ChannelNameValidator
+    StandardTests[YouTube],
+    ChannelNameValidator,
 ):
     channel_key = "UCX6OQ3DkcsbYNE6H8uQQuVA"
     channel_name = "PhotoLukeHawaii"

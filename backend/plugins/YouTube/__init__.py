@@ -12,13 +12,20 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.YouTube.files import get_first_item, is_quota_error, is_video_key
+from plugins.YouTube.files import (
+    get_first_item,
+    is_quota_error,
+    is_show_key,
+    is_show_season_key,
+    is_video_key,
+)
 from plugins.YouTube.handlers import (
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
     ChannelUsernameURLHandler,
     PlaylistURLHandler,
     PlaylistVideoURLHandler,
+    ShowURLHandler,
     VideoURLHandler,
     YouTubeURLHandler,
 )
@@ -47,12 +54,14 @@ class YouTube(
         "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
     )
 
-    # _playlist_video before _video and _username before _handle due to regex overlap.
+    # _playlist_video before _video, and _username and _show before _handle, due to
+    # regex overlap.
     _URL_HANDLERS: ClassVar[tuple[type[YouTubeURLHandler], ...]] = (
         PlaylistVideoURLHandler,
         PlaylistURLHandler,
         VideoURLHandler,
         ChannelKeyURLHandler,
+        ShowURLHandler,
         ChannelUsernameURLHandler,
         ChannelHandleURLHandler,
     )
@@ -138,6 +147,11 @@ class YouTube(
         return show
 
     def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
+        # A URL for a whole show asks for every season it has, so nothing is missing
+        # as long as it has been imported with seasons.
+        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
+            return not show.active_children
+
         # If the playlist being checked is the channel uploads playlist it should only
         # be considered missing if the channel has at least one upload.
         if playlist_key == self.channel_uploads_playlist_key(show.key):
@@ -152,7 +166,9 @@ class YouTube(
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         # A season that is a single video has no feed to check for new videos.
-        if is_video_key(season.key):
+        # A season that is a single video, or a season of a show, has no feed to
+        # check for new videos, so its page is re-read instead.
+        if is_video_key(season.key) or is_show_season_key(season.key):
             self._download_season_files_and_children(
                 season,
                 update_at=season.update_at,
