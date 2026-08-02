@@ -91,7 +91,13 @@ export function ResponsiveActionMenu({
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
+      className={cn(
+        "h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm",
+        // A 32px button is smaller than a finger can reliably hit, so on touch
+        // devices an invisible pseudo-element grows the tap area to 48px while
+        // the button keeps looking the same size.
+        isTouch && "relative after:absolute after:-inset-2 after:content-['']",
+      )}
       onClick={onTriggerClick}
     >
       <MoreVertical className="h-4 w-4" />
