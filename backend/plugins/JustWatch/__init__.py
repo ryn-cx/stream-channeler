@@ -25,5 +25,4 @@ class JustWatch(
 
     _VERSION = "0.0.1"
     FAVICON_URL = "https://www.justwatch.com/favicon.ico"
-    SUPERUSER_ONLY = True
     _URL_HANDLERS: ClassVar[tuple[type[JustWatchURLHandler], ...]] = (TitleURLHandler,)

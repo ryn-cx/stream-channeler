@@ -37,10 +37,6 @@ class AbstractPlugin(ABC):
     # has no icon of its own.
     FAVICON_URL: ClassVar[str | None] = None
 
-    # When True the plugin is only offered to superusers, so it is left out of the
-    # plugin lists returned to regular users.
-    SUPERUSER_ONLY: ClassVar[bool] = False
-
     @classmethod
     @abstractmethod
     def plugin_key(cls) -> str:
