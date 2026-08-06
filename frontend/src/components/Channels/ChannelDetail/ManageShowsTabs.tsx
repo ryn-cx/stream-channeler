@@ -65,6 +65,7 @@ interface Show {
   name: string | null
   source_id: string
   url?: string | null
+  tmdb_id?: number | null
 }
 
 interface Source {
@@ -120,11 +121,18 @@ function useSourceRank(): (source: Source | undefined) => number {
   return (source) => (source && ranks.get(source.key)) ?? otherRank
 }
 
-/** Group shows that share a name, keeping the order they arrived in. */
-function groupShowsByName(shows: Show[]): Show[][] {
+/**
+ * Group shows that are the same title, keeping the order they arrived in.
+ *
+ * TMDB is what actually identifies a title across services, so it is used
+ * whenever a show is linked to it. A show without a TMDB link falls back to
+ * grouping with the shows that share its name.
+ */
+function groupShows(shows: Show[]): Show[][] {
   const groups = new Map<string, Show[]>()
   for (const show of shows) {
-    const key = show.name ?? ""
+    const key =
+      show.tmdb_id == null ? `name:${show.name ?? ""}` : `tmdb:${show.tmdb_id}`
     const group = groups.get(key)
     if (group) {
       group.push(show)
@@ -142,6 +150,8 @@ function groupShowsByName(shows: Show[]): Show[][] {
  * fill the table with rows that read identically. A group shows the name once
  * with a favicon per service, and expands to the individual shows so each can
  * still be managed on its own.
+ *
+ * @see groupShows for what counts as the same show.
  */
 function ShowRows({
   shows,
@@ -152,22 +162,22 @@ function ShowRows({
   sources: Record<string, Source>
   renderActions: (show: Show) => ReactNode
 }) {
-  const [expandedNames, setExpandedNames] = useState<Set<string>>(new Set())
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
   const sourceRank = useSourceRank()
 
   const bySourceRank = (first: Show, second: Show) =>
     sourceRank(sources[first.source_id]) - sourceRank(sources[second.source_id])
 
-  const toggle = (name: string) =>
-    setExpandedNames((current) => {
+  const toggle = (groupKey: string) =>
+    setExpandedKeys((current) => {
       const next = new Set(current)
-      if (!next.delete(name)) next.add(name)
+      if (!next.delete(groupKey)) next.add(groupKey)
       return next
     })
 
   return (
     <>
-      {groupShowsByName(shows).map((unorderedGroup) => {
+      {groupShows(shows).map((unorderedGroup) => {
         const group = [...unorderedGroup].sort(bySourceRank)
         const [firstShow] = group
         const name = firstShow.name ?? ""
@@ -177,26 +187,29 @@ function ShowRows({
         if (group.length === 1) {
           return (
             <TableRow key={firstShow.id}>
-              <TableCell className="whitespace-normal">
+              <TableCell>
                 <div className="flex items-center gap-2">
                   <span className="size-4 shrink-0" />
                   <SourceFavicon source={sources[firstShow.source_id]} />
-                  <span className="wrap-break-word">{name}</span>
                 </div>
+              </TableCell>
+              <TableCell className="whitespace-normal">
+                <span className="wrap-break-word">{name}</span>
               </TableCell>
               <TableCell>{renderActions(firstShow)}</TableCell>
             </TableRow>
           )
         }
 
-        const isExpanded = expandedNames.has(name)
+        const groupKey = firstShow.id
+        const isExpanded = expandedKeys.has(groupKey)
         return (
-          <Fragment key={name}>
+          <Fragment key={groupKey}>
             <TableRow>
-              <TableCell className="whitespace-normal">
+              <TableCell>
                 <button
                   type="button"
-                  onClick={() => toggle(name)}
+                  onClick={() => toggle(groupKey)}
                   aria-expanded={isExpanded}
                   className="flex w-full items-center gap-2 text-left"
                 >
@@ -213,6 +226,15 @@ function ShowRows({
                       />
                     ))}
                   </span>
+                </button>
+              </TableCell>
+              <TableCell className="whitespace-normal">
+                <button
+                  type="button"
+                  onClick={() => toggle(groupKey)}
+                  aria-expanded={isExpanded}
+                  className="w-full text-left"
+                >
                   <span className="wrap-break-word">{name}</span>
                 </button>
               </TableCell>
@@ -221,13 +243,15 @@ function ShowRows({
             {isExpanded &&
               group.map((show) => (
                 <TableRow key={show.id} className="bg-muted/30">
-                  <TableCell className="whitespace-normal">
+                  <TableCell>
                     <div className="flex items-center gap-2 pl-6">
                       <SourceFavicon source={sources[show.source_id]} />
-                      <span className="wrap-break-word text-muted-foreground">
-                        {sources[show.source_id]?.name ?? name}
-                      </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="whitespace-normal">
+                    <span className="wrap-break-word text-muted-foreground">
+                      {sources[show.source_id]?.name ?? name}
+                    </span>
                   </TableCell>
                   <TableCell>{renderActions(show)}</TableCell>
                 </TableRow>
@@ -628,6 +652,9 @@ export function ManageShowsTabs({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-px whitespace-nowrap">
+                      Sources
+                    </TableHead>
                     <TableHead>Show</TableHead>
                     <TableHead className="w-25 text-center">Actions</TableHead>
                   </TableRow>
@@ -676,6 +703,9 @@ export function ManageShowsTabs({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-px whitespace-nowrap">
+                        Sources
+                      </TableHead>
                       <TableHead>Show</TableHead>
                       <TableHead className="w-25 text-center">
                         Actions
