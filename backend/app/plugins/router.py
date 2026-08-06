@@ -27,9 +27,9 @@ from app.plugins.schemas import (
     PluginsPublic,
     PluginUpdate,
     PluginURLMatch,
+    TMDBMatch,
     TMDBMediaInfo,
     TMDBMediaType,
-    TMDBSearchResultItem,
 )
 from app.schemas import Message
 from app.users.models import User
@@ -107,7 +107,12 @@ def import_watch_history_information(
 def import_url_information(
     _current_user: CurrentUser,
 ) -> list[PluginImportURLInformation]:
-    """Return information about all plugins that support importing URLs."""
+    """Return information about the plugins offered as ways to add by URL.
+
+    A plugin that imports URLs but is only reached through another one is left
+    out. `match-url` still resolves its URLs, so one a `User` pastes anyway is
+    imported rather than rejected.
+    """
     return [
         PluginImportURLInformation(
             name=plugin_cls.plugin_key(),
@@ -115,7 +120,7 @@ def import_url_information(
             favicon_url=plugin_cls.FAVICON_URL,
         )
         for plugin_cls in sorted_plugins()
-        if plugin_cls.implements("import_url")
+        if plugin_cls.implements("import_url") and plugin_cls.LISTED_FOR_IMPORT_URL
     ]
 
 
@@ -176,8 +181,12 @@ def search_plugin(
     query: str,
     session: SessionDep,
     _current_user: CurrentUser,
+    cursor: str | None = None,
 ) -> PluginSearchResults:
-    """Search for shows/movies on a plugin's platform."""
+    """Search for shows/movies on a plugin's platform.
+
+    `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
+    """
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
             if not plugin_cls.implements("search"):
@@ -185,19 +194,21 @@ def search_plugin(
                     status_code=422,
                     detail=f"Plugin '{plugin_key}' does not support search.",
                 )
-            return plugin_cls(session).search(query)
+            return plugin_cls(session).search(query, cursor)
 
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
-@plugins_router.get("/tmdb/search")
-def tmdb_search(
-    query: str,
+@plugins_router.get("/tmdb/match")
+def tmdb_match(
+    title: str,
+    media_type: TMDBMediaType,
     session: SessionDep,
     _current_user: CurrentUser,
-) -> list[TMDBSearchResultItem]:
-    """Search movies and TV across all of TMDB, ranked by title similarity."""
-    return service.tmdb_search(session, query)
+    year: int | None = None,
+) -> TMDBMatch | None:
+    """Return the TMDB title that best matches a plugin's search result."""
+    return service.tmdb_match(session, title, media_type, year)
 
 
 @plugins_router.get("/tmdb/media-info")

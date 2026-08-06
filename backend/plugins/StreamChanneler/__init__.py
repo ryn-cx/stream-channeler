@@ -32,7 +32,7 @@ class StreamChanneler(BasePlugin, register=True):
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 
     @override
-    def initialize_source(self) -> None:
+    def initialize_sources(self) -> None:
         return
 
     @override
@@ -61,7 +61,7 @@ class StreamChanneler(BasePlugin, register=True):
         return []
 
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
@@ -79,7 +79,7 @@ class StreamChanneler(BasePlugin, register=True):
 
     @classmethod
     @override
-    def _url_regex(cls) -> str:
+    def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         uuid_pattern = r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
         return (
@@ -93,7 +93,7 @@ class StreamChanneler(BasePlugin, register=True):
         return self._get_url_handler(url).import_results()
 
     def _get_url_handler(self, url: str) -> StreamChannelerURLHandler:
-        match = re.match(self._url_regex(), url)
+        match = re.match(self.url_regex(), url)
         if not match:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)

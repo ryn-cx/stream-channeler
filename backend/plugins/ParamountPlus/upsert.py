@@ -13,7 +13,7 @@ from plugins.ParamountPlus.helpers import HelperMixin
 
 class UpsertMixin(HelperMixin, register=False):
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,

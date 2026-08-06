@@ -27,7 +27,7 @@ _SERIES_UPDATE_INTERVAL = timedelta(days=7)
 
 class UpsertMixin(HelperMixin, register=False):
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
@@ -406,5 +406,5 @@ class UpsertMixin(HelperMixin, register=False):
             season,
             episode,
             show_key,
-            self._tmdb_media_type(show_key),
+            self.tmdb_media_type(show_key),
         )

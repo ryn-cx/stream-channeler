@@ -1,23 +1,12 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Search } from "lucide-react"
-import { useEffect, useState } from "react"
-import type {
-  PluginSearchResult,
-  TMDBMediaInfo,
-  TMDBSearchResultItem,
-  TMDBWatchProviderItem,
-} from "@/client"
+import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -33,12 +22,24 @@ import { useSearchablePlugins } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
-// TMDB is the multi-source aggregator search; every other plugin searches its
-// own single platform. This synthetic key selects the aggregator mode.
-const TMDB_KEY = "TMDB"
-
 function mediaTypeLabel(mediaType: string): string {
   return mediaType === "movie" ? "Movie" : "TV Show"
+}
+
+// TMDB covers every service rather than one, so it is the source a search starts
+// on. Falls back to the first searchable plugin when TMDB is not available.
+const DEFAULT_PLUGIN_KEY = "TMDB"
+
+// The title a details modal is open for, built from the plugin result that was
+// clicked and the TMDB id it was matched to.
+type SelectedTitle = {
+  tmdb_id: number
+  media_type: "movie" | "tv"
+  title: string
+  // The result's own URL, so the modal queues exactly what its card would.
+  url: string
+  year?: number | null
+  image_url?: string | null
 }
 
 function useAddToQueue(channelId: string) {
@@ -111,42 +112,55 @@ function ResultCard({
   const Wrapper = onClick ? "button" : "div"
 
   return (
-    <Wrapper
-      type={onClick ? "button" : undefined}
-      onClick={onClick}
+    <div
       style={{ width: isLandscape ? LANDSCAPE_WIDTH : PORTRAIT_WIDTH }}
       className={cn(
         "border rounded-lg flex flex-col items-center text-center p-3 shrink-0",
-        onClick && "hover:bg-accent/50 transition-colors cursor-pointer",
+        onClick && "hover:bg-accent/50 transition-colors",
       )}
     >
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt={title}
-          onLoad={(event) => {
-            const { naturalWidth, naturalHeight } = event.currentTarget
-            if (naturalHeight > 0) {
-              setAspectRatio(naturalWidth / naturalHeight)
-            }
-          }}
-          style={{ aspectRatio: aspectRatio ?? DEFAULT_ASPECT_RATIO }}
-          className="w-full rounded object-cover bg-muted mb-2"
-        />
-      )}
-      <p className="font-medium text-sm leading-tight line-clamp-2">{title}</p>
-      <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+      {/* The footer holds its own buttons, so it stays outside the clickable
+          part of the card rather than nesting buttons inside each other. */}
+      <Wrapper
+        type={onClick ? "button" : undefined}
+        onClick={onClick}
+        className={cn(
+          "flex flex-col items-center text-center w-full",
+          onClick && "cursor-pointer",
+        )}
+      >
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={title}
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget
+              if (naturalHeight > 0) {
+                setAspectRatio(naturalWidth / naturalHeight)
+              }
+            }}
+            style={{ aspectRatio: aspectRatio ?? DEFAULT_ASPECT_RATIO }}
+            className="w-full rounded object-cover bg-muted mb-2"
+          />
+        )}
+        <p className="font-medium text-sm leading-tight line-clamp-2">
+          {title}
+        </p>
+        <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+      </Wrapper>
       {footer}
-    </Wrapper>
+    </div>
   )
 }
 
 function PluginResultCard({
   result,
   channelId,
+  onSelect,
 }: {
   result: PluginSearchResult
   channelId: string
+  onSelect?: (result: PluginSearchResult) => void
 }) {
   return (
     <ResultCard
@@ -158,66 +172,91 @@ function PluginResultCard({
           {result.year && ` (${result.year})`}
         </>
       }
+      // A plugin only knows its own service's data, so opening the details
+      // means finding the matching TMDB title first.
+      onClick={onSelect ? () => onSelect(result) : undefined}
       footer={<AddToQueueButton url={result.url} channelId={channelId} />}
     />
   )
 }
 
-// Opens on top of the media-info modal with a single plugin's search results,
-// leaving the underlying modals and the main search untouched.
-function PluginSearchModal({
-  pluginKey,
-  pluginName,
-  query,
-  channelId,
-  onOpenChange,
+// Every source pages its search differently, so the backend hands back an
+// opaque cursor for the page after the current one. Keeping the cursor of each
+// page that has been visited is what makes stepping back possible.
+function useSearchCursors() {
+  const [pages, setPages] = useState<{
+    cursors: (string | null)[]
+    index: number
+  }>({ cursors: [null], index: 0 })
+
+  return {
+    pageIndex: pages.index,
+    cursor: pages.cursors[pages.index],
+    reset: useCallback(() => setPages({ cursors: [null], index: 0 }), []),
+    goToNextPage: useCallback(
+      (nextCursor: string) =>
+        setPages(({ cursors, index }) => ({
+          cursors: [...cursors.slice(0, index + 1), nextCursor],
+          index: index + 1,
+        })),
+      [],
+    ),
+    goToPreviousPage: useCallback(
+      () =>
+        setPages(({ cursors, index }) => ({
+          cursors,
+          index: Math.max(index - 1, 0),
+        })),
+      [],
+    ),
+  }
+}
+
+function SearchPager({
+  pageIndex,
+  nextCursor,
+  isLoading,
+  onPrevious,
+  onNext,
 }: {
-  pluginKey: string | null
-  pluginName: string | null
-  query: string
-  channelId: string
-  onOpenChange: (open: boolean) => void
+  pageIndex: number
+  nextCursor?: string | null
+  isLoading: boolean
+  onPrevious: () => void
+  onNext: () => void
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["plugin-search", pluginKey, query],
-    queryFn: () =>
-      PluginsService.searchPlugin({ pluginKey: pluginKey!, query }),
-    enabled: pluginKey != null,
-  })
-  const results = data?.results ?? []
+  // A single page of results needs no controls at all.
+  if (pageIndex === 0 && !nextCursor) return null
 
   return (
-    <Dialog open={pluginKey != null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{pluginName ?? "Search"} results</DialogTitle>
-          <DialogDescription>
-            Add a result to grab its importable URL for “{query}”.
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Searching…</p>
-        ) : results.length > 0 ? (
-          <div className="flex flex-wrap gap-3">
-            {results.map((result, index) => (
-              <PluginResultCard
-                key={`${result.url}-${index}`}
-                result={result}
-                channelId={channelId}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No results found</p>
-        )}
-      </DialogContent>
-    </Dialog>
+    <div className="flex items-center justify-center gap-3">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onPrevious}
+        disabled={pageIndex === 0 || isLoading}
+      >
+        <ChevronLeft className="h-4 w-4 mr-1" />
+        Previous
+      </Button>
+      <span className="text-sm text-muted-foreground">
+        Page {pageIndex + 1}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onNext}
+        disabled={!nextCursor || isLoading}
+      >
+        Next
+        <ChevronRight className="h-4 w-4 ml-1" />
+      </Button>
+    </div>
   )
 }
 
 // Builds the "Movie • 2023 • 8.8★" style metadata line for a media detail.
-function metaLine(result: TMDBSearchResultItem, info: TMDBMediaInfo): string[] {
+function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
   const parts: string[] = []
 
   const year = info.year ?? result.year
@@ -244,91 +283,17 @@ function metaLine(result: TMDBSearchResultItem, info: TMDBMediaInfo): string[] {
   return parts
 }
 
-function ProviderButton({
-  provider,
-  onClick,
-  href,
-}: {
-  provider: TMDBWatchProviderItem
-  onClick?: () => void
-  href?: string
-}) {
-  const inner = (
-    <>
-      {provider.icon_url ? (
-        <img
-          src={provider.icon_url}
-          alt={provider.name}
-          className="h-8 w-8 rounded"
-        />
-      ) : null}
-      <span className="text-sm">{provider.name}</span>
-    </>
-  )
-
-  if (href) {
-    return (
-      <Button asChild variant="outline" className="h-auto gap-2 p-2">
-        <a href={href} target="_blank" rel="noreferrer">
-          {inner}
-        </a>
-      </Button>
-    )
-  }
-
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={onClick}
-      className={`h-auto gap-2 p-2 ${onClick ? "" : "cursor-default"}`}
-    >
-      {inner}
-    </Button>
-  )
-}
-
-function ProviderGroup({
-  heading,
-  providers,
-  muted,
-  renderButton,
-}: {
-  heading: string
-  providers: TMDBWatchProviderItem[]
-  muted?: boolean
-  renderButton: (provider: TMDBWatchProviderItem) => React.ReactNode
-}) {
-  if (providers.length === 0) return null
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {heading}
-      </p>
-      <div className={`flex flex-wrap gap-2 ${muted ? "opacity-40" : ""}`}>
-        {providers.map(renderButton)}
-      </div>
-    </div>
-  )
-}
-
-// Fetches a single title's full detail plus its watch providers on demand, so a
-// multi-result search never downloads that data for results the user never opens.
+// Fetches a single title's full detail on demand, so a multi-result search never
+// downloads that data for results the user never opens.
 function MediaInfoModal({
   result,
   channelId,
-  searchablePluginKeys,
   onOpenChange,
 }: {
-  result: TMDBSearchResultItem | null
+  result: SelectedTitle | null
   channelId: string
-  searchablePluginKeys: Set<string>
   onOpenChange: (open: boolean) => void
 }) {
-  const [pluginSearch, setPluginSearch] = useState<{
-    pluginKey: string
-    pluginName: string
-  } | null>(null)
   const { data: info, isLoading } = useQuery({
     queryKey: ["tmdb-media-info", result?.media_type, result?.tmdb_id],
     queryFn: () =>
@@ -340,31 +305,6 @@ function MediaInfoModal({
   })
 
   const title = info?.title ?? result?.title ?? ""
-  const providers = info?.providers ?? []
-  // Plugins we can search in-app show their results in a nested modal; plugins
-  // with only a website search page open that page in a new tab instead.
-  const inAppSearch = providers.filter(
-    (provider) =>
-      provider.plugin_key != null &&
-      searchablePluginKeys.has(provider.plugin_key),
-  )
-  const siteSearch = providers.filter(
-    (provider) =>
-      provider.search_url != null &&
-      !(
-        provider.plugin_key != null &&
-        searchablePluginKeys.has(provider.plugin_key)
-      ),
-  )
-  const manual = providers.filter(
-    (provider) =>
-      provider.plugin_key != null &&
-      provider.search_url == null &&
-      !searchablePluginKeys.has(provider.plugin_key),
-  )
-  const unsupported = providers.filter(
-    (provider) => provider.plugin_key == null && provider.search_url == null,
-  )
 
   return (
     <Dialog open={result != null} onOpenChange={onOpenChange}>
@@ -440,66 +380,6 @@ function MediaInfoModal({
               {info.overview && (
                 <p className="text-sm leading-relaxed">{info.overview}</p>
               )}
-
-              <div className="flex flex-col gap-3">
-                <p className="font-semibold">Where to watch</p>
-                {providers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No US streaming sources found.
-                  </p>
-                ) : (
-                  <>
-                    <ProviderGroup
-                      heading="Search here for the Media"
-                      providers={inAppSearch}
-                      renderButton={(provider) => (
-                        <ProviderButton
-                          key={provider.name}
-                          provider={provider}
-                          onClick={() =>
-                            setPluginSearch({
-                              pluginKey: provider.plugin_key!,
-                              pluginName: provider.name,
-                            })
-                          }
-                        />
-                      )}
-                    />
-                    <ProviderGroup
-                      heading="Search the website for the URL"
-                      providers={siteSearch}
-                      renderButton={(provider) => (
-                        <ProviderButton
-                          key={provider.name}
-                          provider={provider}
-                          href={provider.search_url ?? undefined}
-                        />
-                      )}
-                    />
-                    <ProviderGroup
-                      heading='Supported — add its URL in the "Add by URL" tab'
-                      providers={manual}
-                      renderButton={(provider) => (
-                        <ProviderButton
-                          key={provider.name}
-                          provider={provider}
-                        />
-                      )}
-                    />
-                    <ProviderGroup
-                      heading="Not supported"
-                      providers={unsupported}
-                      muted
-                      renderButton={(provider) => (
-                        <ProviderButton
-                          key={provider.name}
-                          provider={provider}
-                        />
-                      )}
-                    />
-                  </>
-                )}
-              </div>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -507,21 +387,17 @@ function MediaInfoModal({
             </p>
           )}
 
+          {/* Importing works out where a title can be watched on its own, so
+              there is nothing to pick here — one button queues the title. */}
+          {result && (
+            <AddToQueueButton url={result.url} channelId={channelId} />
+          )}
+
           <p className="text-xs text-muted-foreground">
             Streaming availability data provided by JustWatch.
           </p>
         </div>
       </DialogContent>
-
-      <PluginSearchModal
-        pluginKey={pluginSearch?.pluginKey ?? null}
-        pluginName={pluginSearch?.pluginName ?? null}
-        query={title}
-        channelId={channelId}
-        onOpenChange={(open) => {
-          if (!open) setPluginSearch(null)
-        }}
-      />
     </Dialog>
   )
 }
@@ -540,18 +416,73 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     }
   }, [initialQuery])
 
-  const [tmdbResults, setTmdbResults] = useState<TMDBSearchResultItem[] | null>(
+  // The search that results are currently shown for, which is only set once a
+  // search has actually been run — the plugin and text in the controls above can
+  // be changed without disturbing them.
+  const [activeSearch, setActiveSearch] = useState<{
+    pluginKey: string
+    query: string
+  } | null>(null)
+  const [isCheckingUrl, setIsCheckingUrl] = useState(false)
+  const [selectedResult, setSelectedResult] = useState<SelectedTitle | null>(
     null,
   )
-  const [pluginResults, setPluginResults] = useState<
-    PluginSearchResult[] | null
-  >(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [selectedResult, setSelectedResult] =
-    useState<TMDBSearchResultItem | null>(null)
-  const [pluginKey, setPluginKey] = useState(TMDB_KEY)
+  const [pluginKey, setPluginKey] = useState("")
   const { showErrorToast } = useCustomToast()
   const addUrlMutation = useAddToQueue(channelId)
+  const { pageIndex, cursor, reset, goToNextPage, goToPreviousPage } =
+    useSearchCursors()
+
+  const { data: searchPage, isFetching } = useQuery({
+    queryKey: [
+      "plugin-search",
+      activeSearch?.pluginKey,
+      activeSearch?.query,
+      cursor,
+    ],
+    queryFn: async () => {
+      try {
+        return await PluginsService.searchPlugin({
+          pluginKey: activeSearch!.pluginKey,
+          query: activeSearch!.query,
+          cursor,
+        })
+      } catch (error) {
+        showErrorToast("Search failed")
+        throw error
+      }
+    },
+    enabled: activeSearch != null,
+  })
+  const pluginResults = activeSearch ? (searchPage?.results ?? null) : null
+
+  // A plugin result carries no TMDB id, so the matching title is looked up when
+  // the card is opened rather than for every result of every search.
+  const tmdbMatchMutation = useMutation({
+    mutationFn: async (result: PluginSearchResult) => {
+      const match = await PluginsService.tmdbMatch({
+        title: result.title,
+        mediaType: result.media_type === "Movie" ? "movie" : "tv",
+        year: result.year,
+      })
+      return { match, result }
+    },
+    onSuccess: ({ match, result }) => {
+      if (!match) {
+        showErrorToast(`No details found for “${result.title}”`)
+        return
+      }
+      setSelectedResult({
+        tmdb_id: match.tmdb_id,
+        media_type: match.media_type,
+        title: result.title,
+        url: result.url,
+        year: result.year,
+        image_url: result.image_url,
+      })
+    },
+    onError: () => showErrorToast("Failed to load details"),
+  })
 
   const { data: searchablePlugins } = useSearchablePlugins()
 
@@ -561,16 +492,22 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   // their search page in a new tab instead of showing in-app results.
   const inAppPlugins = plugins.filter((plugin) => !plugin.manual_search_only)
   const manualPlugins = plugins.filter((plugin) => plugin.manual_search_only)
-  const searchablePluginKeys = new Set(
-    inAppPlugins.map((plugin) => plugin.plugin_key),
-  )
   const manualPluginKeys = new Set(
     manualPlugins.map((plugin) => plugin.plugin_key),
   )
 
+  useEffect(() => {
+    if (!pluginKey && inAppPlugins.length > 0) {
+      const preferred = inAppPlugins.find(
+        (plugin) => plugin.plugin_key === DEFAULT_PLUGIN_KEY,
+      )
+      setPluginKey((preferred ?? inAppPlugins[0]).plugin_key)
+    }
+  }, [pluginKey, inAppPlugins])
+
   const runSearch = async (key: string, rawQuery: string) => {
     const trimmed = rawQuery.trim()
-    if (!trimmed) return
+    if (!key || !trimmed) return
 
     // Manual-search-only plugins have no in-app search; open their website's
     // search page in a new tab. The tab is opened synchronously so the browser
@@ -596,9 +533,8 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
       return
     }
 
-    setIsSearching(true)
-    setTmdbResults(null)
-    setPluginResults(null)
+    setIsCheckingUrl(true)
+    setActiveSearch(null)
     setSelectedResult(null)
 
     try {
@@ -614,23 +550,18 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
         return
       }
 
-      if (key === TMDB_KEY) {
-        setTmdbResults(await PluginsService.tmdbSearch({ query: trimmed }))
-      } else {
-        const response = await PluginsService.searchPlugin({
-          pluginKey: key,
-          query: trimmed,
-        })
-        setPluginResults(response.results)
-      }
+      // A new search always starts from the first page.
+      reset()
+      setActiveSearch({ pluginKey: key, query: trimmed })
     } catch {
       showErrorToast("Search failed")
     } finally {
-      setIsSearching(false)
+      setIsCheckingUrl(false)
     }
   }
 
   const handleSearch = () => runSearch(pluginKey, searchQuery)
+  const isSearching = isCheckingUrl || isFetching
 
   return (
     <div className="space-y-4">
@@ -658,7 +589,6 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={TMDB_KEY}>TMDB (Search Multiple)</SelectItem>
             {inAppPlugins.map((plugin) => (
               <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
                 <SourceOptionLabel
@@ -684,25 +614,6 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
         </Select>
       </div>
 
-      {tmdbResults && tmdbResults.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {tmdbResults.map((result) => (
-            <ResultCard
-              key={`${result.media_type}-${result.tmdb_id}`}
-              imageUrl={result.image_url}
-              title={result.title}
-              subtitle={
-                <>
-                  {mediaTypeLabel(result.media_type)}
-                  {result.year && ` (${result.year})`}
-                </>
-              }
-              onClick={() => setSelectedResult(result)}
-            />
-          ))}
-        </div>
-      )}
-
       {pluginResults && pluginResults.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {pluginResults.map((result, index) => (
@@ -710,23 +621,33 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
               key={`${result.url}-${index}`}
               result={result}
               channelId={channelId}
+              onSelect={(selected) => tmdbMatchMutation.mutate(selected)}
             />
           ))}
         </div>
       )}
 
-      {(tmdbResults?.length === 0 || pluginResults?.length === 0) &&
-        !isSearching &&
-        searchQuery && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No results found
-          </p>
-        )}
+      {pluginResults?.length === 0 && !isSearching && searchQuery && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No results found
+        </p>
+      )}
+
+      {activeSearch && (
+        <SearchPager
+          pageIndex={pageIndex}
+          nextCursor={searchPage?.next_cursor}
+          isLoading={isSearching}
+          onPrevious={goToPreviousPage}
+          onNext={() =>
+            searchPage?.next_cursor && goToNextPage(searchPage.next_cursor)
+          }
+        />
+      )}
 
       <MediaInfoModal
         result={selectedResult}
         channelId={channelId}
-        searchablePluginKeys={searchablePluginKeys}
         onOpenChange={(open) => {
           if (!open) setSelectedResult(null)
         }}

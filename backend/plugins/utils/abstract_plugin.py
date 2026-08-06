@@ -33,9 +33,17 @@ class AbstractPlugin(ABC):
     # empty when the plugin has no matching TMDB provider.
     TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
 
+    # How many search results make up a single page of `search` output.
+    SEARCH_PAGE_SIZE: ClassVar[int] = 20
+
     # The favicon shown next to this plugin's name in the UI; None when the plugin
     # has no icon of its own.
     FAVICON_URL: ClassVar[str | None] = None
+
+    # Whether the plugin is offered in the UI's list of what can be added by URL.
+    # A plugin that is reached through another one sets this False: a URL a `User`
+    # pastes still imports, it is just not advertised as a way in.
+    LISTED_FOR_IMPORT_URL: ClassVar[bool] = True
 
     @classmethod
     @abstractmethod
@@ -301,8 +309,15 @@ class AbstractPlugin(ABC):
         msg = "import_watch_history is not supported by this plugin."
         raise NotImplementedError(msg)
 
-    def search(self, query: str) -> PluginSearchResults:
-        """Search for media."""
+    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
+        """Search for media.
+
+        Args:
+            query: The text to search for.
+            cursor: Opaque marker for the page to return, taken from the
+                `next_cursor` of a previous call. None returns the first page.
+
+        """
         msg = "search is not supported by this plugin."
         raise NotImplementedError(msg)
 
@@ -410,6 +425,33 @@ class PluginSearchResult(BaseModel):
 
 
 class PluginSearchResults(BaseModel):
-    """Results from a search query."""
+    """A single page of results from a search query."""
 
     results: list[PluginSearchResult]
+
+    next_cursor: str | None = None
+    """Cursor to pass back to `search` for the next page, None on the last page.
+
+    Every source pages differently — some hand out opaque cursors, others take
+    an offset — so the value is only ever interpreted by the plugin that
+    produced it.
+    """
+
+
+def paginate_search_results(
+    results: list[PluginSearchResult],
+    cursor: str | None,
+    page_size: int,
+) -> PluginSearchResults:
+    """Cut `results` into a page, using the cursor as an offset into them.
+
+    For sources that answer a search with every match at once instead of a page
+    at a time, so the whole batch is downloaded once and paged through locally.
+    """
+    offset = int(cursor) if cursor else 0
+    page = results[offset : offset + page_size]
+    next_offset = offset + len(page)
+    return PluginSearchResults(
+        results=page,
+        next_cursor=str(next_offset) if next_offset < len(results) else None,
+    )

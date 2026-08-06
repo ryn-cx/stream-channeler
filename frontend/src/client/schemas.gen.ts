@@ -3865,12 +3865,23 @@ export const PluginSearchResultsSchema = {
             },
             type: 'array',
             title: 'Results'
+        },
+        next_cursor: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Next Cursor'
         }
     },
     type: 'object',
     required: ['results'],
     title: 'PluginSearchResults',
-    description: 'Results from a search query.'
+    description: 'A single page of results from a search query.'
 } as const;
 
 export const PluginSearchUrlSchema = {
@@ -5974,6 +5985,24 @@ export const SourcesPublicSchema = {
     description: 'Schema for returning a list of `Source`s.'
 } as const;
 
+export const TMDBMatchSchema = {
+    properties: {
+        tmdb_id: {
+            type: 'integer',
+            title: 'Tmdb Id'
+        },
+        media_type: {
+            type: 'string',
+            enum: ['movie', 'tv'],
+            title: 'Media Type'
+        }
+    },
+    type: 'object',
+    required: ['tmdb_id', 'media_type'],
+    title: 'TMDBMatch',
+    description: "The TMDB title that best matches a plugin's search result."
+} as const;
+
 export const TMDBMediaInfoSchema = {
     properties: {
         title: {
@@ -6139,50 +6168,6 @@ export const TMDBMediaInfoSchema = {
     type: 'object',
     title: 'TMDBMediaInfo',
     description: 'Rich detail for a single movie or TV show plus its US watch providers.'
-} as const;
-
-export const TMDBSearchResultItemSchema = {
-    properties: {
-        tmdb_id: {
-            type: 'integer',
-            title: 'Tmdb Id'
-        },
-        media_type: {
-            type: 'string',
-            enum: ['movie', 'tv'],
-            title: 'Media Type'
-        },
-        title: {
-            type: 'string',
-            title: 'Title'
-        },
-        year: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Year'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        }
-    },
-    type: 'object',
-    required: ['tmdb_id', 'media_type', 'title'],
-    title: 'TMDBSearchResultItem',
-    description: 'A single TMDB multi-source search result.'
 } as const;
 
 export const TMDBWatchProviderItemSchema = {

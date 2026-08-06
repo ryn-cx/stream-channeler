@@ -22,7 +22,8 @@ class Tubi(
     UpsertMixin,
     HelperMixin,
     URLHandlerPlugin[TubiURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """Tubi plugin."""
 

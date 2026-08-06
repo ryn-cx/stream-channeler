@@ -2,6 +2,7 @@
 from collections.abc import Generator, Sequence
 from datetime import date, datetime
 from functools import cache
+from http import HTTPStatus
 from typing import Any, ClassVar, Literal, overload, override
 
 from pydantic import BaseModel
@@ -21,12 +22,17 @@ from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
+from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, HTMLFile
 from plugins.utils.base_plugin.plugin import BasePlugin
+from plugins.utils.get_around_client import get_around_client
 
-LOOKUP_ONLY_MESSAGE = (
-    "TMDB is a lookup-only plugin and does not support importing or updating media."
-)
+TMDB_DOMAIN = "themoviedb.org"
+
+
+def title_page_url(media_type: str, tmdb_id: int) -> str:
+    """Return the themoviedb.org page a user would visit for a title."""
+    return f"https://www.{TMDB_DOMAIN}/{media_type}/{tmdb_id}?language=en-US"
+
 
 _POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"
 _BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original"
@@ -238,13 +244,50 @@ class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
 
     API_ENDPOINT = tminidb_client().search_multi
 
-    def __init__(self, session: Session, plugin: Plugin, query: str) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        page: int = 1,
+    ) -> None:
         self.query = query
-        super().__init__(session, plugin, query)
+        self.page = page
+        super().__init__(session, plugin, query if page == 1 else f"{query}/{page}")
 
     @override
     def _get(self) -> SearchMultiModel:
-        return self.API_ENDPOINT.download_and_parse(self.query)
+        return self.API_ENDPOINT.download_and_parse(self.query, page=self.page)
+
+
+class TitlePage(HTMLFile):
+    """The themoviedb.org web page for a single title.
+
+    The API this plugin otherwise uses does not carry a JustWatch link, so the
+    page a user would visit is downloaded to read it off instead.
+    """
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        media_type: str,
+        tmdb_id: int,
+    ) -> None:
+        self.media_type = media_type
+        self.tmdb_id = tmdb_id
+        super().__init__(session, plugin, f"{media_type}/{tmdb_id}")
+
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            url = title_page_url(self.media_type, self.tmdb_id)
+            response = get_around_client().get(url, follow_redirects=True)
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                self.write(None)
+                return
+            response.raise_for_status()
+            self.write(response.text)
 
 
 class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
@@ -291,9 +334,13 @@ class TvSearch(_TMDBEndpointFile[SearchTvModel]):
 
 
 class FileMixin(BasePlugin, register=False):
-    def multi_search_file(self, query: str) -> MultiSearch:
+    def multi_search_file(self, query: str, page: int = 1) -> MultiSearch:
         """Returns MultiSearch file."""
-        return self._file(MultiSearch, query)
+        return self._file(MultiSearch, query, page)
+
+    def title_page_file(self, media_type: str, tmdb_id: int) -> TitlePage:
+        """Returns TitlePage file."""
+        return self._file(TitlePage, media_type, tmdb_id)
 
     def movie_search_file(self, query: str, year: int | None = None) -> MovieSearch:
         """Returns MovieSearch file."""

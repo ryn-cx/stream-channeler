@@ -19,7 +19,7 @@ class URLHandler[PluginT](ABC):
         self.url = url
 
     @classmethod
-    def url_regex(cls, domain_regex: str) -> str:
+    def _url_regex(cls, domain_regex: str) -> str:
         """Returns the full URL regex for the handler."""
         return domain_regex + cls._URL_REGEX
 
@@ -40,11 +40,11 @@ class URLHandler[PluginT](ABC):
 class URLMixin(ABC):
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:
-        return re.match(cls._url_regex(), url) is not None
+        return re.match(cls.url_regex(), url) is not None
 
     @classmethod
     @abstractmethod
-    def _url_regex(cls) -> str:
+    def url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
 
     # TODO: Replace with get_url_handler style

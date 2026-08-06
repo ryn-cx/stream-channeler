@@ -21,7 +21,8 @@ class ParamountPlus(
     UpsertMixin,
     HelperMixin,
     MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """Paramount+ plugin."""
 

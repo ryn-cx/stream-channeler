@@ -727,10 +727,11 @@ export type PluginSearchResult = {
 };
 
 /**
- * Results from a search query.
+ * A single page of results from a search query.
  */
 export type PluginSearchResults = {
     results: Array<PluginSearchResult>;
+    next_cursor?: (string | null);
 };
 
 export type PluginSearchUrl = {
@@ -1073,6 +1074,16 @@ export type SourceUpdate = {
 };
 
 /**
+ * The TMDB title that best matches a plugin's search result.
+ */
+export type TMDBMatch = {
+    tmdb_id: number;
+    media_type: 'movie' | 'tv';
+};
+
+export type media_type = 'movie' | 'tv';
+
+/**
  * Rich detail for a single movie or TV show plus its US watch providers.
  */
 export type TMDBMediaInfo = {
@@ -1092,19 +1103,6 @@ export type TMDBMediaInfo = {
     genres?: Array<(string)>;
     providers?: Array<TMDBWatchProviderItem>;
 };
-
-/**
- * A single TMDB multi-source search result.
- */
-export type TMDBSearchResultItem = {
-    tmdb_id: number;
-    media_type: 'movie' | 'tv';
-    title: string;
-    year?: (number | null);
-    image_url?: (string | null);
-};
-
-export type media_type = 'movie' | 'tv';
 
 /**
  * A place to watch a title, marked with the plugin that supports it.
@@ -1864,17 +1862,20 @@ export type PluginsSearchUrlData = {
 export type PluginsSearchUrlResponse = (PluginSearchUrl);
 
 export type PluginsSearchPluginData = {
+    cursor?: (string | null);
     pluginKey: string;
     query: string;
 };
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
-export type PluginsTmdbSearchData = {
-    query: string;
+export type PluginsTmdbMatchData = {
+    mediaType: 'movie' | 'tv';
+    title: string;
+    year?: (number | null);
 };
 
-export type PluginsTmdbSearchResponse = (Array<TMDBSearchResultItem>);
+export type PluginsTmdbMatchResponse = ((TMDBMatch | null));
 
 export type PluginsTmdbMediaInfoData = {
     mediaType: 'movie' | 'tv';

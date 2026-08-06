@@ -21,7 +21,8 @@ class Roku(
     UpsertMixin,
     HelperMixin,
     URLHandlerPlugin[RokuURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """The Roku Channel plugin."""
 

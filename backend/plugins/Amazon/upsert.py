@@ -25,7 +25,7 @@ def _parse_date(value: str | None) -> datetime | None:
 
 class UpsertMixin(HelperMixin, register=False):
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,

@@ -81,7 +81,7 @@ class YouTube(
 
     @classmethod
     @override
-    def _url_regex(cls) -> str:
+    def url_regex(cls) -> str:
         long_domain_regex = cls._regex_escape_domain(cls.__long_domain())
         short_domain_regex = cls._regex_escape_domain(cls.__short_domain())
         alternatives = "|".join(
@@ -138,11 +138,11 @@ class YouTube(
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
-            return self._upsert_show(self.source, show_key)
+            return self.upsert_show(self.source, show_key)
 
         if self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            return self._upsert_show(self.source, show_key)
+            return self.upsert_show(self.source, show_key)
 
         return show
 

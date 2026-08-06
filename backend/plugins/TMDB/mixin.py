@@ -6,10 +6,13 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils.sentinels import Sentinel
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import EpisodeDetail, MovieDetails, SeasonDetail, ShowDetail
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
+
+_UNRESOLVED = Sentinel("TMDB_ID")
 
 
 class TMDBMixin(BasePlugin, register=False):
@@ -56,8 +59,16 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: Literal["movie", "tv"],
     ) -> Show:
+        """Store the website's own `Show`, pointed at the TMDB title behind it.
+
+        Nothing is copied off TMDB here. The title is imported as the TMDB
+        plugin's own media instead, which is what fills in whatever this website
+        leaves out when the `Show` is served.
+        """
         tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
-        show = self.tmdb.tmdb_merge_show(show, tmdb_id, tmdb_media_type)
+        show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
+        if show.tmdb_id:
+            self.tmdb.import_title(tmdb_media_type, show.tmdb_id)
         show_files = self._show_files(show_key)
         return show.upsert_and_set_update_at(source, existing_show, show_files)
 
@@ -69,7 +80,7 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: Literal["movie", "tv"],
     ) -> Season:
-        season = self.tmdb.tmdb_merge_season(
+        season = self.tmdb.tmdb_link_season(
             season,
             show.tmdb_id,
             season.season_number,
@@ -86,7 +97,7 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: Literal["movie", "tv"],
     ) -> Episode:
-        episode = self.tmdb.tmdb_merge_episode(
+        episode = self.tmdb.tmdb_link_episode(
             episode,
             season.show.tmdb_id,
             season.season_number,
@@ -107,10 +118,10 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> int | None:
         raise NotImplementedError
 
-    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:  # noqa: ARG002
+    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:  # noqa: ARG002
         return "tv"
 
-    _tmdb_id_cache: dict[str, int | None]
+    _tmdb_id: int | None | Sentinel = _UNRESOLVED
 
     def _existing_show(self, show_key: str) -> Show | None:
         """Return a stored `Show` for `show_key`, preferring one with a `tmdb_id`.
@@ -125,25 +136,25 @@ class TMDBMixin(BasePlugin, register=False):
         return next((show for show in shows if show.tmdb_id), shows[0])
 
     def _cached_tmdb_id(self, show_key: str) -> int | None:
-        """Resolve the TMDB id once per show key for the life of the plugin.
+        """Resolve the TMDB id once for the show the instance is working on.
 
         Every file listing resolves the id, so without caching a show with many
-        episodes repeats the same lookup for each of them.
+        episodes repeats the same lookup for each of them. The value is dropped
+        by `_reset_show_state` when the instance moves to another show, so it is
+        held for one show rather than kept per show key.
         """
-        if not hasattr(self, "_tmdb_id_cache"):
-            self._tmdb_id_cache = {}
-        if show_key not in self._tmdb_id_cache:
-            self._tmdb_id_cache[show_key] = self._fetch_tmdb_id(
+        if isinstance(self._tmdb_id, Sentinel):
+            self._tmdb_id = self._fetch_tmdb_id(
                 show_key,
                 self._existing_show(show_key),
             )
-        return self._tmdb_id_cache[show_key]
+        return self._tmdb_id
 
     def _tmdb_show_file(self, show_key: str) -> ShowDetail | MovieDetails | None:
         tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
-        if self._tmdb_media_type(show_key) == "movie":
+        if self.tmdb_media_type(show_key) == "movie":
             return self.tmdb.movie_detail_file(tmdb_id)
         return self.tmdb.show_detail_file(tmdb_id)
 
@@ -155,7 +166,7 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
-        if self._tmdb_media_type(show_key) == "movie":
+        if self.tmdb_media_type(show_key) == "movie":
             return self.tmdb.movie_detail_file(tmdb_id)
         season_number = self._get_season_number(season_key, show_key)
         if season_number is None:
@@ -173,7 +184,7 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return None
-        if self._tmdb_media_type(show_key) == "movie":
+        if self.tmdb_media_type(show_key) == "movie":
             return self.tmdb.movie_detail_file(tmdb_id)
         season_number = self._get_season_number(season_key, show_key)
         episode_number = self._get_episode_number(episode_key, season_key, show_key)

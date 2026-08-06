@@ -45,7 +45,7 @@ class SourceMixin(FileMixin, register=False):
                     # immediately.
                     logger.info("Importing new show: {}", show_id)
                     self._download_show_files_and_children(show_id)
-                    self._upsert_show(source, show_id)
+                    self.upsert_show(source, show_id)
 
             feed_file.database_record.extra = "Completed"
 

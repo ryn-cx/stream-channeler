@@ -18,7 +18,7 @@ _MOVIE_UPDATE_INTERVAL = timedelta(days=30)
 
 class UpsertMixin(HelperMixin, register=False):
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,

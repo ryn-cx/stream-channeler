@@ -6,19 +6,16 @@ from typing import Any, cast, override
 
 import httpx
 from just_scrape import JustScrape
-from just_scrape.custom_buy_box_offers import (
-    models as custom_buy_box_offers_models,
-)
-from just_scrape.custom_season_episodes import (
-    models as custom_season_episodes_models,
-)
+from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.exceptions import GraphQLError
 from just_scrape.new_title_buckets import models as new_title_buckets_models
 from just_scrape.new_titles import models as new_titles_models
 from just_scrape.search import models as search_models
+from just_scrape.season_episodes import models as season_episodes_models
 from just_scrape.url_title_details import models as url_title_details_models
 from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.files.models import File
 from app.plugins.models import Plugin
@@ -44,6 +41,14 @@ def just_scrape() -> JustScrape:
         get_around_client=get_around_client(),
         sleep_time=10,
     )
+
+
+# The throttle above paces the bulk downloads that run in the background, where
+# waiting costs nothing. A search happens while a user is watching the screen,
+# so it gets a client that returns as soon as the response arrives.
+@cache
+def unthrottled_just_scrape() -> JustScrape:
+    return JustScrape(get_around_client=get_around_client())
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
@@ -125,40 +130,61 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
         return f"Invalid full_path {self.unique_identifier}"
 
 
-class CustomSeasonEpisodes(
-    GAPIListJSON[custom_season_episodes_models.CustomSeasonEpisodesResponse],
+class SeasonEpisodes(
+    GAPIListJSON[season_episodes_models.SeasonEpisodesResponse],
 ):
-    API_ENDPOINT = just_scrape().custom_season_episodes
+    API_ENDPOINT = just_scrape().season_episodes
 
     @override
-    def _get(self) -> list[custom_season_episodes_models.CustomSeasonEpisodesResponse]:
-        return just_scrape().custom_season_episodes.download_and_parse_all(
+    def _get(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
+        return just_scrape().season_episodes.download_and_parse_all(
             self.unique_identifier,
         )
 
-    def parsed_episodes(self) -> list[custom_season_episodes_models.Episode]:
-        return just_scrape().custom_season_episodes.extract_episodes(self.parsed())
+    def parsed_episodes(self) -> list[season_episodes_models.Episode]:
+        return just_scrape().season_episodes.extract_episodes(self.parsed())
 
 
-class CustomBuyBoxOffers(
-    GAPIJSON[custom_buy_box_offers_models.CustomBuyBoxOffersResponse],
+class BuyBoxOffers(
+    GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse],
 ):
-    API_ENDPOINT = just_scrape().custom_buy_box_offers
+    API_ENDPOINT = just_scrape().buy_box_offers
 
 
 class SearchTitles(GAPIJSON[search_models.SearchResponse]):
-    API_ENDPOINT = just_scrape().search
+    API_ENDPOINT = unthrottled_just_scrape().search
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        cursor: str,
+    ) -> None:
+        self.query = query
+        self.cursor = cursor
+        super().__init__(session, plugin, f"{query}/{cursor}")
+
+    # Every argument but the cursor keeps its default so a page request looks
+    # exactly like the one the website makes.
+    @override
+    def _get(self) -> search_models.SearchResponse:
+        return unthrottled_just_scrape().search.download_and_parse(
+            self.query,
+            search_after_cursor=self.cursor,
+        )
 
 
 class FileMixin(TMDBMixin, register=False):
-    @override
-    def __init__(self, session: Session) -> None:
-        self._cached_media_type: str | None = None
-        super().__init__(session)
+    _cached_media_type: str | None = None
 
-    def custom_buy_box_offers_file(self, episode_key: str) -> CustomBuyBoxOffers:
+    # The provider list and the new titles feeds belong to the plugin and its
+    # sources, so every show reads the same ones.
+    _PLUGIN_WIDE_FILES = (ProvidersLocale, NewTitleBucket, NewTitles)
+
+    def buy_box_offers_file(self, episode_key: str) -> BuyBoxOffers:
         """Contains every offer JustWatch has for a single episode."""
-        return self._file(CustomBuyBoxOffers, episode_key)
+        return self._file(BuyBoxOffers, episode_key)
 
     def url_title_details_file(self, show_key: str) -> UrlTitleDetails:
         """Contains a title's metadata, its seasons, and its offers."""
@@ -170,9 +196,9 @@ class FileMixin(TMDBMixin, register=False):
             new_date = new_date.date()
         return self._file(NewTitles, source_key, new_date)
 
-    def custom_season_episodes_file(self, season_key: str) -> CustomSeasonEpisodes:
+    def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
         """Contains every episode of a single season."""
-        return self._file(CustomSeasonEpisodes, season_key)
+        return self._file(SeasonEpisodes, season_key)
 
     def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
         """Contains which sources added new titles on which dates."""
@@ -185,9 +211,9 @@ class FileMixin(TMDBMixin, register=False):
         """Contains every provider JustWatch tracks for a locale."""
         return self._file(ProvidersLocale, locale)
 
-    def search_titles_file(self, query: str) -> SearchTitles:
-        """Contains the search results for a single query."""
-        return self._file(SearchTitles, query)
+    def search_titles_file(self, query: str, cursor: str | None) -> SearchTitles:
+        """Contains one page of search results for a single query."""
+        return self._file(SearchTitles, query, cursor or "")
 
     @override
     def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
@@ -217,7 +243,7 @@ class FileMixin(TMDBMixin, register=False):
         else:
             base_files = [
                 # Required to detect new episodes.
-                self.custom_season_episodes_file(season_key),
+                self.season_episodes_file(season_key),
                 # Required to detect changes to the season.
                 self.url_title_details_file(show_key),
             ]
@@ -237,8 +263,8 @@ class FileMixin(TMDBMixin, register=False):
         else:
             base_files = [
                 # Required to detect changes to the episode.
-                self.custom_buy_box_offers_file(episode_key),
-                self.custom_season_episodes_file(season_key),
+                self.buy_box_offers_file(episode_key),
+                self.season_episodes_file(season_key),
             ]
         return self._append_tmdb_episode_file(
             base_files,
@@ -261,18 +287,11 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
             update_at,
         )
-        # The season episodes file reports when each episode's offers last
-        # changed, so re-download any buy box offers that are now stale.
+        # Episode files are only downloaded when missing, so the buy box offers
+        # are refreshed here to pick up offer changes for existing episodes.
         if self._media_type(show_key) != "Movie":
-            for episode in self.custom_season_episodes_file(
-                season_key,
-            ).parsed_episodes():
-                offer_updated_at = episode.max_offer_updated_at
-                if isinstance(offer_updated_at, str):
-                    offer_updated_at = datetime.fromisoformat(offer_updated_at)
-                self.custom_buy_box_offers_file(episode.id).download_if_outdated(
-                    offer_updated_at,
-                )
+            for episode in self.season_episodes_file(season_key).parsed_episodes():
+                self.buy_box_offers_file(episode.id).download_if_outdated(update_at)
         return files
 
     def _download_new_titles_files(
@@ -302,6 +321,45 @@ class FileMixin(TMDBMixin, register=False):
         if not self._get_latest_new_titles_bucket().first():
             bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
+
+    def _download_new_titles(self) -> None:
+        """Download every new titles file the stored buckets list.
+
+        The buckets say which dates a provider added titles on and the new titles
+        files are what `update_source` reads. Every provider is covered because a
+        service only announces a title it picked up in its own feed, so the feeds
+        that report a title becoming available somewhere new are the ones for the
+        services it is not on yet. A file that is never downloaded has no record
+        for `_pending_new_titles_files` to find, leaving it invisible for good.
+        """
+        new_titles_files = [
+            self.new_titles_file(edge.key.package.short_name, edge.key.date)
+            for bucket_record in self._get_new_titles_buckets()
+            for edge in self.new_titles_bucket_file(bucket_record).parsed_edges()
+        ]
+        # Read every stored record in one query and hold it for the loop below.
+        # The session only keeps records weakly, so without this each file finds
+        # nothing in memory and queries the database for its own record.
+        _cache = self._get_files_by_keys(
+            [new_titles.file_key() for new_titles in new_titles_files],
+        )
+        for new_titles in new_titles_files:
+            new_titles.download_if_outdated()
+
+    def provider(self, source_key: str) -> dict[str, Any]:
+        """Return the providers file's entry for `source_key`."""
+        providers = self._providers_by_key()
+        if source_key not in providers:
+            # A provider JustWatch added after the providers file was downloaded.
+            self.providers_locale_file().download_if_outdated(tz_datetime.now())
+            providers = self._providers_by_key()
+        return providers[source_key]
+
+    def _providers_by_key(self) -> dict[str, dict[str, Any]]:
+        return {
+            provider["short_name"]: provider
+            for provider in self.providers_locale_file().parsed()
+        }
 
     def _download_latest_new_titles_bucket(self) -> None:
         latest_bucket = self._get_latest_new_titles_bucket().one()
@@ -336,9 +394,7 @@ class FileMixin(TMDBMixin, register=False):
         return [
             episode.id
             for season_key in season_keys
-            for episode in self.custom_season_episodes_file(
-                season_key,
-            ).parsed_episodes()
+            for episode in self.season_episodes_file(season_key).parsed_episodes()
         ]
 
     def _media_type(self, show_key: str) -> str:
@@ -361,17 +417,21 @@ class FileMixin(TMDBMixin, register=False):
             seen.setdefault(offer.package.short_name, offer)
         return list(seen.items())
 
-    def _get_latest_new_titles_bucket(self) -> ScalarResult[File]:
-        statement = (
+    def _new_titles_buckets_statement(self) -> SelectOfScalar[File]:
+        return (
             select(File)
             .where(
                 File.plugin_id == self.plugin.id,
                 col(File.key).startswith(f"{NewTitleBucket.__name__}/"),
             )
             .order_by(col(File.data_timestamp).desc())
-            .limit(1)
         )
-        return self.session.exec(statement)
+
+    def _get_new_titles_buckets(self) -> ScalarResult[File]:
+        return self.session.exec(self._new_titles_buckets_statement())
+
+    def _get_latest_new_titles_bucket(self) -> ScalarResult[File]:
+        return self.session.exec(self._new_titles_buckets_statement().limit(1))
 
     def minimum_new_titles_timestamp(self, file: NewTitles) -> datetime:
         # The data for a specific source changes throughout the day as new entries are

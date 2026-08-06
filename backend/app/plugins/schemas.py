@@ -81,14 +81,11 @@ class PluginSearchUrl(BaseModel):
 TMDBMediaType = Literal["movie", "tv"]
 
 
-class TMDBSearchResultItem(BaseModel):
-    """A single TMDB multi-source search result."""
+class TMDBMatch(BaseModel):
+    """The TMDB title that best matches a plugin's search result."""
 
     tmdb_id: int
     media_type: TMDBMediaType
-    title: str
-    year: int | None = None
-    image_url: str | None = None
 
 
 class TMDBWatchProviderItem(BaseModel):

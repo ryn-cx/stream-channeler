@@ -352,12 +352,12 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         plugin_under_test: BasePlugin | None = None
         for plugin_key in plugin_keys:
             plugin_class = _plugin_class(plugin_key)
-            initialize_source = plugin_class.initialize_source
-            plugin_class.initialize_source = no_operation  # type: ignore[assignment]
+            initialize_sources = plugin_class.initialize_sources
+            plugin_class.initialize_sources = no_operation  # type: ignore[assignment]
             try:
                 plugin_instance = plugin_class(session)
             finally:
-                plugin_class.initialize_source = initialize_source  # type: ignore[method-assign]
+                plugin_class.initialize_sources = initialize_sources  # type: ignore[method-assign]
             if plugin_key == self.plugin_class.plugin_key():
                 plugin_under_test = plugin_instance
             plugin_records[plugin_key] = Plugin.get_one(
@@ -384,7 +384,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         # Files are imported so now the plugin under test's source can be run.
         assert plugin_under_test is not None
-        plugin_under_test.initialize_source()
+        plugin_under_test.initialize_sources()
 
         session.commit()  # Set the rollback point.
 

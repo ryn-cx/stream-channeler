@@ -21,7 +21,8 @@ class HBOMax(
     UpsertMixin,
     HelperMixin,
     MediaTypeImportMixin[HBOMaxURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """HBO Max plugin."""
 

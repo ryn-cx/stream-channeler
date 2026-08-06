@@ -55,6 +55,7 @@ from app.channels.schemas import (
 )
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
+from app.media.tmdb_fallback import fill_episodes, fill_seasons, fill_shows
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
@@ -421,6 +422,10 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
+    fill_episodes(session, output.episodes)
+    fill_seasons(session, list(output.seasons.values()))
+    fill_shows(session, list(output.shows.values()))
+
     logger.info("get_channel_episodes completed in {:.3f} seconds", time.time() - start)
     return output
 
@@ -496,6 +501,16 @@ def get_channel_shows(
         for group_channel_id in sorted(shows_by_channel, key=group_sort_key)
     ]
 
+    # A grouped show is its own row, so the groups are filled alongside the lists.
+    fill_shows(
+        session,
+        [
+            *output.shows,
+            *output.filter_only_shows,
+            *(show for group in output.groups for show in group.shows),
+        ],
+    )
+
     return output
 
 
@@ -524,6 +539,7 @@ def get_channel_sources(
 # FAST003 - Parameter is used by UserChannelShow.
 @channels_router.get("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
 def get_channel_whitelist(
+    session: SessionDep,
     channel_show: EditableChannelReadableShow,
 ) -> WhitelistShowOutput:
     """Read the whitelist for a show in a channel."""
@@ -555,14 +571,22 @@ def get_channel_whitelist(
             for episode in season.episodes
         )
 
-    return WhitelistShowOutput.model_validate(
-        channel_show.show,
-        update={
-            "is_whitelist": channel_show.is_whitelist,
-            "seasons": seasons,
-            "episodes": episodes,
-        },
-    )
+    fill_seasons(session, seasons)
+    fill_episodes(session, episodes)
+
+    return fill_shows(
+        session,
+        [
+            WhitelistShowOutput.model_validate(
+                channel_show.show,
+                update={
+                    "is_whitelist": channel_show.is_whitelist,
+                    "seasons": seasons,
+                    "episodes": episodes,
+                },
+            ),
+        ],
+    )[0]
 
 
 # FAST003 - Parameter is used by UserChannelShow.
@@ -576,7 +600,7 @@ def update_channel_whitelist(
     service.update_whitelist(session, channel_show, whitelist_config)
     # Build the response before any cleanup so it stays valid even if the
     # channel-show is removed below.
-    output = get_channel_whitelist(channel_show)
+    output = get_channel_whitelist(session, channel_show)
     # A filter-only show that no longer hides anything serves no purpose, so drop it
     # to keep the channel's show list clean.
     if (

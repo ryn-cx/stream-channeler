@@ -24,7 +24,8 @@ class Hulu(
     SearchMixin,
     HelperMixin,
     MediaTypeImportMixin[HuluURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """Hulu plugin."""
 

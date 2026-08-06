@@ -24,7 +24,7 @@ _MILLISECONDS_PER_SECOND = 1000
 
 class UpsertMixin(HelperMixin, register=False):
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,

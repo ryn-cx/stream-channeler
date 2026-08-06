@@ -19,7 +19,8 @@ class Amazon(
     UpsertMixin,
     HelperMixin,
     URLHandlerPlugin[AmazonURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """Amazon Prime Video plugin."""
 

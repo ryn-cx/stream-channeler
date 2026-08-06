@@ -16,7 +16,7 @@ from plugins.YouTube.files import (
 
 class HelperMixin(FileMixin, register=False):
     def record_album_playlist_key(self, playlist_key: str) -> None:
-        self._imported_album_playlist_keys.add(playlist_key)
+        self._importing_album_playlist_key = playlist_key
 
     @override
     def _fetch_tmdb_id(
@@ -38,7 +38,7 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     @override
-    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if is_video_key(show_key) else "tv"
 
     @override

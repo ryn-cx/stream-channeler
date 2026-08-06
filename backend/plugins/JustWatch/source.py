@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, override
+from typing import override
 
 from loguru import logger
 from sqlalchemy import func
@@ -13,70 +13,39 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.JustWatch.files import NewTitleBucket, NewTitles
-from plugins.JustWatch.helpers import HelperMixin
+from plugins.JustWatch.upsert import UpsertMixin
 
 
-class SourceMixin(HelperMixin, register=False):
-    # JustWatch tracks hundreds of providers but only the ones a title is actually
-    # imported from get a `Source`, so they are created on demand instead of here.
+class SourceMixin(UpsertMixin, register=False):
     @override
-    def initialize_source(self) -> None:
-        if self.plugin.data_timestamp is None:
-            providers_file = self.providers_locale_file()
-            providers_file.download_if_outdated()
+    def initialize_sources(self) -> None:
+        if self.plugin.sources:
+            return
 
-            bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
-            bucket.download_if_outdated()
-
-            self._download_new_titles_bucket_if_missing()
-
-            self.plugin.data_timestamp = self.plugin_data_timestamp()
-            self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
-
-    @override
-    def _upsert_source(self, source_key: str) -> Source:
-        """Create or update the `Source` for a single provider."""
         providers_file = self.providers_locale_file()
         providers_file.download_if_outdated()
-        provider = self._provider(source_key)
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
 
-        source = Source(
-            key=source_key,
-            name=provider["clear_name"],
-            favicon_url=self._favicon_url(provider),
-            plugin_id=self.plugin.id,
-        ).upsert(self.plugin, existing_source)
+        bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
+        bucket.download_if_outdated()
 
-        # Only use the data timestamp from the providers file for the initial
-        # import. If the source already has a data_timestamp keep it because it will
-        # be based on data from the new titles files which are more up to date.
-        if not source.data_timestamp:
-            source.data_timestamp = providers_file.data_timestamp
+        self._download_new_titles_bucket_if_missing()
+        self._download_new_titles()
 
-        return source
-
-    def _provider(self, source_key: str) -> dict[str, Any]:
-        providers = self._providers_by_key()
-        if source_key not in providers:
-            # A provider JustWatch added after the providers file was downloaded.
-            self.providers_locale_file().download_if_outdated(tz_datetime.now())
-            providers = self._providers_by_key()
-        return providers[source_key]
-
-    def _providers_by_key(self) -> dict[str, dict[str, Any]]:
-        return {
-            provider["short_name"]: provider
-            for provider in self.providers_locale_file().parsed()
-        }
+        self._upsert_sources()
+        self.plugin.data_timestamp = self.plugin_data_timestamp()
+        self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
     @override
     def update_plugin(self, plugin: Plugin) -> None:
-        providers_file = self.providers_locale_file()
-        providers_file.download_if_outdated()
 
+        if not (providers_locale_file := self.providers_locale_file()):
+            msg = f"Plugin {plugin.key} has no providers locale file."
+            raise ValueError(msg)
+
+        timestamp = providers_locale_file.data_timestamp + timedelta(days=1)
+        providers_locale_file.download_if_outdated(timestamp)
+        self._upsert_sources()
         _cache = plugin.sources
         for source in plugin.sources:
             self._upsert_source(source.key)
@@ -148,6 +117,62 @@ class SourceMixin(HelperMixin, register=False):
         else:
             source.update_at = None
 
+    def _title_is_tracked(self, show_key: str) -> bool:
+        """Report whether the title's details are stored.
+
+        A feed covers every title the service added, so this keeps the work to
+        the handful of titles that were actually imported.
+        """
+        statement = select(File).where(
+            File.plugin_id == self.plugin.id,
+            File.key == self.url_title_details_file(show_key).file_key(),
+        )
+        return self.session.exec(statement).first() is not None
+
+    def _mark_external_show(
+        self,
+        show_key: str,
+        source_key: str,
+        timestamp: datetime,
+    ) -> None:
+        """Mark the title's copy on `source_key` when another plugin owns it.
+
+        JustWatch watches the new titles feed of every service a title it
+        imported is on, including the services whose own plugin holds the media.
+        Only the copy on the service the feed belongs to changed, and it is
+        stored under that plugin's own key, so the TMDB id both copies were
+        matched to is the only thing that ties them together.
+        """
+        # A feed covers many titles, and `update_source` is not tied to any one
+        # of them, so each title has to be announced before its id is resolved.
+        self._set_current_show(show_key)
+
+        plugin_class = self._plugin_for_source(show_key, source_key)
+        if plugin_class is None:
+            return
+
+        tmdb_id = self._cached_tmdb_id(show_key)
+        if tmdb_id is None:
+            return
+
+        statement = (
+            select(Show)
+            .join(Source)
+            .join(Plugin)
+            .where(
+                Show.tmdb_id == tmdb_id,
+                Plugin.key == plugin_class.plugin_key(),
+                col(Show.deleted_at).is_(None),
+            )
+        )
+        for external_show in self.session.exec(statement).all():
+            logger.info("Marking {} show: {}", plugin_class.plugin_key(), show_key)
+            external_show.set_update_at(timestamp)
+            # Updating a show does not always update its seasons, so the seasons
+            # have to be marked as well for the new episodes to be picked up.
+            for season in external_show.active_children:
+                season.set_update_at(timestamp)
+
     def _process_new_titles_files(
         self,
         source: Source,
@@ -188,3 +213,11 @@ class SourceMixin(HelperMixin, register=False):
                     # to be updated.
                     else:
                         show.set_update_at(file.data_timestamp)
+                # The source holds no media of its own when the service has a
+                # plugin, so the title changed on that plugin's copy instead.
+                elif self._title_is_tracked(show_key):
+                    self._mark_external_show(
+                        show_key,
+                        file.source_key,
+                        file.data_timestamp,
+                    )

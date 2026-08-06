@@ -11,12 +11,15 @@ from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
+    paginate_search_results,
 )
 
 
 class SearchMixin(HelperMixin, register=False):
+    # Crunchyroll answers a search with every match at once, so pages are cut out
+    # of that one download rather than requested one at a time.
     @override
-    def search(self, query: str) -> PluginSearchResults:
+    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         search_file = self.search_file(query)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
@@ -40,7 +43,7 @@ class SearchMixin(HelperMixin, register=False):
             )
             for item in items
         ]
-        return PluginSearchResults(results=results)
+        return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
 
     @staticmethod
     def _search_image_url(images: search_models.Images) -> str | None:

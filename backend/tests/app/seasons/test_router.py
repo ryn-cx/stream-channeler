@@ -1,4 +1,9 @@
 # TODO: Validate
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonCreate,
@@ -12,6 +17,7 @@ from tests.app.utils.base_create import BaseCreateTests
 from tests.app.utils.base_delete import BaseDeleteTests
 from tests.app.utils.base_get import BaseGetTests
 from tests.app.utils.base_update import BaseUpdateTests
+from tests.app.utils.route_assertions import assert_success
 
 
 class SeasonTestMixin(BaseTests[Season]):
@@ -38,3 +44,62 @@ class TestUpdateSeason(SeasonTestMixin, BaseUpdateTests[Season]):
 
 class TestDeleteSeason(SeasonTestMixin, BaseDeleteTests[Season]):
     pass
+
+
+class TestUpdateSeasonRemerge(SeasonTestMixin):
+    def patch_tmdb_id(
+        self,
+        session: Session,
+        client: TestClient,
+        original_tmdb_id: int,
+        new_tmdb_id: int,
+    ) -> int:
+        """Patch a `Season` with `new_tmdb_id` and count the relinks it caused."""
+        setup = self.create_test_data(
+            client=client,
+            session=session,
+            user_is_owner=True,
+            user_is_authenticated=True,
+            record_is_public=False,
+        )
+        setup.record.tmdb_id = original_tmdb_id
+        session.commit()
+
+        with patch("app.seasons.router.relink_season_children") as relink:
+            assert_success(
+                client=client,
+                method="patch",
+                url=self.generic_record_url(setup.record.id),
+                output_schema=SeasonOutput,
+                headers=setup.headers,
+                parameters={"tmdb_id": new_tmdb_id},
+            )
+        return relink.call_count
+
+    def test_changed_tmdb_id_relinks_episodes(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_session: Session,
+    ) -> None:
+        """Ensure a new `tmdb_id` reruns the children through TMDB."""
+        call_count = self.patch_tmdb_id(
+            session_scoped_session,
+            session_scoped_client,
+            original_tmdb_id=100,
+            new_tmdb_id=200,
+        )
+        assert call_count == 1
+
+    def test_unchanged_tmdb_id_does_not_relink_episodes(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_session: Session,
+    ) -> None:
+        """Ensure an unchanged `tmdb_id` leaves the children alone."""
+        call_count = self.patch_tmdb_id(
+            session_scoped_session,
+            session_scoped_client,
+            original_tmdb_id=100,
+            new_tmdb_id=100,
+        )
+        assert call_count == 0

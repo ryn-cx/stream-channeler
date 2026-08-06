@@ -1,8 +1,14 @@
 """Crunchyroll URL handlers."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from plugins.Crunchyroll.music_keys import (
+    MusicCategory,
+    artist_show_key,
+    music_episode_key,
+)
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -77,3 +83,92 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
 
         msg = f"Episode {self._key} not found in show {show.key}"
         raise InvalidURLError(msg)
+
+
+class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
+    """Crunchyroll artist URL handler.
+
+    Importing an artist takes every music video and concert they have released,
+    and every one they release later.
+
+    Supported URL Formats:
+        - https://www.crunchyroll.com/artist/MA899F54A4
+        - https://www.crunchyroll.com/artist/MA899F54A4/lisa
+    """
+
+    _URL_REGEX = r"\/artist\/(?P<artist_key>[A-Z0-9]{9,})(?:\/|$)"
+
+    @property
+    @override
+    def show_key(self) -> str:
+        return artist_show_key(self._key)
+
+    @override
+    def raise_if_invalid(self) -> None:
+        artist_file = self.plugin.artist_file(self._key)
+        self.plugin.raise_if_invalid_file(artist_file, self.url)
+
+
+class CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
+    """Base handler for a single music video or concert.
+
+    Both are reached through the artist that released them, so the URL only
+    identifies which of the artist's episodes the import should whitelist.
+    """
+
+    _CATEGORY: MusicCategory
+
+    @property
+    @override
+    def show_key(self) -> str:
+        details = self.plugin.music_file(self._episode_key).parsed().data[0]
+        return artist_show_key(details.artist.id)
+
+    @property
+    def _episode_key(self) -> str:
+        return music_episode_key(self._CATEGORY, self._key)
+
+    @override
+    def raise_if_invalid(self) -> None:
+        music_file = self.plugin.music_file(self._episode_key)
+        self.plugin.raise_if_invalid_file(music_file, self.url)
+
+    @override
+    def import_results(self, show: Show) -> list[URLImportResult]:
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.key == self._episode_key:
+                    return [
+                        URLImportResult(
+                            show=show,
+                            episodes=[episode],
+                            is_whitelist=True,
+                        ),
+                    ]
+
+        msg = f"Episode {self._episode_key} not found in show {show.key}"
+        raise InvalidURLError(msg)
+
+
+class CrunchyrollMusicVideoURLHandler(CrunchyrollMusicURLHandler):
+    """Crunchyroll music video URL handler.
+
+    Supported URL Formats:
+        - https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
+        - https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009/gurenge
+    """
+
+    _URL_REGEX = r"\/watch\/musicvideo\/(?P<music_video_key>[A-Z0-9]{9,})(?:\/|$)"
+    _CATEGORY: MusicCategory = "musicvideo"
+
+
+class CrunchyrollConcertURLHandler(CrunchyrollMusicURLHandler):
+    """Crunchyroll concert URL handler.
+
+    Supported URL Formats:
+        - https://www.crunchyroll.com/watch/concert/MC413F1C5C
+        - https://www.crunchyroll.com/watch/concert/MC413F1C5C/lisa-ladybug
+    """
+
+    _URL_REGEX = r"\/watch\/concert\/(?P<concert_key>[A-Z0-9]{9,})(?:\/|$)"
+    _CATEGORY: MusicCategory = "concert"

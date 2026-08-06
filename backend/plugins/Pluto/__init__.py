@@ -21,7 +21,8 @@ class Pluto(
     UpsertMixin,
     HelperMixin,
     MediaTypeImportMixin[PlutoURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """Pluto TV plugin."""
 

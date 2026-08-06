@@ -435,10 +435,7 @@ class ShowPage(HTMLFile):
 
 
 class FileMixin(TMDBMixin, register=False):
-    @override
-    def __init__(self, session: Session) -> None:
-        super().__init__(session)
-        self._imported_album_playlist_keys: set[str] = set()
+    _importing_album_playlist_key: str | None = None
 
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         """Return a cached ChannelByChannelId for the given show key."""
@@ -608,7 +605,9 @@ class FileMixin(TMDBMixin, register=False):
         return season_keys
 
     def _album_season_keys(self, show_key: str) -> list[str]:
-        season_keys: list[str] = list(self._imported_album_playlist_keys)
+        season_keys: list[str] = []
+        if self._importing_album_playlist_key:
+            season_keys.append(self._importing_album_playlist_key)
         existing_show = self._preload_show(
             show_key,
             preload_seasons=True,

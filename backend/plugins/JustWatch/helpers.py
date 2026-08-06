@@ -4,14 +4,14 @@ from datetime import date, datetime
 from itertools import chain
 from typing import Literal, cast, override
 
-from just_scrape.custom_buy_box_offers import (
-    models as custom_buy_box_offers_models,
-)
+from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.url_title_details import models as url_title_details_models
 
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
+from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.manage_plugins import sorted_plugins
 
 
 class HelperMixin(FileMixin, register=False):
@@ -19,6 +19,30 @@ class HelperMixin(FileMixin, register=False):
     @override
     def _domain(cls) -> str:
         return "justwatch.com"
+
+    @classmethod
+    def _plugin_for_url(cls, url: str) -> type[AbstractPlugin] | None:
+        """Return the plugin that imports `url` itself, if there is one."""
+        for plugin_class in sorted_plugins():
+            if (
+                plugin_class is not cls
+                and plugin_class.implements("import_url")
+                and plugin_class.is_valid_url_format(url)
+            ):
+                return plugin_class
+        return None
+
+    def _plugin_for_source(
+        self,
+        show_key: str,
+        source_key: str,
+    ) -> type[AbstractPlugin] | None:
+        """Return the plugin that owns the title's media on `source_key`."""
+        for offer_source_key, offer in self._sources_with_offers(show_key):
+            if offer_source_key == source_key:
+                offer_url = self._clean_external_url(offer.standard_web_url)
+                return self._plugin_for_url(offer_url)
+        return None
 
     @override
     def _fetch_tmdb_id(
@@ -33,12 +57,12 @@ class HelperMixin(FileMixin, register=False):
         content = details_file.parsed().data.url_v2.node.content
         return self._tmdb_search_media(
             content.title,
-            self._tmdb_media_type(show_key),
+            self.tmdb_media_type(show_key),
             content.original_release_year,
         )
 
     @override
-    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if self._media_type(show_key) == "Movie" else "tv"
 
     @override
@@ -60,7 +84,7 @@ class HelperMixin(FileMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> int | None:
-        episodes = self.custom_season_episodes_file(season_key).parsed_episodes()
+        episodes = self.season_episodes_file(season_key).parsed_episodes()
         for episode in episodes:
             if episode.id == episode_key:
                 return episode.content.episode_number
@@ -106,8 +130,8 @@ class HelperMixin(FileMixin, register=False):
     @staticmethod
     def _find_matching_episode(
         source_key: str,
-        node: custom_buy_box_offers_models.Node | url_title_details_models.Node,
-    ) -> custom_buy_box_offers_models.Offer | None:
+        node: buy_box_offers_models.Node | url_title_details_models.Node,
+    ) -> buy_box_offers_models.Offer | None:
         """Find the offer that matches the source key.
 
         The just_scrape models split offers into separate categorized lists
@@ -124,5 +148,5 @@ class HelperMixin(FileMixin, register=False):
             if item is None:
                 continue
             if item.package.short_name == source_key:
-                return cast("custom_buy_box_offers_models.Offer", item)
+                return cast("buy_box_offers_models.Offer", item)
         return None

@@ -9,9 +9,9 @@ from tminidb.movie_watch_providers.models import MovieWatchProvidersModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
 from app.plugins.schemas import (
+    TMDBMatch,
     TMDBMediaInfo,
     TMDBMediaType,
-    TMDBSearchResultItem,
     TMDBWatchProviderItem,
 )
 from plugins.TMDB import TMDB
@@ -71,29 +71,23 @@ def _watch_provider_items(
     return items
 
 
-def tmdb_search(session: Session, query: str) -> list[TMDBSearchResultItem]:
-    """Search movies and TV across all of TMDB."""
-    tmdb = TMDB(session)
-    items: list[TMDBSearchResultItem] = []
-    for result in tmdb.auto_updating_search_media(None, query).parsed().results:
-        if result.media_type not in ("movie", "tv"):
-            continue
-        is_movie = result.media_type == "movie"
-        title = result.title if is_movie else result.name
-        if not title:
-            continue
-        items.append(
-            TMDBSearchResultItem(
-                tmdb_id=result.id,
-                media_type="movie" if is_movie else "tv",
-                title=title,
-                year=release_year(
-                    result.release_date if is_movie else result.first_air_date,
-                ),
-                image_url=poster_image_url(result.poster_path),
-            ),
-        )
-    return items
+def tmdb_match(
+    session: Session,
+    title: str,
+    media_type: TMDBMediaType,
+    year: int | None = None,
+) -> TMDBMatch | None:
+    """Return the TMDB title that best matches a plugin's search result.
+
+    A plugin search result only carries what its own service knows, so the
+    matching TMDB title has to be found by searching for it. Resolved on demand
+    rather than for every result, since only the ones opened are needed.
+    """
+    search_file = TMDB(session).auto_updating_search_media(media_type, title, year)
+    results = search_file.parsed().results
+    if not results:
+        return None
+    return TMDBMatch(tmdb_id=results[0].id, media_type=media_type)
 
 
 def tmdb_media_info(
@@ -102,8 +96,8 @@ def tmdb_media_info(
     tmdb_id: int,
 ) -> TMDBMediaInfo | None:
     tmdb = TMDB(session)
-    detail = tmdb.media_detail_file(media_type, tmdb_id).parsed()
-    providers = tmdb.auto_updating_watch_providers(media_type, tmdb_id)
+    detail = tmdb.auto_updating_media_detail(media_type, tmdb_id).parsed()
+    providers = tmdb.auto_updating_watch_providers(media_type, tmdb_id).parsed()
     if isinstance(detail, MovieDetailsModel):
         title = detail.title
         year = release_year(detail.release_date)

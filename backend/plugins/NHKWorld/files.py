@@ -10,8 +10,10 @@ from naphki.video_episodes import models as video_episodes_models
 from naphki.video_episodes.models import Item, VideoEpisodesModel
 from naphki.video_programs import models as video_programs_models
 from naphki.video_programs.models import VideoProgramsModel
+from sqlmodel import Session
 
 from app.files.models import File
+from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
@@ -48,6 +50,24 @@ class ShowsSearch(GAPIJSON[ShowsSearchModel]):
     """Shows search file."""
 
     API_ENDPOINT = naphki().shows_search
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        offset: int,
+    ) -> None:
+        self.query = query
+        self.offset = offset
+        super().__init__(session, plugin, f"{query}/{offset}")
+
+    # `size` keeps its default so a page request looks exactly like the one the
+    # website makes.
+    @override
+    def _get(self) -> ShowsSearchModel:
+        endpoint = naphki().shows_search
+        return endpoint.parse(endpoint.download(self.query, from_=self.offset))
 
 
 class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
@@ -86,6 +106,9 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
 
 class FileMixin(TMDBMixin, register=False):
+    # The new episodes feed belongs to the source, so every show reads the same one.
+    _PLUGIN_WIDE_FILES = (NewVideoEpisodes,)
+
     def video_program_file(self, show_key: str) -> VideoProgram:
         """Contains a single show's information."""
         return self._file(VideoProgram, show_key)
@@ -94,9 +117,9 @@ class FileMixin(TMDBMixin, register=False):
         """Contains a show's episodes."""
         return self._file(VideoEpisodes, program_id)
 
-    def shows_search_file(self, query: str) -> ShowsSearch:
-        """Contains results for a search query."""
-        return self._file(ShowsSearch, query)
+    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
+        """Contains one page of results for a search query."""
+        return self._file(ShowsSearch, query, offset)
 
     # TODO: Consider making this a generic function
     def new_video_episodes_file(

@@ -28,17 +28,19 @@ class SearchMixin(HelperMixin, register=False):
         return f"https://www.netflix.com/search?q={quote_plus(query)}"
 
     @override
-    def search(self, query: str) -> PluginSearchResults:
+    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         """Search Netflix's movies and TV shows.
 
         Netflix returns movies and shows intermixed. Suggestion entities
         (collections, autocomplete) carry no title and are skipped.
         """
-        search_file = self.search_file(query)
+        search_file = self.search_file(query, cursor)
         search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
 
+        next_cursor: str | None = None
         results: list[PluginSearchResult] = []
         for section in search_file.parsed().data.page.sections.edges:
+            section_results = 0
             for entity in section.node.entities.edges:
                 unified_entity = entity.node.unified_entity
                 if unified_entity is None:
@@ -58,4 +60,10 @@ class SearchMixin(HelperMixin, register=False):
                         media_type=media_type,
                     ),
                 )
-        return PluginSearchResults(results=results)
+                section_results += 1
+            # Only the section holding the titles is worth paging through; the
+            # suggestion section alongside it never produces a result.
+            page_info = section.node.entities.page_info
+            if section_results and page_info.has_next_page:
+                next_cursor = page_info.end_cursor
+        return PluginSearchResults(results=results, next_cursor=next_cursor)

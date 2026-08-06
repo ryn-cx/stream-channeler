@@ -26,7 +26,8 @@ class HiDive(
     SearchMixin,
     HelperMixin,
     MediaTypeImportMixin[HiDiveURLHandler],
-    register=True,
+    # TODO: Temporarily disabled.
+    register=False,
 ):
     """HiDive plugin."""
 

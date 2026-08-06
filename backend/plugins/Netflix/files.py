@@ -6,7 +6,9 @@ from typing import Any, override
 from meshfilm import Meshfilm
 from meshfilm.lodp_title_and_plans_page import models as netflix_models
 from meshfilm.search_page_results import models as search_models
+from sqlmodel import Session
 
+from app.plugins.models import Plugin
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
 from plugins.utils.get_around_client import get_around_client
@@ -28,15 +30,33 @@ class Search(GAPIJSON[search_models.SearchPageResultsModel]):
 
     API_ENDPOINT = meshfilm().search_page_results
 
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        cursor: str,
+    ) -> None:
+        self.query = query
+        self.cursor = cursor
+        super().__init__(session, plugin, f"{query}/{cursor}")
+
+    @override
+    def _get(self) -> search_models.SearchPageResultsModel:
+        return meshfilm().search_page_results.download_and_parse(
+            self.query,
+            self.cursor or None,
+        )
+
 
 class FileMixin(TMDBMixin, register=False):
     def title_file(self, title_key: str) -> Title:
         """Contains all of a Netflix title's data (show, seasons, episodes)."""
         return self._file(Title, title_key)
 
-    def search_file(self, query: str) -> Search:
-        """Contains Netflix's movie and TV search results for a query."""
-        return self._file(Search, query)
+    def search_file(self, query: str, cursor: str | None) -> Search:
+        """Contains one page of Netflix's movie and TV search results."""
+        return self._file(Search, query, cursor or "")
 
     def _title_video(self, show_key: str) -> netflix_models.Video1:
         parsed = self.title_file(show_key).parsed()

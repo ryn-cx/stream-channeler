@@ -14,6 +14,36 @@ if TYPE_CHECKING:
 
 
 class UpsertMixin(HelperMixin, register=False):
+    def _upsert_sources(self) -> None:
+        """Create or update a `Source` for every provider JustWatch tracks."""
+        _cache = self._preload_sources().all()
+        for source_key in self._providers_by_key():
+            self._upsert_source(source_key)
+
+    @override
+    def _upsert_source(self, source_key: str) -> Source:
+        """Create or update the `Source` for a single provider."""
+        provider = self.provider(source_key)
+        # Every provider gets a source but most are never read again, so they
+        # fall out of the session's weak identity map and have to be looked up
+        # in the database rather than in memory.
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+
+        source = Source(
+            key=source_key,
+            name=provider["clear_name"],
+            favicon_url=self._favicon_url(provider),
+            plugin_id=self.plugin.id,
+        ).upsert(self.plugin, existing_source)
+
+        # Only use the data timestamp from the providers file for the initial
+        # import. If the source already has a data_timestamp keep it because it will
+        # be based on data from the new titles files which are more up to date.
+        if not source.data_timestamp:
+            source.data_timestamp = self.providers_locale_file().data_timestamp
+
+        return source
+
     def _upsert_shows(
         self,
         show_key: str,
@@ -26,11 +56,11 @@ class UpsertMixin(HelperMixin, register=False):
             if source_keys is not None and source_key not in source_keys:
                 continue
             source = self._upsert_source(source_key)
-            shows.append(self._upsert_show(source, show_key, force=force))
+            shows.append(self.upsert_show(source, show_key, force=force))
         return shows
 
     @override
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
@@ -75,7 +105,7 @@ class UpsertMixin(HelperMixin, register=False):
             source,
             existing_show,
             show_key,
-            self._tmdb_media_type(show_key),
+            self.tmdb_media_type(show_key),
         )
 
         self._upsert_seasons(show, show_key, force=force)
@@ -180,15 +210,13 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         source_key = show.source.key
-        custom_season_episodes_file = self.custom_season_episodes_file(
-            season_data.id,
-        )
+        season_episodes_file = self.season_episodes_file(season_data.id)
         backdrops = (
             self.url_title_details_file(show_key)
             .parsed()
             .data.url_v2.node.content.full_backdrops
         )
-        parsed_episodes = custom_season_episodes_file.parsed_episodes()
+        parsed_episodes = season_episodes_file.parsed_episodes()
         for index, season_episode in enumerate(parsed_episodes):
             existing_episode = Episode.get_from_memory(
                 self.session,
@@ -203,7 +231,7 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
-            buy_box_offers = self.custom_buy_box_offers_file(season_episode.id)
+            buy_box_offers = self.buy_box_offers_file(season_episode.id)
             episode_info = self._find_matching_episode(
                 source_key,
                 buy_box_offers.parsed().data.node,
@@ -230,12 +258,6 @@ class UpsertMixin(HelperMixin, register=False):
                     show_key,
                 ),
                 image_url=self._images_base_url + backdrop_image,
-                release_date=self._date_to_datetime(
-                    season_episode.content.original_release_date,
-                ),
-                air_date=self._date_to_datetime(
-                    season_episode.content.original_release_date,
-                ),
                 season_id=season.id,
             )
             self._merge_and_upsert_episode(

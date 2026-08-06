@@ -1,8 +1,11 @@
 # TODO: Validate
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from functools import wraps
 from typing import Any, ClassVar, cast, override
 
 from loguru import logger
@@ -28,6 +31,32 @@ from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLHandler, URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 
+# The entry points that work on a single show, mapped to the name of their first
+# argument and how the show is read off it. `import_url` has no show until the
+# plugin has parsed the URL, so the URL stands in for it.
+_ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
+    "import_url": ("url", lambda url: url),
+    "update_show": ("show", lambda show: show.key),
+    "update_season": ("season", lambda season: season.show.key),
+    "update_episode": ("episode", lambda episode: episode.season.show.key),
+}
+
+
+def _tracks_show(
+    entry_point: Callable[..., Any],
+    argument: str,
+    show_of: Callable[[Any], str],
+) -> Callable[..., Any]:
+    """Return `entry_point` wrapped so it records the show it was called for."""
+
+    @wraps(entry_point)
+    def tracked(self: BasePlugin, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 - Forwarded verbatim.
+        entity = args[0] if args else kwargs[argument]
+        self._set_current_show(show_of(entity))
+        return entry_point(self, *args, **kwargs)
+
+    return tracked
+
 
 class BasePlugin(
     PreloadMixin,
@@ -40,12 +69,93 @@ class BasePlugin(
 ):
     _VERSION: str
 
+    _current_show: str | None = None
+    """What the values cached on this instance belong to."""
+
+    _weakref_file_cache: dict[object, Any]
+    _plugin_file_cache: dict[object, Any]
+
+    _PLUGIN_WIDE_FILES: ClassVar[tuple[type[BaseFile[Any]], ...]] = ()
+    """The file types that describe the plugin or a source rather than one show.
+
+    `_file` caches these separately so they survive a change of show, since
+    re-reading a provider list or a feed for every show would be wasted work.
+    """
+
+    SHOW_INDEPENDENT_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset({
+        "session",
+        "plugin",
+        "_source",
+        "_current_show",
+        "_plugin_file_cache",
+    })
+    """The instance attributes that describe the plugin rather than a show.
+
+    Everything else is dropped by `_reset_show_state`, so an attribute only
+    survives a change of show by being named here.
+    """
+
+    @override
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Wrap the entry points a subclass declares so they record the show."""
+        super().__init_subclass__(**kwargs)
+        cls._track_show_on_entry_points()
+
+    @classmethod
+    def _track_show_on_entry_points(cls) -> None:
+        """Wrap the entry points this class declares so they record the show.
+
+        Only the definitions in `cls` itself are wrapped, so each one is wrapped
+        exactly once and an inherited entry point keeps the wrapper of the class
+        that declared it.
+        """
+        for name, (argument, show_of) in _ENTRY_POINTS.items():
+            entry_point = cls.__dict__.get(name)
+            if entry_point is None:
+                continue
+            setattr(cls, name, _tracks_show(entry_point, argument, show_of))
+
+    def _set_current_show(self, show: str) -> None:
+        """Record which show the instance is working on, dropping the last one's.
+
+        Plugins cache values for the show they are working on, which the next
+        show must not read. Moving to a different show drops them, so a single
+        instance can be used for any number of shows without carrying the
+        previous show's data or holding on to it.
+
+        Called by the wrapper `__init_subclass__` puts around every entry point,
+        so a plugin cannot miss it by overriding one. An entry point that spans
+        several shows, like `update_source`, has to call this itself for each.
+        """
+        if self._current_show == show:
+            return
+        # The first call has no earlier show to drop, so whatever construction
+        # cached is kept rather than thrown away before it has been read.
+        if self._current_show is not None:
+            self._reset_show_state()
+        self._current_show = show
+
+    def _reset_show_state(self) -> None:
+        """Drop everything cached for the show the instance has moved off.
+
+        Every instance attribute goes except the ones named in
+        `SHOW_INDEPENDENT_ATTRIBUTES`, so a plugin caches whatever it likes
+        without having to remember to clear it. An attribute that is read after
+        being dropped falls back to its class-level default, which is where a
+        per-show value's "nothing cached yet" state belongs.
+        """
+        for name in list(vars(self)):
+            if name not in self.SHOW_INDEPENDENT_ATTRIBUTES:
+                delattr(self, name)
+        self._weakref_file_cache = {}
+
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
         self._source: Source | None = None
-        self._file_cache: dict[tuple[type, object], Any] = {}
-        self._weakref_file_cache: dict[object, Any] = {}
+        self._plugin_file_cache = {}
+        # Creates the show file cache, which `initialize_database` needs below.
+        self._reset_show_state()
         self.initialize_database()
         self._validate_plugin_version()
 
@@ -73,7 +183,7 @@ class BasePlugin(
         Sets `self.source` if only a single `Source` record exists.
         """
         self.initialize_plugin()
-        self.initialize_source()
+        self.initialize_sources()
 
     def initialize_plugin(self) -> None:
         """Create the `Plugin` record(s) and set `self.plugin`."""
@@ -85,7 +195,7 @@ class BasePlugin(
         else:
             self.plugin = self._upsert_plugin(plugin_user, existing_plugin)
 
-    def initialize_source(self) -> None:
+    def initialize_sources(self) -> None:
         """Create the `Source` record(s) and set `self.source`."""
         if hasattr(self, "source") and self.source:
             return
@@ -156,7 +266,7 @@ class BasePlugin(
     ) -> None:
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        self._upsert_show(show.source, show.key, force=force)
+        self.upsert_show(show.source, show.key, force=force)
 
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
@@ -209,10 +319,10 @@ class BasePlugin(
             return show
 
         _cache = self._download_show_files_and_children(show_key)
-        return self._upsert_show(self.source, show_key)
+        return self.upsert_show(self.source, show_key)
 
     @abstractmethod
-    def _upsert_show(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
@@ -275,11 +385,16 @@ class BasePlugin(
         *identifiers: object,
     ) -> FileT:
         """Return the cached `file_type` instance for `identifiers`."""
+        cache = (
+            self._plugin_file_cache
+            if file_type in self._PLUGIN_WIDE_FILES
+            else self._weakref_file_cache
+        )
         cache_key = (file_type, identifiers)
-        if cached := self._weakref_file_cache.get(cache_key):
+        if cached := cache.get(cache_key):
             return cached
         file = file_type(self.session, self.plugin, *identifiers)
-        self._weakref_file_cache[cache_key] = file
+        cache[cache_key] = file
         return file
 
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
@@ -295,7 +410,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def _get_url_handler(self, url: str) -> HandlerT:
         domain_regex = self._domain_regex()
         for handler_class in self._URL_HANDLERS:
-            if match := re.match(handler_class.url_regex(domain_regex), url):
+            if match := re.match(handler_class._url_regex(domain_regex), url):
                 return cast("HandlerT", handler_class(self, url, match.group(1)))  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
         msg = f"Invalid {self.plugin_key()} URL: {url}"
@@ -303,10 +418,11 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
 
     @classmethod
     @override
-    def _url_regex(cls) -> str:
+    def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         alternatives = "|".join(
-            handler_class.url_regex(domain_regex) for handler_class in cls._URL_HANDLERS
+            handler_class._url_regex(domain_regex)  # noqa: SLF001 - Same package.
+            for handler_class in cls._URL_HANDLERS
         )
         return f"(?:{alternatives})"
 
@@ -316,3 +432,9 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key)
         return handler.import_results(show)
+
+
+# `__init_subclass__` only runs for subclasses, so the entry points `BasePlugin`
+# declares itself are wrapped here instead. Every other class, this file's
+# `URLHandlerPlugin` included, is a subclass and is wrapped as it is declared.
+BasePlugin._track_show_on_entry_points()  # noqa: SLF001 - Declared just above.

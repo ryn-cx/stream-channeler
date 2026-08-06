@@ -7,10 +7,12 @@ from tminidb.movie_details.models import MovieDetailsModel
 from app.utils import tz_datetime
 from plugins.TMDB.files import (
     FileMixin,
+    MovieDetails,
     MovieSearch,
     MovieWatchProviders,
     MultiSearch,
     TvSearch,
+    TvSeriesDetails,
     TvWatchProviders,
 )
 
@@ -45,6 +47,21 @@ class LookupMixin(FileMixin, register=False):
         providers_file = self.watch_providers_file(media_type, tmdb_id)
         providers_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
         return providers_file
+
+    def auto_updating_media_detail(
+        self,
+        media_type: Literal["movie", "tv"],
+        tmdb_id: int,
+    ) -> MovieDetails | TvSeriesDetails:
+        """Return the detail file for a title, downloading it when needed.
+
+        A title can be looked up without ever having been imported, and a show
+        that was imported stores its details under `ShowDetail` instead, so the
+        file this reads cannot be assumed to exist.
+        """
+        detail_file = self.media_detail_file(media_type, tmdb_id)
+        detail_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
+        return detail_file
 
     def _movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
         return self.media_detail_file("movie", tmdb_id).parsed()

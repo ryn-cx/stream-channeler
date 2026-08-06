@@ -14,8 +14,9 @@ from plugins.utils.abstract_plugin import (
 
 class SearchMixin(FileMixin, register=False):
     @override
-    def search(self, query: str) -> PluginSearchResults:
-        search_file = self.shows_search_file(query)
+    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
+        offset = int(cursor) if cursor else 0
+        search_file = self.shows_search_file(query, offset)
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
         parsed = search_file.parsed()
@@ -28,4 +29,12 @@ class SearchMixin(FileMixin, register=False):
             )
             for hit in parsed.hits.hits
         ]
-        return PluginSearchResults(results=results)
+        next_offset = offset + len(results)
+        return PluginSearchResults(
+            results=results,
+            next_cursor=(
+                str(next_offset)
+                if results and next_offset < parsed.hits.total.value
+                else None
+            ),
+        )

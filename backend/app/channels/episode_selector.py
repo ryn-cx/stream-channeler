@@ -2,7 +2,7 @@
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, ClassVar, cast
 from uuid import UUID
 
 from sqlalchemy import String, case, literal_column
@@ -22,6 +22,12 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelOptions, SortKeyInput
 from app.episodes.models import Episode
+from app.media.tmdb_fallback import (
+    EPISODE_FALLBACK_FIELDS,
+    SEASON_FALLBACK_FIELDS,
+    SHOW_FALLBACK_FIELDS,
+    TMDB_PLUGIN_KEY,
+)
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -194,10 +200,101 @@ def _select_show_subset(
     return selected
 
 
+class _TMDBFallbackColumns:
+    """The TMDB stand-in of each media level, joined in so SQL can read it.
+
+    A website only stores what it reports, so filtering or sorting on the stored
+    column alone drops every episode whose site left that value out. Each level
+    is joined to the TMDB media it links to by `tmdb_id` and read through a
+    `coalesce`, which is the same value the record is served with.
+
+    A level is only joined when something asks for one of its columns, so a
+    channel that sorts on nothing borrowed pays for no extra joins.
+    """
+
+    _FALLBACK_FIELDS: ClassVar[dict[str, tuple[str, ...]]] = {
+        "episode": EPISODE_FALLBACK_FIELDS,
+        "season": SEASON_FALLBACK_FIELDS,
+        "show": SHOW_FALLBACK_FIELDS,
+    }
+
+    def __init__(self) -> None:
+        self._subqueries: dict[str, Any] = {}
+
+    @staticmethod
+    def _subquery(model: str) -> Any:  # noqa: ANN401 - A subquery of whichever level was asked for.
+        episode = aliased(Episode)
+        season = aliased(Season)
+        show = aliased(Show)
+        source = aliased(Source)
+        plugin = aliased(Plugin)
+
+        owners: dict[str, Any] = {"episode": episode, "season": season, "show": show}
+        owner = owners[model]
+        statement: Any = select(
+            col(owner.tmdb_id).label("tmdb_id"),
+            *(
+                getattr(owner, field).label(field)
+                for field in _TMDBFallbackColumns._FALLBACK_FIELDS[model]
+            ),
+        ).select_from(owner)
+
+        # Joined down from the level asked for so each join only names tables
+        # already in the statement.
+        if model == "episode":
+            statement = statement.join(season, col(season.id) == col(episode.season_id))
+        if model in {"episode", "season"}:
+            statement = statement.join(show, col(show.id) == col(season.show_id))
+
+        return (
+            statement.join(source, col(source.id) == col(show.source_id))
+            .join(plugin, col(plugin.id) == col(source.plugin_id))
+            .where(
+                plugin.key == TMDB_PLUGIN_KEY,
+                col(owner.tmdb_id).is_not(None),
+                col(owner.deleted_at).is_(None),
+            )
+            .subquery()
+        )
+
+    def column(
+        self,
+        model: str,
+        field: str,
+        model_class: type[Any],
+    ) -> ColumnElement[Any]:
+        """Return `field` read through the TMDB stand-in when the record lacks it."""
+        own = cast("ColumnElement[Any]", getattr(model_class, field))
+        if field not in self._FALLBACK_FIELDS.get(model, ()):
+            return own
+        if model not in self._subqueries:
+            self._subqueries[model] = self._subquery(model)
+        return func.coalesce(own, self._subqueries[model].c[field])
+
+    def join(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        """Join in every level whose columns were asked for."""
+        linked: dict[str, Any] = {"episode": Episode, "season": Season, "show": Show}
+        for model, subquery in self._subqueries.items():
+            query = query.outerjoin(
+                subquery,
+                col(linked[model].tmdb_id) == subquery.c.tmdb_id,
+            )
+        return query
+
+
 class _SortExpressionBuilder:
-    def __init__(self, random_seed: int, user: User | None) -> None:
+    def __init__(
+        self,
+        random_seed: int,
+        user: User | None,
+        fallbacks: _TMDBFallbackColumns,
+    ) -> None:
         self._random_seed = random_seed
         self._user = user
+        self._fallbacks = fallbacks
 
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         if sort_key.field == "saved_order":
@@ -251,7 +348,11 @@ class _SortExpressionBuilder:
         if field == "started" and sort_key.model == "show":
             return self._started_show_expr()
 
-        return getattr(sort_key.model_class, field)  # type: ignore[no-any-return]
+        return self._fallbacks.column(
+            sort_key.model,
+            field,
+            sort_key.model_class,
+        )
 
     def _aggregate_episode_expr(
         self,
@@ -269,7 +370,11 @@ class _SortExpressionBuilder:
         elif sort_key.field == "episode_count":
             episode_field = Episode.id  # type: ignore[assignment]
         else:
-            episode_field = getattr(Episode, sort_key.field)
+            episode_field = self._fallbacks.column(
+                "episode",
+                sort_key.field,
+                Episode,
+            )
 
         agg_funcs: dict[str, Any] = {
             "max": func.max,
@@ -312,19 +417,13 @@ class _SortExpressionBuilder:
         msg = f"sequential is not supported for model '{model}'"
         raise ValueError(msg)
 
-    @staticmethod
-    def _recently_aired_expr(sort_key: SortKeyInput) -> ColumnElement[Any]:
+    def _recently_aired_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         cutoff = sort_key.recently_aired_date or (
             tz_datetime.now() - timedelta(days=sort_key.days or 7)
         )
+        air_date = self._fallbacks.column("episode", "air_date", Episode)
         return case(
-            (
-                and_(
-                    col(Episode.air_date).is_not(None),
-                    col(Episode.air_date) >= cutoff,
-                ),
-                1,
-            ),
+            (and_(air_date.is_not(None), air_date >= cutoff), 1),
             else_=0,
         )
 
@@ -415,9 +514,11 @@ class EpisodeQueryBuilder:
             session,
             stored_preferences(self._user.source_preferences) if self._user else [],
         )
+        self._tmdb_fallbacks = _TMDBFallbackColumns()
         self._sort_expressions = _SortExpressionBuilder(
             random_seed=self._channel_options.random_seed,
             user=self._user,
+            fallbacks=self._tmdb_fallbacks,
         )
 
     def _require_user(self) -> User:
@@ -895,7 +996,7 @@ class EpisodeQueryBuilder:
                 conditions.append(or_(column <= max_value, column.is_(None)))
 
         add_range(
-            col(Episode.air_date),
+            self._tmdb_fallbacks.column("episode", "air_date", Episode),
             self._parse_date_filter(
                 self._channel_options.minimum_air_date_absolute,
                 self._channel_options.minimum_air_date_relative,
@@ -906,7 +1007,7 @@ class EpisodeQueryBuilder:
             ),
         )
         add_range(
-            col(Episode.release_date),
+            self._tmdb_fallbacks.column("episode", "release_date", Episode),
             self._parse_date_filter(
                 self._channel_options.minimum_release_date_absolute,
                 self._channel_options.minimum_release_date_relative,
@@ -917,7 +1018,7 @@ class EpisodeQueryBuilder:
             ),
         )
         add_range(
-            col(Episode.duration),
+            self._tmdb_fallbacks.column("episode", "duration", Episode),
             self._channel_options.minimum_duration,
             self._channel_options.maximum_duration,
         )
@@ -992,13 +1093,17 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         if not self._channel_options.sort_by:
-            return query
+            return self._tmdb_fallbacks.join(query)
         expressions = self._sort_expressions
         labeled_values: list[ColumnElement[Any]] = [
             expressions.expression(sort_key).label(f"sort_value_{index}")
             for index, sort_key in enumerate(self._channel_options.sort_by)
         ]
         labeled_values.append(col(Season.show_id).label("show_id"))
+        # Every filter and sort has now asked for its columns, so the levels they
+        # borrowed from TMDB are known and can be joined in before the values are
+        # frozen into a subquery.
+        query = self._tmdb_fallbacks.join(query)
         subquery = query.add_columns(*labeled_values).subquery()
 
         raws = [

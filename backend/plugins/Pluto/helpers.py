@@ -32,7 +32,7 @@ class HelperMixin(FileMixin, register=False):
         return self._tmdb_search_media(self._series(show_key).name, "tv")
 
     @override
-    def _tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
         return "movie" if self._is_movie() else "tv"
 
     @override

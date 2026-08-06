@@ -6,9 +6,8 @@ from typing import override
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import JustWatchURLHandler
-from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
+from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
-from plugins.utils.manage_plugins import sorted_plugins
 
 
 class ImportURLMixin(
@@ -36,6 +35,11 @@ class ImportURLMixin(
                 unhandled_source_keys.append(source_key)
                 continue
 
+            # The TMDB id is what ties a feed hit back to the copy the other
+            # plugin stores, and a title can be delegated on every service it is
+            # on, so it is resolved here rather than when a show is upserted.
+            self._cached_tmdb_id(handler.show_key)
+
             plugin_results = plugin_class(self.session).import_url(offer_url)
             results.extend(handler.narrow_to_season(plugin_results))
 
@@ -62,18 +66,13 @@ class ImportURLMixin(
 
         _cache = (
             self._download_show_files_and_children(show_key),
-            self._preload_sources().all(),
+            # Upserting walks `children` at every level: `add_child` on the
+            # source, `soft_delete_missing_children` on the show and season, and
+            # `active_children` on the season. Each of those lazy loads its own
+            # collection, so the tree is loaded up front for the sources being
+            # imported rather than one query per record. The source keys are
+            # passed because loading every provider's media would be far worse
+            # than the lazy loads this avoids.
+            self._preload_sources(source_keys, preload_episodes=True).all(),
         )
         return self._upsert_shows(show_key, source_keys)
-
-    @classmethod
-    def _plugin_for_url(cls, url: str) -> type[AbstractPlugin] | None:
-        """Return the plugin that imports `url` itself, if there is one."""
-        for plugin_class in sorted_plugins():
-            if (
-                plugin_class is not cls
-                and plugin_class.implements("import_url")
-                and plugin_class.is_valid_url_format(url)
-            ):
-                return plugin_class
-        return None
