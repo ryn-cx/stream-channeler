@@ -6,7 +6,7 @@ from typing import override
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import JustWatchURLHandler
-from plugins.utils.abstract_plugin import URLImportResult
+from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
@@ -41,11 +41,62 @@ class ImportURLMixin(
             self._cached_tmdb_id(handler.show_key)
 
             plugin_results = plugin_class(self.session).import_url(offer_url)
-            results.extend(handler.narrow_to_season(plugin_results))
+            results.extend(
+                self._delegated_results(handler, plugin_class, plugin_results),
+            )
 
         shows = self._import_shows(handler.show_key, unhandled_source_keys)
         results.extend(handler.import_results_for_shows(shows))
         return results
+
+    def _delegated_results(
+        self,
+        handler: JustWatchURLHandler,
+        plugin_class: type[AbstractPlugin],
+        plugin_results: list[URLImportResult],
+    ) -> list[URLImportResult]:
+        """Return what another plugin imported, scoped to this plugin's URL.
+
+        A service links its offer at the title, so what the plugin imported is
+        already what was asked for. Crunchyroll is the exception and has to be
+        asked again.
+        """
+        if plugin_class.plugin_key() == "Crunchyroll":
+            return self._crunchyroll_title_results(
+                handler,
+                plugin_class,
+                plugin_results,
+            )
+        return handler.narrow_to_season(plugin_results)
+
+    def _crunchyroll_title_results(
+        self,
+        handler: JustWatchURLHandler,
+        plugin_class: type[AbstractPlugin],
+        plugin_results: list[URLImportResult],
+    ) -> list[URLImportResult]:
+        """Return the whole title the Crunchyroll offer's episode belongs to.
+
+        Crunchyroll's offer link names a single episode rather than the title,
+        so importing it reports only that episode. That import is what resolves
+        which show the episode belongs to, and the show it stored knows its own
+        URL, so importing that gets the results for the whole title. The show is
+        already stored by then, so the second import reuses it rather than
+        downloading anything again.
+        """
+        if len(plugin_results) != 1 or not plugin_results[0].episodes:
+            msg = (
+                f"Expected one episode from Crunchyroll, got {len(plugin_results)} "
+                f"results: {[result.show.key for result in plugin_results]}"
+            )
+            raise ValueError(msg)
+
+        show = plugin_results[0].show
+        if show.url is None:
+            msg = f"Crunchyroll show {show.key} has no URL to import the title from"
+            raise ValueError(msg)
+
+        return handler.narrow_to_season(plugin_class(self.session).import_url(show.url))
 
     def _import_shows(self, show_key: str, source_keys: list[str]) -> list[Show]:
         """Import the title from JustWatch's own data for `source_keys`.

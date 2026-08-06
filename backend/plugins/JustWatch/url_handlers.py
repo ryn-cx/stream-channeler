@@ -41,7 +41,8 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
         shows: Sequence[Show],
     ) -> list[URLImportResult]:
         """Return the import results for every show the URL maps to."""
-        return [result for show in shows for result in self._results_for_show(show)]
+        a = [result for show in shows for result in self._results_for_show(show)]
+        return a
 
     def narrow_to_season(
         self,
@@ -49,8 +50,8 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
     ) -> list[URLImportResult]:
         """Narrow results imported by another plugin down to the URL's season.
 
-        The offer URL handed to the other plugin always points at the whole title,
-        so a season URL has to be applied to the shows it imported.
+        The offer URL handed to the other plugin points at the whole title, so a
+        season URL has to be applied to the shows it imported.
         """
         if self.season_number is None:
             return list(results)

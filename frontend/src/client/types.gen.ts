@@ -1236,7 +1236,7 @@ export type WatchItem = {
     watch_date: string;
     verified: boolean;
     id: string;
-    episode_id: string;
+    episode_id: (string | null);
     episode_identifier: string;
 };
 
@@ -1247,7 +1247,7 @@ export type WatchOutput = {
     watch_date: string;
     verified: boolean;
     id: string;
-    episode_id: string;
+    episode_id: (string | null);
     episode_identifier: string;
     user_id: string;
 };

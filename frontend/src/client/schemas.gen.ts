@@ -6644,8 +6644,15 @@ export const WatchItemSchema = {
             title: 'Id'
         },
         episode_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Episode Id'
         },
         episode_identifier: {
@@ -6675,8 +6682,15 @@ export const WatchOutputSchema = {
             title: 'Id'
         },
         episode_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Episode Id'
         },
         episode_identifier: {

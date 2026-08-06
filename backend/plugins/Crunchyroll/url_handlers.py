@@ -13,6 +13,7 @@ from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
+    from app.episodes.models import Episode
     from app.shows.models import Show
     from plugins.Crunchyroll import Crunchyroll
 
@@ -90,18 +91,38 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
         objects_file = self.plugin.objects_file(self._key)
         self.plugin.raise_if_invalid_file(objects_file, self.url)
 
+        # Crunchyroll gives an episode an id per audio version and a link can
+        # name any of them, but a show only carries the original one, so the key
+        # becomes that and the dub is not referred to again.
+        for version in objects_file.parsed().data[0].episode_metadata.versions:
+            if version.original:
+                self._key = version.guid
+                break
+
+        original_file = self.plugin.objects_file(self._key)
+        self.plugin.raise_if_invalid_file(original_file, self.url)
+
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
+        return [
+            URLImportResult(
+                show=show,
+                episodes=[self._stored_episode(show)],
+                is_whitelist=True,
+            ),
+        ]
+
+    def _stored_episode(self, show: Show) -> Episode:
+        """Return the episode the URL names.
+
+        Raises:
+            `InvalidURLError` if the show does not carry the episode.
+
+        """
         for season in show.seasons:
             for episode in season.episodes:
                 if episode.key == self._key:
-                    return [
-                        URLImportResult(
-                            show=show,
-                            episodes=[episode],
-                            is_whitelist=True,
-                        ),
-                    ]
+                    return episode
 
         msg = f"Episode {self._key} not found in show {show.key}"
         raise InvalidURLError(msg)

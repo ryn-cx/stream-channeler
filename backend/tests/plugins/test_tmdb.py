@@ -30,6 +30,13 @@ class TestShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
     search_query = "Demon Slayer"
 
 
+class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
+    media_type = "tv"
+    parse_url_response = "64196"
+    show_slug = "overlord"
+    search_query = "Overlord"
+
+
 class InvalidTMDBURLValidator(InvalidURLValidator[TMDB]):
     plugin_class = TMDB
     urls = ("/{media_type}/{parse_url_response}",)

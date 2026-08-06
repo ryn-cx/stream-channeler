@@ -2,6 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Antenna,
+  ChevronDown,
+  ChevronRight,
   Info,
   Link2,
   List,
@@ -12,12 +14,12 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react"
-import { useState } from "react"
+import { Fragment, type ReactNode, useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelQueueOutput } from "@/client"
-import { ChannelsService, PluginsService } from "@/client"
+import { ChannelsService, PluginsService, UsersService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,6 +51,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
@@ -65,9 +68,12 @@ interface Show {
 }
 
 interface Source {
+  key: string
   favicon_url?: string | null
   name: string | null
 }
+
+const OTHER_SOURCE_KEY = "Other"
 
 /** The source's favicon, naming the source when it is hovered. */
 function SourceFavicon({ source }: { source: Source | undefined }) {
@@ -87,6 +93,149 @@ function SourceFavicon({ source }: { source: Source | undefined }) {
       <TooltipTrigger asChild>{favicon}</TooltipTrigger>
       <TooltipContent>{source.name}</TooltipContent>
     </Tooltip>
+  )
+}
+
+/**
+ * Rank a source by the user's source preferences, lowest first.
+ *
+ * A source the user has not ordered sits wherever they placed "Other", which is
+ * also where every source lands when nobody is signed in.
+ */
+function useSourceRank(): (source: Source | undefined) => number {
+  const { data: preferences } = useQuery({
+    queryKey: ["source-preferences"],
+    queryFn: () => UsersService.readSourcePreferences(),
+    enabled: isLoggedIn(),
+  })
+
+  const ranks = new Map(
+    (preferences ?? []).map((preference, index) => [
+      preference.source_key,
+      index,
+    ]),
+  )
+  const otherRank = ranks.get(OTHER_SOURCE_KEY) ?? ranks.size
+
+  return (source) => (source && ranks.get(source.key)) ?? otherRank
+}
+
+/** Group shows that share a name, keeping the order they arrived in. */
+function groupShowsByName(shows: Show[]): Show[][] {
+  const groups = new Map<string, Show[]>()
+  for (const show of shows) {
+    const key = show.name ?? ""
+    const group = groups.get(key)
+    if (group) {
+      group.push(show)
+    } else {
+      groups.set(key, [show])
+    }
+  }
+  return [...groups.values()]
+}
+
+/**
+ * The rows of a shows table, with same-named shows collapsed into one.
+ *
+ * The same show is usually available on several services, which would otherwise
+ * fill the table with rows that read identically. A group shows the name once
+ * with a favicon per service, and expands to the individual shows so each can
+ * still be managed on its own.
+ */
+function ShowRows({
+  shows,
+  sources,
+  renderActions,
+}: {
+  shows: Show[]
+  sources: Record<string, Source>
+  renderActions: (show: Show) => ReactNode
+}) {
+  const [expandedNames, setExpandedNames] = useState<Set<string>>(new Set())
+  const sourceRank = useSourceRank()
+
+  const bySourceRank = (first: Show, second: Show) =>
+    sourceRank(sources[first.source_id]) - sourceRank(sources[second.source_id])
+
+  const toggle = (name: string) =>
+    setExpandedNames((current) => {
+      const next = new Set(current)
+      if (!next.delete(name)) next.add(name)
+      return next
+    })
+
+  return (
+    <>
+      {groupShowsByName(shows).map((unorderedGroup) => {
+        const group = [...unorderedGroup].sort(bySourceRank)
+        const [firstShow] = group
+        const name = firstShow.name ?? ""
+
+        // A show on a single service needs no group around it. The spacer keeps
+        // its favicon aligned with the ones under a group's chevron.
+        if (group.length === 1) {
+          return (
+            <TableRow key={firstShow.id}>
+              <TableCell className="whitespace-normal">
+                <div className="flex items-center gap-2">
+                  <span className="size-4 shrink-0" />
+                  <SourceFavicon source={sources[firstShow.source_id]} />
+                  <span className="wrap-break-word">{name}</span>
+                </div>
+              </TableCell>
+              <TableCell>{renderActions(firstShow)}</TableCell>
+            </TableRow>
+          )
+        }
+
+        const isExpanded = expandedNames.has(name)
+        return (
+          <Fragment key={name}>
+            <TableRow>
+              <TableCell className="whitespace-normal">
+                <button
+                  type="button"
+                  onClick={() => toggle(name)}
+                  aria-expanded={isExpanded}
+                  className="flex w-full items-center gap-2 text-left"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="size-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="size-4 shrink-0" />
+                  )}
+                  <span className="flex items-center gap-1">
+                    {group.map((show) => (
+                      <SourceFavicon
+                        key={show.id}
+                        source={sources[show.source_id]}
+                      />
+                    ))}
+                  </span>
+                  <span className="wrap-break-word">{name}</span>
+                </button>
+              </TableCell>
+              <TableCell />
+            </TableRow>
+            {isExpanded &&
+              group.map((show) => (
+                <TableRow key={show.id} className="bg-muted/30">
+                  <TableCell className="whitespace-normal">
+                    <div className="flex items-center gap-2 pl-6">
+                      <SourceFavicon source={sources[show.source_id]} />
+                      <span className="wrap-break-word text-muted-foreground">
+                        {sources[show.source_id]?.name ?? name}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{renderActions(show)}</TableCell>
+                </TableRow>
+              ))}
+          </Fragment>
+        )
+      })}
+    </>
   )
 }
 
@@ -484,42 +633,31 @@ export function ManageShowsTabs({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {showsList.map((show) => {
-                    const source = sources[show.source_id]
-                    return (
-                      <TableRow key={show.id}>
-                        <TableCell className="whitespace-normal">
-                          <div className="flex items-center gap-2">
-                            <SourceFavicon source={source} />
-                            <span className="wrap-break-word">
-                              {show.name ?? ""}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => setSelectedShowId(show.id)}
-                              title="Manage whitelist"
-                            >
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleRemoveShow(show.id)}
-                              disabled={removeShowMutation.isPending}
-                              title="Remove show"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  <ShowRows
+                    shows={showsList}
+                    sources={sources}
+                    renderActions={(show) => (
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setSelectedShowId(show.id)}
+                          title="Manage whitelist"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleRemoveShow(show.id)}
+                          disabled={removeShowMutation.isPending}
+                          title="Remove show"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  />
                 </TableBody>
               </Table>
             </div>
@@ -545,42 +683,31 @@ export function ManageShowsTabs({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filterOnlyShowsList.map((show) => {
-                      const source = sources[show.source_id]
-                      return (
-                        <TableRow key={show.id}>
-                          <TableCell className="whitespace-normal">
-                            <div className="flex items-center gap-2">
-                              <SourceFavicon source={source} />
-                              <span className="wrap-break-word">
-                                {show.name ?? ""}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => setBlacklistShowId(show.id)}
-                                title="View blacklisted episodes"
-                              >
-                                <ListX className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => handleRemoveShow(show.id)}
-                                disabled={removeShowMutation.isPending}
-                                title="Remove show"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                    <ShowRows
+                      shows={filterOnlyShowsList}
+                      sources={sources}
+                      renderActions={(show) => (
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setBlacklistShowId(show.id)}
+                            title="View blacklisted episodes"
+                          >
+                            <ListX className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleRemoveShow(show.id)}
+                            disabled={removeShowMutation.isPending}
+                            title="Remove show"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    />
                   </TableBody>
                 </Table>
               </div>

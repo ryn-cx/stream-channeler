@@ -1745,7 +1745,11 @@ export class PluginsService {
     
     /**
      * Import Url Information
-     * Return information about all plugins that support importing URLs.
+     * Return information about the plugins offered as ways to add by URL.
+     *
+     * A plugin that imports URLs but is only reached through another one is left
+     * out. `match-url` still resolves its URLs, so one a `User` pastes anyway is
+     * imported rather than rejected.
      * @returns PluginImportURLInformation Successful Response
      * @throws ApiError
      */
@@ -1965,7 +1969,7 @@ export class SeasonsService {
      * Update Season
      * Update and return a `Season` if it's editable by the `User`.
      *
-     * A new `tmdb_id` reruns every `Episode` through TMDB so their `tmdb_id` and
+     * A new `tmdb_id` repoints every `Episode` at TMDB so their `tmdb_id` and
      * `episode_identifier` follow the one the `User` chose.
      * @param data The data for the request.
      * @param data.seasonId
@@ -2182,7 +2186,7 @@ export class ShowsService {
      * Update Show
      * Update and return a `Show` if it's editable by the `User`.
      *
-     * A new `tmdb_id` reruns every `Season` and `Episode` through TMDB so their
+     * A new `tmdb_id` repoints every `Season` and `Episode` at TMDB so their
      * `tmdb_id` and `episode_identifier` follow the one the `User` chose.
      * @param data The data for the request.
      * @param data.showId

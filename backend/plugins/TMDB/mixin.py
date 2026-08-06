@@ -194,11 +194,26 @@ class TMDBMixin(BasePlugin, register=False):
             return None
         return self.tmdb.episode_detail_file(tmdb_id, season_number, episode_number)
 
+    def _download_files_the_tmdb_lookup_reads(
+        self,
+        files: Sequence[BaseFile[Any]],
+    ) -> None:
+        """Download the plugin's own files so the TMDB file can be named.
+
+        Which TMDB file belongs to a record is decided by an id, a media type
+        and a season or episode number, all of which the plugin reads out of the
+        very files being listed here. They are downloaded through the same
+        helper the caller would have used, so nothing is fetched outside the
+        normal run and an already current file costs nothing.
+        """
+        self._download_outdated_files(files)
+
     def _append_tmdb_show_file(
         self,
         files: Sequence[BaseFile[Any]],
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_show_file(show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 
@@ -208,6 +223,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_season_file(season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 
@@ -218,6 +234,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_episode_file(episode_key, season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 

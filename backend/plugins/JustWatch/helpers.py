@@ -1,8 +1,8 @@
 # TODO: Validate
-import re
 from datetime import date, datetime
 from itertools import chain
 from typing import Literal, cast, override
+from urllib.parse import parse_qs, urlsplit
 
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.url_title_details import models as url_title_details_models
@@ -12,6 +12,10 @@ from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import sorted_plugins
+
+# The query parameters an affiliate link hides its destination behind. `u` is
+# what Impact Radius (`*.pxf.io`) uses; `r` is the older shape.
+_REDIRECT_PARAMETERS = ("u", "r")
 
 
 class HelperMixin(FileMixin, register=False):
@@ -117,9 +121,20 @@ class HelperMixin(FileMixin, register=False):
 
     @staticmethod
     def _clean_external_url(url: str) -> str:
-        """Extract the actual external URL from JustWatch's redirect wrapper."""
-        match = re.search(r"r=(https?://[^&]+)", url)
-        return match.group(1) if match else url
+        """Return the URL a JustWatch offer actually points at.
+
+        An offer is an affiliate link that carries the real destination in a
+        query parameter, percent-encoded
+        (`crunchyroll.pxf.io/xk92Nv?u=https%3A%2F%2Fwww.crunchyroll.com%2F...`).
+        The service's own plugin only recognises the URL once it has been
+        unwrapped, and the wrapper is no use as a stored `url` either.
+        """
+        parameters = parse_qs(urlsplit(url).query)
+        for name in _REDIRECT_PARAMETERS:
+            for value in parameters.get(name, ()):
+                if value.startswith(("http://", "https://")):
+                    return value
+        return url
 
     @staticmethod
     def _date_to_datetime(value: date | None) -> datetime | None:
