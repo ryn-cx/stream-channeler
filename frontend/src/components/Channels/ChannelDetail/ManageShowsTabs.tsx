@@ -183,18 +183,18 @@ function ShowRows({
         const name = firstShow.name ?? ""
 
         // A show on a single service needs no group around it. The spacer keeps
-        // its favicon aligned with the ones under a group's chevron.
+        // its name aligned with the ones next to a group's chevron.
         if (group.length === 1) {
           return (
             <TableRow key={firstShow.id}>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <span className="size-4 shrink-0" />
-                  <SourceFavicon source={sources[firstShow.source_id]} />
-                </div>
-              </TableCell>
               <TableCell className="whitespace-normal">
-                <span className="wrap-break-word">{name}</span>
+                <div className="flex items-start gap-2">
+                  <span className="size-4 shrink-0" />
+                  <div className="flex flex-col gap-1">
+                    <span className="wrap-break-word">{name}</span>
+                    <SourceFavicon source={sources[firstShow.source_id]} />
+                  </div>
+                </div>
               </TableCell>
               <TableCell>{renderActions(firstShow)}</TableCell>
             </TableRow>
@@ -206,36 +206,29 @@ function ShowRows({
         return (
           <Fragment key={groupKey}>
             <TableRow>
-              <TableCell>
+              <TableCell className="whitespace-normal">
                 <button
                   type="button"
                   onClick={() => toggle(groupKey)}
                   aria-expanded={isExpanded}
-                  className="flex w-full items-center gap-2 text-left"
+                  className="flex w-full items-start gap-2 text-left"
                 >
                   {isExpanded ? (
                     <ChevronDown className="size-4 shrink-0" />
                   ) : (
                     <ChevronRight className="size-4 shrink-0" />
                   )}
-                  <span className="flex items-center gap-1">
-                    {group.map((show) => (
-                      <SourceFavicon
-                        key={show.id}
-                        source={sources[show.source_id]}
-                      />
-                    ))}
+                  <span className="flex flex-col gap-1">
+                    <span className="wrap-break-word">{name}</span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      {group.map((show) => (
+                        <SourceFavicon
+                          key={show.id}
+                          source={sources[show.source_id]}
+                        />
+                      ))}
+                    </span>
                   </span>
-                </button>
-              </TableCell>
-              <TableCell className="whitespace-normal">
-                <button
-                  type="button"
-                  onClick={() => toggle(groupKey)}
-                  aria-expanded={isExpanded}
-                  className="w-full text-left"
-                >
-                  <span className="wrap-break-word">{name}</span>
                 </button>
               </TableCell>
               <TableCell />
@@ -243,15 +236,13 @@ function ShowRows({
             {isExpanded &&
               group.map((show) => (
                 <TableRow key={show.id} className="bg-muted/30">
-                  <TableCell>
-                    <div className="flex items-center gap-2 pl-6">
+                  <TableCell className="whitespace-normal">
+                    <div className="flex flex-col gap-1 pl-6">
+                      <span className="wrap-break-word text-muted-foreground">
+                        {sources[show.source_id]?.name ?? name}
+                      </span>
                       <SourceFavicon source={sources[show.source_id]} />
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    <span className="wrap-break-word text-muted-foreground">
-                      {sources[show.source_id]?.name ?? name}
-                    </span>
                   </TableCell>
                   <TableCell>{renderActions(show)}</TableCell>
                 </TableRow>
@@ -652,9 +643,6 @@ export function ManageShowsTabs({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-px whitespace-nowrap">
-                      Sources
-                    </TableHead>
                     <TableHead>Show</TableHead>
                     <TableHead className="w-25 text-center">Actions</TableHead>
                   </TableRow>
@@ -703,9 +691,6 @@ export function ManageShowsTabs({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-px whitespace-nowrap">
-                        Sources
-                      </TableHead>
                       <TableHead>Show</TableHead>
                       <TableHead className="w-25 text-center">
                         Actions
