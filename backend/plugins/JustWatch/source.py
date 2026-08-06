@@ -47,6 +47,7 @@ class SourceMixin(UpsertMixin, register=False):
         providers_locale_file.download_if_outdated(timestamp)
         self._upsert_sources()
         _cache = plugin.sources
+        logger.info("Updating {} JustWatch sources", len(plugin.sources))
         for source in plugin.sources:
             self._upsert_source(source.key)
 
@@ -67,11 +68,21 @@ class SourceMixin(UpsertMixin, register=False):
             .order_by(source_key, col(File.key).desc())
             .distinct(source_key),
         ).all()
-        for bucket in self.get_incomplete_files(
+        buckets = self.get_incomplete_files(
             NewTitleBucket,
             self.new_titles_bucket_file,
-        ):
-            for edge in bucket.parsed_edges():
+        )
+        logger.info("Processing {} JustWatch new titles buckets", len(buckets))
+        for bucket_number, bucket in enumerate(buckets, start=1):
+            edges = bucket.parsed_edges()
+            logger.info(
+                "Processing JustWatch bucket {}/{} ({}) with {} entries",
+                bucket_number,
+                len(buckets),
+                bucket.database_record.key,
+                len(edges),
+            )
+            for edge_number, edge in enumerate(edges, start=1):
                 short_name = edge.key.package.short_name
                 source = Source.get_from_memory(self.session, self.plugin, short_name)
 
@@ -80,6 +91,13 @@ class SourceMixin(UpsertMixin, register=False):
                 if not source:
                     continue
 
+                logger.info(
+                    "Bucket entry {}/{}: {} new titles for {}",
+                    edge_number,
+                    len(edges),
+                    edge.key.date,
+                    source.key,
+                )
                 new_titles_file = self.new_titles_file(source.key, edge.key.date)
                 new_titles_file.download_if_outdated()
                 if new_titles_file.database_record.extra != "Completed":
