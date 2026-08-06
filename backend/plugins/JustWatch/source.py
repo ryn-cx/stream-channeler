@@ -48,8 +48,6 @@ class SourceMixin(UpsertMixin, register=False):
         self._upsert_sources()
         _cache = plugin.sources
         logger.info("Updating {} JustWatch sources", len(plugin.sources))
-        for source in plugin.sources:
-            self._upsert_source(source.key)
 
         self._download_latest_new_titles_bucket()
         self._process_new_titles_buckets()
