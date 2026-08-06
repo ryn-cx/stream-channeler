@@ -727,7 +727,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#1409a90fb6636180bda87aed136042d6a8240b00" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#1f5bba70ff987574a3ec9d9e14a03e48c4fe9e35" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -989,7 +989,7 @@ wheels = [
 [[package]]
 name = "just-scrape"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#25500a19eaac8f621af1f4658dbaa341b62eeca1" }
+source = { git = "https://github.com/ryn-cx/just-scrape#45225438bdc8387f55ee4826b8a442b506e8f505" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1953,7 +1953,7 @@ wheels = [
 [[package]]
 name = "tminidb"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/tminidb#faa131669d563b1376c722ef55713633f9698ad2" }
+source = { git = "https://github.com/ryn-cx/tminidb#a324b4bce91699ae8040a3a709ec12854ccd4307" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

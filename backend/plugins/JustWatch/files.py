@@ -5,6 +5,7 @@ from functools import cache
 from typing import Any, cast, override
 
 import httpx
+from good_ass_pydantic_integrator import ParseLevel
 from just_scrape import JustScrape
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.exceptions import GraphQLError
@@ -53,6 +54,7 @@ def unthrottled_just_scrape() -> JustScrape:
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     API_ENDPOINT = just_scrape().new_titles
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
     def __init__(
         self,
@@ -79,6 +81,7 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     API_ENDPOINT = just_scrape().new_title_buckets
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
     def __init__(
         self,
@@ -119,6 +122,7 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     API_ENDPOINT = just_scrape().url_title_details
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
     # Occurs when a user puts in an invalid URL.
     @override
@@ -134,6 +138,7 @@ class SeasonEpisodes(
     GAPIListJSON[season_episodes_models.SeasonEpisodesResponse],
 ):
     API_ENDPOINT = just_scrape().season_episodes
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
     @override
     def _get(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
@@ -159,10 +164,12 @@ class BuyBoxOffers(
     GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse],
 ):
     API_ENDPOINT = just_scrape().buy_box_offers
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
 
 class SearchTitles(GAPIJSON[search_models.SearchResponse]):
     API_ENDPOINT = unthrottled_just_scrape().search
+    PARSE_LEVEL = ParseLevel.ALLOW_MISSING
 
     def __init__(
         self,

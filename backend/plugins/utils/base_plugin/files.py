@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Protocol, final, overload, override
 from xml.etree.ElementTree import Element, fromstring
 
 from bs4 import BeautifulSoup
+from good_ass_pydantic_integrator import ParseLevel
 from good_ass_pydantic_integrator.constants import INPUT_TYPE
 from loguru import logger
 from pydantic import BaseModel
@@ -271,6 +272,8 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     ACCEPTABLE_ERROR: str | None = None
 
+    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
+
     def __init__(
         self,
         session: Session,
@@ -282,7 +285,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     @override
     def _parse(self, raw: Any) -> T:
-        return self.API_ENDPOINT.parse(raw)  # type: ignore[return-value]
+        return self.API_ENDPOINT.parse(raw, level=self.PARSE_LEVEL)  # type: ignore[no-any-return]
 
     @abstractmethod
     def _get(self) -> T:
@@ -321,7 +324,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
 class APISerializerEndpoint[T](Protocol):
     @classmethod
-    def parse(cls, data: INPUT_TYPE, *, update_model: bool = True) -> T: ...
+    def parse(cls, data: INPUT_TYPE, *, level: ParseLevel = ParseLevel.UPDATE) -> T: ...
 
     @overload
     @staticmethod
@@ -369,4 +372,4 @@ class GAPIListJSON[T: BaseModel](PartialGAPIJSON[list[T]], ABC):
 
     @override
     def _parse(self, raw: Any) -> list[T]:
-        return [self.API_ENDPOINT.parse(page) for page in raw]
+        return [self.API_ENDPOINT.parse(page, level=self.PARSE_LEVEL) for page in raw]
