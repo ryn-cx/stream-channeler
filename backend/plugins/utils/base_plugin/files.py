@@ -272,7 +272,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     ACCEPTABLE_ERROR: str | None = None
 
-    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
+    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.ALLOW_MISSING
 
     def __init__(
         self,
