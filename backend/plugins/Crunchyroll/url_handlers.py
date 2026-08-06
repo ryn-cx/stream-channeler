@@ -16,6 +16,28 @@ if TYPE_CHECKING:
     from app.shows.models import Show
     from plugins.Crunchyroll import Crunchyroll
 
+# Crunchyroll serves the same page under a locale prefix (`/de/series/...`,
+# `/pt-br/series/...`), which a link from elsewhere may well carry.
+_LOCALE = r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
+
+# Every id Crunchyroll puts in a URL has this shape.
+_KEY = r"[A-Z0-9]{9,}"
+
+# What may follow a key: a slug, a query, a fragment, or the end of the URL. A
+# link from elsewhere keeps its tracking parameters, so a query has to end a key
+# just as a slash does.
+_KEY_END = r"(?:[\/?#]|$)"
+
+
+def _key_url_regex(*path: str, group: str) -> str:
+    """Return the regex for a Crunchyroll path that ends in an id.
+
+    Wraps `path` in the locale prefix and the key terminator so each handler
+    only states the part that is its own.
+    """
+    segments = "".join(rf"\/{segment}" for segment in path)
+    return rf"{_LOCALE}{segments}\/(?P<{group}>{_KEY}){_KEY_END}"
+
 
 class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
     """Base URL handler for the Crunchyroll plugin."""
@@ -34,7 +56,7 @@ class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
         - https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project
     """
 
-    _URL_REGEX = r"\/series\/(?P<show_key>[A-Z0-9]{9,})(?:\/|$)"
+    _URL_REGEX = _key_url_regex("series", group="show_key")
 
     @property
     @override
@@ -55,7 +77,7 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
         - https://www.crunchyroll.com/watch/GVWU8XW1Z/this-is-compass20
     """
 
-    _URL_REGEX = r"\/watch\/(?P<episode_key>[A-Z0-9]{9,})(?:\/|$)"
+    _URL_REGEX = _key_url_regex("watch", group="episode_key")
 
     @property
     @override
@@ -96,7 +118,7 @@ class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
         - https://www.crunchyroll.com/artist/MA899F54A4/lisa
     """
 
-    _URL_REGEX = r"\/artist\/(?P<artist_key>[A-Z0-9]{9,})(?:\/|$)"
+    _URL_REGEX = _key_url_regex("artist", group="artist_key")
 
     @property
     @override
@@ -158,7 +180,7 @@ class CrunchyrollMusicVideoURLHandler(CrunchyrollMusicURLHandler):
         - https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009/gurenge
     """
 
-    _URL_REGEX = r"\/watch\/musicvideo\/(?P<music_video_key>[A-Z0-9]{9,})(?:\/|$)"
+    _URL_REGEX = _key_url_regex("watch", "musicvideo", group="music_video_key")
     _CATEGORY: MusicCategory = "musicvideo"
 
 
@@ -170,5 +192,5 @@ class CrunchyrollConcertURLHandler(CrunchyrollMusicURLHandler):
         - https://www.crunchyroll.com/watch/concert/MC413F1C5C/lisa-ladybug
     """
 
-    _URL_REGEX = r"\/watch\/concert\/(?P<concert_key>[A-Z0-9]{9,})(?:\/|$)"
+    _URL_REGEX = _key_url_regex("watch", "concert", group="concert_key")
     _CATEGORY: MusicCategory = "concert"

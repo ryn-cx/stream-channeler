@@ -86,7 +86,13 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         cascade_delete=True,
     )
 
-    watches: list[Watch] = Relationship(back_populates="episode", cascade_delete=True)
+    # Deleting an episode leaves its watches behind, detached, rather than
+    # taking them with it. `passive_deletes` hands that to the database's
+    # `ON DELETE SET NULL` instead of SQLAlchemy nulling each row itself.
+    watches: list[Watch] = Relationship(
+        back_populates="episode",
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
 
     @override
     def _root_record(self, session: Session) -> Plugin:

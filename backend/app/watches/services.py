@@ -167,13 +167,11 @@ def _format_watched_episodes_data(
     episode_by_identifier = _representative_episodes_by_identifier(
         session,
         user_id,
-        {watch.episode.episode_identifier for watch in episode_watches},
+        {watch.episode_identifier for watch in episode_watches},
     )
 
     for episode_watch in episode_watches:
-        episode = episode_by_identifier.get(
-            episode_watch.episode.episode_identifier,
-        )
+        episode = episode_by_identifier.get(episode_watch.episode_identifier)
         if episode is None:
             continue
         season = episode.season
@@ -198,7 +196,7 @@ def _format_watched_episodes_data(
             WatchItem(
                 id=episode_watch.id,
                 episode_id=episode_watch.episode_id,
-                episode_identifier=episode_watch.episode.episode_identifier,
+                episode_identifier=episode_watch.episode_identifier,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,
             ),
@@ -243,6 +241,7 @@ def create_watches(
         watch_input,
         update={
             "episode_id": episode.id,
+            "episode_identifier": episode.episode_identifier,
             "user_id": user_id,
         },
     )

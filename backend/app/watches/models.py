@@ -2,7 +2,6 @@
 import uuid
 from datetime import datetime
 
-from pydantic import computed_field
 from sqlmodel import (
     DateTime,
     Field,
@@ -32,12 +31,22 @@ class BaseWatch(SQLModel):
 
 class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
-        PrimaryKeyConstraint("user_id", "episode_id", "watch_date"),
-        UniqueConstraint("id"),
+        # Keyed on the identifier rather than the episode so a watch keeps its
+        # identity after the episode it pointed at is deleted. One watch per
+        # `User`, per logical episode, per moment, whether linked or not.
+        PrimaryKeyConstraint("id"),
+        UniqueConstraint(
+            "user_id",
+            "episode_identifier",
+            "watch_date",
+            name="Watch-user_id-episode_identifier-watch_date-key",
+        ),
         # Used in episode_selector and watch services to look up a user's watches.
         Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),
-        # Used by cascade deletion when an episode is deleted.
+        # Used when an episode is deleted and its watches are detached.
         Index("Watch-episode_id-index", "episode_id"),
+        # Used by the relink tool to find the watches with no episode left.
+        Index("Watch-episode_identifier-index", "episode_identifier"),
         # Used in episode_selector._apply_hide_watched and
         # episode_selector._filter_show_counts to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
@@ -49,17 +58,20 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="watched_episodes")
 
-    # A watch points at the episode that was watched, so renaming that episode's
-    # `episode_identifier` never detaches the watch. Reads still group watches by
-    # identifier so a watch counts for the same episode from every source.
-    episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
-    episode: Episode = Relationship(back_populates="watches")
+    # What was watched, kept on the watch itself so deleting the episode leaves
+    # the watch intact rather than taking it with it. `app.tools.relink_watches`
+    # is what points a detached watch at an episode again.
+    episode_identifier: str = Field(index=False)
 
-    @computed_field
-    @property
-    def episode_identifier(self) -> str:
-        """Return the `episode_identifier` of the episode this watch points at."""
-        return self.episode.episode_identifier
+    # The episode the watch was recorded against, or None once that episode has
+    # been deleted. Reads join through it, so a detached watch is dormant until
+    # it is relinked.
+    episode_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="episode.id",
+        ondelete="SET NULL",
+    )
+    episode: Episode | None = Relationship(back_populates="watches")
 
     def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id

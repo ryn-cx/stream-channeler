@@ -34,7 +34,7 @@ class WatchOutput(BaseWatch):
     """Schema for returning a `Watch`."""
 
     id: uuid.UUID
-    episode_id: uuid.UUID
+    episode_id: uuid.UUID | None
     episode_identifier: str
     user_id: uuid.UUID
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
@@ -45,7 +45,7 @@ class WatchOutput(BaseWatch):
 
 class WatchItem(BaseWatch):
     id: uuid.UUID
-    episode_id: uuid.UUID
+    episode_id: uuid.UUID | None
     episode_identifier: str
 
     def __hash__(self) -> int:

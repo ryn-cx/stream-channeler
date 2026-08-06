@@ -1,0 +1,129 @@
+# TODO: Validate
+"""Point detached watches back at an episode.
+
+Deleting an episode leaves its watches behind with no `episode_id`. A watch
+still names what it watched, so once an episode carrying that
+`episode_identifier` exists again the watch can be attached to it. The same
+identifier usually resolves to an episode on several sources, so the one the
+`User` ranked highest is chosen, exactly as playback would.
+"""
+
+from collections import defaultdict
+from uuid import UUID
+
+from loguru import logger
+from sqlmodel import Session, col, select
+
+from app.channels.episode_selector import SourceDedupConfig, source_dedup_config
+from app.database import engine, load_models
+from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
+from app.sources.models import Source
+from app.users.models import User
+from app.users.service import stored_preferences
+from app.watches.models import Watch
+
+load_models()
+
+
+def _detached_watches(session: Session) -> list[Watch]:
+    """Return every watch left without an episode."""
+    return list(
+        session.exec(select(Watch).where(col(Watch.episode_id).is_(None))).all(),
+    )
+
+
+def _candidates_by_identifier(
+    session: Session,
+    identifiers: set[str],
+) -> dict[str, list[tuple[Episode, str]]]:
+    """Return the live episodes each identifier resolves to, with their source key."""
+    if not identifiers:
+        return {}
+
+    rows = session.exec(
+        select(Episode, Source.key)
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .where(
+            col(Episode.episode_identifier).in_(identifiers),
+            col(Episode.deleted_at).is_(None),
+        ),
+    ).all()
+
+    candidates: dict[str, list[tuple[Episode, str]]] = defaultdict(list)
+    for episode, source_key in rows:
+        candidates[episode.episode_identifier].append((episode, source_key))
+    return candidates
+
+
+def _preferred_episode(
+    candidates: list[tuple[Episode, str]],
+    config: SourceDedupConfig,
+) -> Episode:
+    """Return the candidate whose source the `User` ranked highest.
+
+    Ties break on the episode id so a rerun makes the same choice, matching how
+    playback collapses episodes that share an identifier.
+    """
+    episode, _ = min(
+        candidates,
+        key=lambda candidate: (config.priority_for(candidate[1]), str(candidate[0].id)),
+    )
+    return episode
+
+
+def _config_for_user(
+    session: Session,
+    user_id: UUID,
+    cache: dict[UUID, SourceDedupConfig],
+) -> SourceDedupConfig:
+    """Return a `User`'s source priorities, resolved once per run."""
+    if user_id not in cache:
+        user = session.get(User, user_id)
+        preferences = stored_preferences(user.source_preferences) if user else []
+        cache[user_id] = source_dedup_config(session, preferences)
+    return cache[user_id]
+
+
+def relink_watches(session: Session) -> int:
+    """Attach every detached watch that has an episode to point at again."""
+    detached = _detached_watches(session)
+    if not detached:
+        logger.info("No detached watches to relink")
+        return 0
+
+    logger.info("Found {} detached watches", len(detached))
+    candidates = _candidates_by_identifier(
+        session,
+        {watch.episode_identifier for watch in detached},
+    )
+    configs: dict[UUID, SourceDedupConfig] = {}
+
+    relinked = 0
+    for watch in detached:
+        matches = candidates.get(watch.episode_identifier)
+        if not matches:
+            continue
+
+        config = _config_for_user(session, watch.user_id, configs)
+        episode = _preferred_episode(matches, config)
+        watch.episode_id = episode.id
+        relinked += 1
+        logger.info(
+            "Relinked watch {} to episode {} ({})",
+            watch.id,
+            episode.key,
+            watch.episode_identifier,
+        )
+
+    session.commit()
+    logger.info("Relinked {} of {} detached watches", relinked, len(detached))
+    return relinked
+
+
+if __name__ == "__main__":
+    with Session(engine) as session:
+        relink_watches(session)

@@ -69,6 +69,7 @@ class WatchHistoryMixin(WatchMixin):
             self.session.add(
                 Watch(
                     user_id=user.id,
+                    episode_id=episode.id,
                     episode_identifier=identifier,
                     watch_date=entry.watch_date,
                     verified=verified,
