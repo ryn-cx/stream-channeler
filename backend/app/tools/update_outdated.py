@@ -2,7 +2,6 @@
 # pyright: reportArgumentType=false
 
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any
 
@@ -13,7 +12,6 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import ChannelSeasonFilter, ChannelShow
-from app.config import settings
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
@@ -311,37 +309,25 @@ def _seconds_until_next_update() -> float:
 
 def _update_outdated(stop_event: threading.Event) -> None:
     # The work is grouped by the `Plugin` rows in the database (not the installed plugin
-    # files). Each database plugin runs its whole update sequence in its own thread and
-    # session so plugins update at the same time; the installed plugin class is only used
-    # to execute the updates. Ordering is preserved within a plugin (see
-    # MEDIA_CLASSES_IN_ORDER), while different plugins are independent of each other.
+    # files); the installed plugin class is only used to execute the updates. Plugins run
+    # one after another rather than at the same time, and ordering is preserved within a
+    # plugin (see MEDIA_CLASSES_IN_ORDER).
     plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
 
-    tasks: list[tuple[str, type[AbstractPlugin]]] = []
     for plugin_key in _plugin_user_plugin_keys():
+        if stop_event.is_set():
+            break
         plugin_class = plugin_classes_by_key.get(plugin_key)
         if plugin_class is None:
             logger.error(
                 f"[{plugin_key}] No installed plugin matches this database entry",
             )
             continue
-        tasks.append((plugin_key, plugin_class))
-
-    max_workers = min(max(len(tasks), 1), settings.UPDATE_MAX_THREADS)
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(_update_plugin, plugin_key, plugin_class, stop_event): (
-                plugin_key
-            )
-            for plugin_key, plugin_class in tasks
-        }
-        for future in as_completed(futures):
-            plugin_key = futures[future]
-            try:
-                future.result()
-            except Exception:
-                # Log the plugin-level failure and let the other plugins finish.
-                logger.exception(f"[{plugin_key}] Plugin update run crashed")
+        try:
+            _update_plugin(plugin_key, plugin_class, stop_event)
+        except Exception:
+            # Log the plugin-level failure and let the other plugins finish.
+            logger.exception(f"[{plugin_key}] Plugin update run crashed")
 
 
 def run_forever(stop_event: threading.Event) -> None:  # noqa: D103
