@@ -39,7 +39,7 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 def just_scrape() -> JustScrape:
     return JustScrape(
         get_around_client=get_around_client(),
-        sleep_time=10,
+        sleep_time=5,
     )
 
 
@@ -142,7 +142,17 @@ class SeasonEpisodes(
         )
 
     def parsed_episodes(self) -> list[season_episodes_models.Episode]:
-        return just_scrape().season_episodes.extract_episodes(self.parsed())
+        """Return every episode across the file's pages.
+
+        Flattened here rather than through `extract_episodes`, which decides what
+        it was handed with `isinstance`. A download that does not fit the model
+        makes GAPI regenerate and reload it, and the reloaded class is a
+        different object than the one that helper closed over, so the check
+        silently fails and it recurses into the value until the stack runs out.
+        """
+        return [
+            episode for page in self.parsed() for episode in page.data.node.episodes
+        ]
 
 
 class BuyBoxOffers(
