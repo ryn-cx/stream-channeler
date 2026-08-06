@@ -28,12 +28,22 @@ class ImportURLMixin(
 
         results: list[URLImportResult] = []
         unhandled_source_keys: list[str] = []
+        imported_offer_urls: set[str] = set()
         for source_key, offer in self._sources_with_offers(handler.show_key):
             offer_url = self._clean_external_url(offer.standard_web_url)
             plugin_class = self._plugin_for_url(offer_url)
             if plugin_class is None:
                 unhandled_source_keys.append(source_key)
                 continue
+
+            # A service that sells more than one plan is listed as a separate
+            # package per plan (`nfx` and `nfa` are both Netflix), and every one
+            # of them links the same title. The plugin stores one copy of that
+            # title, so importing each package would return the same show more
+            # than once.
+            if offer_url in imported_offer_urls:
+                continue
+            imported_offer_urls.add(offer_url)
 
             # The TMDB id is what ties a feed hit back to the copy the other
             # plugin stores, and a title can be delegated on every service it is
