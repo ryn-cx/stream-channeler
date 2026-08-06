@@ -5,10 +5,12 @@ import {
   ChevronDown,
   ChevronRight,
   Info,
+  LayoutGrid,
   Link2,
   List,
   ListX,
   Plus,
+  Rows3,
   Search,
   Settings,
   Sparkles,
@@ -23,6 +25,8 @@ import { ChannelsService, PluginsService, UsersService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
+import { Card } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -66,7 +70,10 @@ interface Show {
   source_id: string
   url?: string | null
   tmdb_id?: number | null
+  image_url?: string | null
 }
+
+type ShowsView = "table" | "cards"
 
 interface Source {
   key: string
@@ -144,24 +151,12 @@ function groupShows(shows: Show[]): Show[][] {
 }
 
 /**
- * The rows of a shows table, with same-named shows collapsed into one.
- *
- * The same show is usually available on several services, which would otherwise
- * fill the table with rows that read identically. A group shows the name once
- * with a favicon per service, and expands to the individual shows so each can
- * still be managed on its own.
+ * The show groups a view renders, each ordered by the user's source preferences,
+ * along with the expansion state shared by every group in that view.
  *
  * @see groupShows for what counts as the same show.
  */
-function ShowRows({
-  shows,
-  sources,
-  renderActions,
-}: {
-  shows: Show[]
-  sources: Record<string, Source>
-  renderActions: (show: Show) => ReactNode
-}) {
+function useShowGroups(shows: Show[], sources: Record<string, Source>) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
   const sourceRank = useSourceRank()
 
@@ -175,10 +170,36 @@ function ShowRows({
       return next
     })
 
+  return {
+    groups: groupShows(shows).map((group) => [...group].sort(bySourceRank)),
+    expandedKeys,
+    toggle,
+  }
+}
+
+/**
+ * The rows of a shows table, with the same show on several services collapsed
+ * into one.
+ *
+ * The same show is usually available on several services, which would otherwise
+ * fill the table with rows that read identically. A group shows the name once
+ * with a favicon per service, and expands to the individual shows so each can
+ * still be managed on its own.
+ */
+function ShowRows({
+  shows,
+  sources,
+  renderActions,
+}: {
+  shows: Show[]
+  sources: Record<string, Source>
+  renderActions: (show: Show) => ReactNode
+}) {
+  const { groups, expandedKeys, toggle } = useShowGroups(shows, sources)
+
   return (
     <>
-      {groupShows(shows).map((unorderedGroup) => {
-        const group = [...unorderedGroup].sort(bySourceRank)
+      {groups.map((group) => {
         const [firstShow] = group
         const name = firstShow.name ?? ""
 
@@ -237,11 +258,11 @@ function ShowRows({
               group.map((show) => (
                 <TableRow key={show.id} className="bg-muted/30">
                   <TableCell className="whitespace-normal">
-                    <div className="flex flex-col gap-1 pl-6">
+                    <div className="flex items-center gap-2 pl-6">
+                      <SourceFavicon source={sources[show.source_id]} />
                       <span className="wrap-break-word text-muted-foreground">
                         {sources[show.source_id]?.name ?? name}
                       </span>
-                      <SourceFavicon source={sources[show.source_id]} />
                     </div>
                   </TableCell>
                   <TableCell>{renderActions(show)}</TableCell>
@@ -251,6 +272,112 @@ function ShowRows({
         )
       })}
     </>
+  )
+}
+
+/**
+ * The same show groups as `ShowRows`, laid out as cards with their artwork.
+ *
+ * A card has room to list every service the show is on, so each one is a line of
+ * its own with its actions instead of hiding behind an expander.
+ */
+function ShowCards({
+  shows,
+  sources,
+  renderActions,
+}: {
+  shows: Show[]
+  sources: Record<string, Source>
+  renderActions: (show: Show) => ReactNode
+}) {
+  const { groups } = useShowGroups(shows, sources)
+
+  return (
+    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+      {groups.map((group) => {
+        const [firstShow] = group
+        const name = firstShow.name ?? ""
+        const artwork = group.find((show) => show.image_url)?.image_url
+
+        return (
+          <Card key={firstShow.id} className="gap-0 overflow-hidden py-0">
+            <div className="aspect-video w-full bg-muted">
+              {artwork && (
+                <img
+                  src={artwork}
+                  alt={name}
+                  className="size-full object-cover"
+                />
+              )}
+            </div>
+            <div className="flex flex-1 flex-col gap-2 p-3">
+              <span className="wrap-break-word text-sm font-medium">
+                {name}
+              </span>
+              <div className="mt-auto space-y-1">
+                {group.map((show) => (
+                  <div
+                    key={show.id}
+                    className="flex items-center justify-between gap-2 rounded bg-muted/30 px-2 py-1"
+                  >
+                    <span className="flex min-w-0 items-center gap-1">
+                      <SourceFavicon source={sources[show.source_id]} />
+                      <span className="truncate text-xs text-muted-foreground">
+                        {sources[show.source_id]?.name ?? name}
+                      </span>
+                    </span>
+                    {renderActions(show)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+/** The shows of one list, in whichever layout the user picked. */
+function ShowsList({
+  view,
+  shows,
+  sources,
+  renderActions,
+}: {
+  view: ShowsView
+  shows: Show[]
+  sources: Record<string, Source>
+  renderActions: (show: Show) => ReactNode
+}) {
+  if (view === "cards") {
+    return (
+      <ShowCards
+        shows={shows}
+        sources={sources}
+        renderActions={renderActions}
+      />
+    )
+  }
+
+  return (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Show</TableHead>
+            <TableHead className="w-25 text-center">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <ShowRows
+            shows={shows}
+            sources={sources}
+            renderActions={renderActions}
+          />
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -301,6 +428,7 @@ export function ManageShowsTabs({
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
   const [blacklistShowId, setBlacklistShowId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("search")
+  const [showsView, setShowsView] = useState<ShowsView>("table")
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
   // region Queries
@@ -634,48 +762,58 @@ export function ManageShowsTabs({
         </TabsContent>
 
         <TabsContent value="shows" className={`${contentClassName} space-y-6`}>
+          <div className="flex justify-end">
+            <ButtonGroup>
+              <Button
+                variant={showsView === "table" ? "secondary" : "outline"}
+                size="icon-sm"
+                onClick={() => setShowsView("table")}
+                title="Table view"
+              >
+                <Rows3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={showsView === "cards" ? "secondary" : "outline"}
+                size="icon-sm"
+                onClick={() => setShowsView("cards")}
+                title="Card view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </ButtonGroup>
+          </div>
+
           {showsList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No shows in this channel
             </p>
           ) : (
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Show</TableHead>
-                    <TableHead className="w-25 text-center">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <ShowRows
-                    shows={showsList}
-                    sources={sources}
-                    renderActions={(show) => (
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setSelectedShowId(show.id)}
-                          title="Manage whitelist"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleRemoveShow(show.id)}
-                          disabled={removeShowMutation.isPending}
-                          title="Remove show"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  />
-                </TableBody>
-              </Table>
-            </div>
+            <ShowsList
+              view={showsView}
+              shows={showsList}
+              sources={sources}
+              renderActions={(show) => (
+                <div className="flex items-center justify-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setSelectedShowId(show.id)}
+                    title="Manage whitelist"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => handleRemoveShow(show.id)}
+                    disabled={removeShowMutation.isPending}
+                    title="Remove show"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            />
           )}
 
           {filterOnlyShowsList.length > 0 && (
@@ -687,45 +825,32 @@ export function ManageShowsTabs({
                   blacklisted from channels included here.
                 </p>
               </div>
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Show</TableHead>
-                      <TableHead className="w-25 text-center">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <ShowRows
-                      shows={filterOnlyShowsList}
-                      sources={sources}
-                      renderActions={(show) => (
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => setBlacklistShowId(show.id)}
-                            title="View blacklisted episodes"
-                          >
-                            <ListX className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleRemoveShow(show.id)}
-                            disabled={removeShowMutation.isPending}
-                            title="Remove show"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    />
-                  </TableBody>
-                </Table>
-              </div>
+              <ShowsList
+                view={showsView}
+                shows={filterOnlyShowsList}
+                sources={sources}
+                renderActions={(show) => (
+                  <div className="flex items-center justify-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setBlacklistShowId(show.id)}
+                      title="View blacklisted episodes"
+                    >
+                      <ListX className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleRemoveShow(show.id)}
+                      disabled={removeShowMutation.isPending}
+                      title="Remove show"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              />
             </div>
           )}
         </TabsContent>
