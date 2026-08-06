@@ -684,12 +684,13 @@ class FileMixin(TMDBMixin, register=False):
         ]
 
         if outdated_ids:
-            logger.info(f"Batch downloading {len(outdated_ids)} videos")
+            logger.info(f"Batch downloading {len(outdated_ids)} YouTube videos")
             start = time.monotonic()
             pages = not_yt_dlapi().videos.download_all(outdated_ids)
             elapsed_time = time.monotonic() - start
             logger.info(
-                f"Batch downloaded {len(outdated_ids)} videos in {elapsed_time:.2f}s",
+                f"Batch downloaded {len(outdated_ids)} YouTube videos "
+                f"in {elapsed_time:.2f}s",
             )
 
             responses_by_id: dict[str, dict[str, Any]] = {

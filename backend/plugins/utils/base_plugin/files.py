@@ -115,14 +115,16 @@ class BaseFile[T](ABC):
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).__name__
+        plugin_key = self.__plugin.key
         action = "new" if self._existing_database_record else "initial"
         # This log is useful when a download fails.
-        logger.info(f"Downloading {action} {class_name} ({identifier})")
+        logger.info(f"Downloading {action} {plugin_key} {class_name} ({identifier})")
         start = time.monotonic()
         yield
         elapsed_time = time.monotonic() - start
         logger.info(
-            f"Downloaded {action} {class_name} ({identifier}) in {elapsed_time:.2f}s",
+            f"Downloaded {action} {plugin_key} {class_name} ({identifier}) "
+            f"in {elapsed_time:.2f}s",
         )
 
     @final  # Makes mocking downloads easier.
