@@ -1174,7 +1174,7 @@ wheels = [
 [[package]]
 name = "meshfilm"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/meshfilm#ec6bd91d2add6f2c5eee931041f421097662c850" }
+source = { git = "https://github.com/ryn-cx/meshfilm#97bfa5a8ffe3fa61571d850c613bf01a285e67dc" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
