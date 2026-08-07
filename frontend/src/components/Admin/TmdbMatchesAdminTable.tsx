@@ -10,6 +10,7 @@ import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { PageHeader } from "@/components/Common/PageHeader"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import { tmdbMatchColumns } from "./tmdbMatchColumns"
+import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
 
 const STORAGE_KEY = "admin-tmdb-matches"
 
@@ -18,7 +19,7 @@ export function TmdbMatchesAdminTable() {
     usePersistedJsonState<VisibilityState>(`${STORAGE_KEY}-visibility`, {})
 
   const { data: episodes } = useQuery({
-    queryKey: ["admin-tmdb-matches"],
+    queryKey: TMDB_MATCHES_QUERY_KEY,
     queryFn: () => EpisodesService.adminGetUnmatchedEpisodes({ limit: 1000 }),
   })
 

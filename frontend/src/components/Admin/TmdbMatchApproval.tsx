@@ -3,11 +3,22 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, List, X } from "lucide-react"
 import { useState } from "react"
 
-import { EpisodesService, type UnmatchedEpisodeOutput } from "@/client"
+import {
+  type ApiError,
+  type EpisodeOutput,
+  EpisodesService,
+  type UnmatchedEpisodeOutput,
+} from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { TmdbEpisodePickerDialog } from "./TmdbEpisodePickerDialog"
+import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
+
+/** The rows put back when the server refuses what was already taken off the table. */
+interface RemovedRows {
+  previousRows?: UnmatchedEpisodeOutput[]
+}
 
 /**
  * Settle which TMDB episode an episode is, or settle that it is none of them.
@@ -25,30 +36,60 @@ export function TmdbMatchApproval({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [isPicking, setIsPicking] = useState(false)
 
+  // An episode that has been settled is off the list whichever way it was
+  // settled, so the row is taken out as the button is pressed rather than left
+  // sitting there until the server has been asked and the table read back.
+  const takeRowOff = async (): Promise<RemovedRows> => {
+    await queryClient.cancelQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
+    const previousRows = queryClient.getQueryData<UnmatchedEpisodeOutput[]>(
+      TMDB_MATCHES_QUERY_KEY,
+    )
+    queryClient.setQueryData<UnmatchedEpisodeOutput[]>(
+      TMDB_MATCHES_QUERY_KEY,
+      (rows) => rows?.filter((row) => row.id !== episode.id),
+    )
+    setIsPicking(false)
+    return { previousRows }
+  }
+
+  const putRowBack = (
+    error: ApiError,
+    _variables: unknown,
+    context: RemovedRows | undefined,
+  ) => {
+    if (context?.previousRows) {
+      queryClient.setQueryData(TMDB_MATCHES_QUERY_KEY, context.previousRows)
+    }
+    handleError.call(showErrorToast, error)
+  }
+
+  const settleQueries = () =>
+    queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
+
   const linkMutation = useMutation({
     mutationFn: (tmdbEpisodeId: number) =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId: episode.id,
         requestBody: { tmdb_episode_id: tmdbEpisodeId },
       }),
-    onSuccess: () => {
-      setIsPicking(false)
-      showSuccessToast("Episode linked to TMDB")
-    },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-matches"] }),
+    onMutate: takeRowOff,
+    onSuccess: () => showSuccessToast("Episode linked to TMDB"),
+    onError: putRowBack,
+    onSettled: settleQueries,
   })
 
-  const noMatchMutation = useMutation({
+  const noMatchMutation = useMutation<
+    EpisodeOutput,
+    ApiError,
+    void,
+    RemovedRows
+  >({
     mutationFn: () =>
       EpisodesService.adminMarkEpisodeNoTmdbMatch({ episodeId: episode.id }),
-    onSuccess: () => {
-      showSuccessToast("Episode marked as having no TMDB match")
-    },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-matches"] }),
+    onMutate: takeRowOff,
+    onSuccess: () => showSuccessToast("Episode marked as having no TMDB match"),
+    onError: putRowBack,
+    onSettled: settleQueries,
   })
 
   const isSaving = linkMutation.isPending || noMatchMutation.isPending

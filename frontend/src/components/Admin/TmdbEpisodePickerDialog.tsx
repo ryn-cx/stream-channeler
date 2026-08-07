@@ -2,11 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
-import {
-  EpisodesService,
-  type TmdbEpisodeChoice,
-  type UnmatchedEpisodeOutput,
-} from "@/client"
+import { EpisodesService, type UnmatchedEpisodeOutput } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { isNumberedTheSame } from "./tmdbNumbering"
 
 type ChoiceOrder = "episode" | "similarity"
 
@@ -35,28 +32,6 @@ function compareNumbers(left: number | null, right: number | null): number {
   if (left === null) return 1
   if (right === null) return -1
   return left - right
-}
-
-/**
- * Whether a choice is numbered the same as the episode being linked.
- *
- * Either numbering counts, since a website that restarts its numbering each
- * season agrees with TMDB on the season and episode, and one that runs straight
- * through agrees on how far into the title the episode is.
- */
-function isNumberedTheSame(
-  episode: UnmatchedEpisodeOutput,
-  choice: TmdbEpisodeChoice,
-): boolean {
-  const seasonAndEpisodeAgree =
-    episode.season_number !== null &&
-    episode.episode_number !== null &&
-    episode.season_number === choice.season_number &&
-    episode.episode_number === choice.episode_number
-  const absoluteAgrees =
-    episode.absolute_number !== null &&
-    episode.absolute_number === choice.absolute_number
-  return seasonAndEpisodeAgree || absoluteAgrees
 }
 
 /**

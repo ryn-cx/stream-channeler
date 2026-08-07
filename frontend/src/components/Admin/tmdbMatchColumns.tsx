@@ -6,6 +6,11 @@ import type { UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { cn } from "@/lib/utils"
 import { TmdbMatchApproval } from "./TmdbMatchApproval"
+import {
+  type Numbered,
+  numberingAgreement,
+  seasonAndEpisodeText,
+} from "./tmdbNumbering"
 
 /**
  * A cell whose text runs onto another line rather than widening the table.
@@ -28,69 +33,44 @@ function WrappingCell({
   )
 }
 
-/** "S2E5", or as much of it as the record was numbered with. */
-function seasonAndEpisodeText(
-  seasonNumber: number | null,
-  episodeNumber: number | null,
-): string {
-  if (seasonNumber === null && episodeNumber === null) return ""
-  return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
-}
-
-/** Whether the website and TMDB file the episode under the same season and number. */
-function seasonAndEpisodeAgree(episode: UnmatchedEpisodeOutput): boolean {
-  const match = episode.best_match
-  if (!match) return false
-  return (
-    episode.season_number !== null &&
-    episode.episode_number !== null &&
-    episode.season_number === match.season_number &&
-    episode.episode_number === match.episode_number
-  )
-}
-
-/** Whether the website and TMDB put the episode the same distance into the title. */
-function absoluteNumberAgrees(episode: UnmatchedEpisodeOutput): boolean {
-  const match = episode.best_match
-  if (!match) return false
-  return (
-    episode.absolute_number !== null &&
-    episode.absolute_number === match.absolute_number
-  )
+const NOTHING_TO_AGREE_WITH: Numbered = {
+  season_number: null,
+  episode_number: null,
+  absolute_number: null,
 }
 
 /**
- * How a record is numbered, marked where the two sides agree.
+ * How a record is numbered, marked where the other record puts it in the same place.
  *
  * A website and TMDB rarely number the same episode the same way, so a number
  * they do share is the strongest thing on the row for telling whether the match
- * is the right one, and it is picked out rather than left to be read off.
+ * is the right one, and it is picked out rather than left to be read off. Each
+ * number is marked on its own, since the two sides can agree through one of
+ * them without agreeing through the other.
  */
 function Numbering({
-  seasonNumber,
-  episodeNumber,
-  absoluteNumber,
-  seasonAndEpisodeMatches,
-  absoluteMatches,
+  record,
+  counterpart,
 }: {
-  seasonNumber: number | null
-  episodeNumber: number | null
-  absoluteNumber: number | null
-  seasonAndEpisodeMatches: boolean
-  absoluteMatches: boolean
+  record: Numbered
+  counterpart: Numbered | null
 }) {
-  const seasonAndEpisode = seasonAndEpisodeText(seasonNumber, episodeNumber)
+  const seasonAndEpisode = seasonAndEpisodeText(record)
+  const agreement = numberingAgreement(
+    record,
+    counterpart ?? NOTHING_TO_AGREE_WITH,
+  )
 
   return (
     <span className="flex items-center gap-2 tabular-nums">
       {seasonAndEpisode ? (
-        <span className={seasonAndEpisodeMatches ? "text-destructive" : ""}>
+        <span className={agreement.seasonAndEpisode ? "text-destructive" : ""}>
           {seasonAndEpisode}
         </span>
       ) : null}
-      {absoluteNumber === null ? null : (
-        <span className={absoluteMatches ? "text-destructive" : ""}>
-          #{absoluteNumber}
+      {record.absolute_number === null ? null : (
+        <span className={agreement.absolute ? "text-destructive" : ""}>
+          #{record.absolute_number}
         </span>
       )}
     </span>
@@ -139,11 +119,8 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <span className="font-medium">{row.original.name ?? "Unnamed"}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Numbering
-            seasonNumber={row.original.season_number}
-            episodeNumber={row.original.episode_number}
-            absoluteNumber={row.original.absolute_number}
-            seasonAndEpisodeMatches={seasonAndEpisodeAgree(row.original)}
-            absoluteMatches={absoluteNumberAgrees(row.original)}
+            record={row.original}
+            counterpart={row.original.best_match}
           />
           {row.original.url ? (
             <a
@@ -176,13 +153,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <WrappingCell className="max-w-64">
           {match.name ?? "Unnamed"}
           <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Numbering
-              seasonNumber={match.season_number}
-              episodeNumber={match.episode_number}
-              absoluteNumber={match.absolute_number}
-              seasonAndEpisodeMatches={seasonAndEpisodeAgree(row.original)}
-              absoluteMatches={absoluteNumberAgrees(row.original)}
-            />
+            <Numbering record={match} counterpart={row.original} />
             <span className="tabular-nums">id {match.tmdb_episode_id}</span>
             <TmdbLink url={match.url} />
           </span>
