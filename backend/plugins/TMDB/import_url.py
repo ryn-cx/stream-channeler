@@ -6,13 +6,15 @@ from typing import override
 
 from bs4 import Tag
 
-from plugins.TMDB.files import TMDB_DOMAIN, FileMixin, TitlePage
+from plugins.TMDB.files import TMDB_DOMAIN, TitlePage
+from plugins.TMDB.keys import MediaType
+from plugins.TMDB.upsert import UpsertMixin
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 
 _TITLE_PATH_REGEX = r"\/(?P<media_type>movie|tv)\/(?P<tmdb_id>\d+)"
 
 
-class ImportURLMixin(FileMixin, register=False):
+class ImportURLMixin(UpsertMixin, register=False):
     @classmethod
     @override
     def _domain(cls) -> str:
@@ -36,14 +38,19 @@ class ImportURLMixin(FileMixin, register=False):
         what knows the offers every source has. The URL names the TMDB title
         outright, so that id is handed to JustWatch and on to every plugin below
         it rather than each of them searching TMDB for the title by name.
+
+        A title JustWatch does not carry is imported as this plugin's own media
+        instead, which is all there is to serve for it until a source that
+        streams it turns up.
         """
         match = re.match(self.url_regex(), url)
         if match is None:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
             raise InvalidURLError(msg)
 
+        media_type: MediaType = "movie" if match.group("media_type") == "movie" else "tv"
         url_tmdb_id = int(match.group("tmdb_id"))
-        page_file = self.title_page_file(match.group("media_type"), url_tmdb_id)
+        page_file = self.title_page_file(media_type, url_tmdb_id)
         page_file.download_if_outdated()
         if not page_file.database_record.content:
             msg = f"Invalid {self.plugin_key()} URL: {url}"
@@ -51,8 +58,11 @@ class ImportURLMixin(FileMixin, register=False):
 
         justwatch_url = self._justwatch_url(page_file)
         if justwatch_url is None:
-            msg = f"TMDB has no JustWatch link for {url}"
-            raise InvalidURLError(msg)
+            show = self.import_title(media_type, url_tmdb_id)
+            if show is None:
+                msg = f"TMDB has no files for {url}"
+                raise InvalidURLError(msg)
+            return [URLImportResult.for_show(show)]
 
         # Imported lazily because JustWatch's files use this plugin to resolve
         # TMDB ids, so importing it up here would be circular.

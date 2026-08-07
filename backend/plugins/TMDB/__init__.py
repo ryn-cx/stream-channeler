@@ -14,10 +14,10 @@ from plugins.TMDB.upsert import UpsertMixin
 
 
 class TMDB(
+    ImportURLMixin,
     UpsertMixin,
     LinkMixin,
     SearchMixin,
-    ImportURLMixin,
     HelperMixin,
     FileMixin,
     register=True,
