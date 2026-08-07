@@ -652,6 +652,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
           if (!open) setSelectedResult(null)
         }}
       />
+
     </div>
   )
 }

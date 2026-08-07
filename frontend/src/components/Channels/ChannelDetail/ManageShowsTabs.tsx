@@ -58,6 +58,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
+import { FeelingLuckyPanel } from "./FeelingLuckyPanel"
 import { AdditionalChannelsPanel } from "./ManageSubChannels"
 import { ShowSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
@@ -616,6 +617,9 @@ export function ManageShowsTabs({
           <TabsTrigger value="search">
             <Search className="h-4 w-4 mr-1" /> Search
           </TabsTrigger>
+          <TabsTrigger value="lucky">
+            <Sparkles className="h-4 w-4 mr-1" /> I'm Feeling Lucky
+          </TabsTrigger>
           <TabsTrigger value="url">
             <Link2 className="h-4 w-4 mr-1" /> Add By URL
           </TabsTrigger>
@@ -638,6 +642,10 @@ export function ManageShowsTabs({
 
         <TabsContent value="search" className={contentClassName}>
           <ShowSearch channelId={channelId} initialQuery={searchQuery} />
+        </TabsContent>
+
+        <TabsContent value="lucky" className={contentClassName}>
+          <FeelingLuckyPanel channelId={channelId} />
         </TabsContent>
 
         <TabsContent value="url" className={contentClassName}>

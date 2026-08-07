@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlalchemy.orm import aliased
-from sqlmodel import Session, col, or_, select
+from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.service import delete_record
 from app.models import Visibility
 from app.plugins.models import Plugin
@@ -65,6 +66,10 @@ def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: 
     watch can be joined to concrete media for display and visibility filtering.
     Restricted to `identifiers` so it only resolves the identifiers actually in play
     instead of the whole episode catalog.
+
+    TMDB is what a website's media is filled in from rather than a website an
+    episode can be watched on, so its own copy is never what a watch is shown
+    as, however the episodes happen to be ordered.
     """
     return (
         select(
@@ -77,10 +82,33 @@ def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: 
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(Episode.deleted_at).is_(None))
         .where(_visible_plugin_condition(user_id))
+        .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
         .where(col(Episode.episode_identifier).in_(identifiers))
         .distinct(col(Episode.episode_identifier))
         .order_by(col(Episode.episode_identifier), col(Episode.id))
         .subquery()
+    )
+
+
+def _own_visible_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
+    """The episode a watch was recorded against, when it is one the `User` can see.
+
+    A watch is made against one website's copy of an episode, which is the copy
+    it should be shown as. It is only stood in for by another source's copy when
+    the one it was made against is not the `User`'s to see.
+    """
+    return (
+        select(col(WatchedEpisode.id))
+        .join(Season, col(Season.id) == col(WatchedEpisode.season_id))
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(col(WatchedEpisode.id) == col(Watch.episode_id))
+        .where(col(WatchedEpisode.deleted_at).is_(None))
+        .where(_visible_plugin_condition(user_id))
+        .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
+        .correlate(Watch)
+        .scalar_subquery()
     )
 
 
@@ -97,7 +125,14 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
             representative.c.episode_identifier
             == col(WatchedEpisode.episode_identifier),
         )
-        .join(Episode, col(Episode.id) == representative.c.episode_id)
+        .join(
+            Episode,
+            col(Episode.id)
+            == func.coalesce(
+                _own_visible_episode_subquery(user_id),
+                representative.c.episode_id,
+            ),
+        )
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
