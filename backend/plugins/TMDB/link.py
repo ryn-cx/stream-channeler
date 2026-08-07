@@ -18,6 +18,7 @@ from app.shows.models import Show
 from plugins.TMDB.lookup import LookupMixin
 
 _MAX_READING_COMBINATIONS = 32
+_GENERIC_EPISODE_NAME = re.compile(r"episode\s*\d+")
 
 
 class _Named(Protocol):
@@ -90,6 +91,10 @@ def _plaintext_forms(name: str) -> frozenset[str]:
             forms |= {romanized, _folded(romanized)}
 
     return frozenset(form for form in forms if form)
+
+
+def _is_generically_named(name: str) -> bool:
+    return bool(_GENERIC_EPISODE_NAME.fullmatch(name.strip().casefold()))
 
 
 type _Compare = Callable[[frozenset[str], frozenset[str]], bool]
@@ -244,7 +249,7 @@ class LinkMixin(LookupMixin, register=False):
         episode_name: str | None,
         highest_episode_number: int | None,
     ) -> TvSeasonEpisode | None:
-        if not episode_name:
+        if not episode_name or _is_generically_named(episode_name):
             return self._episode_by_number(tmdb_id, season_number, episode_number)
 
         if match := self._exactly_named(tmdb_id, episode_name):
