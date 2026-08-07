@@ -9,12 +9,12 @@ identifier usually resolves to an episode on several sources, so the one the
 """
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from loguru import logger
 from sqlmodel import Session, col, select
 
-from app.channels.episode_selector import SourceDedupConfig, source_dedup_config
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -24,6 +24,12 @@ from app.users.models import User
 from app.users.service import stored_preferences
 from app.watches.models import Watch
 
+if TYPE_CHECKING:
+    from app.channels.episode_selector import SourceDedupConfig
+
+# `episode_selector` aliases `Episode` as it is imported, which maps every model
+# a mapped model names, so it is imported after the models are loaded rather
+# than alongside them.
 load_models()
 
 
@@ -81,6 +87,8 @@ def _config_for_user(
     cache: dict[UUID, SourceDedupConfig],
 ) -> SourceDedupConfig:
     """Return a `User`'s source priorities, resolved once per run."""
+    from app.channels.episode_selector import source_dedup_config  # noqa: PLC0415
+
     if user_id not in cache:
         user = session.get(User, user_id)
         preferences = stored_preferences(user.source_preferences) if user else []
