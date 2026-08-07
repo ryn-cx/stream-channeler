@@ -538,6 +538,13 @@ export type EpisodesPublic = {
 };
 
 /**
+ * The TMDB episode a `User` is pointing an `Episode` at by hand.
+ */
+export type EpisodeTmdbLinkInput = {
+    tmdb_episode_id: number;
+};
+
+/**
  * Schema for updating an `Episode`.
  */
 export type EpisodeUpdate = {
@@ -1272,6 +1279,28 @@ export type SourceUpdate = {
 };
 
 /**
+ * A TMDB episode of a title, as one of the episodes an `Episode` can be linked to.
+ *
+ * `absolute_number` counts the episode from the first of the title rather than
+ * from the first of its own season, which is how a website that never restarts
+ * its numbering names the same episode. Specials are outside that count and
+ * have none.
+ *
+ * `similarity` is how much of its name it shares with the episode being linked,
+ * which is what lets the choices be read in the order they are most likely to
+ * be the one rather than in the order the title runs.
+ */
+export type TmdbEpisodeChoice = {
+    tmdb_episode_id: number;
+    name: (string | null);
+    season_number: (number | null);
+    episode_number: (number | null);
+    absolute_number: (number | null);
+    url: (string | null);
+    similarity: number;
+};
+
+/**
  * The TMDB title that best matches a plugin's search result.
  */
 export type TMDBMatch = {
@@ -1315,6 +1344,23 @@ export type TMDBWatchProviderItem = {
 export type Token = {
     access_token: string;
     token_type?: string;
+};
+
+/**
+ * An episode no TMDB record was found for, beside the closest TMDB episode.
+ */
+export type UnmatchedEpisodeOutput = {
+    id: string;
+    episode_identifier: string;
+    name: (string | null);
+    episode_number: (number | null);
+    absolute_number: (number | null);
+    season_name: (string | null);
+    season_number: (number | null);
+    show_name: (string | null);
+    source_name: (string | null);
+    url: (string | null);
+    best_match: (TmdbEpisodeChoice | null);
 };
 
 export type UpdatePassword = {
@@ -1913,6 +1959,31 @@ export type EpisodesGetEpisodesData = {
 };
 
 export type EpisodesGetEpisodesResponse = (EpisodesPublic);
+
+export type EpisodesAdminGetUnmatchedEpisodesData = {
+    limit?: number;
+};
+
+export type EpisodesAdminGetUnmatchedEpisodesResponse = (Array<UnmatchedEpisodeOutput>);
+
+export type EpisodesAdminGetTmdbEpisodeChoicesData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminGetTmdbEpisodeChoicesResponse = (Array<TmdbEpisodeChoice>);
+
+export type EpisodesAdminLinkEpisodeToTmdbData = {
+    episodeId: string;
+    requestBody: EpisodeTmdbLinkInput;
+};
+
+export type EpisodesAdminLinkEpisodeToTmdbResponse = (EpisodeOutput);
+
+export type EpisodesAdminMarkEpisodeNoTmdbMatchData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminMarkEpisodeNoTmdbMatchResponse = (EpisodeOutput);
 
 export type EpisodesGetEpisodeInformationData = {
     episodeId: string;

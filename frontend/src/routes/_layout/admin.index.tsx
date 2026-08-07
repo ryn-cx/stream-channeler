@@ -4,6 +4,7 @@ import {
   Clapperboard,
   Flag,
   Layers,
+  Link2,
   ListOrdered,
   Radio,
   Tv,
@@ -113,6 +114,20 @@ function AdminIndex() {
               <CardDescription>
                 Each reported title once, with how many issues were reported
                 against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/tmdb-matches" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="size-5" />
+                TMDB Matches
+              </CardTitle>
+              <CardDescription>
+                Every episode no TMDB record was found for, beside the closest
+                TMDB episode, to be approved or replaced by hand.
               </CardDescription>
             </CardHeader>
           </Card>

@@ -1,7 +1,7 @@
 # TODO: Validate
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import cache
 from itertools import product
 from math import prod
@@ -92,9 +92,27 @@ def _plaintext_forms(name: str) -> frozenset[str]:
     return frozenset(form for form in forms if form)
 
 
+type _Compare = Callable[[frozenset[str], frozenset[str]], bool]
+
+
+def _matches_exactly(candidate_forms: frozenset[str], targets: frozenset[str]) -> bool:
+    return bool(candidate_forms & targets)
+
+
+def _contains_either_way(
+    candidate_forms: frozenset[str],
+    targets: frozenset[str],
+) -> bool:
+    return any(
+        candidate_form in target or target in candidate_form
+        for candidate_form, target in product(candidate_forms, targets)
+    )
+
+
 def _find_by_name[NamedType: _Named](
     candidates: Sequence[NamedType],
     name: str | None,
+    compare: _Compare = _matches_exactly,
 ) -> NamedType | None:
     if not name:
         return None
@@ -103,7 +121,7 @@ def _find_by_name[NamedType: _Named](
     matches = [
         candidate
         for candidate in candidates
-        if _plaintext_forms(candidate.name) & targets
+        if compare(_plaintext_forms(candidate.name), targets)
     ]
     return matches[0] if len(matches) == 1 else None
 
@@ -229,18 +247,78 @@ class LinkMixin(LookupMixin, register=False):
         if not episode_name:
             return self._episode_by_number(tmdb_id, season_number, episode_number)
 
-        episodes = self._all_episodes(tmdb_id)
+        if match := self._exactly_named(tmdb_id, episode_name):
+            return match
 
-        if episode_detail := _find_by_name(episodes, episode_name):
-            return episode_detail
+        if match := self._exactly_named_in_translation(tmdb_id, episode_name):
+            return match
 
-        if translated_detail := self._find_by_translated_name(
+        if match := self._exact_substring(tmdb_id, episode_name):
+            return match
+
+        if match := self._named_within_translation(tmdb_id, episode_name):
+            return match
+
+        return self._numbered_the_same_way(
             tmdb_id,
-            episodes,
-            episode_name,
-        ):
-            return translated_detail
+            season_number,
+            episode_number,
+            highest_episode_number,
+        )
 
+    def _exactly_named(
+        self,
+        tmdb_id: int,
+        episode_name: str,
+    ) -> TvSeasonEpisode | None:
+        return _find_by_name(
+            self._all_episodes(tmdb_id),
+            episode_name,
+            _matches_exactly,
+        )
+
+    def _exactly_named_in_translation(
+        self,
+        tmdb_id: int,
+        episode_name: str,
+    ) -> TvSeasonEpisode | None:
+        return self._find_by_translated_name(
+            tmdb_id,
+            self._all_episodes(tmdb_id),
+            episode_name,
+            _matches_exactly,
+        )
+
+    def _exact_substring(
+        self,
+        tmdb_id: int,
+        episode_name: str,
+    ) -> TvSeasonEpisode | None:
+        return _find_by_name(
+            self._all_episodes(tmdb_id),
+            episode_name,
+            _contains_either_way,
+        )
+
+    def _named_within_translation(
+        self,
+        tmdb_id: int,
+        episode_name: str,
+    ) -> TvSeasonEpisode | None:
+        return self._find_by_translated_name(
+            tmdb_id,
+            self._all_episodes(tmdb_id),
+            episode_name,
+            _contains_either_way,
+        )
+
+    def _numbered_the_same_way(
+        self,
+        tmdb_id: int,
+        season_number: int | None,
+        episode_number: int | None,
+        highest_episode_number: int | None,
+    ) -> TvSeasonEpisode | None:
         if not self._season_ends_on_the_same_number(
             tmdb_id,
             season_number,
@@ -272,6 +350,7 @@ class LinkMixin(LookupMixin, register=False):
         tmdb_id: int,
         episodes: Sequence[TvSeasonEpisode],
         episode_name: str | None,
+        compare: _Compare = _matches_exactly,
     ) -> TvSeasonEpisode | None:
         if not episode_name:
             return None
@@ -280,22 +359,26 @@ class LinkMixin(LookupMixin, register=False):
         matches = [
             episode
             for episode in episodes
-            if self._translated_names(tmdb_id, episode) & targets
+            if compare(self._translated_names(tmdb_id, episode), targets)
         ]
         return matches[0] if len(matches) == 1 else None
 
-    def _translated_names(self, tmdb_id: int, episode: TvSeasonEpisode) -> set[str]:
+    def _translated_names(
+        self,
+        tmdb_id: int,
+        episode: TvSeasonEpisode,
+    ) -> frozenset[str]:
         translations_file = self.episode_translations_file(
             tmdb_id,
             episode.season_number,
             episode.episode_number,
         )
-        return {
+        return frozenset(
             form
             for translation in translations_file.parsed()
             if translation.data.name
             for form in _plaintext_forms(translation.data.name)
-        }
+        )
 
     def _episode_by_number(
         self,

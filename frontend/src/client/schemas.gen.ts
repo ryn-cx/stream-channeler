@@ -2726,6 +2726,19 @@ never disagree about which TMDB record this is.`,
     description: 'Schema for returning an `Episode`.'
 } as const;
 
+export const EpisodeTmdbLinkInputSchema = {
+    properties: {
+        tmdb_episode_id: {
+            type: 'integer',
+            title: 'Tmdb Episode Id'
+        }
+    },
+    type: 'object',
+    required: ['tmdb_episode_id'],
+    title: 'EpisodeTmdbLinkInput',
+    description: 'The TMDB episode a `User` is pointing an `Episode` at by hand.'
+} as const;
+
 export const EpisodeUpdateSchema = {
     properties: {
         key: {
@@ -6920,6 +6933,87 @@ export const TMDBWatchProviderItemSchema = {
     description: 'A place to watch a title, marked with the plugin that supports it.'
 } as const;
 
+export const TmdbEpisodeChoiceSchema = {
+    properties: {
+        tmdb_episode_id: {
+            type: 'integer',
+            title: 'Tmdb Episode Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        absolute_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Absolute Number'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        similarity: {
+            type: 'number',
+            title: 'Similarity'
+        }
+    },
+    type: 'object',
+    required: ['tmdb_episode_id', 'name', 'season_number', 'episode_number', 'absolute_number', 'url', 'similarity'],
+    title: 'TmdbEpisodeChoice',
+    description: `A TMDB episode of a title, as one of the episodes an \`Episode\` can be linked to.
+
+\`absolute_number\` counts the episode from the first of the title rather than
+from the first of its own season, which is how a website that never restarts
+its numbering names the same episode. Specials are outside that count and
+have none.
+
+\`similarity\` is how much of its name it shares with the episode being linked,
+which is what lets the choices be read in the order they are most likely to
+be the one rather than in the order the title runs.`
+} as const;
+
 export const TokenSchema = {
     properties: {
         access_token: {
@@ -6942,6 +7036,122 @@ export const URLStatusSchema = {
     enum: ['Pending', 'Failed', 'Imported', 'Importing'],
     title: 'URLStatus',
     description: 'Enum representing the status of a URL in the channel queue.'
+} as const;
+
+export const UnmatchedEpisodeOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        absolute_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Absolute Number'
+        },
+        season_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        show_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Name'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        best_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id', 'episode_identifier', 'name', 'episode_number', 'absolute_number', 'season_name', 'season_number', 'show_name', 'source_name', 'url', 'best_match'],
+    title: 'UnmatchedEpisodeOutput',
+    description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;
 
 export const UpdatePasswordSchema = {

@@ -37,7 +37,6 @@ from plugins.utils.get_around_client import get_around_client
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
-
 # The worker is shared by every plugin and JustWatch is what leans on it hardest,
 # so its requests go through a proxy of our own whenever one is configured and
 # fall back to the worker when it is not.

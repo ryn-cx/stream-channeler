@@ -3,13 +3,18 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    get_current_active_superuser,
 )
-from app.episodes.dependencies import EditableEpisode, ReadableEpisode
+from app.episodes.dependencies import (
+    EditableEpisode,
+    ExistingEpisode,
+    ReadableEpisode,
+)
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     EpisodeCreate,
@@ -18,7 +23,16 @@ from app.episodes.schemas import (
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
+    EpisodeTmdbLinkInput,
     EpisodeUpdate,
+    TmdbEpisodeChoice,
+    UnmatchedEpisodeOutput,
+)
+from app.episodes.tmdb_matches import (
+    confirm_no_tmdb_match,
+    link_episode,
+    list_tmdb_episode_choices,
+    list_unmatched_episodes,
 )
 from app.issue_reports.service import list_episode_issue_reports
 from app.media.schemas import MediaReadOptions
@@ -177,6 +191,56 @@ def get_show_episodes(
     )
     fill_episodes(session, episodes.data)
     return episodes
+
+
+@episodes_router.get(
+    "/tmdb-matches",
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_get_unmatched_episodes(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[UnmatchedEpisodeOutput]:
+    """Get the `Episode`s no TMDB record was found for, and the closest match to each."""
+    return list_unmatched_episodes(session, limit)
+
+
+@episodes_router.get(
+    "/{episode_id}/tmdb-choices",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_get_tmdb_episode_choices(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> list[TmdbEpisodeChoice]:
+    """Get every TMDB episode an `Episode` could be linked to, in the title's order."""
+    return list_tmdb_episode_choices(session, episode)
+
+
+@episodes_router.put(
+    "/{episode_id}/tmdb-link",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_link_episode_to_tmdb(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    link_input: EpisodeTmdbLinkInput,
+) -> EpisodeOutput:
+    """Point an `Episode` at the TMDB episode an admin chose for it."""
+    linked = link_episode(session, episode, link_input.tmdb_episode_id)
+    return _episode_output(session, linked)
+
+
+@episodes_router.put(
+    "/{episode_id}/tmdb-no-match",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_mark_episode_no_tmdb_match(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> EpisodeOutput:
+    """Hold an `Episode` at its own identifier, TMDB having nothing to link it to."""
+    return _episode_output(session, confirm_no_tmdb_match(session, episode))
 
 
 def _information_side(

@@ -103,6 +103,50 @@ class EpisodeInformationOutput(BaseModel):
     tmdb: EpisodeInformationSide | None
 
 
+class TmdbEpisodeChoice(BaseModel):
+    """A TMDB episode of a title, as one of the episodes an `Episode` can be linked to.
+
+    `absolute_number` counts the episode from the first of the title rather than
+    from the first of its own season, which is how a website that never restarts
+    its numbering names the same episode. Specials are outside that count and
+    have none.
+
+    `similarity` is how much of its name it shares with the episode being linked,
+    which is what lets the choices be read in the order they are most likely to
+    be the one rather than in the order the title runs.
+    """
+
+    tmdb_episode_id: int
+    name: str | None
+    season_number: int | None
+    episode_number: int | None
+    absolute_number: int | None
+    url: str | None
+    similarity: float
+
+
+class UnmatchedEpisodeOutput(BaseModel):
+    """An episode no TMDB record was found for, beside the closest TMDB episode."""
+
+    id: uuid.UUID
+    episode_identifier: str
+    name: str | None
+    episode_number: int | None
+    absolute_number: int | None
+    season_name: str | None
+    season_number: int | None
+    show_name: str | None
+    source_name: str | None
+    url: str | None
+    best_match: TmdbEpisodeChoice | None
+
+
+class EpisodeTmdbLinkInput(BaseModel):
+    """The TMDB episode a `User` is pointing an `Episode` at by hand."""
+
+    tmdb_episode_id: int
+
+
 class EpisodesPublic(BaseModel):
     """Schema for returning a list of `Episode`s."""
 
