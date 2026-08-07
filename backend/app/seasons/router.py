@@ -164,12 +164,15 @@ def update_season(
     """Update and return a `Season` if it's editable by the `User`.
 
     A new `tmdb_id` repoints every `Episode` at TMDB so their `tmdb_id` and
-    `episode_identifier` follow the one the `User` chose.
+    `episode_identifier` follow the one the `User` chose, and the
+    `season_identifier` follows it as well. A `season_identifier` in the same
+    request is what the `User` wants it to be, so it is left alone.
     """
     previous_tmdb_id = season.tmdb_id
+    sets_identifier = "season_identifier" in season_input.model_dump(exclude_unset=True)
     season = season_input.update(session, season)
     if season.tmdb_id != previous_tmdb_id:
-        relink_season_children(session, season)
+        relink_season_children(session, season, relink_identifier=not sets_identifier)
     return _season_output(session, season)
 
 

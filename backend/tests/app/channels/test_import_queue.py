@@ -45,7 +45,7 @@ class TestImportQueue:
             select(ChannelShow).where(ChannelShow.channel_id == channel.id),
         ).all()
         assert len(channel_shows) == 1
-        assert channel_shows[0].show_id == show.id
+        assert channel_shows[0].show_identifier == show.show_identifier
 
     def test_uses_the_callers_session_database(
         self,
@@ -89,7 +89,9 @@ class TestImportQueue:
         channel_shows = function_scoped_session.exec(
             select(ChannelShow).where(ChannelShow.channel_id == channel.id),
         ).all()
-        assert {channel_show.show_id for channel_show in channel_shows} == {show.id}
+        assert {channel_show.show_identifier for channel_show in channel_shows} == {
+            show.show_identifier,
+        }
 
     def test_marks_unmatched_url_failed(
         self,

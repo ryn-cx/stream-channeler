@@ -795,6 +795,7 @@ export type SeasonCreate = {
     image_url?: (string | null);
     season_number?: (number | null);
     tmdb_id?: (number | null);
+    season_identifier: string;
 };
 
 /**
@@ -812,6 +813,7 @@ export type SeasonListOutput = {
     image_url?: (string | null);
     season_number?: (number | null);
     tmdb_id?: (number | null);
+    season_identifier: string;
     show_id: string;
     id: string;
     username: (string | null);
@@ -837,6 +839,7 @@ export type SeasonOutput = {
     image_url?: (string | null);
     season_number?: (number | null);
     tmdb_id?: (number | null);
+    season_identifier: string;
     show_id: string;
     id: string;
 };
@@ -866,6 +869,7 @@ export type SeasonUpdate = {
     image_url?: (string | null);
     season_number?: (number | null);
     tmdb_id?: (number | null);
+    season_identifier?: (string | null);
 };
 
 /**
@@ -884,6 +888,7 @@ export type ShowCreate = {
     image_url?: (string | null);
     icon?: (string | null);
     tmdb_id?: (number | null);
+    show_identifier: string;
 };
 
 /**
@@ -902,6 +907,7 @@ export type ShowListPublic = {
     image_url?: (string | null);
     icon?: (string | null);
     tmdb_id?: (number | null);
+    show_identifier: string;
     source_id: string;
     id: string;
     username: (string | null);
@@ -926,6 +932,7 @@ export type ShowPublic = {
     image_url?: (string | null);
     icon?: (string | null);
     tmdb_id?: (number | null);
+    show_identifier: string;
     source_id: string;
     id: string;
 };
@@ -956,6 +963,7 @@ export type ShowUpdate = {
     image_url?: (string | null);
     icon?: (string | null);
     tmdb_id?: (number | null);
+    show_identifier?: (string | null);
 };
 
 export type SortKeyInput = {
@@ -1288,6 +1296,9 @@ export type WhitelistEpisodeOutput = {
     season_id: string;
     filtered: boolean;
     expires_at?: (string | null);
+    show_ids: Array<(string)>;
+    tmdb_season_number?: (number | null);
+    tmdb_episode_number?: (number | null);
 };
 
 export type WhitelistSeasonOutput = {
@@ -1302,13 +1313,17 @@ export type WhitelistSeasonOutput = {
     image_url?: (string | null);
     season_number?: (number | null);
     tmdb_id?: (number | null);
+    season_identifier: string;
     show_id: string;
     id: string;
     filtered: boolean;
+    show_ids: Array<(string)>;
+    tmdb_season_number?: (number | null);
 };
 
 export type WhitelistShowInput = {
     is_whitelist?: (boolean | null);
+    sources?: Array<WhitelistEntryInput>;
     seasons?: Array<WhitelistEntryInput>;
     episodes?: Array<WhitelistEntryInput>;
 };
@@ -1326,11 +1341,24 @@ export type WhitelistShowOutput = {
     image_url?: (string | null);
     icon?: (string | null);
     tmdb_id?: (number | null);
+    show_identifier: string;
     source_id: string;
     id: string;
     is_whitelist: boolean;
+    sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
     episodes: Array<WhitelistEpisodeOutput>;
+};
+
+/**
+ * One website's copy of the title, and whether it is filtered.
+ */
+export type WhitelistSourceOutput = {
+    show_id: string;
+    source_id: string;
+    source_name: (string | null);
+    favicon_url: (string | null);
+    filtered: boolean;
 };
 
 export type ChannelOrdersCreateChannelOrderData = {

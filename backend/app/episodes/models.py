@@ -25,7 +25,6 @@ from app.sources.models import Source
 from app.users.models import User
 
 if TYPE_CHECKING:
-    from app.channels.models import ChannelEpisodeFilter
     from app.watches.models import Watch
 
 
@@ -80,11 +79,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
-
-    channel_filters: list[ChannelEpisodeFilter] = Relationship(
-        back_populates="episode",
-        cascade_delete=True,
-    )
 
     # Deleting an episode leaves its watches behind, detached, rather than
     # taking them with it. `passive_deletes` hands that to the database's

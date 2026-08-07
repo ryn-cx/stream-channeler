@@ -19,13 +19,17 @@ from app.channels.models import (
     ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
     ChannelShow,
+    ChannelSourceFilter,
 )
 from app.channels.schemas import ChannelOptions, SortKeyInput
 from app.episodes.models import Episode
 from app.media.tmdb_fallback import (
     EPISODE_FALLBACK_FIELDS,
+    EPISODE_IDENTIFIER_FIELD,
     SEASON_FALLBACK_FIELDS,
+    SEASON_IDENTIFIER_FIELD,
     SHOW_FALLBACK_FIELDS,
+    SHOW_IDENTIFIER_FIELD,
     TMDB_PLUGIN_KEY,
 )
 from app.models import Visibility
@@ -205,8 +209,9 @@ class _TMDBFallbackColumns:
 
     A website only stores what it reports, so filtering or sorting on the stored
     column alone drops every episode whose site left that value out. Each level
-    is joined to the TMDB media it links to by `tmdb_id` and read through a
-    `coalesce`, which is the same value the record is served with.
+    is joined to the TMDB media standing in for it by the identifier they share
+    and read through a `coalesce`, which is the same value the record is served
+    with.
 
     A level is only joined when something asks for one of its columns, so a
     channel that sorts on nothing borrowed pays for no extra joins.
@@ -216,6 +221,12 @@ class _TMDBFallbackColumns:
         "episode": EPISODE_FALLBACK_FIELDS,
         "season": SEASON_FALLBACK_FIELDS,
         "show": SHOW_FALLBACK_FIELDS,
+    }
+
+    _IDENTIFIER_FIELDS: ClassVar[dict[str, str]] = {
+        "episode": EPISODE_IDENTIFIER_FIELD,
+        "season": SEASON_IDENTIFIER_FIELD,
+        "show": SHOW_IDENTIFIER_FIELD,
     }
 
     def __init__(self) -> None:
@@ -231,8 +242,9 @@ class _TMDBFallbackColumns:
 
         owners: dict[str, Any] = {"episode": episode, "season": season, "show": show}
         owner = owners[model]
+        identifier_field = _TMDBFallbackColumns._IDENTIFIER_FIELDS[model]
         statement: Any = select(
-            col(owner.tmdb_id).label("tmdb_id"),
+            getattr(owner, identifier_field).label("identifier"),
             *(
                 getattr(owner, field).label(field)
                 for field in _TMDBFallbackColumns._FALLBACK_FIELDS[model]
@@ -251,7 +263,6 @@ class _TMDBFallbackColumns:
             .join(plugin, col(plugin.id) == col(source.plugin_id))
             .where(
                 plugin.key == TMDB_PLUGIN_KEY,
-                col(owner.tmdb_id).is_not(None),
                 col(owner.deleted_at).is_(None),
             )
             .subquery()
@@ -278,10 +289,8 @@ class _TMDBFallbackColumns:
         """Join in every level whose columns were asked for."""
         linked: dict[str, Any] = {"episode": Episode, "season": Season, "show": Show}
         for model, subquery in self._subqueries.items():
-            query = query.outerjoin(
-                subquery,
-                col(linked[model].tmdb_id) == subquery.c.tmdb_id,
-            )
+            identifier = getattr(linked[model], self._IDENTIFIER_FIELDS[model])
+            query = query.outerjoin(subquery, identifier == subquery.c.identifier)
         return query
 
 
@@ -599,6 +608,7 @@ class EpisodeQueryBuilder:
         query = self._filter_episodes_by_channels(query)
         query = self._apply_channel_specific_blacklist(query)
         query = self._filter_by_plugin_visibility(query)
+        query = self._filter_metadata_plugins(query)
         query = self._filter_disabled_sources(query)
         query = self._filter_watched_episodes(query)
         query = self._filter_unwatched_episodes(query)
@@ -658,34 +668,51 @@ class EpisodeQueryBuilder:
         return dict(rows)
 
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
+        # A channel holds titles rather than one website's copy of them, so every
+        # copy of a title the channel holds is joined to the same `ChannelShow`.
         return (
             select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
             .select_from(Episode)
             .join(Season)
             .join(Show)
-            .join(ChannelShow)
+            .join(
+                ChannelShow,
+                col(ChannelShow.show_identifier) == col(Show.show_identifier),
+            )
         )
 
     def _join_whitelist(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        return query.outerjoin(
-            ChannelSeasonFilter,
-            and_(
-                ChannelSeasonFilter.channel_show_id == ChannelShow.id,
-                ChannelSeasonFilter.season_id == Season.id,
-            ),
-        ).outerjoin(
-            ChannelEpisodeFilter,
-            and_(
-                ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
-                ChannelEpisodeFilter.episode_id == Episode.id,
-                or_(
-                    col(ChannelEpisodeFilter.expires_at).is_(None),
-                    col(ChannelEpisodeFilter.expires_at) > self._now,
+        return (
+            query.outerjoin(
+                ChannelSourceFilter,
+                and_(
+                    ChannelSourceFilter.channel_show_id == ChannelShow.id,
+                    ChannelSourceFilter.show_id == Show.id,
                 ),
-            ),
+            )
+            .outerjoin(
+                ChannelSeasonFilter,
+                and_(
+                    ChannelSeasonFilter.channel_show_id == ChannelShow.id,
+                    col(ChannelSeasonFilter.season_identifier)
+                    == col(Season.season_identifier),
+                ),
+            )
+            .outerjoin(
+                ChannelEpisodeFilter,
+                and_(
+                    ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
+                    col(ChannelEpisodeFilter.episode_identifier)
+                    == col(Episode.episode_identifier),
+                    or_(
+                        col(ChannelEpisodeFilter.expires_at).is_(None),
+                        col(ChannelEpisodeFilter.expires_at) > self._now,
+                    ),
+                ),
+            )
         )
 
     def _join_saved_order(
@@ -779,32 +806,77 @@ class EpisodeQueryBuilder:
                 )
         return query
 
+    def _filter_metadata_plugins(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        """Filter out episodes that only stand in for a website's missing metadata.
+
+        TMDB is imported so other websites can borrow what they left out, never so
+        its own copy of an episode is watched, so it is never one of the results.
+        `Plugin` is already joined by `_filter_by_plugin_visibility`.
+        """
+        return query.where(Plugin.key != TMDB_PLUGIN_KEY)
+
     @staticmethod
-    def _channel_access_condition() -> ColumnElement[bool]:
+    def _source_access_condition() -> ColumnElement[bool]:
+        """Whether this website's copy of the title is one the channel takes.
+
+        A `ChannelShow` covers every website the title is on, so a `User` who
+        wants only some of them says so with `ChannelSourceFilter` entries. Saying
+        nothing means every copy, which is what a channel that was never told
+        about websites at all wants.
+        """
+        # Aliased so the outer join to `ChannelSourceFilter` is not what this reads;
+        # it asks whether the `ChannelShow` names any website at all.
+        any_source_filter = aliased(ChannelSourceFilter)
+        has_source_filters = (
+            select(literal_column("1"))
+            .select_from(any_source_filter)
+            .where(col(any_source_filter.channel_show_id) == col(ChannelShow.id))
+            .correlate(ChannelShow)
+            .exists()
+        )
+        matched = col(ChannelSourceFilter.show_id).is_not(None)
         return or_(
             and_(
                 col(ChannelShow.is_whitelist).is_(True),
-                or_(
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_not(None),
-                        col(ChannelEpisodeFilter.episode_id).is_(None),
-                    ),
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_(None),
-                        col(ChannelEpisodeFilter.episode_id).is_not(None),
+                or_(~has_source_filters, matched),
+            ),
+            and_(col(ChannelShow.is_whitelist).is_(False), ~matched),
+        )
+
+    @staticmethod
+    def _channel_access_condition() -> ColumnElement[bool]:
+        # An episode entry inverts what the season entry decided, which is what
+        # makes one episode an exception to a whitelisted or blacklisted season.
+        return and_(
+            EpisodeQueryBuilder._source_access_condition(),
+            or_(
+                and_(
+                    col(ChannelShow.is_whitelist).is_(True),
+                    or_(
+                        and_(
+                            col(ChannelSeasonFilter.season_identifier).is_not(None),
+                            col(ChannelEpisodeFilter.episode_identifier).is_(None),
+                        ),
+                        and_(
+                            col(ChannelSeasonFilter.season_identifier).is_(None),
+                            col(ChannelEpisodeFilter.episode_identifier).is_not(None),
+                        ),
                     ),
                 ),
-            ),
-            and_(
-                col(ChannelShow.is_whitelist).is_(False),
-                or_(
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_(None),
-                        col(ChannelEpisodeFilter.episode_id).is_(None),
-                    ),
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_not(None),
-                        col(ChannelEpisodeFilter.episode_id).is_not(None),
+                and_(
+                    col(ChannelShow.is_whitelist).is_(False),
+                    or_(
+                        and_(
+                            col(ChannelSeasonFilter.season_identifier).is_(None),
+                            col(ChannelEpisodeFilter.episode_identifier).is_(None),
+                        ),
+                        and_(
+                            col(ChannelSeasonFilter.season_identifier).is_not(None),
+                            col(ChannelEpisodeFilter.episode_identifier).is_not(None),
+                        ),
                     ),
                 ),
             ),
@@ -829,7 +901,7 @@ class EpisodeQueryBuilder:
         filter_only_show = aliased(ChannelShow)
         filter_only_filter = aliased(ChannelEpisodeFilter)
         blacklisted_episodes = (
-            select(filter_only_filter.episode_id)
+            select(filter_only_filter.episode_identifier)
             .select_from(filter_only_filter)
             .join(
                 filter_only_show,
@@ -838,7 +910,8 @@ class EpisodeQueryBuilder:
             .where(
                 col(filter_only_show.is_blacklist_only).is_(True),
                 col(filter_only_show.channel_id).in_(self._channel_ids),
-                filter_only_filter.episode_id == Episode.id,
+                col(filter_only_filter.episode_identifier)
+                == col(Episode.episode_identifier),
                 or_(
                     col(filter_only_filter.expires_at).is_(None),
                     col(filter_only_filter.expires_at) > self._now,

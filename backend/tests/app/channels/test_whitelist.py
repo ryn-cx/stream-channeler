@@ -20,9 +20,10 @@ from app.config import settings
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.models import Visibility
+from app.shows.models import Show
 from app.users.models import User
 from tests.app.channels.base import BaseChannelSubEndpointTests
-from tests.app.channels.utils import create_random_channel_show
+from tests.app.channels.utils import channel_show_show, create_random_channel_show
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.shows.utils import create_random_show
@@ -52,6 +53,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         session_scoped_client: TestClient,
         channel: Channel,
         channel_show: ChannelShow,
+        show: Show,
         episodes: list[Episode],
         headers: dict[str, str],
         *,
@@ -61,7 +63,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         result = assert_success(
             client=session_scoped_client,
             method="get",
-            url=f"{settings.API_V1_STR}/channels/{channel.id}/whitelist/{channel_show.show_id}",
+            url=f"{settings.API_V1_STR}/channels/{channel.id}/whitelist/{show.id}",
             output_schema=WhitelistShowOutput,
             headers=headers,
         )
@@ -164,14 +166,15 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             initial_test_data.record,
             show,
         )
-        episode = create_random_episode(session_scoped_session, channel_show.show)
+        episode = create_random_episode(session_scoped_session, show)
 
-        url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/whitelist/{channel_show.show_id}"
+        url = f"{settings.API_V1_STR}/channels/{initial_test_data.record.id}/whitelist/{show.id}"
         if user_is_owner and plugin_is_public:
             self.assert_whitelist_success(
                 session_scoped_client,
                 initial_test_data.record,
                 channel_show,
+                show,
                 [episode],
                 initial_test_data.headers,
             )
@@ -211,14 +214,16 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             initial_test_data.record,
             initial_test_data.user,
         )
+        show = channel_show_show(session_scoped_session, channel_show)
         episodes = [
-            create_random_episode(session_scoped_session, channel_show.show)
+            create_random_episode(session_scoped_session, show)
             for _ in range(episode_count)
         ]
         self.assert_whitelist_success(
             session_scoped_client,
             initial_test_data.record,
             channel_show,
+            show,
             episodes,
             initial_test_data.headers,
         )
@@ -230,6 +235,7 @@ class WhitelistUpdateTestData:
     user_headers: dict[str, str]
     channel: Channel
     channel_show: ChannelShow
+    show: Show
     preserved_marked_episode: Episode
     preserved_unmarked_episode: Episode
     target_episode: Episode
@@ -279,7 +285,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         result = assert_success(
             client=session_scoped_client,
             method="patch",
-            url=f"{settings.API_V1_STR}/channels/{setup.channel.id}/whitelist/{setup.channel_show.show_id}",
+            url=f"{settings.API_V1_STR}/channels/{setup.channel.id}/whitelist/{setup.show.id}",
             output_schema=WhitelistShowOutput,
             headers=setup.user_headers,
             parameters=update_input.model_dump(mode="json"),
@@ -310,9 +316,9 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             initial_test_data.user,
             is_whitelist=True,
         )
+        show = channel_show_show(session_scoped_session, channel_show)
         episodes = [
-            create_random_episode(session_scoped_session, channel_show.show)
-            for _ in range(3)
+            create_random_episode(session_scoped_session, show) for _ in range(3)
         ]
         preserved_marked_episode = episodes[0]
         preserved_unmarked_episode = episodes[1]
@@ -339,6 +345,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             user_headers=initial_test_data.headers,
             channel=initial_test_data.record,
             channel_show=channel_show,
+            show=show,
             preserved_marked_episode=preserved_marked_episode,
             preserved_unmarked_episode=preserved_unmarked_episode,
             target_episode=target_episode,

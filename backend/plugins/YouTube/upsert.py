@@ -126,6 +126,7 @@ class UpsertMixin(HelperMixin, register=False):
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp + timedelta(days=30),
+                show_identifier=f"{self.plugin_key()} {channel_item.id}",
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
@@ -238,6 +239,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=name,
                 url=self.build_url(f"playlist?list={season_key}"),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
+                season_identifier=f"{self.plugin_key()} {season_key}",
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),
                 show_id=show.id,

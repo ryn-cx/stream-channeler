@@ -67,8 +67,7 @@ class ShowPage(HTMLFile):
                 follow_redirects=True,
             )
             if response.status_code == HTTPStatus.NOT_FOUND:
-                self.write(None)
-                self.database_record.extra = f"Invalid show {self.show_id}"
+                self.write(None, f"Invalid show {self.show_id}")
                 return
             response.raise_for_status()
             self.write(response.text)

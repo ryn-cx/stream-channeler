@@ -15,6 +15,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.JustWatch.files import NewTitleBucket, NewTitles
 from plugins.JustWatch.upsert import UpsertMixin
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 class SourceMixin(UpsertMixin, register=False):
@@ -145,10 +146,34 @@ class SourceMixin(UpsertMixin, register=False):
         )
         return self.session.exec(statement).first() is not None
 
-    def _mark_external_show(
+    def _update_tracked_title(
         self,
         show_key: str,
         source_key: str,
+        timestamp: datetime,
+    ) -> None:
+        # A feed covers many titles, and `update_source` is not tied to any one
+        # of them, so each title has to be announced before its id is resolved.
+        self._set_current_show(show_key)
+
+        title_is_stored = self._preload_show(show_key).first() is not None
+        if title_is_stored:
+            self._download_show_files_and_children(show_key, timestamp)
+
+        if plugin_class := self._plugin_for_source(show_key, source_key):
+            self._mark_external_show(show_key, plugin_class, timestamp)
+        elif title_is_stored:
+            self._import_show_for_source(show_key, source_key)
+
+    def _import_show_for_source(self, show_key: str, source_key: str) -> None:
+        logger.info("Importing {} for new source: {}", show_key, source_key)
+        _cache = self._preload_sources([source_key], preload_episodes=True).all()
+        self._upsert_shows(show_key, [source_key])
+
+    def _mark_external_show(
+        self,
+        show_key: str,
+        plugin_class: type[AbstractPlugin],
         timestamp: datetime,
     ) -> None:
         """Mark the title's copy on `source_key` when another plugin owns it.
@@ -159,14 +184,6 @@ class SourceMixin(UpsertMixin, register=False):
         stored under that plugin's own key, so the TMDB id both copies were
         matched to is the only thing that ties them together.
         """
-        # A feed covers many titles, and `update_source` is not tied to any one
-        # of them, so each title has to be announced before its id is resolved.
-        self._set_current_show(show_key)
-
-        plugin_class = self._plugin_for_source(show_key, source_key)
-        if plugin_class is None:
-            return
-
         tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
             return
@@ -232,7 +249,7 @@ class SourceMixin(UpsertMixin, register=False):
                 # The source holds no media of its own when the service has a
                 # plugin, so the title changed on that plugin's copy instead.
                 elif self._title_is_tracked(show_key):
-                    self._mark_external_show(
+                    self._update_tracked_title(
                         show_key,
                         file.source_key,
                         file.data_timestamp,

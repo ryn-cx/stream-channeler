@@ -103,9 +103,9 @@ class DetailPage(HTMLFile):
         super().__init__(session, plugin, asin)
 
     @override
-    def write(self, content: str | None) -> None:
+    def write(self, content: str | None, extra: str | None = None) -> None:
         self._hydration_cache = None
-        super().write(content)
+        super().write(content, extra)
 
     @override
     def _download(self) -> None:
@@ -117,8 +117,7 @@ class DetailPage(HTMLFile):
                 follow_redirects=True,
             )
             if response.status_code == HTTPStatus.NOT_FOUND:
-                self.write(None)
-                self.database_record.extra = f"Invalid title {self.asin}"
+                self.write(None, f"Invalid title {self.asin}")
                 return
             response.raise_for_status()
             self.write(response.text)

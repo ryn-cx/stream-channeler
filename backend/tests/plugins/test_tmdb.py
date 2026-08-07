@@ -37,6 +37,10 @@ class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
     search_query = "Overlord"
 
 
+class TestTemp(URLTests[TMDB], TMDBValidator):
+    urls = ("https://www.themoviedb.org/tv/209867/watch?language=en-US",)
+
+
 class InvalidTMDBURLValidator(InvalidURLValidator[TMDB]):
     plugin_class = TMDB
     urls = ("/{media_type}/{parse_url_response}",)

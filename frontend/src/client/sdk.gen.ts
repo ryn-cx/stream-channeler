@@ -635,7 +635,11 @@ export class ChannelsService {
     
     /**
      * Get Channel Whitelist
-     * Read the whitelist for a show in a channel.
+     * Read the whitelist for a title in a channel.
+     *
+     * A filter is about the media rather than one website's copy of it, so every
+     * copy's seasons and episodes are listed, with the copies of the same season or
+     * episode collapsed into the one row the filter applies to.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.showId
@@ -760,7 +764,7 @@ export class ChannelsService {
     
     /**
      * Delete Channel Show
-     * Remove a `Show` from a `Channel`.
+     * Remove a title, on every website it is on, from a `Channel`.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.showId
@@ -1970,7 +1974,9 @@ export class SeasonsService {
      * Update and return a `Season` if it's editable by the `User`.
      *
      * A new `tmdb_id` repoints every `Episode` at TMDB so their `tmdb_id` and
-     * `episode_identifier` follow the one the `User` chose.
+     * `episode_identifier` follow the one the `User` chose, and the
+     * `season_identifier` follows it as well. A `season_identifier` in the same
+     * request is what the `User` wants it to be, so it is left alone.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.requestBody
@@ -2187,7 +2193,9 @@ export class ShowsService {
      * Update and return a `Show` if it's editable by the `User`.
      *
      * A new `tmdb_id` repoints every `Season` and `Episode` at TMDB so their
-     * `tmdb_id` and `episode_identifier` follow the one the `User` chose.
+     * `tmdb_id`, `show_identifier`, `season_identifier` and `episode_identifier`
+     * follow the one the `User` chose. A `show_identifier` in the same request is
+     * what the `User` wants it to be, so it is left alone.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody

@@ -26,7 +26,11 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
 from app.utils import tz_datetime
-from tests.app.channels.utils import create_random_channel, create_random_channel_show
+from tests.app.channels.utils import (
+    channel_show_show,
+    create_random_channel,
+    create_random_channel_show,
+)
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
@@ -95,7 +99,10 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
             plugin,
             is_whitelist=False,
         )
-        season = create_random_season(session_scoped_session, channel_show.show)
+        season = create_random_season(
+            session_scoped_session,
+            channel_show_show(session_scoped_session, channel_show),
+        )
         recent_episode = create_random_episode(
             session_scoped_session,
             season,
@@ -110,7 +117,7 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
         )
         shows.append(
             {
-                "show": channel_show.show,
+                "show": channel_show_show(session_scoped_session, channel_show),
                 "season": season,
                 "recent": recent_episode,
                 "old": old_episode,
@@ -644,7 +651,10 @@ class TestPluginVisibility:
             plugin,
             is_whitelist=False,
         )
-        season = create_random_season(session_scoped_session, channel_show.show)
+        season = create_random_season(
+            session_scoped_session,
+            channel_show_show(session_scoped_session, channel_show),
+        )
         create_random_episode(session_scoped_session, season)
         session_scoped_session.flush()
 
@@ -675,7 +685,10 @@ class TestPluginVisibility:
             plugin,
             is_whitelist=False,
         )
-        season = create_random_season(session_scoped_session, channel_show.show)
+        season = create_random_season(
+            session_scoped_session,
+            channel_show_show(session_scoped_session, channel_show),
+        )
         create_random_episode(session_scoped_session, season)
         session_scoped_session.flush()
 
@@ -1204,7 +1217,7 @@ class TestAdditionalChannels:
             episode_setup["plugin"],
             is_whitelist=False,
         )
-        season = create_random_season(session, channel_show.show)
+        season = create_random_season(session, channel_show_show(session, channel_show))
         extra_episode = create_random_episode(session, season, duration=300)
         session.flush()
 
@@ -1234,7 +1247,10 @@ class TestAdditionalChannels:
                 plugin,
                 is_whitelist=False,
             )
-            season = create_random_season(session, channel_show.show)
+            season = create_random_season(
+                session,
+                channel_show_show(session, channel_show),
+            )
             episode = create_random_episode(session, season, duration=300)
             return channel, episode
 
@@ -1288,8 +1304,9 @@ class TestRecentlyAiredGroupByShow:
             plugin,
             is_whitelist=False,
         )
-        recent_show_1.show.name = "Recent 1"
-        season_r1 = create_random_season(session_scoped_session, recent_show_1.show)
+        recent_show_1_show = channel_show_show(session_scoped_session, recent_show_1)
+        recent_show_1_show.name = "Recent 1"
+        season_r1 = create_random_season(session_scoped_session, recent_show_1_show)
         for duration in (3600, 2400, 1200):
             create_random_episode(
                 session_scoped_session,
@@ -1305,8 +1322,9 @@ class TestRecentlyAiredGroupByShow:
             plugin,
             is_whitelist=False,
         )
-        recent_show_2.show.name = "Recent 2"
-        season_r2 = create_random_season(session_scoped_session, recent_show_2.show)
+        recent_show_2_show = channel_show_show(session_scoped_session, recent_show_2)
+        recent_show_2_show.name = "Recent 2"
+        season_r2 = create_random_season(session_scoped_session, recent_show_2_show)
         for duration in (3000, 2000, 1000):
             create_random_episode(
                 session_scoped_session,
@@ -1322,8 +1340,9 @@ class TestRecentlyAiredGroupByShow:
             plugin,
             is_whitelist=False,
         )
-        old_show.show.name = "Old Show"
-        season_old = create_random_season(session_scoped_session, old_show.show)
+        old_show_show = channel_show_show(session_scoped_session, old_show)
+        old_show_show.name = "Old Show"
+        season_old = create_random_season(session_scoped_session, old_show_show)
         for duration in (5000, 4000, 3000):
             create_random_episode(
                 session_scoped_session,
@@ -1403,7 +1422,7 @@ class TestWhitelistWithEpisodeExclusion:
             plugin,
             is_whitelist=True,
         )
-        show = channel_show.show
+        show = channel_show_show(session_scoped_session, channel_show)
         season = create_random_season(session_scoped_session, show)
         episode_included = create_random_episode(session_scoped_session, season)
         episode_excluded = create_random_episode(session_scoped_session, season)
@@ -1412,14 +1431,14 @@ class TestWhitelistWithEpisodeExclusion:
         session_scoped_session.add(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_id=season.id,
+                season_identifier=season.season_identifier,
             ),
         )
         # Also mark the episode — this should exclude it from the whitelisted season
         session_scoped_session.add(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode_excluded.id,
+                episode_identifier=episode_excluded.episode_identifier,
             ),
         )
         session_scoped_session.flush()
@@ -1455,7 +1474,7 @@ class TestBlacklistWithEpisodeInclusion:
             plugin,
             is_whitelist=False,
         )
-        show = channel_show.show
+        show = channel_show_show(session_scoped_session, channel_show)
         season = create_random_season(session_scoped_session, show)
         episode_excluded = create_random_episode(session_scoped_session, season)
         episode_included = create_random_episode(session_scoped_session, season)
@@ -1464,14 +1483,14 @@ class TestBlacklistWithEpisodeInclusion:
         session_scoped_session.add(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_id=season.id,
+                season_identifier=season.season_identifier,
             ),
         )
         # Also mark the episode — this should include it despite the season blacklist
         session_scoped_session.add(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode_included.id,
+                episode_identifier=episode_included.episode_identifier,
             ),
         )
         session_scoped_session.flush()
@@ -1533,7 +1552,7 @@ class TestNestedChannelBlacklist:
             plugin,
             is_whitelist=False,
         )
-        show = channel_show_a.show
+        show = channel_show_show(session, channel_show_a)
         season = create_random_season(session, show)
         episode_z = create_random_episode(session, season)
         # A second episode that is never blacklisted, used as a positive control to
@@ -1553,7 +1572,7 @@ class TestNestedChannelBlacklist:
         session.add(
             ChannelEpisodeFilter(
                 channel_show_id=blacklist_show.id,
-                episode_id=episode_z.id,
+                episode_identifier=episode_z.episode_identifier,
             ),
         )
 

@@ -20,7 +20,11 @@ from app.shows.models import Show
 from app.users import service as user_service
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
-from tests.app.channels.utils import create_random_channel, create_random_channel_show
+from tests.app.channels.utils import (
+    channel_show_show,
+    create_random_channel,
+    create_random_channel_show,
+)
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.sources.utils import create_random_source
@@ -54,10 +58,10 @@ def _build_duplicated_channel(
         )
         create_random_episode(
             session,
-            channel_show.show,
+            channel_show_show(session, channel_show),
             episode_identifier=SHARED_IDENTIFIER,
         )
-        shows[key] = channel_show.show
+        shows[key] = channel_show_show(session, channel_show)
     return channel, shows
 
 

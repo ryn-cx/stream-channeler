@@ -13,6 +13,7 @@ from app.config import settings
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from tests.app.channels.utils import (
+    channel_show_show,
     create_random_channel,
     create_random_channel_show,
 )
@@ -34,10 +35,10 @@ class TestListChannelShows:
         return f"{settings.API_V1_STR}/channels/{channel.id}/shows"
 
     @staticmethod
-    def build_expected(channel: Channel) -> ChannelShowsOutput:
+    def build_expected(session: Session, channel: Channel) -> ChannelShowsOutput:
         expected = ChannelShowsOutput()
         for channel_show in channel.shows:
-            show = channel_show.show
+            show = channel_show_show(session, channel_show)
             source = show.source
             expected.shows.append(ShowPublic.model_validate(show))
             if source.id not in expected.sources:
@@ -68,7 +69,7 @@ class TestListChannelShows:
             output_schema=ChannelShowsOutput,
             headers=owner_headers,
         )
-        expected = self.build_expected(channel)
+        expected = self.build_expected(session_scoped_session, channel)
         assert result.shows == expected.shows
         assert result.sources == expected.sources
 
@@ -276,7 +277,10 @@ class TestDeleteChannelShow:
         assert_not_found(
             client=session_scoped_client,
             method="delete",
-            url=self.url(channel, other_channel_show.show_id),
+            url=self.url(
+                channel,
+                channel_show_show(session_scoped_session, other_channel_show).id,
+            ),
             detail="Show was not found on channel",
             headers=user_headers,
         )

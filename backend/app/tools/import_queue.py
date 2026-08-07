@@ -2,7 +2,6 @@
 
 import threading
 import traceback
-from uuid import UUID
 
 from loguru import logger
 from sqlmodel import Session, col, or_, select
@@ -18,6 +17,7 @@ from app.channels.models import (
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
+from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -129,42 +129,48 @@ def add_results_to_channel(
     channel: Channel,
 ) -> None:
     """Add the given import results to the channel."""
-    existing_channel_shows = {show.show_id: show for show in channel.shows}
+    existing_channel_shows = {show.show_identifier: show for show in channel.shows}
     for result in results:
-        if existing_channel_show := existing_channel_shows.get(result.show.id):
+        if existing_channel_show := existing_channel_shows.get(
+            result.show.show_identifier,
+        ):
             _update_channel_show(session, existing_channel_show, result)
         else:
-            _create_channel_show(session, channel, result)
+            existing_channel_shows[result.show.show_identifier] = _create_channel_show(
+                channel,
+                result,
+            )
 
 
 def _create_channel_show(
-    session: Session,
     channel: Channel,
     result: URLImportResult,
-) -> None:
+) -> ChannelShow:
     channel_show = ChannelShow(
         channel_id=channel.id,
-        show_id=result.show.id,
+        show_identifier=result.show.show_identifier,
         is_whitelist=result.is_whitelist,
         is_blacklist_only=False,
     )
     channel.shows.append(channel_show)
 
     for season in result.seasons:
-        session.add(
+        channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_id=season.id,
+                season_identifier=season.season_identifier,
             ),
         )
 
     for episode in result.episodes:
-        session.add(
+        channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode.id,
+                episode_identifier=episode.episode_identifier,
             ),
         )
+
+    return channel_show
 
 
 def _update_channel_show(
@@ -175,89 +181,90 @@ def _update_channel_show(
     existing_channel_show.is_blacklist_only = False
 
     was_whitelist = existing_channel_show.is_whitelist
-    existing_season_ids: set[UUID] = {
-        season_filter.season_id
+    existing_seasons: set[str] = {
+        season_filter.season_identifier
         for season_filter in existing_channel_show.season_filters
     }
-    existing_episode_ids: set[UUID] = {
-        episode_filter.episode_id
+    existing_episodes: set[str] = {
+        episode_filter.episode_identifier
         for episode_filter in existing_channel_show.episode_filters
     }
-    blacklisted_episode_ids: set[UUID] = (
-        set() if was_whitelist else existing_episode_ids
-    )
+    blacklisted_episodes: set[str] = set() if was_whitelist else existing_episodes
 
-    result_season_ids: set[UUID] = {season.id for season in result.seasons}
-    result_episode_ids: set[UUID] = {episode.id for episode in result.episodes}
+    result_seasons: set[str] = {season.season_identifier for season in result.seasons}
+    result_episodes: set[str] = {
+        episode.episode_identifier for episode in result.episodes
+    }
 
     if result.is_whitelist:
-        season_ids = (
-            existing_season_ids if was_whitelist else set[UUID]()
-        ) | result_season_ids
-        whitelisted_episode_ids = (
-            (existing_episode_ids if was_whitelist else set[UUID]())
-            | result_episode_ids
-        ) - blacklisted_episode_ids
-        season_by_blacklisted_episode = _season_ids_for_episodes(
+        seasons = (existing_seasons if was_whitelist else set[str]()) | result_seasons
+        whitelisted_episodes = (
+            (existing_episodes if was_whitelist else set[str]()) | result_episodes
+        ) - blacklisted_episodes
+        season_by_blacklisted_episode = _season_identifiers_for_episodes(
             session,
-            blacklisted_episode_ids,
+            blacklisted_episodes,
         )
-        exclusion_episode_ids = {
-            episode_id
-            for episode_id, season_id in season_by_blacklisted_episode.items()
-            if season_id in season_ids
+        exclusions = {
+            episode_identifier
+            for episode_identifier, season_identifier in (
+                season_by_blacklisted_episode.items()
+            )
+            if season_identifier in seasons
         }
-        episode_ids = whitelisted_episode_ids | exclusion_episode_ids
+        episodes = whitelisted_episodes | exclusions
     else:
-        season_ids = set[UUID]()
-        episode_ids = blacklisted_episode_ids | result_episode_ids
+        seasons = set[str]()
+        episodes = blacklisted_episodes | result_episodes
 
     existing_channel_show.is_whitelist = result.is_whitelist
-    _merge_filters(session, existing_channel_show, season_ids, episode_ids)
+    _merge_filters(existing_channel_show, seasons, episodes)
 
 
-def _season_ids_for_episodes(
+def _season_identifiers_for_episodes(
     session: Session,
-    episode_ids: set[UUID],
-) -> dict[UUID, UUID]:
-    """Map each episode id to its season id."""
-    if not episode_ids:
+    episode_identifiers: set[str],
+) -> dict[str, str]:
+    """Map each episode identifier to the identifier of the season holding it."""
+    if not episode_identifiers:
         return {}
     rows = session.exec(
-        select(Episode.id, Episode.season_id).where(col(Episode.id).in_(episode_ids)),
+        select(Episode.episode_identifier, Season.season_identifier)  # type: ignore[call-overload]
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .where(col(Episode.episode_identifier).in_(episode_identifiers)),
     ).all()
     return dict(rows)
 
 
 def _merge_filters(
-    session: Session,
     channel_show: ChannelShow,
-    season_ids: set[UUID],
-    episode_ids: set[UUID],
+    season_identifiers: set[str],
+    episode_identifiers: set[str],
 ) -> None:
     """Merge the given season/episode filters into the channel show's existing ones.
 
     Existing filters are kept; only values not already present are added, so importing
     never drops filters a previous import or the user already set.
     """
-    existing_season_ids = {
-        season_filter.season_id for season_filter in channel_show.season_filters
+    existing_seasons = {
+        season_filter.season_identifier for season_filter in channel_show.season_filters
     }
-    existing_episode_ids = {
-        episode_filter.episode_id for episode_filter in channel_show.episode_filters
+    existing_episodes = {
+        episode_filter.episode_identifier
+        for episode_filter in channel_show.episode_filters
     }
-    for season_id in season_ids - existing_season_ids:
-        session.add(
+    for season_identifier in season_identifiers - existing_seasons:
+        channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_id=season_id,
+                season_identifier=season_identifier,
             ),
         )
-    for episode_id in episode_ids - existing_episode_ids:
-        session.add(
+    for episode_identifier in episode_identifiers - existing_episodes:
+        channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode_id,
+                episode_identifier=episode_identifier,
             ),
         )
 

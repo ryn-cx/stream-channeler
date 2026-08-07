@@ -22,6 +22,7 @@ from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
 from tests.app.channels.base import BaseChannelSubEndpointTests
 from tests.app.channels.utils import (
+    channel_show_show,
     create_random_channel,
     create_random_channel_show,
 )
@@ -80,7 +81,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
                 plugin,
                 is_whitelist=False,
             )
-            show = channel_show.show
+            show = channel_show_show(session_scoped_session, channel_show)
             create_random_episode(session_scoped_session, show)
             source = show.source
             plugin = source.plugin
@@ -299,7 +300,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             private_plugin,
             is_whitelist=False,
         )
-        show = channel_show.show
+        show = channel_show_show(session_scoped_session, channel_show)
         create_random_episode(session_scoped_session, show)
 
         if user_type == "owner":
@@ -372,7 +373,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             public_plugin,
             is_whitelist=False,
         )
-        show = channel_show.show
+        show = channel_show_show(session_scoped_session, channel_show)
         create_random_episode(session_scoped_session, show)
 
         if user_is_owner:

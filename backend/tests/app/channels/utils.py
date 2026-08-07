@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.channels.schemas import ChannelOutput
+from app.channels.service import shows_for_channel_show
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.shows.models import Show
@@ -50,12 +51,21 @@ def create_random_channel_show(
     channel_show = build_random_model(
         ChannelShow,
         channel_id=channel.id,
-        show_id=parent.id,
+        show_identifier=parent.show_identifier,
         **kwargs,
     )
     session.add(channel_show)
     session.flush()  # Allows channel.shows and channel.queue to be accessed.
     return channel_show
+
+
+def channel_show_show(session: Session, channel_show: ChannelShow) -> Show:
+    """Return the `Show` the `ChannelShow` stands for.
+
+    A `ChannelShow` names a title rather than one website's copy of it, and a test
+    only ever creates the one copy, so the first match is that copy.
+    """
+    return shows_for_channel_show(session, channel_show)[0]
 
 
 def create_random_channel_queue(

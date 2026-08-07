@@ -1,5 +1,6 @@
 # TODO: Validate
-from collections.abc import Sequence
+from collections import defaultdict
+from collections.abc import Collection, Sequence
 from datetime import datetime
 from functools import cache
 from uuid import UUID
@@ -15,6 +16,7 @@ from app.channels.models import (
     ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
     ChannelShow,
+    ChannelSourceFilter,
     URLStatus,
 )
 from app.channels.schemas import (
@@ -25,6 +27,7 @@ from app.channels.schemas import (
     WhitelistShowInput,
 )
 from app.episodes.models import Episode
+from app.media.tmdb_fallback import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import RecordScope, ScopedReadOptions
 from app.seasons.models import Season
@@ -32,6 +35,43 @@ from app.service import scoped_list_response
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
+
+
+def shows_by_identifier(
+    session: Session,
+    identifiers: Collection[str],
+) -> dict[str, list[Show]]:
+    """Return every website's copy of each title in `identifiers`.
+
+    A `ChannelShow` names a title rather than one website's copy of it, so the
+    copies it stands for have to be looked up by the identifier they share.
+    """
+    grouped: dict[str, list[Show]] = defaultdict(list)
+    if not identifiers:
+        return grouped
+
+    shows = session.exec(
+        select(Show)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            col(Show.show_identifier).in_(identifiers),
+            col(Show.deleted_at).is_(None),
+            # TMDB only supplies the metadata other websites left out, so its copy of
+            # a title is never one of the websites the title can be watched on.
+            Plugin.key != TMDB_PLUGIN_KEY,
+        ),
+    ).all()
+    for show in shows:
+        grouped[show.show_identifier].append(show)
+    return grouped
+
+
+def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[Show]:
+    """Return every website's copy of the title `channel_show` is about."""
+    return shows_by_identifier(session, [channel_show.show_identifier])[
+        channel_show.show_identifier
+    ]
 
 
 def viewer_is_privileged(channel: Channel, viewer: User | None) -> bool:
@@ -152,14 +192,27 @@ def update_whitelist(
     if config.is_whitelist is not None:
         channel_show.is_whitelist = config.is_whitelist
 
-    existing_seasons = {season.season_id for season in channel_show.season_filters}
-    existing_episodes = {episode.episode_id for episode in channel_show.episode_filters}
+    existing_sources = {source.show_id for source in channel_show.source_filters}
+    existing_seasons = {
+        season.season_identifier for season in channel_show.season_filters
+    }
+    existing_episodes = {
+        episode.episode_identifier for episode in channel_show.episode_filters
+    }
 
+    for source in config.sources:
+        toggle_source_whitelist(
+            session,
+            channel_show,
+            source.id,
+            existing_sources,
+            marked=source.marked,
+        )
     for season in config.seasons:
         toggle_season_whitelist(
             session,
             channel_show,
-            season.id,
+            _season_identifier(session, season.id),
             existing_seasons,
             marked=season.marked,
         )
@@ -167,7 +220,7 @@ def update_whitelist(
         toggle_episode_whitelist(
             session,
             channel_show,
-            episode.id,
+            _episode_identifier(session, episode.id),
             existing_episodes,
             marked=episode.marked,
             expires_at=episode.expires_at,
@@ -176,23 +229,63 @@ def update_whitelist(
     session.commit()
 
 
-def toggle_season_whitelist(
+def _season_identifier(session: Session, season_id: UUID) -> str:
+    """Return the identifier of the season `season_id`, whose key is not its id."""
+    return session.exec(
+        select(Season.season_identifier).where(Season.id == season_id),  # type: ignore[call-overload]
+    ).one()
+
+
+def _episode_identifier(session: Session, episode_id: UUID) -> str:
+    """Return the identifier of the episode `episode_id`, whose key is not its id."""
+    return session.exec(
+        select(Episode.episode_identifier).where(Episode.id == episode_id),  # type: ignore[call-overload]
+    ).one()
+
+
+def toggle_source_whitelist(
     session: Session,
     channel_show: ChannelShow,
-    season_id: UUID,
+    show_id: UUID,
     existing: set[UUID],
     *,
     marked: bool,
 ) -> None:
-    if marked and season_id not in existing:
+    """Mark or unmark one website's copy of the title `channel_show` is about."""
+    if marked and show_id not in existing:
+        channel_show.source_filters.append(
+            ChannelSourceFilter(
+                channel_show_id=channel_show.id,
+                show_id=show_id,
+            ),
+        )
+    elif not marked and show_id in existing:
+        existing_source = ChannelSourceFilter.get(session, channel_show, show_id)
+        if existing_source:
+            session.delete(existing_source)
+
+
+def toggle_season_whitelist(
+    session: Session,
+    channel_show: ChannelShow,
+    season_identifier: str,
+    existing: set[str],
+    *,
+    marked: bool,
+) -> None:
+    if marked and season_identifier not in existing:
         channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_id=season_id,
+                season_identifier=season_identifier,
             ),
         )
-    elif not marked and season_id in existing:
-        existing_season = ChannelSeasonFilter.get(session, channel_show, season_id)
+    elif not marked and season_identifier in existing:
+        existing_season = ChannelSeasonFilter.get(
+            session,
+            channel_show,
+            season_identifier,
+        )
         if existing_season:
             session.delete(existing_season)
 
@@ -200,30 +293,34 @@ def toggle_season_whitelist(
 def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist plus expiry
     session: Session,
     channel_show: ChannelShow,
-    episode_id: UUID,
-    existing: set[UUID],
+    episode_identifier: str,
+    existing: set[str],
     *,
     marked: bool,
     expires_at: datetime | None = None,
 ) -> None:
-    if marked and episode_id not in existing:
+    if marked and episode_identifier not in existing:
         channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode_id,
+                episode_identifier=episode_identifier,
                 expires_at=expires_at,
             ),
         )
-    elif marked and episode_id in existing:
+    elif marked and episode_identifier in existing:
         # Re-marking an existing entry updates its expiry.
-        existing_episode = ChannelEpisodeFilter.get(session, channel_show, episode_id)
-        if existing_episode:
-            existing_episode.expires_at = expires_at
-    elif not marked and episode_id in existing:
         existing_episode = ChannelEpisodeFilter.get(
             session,
             channel_show,
-            episode_id,
+            episode_identifier,
+        )
+        if existing_episode:
+            existing_episode.expires_at = expires_at
+    elif not marked and episode_identifier in existing:
+        existing_episode = ChannelEpisodeFilter.get(
+            session,
+            channel_show,
+            episode_identifier,
         )
         if existing_episode:
             session.delete(existing_episode)
@@ -238,27 +335,33 @@ def blacklist_episode_on_channel(
 ) -> ChannelShow:
     """Blacklist a single episode for `channel`.
 
-    Gets or creates the `ChannelShow` linking `channel` and `show`. A newly created
+    Gets or creates the `ChannelShow` for the title `show` is a copy of. A newly created
     `ChannelShow` is a filter-only show (`is_blacklist_only=True`) in blacklist mode, so
-    the show's other episodes are not pulled into the channel. Adds (or updates the expiry
-    of) a `ChannelEpisodeFilter` for the episode.
+    the title's other episodes are not pulled into the channel. Adds (or updates the
+    expiry of) a `ChannelEpisodeFilter` for the episode, which covers that episode on
+    every website the title is on.
     """
     channel_show = ChannelShow.get(session, channel, show)
     if channel_show is None:
         channel_show = ChannelShow(
             channel_id=channel.id,
-            show_id=show.id,
+            show_identifier=show.show_identifier,
             is_whitelist=False,
             is_blacklist_only=True,
         )
         session.add(channel_show)
 
-    existing_filter = ChannelEpisodeFilter.get(session, channel_show, episode_id)
+    episode_identifier = _episode_identifier(session, episode_id)
+    existing_filter = ChannelEpisodeFilter.get(
+        session,
+        channel_show,
+        episode_identifier,
+    )
     if existing_filter is None:
         channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_id=episode_id,
+                episode_identifier=episode_identifier,
                 expires_at=expires_at,
             ),
         )

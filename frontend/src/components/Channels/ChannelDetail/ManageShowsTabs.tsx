@@ -2,8 +2,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Antenna,
-  ChevronDown,
-  ChevronRight,
   Info,
   LayoutGrid,
   Link2,
@@ -16,7 +14,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react"
-import { Fragment, type ReactNode, useState } from "react"
+import { type ReactNode, useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
@@ -69,7 +67,7 @@ interface Show {
   name: string | null
   source_id: string
   url?: string | null
-  tmdb_id?: number | null
+  show_identifier: string
   image_url?: string | null
 }
 
@@ -91,7 +89,7 @@ function SourceFavicon({ source }: { source: Source | undefined }) {
     <img
       src={source.favicon_url}
       alt={`${source.name} favicon`}
-      className="size-4 shrink-0"
+      className="size-8 shrink-0"
     />
   )
   if (!source.name) return favicon
@@ -131,15 +129,15 @@ function useSourceRank(): (source: Source | undefined) => number {
 /**
  * Group shows that are the same title, keeping the order they arrived in.
  *
- * TMDB is what actually identifies a title across services, so it is used
- * whenever a show is linked to it. A show without a TMDB link falls back to
- * grouping with the shows that share its name.
+ * `show_identifier` is what makes the same title on two services one title, so
+ * it is the whole of the grouping. It is the TMDB id when the show is linked to
+ * TMDB and the plugin's own key for it when it is not, which leaves an unlinked
+ * show in a group of its own.
  */
 function groupShows(shows: Show[]): Show[][] {
   const groups = new Map<string, Show[]>()
   for (const show of shows) {
-    const key =
-      show.tmdb_id == null ? `name:${show.name ?? ""}` : `tmdb:${show.tmdb_id}`
+    const key = show.show_identifier
     const group = groups.get(key)
     if (group) {
       group.push(show)
@@ -151,29 +149,18 @@ function groupShows(shows: Show[]): Show[][] {
 }
 
 /**
- * The show groups a view renders, each ordered by the user's source preferences,
- * along with the expansion state shared by every group in that view.
+ * The show groups a view renders, each ordered by the user's source preferences.
  *
  * @see groupShows for what counts as the same show.
  */
 function useShowGroups(shows: Show[], sources: Record<string, Source>) {
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
   const sourceRank = useSourceRank()
 
   const bySourceRank = (first: Show, second: Show) =>
     sourceRank(sources[first.source_id]) - sourceRank(sources[second.source_id])
 
-  const toggle = (groupKey: string) =>
-    setExpandedKeys((current) => {
-      const next = new Set(current)
-      if (!next.delete(groupKey)) next.add(groupKey)
-      return next
-    })
-
   return {
     groups: groupShows(shows).map((group) => [...group].sort(bySourceRank)),
-    expandedKeys,
-    toggle,
   }
 }
 
@@ -183,8 +170,7 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
  *
  * The same show is usually available on several services, which would otherwise
  * fill the table with rows that read identically. A group shows the name once
- * with a favicon per service, and expands to the individual shows so each can
- * still be managed on its own.
+ * with a favicon per service.
  */
 function ShowRows({
   shows,
@@ -195,80 +181,32 @@ function ShowRows({
   sources: Record<string, Source>
   renderActions: (show: Show) => ReactNode
 }) {
-  const { groups, expandedKeys, toggle } = useShowGroups(shows, sources)
+  const { groups } = useShowGroups(shows, sources)
 
   return (
     <>
       {groups.map((group) => {
         const [firstShow] = group
-        const name = firstShow.name ?? ""
 
-        // A show on a single service needs no group around it. The spacer keeps
-        // its name aligned with the ones next to a group's chevron.
-        if (group.length === 1) {
-          return (
-            <TableRow key={firstShow.id}>
-              <TableCell className="whitespace-normal">
-                <div className="flex items-start gap-2">
-                  <span className="size-4 shrink-0" />
-                  <div className="flex flex-col gap-1">
-                    <span className="wrap-break-word">{name}</span>
-                    <SourceFavicon source={sources[firstShow.source_id]} />
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>{renderActions(firstShow)}</TableCell>
-            </TableRow>
-          )
-        }
-
-        const groupKey = firstShow.id
-        const isExpanded = expandedKeys.has(groupKey)
         return (
-          <Fragment key={groupKey}>
-            <TableRow>
-              <TableCell className="whitespace-normal">
-                <button
-                  type="button"
-                  onClick={() => toggle(groupKey)}
-                  aria-expanded={isExpanded}
-                  className="flex w-full items-start gap-2 text-left"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="size-4 shrink-0" />
-                  ) : (
-                    <ChevronRight className="size-4 shrink-0" />
-                  )}
-                  <span className="flex flex-col gap-1">
-                    <span className="wrap-break-word">{name}</span>
-                    <span className="flex flex-wrap items-center gap-1">
-                      {group.map((show) => (
-                        <SourceFavicon
-                          key={show.id}
-                          source={sources[show.source_id]}
-                        />
-                      ))}
-                    </span>
-                  </span>
-                </button>
-              </TableCell>
-              <TableCell />
-            </TableRow>
-            {isExpanded &&
-              group.map((show) => (
-                <TableRow key={show.id} className="bg-muted/30">
-                  <TableCell className="whitespace-normal">
-                    <div className="flex items-center gap-2 pl-6">
-                      <SourceFavicon source={sources[show.source_id]} />
-                      <span className="wrap-break-word text-muted-foreground">
-                        {sources[show.source_id]?.name ?? name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{renderActions(show)}</TableCell>
-                </TableRow>
-              ))}
-          </Fragment>
+          <TableRow key={firstShow.id}>
+            <TableCell className="whitespace-normal">
+              <div className="flex flex-col gap-1">
+                <span className="wrap-break-word">{firstShow.name ?? ""}</span>
+                <span className="flex flex-wrap items-center gap-1">
+                  {group.map((show) => (
+                    <SourceFavicon
+                      key={show.id}
+                      source={sources[show.source_id]}
+                    />
+                  ))}
+                </span>
+              </div>
+            </TableCell>
+            {/* A channel holds the title rather than one site's copy of it, so
+                the actions belong to the group. */}
+            <TableCell>{renderActions(firstShow)}</TableCell>
+          </TableRow>
         )
       })}
     </>
@@ -314,22 +252,22 @@ function ShowCards({
               <span className="wrap-break-word text-sm font-medium">
                 {name}
               </span>
-              <div className="mt-auto space-y-1">
+              <div className="space-y-1">
                 {group.map((show) => (
                   <div
                     key={show.id}
-                    className="flex items-center justify-between gap-2 rounded bg-muted/30 px-2 py-1"
+                    className="flex min-w-0 items-center gap-1 rounded bg-muted/30 px-2 py-1"
                   >
-                    <span className="flex min-w-0 items-center gap-1">
-                      <SourceFavicon source={sources[show.source_id]} />
-                      <span className="truncate text-xs text-muted-foreground">
-                        {sources[show.source_id]?.name ?? name}
-                      </span>
+                    <SourceFavicon source={sources[show.source_id]} />
+                    <span className="truncate text-xs text-muted-foreground">
+                      {sources[show.source_id]?.name ?? name}
                     </span>
-                    {renderActions(show)}
                   </div>
                 ))}
               </div>
+              {/* The channel holds the title, so one set of actions covers every
+                  site listed above. */}
+              <div className="mt-auto">{renderActions(firstShow)}</div>
             </div>
           </Card>
         )

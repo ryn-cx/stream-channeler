@@ -151,9 +151,12 @@ class Settings(BaseSettings):
                 "GET_AROUND_SERVER",
                 "CF_ACCESS_CLIENT_ID",
                 "CF_ACCESS_CLIENT_SECRET",
+                "PROXY",
                 "TMDB_API_READ_TOKEN",
             ):
-                if name not in data:
+                # The committed `.env` sets these to `changethis`, which is a
+                # placeholder rather than a value, so the keyring still applies.
+                if data.get(name, "changethis") == "changethis":
                     try:
                         keyring_value = keyring.get_password(KEYRING_SERVICE, name)
                     except NoKeyringError:

@@ -22,7 +22,7 @@ from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, HTMLFile
+from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, HTMLFile, JSONFile
 from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.get_around_client import get_around_client
 
@@ -137,6 +137,9 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
             or_(
                 col(File.key).startswith(f"{SeasonDetail.__name__}/{self.tmdb_id}/"),
                 col(File.key).startswith(f"{EpisodeDetail.__name__}/{self.tmdb_id}/"),
+                col(File.key).startswith(
+                    f"{EpisodeTranslations.__name__}/{self.tmdb_id}/",
+                ),
             ),
         )
         # The session only holds records weakly, so they have to be kept alive for
@@ -157,6 +160,13 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
                 continue
             for episode in season_file.parsed().episodes:
                 yield EpisodeDetail(
+                    self.session,
+                    self.plugin,
+                    self.tmdb_id,
+                    season.season_number,
+                    episode.episode_number,
+                )
+                yield EpisodeTranslations(
                     self.session,
                     self.plugin,
                     self.tmdb_id,
@@ -237,6 +247,56 @@ class EpisodeDetail(_TMDBEndpointFile[TvEpisodeDetailsModel]):
             self.season_number,
             self.episode_number,
         )
+
+
+class EpisodeTranslationData(BaseModel):
+    """The translated fields of a single translation."""
+
+    name: str | None = None
+    overview: str | None = None
+
+
+class EpisodeTranslation(BaseModel):
+    """One language's version of an episode."""
+
+    iso_639_1: str | None = None
+    iso_3166_1: str | None = None
+    data: EpisodeTranslationData
+
+
+class EpisodeTranslations(JSONFile[list[EpisodeTranslation]]):
+    """Every language's name for a single episode."""
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        tmdb_show_id: int,
+        season_number: int,
+        episode_number: int,
+    ) -> None:
+        self.tmdb_show_id = tmdb_show_id
+        self.season_number = season_number
+        self.episode_number = episode_number
+        self.unique_identifier = f"{tmdb_show_id}/{season_number}/{episode_number}"
+        super().__init__(session, plugin)
+
+    @override
+    def _parse(self, raw: Any) -> list[EpisodeTranslation]:
+        return [
+            EpisodeTranslation.model_validate(translation)
+            for translation in raw["translations"]
+        ]
+
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            endpoint = (
+                f"tv/{self.tmdb_show_id}/season/{self.season_number}"
+                f"/episode/{self.episode_number}/translations"
+            )
+            content = tminidb_client().download(endpoint, {}, log_id=self.file_key())
+            self.write(content)
 
 
 class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
@@ -375,6 +435,20 @@ class FileMixin(BasePlugin, register=False):
         """Returns EpisodeDetail file."""
         return self._file(
             EpisodeDetail,
+            tmdb_show_id,
+            season_number,
+            episode_number,
+        )
+
+    def episode_translations_file(
+        self,
+        tmdb_show_id: int,
+        season_number: int,
+        episode_number: int,
+    ) -> EpisodeTranslations:
+        """Returns EpisodeTranslations file."""
+        return self._file(
+            EpisodeTranslations,
             tmdb_show_id,
             season_number,
             episode_number,

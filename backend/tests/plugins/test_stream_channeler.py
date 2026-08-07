@@ -181,7 +181,7 @@ class TestAddResultsToChannel:
         function_scoped_session.flush()
 
         assert len(channel.shows) == 1
-        assert channel.shows[0].show_id == show.id
+        assert channel.shows[0].show_identifier == show.show_identifier
         assert channel.shows[0].is_whitelist is False
 
     def test_import_season_adds_to_channel_with_whitelist(
@@ -199,7 +199,7 @@ class TestAddResultsToChannel:
 
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
-        assert channel_show.show_id == season.show_id
+        assert channel_show.show_identifier == season.show.show_identifier
         assert channel_show.is_whitelist is True
 
         season_whitelist = function_scoped_session.exec(
@@ -208,7 +208,7 @@ class TestAddResultsToChannel:
             ),
         ).all()
         assert len(season_whitelist) == 1
-        assert season_whitelist[0].season_id == season.id
+        assert season_whitelist[0].season_identifier == season.season_identifier
 
     def test_import_episode_adds_to_channel_with_whitelist(
         self,
@@ -225,7 +225,7 @@ class TestAddResultsToChannel:
 
         assert len(channel.shows) == 1
         channel_show = channel.shows[0]
-        assert channel_show.show_id == episode.season.show_id
+        assert channel_show.show_identifier == episode.season.show.show_identifier
         assert channel_show.is_whitelist is True
 
         episode_whitelist = function_scoped_session.exec(
@@ -234,7 +234,7 @@ class TestAddResultsToChannel:
             ),
         ).all()
         assert len(episode_whitelist) == 1
-        assert episode_whitelist[0].episode_id == episode.id
+        assert episode_whitelist[0].episode_identifier == episode.episode_identifier
 
     def test_import_multiple_shows_from_source(
         self,
@@ -251,10 +251,12 @@ class TestAddResultsToChannel:
         add_results_to_channel(function_scoped_session, results, channel)
         function_scoped_session.flush()
 
-        channel_show_ids = {channel_show.show_id for channel_show in channel.shows}
+        channel_show_identifiers = {
+            channel_show.show_identifier for channel_show in channel.shows
+        }
         assert len(channel.shows) == 2  # noqa: PLR2004
-        assert show_one.id in channel_show_ids
-        assert show_two.id in channel_show_ids
+        assert show_one.show_identifier in channel_show_identifiers
+        assert show_two.show_identifier in channel_show_identifiers
 
     def test_import_show_already_in_channel(
         self,

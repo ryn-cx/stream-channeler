@@ -6,11 +6,13 @@ import type {
   WhitelistEpisodeOutput,
   WhitelistSeasonOutput,
   WhitelistShowInput,
+  WhitelistSourceOutput,
 } from "@/client"
 import { ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -18,10 +20,161 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
+
+/** The favicons of the websites' copies a season or episode was found on. */
+function SourceFavicons({
+  showIds,
+  sourcesByShowId,
+}: {
+  showIds: string[]
+  sourcesByShowId: Map<string, WhitelistSourceOutput>
+}) {
+  return (
+    <span className="flex items-center gap-1 shrink-0">
+      {showIds.map((showId) => {
+        const source = sourcesByShowId.get(showId)
+        if (!source?.favicon_url) return null
+        return (
+          <Tooltip key={showId}>
+            <TooltipTrigger asChild>
+              <img
+                src={source.favicon_url}
+                alt={`${source.source_name} favicon`}
+                className="size-4 shrink-0"
+              />
+            </TooltipTrigger>
+            <TooltipContent>
+              {source.source_name ?? "Unknown source"}
+            </TooltipContent>
+          </Tooltip>
+        )
+      })}
+    </span>
+  )
+}
+
+/**
+ * One season row: the stored seasons it stands for, and the episodes under it.
+ *
+ * A website numbers its own seasons, which is not how TMDB numbers the same
+ * ones, so a row stands for a TMDB season rather than a stored one and the
+ * stored seasons whose episodes TMDB puts in it are all listed together. A
+ * season filter is about a stored season, so a row carries every stored season
+ * it covers and marks them together.
+ */
+interface SeasonGroup {
+  key: string
+  label: string
+  seasons: WhitelistSeasonOutput[]
+  episodes: WhitelistEpisodeOutput[]
+}
+
+function tmdbGroupKey(tmdbSeasonNumber: number) {
+  return `tmdb-${tmdbSeasonNumber}`
+}
+
+function siteSeasonLabel(
+  season: WhitelistSeasonOutput,
+  anySeasonHasNumber: boolean,
+) {
+  if (!anySeasonHasNumber) {
+    return season.name ?? ""
+  }
+  const seasonName = season.name ? ` - ${season.name}` : ""
+  return `Season ${season.season_number ?? "?"}${seasonName}`
+}
+
+function groupSeasons(
+  seasons: WhitelistSeasonOutput[],
+  episodes: WhitelistEpisodeOutput[],
+): SeasonGroup[] {
+  const anySeasonHasNumber = seasons.some(
+    (season) => season.season_number != null,
+  )
+  const seasonsById = new Map(seasons.map((season) => [season.id, season]))
+  const episodesBySeasonId = new Map<string, WhitelistEpisodeOutput[]>()
+  for (const episode of episodes) {
+    const seasonEpisodes = episodesBySeasonId.get(episode.season_id) ?? []
+    seasonEpisodes.push(episode)
+    episodesBySeasonId.set(episode.season_id, seasonEpisodes)
+  }
+
+  const groups = new Map<string, SeasonGroup>()
+  const groupFor = (key: string, label: string) => {
+    const existing = groups.get(key)
+    if (existing) return existing
+    const created: SeasonGroup = { key, label, seasons: [], episodes: [] }
+    groups.set(key, created)
+    return created
+  }
+
+  // A stored season with no TMDB season of its own belongs wherever its episodes
+  // were put, which is what merges the site's split of a TMDB season back into
+  // the one row.
+  const groupKeysOfSeason = (season: WhitelistSeasonOutput) => {
+    if (season.tmdb_season_number != null) {
+      return [tmdbGroupKey(season.tmdb_season_number)]
+    }
+    const keys = new Set(
+      (episodesBySeasonId.get(season.id) ?? [])
+        .filter((episode) => episode.tmdb_season_number != null)
+        .map((episode) => tmdbGroupKey(episode.tmdb_season_number as number)),
+    )
+    return keys.size > 0 ? [...keys] : [`season-${season.id}`]
+  }
+
+  for (const season of seasons) {
+    for (const key of groupKeysOfSeason(season)) {
+      const label = key.startsWith("tmdb-")
+        ? `Season ${key.replace("tmdb-", "")}`
+        : siteSeasonLabel(season, anySeasonHasNumber)
+      groupFor(key, label).seasons.push(season)
+    }
+  }
+
+  for (const episode of episodes) {
+    const season = seasonsById.get(episode.season_id)
+    const tmdbSeasonNumber =
+      episode.tmdb_season_number ?? season?.tmdb_season_number
+    if (tmdbSeasonNumber != null) {
+      const key = tmdbGroupKey(tmdbSeasonNumber)
+      groupFor(key, `Season ${tmdbSeasonNumber}`).episodes.push(episode)
+      continue
+    }
+    const key = `season-${episode.season_id}`
+    const label = season ? siteSeasonLabel(season, anySeasonHasNumber) : ""
+    groupFor(key, label).episodes.push(episode)
+  }
+
+  // The site's split of a TMDB season leaves the episodes of one row numbered by
+  // more than one website, so a row TMDB numbers is read in TMDB's order.
+  for (const group of groups.values()) {
+    if (
+      group.episodes.every((episode) => episode.tmdb_episode_number != null)
+    ) {
+      group.episodes.sort(
+        (first, second) =>
+          (first.tmdb_episode_number ?? 0) - (second.tmdb_episode_number ?? 0),
+      )
+    }
+    if (!group.key.startsWith("tmdb-")) continue
+    const name = group.seasons.find((season) => season.name)?.name
+    if (name && name !== group.label) {
+      group.label = `${group.label} - ${name}`
+    }
+  }
+
+  return [...groups.values()]
+}
 
 interface WhitelistManagerProps {
   channelId: string
@@ -39,6 +192,10 @@ export function WhitelistManager({
   onClose,
 }: WhitelistManagerProps) {
   const [isWhitelist, setIsWhitelist] = useState(false)
+  // The `Show` ids of the websites' copies that carry a filter entry.
+  const [enabledSourceIds, setEnabledSourceIds] = useState<Set<string>>(
+    new Set(),
+  )
   const [enabledSeasonIds, setEnabledSeasonIds] = useState<Set<string>>(
     new Set(),
   )
@@ -66,6 +223,13 @@ export function WhitelistManager({
   useEffect(() => {
     if (whitelistData) {
       setIsWhitelist(whitelistData.is_whitelist ?? false)
+      setEnabledSourceIds(
+        new Set(
+          whitelistData.sources
+            .filter((source) => source.filtered)
+            .map((source) => source.show_id),
+        ),
+      )
       setEnabledSeasonIds(
         new Set(
           whitelistData.seasons
@@ -119,22 +283,35 @@ export function WhitelistManager({
     setIsWhitelist(!isWhitelist)
   }
 
-  const toggleSeasonExpanded = (seasonId: string) => {
+  const toggleGroupExpanded = (groupKey: string) => {
     const newExpanded = new Set(expandedSeasons)
-    if (newExpanded.has(seasonId)) {
-      newExpanded.delete(seasonId)
+    if (newExpanded.has(groupKey)) {
+      newExpanded.delete(groupKey)
     } else {
-      newExpanded.add(seasonId)
+      newExpanded.add(groupKey)
     }
     setExpandedSeasons(newExpanded)
   }
 
-  const toggleSeasonEnabled = (seasonId: string) => {
-    const newEnabled = new Set(enabledSeasonIds)
-    if (newEnabled.has(seasonId)) {
-      newEnabled.delete(seasonId)
+  const toggleSourceEnabled = (showId: string) => {
+    const newEnabled = new Set(enabledSourceIds)
+    if (newEnabled.has(showId)) {
+      newEnabled.delete(showId)
     } else {
-      newEnabled.add(seasonId)
+      newEnabled.add(showId)
+    }
+    setEnabledSourceIds(newEnabled)
+  }
+
+  // A row can stand for more than one stored season, and they are marked together.
+  const toggleSeasonsEnabled = (seasonIds: string[], enabled: boolean) => {
+    const newEnabled = new Set(enabledSeasonIds)
+    for (const seasonId of seasonIds) {
+      if (enabled) {
+        newEnabled.delete(seasonId)
+      } else {
+        newEnabled.add(seasonId)
+      }
     }
     setEnabledSeasonIds(newEnabled)
   }
@@ -183,6 +360,10 @@ export function WhitelistManager({
 
     const input: WhitelistShowInput = {
       is_whitelist: isWhitelist,
+      sources: whitelistData.sources.map((source) => ({
+        id: source.show_id,
+        marked: enabledSourceIds.has(source.show_id),
+      })),
       seasons: whitelistData.seasons.map((season) => ({
         id: season.id,
         marked: enabledSeasonIds.has(season.id),
@@ -198,21 +379,11 @@ export function WhitelistManager({
     saveMutation.mutate(input)
   }
 
-  const getSeasonLabel = (season: WhitelistSeasonOutput) => {
-    const anySeasonHasNumber = whitelistData?.seasons.some(
-      (currentSeason) => currentSeason.season_number != null,
-    )
-    if (!anySeasonHasNumber) {
-      return season.name ?? ""
-    }
-    const seasonNum = season.season_number ?? "?"
-    const seasonName = season.name ? ` - ${season.name}` : ""
-    return `Season ${seasonNum}${seasonName}`
-  }
-
   const getEpisodeLabel = (episode: WhitelistEpisodeOutput) => {
     const episodeName = episode.name ? ` - ${episode.name}` : ""
-    return `Episode ${episode.sort_order ?? "?"}${episodeName}`
+    const episodeNumber =
+      episode.tmdb_episode_number ?? episode.sort_order ?? "?"
+    return `Episode ${episodeNumber}${episodeName}`
   }
 
   const getSeasonActionLabel = (enabled: boolean) => {
@@ -221,6 +392,11 @@ export function WhitelistManager({
     }
     return enabled ? "Remove from Blacklist" : "Add to Blacklist"
   }
+
+  // A source entry reads the same way a season entry does: in whitelist mode it is
+  // one of the sites the show is watched on, in blacklist mode one of the sites it
+  // is skipped on.
+  const getSourceActionLabel = getSeasonActionLabel
 
   const getEpisodeActionLabel = (
     episodeEnabled: boolean,
@@ -241,16 +417,26 @@ export function WhitelistManager({
     return episodeEnabled ? "Remove from Blacklist" : "Add to Blacklist"
   }
 
-  // Group episodes by season for rendering
   if (!whitelistData) return
-  const episodesBySeason = new Map<string, typeof whitelistData.episodes>()
-  if (whitelistData) {
-    whitelistData.episodes.forEach((episode) => {
-      const seasonEpisodes = episodesBySeason.get(episode.season_id) || []
-      seasonEpisodes.push(episode)
-      episodesBySeason.set(episode.season_id, seasonEpisodes)
-    })
-  }
+  const sourcesByShowId = new Map(
+    whitelistData.sources.map((source) => [source.show_id, source]),
+  )
+  const seasonGroups = groupSeasons(
+    whitelistData.seasons,
+    whitelistData.episodes,
+  )
+  const isGroupEnabled = (group: SeasonGroup) =>
+    group.seasons.length > 0 &&
+    group.seasons.every((season) => enabledSeasonIds.has(season.id))
+  // The row an episode is listed under decides how its own entry reads, so its
+  // row's state is looked up rather than the season it was imported under.
+  const groupEnabledByEpisodeId = new Map(
+    seasonGroups.flatMap((group) =>
+      group.episodes.map(
+        (episode) => [episode.id, isGroupEnabled(group)] as const,
+      ),
+    ),
+  )
 
   return (
     <>
@@ -260,7 +446,7 @@ export function WhitelistManager({
             <DialogTitle>Manage Whitelist - {showName}</DialogTitle>
             <DialogDescription>
               {isWhitelist
-                ? "Only selected seasons and episodes will appear. New episodes are not automatically added."
+                ? "Only selected sites, seasons and episodes will appear. New episodes are not automatically added."
                 : "All episodes are shown by default. New episodes are automatically added."}
             </DialogDescription>
           </DialogHeader>
@@ -271,8 +457,8 @@ export function WhitelistManager({
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-4 py-4 flex-1 min-h-0">
-                <div className="flex items-center justify-between p-4 border rounded bg-muted/50 shrink-0">
+              <DialogBody className="flex flex-col gap-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-4 border rounded bg-muted/50 shrink-0">
                   <div>
                     <h3 className="font-semibold">
                       Current Mode:{" "}
@@ -289,95 +475,155 @@ export function WhitelistManager({
                   </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto border rounded min-h-0">
+                {whitelistData.sources.length > 1 && (
+                  <div className="border rounded shrink-0">
+                    <div className="p-3 bg-accent/50 border-b">
+                      <h3 className="font-medium">Sources</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {isWhitelist
+                          ? "Only whitelisted sites are watched for this show. Whitelisting none watches them all."
+                          : "All sites are watched except blacklisted ones"}
+                      </p>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      {whitelistData.sources.map((source) => {
+                        const sourceEnabled = enabledSourceIds.has(
+                          source.show_id,
+                        )
+                        return (
+                          <div
+                            key={source.show_id}
+                            className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded"
+                          >
+                            {source.favicon_url && (
+                              <img
+                                src={source.favicon_url}
+                                alt=""
+                                className="size-4 shrink-0"
+                              />
+                            )}
+                            <span className="flex-1 text-sm">
+                              {source.source_name ?? "Unknown source"}
+                            </span>
+                            <Button
+                              variant={sourceEnabled ? "default" : "outline"}
+                              size="sm"
+                              onClick={() =>
+                                toggleSourceEnabled(source.show_id)
+                              }
+                            >
+                              {getSourceActionLabel(sourceEnabled)}
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border rounded">
                   <div className="p-4 space-y-2">
-                    {!whitelistData?.seasons ||
-                    whitelistData.seasons.length === 0 ? (
+                    {seasonGroups.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No seasons found for this show
                       </p>
                     ) : (
-                      whitelistData.seasons.map((season) => {
-                        const seasonEnabled = enabledSeasonIds.has(season.id)
+                      seasonGroups.map((group) => {
+                        const seasonEnabled = isGroupEnabled(group)
                         return (
-                          <div key={season.id} className="border rounded">
+                          <div key={group.key} className="border rounded">
                             <div className="flex items-center gap-2 p-3 bg-accent/50">
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => toggleSeasonExpanded(season.id)}
+                                onClick={() => toggleGroupExpanded(group.key)}
                               >
-                                {expandedSeasons.has(season.id) ? (
+                                {expandedSeasons.has(group.key) ? (
                                   <ChevronDown className="h-4 w-4" />
                                 ) : (
                                   <ChevronRight className="h-4 w-4" />
                                 )}
                               </Button>
                               <span className="flex-1 font-medium">
-                                {getSeasonLabel(season)}
+                                {group.label}
                               </span>
+                              <SourceFavicons
+                                showIds={[
+                                  ...new Set(
+                                    group.seasons.flatMap(
+                                      (season) => season.show_ids,
+                                    ),
+                                  ),
+                                ]}
+                                sourcesByShowId={sourcesByShowId}
+                              />
                               <Button
                                 variant={seasonEnabled ? "default" : "outline"}
                                 size="sm"
-                                onClick={() => toggleSeasonEnabled(season.id)}
+                                onClick={() =>
+                                  toggleSeasonsEnabled(
+                                    group.seasons.map((season) => season.id),
+                                    seasonEnabled,
+                                  )
+                                }
                               >
                                 {getSeasonActionLabel(seasonEnabled)}
                               </Button>
                             </div>
 
-                            {expandedSeasons.has(season.id) && (
+                            {expandedSeasons.has(group.key) && (
                               <div className="p-2 space-y-1">
-                                {!episodesBySeason.get(season.id) ||
-                                episodesBySeason.get(season.id)!.length ===
-                                  0 ? (
+                                {group.episodes.length === 0 ? (
                                   <p className="text-sm text-muted-foreground text-center py-2">
                                     No episodes found
                                   </p>
                                 ) : (
-                                  episodesBySeason
-                                    .get(season.id)!
-                                    .map((episode) => {
-                                      const episodeEnabled =
-                                        enabledEpisodeIds.has(episode.id)
-                                      return (
-                                        <div
-                                          key={episode.id}
-                                          className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded"
-                                        >
-                                          <span className="flex-1 text-sm ml-8">
-                                            {getEpisodeLabel(episode)}
-                                            {episodeEnabled &&
-                                              episodeExpiry.get(episode.id) && (
-                                                <span className="ml-2 text-xs text-muted-foreground">
-                                                  (until{" "}
-                                                  {new Date(
-                                                    episodeExpiry.get(
-                                                      episode.id,
-                                                    )!,
-                                                  ).toLocaleString()}
-                                                  )
-                                                </span>
-                                              )}
-                                          </span>
-                                          <Button
-                                            variant={
-                                              episodeEnabled !== seasonEnabled
-                                                ? "default"
-                                                : "outline"
-                                            }
-                                            size="sm"
-                                            onClick={() =>
-                                              handleEpisodeClick(episode)
-                                            }
-                                          >
-                                            {getEpisodeActionLabel(
-                                              episodeEnabled,
-                                              seasonEnabled,
+                                  group.episodes.map((episode) => {
+                                    const episodeEnabled =
+                                      enabledEpisodeIds.has(episode.id)
+                                    return (
+                                      <div
+                                        key={episode.id}
+                                        className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded"
+                                      >
+                                        <span className="flex-1 text-sm ml-8">
+                                          {getEpisodeLabel(episode)}
+                                          {episodeEnabled &&
+                                            episodeExpiry.get(episode.id) && (
+                                              <span className="ml-2 text-xs text-muted-foreground">
+                                                (until{" "}
+                                                {new Date(
+                                                  episodeExpiry.get(
+                                                    episode.id,
+                                                  )!,
+                                                ).toLocaleString()}
+                                                )
+                                              </span>
                                             )}
-                                          </Button>
-                                        </div>
-                                      )
-                                    })
+                                        </span>
+                                        <SourceFavicons
+                                          showIds={episode.show_ids}
+                                          sourcesByShowId={sourcesByShowId}
+                                        />
+                                        <Button
+                                          variant={
+                                            episodeEnabled !== seasonEnabled
+                                              ? "default"
+                                              : "outline"
+                                          }
+                                          size="sm"
+                                          onClick={() =>
+                                            handleEpisodeClick(episode)
+                                          }
+                                        >
+                                          {getEpisodeActionLabel(
+                                            episodeEnabled,
+                                            seasonEnabled,
+                                          )}
+                                        </Button>
+                                      </div>
+                                    )
+                                  })
                                 )}
                               </div>
                             )}
@@ -387,7 +633,7 @@ export function WhitelistManager({
                     )}
                   </div>
                 </div>
-              </div>
+              </DialogBody>
 
               <DialogFooter>
                 <Button
@@ -416,13 +662,13 @@ export function WhitelistManager({
           // matches the not-yet-enabled label (which already accounts for the season).
           title={getEpisodeActionLabel(
             false,
-            enabledSeasonIds.has(pendingEpisode.season_id),
+            groupEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
           )}
           description={getEpisodeLabel(pendingEpisode)}
           dateLabel="Expires at (optional)"
           confirmLabel={getEpisodeActionLabel(
             false,
-            enabledSeasonIds.has(pendingEpisode.season_id),
+            groupEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
           )}
           initialExpiry={episodeExpiry.get(pendingEpisode.id) ?? ""}
           onConfirm={confirmEpisodeExpiry}

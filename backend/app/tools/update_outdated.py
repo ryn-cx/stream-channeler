@@ -7,6 +7,7 @@ from typing import Any
 
 from loguru import logger
 from sqlalchemy import or_
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -39,23 +40,34 @@ MediaClass = type[MediaMixin[Any, Any]]
 def _channel_inclusion_clause() -> ColumnElement[bool]:
     return col(ChannelShow.is_blacklist_only).is_(False) & or_(
         col(ChannelShow.is_whitelist).is_(True)
-        & col(ChannelSeasonFilter.season_id).is_not(None),
+        & col(ChannelSeasonFilter.season_identifier).is_not(None),
         col(ChannelShow.is_whitelist).is_(False)
-        & col(ChannelSeasonFilter.season_id).is_(None),
+        & col(ChannelSeasonFilter.season_identifier).is_(None),
     )
 
 
 def _season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Season to be included in some channel."""
+    # A channel holds a title rather than one website's copy of it, so the show the
+    # season belongs to is reached through the identifier the copies share.
+    channel_show_of = aliased(Show)
     return (
         select(ChannelShow.id)
+        .select_from(ChannelShow)
+        .join(
+            channel_show_of,
+            col(channel_show_of.show_identifier) == col(ChannelShow.show_identifier),
+        )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
-            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+            & (
+                col(ChannelSeasonFilter.season_identifier)
+                == col(Season.season_identifier)
+            ),
         )
         .where(
-            col(ChannelShow.show_id) == col(Season.show_id),
+            col(channel_show_of.id) == col(Season.show_id),
             _channel_inclusion_clause(),
         )
         .exists()
@@ -64,13 +76,22 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
 
 def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Show to have a Season included in a channel."""
+    channel_show_of = aliased(Show)
     return (
         select(Season.id)
-        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .select_from(Season)
+        .join(channel_show_of, col(channel_show_of.id) == col(Season.show_id))
+        .join(
+            ChannelShow,
+            col(ChannelShow.show_identifier) == col(channel_show_of.show_identifier),
+        )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
-            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+            & (
+                col(ChannelSeasonFilter.season_identifier)
+                == col(Season.season_identifier)
+            ),
         )
         .where(
             col(Season.show_id) == col(Show.id),
@@ -85,11 +106,17 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
     return (
         select(Season.id)
         .join(Show, col(Show.id) == col(Season.show_id))
-        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .join(
+            ChannelShow,
+            col(ChannelShow.show_identifier) == col(Show.show_identifier),
+        )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
-            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+            & (
+                col(ChannelSeasonFilter.season_identifier)
+                == col(Season.season_identifier)
+            ),
         )
         .where(
             col(Show.source_id) == col(Source.id),
@@ -105,11 +132,17 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
         select(Season.id)
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
-        .join(ChannelShow, col(ChannelShow.show_id) == col(Season.show_id))
+        .join(
+            ChannelShow,
+            col(ChannelShow.show_identifier) == col(Show.show_identifier),
+        )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
-            & (col(ChannelSeasonFilter.season_id) == col(Season.id)),
+            & (
+                col(ChannelSeasonFilter.season_identifier)
+                == col(Season.season_identifier)
+            ),
         )
         .where(
             col(Source.plugin_id) == col(Plugin.id),

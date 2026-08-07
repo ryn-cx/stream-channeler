@@ -13,7 +13,7 @@ from good_ass_pydantic_integrator import ParseLevel
 from good_ass_pydantic_integrator.constants import INPUT_TYPE
 from loguru import logger
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.files.models import File
 from app.plugins.models import Plugin
@@ -127,6 +127,10 @@ class BaseFile[T](ABC):
             f"in {elapsed_time:.2f}s",
         )
 
+    def _log_parse(self) -> None:
+        """Log that the file's stored content is about to be parsed."""
+        logger.debug(f"Parsing {self.__plugin.key} {self.file_key()}")
+
     @final  # Makes mocking downloads easier.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
@@ -156,17 +160,39 @@ class BaseFile[T](ABC):
         msg = f"{type(self).__name__} does not implement _download"
         raise NotImplementedError(msg)
 
-    def write(self, content: str | None) -> None:
-        """Write content to the file and commit it to the database."""
-        self._existing_database_record = File(
-            key=self.file_key(),
-            content=content,
-            data_timestamp=tz_datetime.now(),
-            plugin_id=self.__plugin.id,
-        ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
+    def write(self, content: str | None, extra: str | None = None) -> None:
+        """Write content to the file and commit it to the database.
 
+        The record is committed through a session of its own so a download is kept
+        even when the import that triggered it fails. Committing the plugin's
+        session here would also commit the records that import has upserted so far,
+        which is what used to leave a failed import half stored.
+        """
+        with Session(self.__session.get_bind()) as file_session:
+            plugin = file_session.exec(
+                select(Plugin).where(Plugin.id == self.__plugin.id),
+            ).one()
+            File(
+                key=self.file_key(),
+                content=content,
+                data_timestamp=tz_datetime.now(),
+                extra=extra,
+                plugin_id=plugin.id,
+            ).upsert_and_set_update_at(
+                plugin,
+                File.get(file_session, plugin, self.file_key()),
+            )
+            file_session.commit()
+
+        # The record the file session wrote belongs to that session, so the plugin's
+        # own copy is reloaded to pick the new values up.
+        self._existing_database_record = File.get(
+            self.__session,
+            self.__plugin,
+            self.file_key(),
+            populate_existing=True,
+        )
         self._cached_parsed = None
-        self.__session.commit()
 
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
@@ -199,6 +225,7 @@ class JSONFile[T](BaseFile[T], ABC):
     def parsed(self) -> T:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
+            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
@@ -208,10 +235,10 @@ class JSONFile[T](BaseFile[T], ABC):
         return self._cached_parsed
 
     @override
-    def write(self, content: str | INPUT_TYPE | None) -> None:
+    def write(self, content: str | INPUT_TYPE | None, extra: str | None = None) -> None:
         if content is not None and not isinstance(content, str):
             content = json.dumps(content, default=str)
-        super().write(content)
+        super().write(content, extra)
 
     @classmethod
     @override
@@ -232,6 +259,7 @@ class XMLFile(BaseFile[Element], ABC):
     def parsed(self) -> Element:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
+            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
@@ -257,6 +285,7 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
     def parsed(self) -> BeautifulSoup:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
+            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
@@ -274,7 +303,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
     ACCEPTABLE_ERROR: str | None = None
 
-    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.ALLOW_MISSING
+    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
 
     def __init__(
         self,
@@ -320,8 +349,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
                 if not self._is_acceptable_error(e):
                     raise
 
-                self.write(None)
-                self.database_record.extra = self.acceptable_error_extra_value()
+                self.write(None, self.acceptable_error_extra_value())
 
 
 class APISerializerEndpoint[T](Protocol):

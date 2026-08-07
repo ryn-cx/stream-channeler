@@ -229,6 +229,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Music",
                 url=self._show_url(show_key),
                 image_url=self._largest_image(artist_data.images.poster_wide),
+                show_identifier=f"{self.plugin_key()} {show_key}",
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             ).upsert_and_set_update_at(source, show, self._show_files(show_key))
@@ -257,6 +258,7 @@ class UpsertMixin(HelperMixin, register=False):
                     name=CATEGORY_NAMES[category],
                     sort_order=sort_order,
                     url=self._show_url(show.key),
+                    season_identifier=f"{self.plugin_key()} {season_key}",
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 ).upsert_and_set_update_at(

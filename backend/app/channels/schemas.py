@@ -207,21 +207,45 @@ class BlacklistEpisodeInput(BaseInput):
 
 class WhitelistShowInput(BaseInput):
     is_whitelist: bool | None = Field(default=None)
+    # Each entry's `id` is the `Show` id of one website's copy of the title.
+    sources: list[WhitelistEntryInput] = Field(default_factory=list)
     seasons: list[WhitelistEntryInput] = Field(default_factory=list)
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
 
 
+class WhitelistSourceOutput(BaseModel):
+    """One website's copy of the title, and whether it is filtered."""
+
+    show_id: uuid.UUID
+    source_id: uuid.UUID
+    source_name: str | None
+    favicon_url: str | None
+    filtered: bool
+
+
 class WhitelistSeasonOutput(SeasonOutput):
     filtered: bool
+    # The `Show` ids of the websites' copies that carry this season.
+    show_ids: list[uuid.UUID]
+    # The number TMDB gives the season, which is not always the one the website
+    # gives it. `None` when the season is not linked to TMDB.
+    tmdb_season_number: int | None = Field(default=None)
 
 
 class WhitelistEpisodeOutput(EpisodeOutput):
     filtered: bool
     expires_at: datetime | None = Field(default=None)
+    # The `Show` ids of the websites' copies that carry this episode.
+    show_ids: list[uuid.UUID]
+    # The numbers TMDB gives the episode and the season it is in, which are not
+    # always the ones the website gives them. `None` when it is not linked to TMDB.
+    tmdb_season_number: int | None = Field(default=None)
+    tmdb_episode_number: int | None = Field(default=None)
 
 
 class WhitelistShowOutput(ShowPublic):
     is_whitelist: bool
+    sources: list[WhitelistSourceOutput]
     seasons: list[WhitelistSeasonOutput]
     episodes: list[WhitelistEpisodeOutput]
 

@@ -138,12 +138,15 @@ def update_show(
     """Update and return a `Show` if it's editable by the `User`.
 
     A new `tmdb_id` repoints every `Season` and `Episode` at TMDB so their
-    `tmdb_id` and `episode_identifier` follow the one the `User` chose.
+    `tmdb_id`, `show_identifier`, `season_identifier` and `episode_identifier`
+    follow the one the `User` chose. A `show_identifier` in the same request is
+    what the `User` wants it to be, so it is left alone.
     """
     previous_tmdb_id = show.tmdb_id
+    sets_identifier = "show_identifier" in show_input.model_dump(exclude_unset=True)
     show = show_input.update(session, show)
     if show.tmdb_id != previous_tmdb_id:
-        relink_children(session, show)
+        relink_children(session, show, relink_identifier=not sets_identifier)
     return _show_output(session, show)
 
 

@@ -23,7 +23,6 @@ from app.sources.models import Source
 from app.users.models import User
 
 if TYPE_CHECKING:
-    from app.channels.models import ChannelSeasonFilter
     from app.episodes.models import Episode
 
 
@@ -36,6 +35,10 @@ class BaseSeason(BaseMediaMixin):
     image_url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
     tmdb_id: int | None = Field(default=None)
+    # What makes the same season on two websites one season rather than two. It
+    # is the TMDB id whenever the season is linked to TMDB, and the plugin's own
+    # key for the season when it is not.
+    season_identifier: str
 
 
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
@@ -57,16 +60,13 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         UniqueConstraint("id"),
         *sortable_field_indexes("Season", DIRECT_SORTABLE_FIELDS),
         Index("Season-deleted_at-index", "deleted_at"),
+        Index("Season-season_identifier-index", "season_identifier", "id"),
     )
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")
 
     episodes: list[Episode] = Relationship(back_populates="season", cascade_delete=True)
-    channel_filters: list[ChannelSeasonFilter] = Relationship(
-        back_populates="season",
-        cascade_delete=True,
-    )
 
     @property
     @override

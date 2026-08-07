@@ -1,6 +1,8 @@
 # TODO: Validate
 import time
 import uuid
+from collections import defaultdict
+from collections.abc import Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -52,10 +54,17 @@ from app.channels.schemas import (
     WhitelistSeasonOutput,
     WhitelistShowInput,
     WhitelistShowOutput,
+    WhitelistSourceOutput,
 )
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
-from app.media.tmdb_fallback import fill_episodes, fill_seasons, fill_shows
+from app.media.tmdb_fallback import (
+    fill_episodes,
+    fill_seasons,
+    fill_shows,
+    prefer_tmdb_episodes,
+    prefer_tmdb_seasons,
+)
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.schemas import SeasonOutput
@@ -449,6 +458,11 @@ def get_channel_shows(
     channel_shows = session.exec(
         select(ChannelShow).where(col(ChannelShow.channel_id).in_(channel_ids)),
     ).all()
+    # A `ChannelShow` is a title, so each one stands for every website's copy of it.
+    copies = service.shows_by_identifier(
+        session,
+        {channel_show.show_identifier for channel_show in channel_shows},
+    )
 
     # A show can appear in several of the combined channels; deduplicate by show id.
     # A show counts as a regular show if any channel includes it normally, even when
@@ -459,23 +473,26 @@ def get_channel_shows(
     shows_by_channel: dict[uuid.UUID, dict[uuid.UUID, ShowPublic]] = {}
     channel_names: dict[uuid.UUID, str | None] = {}
     for channel_show in channel_shows:
-        show = channel_show.show
-        source = show.source
-        plugin = source.plugin
+        for show in copies[channel_show.show_identifier]:
+            source = show.source
+            plugin = source.plugin
 
-        if not plugin.is_readable(session, user):
-            continue
+            if not plugin.is_readable(session, user):
+                continue
 
-        if channel_show.is_blacklist_only:
-            filter_only_shows.setdefault(show.id, ShowPublic.model_validate(show))
-        else:
-            regular_shows.setdefault(show.id, ShowPublic.model_validate(show))
-            channel_group = shows_by_channel.setdefault(channel_show.channel_id, {})
-            channel_group.setdefault(show.id, ShowPublic.model_validate(show))
-            channel_names.setdefault(channel_show.channel_id, channel_show.channel.name)
+            if channel_show.is_blacklist_only:
+                filter_only_shows.setdefault(show.id, ShowPublic.model_validate(show))
+            else:
+                regular_shows.setdefault(show.id, ShowPublic.model_validate(show))
+                channel_group = shows_by_channel.setdefault(channel_show.channel_id, {})
+                channel_group.setdefault(show.id, ShowPublic.model_validate(show))
+                channel_names.setdefault(
+                    channel_show.channel_id,
+                    channel_show.channel.name,
+                )
 
-        if source.id not in output.sources:
-            output.sources[source.id] = SourcePublic.model_validate(source)
+            if source.id not in output.sources:
+                output.sources[source.id] = SourcePublic.model_validate(source)
 
     output.shows = list(regular_shows.values())
     output.filter_only_shows = [
@@ -523,17 +540,38 @@ def get_channel_sources(
 ) -> list[SourcePublic]:
     """Read all unique sources for a channel."""
     sources: dict[uuid.UUID, SourcePublic] = {}
+    copies = service.shows_by_identifier(
+        session,
+        {channel_show.show_identifier for channel_show in channel.shows},
+    )
     for channel_show in channel.shows:
-        source = channel_show.show.source
-        plugin = source.plugin
+        for show in copies[channel_show.show_identifier]:
+            source = show.source
+            plugin = source.plugin
 
-        if not plugin.is_readable(session, user):
-            continue
+            if not plugin.is_readable(session, user):
+                continue
 
-        if source.id not in sources:
-            sources[source.id] = SourcePublic.model_validate(source)
+            if source.id not in sources:
+                sources[source.id] = SourcePublic.model_validate(source)
 
     return list(sources.values())
+
+
+def _copies_by_identifier(
+    shows: Sequence[Show],
+) -> tuple[dict[str, list[uuid.UUID]], dict[str, list[uuid.UUID]]]:
+    """Map each season and episode identifier to the copies carrying it."""
+    season_show_ids: dict[str, list[uuid.UUID]] = defaultdict(list)
+    episode_show_ids: dict[str, list[uuid.UUID]] = defaultdict(list)
+    for show in shows:
+        for season in show.active_children:
+            if show.id not in season_show_ids[season.season_identifier]:
+                season_show_ids[season.season_identifier].append(show.id)
+            for episode in season.active_children:
+                if show.id not in episode_show_ids[episode.episode_identifier]:
+                    episode_show_ids[episode.episode_identifier].append(show.id)
+    return season_show_ids, episode_show_ids
 
 
 # FAST003 - Parameter is used by UserChannelShow.
@@ -542,45 +580,93 @@ def get_channel_whitelist(
     session: SessionDep,
     channel_show: EditableChannelReadableShow,
 ) -> WhitelistShowOutput:
-    """Read the whitelist for a show in a channel."""
-    enabled_season_ids = {x.season_id for x in channel_show.season_filters}
-    enabled_episode_ids = {x.episode_id for x in channel_show.episode_filters}
+    """Read the whitelist for a title in a channel.
+
+    A filter is about the media rather than one website's copy of it, so every
+    copy's seasons and episodes are listed, with the copies of the same season or
+    episode collapsed into the one row the filter applies to.
+    """
+    enabled_sources = {x.show_id for x in channel_show.source_filters}
+    enabled_seasons = {x.season_identifier for x in channel_show.season_filters}
+    enabled_episodes = {x.episode_identifier for x in channel_show.episode_filters}
     episode_expiries = {
-        episode_filter.episode_id: episode_filter.expires_at
+        episode_filter.episode_identifier: episode_filter.expires_at
         for episode_filter in channel_show.episode_filters
     }
 
     seasons: list[WhitelistSeasonOutput] = []
     episodes: list[WhitelistEpisodeOutput] = []
+    # The row each season and episode was listed under, so a later website's copy of
+    # one is folded into the row already standing for it rather than listed again.
+    season_rows: dict[str, uuid.UUID] = {}
+    seen_episodes: set[str] = set()
 
-    for season in channel_show.show.seasons:
-        seasons.append(
-            WhitelistSeasonOutput.model_validate(
-                season,
-                update={"filtered": season.id in enabled_season_ids},
-            ),
+    shows = service.shows_for_channel_show(session, channel_show)
+    if not shows:
+        raise HTTPException(status_code=404, detail="Show was not found on channel")
+
+    # The websites' copies carrying each season and episode, so a row can name the
+    # sites it came from.
+    season_show_ids, episode_show_ids = _copies_by_identifier(shows)
+
+    sources = [
+        WhitelistSourceOutput(
+            show_id=show.id,
+            source_id=show.source.id,
+            source_name=show.source.name,
+            favicon_url=show.source.favicon_url,
+            filtered=show.id in enabled_sources,
         )
-        episodes.extend(
-            WhitelistEpisodeOutput.model_validate(
-                episode,
-                update={
-                    "filtered": episode.id in enabled_episode_ids,
-                    "expires_at": episode_expiries.get(episode.id),
-                },
-            )
-            for episode in season.episodes
-        )
+        for show in shows
+    ]
+
+    for show in shows:
+        for season in show.active_children:
+            if season.season_identifier not in season_rows:
+                season_rows[season.season_identifier] = season.id
+                seasons.append(
+                    WhitelistSeasonOutput.model_validate(
+                        season,
+                        update={
+                            "filtered": season.season_identifier in enabled_seasons,
+                            "show_ids": season_show_ids[season.season_identifier],
+                        },
+                    ),
+                )
+            for episode in season.active_children:
+                if episode.episode_identifier in seen_episodes:
+                    continue
+                seen_episodes.add(episode.episode_identifier)
+                episodes.append(
+                    WhitelistEpisodeOutput.model_validate(
+                        episode,
+                        update={
+                            "season_id": season_rows[season.season_identifier],
+                            "filtered": episode.episode_identifier in enabled_episodes,
+                            "expires_at": episode_expiries.get(
+                                episode.episode_identifier,
+                            ),
+                            "show_ids": episode_show_ids[episode.episode_identifier],
+                        },
+                    ),
+                )
 
     fill_seasons(session, seasons)
     fill_episodes(session, episodes)
+    # A filter is about the media rather than one website's copy of it, so the
+    # rows read as TMDB has the media, with the website only standing in for what
+    # TMDB has no record of.
+    prefer_tmdb_seasons(session, seasons)
+    prefer_tmdb_episodes(session, episodes)
 
     return fill_shows(
         session,
         [
             WhitelistShowOutput.model_validate(
-                channel_show.show,
+                shows[0],
                 update={
                     "is_whitelist": channel_show.is_whitelist,
+                    "sources": sources,
                     "seasons": seasons,
                     "episodes": episodes,
                 },
@@ -605,6 +691,7 @@ def update_channel_whitelist(
     # to keep the channel's show list clean.
     if (
         channel_show.is_blacklist_only
+        and not channel_show.source_filters
         and not channel_show.season_filters
         and not channel_show.episode_filters
     ):
@@ -684,12 +771,15 @@ def delete_channel_show(
     session: SessionDep,
     channel_show: EditableChannelReadableShow,
 ) -> Message:
-    """Remove a `Show` from a `Channel`."""
+    """Remove a title, on every website it is on, from a `Channel`."""
+    shows = service.shows_for_channel_show(session, channel_show)
+    name = next(
+        (show.name for show in shows if show.name),
+        channel_show.show_identifier,
+    )
     session.delete(channel_show)
     session.commit()
-    return Message(
-        message=f"{channel_show.show.name} removed from channel successfully",
-    )
+    return Message(message=f"{name} removed from channel successfully")
 
 
 @channels_router.get(

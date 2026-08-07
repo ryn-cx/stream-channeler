@@ -4214,11 +4214,15 @@ export const SeasonCreateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        season_identifier: {
+            type: 'string',
+            title: 'Season Identifier'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key'],
+    required: ['key', 'season_identifier'],
     title: 'SeasonCreate',
     description: 'Schema for creating a `Season`.'
 } as const;
@@ -4343,6 +4347,10 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        season_identifier: {
+            type: 'string',
+            title: 'Season Identifier'
+        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -4409,7 +4417,7 @@ export const SeasonListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'season_identifier', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -4534,6 +4542,10 @@ export const SeasonOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        season_identifier: {
+            type: 'string',
+            title: 'Season Identifier'
+        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -4546,7 +4558,7 @@ export const SeasonOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id'],
+    required: ['key', 'season_identifier', 'show_id', 'id'],
     title: 'SeasonOutput',
     description: 'Schema for returning a `Season`.'
 } as const;
@@ -4677,6 +4689,17 @@ export const SeasonUpdateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        season_identifier: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Identifier'
         }
     },
     additionalProperties: false,
@@ -4843,11 +4866,15 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        show_identifier: {
+            type: 'string',
+            title: 'Show Identifier'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key'],
+    required: ['key', 'show_identifier'],
     title: 'ShowCreate',
     description: 'Schema for creating a `Show`.'
 } as const;
@@ -4984,6 +5011,10 @@ export const ShowListPublicSchema = {
             ],
             title: 'Tmdb Id'
         },
+        show_identifier: {
+            type: 'string',
+            title: 'Show Identifier'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -5034,7 +5065,7 @@ export const ShowListPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'show_identifier', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -5171,6 +5202,10 @@ export const ShowPublicSchema = {
             ],
             title: 'Tmdb Id'
         },
+        show_identifier: {
+            type: 'string',
+            title: 'Show Identifier'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -5183,7 +5218,7 @@ export const ShowPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id'],
+    required: ['key', 'show_identifier', 'source_id', 'id'],
     title: 'ShowPublic',
     description: 'Schema for returning a `Show`.'
 } as const;
@@ -5326,6 +5361,17 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        show_identifier: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Identifier'
         }
     },
     additionalProperties: false,
@@ -7036,10 +7082,40 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Expires At'
+        },
+        show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Show Ids'
+        },
+        tmdb_season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Season Number'
+        },
+        tmdb_episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Episode Number'
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered', 'show_ids'],
     title: 'WhitelistEpisodeOutput'
 } as const;
 
@@ -7163,6 +7239,10 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        season_identifier: {
+            type: 'string',
+            title: 'Season Identifier'
+        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -7176,10 +7256,29 @@ export const WhitelistSeasonOutputSchema = {
         filtered: {
             type: 'boolean',
             title: 'Filtered'
+        },
+        show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Show Ids'
+        },
+        tmdb_season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Season Number'
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'filtered'],
+    required: ['key', 'season_identifier', 'show_id', 'id', 'filtered', 'show_ids'],
     title: 'WhitelistSeasonOutput'
 } as const;
 
@@ -7195,6 +7294,13 @@ export const WhitelistShowInputSchema = {
                 }
             ],
             title: 'Is Whitelist'
+        },
+        sources: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEntryInput'
+            },
+            type: 'array',
+            title: 'Sources'
         },
         seasons: {
             items: {
@@ -7348,6 +7454,10 @@ export const WhitelistShowOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        show_identifier: {
+            type: 'string',
+            title: 'Show Identifier'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -7361,6 +7471,13 @@ export const WhitelistShowOutputSchema = {
         is_whitelist: {
             type: 'boolean',
             title: 'Is Whitelist'
+        },
+        sources: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistSourceOutput'
+            },
+            type: 'array',
+            title: 'Sources'
         },
         seasons: {
             items: {
@@ -7378,6 +7495,51 @@ export const WhitelistShowOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'is_whitelist', 'seasons', 'episodes'],
+    required: ['key', 'show_identifier', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
     title: 'WhitelistShowOutput'
+} as const;
+
+export const WhitelistSourceOutputSchema = {
+    properties: {
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        source_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Id'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        },
+        filtered: {
+            type: 'boolean',
+            title: 'Filtered'
+        }
+    },
+    type: 'object',
+    required: ['show_id', 'source_id', 'source_name', 'favicon_url', 'filtered'],
+    title: 'WhitelistSourceOutput',
+    description: "One website's copy of the title, and whether it is filtered."
 } as const;

@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from typing import Any, Literal, override
 
 from app.episodes.models import Episode
+from app.media.tmdb_fallback import TMDB_IDENTIFIER_PREFIX
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -65,6 +66,10 @@ class TMDBMixin(BasePlugin, register=False):
         plugin's own media instead, which is what fills in whatever this website
         leaves out when the `Show` is served.
         """
+        # A title TMDB does not hold is only ever itself, so the plugin's own key
+        # for it is what identifies it. `tmdb_link_show` replaces this with the
+        # TMDB id when the title is linked.
+        show.show_identifier = f"{self.plugin_key()} {show_key}"
         tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
         show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
         if show.tmdb_id:
@@ -80,6 +85,7 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: Literal["movie", "tv"],
     ) -> Season:
+        season.season_identifier = f"{self.plugin_key()} {season.key}"
         season = self.tmdb.tmdb_link_season(
             season,
             show.tmdb_id,

@@ -32,10 +32,14 @@ class BaseShow(BaseMediaMixin):
     image_url: str | None = Field(default=None)
     icon: str | None = Field(default=None, max_length=32)
     tmdb_id: int | None = Field(default=None)
+    # What makes the same title on two websites one title rather than two. It is
+    # the TMDB id whenever the show is linked to TMDB, and the plugin's own key
+    # for the show when it is not.
+    show_identifier: str
 
 
 if TYPE_CHECKING:
-    from app.channels.models import ChannelShow
+    from app.channels.models import ChannelSourceFilter
     from app.seasons.models import Season
 
 
@@ -60,6 +64,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         UniqueConstraint("id"),
         *sortable_field_indexes("Show", DIRECT_SORTABLE_FIELDS),
         Index("Show-deleted_at-index", "deleted_at"),
+        Index("Show-show_identifier-index", "show_identifier", "id"),
     )
 
     source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
@@ -70,7 +75,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         cascade_delete=True,
     )
 
-    channels: list[ChannelShow] = Relationship(
+    channel_filters: list[ChannelSourceFilter] = Relationship(
         back_populates="show",
         cascade_delete=True,
     )
