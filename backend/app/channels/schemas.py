@@ -158,10 +158,17 @@ class EpisodeWithDetails(EpisodeOutput):
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
     episode_watch_id: uuid.UUID | None = Field(default=None)
+    # The episode's page on themoviedb.org, when it is linked to one.
+    tmdb_url: str | None = Field(default=None)
     channel_id: uuid.UUID
     # All in-scope member channels this episode belongs to. The first is `channel_id`
     # (the primary/base channel). Used by the blacklist UI to offer each as a target.
     channel_ids: list[uuid.UUID] = Field(default_factory=list)
+    # How TMDB numbers and names the episode and the season it is in, which is not
+    # always how the website does. `None` when it is not linked to TMDB.
+    tmdb_season_number: int | None = Field(default=None)
+    tmdb_season_name: str | None = Field(default=None)
+    tmdb_episode_number: int | None = Field(default=None)
 
 
 class ChannelEpisodesOutput(BaseModel):
@@ -237,9 +244,10 @@ class WhitelistEpisodeOutput(EpisodeOutput):
     expires_at: datetime | None = Field(default=None)
     # The `Show` ids of the websites' copies that carry this episode.
     show_ids: list[uuid.UUID]
-    # The numbers TMDB gives the episode and the season it is in, which are not
-    # always the ones the website gives them. `None` when it is not linked to TMDB.
+    # How TMDB numbers and names the episode and the season it is in, which is not
+    # always how the website does. `None` when it is not linked to TMDB.
     tmdb_season_number: int | None = Field(default=None)
+    tmdb_season_name: str | None = Field(default=None)
     tmdb_episode_number: int | None = Field(default=None)
 
 

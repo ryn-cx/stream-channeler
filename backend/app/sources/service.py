@@ -1,9 +1,14 @@
 # TODO: Validate
 """Source service functions."""
 
+import uuid
+
 from sqlmodel import Session, col, func, select
 
+from app.episodes.models import Episode
 from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
@@ -30,6 +35,22 @@ def sources_by_key(session: Session) -> dict[str, Source]:
         .order_by(col(Source.name), col(Source.key)),
     ).all()
     return {source.key: source for source in sources}
+
+
+def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
+    """Return the number of live episodes each `Source` provides, keyed by source id."""
+    rows = session.exec(
+        select(Show.source_id, func.count(col(Episode.id)))
+        .join(Season, col(Season.show_id) == Show.id)
+        .join(Episode, col(Episode.season_id) == Season.id)
+        .where(
+            col(Show.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Episode.deleted_at).is_(None),
+        )
+        .group_by(col(Show.source_id)),
+    ).all()
+    return dict(rows)
 
 
 def source_keys(session: Session) -> list[str]:

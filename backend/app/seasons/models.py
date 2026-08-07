@@ -47,10 +47,16 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "id",
         "name",
+        "season_identifier",
         "season_number",
         "sort_order",
     ]
-    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["random", "sequential"]
+    INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
+        "random",
+        "season_number_zero_last",
+        "sequential",
+        "sequential_zero_last",
+    ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
@@ -58,7 +64,11 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes("Season", DIRECT_SORTABLE_FIELDS),
+        *sortable_field_indexes(
+            "Season",
+            DIRECT_SORTABLE_FIELDS,
+            already_indexed=("season_identifier",),
+        ),
         Index("Season-deleted_at-index", "deleted_at"),
         Index("Season-season_identifier-index", "season_identifier", "id"),
     )

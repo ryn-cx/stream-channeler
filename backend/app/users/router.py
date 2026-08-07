@@ -20,7 +20,11 @@ from app.config import settings
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.schemas import Message
-from app.sources.service import OTHER_SOURCE_KEY, sources_by_key
+from app.sources.service import (
+    OTHER_SOURCE_KEY,
+    episode_counts_by_source_id,
+    sources_by_key,
+)
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User, UserSourcePreference
@@ -162,17 +166,27 @@ def _source_preference_outputs(
     session: SessionDep,
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
-    """Attach each source's stored display name and favicon for display."""
+    """Attach each source's stored display name, favicon and episode count."""
     sources = sources_by_key(session)
+    counts = episode_counts_by_source_id(session)
+    installed_ids = {source.id for source in sources.values()}
+    other_count = sum(
+        count for source_id, count in counts.items() if source_id not in installed_ids
+    )
     outputs: list[SourcePreferenceOutput] = []
     for preference in preferences:
         source = sources.get(preference.source_key)
+        if preference.source_key == OTHER_SOURCE_KEY:
+            episode_count = other_count
+        else:
+            episode_count = counts.get(source.id, 0) if source else 0
         outputs.append(
             SourcePreferenceOutput(
                 source_key=preference.source_key,
                 enabled=preference.enabled,
                 name=source.name if source else None,
                 favicon_url=source.favicon_url if source else None,
+                episode_count=episode_count,
             ),
         )
     return outputs

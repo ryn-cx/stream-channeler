@@ -1,6 +1,12 @@
 ﻿// TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, ChevronUp, Globe } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
+  ChevronUp,
+  Globe,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { type SourcePreferenceOutput, UsersService } from "@/client"
@@ -52,20 +58,39 @@ const SourcePreferences = () => {
     onError: handleError.bind(showErrorToast),
   })
 
-  const move = (index: number, direction: -1 | 1) => {
-    const target = index + direction
-    if (target < 0 || target >= preferences.length) {
-      return
-    }
+  const visible = preferences.filter(
+    (preference) => preference.episode_count > 0,
+  )
+
+  const moveTo = (sourceKey: string, targetIndex: number) => {
     const next = [...preferences]
-    ;[next[index], next[target]] = [next[target], next[index]]
+    const from = next.findIndex(
+      (preference) => preference.source_key === sourceKey,
+    )
+    const [moved] = next.splice(from, 1)
+    next.splice(targetIndex, 0, moved)
     setPreferences(next)
   }
 
-  const toggle = (index: number) => {
-    const next = [...preferences]
-    next[index] = { ...next[index], enabled: !(next[index].enabled ?? true) }
-    setPreferences(next)
+  const move = (visibleIndex: number, direction: -1 | 1) => {
+    const neighbor = visible[visibleIndex + direction]
+    if (!neighbor) {
+      return
+    }
+    const neighborIndex = preferences.findIndex(
+      (preference) => preference.source_key === neighbor.source_key,
+    )
+    moveTo(visible[visibleIndex].source_key, neighborIndex)
+  }
+
+  const toggle = (sourceKey: string) => {
+    setPreferences(
+      preferences.map((preference) =>
+        preference.source_key === sourceKey
+          ? { ...preference, enabled: !(preference.enabled ?? true) }
+          : preference,
+      ),
+    )
   }
 
   return (
@@ -76,19 +101,30 @@ const SourcePreferences = () => {
         highest in this list is shown and the duplicates are hidden. Use the
         checkbox to enable or disable a source everywhere &mdash; a disabled
         source's episodes are hidden from all of your channels. Reorder with the
-        arrows. This applies on top of each channel's own source filtering.
+        arrows, or send a source straight to the top or bottom with the double
+        arrows. Only sources with at least one episode are listed. This applies
+        on top of each channel's own source filtering.
       </p>
       <ul className="divide-y rounded-md border">
-        {preferences.map((preference, index) => (
+        {visible.map((preference, index) => (
           <li
             key={preference.source_key}
             className="flex items-center gap-2 px-3 py-1.5"
           >
             <Checkbox
               checked={preference.enabled ?? true}
-              onCheckedChange={() => toggle(index)}
+              onCheckedChange={() => toggle(preference.source_key)}
               aria-label={`Enable ${sourceLabel(preference)}`}
             />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={index === 0}
+              onClick={() => moveTo(preference.source_key, 0)}
+              aria-label={`Move ${sourceLabel(preference)} to the top`}
+            >
+              <ChevronsUp className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -101,11 +137,22 @@ const SourcePreferences = () => {
             <Button
               variant="ghost"
               size="icon-sm"
-              disabled={index === preferences.length - 1}
+              disabled={index === visible.length - 1}
               onClick={() => move(index, 1)}
               aria-label={`Move ${sourceLabel(preference)} down`}
             >
               <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={index === visible.length - 1}
+              onClick={() =>
+                moveTo(preference.source_key, preferences.length - 1)
+              }
+              aria-label={`Move ${sourceLabel(preference)} to the bottom`}
+            >
+              <ChevronsDown className="h-4 w-4" />
             </Button>
             {preference.favicon_url ? (
               <img

@@ -21,12 +21,11 @@ function formatNumberedLine(
   number: number | null | undefined,
   name: string | null | undefined,
 ): { label?: string; value: string | null } {
-  if (number && name && !nameMatchesNumber(label, number, name))
-    return { label, value: `${number} ∙ ${name}` }
-  if (number && name) return { value: name }
-  if (name) return { label, value: name }
-  if (number) return { value: `${label} ${number}` }
-  return { value: null }
+  // Season 0 is TMDB's specials, so a number is only missing when it is nullish.
+  if (number == null) return name ? { label, value: name } : { value: null }
+  if (!name) return { value: `${label} ${number}` }
+  if (nameMatchesNumber(label, number, name)) return { value: name }
+  return { label, value: `${number} ∙ ${name}` }
 }
 
 export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
@@ -45,13 +44,13 @@ export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
         lines={[
           formatNumberedLine(
             "Season",
-            episode.season.season_number,
-            episode.season.name,
+            episode.tmdb_season_number ?? episode.season.season_number,
+            episode.tmdb_season_name ?? episode.season.name,
           ),
           {
             ...formatNumberedLine(
               "Episode",
-              episode.episode_number,
+              episode.tmdb_episode_number ?? episode.episode_number,
               episode.name,
             ),
             valueClassName: "font-bold",

@@ -215,19 +215,15 @@ class LinkMixin(LookupMixin, register=False):
         episode_number: int | None,
         episode_name: str | None,
     ) -> TvSeasonEpisode | None:
+        if not episode_name:
+            return self._episode_by_number(tmdb_id, season_number, episode_number)
+
         episodes = self._all_episodes(tmdb_id)
 
         if episode_detail := _find_by_name(episodes, episode_name):
             return episode_detail
 
-        if episode_detail := self._find_by_translated_name(
-            tmdb_id,
-            episodes,
-            episode_name,
-        ):
-            return episode_detail
-
-        return self._episode_by_number(tmdb_id, season_number, episode_number)
+        return self._find_by_translated_name(tmdb_id, episodes, episode_name)
 
     def _find_by_translated_name(
         self,

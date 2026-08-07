@@ -49,7 +49,12 @@ if TYPE_CHECKING:
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     """Model representing a `Show`."""
 
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "media_type", "name"]
+    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
+        "id",
+        "media_type",
+        "name",
+        "show_identifier",
+    ]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_count",
         "random",
@@ -62,7 +67,11 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes("Show", DIRECT_SORTABLE_FIELDS),
+        *sortable_field_indexes(
+            "Show",
+            DIRECT_SORTABLE_FIELDS,
+            already_indexed=("show_identifier",),
+        ),
         Index("Show-deleted_at-index", "deleted_at"),
         Index("Show-show_identifier-index", "show_identifier", "id"),
     )

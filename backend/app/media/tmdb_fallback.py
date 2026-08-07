@@ -40,8 +40,12 @@ SHOW_IDENTIFIER_FIELD = "show_identifier"
 SEASON_IDENTIFIER_FIELD = "season_identifier"
 EPISODE_IDENTIFIER_FIELD = "episode_identifier"
 TMDB_SEASON_NUMBER_FIELD = "tmdb_season_number"
+TMDB_SEASON_NAME_FIELD = "tmdb_season_name"
 TMDB_EPISODE_NUMBER_FIELD = "tmdb_episode_number"
+TMDB_URL_FIELD = "tmdb_url"
 NAME_FIELD = "name"
+
+TMDB_PAGE_URL = "https://www.themoviedb.org"
 
 
 def _tmdb_shows(identifiers: set[str]) -> SelectOfScalar[Show]:
@@ -86,6 +90,22 @@ def _tmdb_episodes(identifiers: set[str]) -> SelectOfScalar[Episode]:
     )
 
 
+def _counterparts(
+    session: Session,
+    rows: Sequence[Any],
+    statement: Callable[[set[str]], SelectOfScalar[Any]],
+    identifier_field: str,
+) -> dict[str, Any]:
+    identifiers = _tmdb_identified(rows, identifier_field)
+    if not identifiers:
+        return {}
+
+    return {
+        getattr(record, identifier_field): record
+        for record in session.exec(statement(identifiers)).all()
+    }
+
+
 def _fill[RowT](
     session: Session,
     rows: Sequence[RowT],
@@ -99,19 +119,9 @@ def _fill[RowT](
     nothing to be written back to the database.
     """
     incomplete = [
-        row
-        for row in rows
-        if str(getattr(row, identifier_field)).startswith(TMDB_IDENTIFIER_PREFIX)
-        and any(getattr(row, field) is None for field in fields)
+        row for row in rows if any(getattr(row, field) is None for field in fields)
     ]
-    if not incomplete:
-        return rows
-
-    identifiers = {getattr(row, identifier_field) for row in incomplete}
-    counterparts = {
-        getattr(record, identifier_field): record
-        for record in session.exec(statement(identifiers)).all()
-    }
+    counterparts = _counterparts(session, incomplete, statement, identifier_field)
     for row in incomplete:
         counterpart = counterparts.get(getattr(row, identifier_field))
         if counterpart is None:
@@ -119,6 +129,31 @@ def _fill[RowT](
         for field in fields:
             if getattr(row, field) is None:
                 setattr(row, field, getattr(counterpart, field))
+    return rows
+
+
+def _prefer[RowT](
+    session: Session,
+    rows: Sequence[RowT],
+    statement: Callable[[set[str]], SelectOfScalar[Any]],
+    identifier_field: str,
+    fields: tuple[str, ...],
+) -> Sequence[RowT]:
+    """Replace every `fields` value on `rows` with their TMDB counterpart's.
+
+    What TMDB has is what the media is served as, and what the website said is
+    kept only where TMDB has nothing of its own to say. `rows` are output schemas
+    rather than stored records, so nothing is written back to the database.
+    """
+    counterparts = _counterparts(session, rows, statement, identifier_field)
+    for row in rows:
+        counterpart = counterparts.get(getattr(row, identifier_field))
+        if counterpart is None:
+            continue
+        for field in fields:
+            value = getattr(counterpart, field)
+            if value is not None:
+                setattr(row, field, value)
     return rows
 
 
@@ -144,15 +179,64 @@ def fill_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]
     )
 
 
+def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
+    """Serve each linked `Show` row as TMDB has it, falling back on the site."""
+    return _prefer(
+        session,
+        rows,
+        _tmdb_shows,
+        SHOW_IDENTIFIER_FIELD,
+        SHOW_FALLBACK_FIELDS,
+    )
+
+
+def prefer_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
+    """Serve each linked `Season` row as TMDB has it, falling back on the site."""
+    return _prefer(
+        session,
+        rows,
+        _tmdb_seasons,
+        SEASON_IDENTIFIER_FIELD,
+        SEASON_FALLBACK_FIELDS,
+    )
+
+
 def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Fill what the website left out of each `Episode` row from TMDB."""
-    return _fill(
+    """Serve each linked `Episode` row as TMDB has it, falling back on the site."""
+    return _prefer(
         session,
         rows,
         _tmdb_episodes,
         EPISODE_IDENTIFIER_FIELD,
         EPISODE_FALLBACK_FIELDS,
     )
+
+
+def tmdb_episode_counterpart(
+    session: Session,
+    episode_identifier: str,
+) -> tuple[Episode, Season, Show] | None:
+    """Return the TMDB episode standing in for `episode_identifier`, and its parents.
+
+    An episode only has a TMDB counterpart while it is linked, so an identifier
+    the website issued itself has nothing to return.
+    """
+    if not episode_identifier.startswith(TMDB_IDENTIFIER_PREFIX):
+        return None
+
+    statement = (
+        select(Episode, Season, Show)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            Plugin.key == TMDB_PLUGIN_KEY,
+            Episode.episode_identifier == episode_identifier,
+            col(Episode.deleted_at).is_(None),
+        )
+    )
+    return session.exec(statement).first()
 
 
 def _tmdb_identified(rows: Sequence[Any], identifier_field: str) -> set[str]:
@@ -188,23 +272,85 @@ def prefer_tmdb_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequenc
     return rows
 
 
-def prefer_tmdb_episodes[RowT](
-    session: Session,
-    rows: Sequence[RowT],
-) -> Sequence[RowT]:
-    """Replace each linked `Episode` row's name and numbers with TMDB's own.
+def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
+    """Set each linked `Episode` row's page on themoviedb.org.
 
-    Which season an episode belongs to, where in it, and what it is called are
-    all things two websites disagree about. Where an episode is linked, TMDB's
-    answer is the one to go by, and an episode with no TMDB counterpart keeps
-    what the website said.
+    TMDB has no page for an episode id on its own, so the address is built from
+    the title it belongs to and the numbering TMDB gives it, which is not always
+    the numbering the website gave its own copy.
     """
     identifiers = _tmdb_identified(rows, EPISODE_IDENTIFIER_FIELD)
     if not identifiers:
         return rows
 
     statement = (
-        select(Episode, Season.season_number)
+        select(Episode.episode_identifier, Episode.episode_number, Season.season_number, Show.key)  # type: ignore[call-overload]
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            Plugin.key == TMDB_PLUGIN_KEY,
+            col(Episode.episode_identifier).in_(identifiers),
+            col(Episode.deleted_at).is_(None),
+        )
+    )
+    urls = {
+        identifier: tmdb_episode_url(show_key, season_number, episode_number)
+        for identifier, episode_number, season_number, show_key in session.exec(
+            statement,
+        ).all()
+    }
+    for row in rows:
+        url = urls.get(getattr(row, EPISODE_IDENTIFIER_FIELD))
+        if url:
+            setattr(row, TMDB_URL_FIELD, url)
+    return rows
+
+
+def tmdb_episode_url(
+    show_key: str,
+    season_number: int | None,
+    episode_number: int | None,
+) -> str | None:
+    """Return the page for a TMDB episode, given the show key it belongs to.
+
+    A TMDB show is keyed by the path its own page lives at ("tv/76075"), which
+    is what says whether the title is a film or a series. A film is a single
+    page with nothing below it, so its one episode is that page.
+    """
+    media_type, _, tmdb_id = show_key.partition("/")
+    if not tmdb_id:
+        return None
+    if media_type == "movie":
+        return f"{TMDB_PAGE_URL}/movie/{tmdb_id}"
+    if season_number is None or episode_number is None:
+        return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
+    return (
+        f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
+        f"/season/{season_number}/episode/{episode_number}"
+    )
+
+
+def prefer_tmdb_episodes[RowT](
+    session: Session,
+    rows: Sequence[RowT],
+) -> Sequence[RowT]:
+    """Replace each linked `Episode` row's name and season with TMDB's own.
+
+    Which season an episode belongs to, where in it, and what it is called are
+    all things two websites disagree about. The season comes off the TMDB episode
+    rather than off the row's own season, since the site can file an episode under
+    a season TMDB does not, which is what puts a site's finale in TMDB's specials.
+    Where an episode is linked, TMDB's answer is the one to go by, and an episode
+    with no TMDB counterpart keeps what the website said.
+    """
+    identifiers = _tmdb_identified(rows, EPISODE_IDENTIFIER_FIELD)
+    if not identifiers:
+        return rows
+
+    statement = (
+        select(Episode, Season.season_number, Season.name)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Show)
         .join(Source)
@@ -216,16 +362,17 @@ def prefer_tmdb_episodes[RowT](
         )
     )
     counterparts = {
-        episode.episode_identifier: (episode, season_number)
-        for episode, season_number in session.exec(statement).all()
+        episode.episode_identifier: (episode, season_number, season_name)
+        for episode, season_number, season_name in session.exec(statement).all()
     }
     for row in rows:
         counterpart = counterparts.get(getattr(row, EPISODE_IDENTIFIER_FIELD))
         if counterpart is None:
             continue
-        episode, season_number = counterpart
+        episode, season_number, season_name = counterpart
         setattr(row, TMDB_SEASON_NUMBER_FIELD, season_number)
         setattr(row, TMDB_EPISODE_NUMBER_FIELD, episode.episode_number)
+        setattr(row, TMDB_SEASON_NAME_FIELD, season_name)
         if episode.name:
             setattr(row, NAME_FIELD, episode.name)
     return rows

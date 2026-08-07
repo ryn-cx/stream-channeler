@@ -132,12 +132,22 @@ function groupSeasons(
     return keys.size > 0 ? [...keys] : [`season-${season.id}`]
   }
 
+  const labelForKey = (
+    key: string,
+    season: WhitelistSeasonOutput | undefined,
+  ) => {
+    if (key.startsWith("tmdb-")) {
+      return `Season ${key.replace("tmdb-", "")}`
+    }
+    return season ? siteSeasonLabel(season, anySeasonHasNumber) : ""
+  }
+
+  const keysBySeasonId = new Map(
+    seasons.map((season) => [season.id, groupKeysOfSeason(season)]),
+  )
   for (const season of seasons) {
-    for (const key of groupKeysOfSeason(season)) {
-      const label = key.startsWith("tmdb-")
-        ? `Season ${key.replace("tmdb-", "")}`
-        : siteSeasonLabel(season, anySeasonHasNumber)
-      groupFor(key, label).seasons.push(season)
+    for (const key of keysBySeasonId.get(season.id) ?? []) {
+      groupFor(key, labelForKey(key, season)).seasons.push(season)
     }
   }
 
@@ -145,14 +155,14 @@ function groupSeasons(
     const season = seasonsById.get(episode.season_id)
     const tmdbSeasonNumber =
       episode.tmdb_season_number ?? season?.tmdb_season_number
-    if (tmdbSeasonNumber != null) {
-      const key = tmdbGroupKey(tmdbSeasonNumber)
-      groupFor(key, `Season ${tmdbSeasonNumber}`).episodes.push(episode)
-      continue
-    }
-    const key = `season-${episode.season_id}`
-    const label = season ? siteSeasonLabel(season, anySeasonHasNumber) : ""
-    groupFor(key, label).episodes.push(episode)
+    // An episode TMDB has no record of belongs wherever its stored season went,
+    // so it is not left in a row of its own under the number the website gave it.
+    const key =
+      tmdbSeasonNumber != null
+        ? tmdbGroupKey(tmdbSeasonNumber)
+        : (keysBySeasonId.get(episode.season_id)?.[0] ??
+          `season-${episode.season_id}`)
+    groupFor(key, labelForKey(key, season)).episodes.push(episode)
   }
 
   // The site's split of a TMDB season leaves the episodes of one row numbered by
@@ -167,7 +177,12 @@ function groupSeasons(
       )
     }
     if (!group.key.startsWith("tmdb-")) continue
-    const name = group.seasons.find((season) => season.name)?.name
+    // Only a season TMDB has a record of can name a row TMDB numbers. A website
+    // that split the season carries its own number in the name of its copy, which
+    // is the very number the row is there to replace.
+    const name = group.seasons.find(
+      (season) => season.tmdb_season_number != null && season.name,
+    )?.name
     if (name && name !== group.label) {
       group.label = `${group.label} - ${name}`
     }

@@ -3,16 +3,20 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    get_current_user,
 )
-from app.episodes.dependencies import EditableEpisode
+from app.episodes.dependencies import EditableEpisode, ReadableEpisode
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     EpisodeCreate,
+    EpisodeInformationOutput,
+    EpisodeInformationSide,
+    EpisodeIssueReportInput,
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
@@ -20,7 +24,12 @@ from app.episodes.schemas import (
 )
 from app.media.schemas import MediaReadOptions
 from app.media.service import delete_record, media_scoped_list_response
-from app.media.tmdb_fallback import fill_episodes
+from app.media.tmdb_fallback import (
+    TMDB_PLUGIN_KEY,
+    fill_episodes,
+    tmdb_episode_counterpart,
+    tmdb_episode_url,
+)
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -53,7 +62,7 @@ EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
 
 
 def _episode_output(session: SessionDep, episode: Episode) -> EpisodeOutput:
-    """Return an `Episode` with whatever its website left out taken from TMDB."""
+    """Return an `Episode` as TMDB has it, falling back on what its website said."""
     return fill_episodes(session, [EpisodeOutput.model_validate(episode)])[0]
 
 
@@ -169,6 +178,110 @@ def get_show_episodes(
     )
     fill_episodes(session, episodes.data)
     return episodes
+
+
+def _information_side(
+    label: str,
+    episode: Episode,
+    season: Season,
+    show: Show,
+    url: str | None,
+) -> EpisodeInformationSide:
+    return EpisodeInformationSide(
+        label=label,
+        name=episode.name,
+        description=episode.description,
+        image_url=episode.image_url,
+        duration=episode.duration,
+        release_date=episode.release_date,
+        air_date=episode.air_date,
+        episode_number=episode.episode_number,
+        season_number=season.season_number,
+        season_name=season.name,
+        show_name=show.name,
+        url=url,
+        key=episode.key,
+    )
+
+
+@episodes_router.get("/{episode_id}/information")  # noqa: FAST003 - Used by ReadableEpisode.
+def get_episode_information(
+    session: SessionDep,
+    episode: ReadableEpisode,
+) -> EpisodeInformationOutput:
+    """Return what the website and TMDB each say about an `Episode`.
+
+    The website's own account is what it stored rather than what is served, since
+    what is served already reads as TMDB has it and would leave nothing to
+    compare.
+    """
+    season = episode.season
+    show = season.show
+    source = show.source
+
+    counterpart = tmdb_episode_counterpart(session, episode.episode_identifier)
+    tmdb: EpisodeInformationSide | None = None
+    if counterpart:
+        tmdb_episode, tmdb_season, tmdb_show = counterpart
+        tmdb = _information_side(
+            TMDB_PLUGIN_KEY,
+            tmdb_episode,
+            tmdb_season,
+            tmdb_show,
+            tmdb_episode_url(
+                tmdb_show.key,
+                tmdb_season.season_number,
+                tmdb_episode.episode_number,
+            ),
+        )
+
+    return EpisodeInformationOutput(
+        episode_id=episode.id,
+        episode_identifier=episode.episode_identifier,
+        episode_identifier_locked=episode.episode_identifier_locked,
+        issue_report=episode.issue_report,
+        source=_information_side(
+            source.name or source.plugin.name or source.plugin.key,
+            episode,
+            season,
+            show,
+            episode.url,
+        ),
+        tmdb=tmdb,
+    )
+
+
+@episodes_router.put(
+    "/{episode_id}/issue-report",  # noqa: FAST003 - Used by ReadableEpisode.
+    dependencies=[Depends(get_current_user)],
+)
+def report_episode_issue(
+    session: SessionDep,
+    episode: ReadableEpisode,
+    report_input: EpisodeIssueReportInput,
+) -> EpisodeOutput:
+    """Record what a `User` says is wrong with an `Episode`."""
+    episode.issue_report = report_input.report
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return _episode_output(session, episode)
+
+
+@episodes_router.delete(
+    "/{episode_id}/issue-report",  # noqa: FAST003 - Used by ReadableEpisode.
+    dependencies=[Depends(get_current_user)],
+)
+def clear_episode_issue_report(
+    session: SessionDep,
+    episode: ReadableEpisode,
+) -> EpisodeOutput:
+    """Drop what was reported as wrong with an `Episode`."""
+    episode.issue_report = None
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return _episode_output(session, episode)
 
 
 @episodes_router.patch("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.

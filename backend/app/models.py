@@ -44,16 +44,27 @@ class SupportsDataTimestamp(Protocol):
     def data_timestamp(self) -> datetime: ...
 
 
+# A sortable field ending in this is the same sort with the number 0 pushed past
+# every other number instead of ahead of them, which is where a season or episode
+# numbered 0 belongs when it is the specials rather than the first of the run.
+ZERO_LAST_SUFFIX = "_zero_last"
+
+
 def sortable_field_indexes(
     model_name: str,
     direct_sortable_fields: Iterable[str],
+    already_indexed: Iterable[str] = (),
 ) -> tuple[Index, ...]:
-    """Build an `Index` for each field that can be used for sorting by the user."""
+    """Build an `Index` for each field that can be used for sorting by the user.
+
+    `id` is already indexed by the primary key, and `already_indexed` names the
+    fields the table indexes itself, which an index built here would collide with.
+    """
+    skipped = {"id", *already_indexed}
     return tuple(
         Index(f"{model_name}-{field}-index", field)
         for field in direct_sortable_fields
-        # Skip id because it is already indexed by the primary key.
-        if field != "id"
+        if field not in skipped
     )
 
 

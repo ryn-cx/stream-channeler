@@ -421,6 +421,49 @@ export type EpisodeCreate = {
     tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
+};
+
+/**
+ * What the website and TMDB each say about an episode, side by side.
+ *
+ * The stored record is returned as the website reported it rather than as it is
+ * served, so the two accounts can be compared instead of one standing in for
+ * the other.
+ */
+export type EpisodeInformationOutput = {
+    episode_id: string;
+    episode_identifier: string;
+    episode_identifier_locked: boolean;
+    issue_report: (string | null);
+    source: EpisodeInformationSide;
+    tmdb: (EpisodeInformationSide | null);
+};
+
+/**
+ * One record's own account of an episode, as the website that holds it has it.
+ */
+export type EpisodeInformationSide = {
+    label: string;
+    name: (string | null);
+    description: (string | null);
+    image_url: (string | null);
+    duration: (number | null);
+    release_date: (string | null);
+    air_date: (string | null);
+    episode_number: (number | null);
+    season_number: (number | null);
+    season_name: (string | null);
+    show_name: (string | null);
+    url: (string | null);
+    key: string;
+};
+
+/**
+ * Schema for reporting what is wrong with an `Episode`.
+ */
+export type EpisodeIssueReportInput = {
+    report: string;
 };
 
 /**
@@ -444,6 +487,7 @@ export type EpisodeListOutput = {
     tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
     id: string;
     season_id: string;
     username: (string | null);
@@ -477,6 +521,7 @@ export type EpisodeOutput = {
     tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
     id: string;
     season_id: string;
 };
@@ -512,6 +557,7 @@ export type EpisodeUpdate = {
     tmdb_id?: (number | null);
     episode_identifier?: (string | null);
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -532,13 +578,18 @@ export type EpisodeWithDetails = {
     tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
     id: string;
     season_id: string;
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
+    tmdb_url?: (string | null);
     channel_id: string;
     channel_ids?: Array<(string)>;
+    tmdb_season_number?: (number | null);
+    tmdb_season_name?: (string | null);
+    tmdb_episode_number?: (number | null);
 };
 
 /**
@@ -1039,6 +1090,7 @@ export type SourcePreferenceOutput = {
     enabled?: boolean;
     name?: (string | null);
     favicon_url?: (string | null);
+    episode_count: number;
 };
 
 /**
@@ -1292,12 +1344,14 @@ export type WhitelistEpisodeOutput = {
     tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    issue_report?: (string | null);
     id: string;
     season_id: string;
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
     tmdb_season_number?: (number | null);
+    tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
 };
 
@@ -1702,6 +1756,25 @@ export type EpisodesGetEpisodesData = {
 };
 
 export type EpisodesGetEpisodesResponse = (EpisodesPublic);
+
+export type EpisodesGetEpisodeInformationData = {
+    episodeId: string;
+};
+
+export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
+
+export type EpisodesReportEpisodeIssueData = {
+    episodeId: string;
+    requestBody: EpisodeIssueReportInput;
+};
+
+export type EpisodesReportEpisodeIssueResponse = (EpisodeOutput);
+
+export type EpisodesClearEpisodeIssueReportData = {
+    episodeId: string;
+};
+
+export type EpisodesClearEpisodeIssueReportResponse = (EpisodeOutput);
 
 export type EpisodesUpdateEpisodeData = {
     episodeId: string;

@@ -62,6 +62,9 @@ from app.media.tmdb_fallback import (
     fill_episodes,
     fill_seasons,
     fill_shows,
+    fill_tmdb_urls,
+    prefer_seasons,
+    prefer_shows,
     prefer_tmdb_episodes,
     prefer_tmdb_seasons,
 )
@@ -431,9 +434,14 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
+    # A card is about the media rather than one website's copy of it, so every row
+    # reads as TMDB has it, with the website standing in only where TMDB has
+    # nothing of its own to say.
     fill_episodes(session, output.episodes)
-    fill_seasons(session, list(output.seasons.values()))
-    fill_shows(session, list(output.shows.values()))
+    fill_tmdb_urls(session, output.episodes)
+    prefer_tmdb_episodes(session, output.episodes)
+    prefer_seasons(session, list(output.seasons.values()))
+    prefer_shows(session, list(output.shows.values()))
 
     logger.info("get_channel_episodes completed in {:.3f} seconds", time.time() - start)
     return output

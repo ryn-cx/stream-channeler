@@ -28,6 +28,7 @@ from app.channels.schemas import (
 )
 from app.episodes.models import Episode
 from app.media.tmdb_fallback import TMDB_PLUGIN_KEY
+from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
 from app.schemas import RecordScope, ScopedReadOptions
 from app.seasons.models import Season
@@ -412,12 +413,19 @@ def set_channel_combined_channels(
     session.commit()
 
 
+def _sort_option_label(model_name: str, field_name: str) -> str:
+    """Name a sortable field as it reads in the sort picker."""
+    base_field = field_name.removesuffix(ZERO_LAST_SUFFIX)
+    variant = " (0 Last)" if base_field != field_name else ""
+    return f"{model_name} - {base_field.replace('_', ' ').title()}{variant}"
+
+
 @cache
 def get_sort_options() -> list[SortOptionOutput]:
     """Build and cache the list of all possible sorting options."""
     options: list[SortOptionOutput] = [
         SortOptionOutput(
-            label=f"{model.__name__} - {field_name.replace('_', ' ').title()}",
+            label=_sort_option_label(model.__name__, field_name),
             # If this value does not match it should raise an error.
             model=model.__name__.lower(),  # type: ignore[arg-type]
             field=field_name,

@@ -10,7 +10,7 @@ import {
 import { lazy, Suspense } from "react"
 
 import type {
-  EpisodeOutput,
+  EpisodeWithDetails,
   PluginOutput,
   SeasonOutput,
   ShowPublic,
@@ -23,7 +23,7 @@ import {
 import { Card } from "@/components/ui/card"
 
 /** Episode shape required by the shared card layout and overlays. */
-export type BaseEpisodeWithDetails = EpisodeOutput & {
+export type BaseEpisodeWithDetails = EpisodeWithDetails & {
   season: SeasonOutput
   show: ShowPublic
   source: SourcePublic
@@ -227,7 +227,7 @@ export function EpisodeCard({
         <img
           loading="lazy"
           src={imageUrl}
-          alt={`Episode ${episode.episode_number} - ${episode.name ?? ""}`}
+          alt={`Episode ${episode.tmdb_episode_number ?? episode.episode_number} - ${episode.name ?? ""}`}
           className="w-full h-full object-cover transition-opacity group-hover:opacity-80"
         />
 

@@ -43,6 +43,9 @@ class BaseEpisode(BaseMediaMixin):
     tmdb_id: int | None = Field(default=None)
     episode_identifier: str
     episode_identifier_locked: bool = Field(default=False)
+    # What a `User` says is wrong with the episode, which is about the episode
+    # rather than about what any website reported, so an import never clears it.
+    issue_report: str | None = Field(default=None)
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
@@ -51,6 +54,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "air_date",
         "duration",
+        "episode_identifier",
         "episode_number",
         "id",
         "name",
@@ -58,12 +62,14 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         "sort_order",
     ]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
+        "episode_number_zero_last",
         "last_watched_completed",
         "last_watched_incomplete",
         "random",
         "recently_aired",
         "saved_order",
         "sequential",
+        "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
@@ -72,7 +78,11 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes("Episode", DIRECT_SORTABLE_FIELDS),
+        *sortable_field_indexes(
+            "Episode",
+            DIRECT_SORTABLE_FIELDS,
+            already_indexed=("episode_identifier",),
+        ),
         Index("Episode-deleted_at-index", "deleted_at"),
         Index("Episode-episode_identifier-index", "episode_identifier", "id"),
     )
@@ -138,11 +148,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     ) -> Self:
         """Upsert the `Episode`, keeping a locked `episode_identifier` intact.
 
-        `episode_identifier_locked` is only ever set by a `User`, so it is always
-        protected, and while it is set the automatically detected
-        `episode_identifier` never replaces the one the `User` chose.
+        `episode_identifier_locked` and `issue_report` are only ever set by a
+        `User`, so they are always protected, and while the lock is set the
+        automatically detected `episode_identifier` never replaces the one the
+        `User` chose.
         """
-        protected_keys = set(protected_keys or ()) | {"episode_identifier_locked"}
+        protected_keys = set(protected_keys or ()) | {
+            "episode_identifier_locked",
+            "issue_report",
+        }
         if existing_record and existing_record.episode_identifier_locked:
             protected_keys.add("episode_identifier")
         return super().upsert(parent, existing_record, protected_keys)

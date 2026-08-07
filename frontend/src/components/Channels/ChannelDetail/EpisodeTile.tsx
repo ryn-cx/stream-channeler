@@ -12,6 +12,7 @@ import {
 import { lazy, Suspense, useState } from "react"
 import { WatchesService } from "@/client"
 import { formatDuration } from "@/components/ChannelCommon/formatters"
+import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import {
   type ActionMenuItem,
   ResponsiveActionMenu,
@@ -211,6 +212,11 @@ export function EpisodeTile({
               </div>
             )}
 
+            <TmdbLink
+              url={episode.tmdb_url}
+              className="absolute bottom-1.5 right-1"
+            />
+
             {/* Play icon on hover */}
             {hovered && (
               <button
@@ -315,7 +321,8 @@ export function EpisodeTile({
         {!hovered && (
           <div className="mt-1 px-0.5">
             <p className="text-xs text-muted-foreground truncate">
-              {episode.name || `Episode ${episode.episode_number || ""}`}
+              {episode.name ||
+                `Episode ${episode.tmdb_episode_number ?? episode.episode_number ?? ""}`}
             </p>
           </div>
         )}
