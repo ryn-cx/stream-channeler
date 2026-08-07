@@ -96,6 +96,37 @@ def _config_for_user(
     return cache[user_id]
 
 
+def _report_unresolvable(session: Session, identifiers: set[str]) -> None:
+    """Log why the watches on `identifiers` have nothing to be pointed at.
+
+    A watch outlives the episode it names, so it can name one this database has
+    never held, and there is nothing a rerun will do about it until that episode
+    is imported. Saying which of the two it is separates a library that has yet
+    to catch up from an episode that was deleted and is still there to restore.
+    """
+    if not identifiers:
+        return
+
+    soft_deleted = set(
+        session.exec(
+            select(Episode.episode_identifier).where(
+                col(Episode.episode_identifier).in_(identifiers),
+            ),
+        ).all(),
+    )
+    unknown = identifiers - soft_deleted
+    logger.info(
+        "{} identifiers name only a deleted episode, {} name no episode at all",
+        len(soft_deleted),
+        len(unknown),
+    )
+    if unknown:
+        logger.info(
+            "Identifiers with no episode, first few: {}",
+            ", ".join(sorted(unknown)[:5]),
+        )
+
+
 def relink_watches(session: Session) -> int:
     """Attach every detached watch that has an episode to point at again."""
     detached = _detached_watches(session)
@@ -104,10 +135,9 @@ def relink_watches(session: Session) -> int:
         return 0
 
     logger.info("Found {} detached watches", len(detached))
-    candidates = _candidates_by_identifier(
-        session,
-        {watch.episode_identifier for watch in detached},
-    )
+    identifiers = {watch.episode_identifier for watch in detached}
+    candidates = _candidates_by_identifier(session, identifiers)
+    _report_unresolvable(session, identifiers - candidates.keys())
     configs: dict[UUID, SourceDedupConfig] = {}
 
     relinked = 0
