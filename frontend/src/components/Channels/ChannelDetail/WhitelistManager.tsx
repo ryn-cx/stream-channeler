@@ -85,6 +85,13 @@ function tmdbGroupKey(tmdbSeasonNumber: number) {
   return `tmdb-${tmdbSeasonNumber}`
 }
 
+// A season TMDB has a record of is one row for every site carrying it, so the
+// episodes under it TMDB has no record of would be read as one site's had they
+// only their season to go by. They are told apart by the sites carrying them.
+function siteGroupKey(seasonId: string, showIds: string[]) {
+  return `season-${seasonId}-${[...showIds].sort().join("-")}`
+}
+
 function siteSeasonLabel(
   season: WhitelistSeasonOutput,
   anySeasonHasNumber: boolean,
@@ -131,13 +138,13 @@ function groupSeasons(
       seasonEpisodes.map((episode) =>
         episode.tmdb_season_number != null
           ? tmdbGroupKey(episode.tmdb_season_number)
-          : `season-${season.id}`,
+          : siteGroupKey(season.id, episode.show_ids),
       ),
     )
     if (keys.size > 0) return [...keys]
     return season.tmdb_season_number != null
       ? [tmdbGroupKey(season.tmdb_season_number)]
-      : [`season-${season.id}`]
+      : [siteGroupKey(season.id, season.show_ids)]
   }
 
   const labelForKey = (
@@ -166,7 +173,7 @@ function groupSeasons(
     const key =
       episode.tmdb_season_number != null
         ? tmdbGroupKey(episode.tmdb_season_number)
-        : `season-${episode.season_id}`
+        : siteGroupKey(episode.season_id, episode.show_ids)
     groupFor(key, labelForKey(key, season)).episodes.push(episode)
   }
 
