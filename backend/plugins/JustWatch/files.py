@@ -5,6 +5,7 @@ from functools import cache
 from typing import Any, cast, override
 
 import httpx
+from get_around import GetAround
 from good_ass_pydantic_integrator import ParseLevel
 from just_scrape import JustScrape
 from just_scrape.buy_box_offers import models as buy_box_offers_models
@@ -18,6 +19,7 @@ from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -36,11 +38,23 @@ from plugins.utils.get_around_client import get_around_client
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
 
+# The worker is shared by every plugin and JustWatch is what leans on it hardest,
+# so its requests go through a proxy of our own whenever one is configured and
+# fall back to the worker when it is not.
+@cache
+def _just_watch_client() -> GetAround:
+    if settings.PROXY:
+        return GetAround(proxy=settings.PROXY)
+    return get_around_client()
+
+
 @cache
 def just_scrape() -> JustScrape:
+    # Nothing but this shares the proxy, so there is nothing to pace it against.
+    sleep_time = 0 if settings.PROXY else 5
     return JustScrape(
-        get_around_client=get_around_client(),
-        sleep_time=5,
+        get_around_client=_just_watch_client(),
+        sleep_time=sleep_time,
     )
 
 
@@ -49,7 +63,7 @@ def just_scrape() -> JustScrape:
 # so it gets a client that returns as soon as the response arrives.
 @cache
 def unthrottled_just_scrape() -> JustScrape:
-    return JustScrape(get_around_client=get_around_client())
+    return JustScrape(get_around_client=_just_watch_client())
 
 
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
