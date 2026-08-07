@@ -127,10 +127,6 @@ class BaseFile[T](ABC):
             f"in {elapsed_time:.2f}s",
         )
 
-    def _log_parse(self) -> None:
-        """Log that the file's stored content is about to be parsed."""
-        logger.debug(f"Parsing {self.__plugin.key} {self.file_key()}")
-
     @final  # Makes mocking downloads easier.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
@@ -225,7 +221,6 @@ class JSONFile[T](BaseFile[T], ABC):
     def parsed(self) -> T:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
-            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
@@ -259,7 +254,6 @@ class XMLFile(BaseFile[Element], ABC):
     def parsed(self) -> Element:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
-            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
@@ -285,7 +279,6 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
     def parsed(self) -> BeautifulSoup:
         """Return the parsed content of the file."""
         if self._cached_parsed is None:
-            self._log_parse()
             if not (content := self.database_record.content):
                 msg = "File content is empty, cannot parse."
                 raise ValueError(msg)
