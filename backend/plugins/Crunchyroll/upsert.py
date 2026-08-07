@@ -24,6 +24,7 @@ from plugins.Crunchyroll.music_keys import (
     music_season_key,
     parse_artist_show_key,
 )
+from plugins.TMDB.mixin import highest_episode_number
 
 # Crunchyroll adds music far more slowly than it airs episodes, and the music
 # catalogue offers no cutoff parameter so every check downloads all of it. The
@@ -163,6 +164,9 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         episodes_data = self.season_episodes_file(season.key).parsed()
+        last_number = highest_episode_number(
+            episode_data.episode_number for episode_data in episodes_data.data
+        )
         for index, episode_data in enumerate(episodes_data.data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
             if not self._episode_is_outdated(episode, force=force):
@@ -192,6 +196,7 @@ class UpsertMixin(HelperMixin, register=False):
                 episode,
                 show_key,
                 tmdb_media_type,
+                last_number,
             )
 
     def _upsert_music_source(self) -> Source:

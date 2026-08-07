@@ -11,6 +11,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Netflix.helpers import HelperMixin
+from plugins.TMDB.mixin import highest_episode_number
 
 
 class UpsertMixin(HelperMixin, register=False):
@@ -105,9 +106,11 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, episode_data in enumerate(
-            self._season_episodes(show_key, season_id),
-        ):
+        episodes = self._season_episodes(show_key, season_id)
+        last_number = highest_episode_number(
+            episode_data.number for episode_data in episodes
+        )
+        for sort_order, episode_data in enumerate(episodes):
             episode_key = str(episode_data.video_id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(episode, force=force):
@@ -136,6 +139,7 @@ class UpsertMixin(HelperMixin, register=False):
                 episode,
                 show_key,
                 "tv",
+                last_number,
             )
 
     def _upsert_movie(

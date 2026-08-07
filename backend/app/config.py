@@ -163,6 +163,12 @@ class Settings(BaseSettings):
                         keyring_value = None
                     if keyring_value:
                         data[name] = keyring_value
+
+            # Every other secret above is required, so a leftover placeholder is
+            # caught by `_enforce_non_default_secrets`. A proxy is optional, and
+            # nothing downstream can tell the placeholder from a URL.
+            if data.get("PROXY") == "changethis":
+                data["PROXY"] = ""
         return data
 
 

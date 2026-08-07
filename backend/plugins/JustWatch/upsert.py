@@ -8,6 +8,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.JustWatch.helpers import HelperMixin
+from plugins.TMDB.mixin import highest_episode_number
 
 if TYPE_CHECKING:
     from just_scrape.url_title_details import models as url_title_details_models
@@ -217,6 +218,9 @@ class UpsertMixin(HelperMixin, register=False):
             .data.url_v2.node.content.full_backdrops
         )
         parsed_episodes = season_episodes_file.parsed_episodes()
+        last_number = highest_episode_number(
+            season_episode.content.episode_number for season_episode in parsed_episodes
+        )
         for index, season_episode in enumerate(parsed_episodes):
             existing_episode = Episode.get_from_memory(
                 self.session,
@@ -266,6 +270,7 @@ class UpsertMixin(HelperMixin, register=False):
                 existing_episode,
                 show_key,
                 "tv",
+                last_number,
             )
 
     def _upsert_movie_episode(

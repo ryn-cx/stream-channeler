@@ -10,6 +10,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.watches.services import get_installed_plugin
 from plugins.TMDB import TMDB
+from plugins.TMDB.mixin import highest_episode_number
 
 
 def relink_children(session: Session, show: Show) -> None:
@@ -64,16 +65,22 @@ def _relink_episodes(
     tmdb_id: int | None,
     media_type: Literal["movie", "tv"],
 ) -> None:
+    last_number = highest_episode_number(
+        episode.episode_number
+        for episode in season.episodes
+        if episode.deleted_at is None
+    )
     for episode in season.episodes:
-        _relink_episode(tmdb, episode, season, tmdb_id, media_type)
+        _relink_episode(tmdb, episode, season, tmdb_id, media_type, last_number)
 
 
-def _relink_episode(
+def _relink_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
     tmdb: TMDB,
     episode: Episode,
     season: Season,
     tmdb_id: int | None,
     media_type: Literal["movie", "tv"],
+    last_number: int | None,
 ) -> None:
     locked_identifier = (
         episode.episode_identifier if episode.episode_identifier_locked else None
@@ -87,6 +94,7 @@ def _relink_episode(
         season.season_number,
         episode.episode_number,
         media_type,
+        last_number,
     )
     if locked_identifier:
         episode.episode_identifier = locked_identifier

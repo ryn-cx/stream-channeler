@@ -1,9 +1,8 @@
 # TODO: Validate
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, Literal, override
 
 from app.episodes.models import Episode
-from app.media.tmdb_fallback import TMDB_IDENTIFIER_PREFIX
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -14,6 +13,11 @@ from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
 
 _UNRESOLVED = Sentinel("TMDB_ID")
+
+
+def highest_episode_number(numbers: Iterable[int | None]) -> int | None:
+    """Return the last episode number a season runs to, ignoring unnumbered ones."""
+    return max((number for number in numbers if number is not None), default=None)
 
 
 class TMDBMixin(BasePlugin, register=False):
@@ -95,13 +99,14 @@ class TMDBMixin(BasePlugin, register=False):
         season_files = self._season_files(season.key, show_key)
         return season.upsert_and_set_update_at(show, existing_season, season_files)
 
-    def _merge_and_upsert_episode(
+    def _merge_and_upsert_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
         self,
         episode: Episode,
         season: Season,
         existing_episode: Episode | None,
         show_key: str,
         tmdb_media_type: Literal["movie", "tv"],
+        last_episode_number: int | None = None,
     ) -> Episode:
         episode = self.tmdb.tmdb_link_episode(
             episode,
@@ -109,6 +114,7 @@ class TMDBMixin(BasePlugin, register=False):
             season.season_number,
             episode.episode_number,
             tmdb_media_type,
+            last_episode_number,
         )
         episode_files = self._episode_files(episode.key, season.key, show_key)
         return episode.upsert_and_set_update_at(season, existing_episode, episode_files)

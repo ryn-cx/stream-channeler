@@ -409,4 +409,5 @@ class UpsertMixin(HelperMixin, register=False):
             episode,
             show_key,
             self.tmdb_media_type(show_key),
+            self._highest_episode_number(season.key),
         )

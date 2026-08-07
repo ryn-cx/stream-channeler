@@ -31,6 +31,7 @@ def test_relink_season_children_links_every_episode(
         season.season_number,
         episode.episode_number,
         "tv",
+        episode.episode_number,
     )
     assert episode.tmdb_id is None
 

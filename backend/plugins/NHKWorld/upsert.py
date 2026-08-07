@@ -113,4 +113,5 @@ class UpsertMixin(HelperMixin, register=False):
                 episode,
                 show_key,
                 "tv",
+                len(items),
             )

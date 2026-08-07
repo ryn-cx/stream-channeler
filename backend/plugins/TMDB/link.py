@@ -171,13 +171,14 @@ class LinkMixin(LookupMixin, register=False):
             season.season_identifier = tmdb_identifier("tv", season_detail.id)
         return season
 
-    def tmdb_link_episode(
+    def tmdb_link_episode(  # noqa: PLR0913 - Every part of what names a TMDB episode.
         self,
         episode: Episode,
         tmdb_id: int | None,
         season_number: int | None,
         episode_number: int | None,
         media_type: Literal["movie", "tv"] = "tv",
+        highest_episode_number: int | None = None,
     ) -> Episode:
         """Point an `Episode` at its TMDB episode.
 
@@ -186,6 +187,11 @@ class LinkMixin(LookupMixin, register=False):
         watch rather than two. TMDB numbers films and episodes separately, so the
         media type is part of the identifier to keep two that share a number
         apart.
+
+        `highest_episode_number` is the last episode number the website gives
+        the season. A season the website and TMDB both end on the same number is
+        one neither has split or merged, so its numbering can be trusted, and it
+        is what an episode whose name matched nothing falls back on.
         """
         if not tmdb_id:
             return episode
@@ -203,6 +209,7 @@ class LinkMixin(LookupMixin, register=False):
             season_number,
             episode_number,
             episode.name,
+            highest_episode_number,
         )
         if episode_detail:
             episode.episode_identifier = tmdb_identifier(
@@ -217,6 +224,7 @@ class LinkMixin(LookupMixin, register=False):
         season_number: int | None,
         episode_number: int | None,
         episode_name: str | None,
+        highest_episode_number: int | None,
     ) -> TvSeasonEpisode | None:
         if not episode_name:
             return self._episode_by_number(tmdb_id, season_number, episode_number)
@@ -226,7 +234,38 @@ class LinkMixin(LookupMixin, register=False):
         if episode_detail := _find_by_name(episodes, episode_name):
             return episode_detail
 
-        return self._find_by_translated_name(tmdb_id, episodes, episode_name)
+        if translated_detail := self._find_by_translated_name(
+            tmdb_id,
+            episodes,
+            episode_name,
+        ):
+            return translated_detail
+
+        if not self._season_ends_on_the_same_number(
+            tmdb_id,
+            season_number,
+            highest_episode_number,
+        ):
+            return None
+
+        return self._episode_by_number(tmdb_id, season_number, episode_number)
+
+    def _season_ends_on_the_same_number(
+        self,
+        tmdb_id: int,
+        season_number: int | None,
+        highest_episode_number: int | None,
+    ) -> bool:
+        if season_number is None or highest_episode_number is None:
+            return False
+        if not self.has_season(tmdb_id, season_number):
+            return False
+
+        episodes = self.season_detail_file(tmdb_id, season_number).parsed().episodes
+        tmdb_numbers = [episode.episode_number for episode in episodes]
+        if not tmdb_numbers:
+            return False
+        return max(tmdb_numbers) == highest_episode_number
 
     def _find_by_translated_name(
         self,

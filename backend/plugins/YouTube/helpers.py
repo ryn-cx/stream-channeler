@@ -61,6 +61,11 @@ class HelperMixin(FileMixin, register=False):
             return None
         return episode_keys.index(episode_key) + 1
 
+    def _highest_episode_number(self, season_key: str) -> int | None:
+        if not is_show_season_key(season_key):
+            return None
+        return len(self._season_episode_keys(season_key)) or None
+
     def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:
         """Return the `Source` for videos that are imported one video at a time.
 

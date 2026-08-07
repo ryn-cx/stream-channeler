@@ -36,7 +36,7 @@ def title_page_url(media_type: str, tmdb_id: int) -> str:
 
 _POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"
 _BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original"
-_STILL_BASE_URL = "https://image.tmdb.org/t/p/w300"
+_STILL_BASE_URL = "https://image.tmdb.org/t/p/original"
 _LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
 
 
@@ -78,7 +78,10 @@ def duration_seconds(runtime: int | None) -> int | None:
 
 
 def air_datetime(air_date: date | None) -> datetime | None:
-    if air_date is None:
+    # A date TMDB does not have yet comes back as an empty string rather than
+    # being left out, which the generated model types as a `date` but passes
+    # along as it arrived.
+    if not air_date:
         return None
     return tz_datetime.combine(air_date, datetime.min.time())
 
@@ -89,31 +92,44 @@ class _TMDBEndpointFile[T: BaseModel](GAPIJSON[T]):
     API_ENDPOINT: ClassVar[Any]
 
 
-class MovieDetails(_TMDBEndpointFile[MovieDetailsModel]):
+class _TMDBIdEndpointFile[T: BaseModel](_TMDBEndpointFile[T]):
+    """A TMDB file the API looks up by a title's numeric id.
+
+    A file is keyed by a string, but TMDB checks that the response it hands back
+    is for the id that was asked for, and the id it read out of the response is a
+    number. A string never matches one, so the id is passed as what it is.
+    """
+
+    @override
+    def _get(self) -> T:
+        return self.API_ENDPOINT.download_and_parse(int(self.unique_identifier))
+
+
+class MovieDetails(_TMDBIdEndpointFile[MovieDetailsModel]):
     """Movie details file."""
 
     API_ENDPOINT = tminidb_client().movie_details
 
 
-class TvSeriesDetails(_TMDBEndpointFile[TvSeriesDetailsModel]):
+class TvSeriesDetails(_TMDBIdEndpointFile[TvSeriesDetailsModel]):
     """TV series details file."""
 
     API_ENDPOINT = tminidb_client().tv_series_details
 
 
-class MovieWatchProviders(_TMDBEndpointFile[MovieWatchProvidersModel]):
+class MovieWatchProviders(_TMDBIdEndpointFile[MovieWatchProvidersModel]):
     """Movie watch providers file."""
 
     API_ENDPOINT = tminidb_client().movie_watch_providers
 
 
-class TvWatchProviders(_TMDBEndpointFile[TvWatchProvidersModel]):
+class TvWatchProviders(_TMDBIdEndpointFile[TvWatchProvidersModel]):
     """TV watch providers file."""
 
     API_ENDPOINT = tminidb_client().tv_watch_providers
 
 
-class ShowDetail(_TMDBEndpointFile[TvSeriesDetailsModel]):
+class ShowDetail(_TMDBIdEndpointFile[TvSeriesDetailsModel]):
     """Show detail file."""
 
     API_ENDPOINT = tminidb_client().tv_series_details
