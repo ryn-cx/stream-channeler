@@ -11,12 +11,16 @@ import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
-  nullifyBlanks,
-  optionalInt,
-  optionalString,
-  requiredKey,
-} from "@/lib/formSchemas"
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 
 import type { ShowTableData } from "./columns"
 
@@ -28,9 +32,10 @@ const formSchema = z.object({
   url: optionalString,
   image_url: optionalString,
   icon: optionalString,
-  tmdb_id: optionalInt,
   data_timestamp: optionalString,
   update_at: optionalString,
+  show_identifier: z.string().min(1, "Show identifier is required"),
+  show_identifier_locked: z.boolean(),
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -55,9 +60,10 @@ const EditShow = ({ show }: EditShowProps) => {
       url: show.url ?? "",
       image_url: show.image_url ?? "",
       icon: show.icon ?? "",
-      tmdb_id: show.tmdb_id ?? "",
       data_timestamp: show.data_timestamp?.slice(0, 16) ?? "",
       update_at: show.update_at?.slice(0, 16) ?? "",
+      show_identifier: show.show_identifier,
+      show_identifier_locked: show.show_identifier_locked ?? false,
     },
   })
 
@@ -139,6 +145,45 @@ const EditShow = ({ show }: EditShowProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      <FormField
+        control={form.control}
+        name="show_identifier"
+        render={({ field, fieldState }) => (
+          <FormItem>
+            <FormLabel>
+              Show Identifier<span className="text-destructive"> *</span>
+            </FormLabel>
+            <FormControl>
+              <Input
+                aria-invalid={fieldState.invalid}
+                required
+                type="text"
+                {...field}
+                onChange={(event) => {
+                  field.onChange(event)
+                  form.setValue("show_identifier_locked", true)
+                }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="show_identifier_locked"
+        render={({ field }) => (
+          <FormItem className="flex items-center gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <FormLabel className="font-normal">Lock show identifier?</FormLabel>
+          </FormItem>
+        )}
+      />
     </FormModal>
   )
 }

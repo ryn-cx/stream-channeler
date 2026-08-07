@@ -135,6 +135,15 @@ class BasePlugin(
             self._reset_show_state()
         self._current_show = show
 
+    def _use_tmdb_id(self, tmdb_id: int | None) -> None:
+        """Take `tmdb_id` as the TMDB title of the show being imported.
+
+        Called at the top of `import_url`, after the wrapper has recorded the
+        show, so the value survives for the rest of the import. A plugin that
+        does not link its media to TMDB has nothing to take; `TMDBMixin` is what
+        overrides this to hold on to it.
+        """
+
     def _reset_show_state(self) -> None:
         """Drop everything cached for the show the instance has moved off.
 
@@ -427,7 +436,12 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         return f"(?:{alternatives})"
 
     @override
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def import_url(
+        self,
+        url: str,
+        tmdb_id: int | None = None,
+    ) -> list[URLImportResult]:
+        self._use_tmdb_id(tmdb_id)
         handler = self._get_url_handler(url)
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key)

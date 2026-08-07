@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from app.episodes.models import BaseEpisode, Episode
+from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
@@ -97,15 +98,9 @@ class EpisodeInformationOutput(BaseModel):
     episode_id: uuid.UUID
     episode_identifier: str
     episode_identifier_locked: bool
-    issue_report: str | None
+    issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None
-
-
-class EpisodeIssueReportInput(BaseModel):
-    """Schema for reporting what is wrong with an `Episode`."""
-
-    report: str = Field(min_length=1)
 
 
 class EpisodesPublic(BaseModel):

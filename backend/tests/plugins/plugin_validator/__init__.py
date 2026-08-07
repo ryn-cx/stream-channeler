@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 from sqlalchemy import inspect as sa_inspect
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
@@ -105,27 +105,72 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     def deleted_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_deleted_validator(episode)
 
-    @staticmethod
-    def get_random_source(results: list[URLImportResult]) -> Source:
-        sources = [result.show.source for result in results]
+    def imported_shows(
+        self,
+        session: Session,
+        results: list[URLImportResult],
+    ) -> list[Show]:
+        """Return the plugin's own `Show`s behind `results`.
+
+        A result names a title by identifier rather than carrying one website's
+        record of it, so the records are looked up here. A title can be stored
+        under several plugins - JustWatch imports through every service that has
+        an offer, and TMDB holds its own copy of everything - so only the copies
+        belonging to the plugin under test are returned, which are the only ones
+        that plugin can update.
+        """
+        identifiers = {result.show_identifier for result in results}
+        shows = session.exec(
+            select(Show)
+            .join(Source)
+            .join(Plugin)
+            .where(
+                col(Show.show_identifier).in_(identifiers),
+                col(Show.deleted_at).is_(None),
+                Plugin.key == self.plugin_class.plugin_key(),
+            ),
+        ).all()
+        if not shows:
+            msg = f"No {self.plugin_class.plugin_key()} shows for {identifiers}"
+            raise ValueError(msg)
+        return list(shows)
+
+    def get_random_source(
+        self,
+        session: Session,
+        results: list[URLImportResult],
+    ) -> Source:
+        sources = [show.source for show in self.imported_shows(session, results)]
         return random.choice(sources)  # noqa: S311
 
-    @staticmethod
-    def get_random_show(results: list[URLImportResult]) -> Show:
-        shows = [result.show for result in results]
-        return random.choice(shows)  # noqa: S311
+    def get_random_show(
+        self,
+        session: Session,
+        results: list[URLImportResult],
+    ) -> Show:
+        return random.choice(self.imported_shows(session, results))  # noqa: S311
 
-    @staticmethod
-    def get_random_season(results: list[URLImportResult]) -> Season:
-        seasons = [season for result in results for season in result.show.seasons]
+    def get_random_season(
+        self,
+        session: Session,
+        results: list[URLImportResult],
+    ) -> Season:
+        seasons = [
+            season
+            for show in self.imported_shows(session, results)
+            for season in show.seasons
+        ]
         return random.choice(seasons)  # noqa: S311
 
-    @staticmethod
-    def get_random_episode(results: list[URLImportResult]) -> Episode:
+    def get_random_episode(
+        self,
+        session: Session,
+        results: list[URLImportResult],
+    ) -> Episode:
         episodes = [
             episode
-            for result in results
-            for season in result.show.seasons
+            for show in self.imported_shows(session, results)
+            for season in show.seasons
             for episode in season.episodes
         ]
         return random.choice(episodes)  # noqa: S311
@@ -379,7 +424,7 @@ class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     def test_update_show(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
-        entity = self.get_random_show(results)
+        entity = self.get_random_show(session_with_files, results)
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
@@ -389,7 +434,7 @@ class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     def test_update_season(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
-        entity = self.get_random_season(results)
+        entity = self.get_random_season(session_with_files, results)
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
@@ -399,7 +444,7 @@ class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     def test_update_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
-        entity = self.get_random_episode(results)
+        entity = self.get_random_episode(session_with_files, results)
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
@@ -426,7 +471,7 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
         results = self._import_url(session_with_files)
         plugin_instance = self.imported_plugin
-        source = self.get_random_source(results)
+        source = self.get_random_source(session_with_files, results)
 
         timestamp = tz_datetime.now() + timedelta(minutes=1)
         self._create_source_update_entry(plugin_instance, source, timestamp)
@@ -448,7 +493,7 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
     def test_deleted_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        season = self.get_random_season(results)
+        season = self.get_random_season(session_with_files, results)
         assert season.data_timestamp
 
         freeze_at = season.data_timestamp + timedelta(seconds=1)
@@ -482,7 +527,7 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
     def test_deleted_season(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        show = self.get_random_show(results)
+        show = self.get_random_show(session_with_files, results)
         assert show.data_timestamp
 
         freeze_at = show.data_timestamp + timedelta(seconds=1)
@@ -516,7 +561,7 @@ class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT
 
     def test_deleted_episode_update_show(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        season = self.get_random_season(results)
+        season = self.get_random_season(session_with_files, results)
         show = season.show
         assert show.data_timestamp
 
@@ -551,7 +596,7 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
 
     def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        show = self.get_random_show(results)
+        show = self.get_random_show(session_with_files, results)
         assert show.data_timestamp
 
         freeze_at = show.data_timestamp + timedelta(seconds=1)

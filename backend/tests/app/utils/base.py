@@ -63,6 +63,7 @@ from tests.app.users.utils import (
     create_random_user,
 )
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
+from tests.app.utils.utils import request_payload
 
 SUPPORTED_MODELS = Channel | Episode | Season | Show | Source | Plugin | Watch | File
 PARENT_MODELS = SUPPORTED_MODELS | User
@@ -354,7 +355,9 @@ class BaseTests[T: SUPPORTED_MODELS]:
         parameters_model: SQLModel | None = None,
     ) -> None:
         parameters = (
-            parameters_model.model_dump(mode="json") if parameters_model else None
+            request_payload(parameters_model, exclude_unset=False)
+            if parameters_model
+            else None
         )
         with self.assert_no_db_change(session):
             if not user_is_authenticated:

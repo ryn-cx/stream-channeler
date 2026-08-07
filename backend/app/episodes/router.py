@@ -3,12 +3,11 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
-    get_current_user,
 )
 from app.episodes.dependencies import EditableEpisode, ReadableEpisode
 from app.episodes.models import Episode
@@ -16,12 +15,12 @@ from app.episodes.schemas import (
     EpisodeCreate,
     EpisodeInformationOutput,
     EpisodeInformationSide,
-    EpisodeIssueReportInput,
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
     EpisodeUpdate,
 )
+from app.issue_reports.service import list_episode_issue_reports
 from app.media.schemas import MediaReadOptions
 from app.media.service import delete_record, media_scoped_list_response
 from app.media.tmdb_fallback import (
@@ -239,7 +238,7 @@ def get_episode_information(
         episode_id=episode.id,
         episode_identifier=episode.episode_identifier,
         episode_identifier_locked=episode.episode_identifier_locked,
-        issue_report=episode.issue_report,
+        issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
             episode,
@@ -249,39 +248,6 @@ def get_episode_information(
         ),
         tmdb=tmdb,
     )
-
-
-@episodes_router.put(
-    "/{episode_id}/issue-report",  # noqa: FAST003 - Used by ReadableEpisode.
-    dependencies=[Depends(get_current_user)],
-)
-def report_episode_issue(
-    session: SessionDep,
-    episode: ReadableEpisode,
-    report_input: EpisodeIssueReportInput,
-) -> EpisodeOutput:
-    """Record what a `User` says is wrong with an `Episode`."""
-    episode.issue_report = report_input.report
-    session.add(episode)
-    session.commit()
-    session.refresh(episode)
-    return _episode_output(session, episode)
-
-
-@episodes_router.delete(
-    "/{episode_id}/issue-report",  # noqa: FAST003 - Used by ReadableEpisode.
-    dependencies=[Depends(get_current_user)],
-)
-def clear_episode_issue_report(
-    session: SessionDep,
-    episode: ReadableEpisode,
-) -> EpisodeOutput:
-    """Drop what was reported as wrong with an `Episode`."""
-    episode.issue_report = None
-    session.add(episode)
-    session.commit()
-    session.refresh(episode)
-    return _episode_output(session, episode)
 
 
 @episodes_router.patch("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.

@@ -105,11 +105,7 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return [
-            URLImportResult(
-                show=show,
-                episodes=[self._stored_episode(show)],
-                is_whitelist=True,
-            ),
+            URLImportResult.for_episodes(show, [self._stored_episode(show)]),
         ]
 
     def _stored_episode(self, show: Show) -> Episode:
@@ -182,11 +178,7 @@ class CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
             for episode in season.episodes:
                 if episode.key == self._episode_key:
                     return [
-                        URLImportResult(
-                            show=show,
-                            episodes=[episode],
-                            is_whitelist=True,
-                        ),
+                        URLImportResult.for_episodes(show, [episode]),
                     ]
 
         msg = f"Episode {self._episode_key} not found in show {show.key}"

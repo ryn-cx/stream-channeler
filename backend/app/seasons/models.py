@@ -4,6 +4,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from pydantic import computed_field
 from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
@@ -16,6 +17,7 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.media.identifiers import identifier_tmdb_id
 from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.shows.models import Show
@@ -24,6 +26,7 @@ from app.users.models import User
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
+    from app.issue_reports.models import SeasonIssueReport
 
 
 class BaseSeason(BaseMediaMixin):
@@ -34,18 +37,26 @@ class BaseSeason(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
-    tmdb_id: int | None = Field(default=None)
     # What makes the same season on two websites one season rather than two. It
     # is the TMDB id whenever the season is linked to TMDB, and the plugin's own
     # key for the season when it is not.
     season_identifier: str
+
+    @computed_field
+    @property
+    def tmdb_id(self) -> int | None:
+        """The TMDB season `season_identifier` names, if it names one.
+
+        Read off the identifier rather than stored beside it, so the two can
+        never disagree about which TMDB record this is.
+        """
+        return identifier_tmdb_id(self.season_identifier)
 
 
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     """Model representing a `Season`."""
 
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "id",
         "name",
         "season_identifier",
         "season_number",
@@ -77,6 +88,11 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     show: Show = Relationship(back_populates="seasons")
 
     episodes: list[Episode] = Relationship(back_populates="season", cascade_delete=True)
+
+    issue_reports: list[SeasonIssueReport] = Relationship(
+        back_populates="season",
+        cascade_delete=True,
+    )
 
     @property
     @override

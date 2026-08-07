@@ -59,6 +59,7 @@ from app.channels.schemas import (
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
 from app.media.tmdb_fallback import (
+    TMDB_PLUGIN_KEY,
     fill_episodes,
     fill_seasons,
     fill_shows,
@@ -613,9 +614,14 @@ def get_channel_whitelist(
     if not shows:
         raise HTTPException(status_code=404, detail="Show was not found on channel")
 
+    # TMDB is not a website the title can be watched on, so it is not one of the
+    # copies rows are built from and only stands for the seasons it has a record
+    # of, which is all an announced season no site has filled yet can be named by.
+    tmdb_shows = service.tmdb_shows_for_channel_show(session, channel_show)
+
     # The websites' copies carrying each season and episode, so a row can name the
     # sites it came from.
-    season_show_ids, episode_show_ids = _copies_by_identifier(shows)
+    season_show_ids, episode_show_ids = _copies_by_identifier([*shows, *tmdb_shows])
 
     sources = [
         WhitelistSourceOutput(
@@ -624,8 +630,9 @@ def get_channel_whitelist(
             source_name=show.source.name,
             favicon_url=show.source.favicon_url,
             filtered=show.id in enabled_sources,
+            is_tmdb=show.source.plugin.key == TMDB_PLUGIN_KEY,
         )
-        for show in shows
+        for show in [*shows, *tmdb_shows]
     ]
 
     for show in shows:

@@ -89,7 +89,11 @@ class StreamChanneler(BasePlugin, register=True):
         )
 
     @override
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def import_url(
+        self,
+        url: str,
+        tmdb_id: int | None = None,  # noqa: ARG002 - Copies media that already carries its own link.
+    ) -> list[URLImportResult]:
         return self._get_url_handler(url).import_results()
 
     def _get_url_handler(self, url: str) -> StreamChannelerURLHandler:

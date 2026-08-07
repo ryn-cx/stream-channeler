@@ -33,16 +33,15 @@ def _single_video_import_results(
     video_key: str,
 ) -> list[URLImportResult]:
     return [
-        URLImportResult(
-            show=show,
-            episodes=[
+        URLImportResult.for_episodes(
+            show,
+            [
                 episode
                 for season in show.seasons
                 if season.key == playlist_key
                 for episode in season.episodes
                 if episode.key == video_key
             ],
-            is_whitelist=True,
         ),
     ]
 
@@ -154,7 +153,7 @@ class PlaylistURLHandler(PlaylistBasedURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
-        return [URLImportResult(show=show, seasons=seasons, is_whitelist=True)]
+        return [URLImportResult.for_seasons(show, seasons)]
 
 
 class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
@@ -217,9 +216,9 @@ class ShowURLHandler(YouTubeURLHandler):
         # A URL for one season only asks for that season, where a URL for the show
         # asks for all of it.
         if self._season_number is None:
-            return [URLImportResult(show=show, is_whitelist=False)]
+            return [URLImportResult.for_show(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
-        return [URLImportResult(show=show, seasons=seasons, is_whitelist=True)]
+        return [URLImportResult.for_seasons(show, seasons)]
 
 
 class ChannelURLHandler(YouTubeURLHandler):
@@ -258,7 +257,13 @@ class ChannelURLHandler(YouTubeURLHandler):
         if self.url.endswith("/playlists") or uploads_key not in show_season_keys:
             is_whitelist = False
             seasons = list(show.seasons)
-        return [URLImportResult(show=show, seasons=seasons, is_whitelist=is_whitelist)]
+        return [
+            URLImportResult(
+                show_identifier=show.show_identifier,
+                season_identifiers=[season.season_identifier for season in seasons],
+                is_whitelist=is_whitelist,
+            ),
+        ]
 
 
 class ChannelKeyURLHandler(ChannelURLHandler):

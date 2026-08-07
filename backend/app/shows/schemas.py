@@ -5,6 +5,7 @@ import uuid
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
+from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
@@ -46,6 +47,34 @@ class ShowListPublic(ShowPublic):
     plugin_name: str | None = Field(
         validation_alias=AliasPath("source", "plugin", "name"),
     )
+
+
+class ShowInformationSide(BaseModel):
+    """One record's own account of a title, as the website that holds it has it."""
+
+    label: str
+    name: str | None
+    media_type: str | None
+    description: str | None
+    image_url: str | None
+    url: str | None
+    key: str
+
+
+class ShowInformationOutput(BaseModel):
+    """What the website and TMDB each say about a title, side by side.
+
+    The stored record is returned as the website reported it rather than as it is
+    served, so the two accounts can be compared instead of one standing in for
+    the other.
+    """
+
+    show_id: uuid.UUID
+    show_identifier: str
+    show_identifier_locked: bool
+    issue_reports: list[IssueReportOutput]
+    source: ShowInformationSide
+    tmdb: ShowInformationSide | None
 
 
 class ShowsPublic(BaseModel):

@@ -2057,17 +2057,6 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -2076,17 +2065,6 @@ export const EpisodeCreateSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         }
     },
     additionalProperties: false,
@@ -2111,16 +2089,12 @@ export const EpisodeInformationOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked'
         },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
+        issue_reports: {
+            items: {
+                '$ref': '#/components/schemas/IssueReportOutput'
+            },
+            type: 'array',
+            title: 'Issue Reports'
         },
         source: {
             '$ref': '#/components/schemas/EpisodeInformationSide'
@@ -2137,7 +2111,7 @@ export const EpisodeInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['episode_id', 'episode_identifier', 'episode_identifier_locked', 'issue_report', 'source', 'tmdb'],
+    required: ['episode_id', 'episode_identifier', 'episode_identifier_locked', 'issue_reports', 'source', 'tmdb'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -2284,20 +2258,6 @@ export const EpisodeInformationSideSchema = {
     required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'season_number', 'season_name', 'show_name', 'url', 'key'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
-} as const;
-
-export const EpisodeIssueReportInputSchema = {
-    properties: {
-        report: {
-            type: 'string',
-            minLength: 1,
-            title: 'Report'
-        }
-    },
-    type: 'object',
-    required: ['report'],
-    title: 'EpisodeIssueReportInput',
-    description: 'Schema for reporting what is wrong with an `Episode`.'
 } as const;
 
 export const EpisodeListOutputSchema = {
@@ -2456,17 +2416,6 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -2475,17 +2424,6 @@ export const EpisodeListOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         },
         id: {
             type: 'string',
@@ -2566,10 +2504,26 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Plugin Name'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB episode \`episode_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -2730,17 +2684,6 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -2749,17 +2692,6 @@ export const EpisodeOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         },
         id: {
             type: 'string',
@@ -2770,10 +2702,26 @@ export const EpisodeOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Season Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB episode \`episode_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'tmdb_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
 } as const;
@@ -2941,17 +2889,6 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             anyOf: [
                 {
@@ -2967,17 +2904,6 @@ export const EpisodeUpdateSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         }
     },
     additionalProperties: false,
@@ -3142,17 +3068,6 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -3161,17 +3076,6 @@ export const EpisodeWithDetailsSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         },
         id: {
             type: 'string',
@@ -3274,10 +3178,26 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Tmdb Episode Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB episode \`episode_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'channel_id'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'channel_id', 'tmdb_id'],
     title: 'EpisodeWithDetails'
 } as const;
 
@@ -3686,6 +3606,198 @@ export const HTTPValidationErrorSchema = {
     },
     type: 'object',
     title: 'HTTPValidationError'
+} as const;
+
+export const IssueReportCreateSchema = {
+    properties: {
+        report: {
+            type: 'string',
+            minLength: 1,
+            title: 'Report'
+        }
+    },
+    type: 'object',
+    required: ['report'],
+    title: 'IssueReportCreate',
+    description: 'Schema for leaving an `IssueReport` on a record.'
+} as const;
+
+export const IssueReportListOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        report: {
+            type: 'string',
+            title: 'Report'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        },
+        media_type: {
+            '$ref': '#/components/schemas/IssueReportMediaType'
+        },
+        media_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Media Id'
+        },
+        media_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Name'
+        },
+        season_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Name'
+        },
+        show_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Name'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'username', 'media_type', 'media_id', 'media_name', 'season_name', 'show_name', 'source_name'],
+    title: 'IssueReportListOutput',
+    description: 'Schema for returning an `IssueReport` alongside the record it was left on.'
+} as const;
+
+export const IssueReportMediaTypeSchema = {
+    type: 'string',
+    enum: ['episode', 'season', 'show'],
+    title: 'IssueReportMediaType',
+    description: 'Which kind of record a report was left on.'
+} as const;
+
+export const IssueReportOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        report: {
+            type: 'string',
+            title: 'Report'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        user_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Id'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        }
+    },
+    type: 'object',
+    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'username'],
+    title: 'IssueReportOutput',
+    description: `Schema for returning an \`IssueReport\`.
+
+\`user_id\` and \`username\` are unset for a report left by a visitor with no
+account.`
+} as const;
+
+export const IssueReportUpdateSchema = {
+    properties: {
+        report: {
+            type: 'string',
+            minLength: 1,
+            title: 'Report'
+        }
+    },
+    type: 'object',
+    required: ['report'],
+    title: 'IssueReportUpdate',
+    description: 'Schema for rewriting an `IssueReport`.'
 } as const;
 
 export const MediaOwnerSchema = {
@@ -4507,17 +4619,6 @@ export const SeasonCreateSchema = {
             ],
             title: 'Season Number'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         season_identifier: {
             type: 'string',
             title: 'Season Identifier'
@@ -4528,6 +4629,131 @@ export const SeasonCreateSchema = {
     required: ['key', 'season_identifier'],
     title: 'SeasonCreate',
     description: 'Schema for creating a `Season`.'
+} as const;
+
+export const SeasonInformationOutputSchema = {
+    properties: {
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
+        season_identifier: {
+            type: 'string',
+            title: 'Season Identifier'
+        },
+        issue_reports: {
+            items: {
+                '$ref': '#/components/schemas/IssueReportOutput'
+            },
+            type: 'array',
+            title: 'Issue Reports'
+        },
+        source: {
+            '$ref': '#/components/schemas/SeasonInformationSide'
+        },
+        tmdb: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/SeasonInformationSide'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['season_id', 'season_identifier', 'issue_reports', 'source', 'tmdb'],
+    title: 'SeasonInformationOutput',
+    description: `What the website and TMDB each say about a season, side by side.
+
+The stored record is returned as the website reported it rather than as it is
+served, so the two accounts can be compared instead of one standing in for
+the other.`
+} as const;
+
+export const SeasonInformationSideSchema = {
+    properties: {
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        show_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Name'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        }
+    },
+    type: 'object',
+    required: ['label', 'name', 'season_number', 'sort_order', 'image_url', 'show_name', 'url', 'key'],
+    title: 'SeasonInformationSide',
+    description: "One record's own account of a season, as the website that holds it has it."
 } as const;
 
 export const SeasonListOutputSchema = {
@@ -4639,17 +4865,6 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Season Number'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         season_identifier: {
             type: 'string',
             title: 'Season Identifier'
@@ -4717,10 +4932,26 @@ export const SeasonListOutputSchema = {
                 }
             ],
             title: 'Plugin Name'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB season \`season_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'season_identifier', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -4834,17 +5065,6 @@ export const SeasonOutputSchema = {
             ],
             title: 'Season Number'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         season_identifier: {
             type: 'string',
             title: 'Season Identifier'
@@ -4858,10 +5078,26 @@ export const SeasonOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB season \`season_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id'],
+    required: ['key', 'season_identifier', 'show_id', 'id', 'tmdb_id'],
     title: 'SeasonOutput',
     description: 'Schema for returning a `Season`.'
 } as const;
@@ -4981,17 +5217,6 @@ export const SeasonUpdateSchema = {
                 }
             ],
             title: 'Season Number'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
         },
         season_identifier: {
             anyOf: [
@@ -5159,20 +5384,14 @@ export const ShowCreateSchema = {
             ],
             title: 'Icon'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         show_identifier: {
             type: 'string',
             title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked',
+            default: false
         }
     },
     additionalProperties: false,
@@ -5180,6 +5399,124 @@ export const ShowCreateSchema = {
     required: ['key', 'show_identifier'],
     title: 'ShowCreate',
     description: 'Schema for creating a `Show`.'
+} as const;
+
+export const ShowInformationOutputSchema = {
+    properties: {
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        show_identifier: {
+            type: 'string',
+            title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked'
+        },
+        issue_reports: {
+            items: {
+                '$ref': '#/components/schemas/IssueReportOutput'
+            },
+            type: 'array',
+            title: 'Issue Reports'
+        },
+        source: {
+            '$ref': '#/components/schemas/ShowInformationSide'
+        },
+        tmdb: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/ShowInformationSide'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['show_id', 'show_identifier', 'show_identifier_locked', 'issue_reports', 'source', 'tmdb'],
+    title: 'ShowInformationOutput',
+    description: `What the website and TMDB each say about a title, side by side.
+
+The stored record is returned as the website reported it rather than as it is
+served, so the two accounts can be compared instead of one standing in for
+the other.`
+} as const;
+
+export const ShowInformationSideSchema = {
+    properties: {
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        }
+    },
+    type: 'object',
+    required: ['label', 'name', 'media_type', 'description', 'image_url', 'url', 'key'],
+    title: 'ShowInformationSide',
+    description: "One record's own account of a title, as the website that holds it has it."
 } as const;
 
 export const ShowListPublicSchema = {
@@ -5303,20 +5640,14 @@ export const ShowListPublicSchema = {
             ],
             title: 'Icon'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         show_identifier: {
             type: 'string',
             title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked',
+            default: false
         },
         source_id: {
             type: 'string',
@@ -5365,10 +5696,26 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Plugin Name'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB title \`show_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'show_identifier', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -5494,20 +5841,14 @@ export const ShowPublicSchema = {
             ],
             title: 'Icon'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         show_identifier: {
             type: 'string',
             title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked',
+            default: false
         },
         source_id: {
             type: 'string',
@@ -5518,10 +5859,26 @@ export const ShowPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB title \`show_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id'],
+    required: ['key', 'show_identifier', 'source_id', 'id', 'tmdb_id'],
     title: 'ShowPublic',
     description: 'Schema for returning a `Show`.'
 } as const;
@@ -5654,17 +6011,6 @@ export const ShowUpdateSchema = {
             ],
             title: 'Icon'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         show_identifier: {
             anyOf: [
                 {
@@ -5675,6 +6021,11 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked',
+            default: false
         }
     },
     additionalProperties: false,
@@ -7344,17 +7695,6 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         episode_identifier: {
             type: 'string',
             title: 'Episode Identifier'
@@ -7363,17 +7703,6 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
-        },
-        issue_report: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Issue Report'
         },
         id: {
             type: 'string',
@@ -7441,10 +7770,26 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Episode Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB episode \`episode_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered', 'show_ids'],
+    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered', 'show_ids', 'tmdb_id'],
     title: 'WhitelistEpisodeOutput'
 } as const;
 
@@ -7557,17 +7902,6 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Season Number'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         season_identifier: {
             type: 'string',
             title: 'Season Identifier'
@@ -7604,10 +7938,26 @@ export const WhitelistSeasonOutputSchema = {
                 }
             ],
             title: 'Tmdb Season Number'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB season \`season_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id', 'filtered', 'show_ids'],
+    required: ['key', 'season_identifier', 'show_id', 'id', 'filtered', 'show_ids', 'tmdb_id'],
     title: 'WhitelistSeasonOutput'
 } as const;
 
@@ -7772,20 +8122,14 @@ export const WhitelistShowOutputSchema = {
             ],
             title: 'Icon'
         },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
         show_identifier: {
             type: 'string',
             title: 'Show Identifier'
+        },
+        show_identifier_locked: {
+            type: 'boolean',
+            title: 'Show Identifier Locked',
+            default: false
         },
         source_id: {
             type: 'string',
@@ -7821,10 +8165,26 @@ export const WhitelistShowOutputSchema = {
             },
             type: 'array',
             title: 'Episodes'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id',
+            description: `The TMDB title \`show_identifier\` names, if it names one.
+
+Read off the identifier rather than stored beside it, so the two can
+never disagree about which TMDB record this is.`,
+            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
+    required: ['key', 'show_identifier', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes', 'tmdb_id'],
     title: 'WhitelistShowOutput'
 } as const;
 
@@ -7865,6 +8225,11 @@ export const WhitelistSourceOutputSchema = {
         filtered: {
             type: 'boolean',
             title: 'Filtered'
+        },
+        is_tmdb: {
+            type: 'boolean',
+            title: 'Is Tmdb',
+            default: false
         }
     },
     type: 'object',

@@ -34,7 +34,7 @@ class URLHandler[PluginT](ABC):
 
     def import_results(self, show: Show) -> list[URLImportResult]:
         """Returns the import results for the URL."""
-        return [URLImportResult(show=show, is_whitelist=False)]
+        return [URLImportResult.for_show(show)]
 
 
 class URLMixin(ABC):

@@ -16,14 +16,14 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.episodes.models import Episode
+from app.media.identifiers import (
+    TMDB_IDENTIFIER_PREFIX,
+    TMDB_PLUGIN_KEY,
+)
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-
-TMDB_PLUGIN_KEY = "TMDB"
-# A record only has a TMDB counterpart while its identifier is one TMDB issued.
-TMDB_IDENTIFIER_PREFIX = f"{TMDB_PLUGIN_KEY} "
 
 SHOW_FALLBACK_FIELDS = ("name", "description", "image_url")
 SEASON_FALLBACK_FIELDS = ("name", "image_url")
@@ -239,6 +239,44 @@ def tmdb_episode_counterpart(
     return session.exec(statement).first()
 
 
+def tmdb_season_counterpart(
+    session: Session,
+    season_identifier: str,
+) -> tuple[Season, Show] | None:
+    """Return the TMDB season standing in for `season_identifier`, and its show.
+
+    A season only has a TMDB counterpart while it is linked, so an identifier the
+    website issued itself has nothing to return.
+    """
+    if not season_identifier.startswith(TMDB_IDENTIFIER_PREFIX):
+        return None
+
+    statement = (
+        select(Season, Show)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            Plugin.key == TMDB_PLUGIN_KEY,
+            Season.season_identifier == season_identifier,
+            col(Season.deleted_at).is_(None),
+        )
+    )
+    return session.exec(statement).first()
+
+
+def tmdb_show_counterpart(session: Session, show_identifier: str) -> Show | None:
+    """Return the TMDB title standing in for `show_identifier`.
+
+    A title only has a TMDB counterpart while it is linked, so an identifier the
+    website issued itself has nothing to return.
+    """
+    if not show_identifier.startswith(TMDB_IDENTIFIER_PREFIX):
+        return None
+
+    return session.exec(_tmdb_shows({show_identifier})).first()
+
+
 def _tmdb_identified(rows: Sequence[Any], identifier_field: str) -> set[str]:
     return {
         getattr(row, identifier_field)
@@ -284,7 +322,12 @@ def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
         return rows
 
     statement = (
-        select(Episode.episode_identifier, Episode.episode_number, Season.season_number, Show.key)  # type: ignore[call-overload]
+        select(
+            Episode.episode_identifier,
+            Episode.episode_number,
+            Season.season_number,
+            Show.key,
+        )  # type: ignore[call-overload]
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Show)
         .join(Source)
@@ -330,6 +373,28 @@ def tmdb_episode_url(
         f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
         f"/season/{season_number}/episode/{episode_number}"
     )
+
+
+def tmdb_season_url(show_key: str, season_number: int | None) -> str | None:
+    """Return the page for a TMDB season, given the show key it belongs to.
+
+    A film is a single page with nothing below it, so its one season is that
+    page, and so is a series season TMDB has no number for.
+    """
+    media_type, _, tmdb_id = show_key.partition("/")
+    if not tmdb_id:
+        return None
+    if media_type == "movie" or season_number is None:
+        return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
+    return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}/season/{season_number}"
+
+
+def tmdb_show_url(show_key: str) -> str | None:
+    """Return the page for a TMDB title, given its key."""
+    media_type, _, tmdb_id = show_key.partition("/")
+    if not tmdb_id:
+        return None
+    return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
 
 
 def prefer_tmdb_episodes[RowT](

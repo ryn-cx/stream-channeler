@@ -4,6 +4,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from pydantic import computed_field
 from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
@@ -16,6 +17,7 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.media.identifiers import identifier_tmdb_id
 from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.sources.models import Source
@@ -31,15 +33,30 @@ class BaseShow(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     icon: str | None = Field(default=None, max_length=32)
-    tmdb_id: int | None = Field(default=None)
     # What makes the same title on two websites one title rather than two. It is
     # the TMDB id whenever the show is linked to TMDB, and the plugin's own key
     # for the show when it is not.
     show_identifier: str
+    # Whether a `User` settled which TMDB title `show_identifier` names. A plugin
+    # normally finds the title by searching TMDB for its name, which can land on
+    # the wrong one; a lock says the answer was chosen by hand and no import may
+    # replace it.
+    show_identifier_locked: bool = Field(default=False)
+
+    @computed_field
+    @property
+    def tmdb_id(self) -> int | None:
+        """The TMDB title `show_identifier` names, if it names one.
+
+        Read off the identifier rather than stored beside it, so the two can
+        never disagree about which TMDB record this is.
+        """
+        return identifier_tmdb_id(self.show_identifier)
 
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelSourceFilter
+    from app.issue_reports.models import ShowIssueReport
     from app.seasons.models import Season
 
 
@@ -50,7 +67,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     """Model representing a `Show`."""
 
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "id",
         "media_type",
         "name",
         "show_identifier",
@@ -85,6 +101,11 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     channel_filters: list[ChannelSourceFilter] = Relationship(
+        back_populates="show",
+        cascade_delete=True,
+    )
+
+    issue_reports: list[ShowIssueReport] = Relationship(
         back_populates="show",
         cascade_delete=True,
     )
@@ -125,6 +146,24 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @override
     def parent(self) -> Source:
         return self.source
+
+    @override
+    def upsert(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        parent: Source,
+        existing_record: Self | None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        """Upsert the `Show`, keeping a locked `show_identifier` intact.
+
+        `show_identifier_locked` is only ever set by a `User`, so it is always
+        protected, and while the lock is set the automatically detected
+        `show_identifier` never replaces the one the `User` chose.
+        """
+        protected_keys = set(protected_keys or ()) | {"show_identifier_locked"}
+        if existing_record and existing_record.show_identifier_locked:
+            protected_keys.add("show_identifier")
+        return super().upsert(parent, existing_record, protected_keys)
 
     def __str__(self) -> str:
         """Return a string representation of the `Show`."""

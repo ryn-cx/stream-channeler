@@ -5,6 +5,7 @@ import uuid
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
+from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
@@ -52,6 +53,34 @@ class SeasonListOutput(SeasonOutput):
     plugin_name: str | None = Field(
         validation_alias=AliasPath("show", "source", "plugin", "name"),
     )
+
+
+class SeasonInformationSide(BaseModel):
+    """One record's own account of a season, as the website that holds it has it."""
+
+    label: str
+    name: str | None
+    season_number: int | None
+    sort_order: int | None
+    image_url: str | None
+    show_name: str | None
+    url: str | None
+    key: str
+
+
+class SeasonInformationOutput(BaseModel):
+    """What the website and TMDB each say about a season, side by side.
+
+    The stored record is returned as the website reported it rather than as it is
+    served, so the two accounts can be compared instead of one standing in for
+    the other.
+    """
+
+    season_id: uuid.UUID
+    season_identifier: str
+    issue_reports: list[IssueReportOutput]
+    source: SeasonInformationSide
+    tmdb: SeasonInformationSide | None
 
 
 class SeasonsPublic(BaseModel):

@@ -75,6 +75,29 @@ def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[
     ]
 
 
+def tmdb_shows_for_channel_show(
+    session: Session,
+    channel_show: ChannelShow,
+) -> list[Show]:
+    """Return TMDB's copies of the title `channel_show` is about.
+
+    TMDB is not one of the websites a title can be watched on, so its copy is
+    kept apart from them and only stands for what TMDB has a record of.
+    """
+    return list(
+        session.exec(
+            select(Show)
+            .join(Source)
+            .join(Plugin)
+            .where(
+                col(Show.show_identifier) == channel_show.show_identifier,
+                col(Show.deleted_at).is_(None),
+                Plugin.key == TMDB_PLUGIN_KEY,
+            ),
+        ).all(),
+    )
+
+
 def viewer_is_privileged(channel: Channel, viewer: User | None) -> bool:
     """Return whether `viewer` may see `channel`'s owner and `score`."""
     return bool(viewer and (viewer.is_superuser or viewer.id == channel.user_id))

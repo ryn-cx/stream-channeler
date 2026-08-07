@@ -12,19 +12,14 @@ from app.watches.services import get_installed_plugin
 from plugins.TMDB import TMDB
 
 
-def relink_children(
-    session: Session,
-    show: Show,
-    *,
-    relink_identifier: bool = True,
-) -> None:
-    """Repoint every child of a `Show` at TMDB after its `tmdb_id` changed.
+def relink_children(session: Session, show: Show) -> None:
+    """Repoint every child of a `Show` at the TMDB title it now names.
 
-    The linking functions leave an existing `tmdb_id` alone, so the one on each
-    child is cleared first to let the one from the new `Show` `tmdb_id` take its
-    place. An `episode_identifier` the `User` locked is kept as they set it, and
-    `relink_identifier` is false when the `User` set the `show_identifier`
-    themselves rather than leaving it to follow TMDB.
+    The linking functions leave a child that is already linked alone, so each
+    child's identifier is reset to the website's own first, which is what lets
+    the title's new TMDB id take its place. An `episode_identifier` the `User`
+    locked is kept as they set it, and the `Show`'s own identifier is whatever
+    the `User` set, so it is never rewritten here.
     """
     tmdb = TMDB(session)
     media_type = _tmdb_media_type(session, show)
@@ -33,15 +28,7 @@ def relink_children(
     if show.tmdb_id:
         tmdb.import_title(media_type, show.tmdb_id)
 
-    if relink_identifier:
-        show.show_identifier = (
-            f"TMDB {media_type} {show.tmdb_id}"
-            if show.tmdb_id
-            else f"{plugin_key} {show.key}"
-        )
-
     for season in show.seasons:
-        season.tmdb_id = None
         season.season_identifier = f"{plugin_key} {season.key}"
         tmdb.tmdb_link_season(season, show.tmdb_id, season.season_number, media_type)
         _relink_episodes(tmdb, season, show.tmdb_id, media_type)
@@ -49,19 +36,15 @@ def relink_children(
     session.commit()
 
 
-def relink_season_children(
-    session: Session,
-    season: Season,
-    *,
-    relink_identifier: bool = True,
-) -> None:
+def relink_season_children(session: Session, season: Season) -> None:
     """Repoint every `Episode` of a `Season` at TMDB after its `tmdb_id` changed.
 
-    The linking functions leave an existing `tmdb_id` alone, so the one on each
-    `Episode` is cleared first to let the one TMDB reports take its place. An
-    `episode_identifier` the `User` locked is kept as they set it, and
-    `relink_identifier` is false when the `User` set the `season_identifier`
-    themselves rather than leaving it to follow TMDB.
+    The linking functions leave an `Episode` that is already linked alone, so
+    each one's identifier is reset to the website's own first, which is what lets
+    the one TMDB reports take its place. An
+    `episode_identifier` the `User` locked is kept as they set it. The
+    `Season`'s own identifier is whatever the `User` set, so it is never
+    rewritten here.
     """
     show = season.show
     tmdb = TMDB(session)
@@ -69,13 +52,6 @@ def relink_season_children(
 
     if show.tmdb_id:
         tmdb.import_title(media_type, show.tmdb_id)
-
-    if relink_identifier:
-        season.season_identifier = (
-            f"TMDB {media_type} {season.tmdb_id}"
-            if season.tmdb_id
-            else f"{show.source.plugin.key} {season.key}"
-        )
 
     _relink_episodes(tmdb, season, show.tmdb_id, media_type)
 
@@ -102,7 +78,9 @@ def _relink_episode(
     locked_identifier = (
         episode.episode_identifier if episode.episode_identifier_locked else None
     )
-    episode.tmdb_id = None
+    # An episode already linked keeps that link, so it is dropped back to the
+    # website's own identifier to let the title's new TMDB id reach it.
+    episode.episode_identifier = f"{season.show.source.plugin.key} {episode.key}"
     tmdb.tmdb_link_episode(
         episode,
         tmdb_id,

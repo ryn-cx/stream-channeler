@@ -132,11 +132,11 @@ def add_results_to_channel(
     existing_channel_shows = {show.show_identifier: show for show in channel.shows}
     for result in results:
         if existing_channel_show := existing_channel_shows.get(
-            result.show.show_identifier,
+            result.show_identifier,
         ):
             _update_channel_show(session, existing_channel_show, result)
         else:
-            existing_channel_shows[result.show.show_identifier] = _create_channel_show(
+            existing_channel_shows[result.show_identifier] = _create_channel_show(
                 channel,
                 result,
             )
@@ -148,25 +148,25 @@ def _create_channel_show(
 ) -> ChannelShow:
     channel_show = ChannelShow(
         channel_id=channel.id,
-        show_identifier=result.show.show_identifier,
+        show_identifier=result.show_identifier,
         is_whitelist=result.is_whitelist,
         is_blacklist_only=False,
     )
     channel.shows.append(channel_show)
 
-    for season in result.seasons:
+    for season_identifier in result.season_identifiers:
         channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_identifier=season.season_identifier,
+                season_identifier=season_identifier,
             ),
         )
 
-    for episode in result.episodes:
+    for episode_identifier in result.episode_identifiers:
         channel_show.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_identifier=episode.episode_identifier,
+                episode_identifier=episode_identifier,
             ),
         )
 
@@ -191,10 +191,8 @@ def _update_channel_show(
     }
     blacklisted_episodes: set[str] = set() if was_whitelist else existing_episodes
 
-    result_seasons: set[str] = {season.season_identifier for season in result.seasons}
-    result_episodes: set[str] = {
-        episode.episode_identifier for episode in result.episodes
-    }
+    result_seasons: set[str] = set(result.season_identifiers)
+    result_episodes: set[str] = set(result.episode_identifiers)
 
     if result.is_whitelist:
         seasons = (existing_seasons if was_whitelist else set[str]()) | result_seasons

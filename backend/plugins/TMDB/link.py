@@ -12,6 +12,7 @@ from pykakasi.kanji import Kanwa
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 
 from app.episodes.models import Episode
+from app.media.identifiers import tmdb_identifier
 from app.seasons.models import Season
 from app.shows.models import Show
 from plugins.TMDB.lookup import LookupMixin
@@ -125,12 +126,12 @@ class LinkMixin(LookupMixin, register=False):
 
         The `show_identifier` is taken from TMDB whenever one is found, since it
         is what makes the same title on two websites a single title rather than
-        two. TMDB numbers films and series separately, so the media type is part
-        of the identifier to keep a film and a series that share a number apart.
+        two, and it is the only place the TMDB id is kept. A title already linked
+        keeps the id it has, so a fresh guess never displaces one.
         """
-        show.tmdb_id = show.tmdb_id or tmdb_id
-        if show.tmdb_id:
-            show.show_identifier = f"TMDB {media_type} {show.tmdb_id}"
+        linked_id = show.tmdb_id or tmdb_id
+        if linked_id:
+            show.show_identifier = tmdb_identifier(media_type, linked_id)
         return show
 
     def tmdb_link_season(
@@ -152,8 +153,7 @@ class LinkMixin(LookupMixin, register=False):
 
         if media_type == "movie":
             if movie := self._movie_detail(tmdb_id):
-                season.tmdb_id = movie.id
-                season.season_identifier = f"TMDB movie {movie.id}"
+                season.season_identifier = tmdb_identifier("movie", movie.id)
             return season
 
         seasons = self.show_detail_file(tmdb_id).parsed().seasons
@@ -168,8 +168,7 @@ class LinkMixin(LookupMixin, register=False):
         if season_detail is None:
             season_detail = _find_by_name(seasons, season.name)
         if season_detail:
-            season.tmdb_id = season_detail.id
-            season.season_identifier = f"TMDB tv {season_detail.id}"
+            season.season_identifier = tmdb_identifier("tv", season_detail.id)
         return season
 
     def tmdb_link_episode(
@@ -193,8 +192,10 @@ class LinkMixin(LookupMixin, register=False):
 
         if media_type == "movie":
             if movie := self._movie_detail(tmdb_id):
-                episode.tmdb_id = episode.tmdb_id or movie.id
-                episode.episode_identifier = f"TMDB movie {movie.id}"
+                episode.episode_identifier = tmdb_identifier(
+                    "movie",
+                    episode.tmdb_id or movie.id,
+                )
             return episode
 
         episode_detail = self._episode_detail(
@@ -204,8 +205,10 @@ class LinkMixin(LookupMixin, register=False):
             episode.name,
         )
         if episode_detail:
-            episode.tmdb_id = episode.tmdb_id or episode_detail.id
-            episode.episode_identifier = f"TMDB tv {episode_detail.id}"
+            episode.episode_identifier = tmdb_identifier(
+                "tv",
+                episode.tmdb_id or episode_detail.id,
+            )
         return episode
 
     def _episode_detail(

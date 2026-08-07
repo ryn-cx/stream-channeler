@@ -8,7 +8,7 @@ from loguru import logger
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.music_keys import MUSIC_SOURCE_KEY, artist_show_key
 from plugins.Crunchyroll.upsert import UpsertMixin
 
@@ -43,7 +43,8 @@ class UpdateMixin(UpsertMixin, register=False):
             self.browse_series_file_from_record,
         ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
-            for release in browse_json.extract_datums():
+            releases = chirashi().browse_series.extract_data(browse_json.parsed())
+            for release in releases:
                 if show := Show.get_from_memory(self.session, source, release.id):
                     logger.info("Matched show: {}", show.name or release.id)
                     # last_public appears to represent the last time a public change
@@ -68,7 +69,8 @@ class UpdateMixin(UpsertMixin, register=False):
                 "Processing music browse file: {}",
                 browse_json.database_record.key,
             )
-            for artist in browse_json.extract_datums():
+            artists = chirashi().browse_music.extract_data(browse_json.parsed())
+            for artist in artists:
                 show_key = artist_show_key(artist.id)
                 if show := Show.get_from_memory(self.session, source, show_key):
                     logger.info("Matched artist: {}", show.name or artist.id)

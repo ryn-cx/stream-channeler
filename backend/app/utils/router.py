@@ -16,9 +16,7 @@ admin_router = APIRouter(
 
 @admin_router.post("/test-email/", status_code=status.HTTP_201_CREATED)
 def test_email(email_to: EmailStr) -> Message:
-    """
-    Test emails.
-    """
+    """Test emails."""
     email_data = email_service.generate_test_email(email_to=email_to)
     email_service.send_email(
         email_to=email_to,

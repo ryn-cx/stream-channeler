@@ -4,6 +4,7 @@ from typing import Literal, override
 from chirashi.series import models as series_models
 
 from app.shows.models import Show
+from app.sources.models import Source
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.music_keys import (
     is_artist_show_key,
@@ -13,6 +14,14 @@ from plugins.Crunchyroll.music_keys import (
 
 
 class HelperMixin(FileMixin, register=False):
+    video_source: Source
+    music_source: Source
+
+    def _source_from_show_key(self, show_key: str) -> Source:
+        if is_artist_show_key(show_key):
+            return self.music_source
+        return self.video_source
+
     def _series_datum(self, show_key: str) -> series_models.Datum:
         series_file = self.series_file(show_key)
         return series_file.parsed().data[0]

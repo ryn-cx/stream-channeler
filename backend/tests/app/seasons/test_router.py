@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.seasons.models import Season
+from app.media.identifiers import tmdb_identifier
 from app.seasons.schemas import (
     SeasonCreate,
     SeasonOutput,
@@ -54,7 +55,11 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
         original_tmdb_id: int,
         new_tmdb_id: int,
     ) -> int:
-        """Patch a `Season` with `new_tmdb_id` and count the relinks it caused."""
+        """Patch a `Season` onto `new_tmdb_id` and count the relinks it caused.
+
+        The TMDB id lives in the `season_identifier` now, so the patch names the
+        identifier and the id is what the `Season` reads back off it.
+        """
         setup = self.create_test_data(
             client=client,
             session=session,
@@ -62,7 +67,7 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
             user_is_authenticated=True,
             record_is_public=False,
         )
-        setup.record.tmdb_id = original_tmdb_id
+        setup.record.season_identifier = tmdb_identifier("tv", original_tmdb_id)
         session.commit()
 
         with patch("app.seasons.router.relink_season_children") as relink:
@@ -72,7 +77,9 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
                 url=self.generic_record_url(setup.record.id),
                 output_schema=SeasonOutput,
                 headers=setup.headers,
-                parameters={"tmdb_id": new_tmdb_id},
+                parameters={
+                    "season_identifier": tmdb_identifier("tv", new_tmdb_id),
+                },
             )
         return relink.call_count
 
@@ -81,7 +88,7 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
         session_scoped_client: TestClient,
         session_scoped_session: Session,
     ) -> None:
-        """Ensure a new `tmdb_id` reruns the children through TMDB."""
+        """Ensure a new TMDB season reruns the children through TMDB."""
         call_count = self.patch_tmdb_id(
             session_scoped_session,
             session_scoped_client,

@@ -9,12 +9,18 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
+from app.issue_reports.service import list_season_issue_reports
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
-from app.media.tmdb_fallback import fill_seasons
+from app.media.tmdb_fallback import (
+    TMDB_PLUGIN_KEY,
+    fill_seasons,
+    tmdb_season_counterpart,
+    tmdb_season_url,
+)
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -22,6 +28,8 @@ from app.seasons.dependencies import EditableSeason, ReadableSeason
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonCreate,
+    SeasonInformationOutput,
+    SeasonInformationSide,
     SeasonListOutput,
     SeasonOutput,
     SeasonsPublic,
@@ -149,6 +157,63 @@ def get_source_seasons(
     return seasons
 
 
+def _information_side(
+    label: str,
+    season: Season,
+    show: Show,
+    url: str | None,
+) -> SeasonInformationSide:
+    return SeasonInformationSide(
+        label=label,
+        name=season.name,
+        season_number=season.season_number,
+        sort_order=season.sort_order,
+        image_url=season.image_url,
+        show_name=show.name,
+        url=url,
+        key=season.key,
+    )
+
+
+@seasons_router.get("/{season_id}/information")  # noqa: FAST003 - Used by ReadableSeason.
+def get_season_information(
+    session: SessionDep,
+    season: ReadableSeason,
+) -> SeasonInformationOutput:
+    """Return what the website and TMDB each say about a `Season`.
+
+    The website's own account is what it stored rather than what is served, since
+    what is served already reads as TMDB has it and would leave nothing to
+    compare.
+    """
+    show = season.show
+    source = show.source
+
+    counterpart = tmdb_season_counterpart(session, season.season_identifier)
+    tmdb: SeasonInformationSide | None = None
+    if counterpart:
+        tmdb_season, tmdb_show = counterpart
+        tmdb = _information_side(
+            TMDB_PLUGIN_KEY,
+            tmdb_season,
+            tmdb_show,
+            tmdb_season_url(tmdb_show.key, tmdb_season.season_number),
+        )
+
+    return SeasonInformationOutput(
+        season_id=season.id,
+        season_identifier=season.season_identifier,
+        issue_reports=list_season_issue_reports(session, season.id),
+        source=_information_side(
+            source.name or source.plugin.name or source.plugin.key,
+            season,
+            show,
+            season.url,
+        ),
+        tmdb=tmdb,
+    )
+
+
 @seasons_router.get("/{season_id}")  # noqa: FAST003 - Used by ReadableSeason.
 def get_season(session: SessionDep, season: ReadableSeason) -> SeasonOutput:
     """Get a `Season` if it's readable by the `User`."""
@@ -163,16 +228,14 @@ def update_season(
 ) -> SeasonOutput:
     """Update and return a `Season` if it's editable by the `User`.
 
-    A new `tmdb_id` repoints every `Episode` at TMDB so their `tmdb_id` and
-    `episode_identifier` follow the one the `User` chose, and the
-    `season_identifier` follows it as well. A `season_identifier` in the same
-    request is what the `User` wants it to be, so it is left alone.
+    A `season_identifier` naming a different TMDB season repoints every
+    `Episode` at TMDB, so their identifiers follow the season the `User` chose.
+    The `season_identifier` itself is what they asked for, so it is left alone.
     """
     previous_tmdb_id = season.tmdb_id
-    sets_identifier = "season_identifier" in season_input.model_dump(exclude_unset=True)
     season = season_input.update(session, season)
     if season.tmdb_id != previous_tmdb_id:
-        relink_season_children(session, season, relink_identifier=not sets_identifier)
+        relink_season_children(session, season)
     return _season_output(session, season)
 
 

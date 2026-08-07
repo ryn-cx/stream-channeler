@@ -418,10 +418,8 @@ export type EpisodeCreate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
 };
 
 /**
@@ -435,7 +433,7 @@ export type EpisodeInformationOutput = {
     episode_id: string;
     episode_identifier: string;
     episode_identifier_locked: boolean;
-    issue_report: (string | null);
+    issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
 };
@@ -460,13 +458,6 @@ export type EpisodeInformationSide = {
 };
 
 /**
- * Schema for reporting what is wrong with an `Episode`.
- */
-export type EpisodeIssueReportInput = {
-    report: string;
-};
-
-/**
  * Schema for returning a list of `Episode`s, with parent information.
  */
 export type EpisodeListOutput = {
@@ -484,10 +475,8 @@ export type EpisodeListOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
     id: string;
     season_id: string;
     username: (string | null);
@@ -498,6 +487,13 @@ export type EpisodeListOutput = {
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
+    /**
+     * The TMDB episode `episode_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -518,12 +514,17 @@ export type EpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
     id: string;
     season_id: string;
+    /**
+     * The TMDB episode `episode_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -554,10 +555,8 @@ export type EpisodeUpdate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier?: (string | null);
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -575,10 +574,8 @@ export type EpisodeWithDetails = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
     id: string;
     season_id: string;
     watch_date?: (string | null);
@@ -590,6 +587,13 @@ export type EpisodeWithDetails = {
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
+    /**
+     * The TMDB episode `episode_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -670,6 +674,58 @@ export type FilterOption = {
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
+};
+
+/**
+ * Schema for leaving an `IssueReport` on a record.
+ */
+export type IssueReportCreate = {
+    report: string;
+};
+
+/**
+ * Schema for returning an `IssueReport` alongside the record it was left on.
+ */
+export type IssueReportListOutput = {
+    id: string;
+    report: string;
+    created_at: string;
+    modified_at: string;
+    user_id: (string | null);
+    username: (string | null);
+    media_type: IssueReportMediaType;
+    media_id: string;
+    media_name: (string | null);
+    season_name: (string | null);
+    show_name: (string | null);
+    source_name: (string | null);
+};
+
+/**
+ * Which kind of record a report was left on.
+ */
+export type IssueReportMediaType = 'episode' | 'season' | 'show';
+
+/**
+ * Schema for returning an `IssueReport`.
+ *
+ * `user_id` and `username` are unset for a report left by a visitor with no
+ * account.
+ */
+export type IssueReportOutput = {
+    id: string;
+    report: string;
+    created_at: string;
+    modified_at: string;
+    user_id: (string | null);
+    username: (string | null);
+};
+
+/**
+ * Schema for rewriting an `IssueReport`.
+ */
+export type IssueReportUpdate = {
+    report: string;
 };
 
 export type MediaOwner = 'official' | 'others';
@@ -845,8 +901,36 @@ export type SeasonCreate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    tmdb_id?: (number | null);
     season_identifier: string;
+};
+
+/**
+ * What the website and TMDB each say about a season, side by side.
+ *
+ * The stored record is returned as the website reported it rather than as it is
+ * served, so the two accounts can be compared instead of one standing in for
+ * the other.
+ */
+export type SeasonInformationOutput = {
+    season_id: string;
+    season_identifier: string;
+    issue_reports: Array<IssueReportOutput>;
+    source: SeasonInformationSide;
+    tmdb: (SeasonInformationSide | null);
+};
+
+/**
+ * One record's own account of a season, as the website that holds it has it.
+ */
+export type SeasonInformationSide = {
+    label: string;
+    name: (string | null);
+    season_number: (number | null);
+    sort_order: (number | null);
+    image_url: (string | null);
+    show_name: (string | null);
+    url: (string | null);
+    key: string;
 };
 
 /**
@@ -863,7 +947,6 @@ export type SeasonListOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    tmdb_id?: (number | null);
     season_identifier: string;
     show_id: string;
     id: string;
@@ -873,6 +956,13 @@ export type SeasonListOutput = {
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
+    /**
+     * The TMDB season `season_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -889,10 +979,16 @@ export type SeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    tmdb_id?: (number | null);
     season_identifier: string;
     show_id: string;
     id: string;
+    /**
+     * The TMDB season `season_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -919,7 +1015,6 @@ export type SeasonUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    tmdb_id?: (number | null);
     season_identifier?: (string | null);
 };
 
@@ -938,8 +1033,37 @@ export type ShowCreate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    tmdb_id?: (number | null);
     show_identifier: string;
+    show_identifier_locked?: boolean;
+};
+
+/**
+ * What the website and TMDB each say about a title, side by side.
+ *
+ * The stored record is returned as the website reported it rather than as it is
+ * served, so the two accounts can be compared instead of one standing in for
+ * the other.
+ */
+export type ShowInformationOutput = {
+    show_id: string;
+    show_identifier: string;
+    show_identifier_locked: boolean;
+    issue_reports: Array<IssueReportOutput>;
+    source: ShowInformationSide;
+    tmdb: (ShowInformationSide | null);
+};
+
+/**
+ * One record's own account of a title, as the website that holds it has it.
+ */
+export type ShowInformationSide = {
+    label: string;
+    name: (string | null);
+    media_type: (string | null);
+    description: (string | null);
+    image_url: (string | null);
+    url: (string | null);
+    key: string;
 };
 
 /**
@@ -957,14 +1081,21 @@ export type ShowListPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    tmdb_id?: (number | null);
     show_identifier: string;
+    show_identifier_locked?: boolean;
     source_id: string;
     id: string;
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
+    /**
+     * The TMDB title `show_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -982,10 +1113,17 @@ export type ShowPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    tmdb_id?: (number | null);
     show_identifier: string;
+    show_identifier_locked?: boolean;
     source_id: string;
     id: string;
+    /**
+     * The TMDB title `show_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -1013,8 +1151,8 @@ export type ShowUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    tmdb_id?: (number | null);
     show_identifier?: (string | null);
+    show_identifier_locked?: boolean;
 };
 
 export type SortKeyInput = {
@@ -1341,10 +1479,8 @@ export type WhitelistEpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    tmdb_id?: (number | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
-    issue_report?: (string | null);
     id: string;
     season_id: string;
     filtered: boolean;
@@ -1353,6 +1489,13 @@ export type WhitelistEpisodeOutput = {
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
+    /**
+     * The TMDB episode `episode_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 export type WhitelistSeasonOutput = {
@@ -1366,13 +1509,19 @@ export type WhitelistSeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    tmdb_id?: (number | null);
     season_identifier: string;
     show_id: string;
     id: string;
     filtered: boolean;
     show_ids: Array<(string)>;
     tmdb_season_number?: (number | null);
+    /**
+     * The TMDB season `season_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 export type WhitelistShowInput = {
@@ -1394,14 +1543,21 @@ export type WhitelistShowOutput = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    tmdb_id?: (number | null);
     show_identifier: string;
+    show_identifier_locked?: boolean;
     source_id: string;
     id: string;
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
     episodes: Array<WhitelistEpisodeOutput>;
+    /**
+     * The TMDB title `show_identifier` names, if it names one.
+     *
+     * Read off the identifier rather than stored beside it, so the two can
+     * never disagree about which TMDB record this is.
+     */
+    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -1413,6 +1569,7 @@ export type WhitelistSourceOutput = {
     source_name: (string | null);
     favicon_url: (string | null);
     filtered: boolean;
+    is_tmdb?: boolean;
 };
 
 export type ChannelOrdersCreateChannelOrderData = {
@@ -1763,19 +1920,6 @@ export type EpisodesGetEpisodeInformationData = {
 
 export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
 
-export type EpisodesReportEpisodeIssueData = {
-    episodeId: string;
-    requestBody: EpisodeIssueReportInput;
-};
-
-export type EpisodesReportEpisodeIssueResponse = (EpisodeOutput);
-
-export type EpisodesClearEpisodeIssueReportData = {
-    episodeId: string;
-};
-
-export type EpisodesClearEpisodeIssueReportResponse = (EpisodeOutput);
-
 export type EpisodesUpdateEpisodeData = {
     episodeId: string;
     requestBody: EpisodeUpdate;
@@ -1881,6 +2025,90 @@ export type FilesGetPluginFilesData = {
 };
 
 export type FilesGetPluginFilesResponse = (FilesPublic);
+
+export type IssueReportsGetIssueReportsData = {
+    mediaType?: (IssueReportMediaType | null);
+};
+
+export type IssueReportsGetIssueReportsResponse = (Array<IssueReportListOutput>);
+
+export type IssueReportsGetEpisodeIssueReportsData = {
+    episodeId: string;
+};
+
+export type IssueReportsGetEpisodeIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateEpisodeIssueReportData = {
+    episodeId: string;
+    requestBody: IssueReportCreate;
+};
+
+export type IssueReportsCreateEpisodeIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsGetSeasonIssueReportsData = {
+    seasonId: string;
+};
+
+export type IssueReportsGetSeasonIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateSeasonIssueReportData = {
+    requestBody: IssueReportCreate;
+    seasonId: string;
+};
+
+export type IssueReportsCreateSeasonIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsGetShowIssueReportsData = {
+    showId: string;
+};
+
+export type IssueReportsGetShowIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateShowIssueReportData = {
+    requestBody: IssueReportCreate;
+    showId: string;
+};
+
+export type IssueReportsCreateShowIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsUpdateEpisodeIssueReportData = {
+    issueReportId: string;
+    requestBody: IssueReportUpdate;
+};
+
+export type IssueReportsUpdateEpisodeIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsDeleteEpisodeIssueReportData = {
+    issueReportId: string;
+};
+
+export type IssueReportsDeleteEpisodeIssueReportResponse = (Message);
+
+export type IssueReportsUpdateSeasonIssueReportData = {
+    issueReportId: string;
+    requestBody: IssueReportUpdate;
+};
+
+export type IssueReportsUpdateSeasonIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsDeleteSeasonIssueReportData = {
+    issueReportId: string;
+};
+
+export type IssueReportsDeleteSeasonIssueReportResponse = (Message);
+
+export type IssueReportsUpdateShowIssueReportData = {
+    issueReportId: string;
+    requestBody: IssueReportUpdate;
+};
+
+export type IssueReportsUpdateShowIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsDeleteShowIssueReportData = {
+    issueReportId: string;
+};
+
+export type IssueReportsDeleteShowIssueReportResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -2001,6 +2229,12 @@ export type SeasonsGetSeasonsData = {
 
 export type SeasonsGetSeasonsResponse = (SeasonsPublic);
 
+export type SeasonsGetSeasonInformationData = {
+    seasonId: string;
+};
+
+export type SeasonsGetSeasonInformationResponse = (SeasonInformationOutput);
+
 export type SeasonsGetSeasonData = {
     seasonId: string;
 };
@@ -2066,6 +2300,12 @@ export type ShowsGetShowsData = {
 };
 
 export type ShowsGetShowsResponse = (ShowsPublic);
+
+export type ShowsGetShowInformationData = {
+    showId: string;
+};
+
+export type ShowsGetShowInformationResponse = (ShowInformationOutput);
 
 export type ShowsGetShowData = {
     showId: string;

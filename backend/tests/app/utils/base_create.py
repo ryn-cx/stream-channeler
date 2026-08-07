@@ -24,7 +24,12 @@ from tests.app.utils.route_assertions import (
     assert_success_list,
     assert_unprocessable,
 )
-from tests.app.utils.utils import build_random_model, dump_random_model, random_bool
+from tests.app.utils.utils import (
+    build_random_model,
+    dump_random_model,
+    random_bool,
+    request_payload,
+)
 
 
 @runtime_checkable
@@ -98,7 +103,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(parent_id),
                 output_schema=self.output_schema,
                 headers=headers,
-                parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
+                parameters=request_payload(parameters_model),
             )
             assert len(response) == 1
             result = response[0]
@@ -109,7 +114,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.create_record_url(parent_id),
                 output_schema=self.output_schema,
                 headers=headers,
-                parameters=parameters_model.model_dump(mode="json", exclude_unset=True),
+                parameters=request_payload(parameters_model),
             )
 
         # Check the response from the API matches the input values.

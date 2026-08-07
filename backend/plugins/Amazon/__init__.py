@@ -30,7 +30,12 @@ class Amazon(
     FAVICON_URL = "https://www.amazon.com/favicon.ico"
 
     @override
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def import_url(
+        self,
+        url: str,
+        tmdb_id: int | None = None,
+    ) -> list[URLImportResult]:
+        self._use_tmdb_id(tmdb_id)
         handler = self._get_url_handler(url)
         handler.raise_if_invalid()
         return [

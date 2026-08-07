@@ -15,9 +15,15 @@ from starlette.responses import Response
 
 from app.config import settings
 from app.constants import APP_PATH
+from app.database import load_models
 from app.log import configure_logging
 
 configure_logging()
+
+# A model is only reachable by name from another model's relationship once it has
+# been imported, and a router can map a model as it is imported, so every model is
+# loaded before the first router is.
+load_models()
 
 
 # TODO: Make this a private function upstream.

@@ -13,7 +13,6 @@ import {
 import { useState } from "react"
 import { type ChannelEpisodesOutput, WatchesService } from "@/client"
 import { EpisodeInformationDialog } from "@/components/ChannelCommon/EpisodeInformationDialog"
-import { ReportEpisodeIssueDialog } from "@/components/ChannelCommon/ReportEpisodeIssueDialog"
 import { BlacklistEpisodeDialog } from "@/components/Channels/ChannelDetail/BlacklistEpisodeDialog"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
@@ -46,7 +45,6 @@ export function useEpisodeActions({
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
   const [confirmDeleteWatch, setConfirmDeleteWatch] = useState(false)
   const [showInformation, setShowInformation] = useState(false)
-  const [reportIssue, setReportIssue] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId, watchFilters)
 
@@ -228,10 +226,10 @@ export function useEpisodeActions({
   menuItems.push({
     key: "report-issue",
     icon: <Flag />,
-    label: episode.issue_report ? "Edit Issue Report" : "Report Issue",
+    label: "Report Issue",
     onClick: (event) => {
       event.stopPropagation()
-      setReportIssue(true)
+      setShowInformation(true)
     },
   })
   menuItems.push({
@@ -253,15 +251,6 @@ export function useEpisodeActions({
           episodeId={episode.id}
           open={showInformation}
           onOpenChange={setShowInformation}
-        />
-      )}
-      {reportIssue && (
-        <ReportEpisodeIssueDialog
-          episodeId={episode.id}
-          episodeName={episode.name ?? null}
-          currentReport={episode.issue_report ?? null}
-          open={reportIssue}
-          onOpenChange={setReportIssue}
         />
       )}
       {confirmBlacklist && (

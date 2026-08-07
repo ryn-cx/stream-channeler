@@ -70,7 +70,7 @@ class TMDBMixin(BasePlugin, register=False):
         # for it is what identifies it. `tmdb_link_show` replaces this with the
         # TMDB id when the title is linked.
         show.show_identifier = f"{self.plugin_key()} {show_key}"
-        tmdb_id = self._fetch_tmdb_id(show_key, existing_show)
+        tmdb_id = self._cached_tmdb_id(show_key)
         show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
         if show.tmdb_id:
             self.tmdb.import_title(tmdb_media_type, show.tmdb_id)
@@ -140,6 +140,17 @@ class TMDBMixin(BasePlugin, register=False):
         if not shows:
             return None
         return next((show for show in shows if show.tmdb_id), shows[0])
+
+    @override
+    def _use_tmdb_id(self, tmdb_id: int | None) -> None:
+        """Take a caller's `tmdb_id` as the answer `_cached_tmdb_id` would look up.
+
+        An import that already knows which TMDB title it is working on says so,
+        which is what keeps a title off the name search `_fetch_tmdb_id` falls
+        back on. Being told nothing leaves the lookup as it was.
+        """
+        if tmdb_id is not None:
+            self._tmdb_id = tmdb_id
 
     def _cached_tmdb_id(self, show_key: str) -> int | None:
         """Resolve the TMDB id once for the show the instance is working on.

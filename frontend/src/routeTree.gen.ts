@@ -41,6 +41,10 @@ import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugi
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
+import { Route as LayoutAdminShowReportsRouteImport } from './routes/_layout/admin.show-reports'
+import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/admin.season-reports'
+import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.reports'
+import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
 import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
@@ -215,6 +219,28 @@ const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutAdminShowReportsRoute = LayoutAdminShowReportsRouteImport.update({
+  id: '/show-reports',
+  path: '/show-reports',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminSeasonReportsRoute =
+  LayoutAdminSeasonReportsRouteImport.update({
+    id: '/season-reports',
+    path: '/season-reports',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
+const LayoutAdminReportsRoute = LayoutAdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminEpisodeReportsRoute =
+  LayoutAdminEpisodeReportsRouteImport.update({
+    id: '/episode-reports',
+    path: '/episode-reports',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
 const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
   id: '/channels',
   path: '/channels',
@@ -322,6 +348,10 @@ export interface FileRoutesByFullPath {
   '/watches': typeof LayoutWatchesRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
+  '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/reports': typeof LayoutAdminReportsRoute
+  '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
+  '/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -367,6 +397,10 @@ export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
+  '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/reports': typeof LayoutAdminReportsRoute
+  '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
+  '/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -416,6 +450,10 @@ export interface FileRoutesById {
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
+  '/_layout/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/_layout/admin/reports': typeof LayoutAdminReportsRoute
+  '/_layout/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
+  '/_layout/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -465,6 +503,10 @@ export interface FileRouteTypes {
     | '/watches'
     | '/admin/channel-queues'
     | '/admin/channels'
+    | '/admin/episode-reports'
+    | '/admin/reports'
+    | '/admin/season-reports'
+    | '/admin/show-reports'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -510,6 +552,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/channel-queues'
     | '/admin/channels'
+    | '/admin/episode-reports'
+    | '/admin/reports'
+    | '/admin/season-reports'
+    | '/admin/show-reports'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -558,6 +604,10 @@ export interface FileRouteTypes {
     | '/_layout/'
     | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
+    | '/_layout/admin/episode-reports'
+    | '/_layout/admin/reports'
+    | '/_layout/admin/season-reports'
+    | '/_layout/admin/show-reports'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
@@ -817,6 +867,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminUsersRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
+    '/_layout/admin/show-reports': {
+      id: '/_layout/admin/show-reports'
+      path: '/show-reports'
+      fullPath: '/admin/show-reports'
+      preLoaderRoute: typeof LayoutAdminShowReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/season-reports': {
+      id: '/_layout/admin/season-reports'
+      path: '/season-reports'
+      fullPath: '/admin/season-reports'
+      preLoaderRoute: typeof LayoutAdminSeasonReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/reports': {
+      id: '/_layout/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof LayoutAdminReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/episode-reports': {
+      id: '/_layout/admin/episode-reports'
+      path: '/episode-reports'
+      fullPath: '/admin/episode-reports'
+      preLoaderRoute: typeof LayoutAdminEpisodeReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/admin/channels': {
       id: '/_layout/admin/channels'
       path: '/channels'
@@ -921,6 +999,10 @@ declare module '@tanstack/react-router' {
 interface LayoutAdminRouteChildren {
   LayoutAdminChannelQueuesRoute: typeof LayoutAdminChannelQueuesRoute
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
+  LayoutAdminEpisodeReportsRoute: typeof LayoutAdminEpisodeReportsRoute
+  LayoutAdminReportsRoute: typeof LayoutAdminReportsRoute
+  LayoutAdminSeasonReportsRoute: typeof LayoutAdminSeasonReportsRoute
+  LayoutAdminShowReportsRoute: typeof LayoutAdminShowReportsRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
 }
@@ -928,6 +1010,10 @@ interface LayoutAdminRouteChildren {
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminChannelQueuesRoute: LayoutAdminChannelQueuesRoute,
   LayoutAdminChannelsRoute: LayoutAdminChannelsRoute,
+  LayoutAdminEpisodeReportsRoute: LayoutAdminEpisodeReportsRoute,
+  LayoutAdminReportsRoute: LayoutAdminReportsRoute,
+  LayoutAdminSeasonReportsRoute: LayoutAdminSeasonReportsRoute,
+  LayoutAdminShowReportsRoute: LayoutAdminShowReportsRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,
 }

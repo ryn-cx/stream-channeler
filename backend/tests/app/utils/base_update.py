@@ -25,7 +25,7 @@ from tests.app.utils.route_assertions import (
     assert_success_list,
     assert_unprocessable,
 )
-from tests.app.utils.utils import build_random_model, dump_random_model
+from tests.app.utils.utils import build_random_model, dump_random_model, request_payload
 
 
 class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
@@ -108,7 +108,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.generic_record_url(record_id),
                 output_schema=self.output_schema,
                 headers=setup.headers,
-                parameters=patch_input.model_dump(mode="json", exclude_unset=True),
+                parameters=request_payload(patch_input),
             )
             assert len(results) == 1
             result = results[0]
@@ -119,7 +119,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 url=self.generic_record_url(record_id),
                 output_schema=self.output_schema,
                 headers=setup.headers,
-                parameters=patch_input.model_dump(mode="json", exclude_unset=True),
+                parameters=request_payload(patch_input),
             )
 
         # Verify that the database matches the API input.
@@ -326,7 +326,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
         update_model = build_random_model(self.update_schema)
-        parameters = update_model.model_dump(mode="json", exclude_unset=True)
+        parameters = request_payload(update_model)
         parameters["key"] = ""
 
         with self.assert_no_db_change(session_scoped_session):
@@ -353,7 +353,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
         update_model = build_random_model(self.update_schema)
-        parameters = update_model.model_dump(mode="json", exclude_unset=True)
+        parameters = request_payload(update_model)
         parameters["id"] = str(uuid.uuid4())
 
         with self.assert_no_db_change(session_scoped_session):

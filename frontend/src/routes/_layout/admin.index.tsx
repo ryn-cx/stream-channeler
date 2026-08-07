@@ -1,6 +1,14 @@
 // TODO: Validate
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { ListOrdered, Radio, Users } from "lucide-react"
+import {
+  Clapperboard,
+  Flag,
+  Layers,
+  ListOrdered,
+  Radio,
+  Tv,
+  Users,
+} from "lucide-react"
 import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Card,
@@ -49,6 +57,62 @@ function AdminIndex() {
               <CardDescription>
                 View and edit every channel's import queue, or filter to a
                 single user's queues.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flag className="size-5" />
+                All Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Every issue reported against an episode, season or show, newest
+                first.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/episode-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clapperboard className="size-5" />
+                Episode Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported episode once, with how many issues were reported
+                against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/season-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="size-5" />
+                Season Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported season once, with how many issues were reported
+                against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/show-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tv className="size-5" />
+                Show Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported title once, with how many issues were reported
+                against it and what they say.
               </CardDescription>
             </CardHeader>
           </Card>

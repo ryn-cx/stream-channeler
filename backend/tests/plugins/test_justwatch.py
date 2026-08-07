@@ -2,16 +2,15 @@
 from datetime import datetime, timedelta
 from typing import override
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
-from app.episodes.models import Episode
-from app.seasons.models import Season
+from app.media.tmdb_fallback import TMDB_PLUGIN_KEY
+from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
 from plugins.JustWatch.files import just_scrape
-from plugins.utils.abstract_plugin import URLImportResult
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -23,48 +22,16 @@ from tests.plugins.plugin_validator.validator import Validator
 
 
 class JustWatchValidator(PluginValidator[JustWatch]):
+    """Validate JustWatch.
+
+    A title is imported through the plugin of every service that has an offer for
+    it, so the results also stand for shows stored under those plugins. JustWatch
+    has no files for them and cannot update them, which leaves the shows it
+    imported from its own data as the only ones its tests can use. `imported_shows`
+    already keeps to the plugin under test, so nothing extra is needed here.
+    """
+
     plugin_class = JustWatch
-
-    @staticmethod
-    def _own_results(results: list[URLImportResult]) -> list[URLImportResult]:
-        """Return the results for the shows JustWatch itself owns.
-
-        A title is imported through the plugin of every service that has one, so
-        the results also cover shows stored under those plugins. JustWatch has no
-        files for them and cannot update them, which leaves the shows it imported
-        from its own data as the only ones its tests can use.
-        """
-        return [
-            result
-            for result in results
-            if result.show.source.plugin.key == JustWatch.plugin_key()
-        ]
-
-    @staticmethod
-    @override
-    def get_random_source(results: list[URLImportResult]) -> Source:
-        return PluginValidator.get_random_source(
-            JustWatchValidator._own_results(results),
-        )
-
-    @staticmethod
-    @override
-    def get_random_show(results: list[URLImportResult]) -> Show:
-        return PluginValidator.get_random_show(JustWatchValidator._own_results(results))
-
-    @staticmethod
-    @override
-    def get_random_season(results: list[URLImportResult]) -> Season:
-        return PluginValidator.get_random_season(
-            JustWatchValidator._own_results(results),
-        )
-
-    @staticmethod
-    @override
-    def get_random_episode(results: list[URLImportResult]) -> Episode:
-        return PluginValidator.get_random_episode(
-            JustWatchValidator._own_results(results),
-        )
 
 
 class JustWatchStandardTests(StandardTests[JustWatch], JustWatchValidator):
@@ -151,11 +118,23 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
         results = self._import_url(session_with_files)
         plugin_instance = self.imported_plugin
 
-        external_shows = [
-            result.show
-            for result in results
-            if result.show.source.plugin.key != JustWatch.plugin_key()
-        ]
+        # A result names a title by identifier, so the copies stored for it are
+        # looked up to find the ones another plugin owns.
+        external_shows = list(
+            session_with_files.exec(
+                select(Show)
+                .join(Source)
+                .join(Plugin)
+                .where(
+                    col(Show.show_identifier).in_(
+                        {result.show_identifier for result in results},
+                    ),
+                    col(Show.deleted_at).is_(None),
+                    Plugin.key != JustWatch.plugin_key(),
+                    Plugin.key != TMDB_PLUGIN_KEY,
+                ),
+            ).all(),
+        )
         assert external_shows, "No show owned by another plugin was imported."
 
         # Every service a title is on can have its own plugin, which leaves

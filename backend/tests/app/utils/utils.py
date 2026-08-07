@@ -169,6 +169,20 @@ def _random_field_value(inner_type: type, info: FieldInfo) -> object:
     return _random_value(inner_type)
 
 
+def request_payload(model: BaseModel, *, exclude_unset: bool = True) -> dict[str, Any]:
+    """Return `model` as a request body would carry it.
+
+    A computed field is derived from what the record already holds, so it is
+    never something a request sets; `model_dump` includes it all the same, and an
+    endpoint that forbids unknown fields rejects the request over it.
+    """
+    return model.model_dump(
+        mode="json",
+        exclude_unset=exclude_unset,
+        exclude=set(type(model).model_computed_fields),
+    )
+
+
 def build_random_model[T: BaseModel](
     model: type[T],
     mode: Literal["random", "full", "minimal"] = "random",
@@ -203,11 +217,7 @@ def dump_random_model(
     **required_kwargs: object,
 ) -> dict[str, Any]:
     """Return a JSON-serialized model with randomly populated fields."""
-    return build_random_model(
-        model,
-        mode,
-        **required_kwargs,
-    ).model_dump(mode="json", exclude_unset=True)
+    return request_payload(build_random_model(model, mode, **required_kwargs))
 
 
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:

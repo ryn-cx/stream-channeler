@@ -12,7 +12,6 @@ import { FormTextField } from "@/components/Common/FormTextField"
 import { DialogTrigger } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
-  optionalInt,
   optionalString,
   requiredIdentifier,
   requiredKey,
@@ -26,7 +25,6 @@ const formSchema = z.object({
   description: optionalString,
   url: optionalString,
   image_url: optionalString,
-  tmdb_id: optionalInt,
   show_identifier: requiredIdentifier,
   data_timestamp: optionalString,
   update_at: optionalString,
@@ -56,7 +54,6 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
       description: "",
       url: "",
       image_url: "",
-      tmdb_id: "",
       show_identifier: "",
       data_timestamp: "",
       update_at: "",

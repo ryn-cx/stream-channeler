@@ -228,6 +228,10 @@ class WhitelistSourceOutput(BaseModel):
     source_name: str | None
     favicon_url: str | None
     filtered: bool
+    # TMDB is where the media is catalogued rather than a website it can be
+    # watched on, so a row names it for the seasons it has a record of and never
+    # for an episode.
+    is_tmdb: bool = Field(default=False)
 
 
 class WhitelistSeasonOutput(SeasonOutput):

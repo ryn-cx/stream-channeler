@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
+from pydantic import computed_field
 from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
@@ -17,6 +18,7 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.media.identifiers import identifier_tmdb_id
 from app.models import BaseMediaMixin, DateTimeField, MediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -25,6 +27,7 @@ from app.sources.models import Source
 from app.users.models import User
 
 if TYPE_CHECKING:
+    from app.issue_reports.models import EpisodeIssueReport
     from app.watches.models import Watch
 
 
@@ -40,12 +43,18 @@ class BaseEpisode(BaseMediaMixin):
     duration: int | None = Field(ge=0, default=None)
     release_date: datetime | None = DateTimeField(default=None)
     air_date: datetime | None = DateTimeField(default=None)
-    tmdb_id: int | None = Field(default=None)
     episode_identifier: str
     episode_identifier_locked: bool = Field(default=False)
-    # What a `User` says is wrong with the episode, which is about the episode
-    # rather than about what any website reported, so an import never clears it.
-    issue_report: str | None = Field(default=None)
+
+    @computed_field
+    @property
+    def tmdb_id(self) -> int | None:
+        """The TMDB episode `episode_identifier` names, if it names one.
+
+        Read off the identifier rather than stored beside it, so the two can
+        never disagree about which TMDB record this is.
+        """
+        return identifier_tmdb_id(self.episode_identifier)
 
 
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
@@ -56,7 +65,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         "duration",
         "episode_identifier",
         "episode_number",
-        "id",
         "name",
         "release_date",
         "sort_order",
@@ -96,6 +104,11 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     watches: list[Watch] = Relationship(
         back_populates="episode",
         sa_relationship_kwargs={"passive_deletes": True},
+    )
+
+    issue_reports: list[EpisodeIssueReport] = Relationship(
+        back_populates="episode",
+        cascade_delete=True,
     )
 
     @override
@@ -148,15 +161,11 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     ) -> Self:
         """Upsert the `Episode`, keeping a locked `episode_identifier` intact.
 
-        `episode_identifier_locked` and `issue_report` are only ever set by a
-        `User`, so they are always protected, and while the lock is set the
-        automatically detected `episode_identifier` never replaces the one the
-        `User` chose.
+        `episode_identifier_locked` is only ever set by a `User`, so it is always
+        protected, and while the lock is set the automatically detected
+        `episode_identifier` never replaces the one the `User` chose.
         """
-        protected_keys = set(protected_keys or ()) | {
-            "episode_identifier_locked",
-            "issue_report",
-        }
+        protected_keys = set(protected_keys or ()) | {"episode_identifier_locked"}
         if existing_record and existing_record.episode_identifier_locked:
             protected_keys.add("episode_identifier")
         return super().upsert(parent, existing_record, protected_keys)

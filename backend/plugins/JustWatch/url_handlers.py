@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from app.channels.service import shows_by_identifier
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -41,8 +42,7 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
         shows: Sequence[Show],
     ) -> list[URLImportResult]:
         """Return the import results for every show the URL maps to."""
-        a = [result for show in shows for result in self._results_for_show(show)]
-        return a
+        return [result for show in shows for result in self._results_for_show(show)]
 
     def narrow_to_season(
         self,
@@ -51,28 +51,36 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
         """Narrow results imported by another plugin down to the URL's season.
 
         The offer URL handed to the other plugin points at the whole title, so a
-        season URL has to be applied to the shows it imported.
+        season URL has to be applied to the title it imported. A result names
+        that title by its identifier, so the copies standing behind it are looked
+        up to find which of their seasons the URL asked for.
         """
         if self.season_number is None:
             return list(results)
+
+        copies = shows_by_identifier(
+            self.plugin.session,
+            {result.show_identifier for result in results},
+        )
         return [
             narrowed
             for result in results
-            for narrowed in self._results_for_show(result.show)
+            for show in copies[result.show_identifier]
+            for narrowed in self._results_for_show(show)
         ]
 
     def _results_for_show(self, show: Show) -> list[URLImportResult]:
         # If no season was specified the whole show should be imported.
         season_number = self.season_number
         if season_number is None:
-            return [URLImportResult(show=show, is_whitelist=False)]
+            return [URLImportResult.for_show(show)]
 
         # If the URL that the user used was for a specific season only return that
         # season. The season.key value in the database is the internal one used by
         # JustWatch, but the user's input will be the external one so the easiest way
         # to match a season is by using the actual season number.
         return [
-            URLImportResult(show=show, seasons=[season], is_whitelist=True)
+            URLImportResult.for_seasons(show, [season])
             for season in show.seasons
             if season.season_number == season_number and season.episodes
         ]

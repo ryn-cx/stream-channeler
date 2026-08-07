@@ -14,17 +14,15 @@ ARTIST_PREFIX = "artist"
 
 # Music is its own `Source` so a channel can take an artist without the video
 # catalogue coming with it, and so the two can be scheduled apart.
+VIDEO_SOURCE_KEY = "Crunchyroll"
+VIDEO_SOURCE_NAME = "Crunchyroll"
 MUSIC_SOURCE_KEY = "CrunchyrollMusic"
 MUSIC_SOURCE_NAME = "Crunchyroll Music"
 
 # An artist's videos and concerts are two separate listings, so each becomes a
 # season of its own rather than one flat list of everything they released.
-MUSIC_CATEGORIES: tuple[MusicCategory, ...] = ("musicvideo", "concert")
-
-CATEGORY_NAMES: dict[MusicCategory, str] = {
-    "musicvideo": "Music Videos",
-    "concert": "Concerts",
-}
+MUSIC_CATEGORIES = ("musicvideo", "concert")
+CATEGORY_NAMES = {"musicvideo": "Music Videos", "concert": "Concerts"}
 
 
 class MusicSeasonKey(NamedTuple):

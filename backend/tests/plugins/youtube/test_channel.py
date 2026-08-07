@@ -79,8 +79,7 @@ class TestChannelWithVideoInMultiplePlaylists(
     def test_episode_in_multiple_seasons(self, session_with_files: Session) -> None:
         """Test that episodes that belong to multiple seasons works correctly."""
         results = self._import_url(session_with_files)
-        result = results[0]
-        show = result.show
+        show = self.imported_shows(session_with_files, results)[0]
         episode_count = 0
         for season in show.seasons:
             for episode in season.episodes:

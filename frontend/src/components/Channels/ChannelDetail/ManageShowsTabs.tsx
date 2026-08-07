@@ -403,6 +403,7 @@ export function ManageShowsTabs({
   const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
     (a, b) => (a.name ?? "").localeCompare(b.name ?? ""),
   )
+  const showCount = groupShows(showsList).length
   const sources: Record<string, Source> = showsData?.sources || {}
   const shows: Record<string, Show> = {
     ...(showsData?.shows
@@ -620,7 +621,7 @@ export function ManageShowsTabs({
           </TabsTrigger>
           <TabsTrigger value="shows">
             <List className="h-4 w-4 mr-1" /> Edit Shows
-            {showsList.length > 0 && ` (${showsList.length})`}
+            {showCount > 0 && ` (${showCount})`}
           </TabsTrigger>
           <TabsTrigger value="queue">
             Queue{pendingQueueCount > 0 && ` (${pendingQueueCount})`}

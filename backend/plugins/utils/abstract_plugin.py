@@ -1,8 +1,11 @@
 # TODO: Validate
 
 
+from __future__ import annotations
+
 import inspect
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, override
@@ -86,13 +89,22 @@ class AbstractPlugin(ABC):
         """
         return False
 
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def import_url(
+        self,
+        url: str,
+        tmdb_id: int | None = None,
+    ) -> list[URLImportResult]:
         """Import `url` into the database.
 
         Only called if `is_valid_url_format` returns `True` on the `url`.
 
         Args:
             url: The URL to import.
+            tmdb_id: The TMDB title `url` is known to be, when the caller already
+                knows it. A plugin otherwise has to find the title on TMDB by
+                searching its name, which is a guess; being told is not. Passed
+                down whenever one import hands off to another, so the whole chain
+                works from the one title the import started at.
 
         Returns:
             A list of `URLImportResult`.
@@ -359,39 +371,39 @@ class InvalidURLError(Exception):
 
 
 class URLImportResult(BaseModel):
-    """Result of importing a single URL.
+    """What a channel takes on from importing a single URL.
+
+    A channel holds identifiers rather than one website's records, so this is
+    what an import has to say and nothing more. The identifiers are also what
+    makes the same title, season or episode on two websites a single thing, so a
+    result stays true no matter which website's copy it was imported from.
 
     Example outputs:
 
-      If a user adds a URL for a show it is assumed the user wants every season/episode
-      of that shows and all future episodes as well so the output should be:
-          show=show - Show is always required is_whitelist=False - New
-          seasons/episodes should be added automatically.
+      If a user adds a URL for a show it is assumed the user wants every
+      season/episode of that show and all future episodes as well:
+          show_identifier - Always required.
+          is_whitelist=False - New seasons/episodes are added automatically.
 
-      If the user adds a URL for a season it is assumed the user wants just the episodes
-      from that season and all other seasons/episodes should be excluded so the output
-      should be:
-          show=show - Show is always required seasons=[season] - Just the imported
-          season should be whitelisted. is_whitelist=True - New seasons need to be
-          manually whitelisted.
+      If the user adds a URL for a season it is assumed the user wants just the
+      episodes from that season and all other seasons excluded:
+          season_identifiers - Just the imported season.
+          is_whitelist=True - New seasons need to be whitelisted by hand.
 
-      If the user adds a URL for an episode it is assumed the user wants just that
-      episode and all other seasons/episodes should be excluded so the output should be:
-          show=show - Show is always required
-          episodes=[episode] - Just the imported episode should be whitelisted.
-          is_whitelist=True - New episodes need to be manually whitelisted.
-
-    Let this be a Sequence because SQLModel defaults to Sequences.
+      If the user adds a URL for an episode it is assumed the user wants just
+      that episode and all other episodes excluded:
+          episode_identifiers - Just the imported episode.
+          is_whitelist=True - New episodes need to be whitelisted by hand.
 
     """
 
-    show: Show
-    """The show that was imported from the URL."""
+    show_identifier: str
+    """The title that was imported from the URL."""
 
-    seasons: list[Season] = Field(default=[])
+    season_identifiers: list[str] = Field(default=[])
     """Seasons to prepopulate in the user's whitelist/blacklist."""
 
-    episodes: list[Episode] = Field(default=[])
+    episode_identifiers: list[str] = Field(default=[])
     """Episodes to prepopulate in the user's whitelist/blacklist."""
 
     is_whitelist: bool = Field(default=False)
@@ -402,6 +414,29 @@ class URLImportResult(BaseModel):
     When False (the default), new content is added automatically and the user
     must blacklist anything they don't want.
     """
+
+    @classmethod
+    def for_show(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
+        """Return the result of importing the whole of `show`."""
+        return cls(show_identifier=show.show_identifier, is_whitelist=is_whitelist)
+
+    @classmethod
+    def for_seasons(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
+        """Return the result of importing only `seasons` of `show`."""
+        return cls(
+            show_identifier=show.show_identifier,
+            season_identifiers=[season.season_identifier for season in seasons],
+            is_whitelist=True,
+        )
+
+    @classmethod
+    def for_episodes(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
+        """Return the result of importing only `episodes` of `show`."""
+        return cls(
+            show_identifier=show.show_identifier,
+            episode_identifiers=[episode.episode_identifier for episode in episodes],
+            is_whitelist=True,
+        )
 
 
 class PluginSearchResult(BaseModel):

@@ -1,7 +1,7 @@
 # TODO: Validate
 
 from loguru import logger
-from sqlmodel import Session, col
+from sqlmodel import Session
 
 from app.database import engine, load_models
 from app.plugins.models import Plugin

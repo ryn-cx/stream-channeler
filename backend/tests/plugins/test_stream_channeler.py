@@ -57,10 +57,10 @@ class TestImportShow:
         results = plugin.import_url(url)
 
         assert len(results) == 1
-        assert results[0].show.id == show.id
+        assert results[0].show_identifier == show.show_identifier
         assert results[0].is_whitelist is False
-        assert results[0].seasons == []
-        assert results[0].episodes == []
+        assert results[0].season_identifiers == []
+        assert results[0].episode_identifiers == []
 
     def test_import_nonexistent_show(self, function_scoped_session: Session) -> None:
         plugin = StreamChanneler(function_scoped_session)
@@ -79,11 +79,10 @@ class TestImportSeason:
         results = plugin.import_url(url)
 
         assert len(results) == 1
-        assert results[0].show.id == season.show_id
+        assert results[0].show_identifier == season.show.show_identifier
         assert results[0].is_whitelist is True
-        assert len(results[0].seasons) == 1
-        assert results[0].seasons[0].id == season.id
-        assert results[0].episodes == []
+        assert results[0].season_identifiers == [season.season_identifier]
+        assert results[0].episode_identifiers == []
 
     def test_import_nonexistent_season(self, function_scoped_session: Session) -> None:
         plugin = StreamChanneler(function_scoped_session)
@@ -102,11 +101,10 @@ class TestImportEpisode:
         results = plugin.import_url(url)
 
         assert len(results) == 1
-        assert results[0].show.id == episode.season.show_id
+        assert results[0].show_identifier == episode.season.show.show_identifier
         assert results[0].is_whitelist is True
-        assert results[0].seasons == []
-        assert len(results[0].episodes) == 1
-        assert results[0].episodes[0].id == episode.id
+        assert results[0].season_identifiers == []
+        assert results[0].episode_identifiers == [episode.episode_identifier]
 
     def test_import_nonexistent_episode(self, function_scoped_session: Session) -> None:
         plugin = StreamChanneler(function_scoped_session)
@@ -126,10 +124,10 @@ class TestImportSource:
 
         results = plugin.import_url(url)
 
-        result_show_ids = {result.show.id for result in results}
+        result_identifiers = {result.show_identifier for result in results}
         assert len(results) == 2  # noqa: PLR2004
-        assert show_one.id in result_show_ids
-        assert show_two.id in result_show_ids
+        assert show_one.show_identifier in result_identifiers
+        assert show_two.show_identifier in result_identifiers
         assert all(result.is_whitelist is False for result in results)
 
     def test_import_nonexistent_source(self, function_scoped_session: Session) -> None:
@@ -152,10 +150,10 @@ class TestImportPlugin:
 
         results = plugin.import_url(url)
 
-        result_show_ids = {result.show.id for result in results}
+        result_identifiers = {result.show_identifier for result in results}
         assert len(results) == 2  # noqa: PLR2004
-        assert show_one.id in result_show_ids
-        assert show_two.id in result_show_ids
+        assert show_one.show_identifier in result_identifiers
+        assert show_two.show_identifier in result_identifiers
         assert all(result.is_whitelist is False for result in results)
 
     def test_import_nonexistent_plugin(self, function_scoped_session: Session) -> None:

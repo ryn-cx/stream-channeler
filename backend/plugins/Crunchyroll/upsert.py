@@ -16,6 +16,8 @@ from plugins.Crunchyroll.music_keys import (
     MUSIC_CATEGORIES,
     MUSIC_SOURCE_KEY,
     MUSIC_SOURCE_NAME,
+    VIDEO_SOURCE_KEY,
+    VIDEO_SOURCE_NAME,
     MusicCategory,
     is_artist_show_key,
     music_episode_key,
@@ -57,10 +59,10 @@ class UpsertMixin(HelperMixin, register=False):
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, VIDEO_SOURCE_KEY)
         return Source(
-            key=self.plugin_key(),
-            name=self.plugin_name(),
+            key=VIDEO_SOURCE_KEY,
+            name=VIDEO_SOURCE_NAME,
             favicon_url=self.FAVICON_URL,
             data_timestamp=data_timestamp,
             update_at=data_timestamp + timedelta(days=1),

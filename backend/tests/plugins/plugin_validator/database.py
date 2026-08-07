@@ -188,18 +188,13 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def _simplify_import_url_results(
         results: list[URLImportResult],
     ) -> list[dict[str, Any]]:
-        """Reduce import results to the key tree that identifies their structure."""
+        """Reduce import results to the identifiers a channel would take on."""
         return [
             {
-                "show_key": result.show.key,
+                "show_identifier": result.show_identifier,
                 "is_whitelist": result.is_whitelist,
-                "whitelist_season_keys": sorted(
-                    season.key for season in result.seasons
-                ),
-                "whitelist_episode_keys": sorted(
-                    f"{episode.key} ({episode.season.key})"
-                    for episode in result.episodes
-                ),
+                "whitelist_season_identifiers": sorted(result.season_identifiers),
+                "whitelist_episode_identifiers": sorted(result.episode_identifiers),
             }
             for result in results
         ]

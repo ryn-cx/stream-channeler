@@ -9,12 +9,18 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
+from app.issue_reports.service import list_show_issue_reports
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
-from app.media.tmdb_fallback import fill_shows
+from app.media.tmdb_fallback import (
+    TMDB_PLUGIN_KEY,
+    fill_shows,
+    tmdb_show_counterpart,
+    tmdb_show_url,
+)
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -23,6 +29,8 @@ from app.shows.dependencies import EditableShow, ReadableShow
 from app.shows.models import Show
 from app.shows.schemas import (
     ShowCreate,
+    ShowInformationOutput,
+    ShowInformationSide,
     ShowListPublic,
     ShowPublic,
     ShowsPublic,
@@ -123,6 +131,54 @@ def get_plugin_shows(
     return shows
 
 
+def _information_side(label: str, show: Show, url: str | None) -> ShowInformationSide:
+    return ShowInformationSide(
+        label=label,
+        name=show.name,
+        media_type=show.media_type,
+        description=show.description,
+        image_url=show.image_url,
+        url=url,
+        key=show.key,
+    )
+
+
+@shows_router.get("/{show_id}/information")  # noqa: FAST003 - Used by ReadableShow.
+def get_show_information(
+    session: SessionDep,
+    show: ReadableShow,
+) -> ShowInformationOutput:
+    """Return what the website and TMDB each say about a `Show`.
+
+    The website's own account is what it stored rather than what is served, since
+    what is served already reads as TMDB has it and would leave nothing to
+    compare.
+    """
+    source = show.source
+
+    counterpart = tmdb_show_counterpart(session, show.show_identifier)
+    tmdb: ShowInformationSide | None = None
+    if counterpart:
+        tmdb = _information_side(
+            TMDB_PLUGIN_KEY,
+            counterpart,
+            tmdb_show_url(counterpart.key),
+        )
+
+    return ShowInformationOutput(
+        show_id=show.id,
+        show_identifier=show.show_identifier,
+        show_identifier_locked=show.show_identifier_locked,
+        issue_reports=list_show_issue_reports(session, show.id),
+        source=_information_side(
+            source.name or source.plugin.name or source.plugin.key,
+            show,
+            show.url,
+        ),
+        tmdb=tmdb,
+    )
+
+
 @shows_router.get("/{show_id}")  # noqa: FAST003 - Used by ReadableShow.
 def get_show(session: SessionDep, show: ReadableShow) -> ShowPublic:
     """Get a `Show` if it's readable by the `User`."""
@@ -137,16 +193,14 @@ def update_show(
 ) -> ShowPublic:
     """Update and return a `Show` if it's editable by the `User`.
 
-    A new `tmdb_id` repoints every `Season` and `Episode` at TMDB so their
-    `tmdb_id`, `show_identifier`, `season_identifier` and `episode_identifier`
-    follow the one the `User` chose. A `show_identifier` in the same request is
-    what the `User` wants it to be, so it is left alone.
+    A `show_identifier` naming a different TMDB title repoints every `Season` and
+    `Episode` at TMDB, so their identifiers follow the title the `User` chose.
+    The `show_identifier` itself is what they asked for, so it is left alone.
     """
     previous_tmdb_id = show.tmdb_id
-    sets_identifier = "show_identifier" in show_input.model_dump(exclude_unset=True)
     show = show_input.update(session, show)
     if show.tmdb_id != previous_tmdb_id:
-        relink_children(session, show, relink_identifier=not sets_identifier)
+        relink_children(session, show)
     return _show_output(session, show)
 
 

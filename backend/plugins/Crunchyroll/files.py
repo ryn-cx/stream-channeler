@@ -98,16 +98,13 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_series
 
-    # Need to use download_and_parse_until_datetime instead of download_and_parse so the
-    # new BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
+    # Use download_and_parse_until_datetime instead of download_and_parse so the new
+    # BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
     @override
     def _get(self) -> list[browse_series_models.BrowseSeriesModel]:
         return chirashi().browse_series.download_and_parse_until_datetime(
             end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
-
-    def extract_datums(self) -> list[browse_series_models.Datum]:
-        return chirashi().browse_series.extract_data(self.parsed())
 
 
 class Search(GAPIJSON[search_models.SearchModel]):
@@ -136,27 +133,11 @@ class ArtistMusicVideos(GAPIJSON[artist_music_videos_models.ArtistMusicVideosMod
 
     API_ENDPOINT = chirashi().artist_music_videos
 
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ArtistNotFoundError)
-
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid artist_id {self.unique_identifier}"
-
 
 class ArtistConcerts(GAPIJSON[artist_concerts_models.ArtistConcertsModel]):
     """Artist concerts file."""
 
     API_ENDPOINT = chirashi().artist_concerts
-
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ArtistNotFoundError)
-
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid artist_id {self.unique_identifier}"
 
 
 class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
@@ -190,12 +171,7 @@ class Concert(GAPIJSON[concert_models.ConcertModel]):
 
 
 class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
-    """Browse music file.
-
-    The music catalogue is browsed by artist and offers no cutoff parameter, so
-    every page is downloaded rather than only the ones newer than the previous
-    file. It is small next to the series catalogue and only read monthly.
-    """
+    """Browse music file."""
 
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_music
@@ -204,11 +180,9 @@ class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
     def _get(self) -> list[browse_music_models.BrowseMusicModel]:
         return chirashi().browse_music.download_and_parse_all()
 
-    def extract_datums(self) -> list[browse_music_models.Datum]:
-        return chirashi().browse_music.extract_data(self.parsed())
-
 
 class FileMixin(TMDBMixin, register=False):
+    """File mixin."""
     # The browse listing belongs to the source, so every show reads the same one.
     _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)
 
