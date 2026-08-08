@@ -91,6 +91,7 @@ class EpisodeInformationSide(BaseModel):
     episode_identifier_note: str | None
     data_timestamp: datetime | None
     update_at: datetime | None
+    modified_at: datetime | None
 
 
 class EpisodeInformationOutput(BaseModel):

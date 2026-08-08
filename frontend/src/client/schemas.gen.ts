@@ -2392,10 +2392,22 @@ export const EpisodeInformationSideSchema = {
                 }
             ],
             title: 'Update At'
+        },
+        modified_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Modified At'
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'data_timestamp', 'update_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'data_timestamp', 'update_at', 'modified_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;

@@ -57,6 +57,7 @@ function sideRows(side: EpisodeInformationSide): InformationRows {
     "Identifier note": side.episode_identifier_note,
     "Data timestamp": formatInformationDate(side.data_timestamp),
     "Update at": formatInformationDate(side.update_at),
+    "Modified at": formatInformationDate(side.modified_at),
   }
 }
 
@@ -76,8 +77,10 @@ const ROW_LABELS = [
   "Key",
   "Episode identifier",
   "Identifier locked",
+  "Identifier note",
   "Data timestamp",
   "Update at",
+  "Modified at",
 ]
 
 function heroSubtitle(data: EpisodeInformationOutput) {

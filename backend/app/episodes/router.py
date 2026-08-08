@@ -299,6 +299,7 @@ def _information_side(
         episode_identifier_note=episode.episode_identifier_note,
         data_timestamp=episode.data_timestamp,
         update_at=episode.update_at,
+        modified_at=episode.modified_at,
     )
 
 

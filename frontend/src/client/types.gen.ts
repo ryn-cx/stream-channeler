@@ -487,6 +487,7 @@ export type EpisodeInformationSide = {
     episode_identifier_note: (string | null);
     data_timestamp: (string | null);
     update_at: (string | null);
+    modified_at: (string | null);
 };
 
 /**
