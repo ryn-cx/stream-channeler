@@ -267,7 +267,7 @@ class SortExpressionBuilder:
             return literal_column("0")
         started_query = (
             select(Watch.id)
-            .join(Watch.episodes)  # type: ignore[arg-type]
+            .join(Episode, col(Watch.episode_id) == col(Episode.id))
             .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
             .where(
                 and_(
