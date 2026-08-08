@@ -270,5 +270,5 @@ def _merge_filters(
 if __name__ == "__main__":
     configure_logging()
     load_models()
-    with Session(engine) as import_session:
-        import_queue(import_session)
+    run_forever()
+    logger.info("Import queue process stopped")
