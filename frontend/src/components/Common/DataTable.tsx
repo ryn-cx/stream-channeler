@@ -63,7 +63,10 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
-import { usePersistedJsonState } from "@/hooks/usePersistedState"
+import {
+  usePersistedJsonState,
+  usePersistedState,
+} from "@/hooks/usePersistedState"
 import { cn } from "@/lib/utils"
 import {
   dateRangeFilter,
@@ -980,12 +983,25 @@ export function MediaListPage<TData extends { id: string }>({
   const isAdmin = user?.is_superuser ?? false
   const search = useSearch({ strict: false }) as MediaSearch
   const navigate = useNavigate()
-  const scopeTab: MediaScope = search.view ?? "owned"
+  // The tab the user last read this list at, so returning to it without a scope
+  // in the URL picks up where they left off rather than at the default.
+  const [rememberedScope, setRememberedScope] = usePersistedState<MediaScope>(
+    `media-scope:${path}`,
+    "owned",
+  )
+  const scopeTab: MediaScope = search.view ?? rememberedScope
   // A linked admin-only scope would 403 for a non-admin, so fall back.
   const scopeFilter: OwnerView =
     !isAdmin && ADMIN_SCOPES.includes(scopeTab) ? "owned" : scopeTab
 
+  useEffect(() => {
+    if (search.view && search.view !== rememberedScope) {
+      setRememberedScope(search.view)
+    }
+  }, [search.view, rememberedScope, setRememberedScope])
+
   const setScopeTab = (next: MediaScope) => {
+    setRememberedScope(next)
     navigate({
       to: path,
       search: next === "owned" ? {} : { view: next },

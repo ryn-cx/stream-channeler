@@ -64,7 +64,7 @@ export function FormModal<
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger}
-      <ModalContent size={size}>
+      <ModalContent size={size} className="overflow-y-hidden">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}

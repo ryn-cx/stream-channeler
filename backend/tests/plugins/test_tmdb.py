@@ -37,6 +37,12 @@ class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
     search_query = "Overlord"
 
 
+class TestNoJustWatch(URLTests[TMDB], TMDBValidator):
+    media_type = "movie"
+    parse_url_response = "1368337"
+    show_slug = "the-odyssey"
+
+
 class TestTemp(URLTests[TMDB], TMDBValidator):
     urls = ("https://www.themoviedb.org/tv/209867/watch?language=en-US",)
 

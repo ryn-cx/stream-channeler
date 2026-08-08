@@ -154,7 +154,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
       <Textarea
         value={titlesText}
         onChange={(event) => setTitlesText(event.target.value)}
-        placeholder={"Cowboy Bebop\nGintama\nLaid-Back Camp"}
+        placeholder={"Show Name 1\nShow Name 2\nShow Name 3"}
         rows={6}
         aria-label="Titles to search"
         disabled={isRunning}

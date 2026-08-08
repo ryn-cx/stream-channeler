@@ -5,7 +5,6 @@ import {
   Check,
   ExternalLink,
   EyeOff,
-  Flag,
   Info,
   SkipForward,
   Trash2,
@@ -218,15 +217,6 @@ export function useEpisodeActions({
     key: "information",
     icon: <Info />,
     label: "Episode Information",
-    onClick: (event) => {
-      event.stopPropagation()
-      setShowInformation(true)
-    },
-  })
-  menuItems.push({
-    key: "report-issue",
-    icon: <Flag />,
-    label: "Report Issue",
     onClick: (event) => {
       event.stopPropagation()
       setShowInformation(true)

@@ -320,6 +320,21 @@ export type ChannelShowsOutput = {
         [key: string]: SourcePublic;
     };
     groups?: Array<ChannelShowGroup>;
+    stats?: {
+        [key: string]: ChannelShowStats;
+    };
+};
+
+/**
+ * What a channel's copies of one title add up to.
+ *
+ * A title is counted by what its seasons and episodes are rather than by the
+ * records holding them, so the same season on three websites is one season.
+ */
+export type ChannelShowStats = {
+    season_count: number;
+    episode_count: number;
+    first_release_date?: (string | null);
 };
 
 /**
@@ -450,11 +465,16 @@ export type EpisodeInformationSide = {
     release_date: (string | null);
     air_date: (string | null);
     episode_number: (number | null);
+    sort_order: (number | null);
     season_number: (number | null);
     season_name: (string | null);
     show_name: (string | null);
     url: (string | null);
     key: string;
+    episode_identifier: string;
+    episode_identifier_locked: boolean;
+    data_timestamp: (string | null);
+    update_at: (string | null);
 };
 
 /**
@@ -1055,6 +1075,7 @@ export type ShowInformationOutput = {
     show_id: string;
     show_identifier: string;
     show_identifier_locked: boolean;
+    editable: boolean;
     issue_reports: Array<IssueReportOutput>;
     source: ShowInformationSide;
     tmdb: (ShowInformationSide | null);

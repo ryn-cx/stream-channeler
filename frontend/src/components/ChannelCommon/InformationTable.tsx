@@ -1,4 +1,5 @@
 // TODO: Validate
+import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
 import {
   Table,
   TableBody,
@@ -45,6 +46,9 @@ interface InformationTableProps {
 /**
  * What the website and TMDB each say about one record, side by side, so the two
  * accounts can be compared rather than one standing in for the other.
+ *
+ * A record TMDB has nothing to say about is only the website's account, so it is
+ * laid out on its own rather than beside a column of blanks.
  */
 export function InformationTable({
   sourceLabel,
@@ -59,7 +63,7 @@ export function InformationTable({
         <TableRow>
           <TableHead className="w-[140px]">Field</TableHead>
           <TableHead>{sourceLabel}</TableHead>
-          <TableHead>{tmdbLabel}</TableHead>
+          {tmdbRows && <TableHead>{tmdbLabel}</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -67,11 +71,13 @@ export function InformationTable({
           <TableRow key={label}>
             <TableCell className="font-medium align-top">{label}</TableCell>
             <TableCell className="align-top whitespace-pre-wrap">
-              {sourceRows[label] ?? "—"}
+              <ClampedContent>{sourceRows[label] ?? "—"}</ClampedContent>
             </TableCell>
-            <TableCell className="align-top whitespace-pre-wrap">
-              {tmdbRows ? (tmdbRows[label] ?? "—") : "—"}
-            </TableCell>
+            {tmdbRows && (
+              <TableCell className="align-top whitespace-pre-wrap">
+                <ClampedContent>{tmdbRows[label] ?? "—"}</ClampedContent>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

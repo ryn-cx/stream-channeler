@@ -9,6 +9,7 @@ import { ShowsService, type ShowUpdate } from "@/client"
 import { FormEmojiField } from "@/components/Common/FormEmojiField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
+import { TmdbIdentifierField } from "@/components/Common/TmdbIdentifierField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -145,6 +146,16 @@ const EditShow = ({ show }: EditShowProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      <TmdbIdentifierField
+        identifier={form.watch("show_identifier")}
+        onChange={(identifier) => {
+          form.setValue("show_identifier", identifier, {
+            shouldValidate: true,
+            shouldDirty: true,
+          })
+          form.setValue("show_identifier_locked", true)
+        }}
+      />
       <FormField
         control={form.control}
         name="show_identifier"

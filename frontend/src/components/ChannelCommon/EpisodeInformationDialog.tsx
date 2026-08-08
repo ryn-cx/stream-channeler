@@ -1,7 +1,9 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
-import type { EpisodeInformationSide } from "@/client"
+import type { EpisodeInformationOutput, EpisodeInformationSide } from "@/client"
 import { EpisodesService } from "@/client"
+import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
+import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import {
   ExternalAnchor,
   formatInformationDate,
@@ -37,6 +39,7 @@ function sideRows(side: EpisodeInformationSide): InformationRows {
   return {
     Name: side.name,
     "Episode number": side.episode_number,
+    "Sort order": side.sort_order,
     "Season number": side.season_number,
     "Season name": side.season_name,
     Show: side.show_name,
@@ -49,12 +52,17 @@ function sideRows(side: EpisodeInformationSide): InformationRows {
       <ExternalAnchor href={side.image_url} label={side.image_url} />
     ) : null,
     Key: side.key,
+    "Episode identifier": side.episode_identifier,
+    "Identifier locked": side.episode_identifier_locked ? "Yes" : "No",
+    "Data timestamp": formatInformationDate(side.data_timestamp),
+    "Update at": formatInformationDate(side.update_at),
   }
 }
 
 const ROW_LABELS = [
   "Name",
   "Episode number",
+  "Sort order",
   "Season number",
   "Season name",
   "Show",
@@ -65,24 +73,123 @@ const ROW_LABELS = [
   "Link",
   "Image",
   "Key",
+  "Episode identifier",
+  "Identifier locked",
+  "Data timestamp",
+  "Update at",
 ]
+
+function heroSubtitle(data: EpisodeInformationOutput) {
+  const side = data.tmdb ?? data.source
+  const seasonNumber = side.season_number ?? data.source.season_number
+  const episodeNumber = side.episode_number ?? data.source.episode_number
+  const placement = [
+    seasonNumber != null ? `Season ${seasonNumber}` : side.season_name,
+    episodeNumber != null ? `Episode ${episodeNumber}` : null,
+  ].filter(Boolean)
+  return [side.show_name, ...placement].filter(Boolean).join(" · ")
+}
+
+function heroFacts(data: EpisodeInformationOutput) {
+  const side = data.tmdb ?? data.source
+  const facts = [
+    formatDuration(side.duration ?? data.source.duration),
+    formatInformationDate(side.air_date ?? data.source.air_date),
+    data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
+    data.source.label,
+  ]
+  return facts.filter((fact): fact is string => !!fact)
+}
+
+function heroLinks(data: EpisodeInformationOutput) {
+  const links = []
+  if (data.source.url) {
+    links.push({ label: data.source.label, href: data.source.url })
+  }
+  if (data.tmdb?.url) {
+    links.push({ label: data.tmdb.label, href: data.tmdb.url })
+  }
+  return links
+}
+
+interface EpisodeInformationPanelProps {
+  episodeId: string
+  /** Whether the information is wanted yet, so a collapsed panel fetches nothing. */
+  enabled?: boolean
+}
+
+/**
+ * The episode's own account of itself beside TMDB's, without a dialog around it,
+ * so it can be read inside whatever is already open.
+ */
+export function EpisodeInformationPanel({
+  episodeId,
+  enabled = true,
+}: EpisodeInformationPanelProps) {
+  const queryKey = ["episode-information", episodeId]
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => EpisodesService.getEpisodeInformation({ episodeId }),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  if (isLoading) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Loading episode information…
+      </p>
+    )
+  }
+  if (error || !data) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Couldn't load the episode information.
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <InformationHero
+        title={data.tmdb?.name ?? data.source.name ?? "Unnamed episode"}
+        subtitle={heroSubtitle(data)}
+        description={data.tmdb?.description ?? data.source.description}
+        imageUrl={data.tmdb?.image_url ?? data.source.image_url}
+        facts={heroFacts(data)}
+        links={heroLinks(data)}
+      />
+
+      <CollapsibleSection title="Field comparison">
+        <div className="overflow-x-auto">
+          <InformationTable
+            sourceLabel={data.source.label}
+            tmdbLabel={data.tmdb ? data.tmdb.label : "TMDB (not linked)"}
+            rowLabels={ROW_LABELS}
+            sourceRows={sideRows(data.source)}
+            tmdbRows={data.tmdb ? sideRows(data.tmdb) : null}
+          />
+        </div>
+      </CollapsibleSection>
+
+      <IssueReportsSection
+        target="episode"
+        mediaId={episodeId}
+        reports={data.issue_reports}
+        informationQueryKey={queryKey}
+      />
+    </div>
+  )
+}
 
 export function EpisodeInformationDialog({
   episodeId,
   open,
   onOpenChange,
 }: EpisodeInformationDialogProps) {
-  const queryKey = ["episode-information", episodeId]
-  const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () => EpisodesService.getEpisodeInformation({ episodeId }),
-    enabled: open,
-    staleTime: 5 * 60 * 1000,
-  })
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <ModalContent size="4xl">
+      <ModalContent size="full">
         <DialogHeader>
           <DialogTitle>Episode Information</DialogTitle>
           <DialogDescription>
@@ -92,39 +199,7 @@ export function EpisodeInformationDialog({
         </DialogHeader>
 
         <DialogBody className="overflow-x-auto">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">
-              Loading episode information…
-            </p>
-          ) : error || !data ? (
-            <p className="text-sm text-muted-foreground">
-              Couldn't load the episode information.
-            </p>
-          ) : (
-            <>
-              <InformationTable
-                sourceLabel={data.source.label}
-                tmdbLabel={data.tmdb ? data.tmdb.label : "TMDB (not linked)"}
-                rowLabels={ROW_LABELS}
-                sourceRows={sideRows(data.source)}
-                tmdbRows={data.tmdb ? sideRows(data.tmdb) : null}
-              />
-
-              <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <dt className="text-muted-foreground">Episode identifier</dt>
-                <dd className="break-all">{data.episode_identifier}</dd>
-                <dt className="text-muted-foreground">Identifier locked</dt>
-                <dd>{data.episode_identifier_locked ? "Yes" : "No"}</dd>
-              </dl>
-
-              <IssueReportsSection
-                target="episode"
-                mediaId={episodeId}
-                reports={data.issue_reports}
-                informationQueryKey={queryKey}
-              />
-            </>
-          )}
+          <EpisodeInformationPanel episodeId={episodeId} enabled={open} />
         </DialogBody>
 
         <DialogFooter>

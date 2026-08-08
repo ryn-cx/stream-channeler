@@ -1592,6 +1592,38 @@ export const ChannelShowGroupSchema = {
     description: 'The regular shows contributed by one channel within a combined channel.'
 } as const;
 
+export const ChannelShowStatsSchema = {
+    properties: {
+        season_count: {
+            type: 'integer',
+            title: 'Season Count'
+        },
+        episode_count: {
+            type: 'integer',
+            title: 'Episode Count'
+        },
+        first_release_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'First Release Date'
+        }
+    },
+    type: 'object',
+    required: ['season_count', 'episode_count'],
+    title: 'ChannelShowStats',
+    description: `What a channel's copies of one title add up to.
+
+A title is counted by what its seasons and episodes are rather than by the
+records holding them, so the same season on three websites is one season.`
+} as const;
+
 export const ChannelShowsOutputSchema = {
     properties: {
         shows: {
@@ -1624,6 +1656,13 @@ export const ChannelShowsOutputSchema = {
             },
             type: 'array',
             title: 'Groups'
+        },
+        stats: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ChannelShowStats'
+            },
+            type: 'object',
+            title: 'Stats'
         }
     },
     type: 'object',
@@ -2205,6 +2244,17 @@ export const EpisodeInformationSideSchema = {
             ],
             title: 'Episode Number'
         },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order'
+        },
         season_number: {
             anyOf: [
                 {
@@ -2252,10 +2302,42 @@ export const EpisodeInformationSideSchema = {
         key: {
             type: 'string',
             title: 'Key'
+        },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
+        episode_identifier_locked: {
+            type: 'boolean',
+            title: 'Episode Identifier Locked'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'season_number', 'season_name', 'show_name', 'url', 'key'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'data_timestamp', 'update_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -5429,6 +5511,10 @@ export const ShowInformationOutputSchema = {
             type: 'boolean',
             title: 'Show Identifier Locked'
         },
+        editable: {
+            type: 'boolean',
+            title: 'Editable'
+        },
         issue_reports: {
             items: {
                 '$ref': '#/components/schemas/IssueReportOutput'
@@ -5451,7 +5537,7 @@ export const ShowInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['show_id', 'show_identifier', 'show_identifier_locked', 'issue_reports', 'source', 'tmdb'],
+    required: ['show_id', 'show_identifier', 'show_identifier_locked', 'editable', 'issue_reports', 'source', 'tmdb'],
     title: 'ShowInformationOutput',
     description: `What the website and TMDB each say about a title, side by side.
 

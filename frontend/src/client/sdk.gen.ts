@@ -1290,6 +1290,10 @@ export class EpisodesService {
     /**
      * Update Episode
      * Update and return an `Episode` if it's editable by the `User`.
+     *
+     * A new `episode_identifier` naming a TMDB episode is checked before it is
+     * stored, so an episode the title does not have is refused rather than kept as
+     * a link to nothing, and the title is imported for the link to read.
      * @param data The data for the request.
      * @param data.episodeId
      * @param data.requestBody
@@ -1335,6 +1339,9 @@ export class EpisodesService {
     /**
      * Create Episode
      * Create an `Episode` if the `Season` is editable by the `User`.
+     *
+     * An `episode_identifier` naming a TMDB episode is checked before it is stored,
+     * and the title holding it is imported for the link to read.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.requestBody
@@ -2406,6 +2413,10 @@ export class SeasonsService {
      * A `season_identifier` naming a different TMDB season repoints every
      * `Episode` at TMDB, so their identifiers follow the season the `User` chose.
      * The `season_identifier` itself is what they asked for, so it is left alone.
+     *
+     * A new `season_identifier` naming a TMDB season is checked before it is
+     * stored, so a season the title does not have is refused rather than kept as a
+     * link to nothing, and the title is imported for the link to read.
      * @param data The data for the request.
      * @param data.seasonId
      * @param data.requestBody
@@ -2451,6 +2462,9 @@ export class SeasonsService {
     /**
      * Create Season
      * Create a `Season` if the `Show` is editable by the `User`.
+     *
+     * A `season_identifier` naming a TMDB season is checked before it is stored,
+     * and the title holding it is imported for the link to read.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody
@@ -2649,6 +2663,10 @@ export class ShowsService {
      * A `show_identifier` naming a different TMDB title repoints every `Season` and
      * `Episode` at TMDB, so their identifiers follow the title the `User` chose.
      * The `show_identifier` itself is what they asked for, so it is left alone.
+     *
+     * A new `show_identifier` naming a TMDB title is checked before it is stored,
+     * so a title TMDB does not have is refused rather than kept as a link to
+     * nothing, and one it does have is imported for the link to read.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody
@@ -2694,6 +2712,9 @@ export class ShowsService {
     /**
      * Create Show
      * Create a `Show` if the `Source` is editable by the `User`.
+     *
+     * A `show_identifier` naming a TMDB title is checked before it is stored, and
+     * the title it names is imported for the link to read.
      * @param data The data for the request.
      * @param data.sourceId
      * @param data.requestBody

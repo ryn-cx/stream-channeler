@@ -43,6 +43,7 @@ from app.media.tmdb_fallback import (
     tmdb_episode_counterpart,
     tmdb_episode_url,
 )
+from app.media.tmdb_identifier_links import check_episode_identifier
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -85,7 +86,16 @@ def create_episode(
     season: EditableSeason,
     episode_input: EpisodeCreate,
 ) -> EpisodeOutput:
-    """Create an `Episode` if the `Season` is editable by the `User`."""
+    """Create an `Episode` if the `Season` is editable by the `User`.
+
+    An `episode_identifier` naming a TMDB episode is checked before it is stored,
+    and the title holding it is imported for the link to read.
+    """
+    check_episode_identifier(
+        session,
+        episode_input.episode_identifier,
+        season.show.show_identifier,
+    )
     return _episode_output(session, episode_input.create(session, Episode, season))
 
 
@@ -259,11 +269,16 @@ def _information_side(
         release_date=episode.release_date,
         air_date=episode.air_date,
         episode_number=episode.episode_number,
+        sort_order=episode.sort_order,
         season_number=season.season_number,
         season_name=season.name,
         show_name=show.name,
         url=url,
         key=episode.key,
+        episode_identifier=episode.episode_identifier,
+        episode_identifier_locked=episode.episode_identifier_locked,
+        data_timestamp=episode.data_timestamp,
+        update_at=episode.update_at,
     )
 
 
@@ -320,7 +335,21 @@ def update_episode(
     episode: EditableEpisode,
     episode_input: EpisodeUpdate,
 ) -> EpisodeOutput:
-    """Update and return an `Episode` if it's editable by the `User`."""
+    """Update and return an `Episode` if it's editable by the `User`.
+
+    A new `episode_identifier` naming a TMDB episode is checked before it is
+    stored, so an episode the title does not have is refused rather than kept as
+    a link to nothing, and the title is imported for the link to read.
+    """
+    if (
+        episode_input.episode_identifier is not None
+        and episode_input.episode_identifier != episode.episode_identifier
+    ):
+        check_episode_identifier(
+            session,
+            episode_input.episode_identifier,
+            episode.season.show.show_identifier,
+        )
     return _episode_output(session, episode_input.update(session, episode))
 
 

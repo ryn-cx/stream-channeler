@@ -80,11 +80,16 @@ class EpisodeInformationSide(BaseModel):
     release_date: datetime | None
     air_date: datetime | None
     episode_number: int | None
+    sort_order: int | None
     season_number: int | None
     season_name: str | None
     show_name: str | None
     url: str | None
     key: str
+    episode_identifier: str
+    episode_identifier_locked: bool
+    data_timestamp: datetime | None
+    update_at: datetime | None
 
 
 class EpisodeInformationOutput(BaseModel):

@@ -2,6 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Antenna,
+  ChevronDown,
+  ChevronRight,
   Info,
   LayoutGrid,
   Link2,
@@ -10,17 +12,18 @@ import {
   Plus,
   Rows3,
   Search,
-  Settings,
   Sparkles,
   Trash2,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { Fragment, type ReactNode, useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelQueueOutput } from "@/client"
+import type { ChannelQueueOutput, ChannelShowStats } from "@/client"
 import { ChannelsService, PluginsService, UsersService } from "@/client"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
+import { parseTmdbIdentifier } from "@/components/Common/TmdbIdentifierField"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -55,6 +58,7 @@ import {
 } from "@/components/ui/tooltip"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { usePersistedState } from "@/hooks/usePersistedState"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
@@ -177,10 +181,14 @@ function ShowRows({
   shows,
   sources,
   renderActions,
+  renderExpanded,
+  renderLeading,
 }: {
   shows: Show[]
   sources: Record<string, Source>
   renderActions: (show: Show) => ReactNode
+  renderExpanded?: (show: Show) => ReactNode
+  renderLeading?: (show: Show) => ReactNode
 }) {
   const { groups } = useShowGroups(shows, sources)
 
@@ -188,26 +196,44 @@ function ShowRows({
     <>
       {groups.map((group) => {
         const [firstShow] = group
+        const expanded = renderExpanded?.(firstShow)
 
         return (
-          <TableRow key={firstShow.id}>
-            <TableCell className="whitespace-normal">
-              <div className="flex flex-col gap-1">
-                <span className="wrap-break-word">{firstShow.name ?? ""}</span>
-                <span className="flex flex-wrap items-center gap-1">
-                  {group.map((show) => (
-                    <SourceFavicon
-                      key={show.id}
-                      source={sources[show.source_id]}
-                    />
-                  ))}
-                </span>
-              </div>
-            </TableCell>
-            {/* A channel holds the title rather than one site's copy of it, so
-                the actions belong to the group. */}
-            <TableCell>{renderActions(firstShow)}</TableCell>
-          </TableRow>
+          <Fragment key={firstShow.id}>
+            <TableRow>
+              <TableCell className="whitespace-normal">
+                <div className="flex items-start gap-2">
+                  {renderLeading?.(firstShow)}
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="wrap-break-word">
+                      {firstShow.name ?? ""}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      {group.map((show) => (
+                        <SourceFavicon
+                          key={show.id}
+                          source={sources[show.source_id]}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </TableCell>
+              {/* A channel holds the title rather than one site's copy of it, so
+                  the actions belong to the group. */}
+              <TableCell>{renderActions(firstShow)}</TableCell>
+            </TableRow>
+            {expanded && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={2}
+                  className="whitespace-normal bg-muted/30 p-4"
+                >
+                  {expanded}
+                </TableCell>
+              </TableRow>
+            )}
+          </Fragment>
         )
       })}
     </>
@@ -215,62 +241,126 @@ function ShowRows({
 }
 
 /**
+ * What is known about a title from the channel's own listing of it.
+ *
+ * The listing carries the identifier rather than TMDB's account of the title, so
+ * a card reads what the identifier itself names and leaves the rest to the
+ * information panel.
+ */
+function showFacts(
+  group: Show[],
+  stats: ChannelShowStats | undefined,
+): string[] {
+  const [firstShow] = group
+  const parsed = parseTmdbIdentifier(firstShow.show_identifier)
+  const facts = [
+    parsed
+      ? parsed.mediaType === "tv"
+        ? "TV"
+        : "Movie"
+      : "Not linked to TMDB",
+  ]
+  if (stats?.first_release_date) {
+    // Read off the stored date rather than the reader's own clock, which would
+    // move a release just after midnight into the year before it.
+    facts.push(stats.first_release_date.slice(0, 4))
+  }
+  if (stats?.season_count) {
+    const seasonCount = stats.season_count
+    facts.push(`${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`)
+  }
+  if (stats?.episode_count) {
+    const episodeCount = stats.episode_count
+    facts.push(`${episodeCount} ${episodeCount === 1 ? "episode" : "episodes"}`)
+  }
+  return facts
+}
+
+/**
  * The same show groups as `ShowRows`, laid out as cards with their artwork.
  *
- * A card has room to list every service the show is on, so each one is a line of
- * its own with its actions instead of hiding behind an expander.
+ * A card is read at a glance rather than field by field, so the sites carrying
+ * the title are their favicons and the few facts the listing knows sit under the
+ * name.
  */
 function ShowCards({
   shows,
   sources,
+  stats,
   renderActions,
+  renderExpanded,
+  onSelect,
 }: {
   shows: Show[]
   sources: Record<string, Source>
+  stats: Record<string, ChannelShowStats>
   renderActions: (show: Show) => ReactNode
+  renderExpanded?: (show: Show) => ReactNode
+  onSelect?: (show: Show) => void
 }) {
   const { groups } = useShowGroups(shows, sources)
 
   return (
-    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+    <div className="grid items-start gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
       {groups.map((group) => {
         const [firstShow] = group
         const name = firstShow.name ?? ""
         const artwork = group.find((show) => show.image_url)?.image_url
+        const expanded = renderExpanded?.(firstShow)
 
         return (
-          <Card key={firstShow.id} className="gap-0 overflow-hidden py-0">
-            <div className="aspect-video w-full bg-muted">
-              {artwork && (
-                <img
-                  src={artwork}
-                  alt={name}
-                  className="size-full object-cover"
-                />
-              )}
-            </div>
-            <div className="flex flex-1 flex-col gap-2 p-3">
-              <span className="wrap-break-word text-sm font-medium">
-                {name}
-              </span>
-              <div className="space-y-1">
-                {group.map((show) => (
-                  <div
-                    key={show.id}
-                    className="flex min-w-0 items-center gap-1 rounded bg-muted/30 px-2 py-1"
-                  >
-                    <SourceFavicon source={sources[show.source_id]} />
-                    <span className="truncate text-xs text-muted-foreground">
-                      {sources[show.source_id]?.name ?? name}
-                    </span>
+          <Fragment key={firstShow.id}>
+            <Card className="relative gap-0 overflow-hidden py-0 hover:border-primary">
+              {/* The whole card opens the title, since everything on it is about
+                  that one title. */}
+              <button
+                type="button"
+                className="block w-full text-left"
+                onClick={() => onSelect?.(firstShow)}
+              >
+                <div className="aspect-video w-full bg-muted">
+                  {artwork && (
+                    <img
+                      src={artwork}
+                      alt={name}
+                      className="size-full object-cover"
+                    />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 p-3">
+                  <span className="wrap-break-word text-sm font-medium">
+                    {name}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1 pr-8">
+                    {showFacts(group, stats[firstShow.show_identifier]).map(
+                      (fact) => (
+                        <Badge key={fact} variant="secondary">
+                          {fact}
+                        </Badge>
+                      ),
+                    )}
+                    {group.map((show) => (
+                      <SourceFavicon
+                        key={show.id}
+                        source={sources[show.source_id]}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              </button>
               {/* The channel holds the title, so one set of actions covers every
-                  site listed above. */}
-              <div className="mt-auto">{renderActions(firstShow)}</div>
-            </div>
-          </Card>
+                  site listed above. They sit in the corner rather than in a row
+                  of their own, which would leave a gap under a short card. */}
+              <div className="absolute right-1 bottom-1 z-10 rounded bg-background/80">
+                {renderActions(firstShow)}
+              </div>
+            </Card>
+            {expanded && (
+              <div className="col-span-full rounded-lg border p-4">
+                {expanded}
+              </div>
+            )}
+          </Fragment>
         )
       })}
     </div>
@@ -282,19 +372,31 @@ function ShowsList({
   view,
   shows,
   sources,
+  stats = {},
   renderActions,
+  renderExpanded,
+  renderLeading,
+  onSelect,
 }: {
   view: ShowsView
   shows: Show[]
   sources: Record<string, Source>
+  stats?: Record<string, ChannelShowStats>
   renderActions: (show: Show) => ReactNode
+  renderExpanded?: (show: Show) => ReactNode
+  renderLeading?: (show: Show) => ReactNode
+  /** Called when a card is opened, which is the whole card in the card view. */
+  onSelect?: (show: Show) => void
 }) {
   if (view === "cards") {
     return (
       <ShowCards
         shows={shows}
         sources={sources}
+        stats={stats}
         renderActions={renderActions}
+        renderExpanded={renderExpanded}
+        onSelect={onSelect}
       />
     )
   }
@@ -313,6 +415,8 @@ function ShowsList({
             shows={shows}
             sources={sources}
             renderActions={renderActions}
+            renderExpanded={renderExpanded}
+            renderLeading={renderLeading}
           />
         </TableBody>
       </Table>
@@ -348,6 +452,8 @@ interface ManageShowsTabsProps {
   }
   /** Called to close the surrounding modal, e.g. after saving a tab's action. */
   onRequestClose?: () => void
+  /** Called with the tab now being read, so a modal can size itself to it. */
+  onActiveTabChange?: (tab: string) => void
 }
 
 export function ManageShowsTabs({
@@ -357,6 +463,7 @@ export function ManageShowsTabs({
   queueRefetchInterval,
   combinedChannels,
   onRequestClose,
+  onActiveTabChange,
 }: ManageShowsTabsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -366,8 +473,16 @@ export function ManageShowsTabs({
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
   const [blacklistShowId, setBlacklistShowId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<string>("search")
-  const [showsView, setShowsView] = useState<ShowsView>("table")
+  const [removeShowId, setRemoveShowId] = useState<string | null>(null)
+  const [activeTab, setActiveTabState] = useState<string>("search")
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab)
+    onActiveTabChange?.(tab)
+  }
+  const [showsView, setShowsView] = usePersistedState<ShowsView>(
+    "manage-shows-view",
+    "table",
+  )
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
 
   // region Queries
@@ -390,6 +505,7 @@ export function ManageShowsTabs({
         shows: Show[]
         filter_only_shows: Show[]
         sources: Record<string, Source>
+        stats: Record<string, ChannelShowStats>
       }>,
   })
 
@@ -597,13 +713,7 @@ export function ManageShowsTabs({
   }
 
   const handleRemoveShow = (showId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to remove this show from the channel? This will remove all episodes from this show.",
-      )
-    ) {
-      removeShowMutation.mutate(showId)
-    }
+    setRemoveShowId(showId)
   }
 
   return (
@@ -709,6 +819,11 @@ export function ManageShowsTabs({
         </TabsContent>
 
         <TabsContent value="shows" className={`${contentClassName} space-y-6`}>
+          <p className="text-sm font-medium text-red-600">
+            This page's design is a work in progress. It is a placeholder to
+            make all of the data and actions available.
+          </p>
+
           <div className="flex justify-end">
             <ButtonGroup>
               <Button
@@ -739,16 +854,41 @@ export function ManageShowsTabs({
               view={showsView}
               shows={showsList}
               sources={sources}
+              renderExpanded={(show) =>
+                selectedShowId === show.id && (
+                  <WhitelistManager
+                    channelId={channelId}
+                    showId={show.id}
+                    showName={show.name || "Unknown Show"}
+                    onClose={() => setSelectedShowId(null)}
+                  />
+                )
+              }
+              stats={showsData?.stats ?? {}}
+              onSelect={(show) =>
+                setSelectedShowId(selectedShowId === show.id ? null : show.id)
+              }
+              renderLeading={(show) => (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0"
+                  onClick={() =>
+                    setSelectedShowId(
+                      selectedShowId === show.id ? null : show.id,
+                    )
+                  }
+                  title="Manage whitelist"
+                >
+                  {selectedShowId === show.id ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               renderActions={(show) => (
                 <div className="flex items-center justify-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setSelectedShowId(show.id)}
-                    title="Manage whitelist"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -917,14 +1057,16 @@ export function ManageShowsTabs({
         </DialogContent>
       </Dialog>
 
-      {/* Whitelist Manager */}
-      {selectedShowId && (
-        <WhitelistManager
-          channelId={channelId}
-          showId={selectedShowId}
-          showName={shows[selectedShowId]?.name || "Unknown Show"}
-          isOpen={!!selectedShowId}
-          onClose={() => setSelectedShowId(null)}
+      {removeShowId && (
+        <ConfirmDialog
+          open={!!removeShowId}
+          onOpenChange={(open) => {
+            if (!open) setRemoveShowId(null)
+          }}
+          title="Remove Show"
+          description={`Are you sure you want to remove "${shows[removeShowId]?.name || "this show"}" from the channel? This will remove all episodes from this show.`}
+          confirmLabel="Remove"
+          onConfirm={() => removeShowMutation.mutate(removeShowId)}
         />
       )}
 

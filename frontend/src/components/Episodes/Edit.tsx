@@ -8,6 +8,7 @@ import { z } from "zod"
 import { EpisodesService, type EpisodeUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
+import { TmdbIdentifierField } from "@/components/Common/TmdbIdentifierField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -109,106 +110,139 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       form={form}
       onSubmit={onSubmit}
       isPending={mutation.isPending}
+      size="3xl"
     >
-      <FormTextField
-        control={form.control}
-        label="Name"
-        placeholder="Episode name"
-        type="text"
-      />
-      <FormTextField
-        control={form.control}
-        label="Episode Number"
-        placeholder="1"
-        type="number"
-      />
-      <FormTextField control={form.control} label="Sort Order" type="number" />
-      <FormTextField
-        control={form.control}
-        label="URL"
-        placeholder="https://..."
-        type="url"
-      />
-      <FormTextField
-        control={form.control}
-        label="Description"
-        placeholder="Description"
-        type="text"
-      />
-      <FormTextField
-        control={form.control}
-        label="Image URL"
-        placeholder="https://..."
-        type="url"
-      />
-      <FormTextField control={form.control} label="Release Date" type="date" />
-      <FormTextField control={form.control} label="Air Date" type="date" />
-      <FormTextField
-        control={form.control}
-        name="duration"
-        label="Duration (seconds)"
-        placeholder="0"
-        type="number"
-      />
-      <FormTextField
-        control={form.control}
-        label="TMDB ID"
-        placeholder="12345"
-        type="number"
-      />
-      <FormTextField
-        control={form.control}
-        label="Data Timestamp"
-        type="datetime-local"
-      />
-      <FormTextField
-        control={form.control}
-        label="Update At"
-        type="datetime-local"
-        showNowButton
-      />
-      <FormTextField control={form.control} label="Key" type="text" />
-      <FormField
-        control={form.control}
-        name="episode_identifier"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <FormLabel>
-              Episode Identifier<span className="text-destructive"> *</span>
-            </FormLabel>
-            <FormControl>
-              <Input
-                aria-invalid={fieldState.invalid}
-                required
-                type="text"
-                {...field}
-                onChange={(event) => {
-                  field.onChange(event)
-                  form.setValue("episode_identifier_locked", true)
-                }}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="episode_identifier_locked"
-        render={({ field }) => (
-          <FormItem className="flex items-center gap-3 space-y-0">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-            <FormLabel className="font-normal">
-              Lock episode identifier?
-            </FormLabel>
-          </FormItem>
-        )}
-      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <FormTextField
+            control={form.control}
+            label="Name"
+            placeholder="Episode name"
+            type="text"
+          />
+        </div>
+        <FormTextField
+          control={form.control}
+          label="Episode Number"
+          placeholder="1"
+          type="number"
+        />
+        <FormTextField
+          control={form.control}
+          label="Sort Order"
+          type="number"
+        />
+        <FormTextField
+          control={form.control}
+          label="Release Date"
+          type="date"
+        />
+        <FormTextField control={form.control} label="Air Date" type="date" />
+        <FormTextField
+          control={form.control}
+          name="duration"
+          label="Duration (seconds)"
+          placeholder="0"
+          type="number"
+        />
+        <FormTextField
+          control={form.control}
+          label="TMDB ID"
+          placeholder="12345"
+          type="number"
+        />
+        <div className="sm:col-span-2">
+          <FormTextField
+            control={form.control}
+            label="URL"
+            placeholder="https://..."
+            type="url"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <FormTextField
+            control={form.control}
+            label="Image URL"
+            placeholder="https://..."
+            type="url"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <FormTextField
+            control={form.control}
+            label="Description"
+            placeholder="Description"
+            type="text"
+          />
+        </div>
+        <FormTextField
+          control={form.control}
+          label="Data Timestamp"
+          type="datetime-local"
+        />
+        <FormTextField
+          control={form.control}
+          label="Update At"
+          type="datetime-local"
+          showNowButton
+        />
+        <div className="sm:col-span-2">
+          <FormTextField control={form.control} label="Key" type="text" />
+        </div>
+        <TmdbIdentifierField
+          identifier={form.watch("episode_identifier")}
+          onChange={(identifier) => {
+            form.setValue("episode_identifier", identifier, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+            form.setValue("episode_identifier_locked", true)
+          }}
+        />
+        <FormField
+          control={form.control}
+          name="episode_identifier"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>
+                Episode Identifier<span className="text-destructive"> *</span>
+              </FormLabel>
+              <FormControl>
+                <Input
+                  aria-invalid={fieldState.invalid}
+                  required
+                  type="text"
+                  {...field}
+                  onChange={(event) => {
+                    field.onChange(event)
+                    form.setValue("episode_identifier_locked", true)
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="sm:col-span-2">
+          <FormField
+            control={form.control}
+            name="episode_identifier_locked"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel className="font-normal">
+                  Lock episode identifier?
+                </FormLabel>
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
     </FormModal>
   )
 }

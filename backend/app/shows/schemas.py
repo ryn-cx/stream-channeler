@@ -72,6 +72,7 @@ class ShowInformationOutput(BaseModel):
     show_id: uuid.UUID
     show_identifier: str
     show_identifier_locked: bool
+    editable: bool
     issue_reports: list[IssueReportOutput]
     source: ShowInformationSide
     tmdb: ShowInformationSide | None

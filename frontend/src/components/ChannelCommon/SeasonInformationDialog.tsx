@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { SeasonInformationSide } from "@/client"
 import { SeasonsService } from "@/client"
+import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
 import {
   ExternalAnchor,
   type InformationRows,
@@ -56,16 +57,16 @@ const ROW_LABELS = [
 
 function SeasonInformation({
   seasonId,
-  open,
+  enabled,
 }: {
   seasonId: string
-  open: boolean
+  enabled: boolean
 }) {
   const queryKey = ["season-information", seasonId]
   const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: () => SeasonsService.getSeasonInformation({ seasonId }),
-    enabled: open,
+    enabled,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -86,13 +87,17 @@ function SeasonInformation({
 
   return (
     <div className="flex flex-col">
-      <InformationTable
-        sourceLabel={data.source.label}
-        tmdbLabel={data.tmdb ? data.tmdb.label : "TMDB (not linked)"}
-        rowLabels={ROW_LABELS}
-        sourceRows={sideRows(data.source)}
-        tmdbRows={data.tmdb ? sideRows(data.tmdb) : null}
-      />
+      <CollapsibleSection title="Field comparison">
+        <div className="overflow-x-auto">
+          <InformationTable
+            sourceLabel={data.source.label}
+            tmdbLabel={data.tmdb ? data.tmdb.label : "TMDB (not linked)"}
+            rowLabels={ROW_LABELS}
+            sourceRows={sideRows(data.source)}
+            tmdbRows={data.tmdb ? sideRows(data.tmdb) : null}
+          />
+        </div>
+      </CollapsibleSection>
 
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Season identifier</dt>
@@ -109,6 +114,33 @@ function SeasonInformation({
   )
 }
 
+interface SeasonInformationPanelProps {
+  seasonIds: string[]
+  /** Whether the information is wanted yet, so a collapsed panel fetches nothing. */
+  enabled?: boolean
+}
+
+/**
+ * Each stored season the row stands for, without a dialog around it, so they can
+ * be read inside whatever is already open.
+ */
+export function SeasonInformationPanel({
+  seasonIds,
+  enabled = true,
+}: SeasonInformationPanelProps) {
+  return (
+    <div className="flex flex-col gap-8">
+      {seasonIds.map((seasonId) => (
+        <SeasonInformation
+          key={seasonId}
+          seasonId={seasonId}
+          enabled={enabled}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function SeasonInformationDialog({
   seasonIds,
   open,
@@ -116,7 +148,7 @@ export function SeasonInformationDialog({
 }: SeasonInformationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <ModalContent size="4xl">
+      <ModalContent size="full">
         <DialogHeader>
           <DialogTitle>Season Information</DialogTitle>
           <DialogDescription>
@@ -125,10 +157,8 @@ export function SeasonInformationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="flex flex-col gap-8 overflow-x-auto">
-          {seasonIds.map((seasonId) => (
-            <SeasonInformation key={seasonId} seasonId={seasonId} open={open} />
-          ))}
+        <DialogBody className="overflow-x-auto">
+          <SeasonInformationPanel seasonIds={seasonIds} enabled={open} />
         </DialogBody>
 
         <DialogFooter>

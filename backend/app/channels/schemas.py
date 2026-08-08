@@ -188,6 +188,20 @@ class ChannelShowGroup(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
 
 
+class ChannelShowStats(BaseModel):
+    """What a channel's copies of one title add up to.
+
+    A title is counted by what its seasons and episodes are rather than by the
+    records holding them, so the same season on three websites is one season.
+    """
+
+    season_count: int
+    episode_count: int
+    # The earliest release date of any of its episodes, which is as close to the
+    # title's own release as the episodes can say.
+    first_release_date: datetime | None = Field(default=None)
+
+
 class ChannelShowsOutput(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
     # Shows that don't belong to the channel but carry blacklist/whitelist entries for
@@ -197,6 +211,9 @@ class ChannelShowsOutput(BaseModel):
     # The regular shows grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelShowGroup] = Field(default_factory=list)
+    # What each title adds up to, keyed by `show_identifier` because the stats are
+    # about the title rather than one website's copy of it.
+    stats: dict[str, ChannelShowStats] = Field(default_factory=dict)
 
 
 class WhitelistEntryInput(BaseInput):

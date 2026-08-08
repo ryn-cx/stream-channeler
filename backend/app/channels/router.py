@@ -3,11 +3,13 @@ import time
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from sqlmodel import col, select
+from sqlalchemy import case, distinct, func
+from sqlmodel import Session, col, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -45,6 +47,7 @@ from app.channels.schemas import (
     ChannelReadOptions,
     ChannelShowGroup,
     ChannelShowsOutput,
+    ChannelShowStats,
     ChannelsPublic,
     ChannelUpdate,
     CombinedChannelOutput,
@@ -56,6 +59,7 @@ from app.channels.schemas import (
     WhitelistShowOutput,
     WhitelistSourceOutput,
 )
+from app.episodes.models import Episode
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
 from app.media.tmdb_fallback import (
@@ -71,6 +75,7 @@ from app.media.tmdb_fallback import (
 )
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
+from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
@@ -78,6 +83,10 @@ from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
+
+# Some websites report an episode with no release date as the epoch, which would
+# otherwise read as the title's own release.
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 channels_router = APIRouter(prefix="/channels", tags=["channels"])
 admin_router = APIRouter(
@@ -537,7 +546,56 @@ def get_channel_shows(
         ],
     )
 
+    output.stats = _channel_show_stats(
+        session,
+        {show.show_identifier for show in [*output.shows, *output.filter_only_shows]},
+    )
+
     return output
+
+
+def _channel_show_stats(
+    session: Session,
+    show_identifiers: set[str],
+) -> dict[str, ChannelShowStats]:
+    """Return what each title's seasons and episodes add up to.
+
+    The same season and episode are carried by every website holding the title,
+    so they are counted by their identifiers rather than by their records.
+    """
+    if not show_identifiers:
+        return {}
+
+    rows = session.exec(
+        select(
+            Show.show_identifier,
+            func.count(distinct(col(Season.season_identifier))),
+            func.count(distinct(col(Episode.episode_identifier))),
+            func.min(
+                case(
+                    (col(Episode.release_date) > EPOCH, col(Episode.release_date)),
+                ),
+            ),
+        )
+        .join(Season, col(Season.show_id) == col(Show.id))
+        .join(Episode, col(Episode.season_id) == col(Season.id))
+        .where(
+            col(Show.show_identifier).in_(show_identifiers),
+            col(Show.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Episode.deleted_at).is_(None),
+        )
+        .group_by(col(Show.show_identifier)),
+    ).all()
+
+    return {
+        show_identifier: ChannelShowStats(
+            season_count=season_count,
+            episode_count=episode_count,
+            first_release_date=first_release_date,
+        )
+        for show_identifier, season_count, episode_count, first_release_date in rows
+    }
 
 
 # FAST003 - Parameter is used by ReadableChannel.
@@ -608,7 +666,10 @@ def get_channel_whitelist(
     # The row each season and episode was listed under, so a later website's copy of
     # one is folded into the row already standing for it rather than listed again.
     season_rows: dict[str, uuid.UUID] = {}
-    seen_episodes: set[str] = set()
+    # An episode is listed once under every season row carrying it, since two
+    # seasons sharing an episode each have it to filter on. Only the copies of it
+    # under the same row are folded together.
+    seen_episodes: set[tuple[uuid.UUID, str]] = set()
 
     shows = service.shows_for_channel_show(session, channel_show)
     if not shows:
@@ -635,36 +696,49 @@ def get_channel_whitelist(
         for show in [*shows, *tmdb_shows]
     ]
 
-    for show in shows:
-        for season in show.active_children:
-            if season.season_identifier not in season_rows:
-                season_rows[season.season_identifier] = season.id
-                seasons.append(
-                    WhitelistSeasonOutput.model_validate(
-                        season,
-                        update={
-                            "filtered": season.season_identifier in enabled_seasons,
-                            "show_ids": season_show_ids[season.season_identifier],
-                        },
-                    ),
-                )
-            for episode in season.active_children:
-                if episode.episode_identifier in seen_episodes:
-                    continue
-                seen_episodes.add(episode.episode_identifier)
-                episodes.append(
-                    WhitelistEpisodeOutput.model_validate(
-                        episode,
-                        update={
-                            "season_id": season_rows[season.season_identifier],
-                            "filtered": episode.episode_identifier in enabled_episodes,
-                            "expires_at": episode_expiries.get(
-                                episode.episode_identifier,
-                            ),
-                            "show_ids": episode_show_ids[episode.episode_identifier],
-                        },
-                    ),
-                )
+    # A season TMDB has a record of that no website carries is still a season of
+    # the title, so it is listed for the user to know it is there rather than left
+    # out for having nothing to watch under it. TMDB catalogues its episodes rather
+    # than carrying them, so they name no site of their own.
+    site_seasons = [season for show in shows for season in show.active_children]
+    site_season_identifiers = {season.season_identifier for season in site_seasons}
+    tmdb_only_seasons = [
+        season
+        for tmdb_show in tmdb_shows
+        for season in tmdb_show.active_children
+        if season.season_identifier not in site_season_identifiers
+    ]
+
+    for season in [*site_seasons, *tmdb_only_seasons]:
+        if season.season_identifier not in season_rows:
+            season_rows[season.season_identifier] = season.id
+            seasons.append(
+                WhitelistSeasonOutput.model_validate(
+                    season,
+                    update={
+                        "filtered": season.season_identifier in enabled_seasons,
+                        "show_ids": season_show_ids[season.season_identifier],
+                    },
+                ),
+            )
+        season_row_id = season_rows[season.season_identifier]
+        for episode in season.active_children:
+            if (season_row_id, episode.episode_identifier) in seen_episodes:
+                continue
+            seen_episodes.add((season_row_id, episode.episode_identifier))
+            episodes.append(
+                WhitelistEpisodeOutput.model_validate(
+                    episode,
+                    update={
+                        "season_id": season_row_id,
+                        "filtered": episode.episode_identifier in enabled_episodes,
+                        "expires_at": episode_expiries.get(
+                            episode.episode_identifier,
+                        ),
+                        "show_ids": episode_show_ids[episode.episode_identifier],
+                    },
+                ),
+            )
 
     fill_seasons(session, seasons)
     fill_episodes(session, episodes)

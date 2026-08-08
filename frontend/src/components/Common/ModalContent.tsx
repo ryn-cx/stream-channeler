@@ -15,6 +15,8 @@ const widthClasses = {
   "3xl": "sm:max-w-3xl",
   "4xl": "sm:max-w-4xl",
   "5xl": "sm:max-w-5xl",
+  // As wide as the page leaves room for, for modals holding a full layout.
+  full: "sm:max-w-[calc(100%-2rem)]",
 } as const
 
 export type ModalSize = keyof typeof widthClasses

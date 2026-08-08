@@ -21,6 +21,7 @@ from app.media.tmdb_fallback import (
     tmdb_season_counterpart,
     tmdb_season_url,
 )
+from app.media.tmdb_identifier_links import check_season_identifier
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -70,7 +71,16 @@ def create_season(
     show: EditableShow,
     season_input: SeasonCreate,
 ) -> SeasonOutput:
-    """Create a `Season` if the `Show` is editable by the `User`."""
+    """Create a `Season` if the `Show` is editable by the `User`.
+
+    A `season_identifier` naming a TMDB season is checked before it is stored,
+    and the title holding it is imported for the link to read.
+    """
+    check_season_identifier(
+        session,
+        season_input.season_identifier,
+        show.show_identifier,
+    )
     return _season_output(session, season_input.create(session, Season, show))
 
 
@@ -231,8 +241,21 @@ def update_season(
     A `season_identifier` naming a different TMDB season repoints every
     `Episode` at TMDB, so their identifiers follow the season the `User` chose.
     The `season_identifier` itself is what they asked for, so it is left alone.
+
+    A new `season_identifier` naming a TMDB season is checked before it is
+    stored, so a season the title does not have is refused rather than kept as a
+    link to nothing, and the title is imported for the link to read.
     """
     previous_tmdb_id = season.tmdb_id
+    if (
+        season_input.season_identifier is not None
+        and season_input.season_identifier != season.season_identifier
+    ):
+        check_season_identifier(
+            session,
+            season_input.season_identifier,
+            season.show.show_identifier,
+        )
     season = season_input.update(session, season)
     if season.tmdb_id != previous_tmdb_id:
         relink_season_children(session, season)

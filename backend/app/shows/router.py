@@ -21,6 +21,7 @@ from app.media.tmdb_fallback import (
     tmdb_show_counterpart,
     tmdb_show_url,
 )
+from app.media.tmdb_identifier_links import check_show_identifier
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -65,7 +66,12 @@ def create_show(
     source: EditableSource,
     show_input: ShowCreate,
 ) -> ShowPublic:
-    """Create a `Show` if the `Source` is editable by the `User`."""
+    """Create a `Show` if the `Source` is editable by the `User`.
+
+    A `show_identifier` naming a TMDB title is checked before it is stored, and
+    the title it names is imported for the link to read.
+    """
+    check_show_identifier(session, show_input.show_identifier)
     return _show_output(session, show_input.create(session, Show, source))
 
 
@@ -147,6 +153,7 @@ def _information_side(label: str, show: Show, url: str | None) -> ShowInformatio
 def get_show_information(
     session: SessionDep,
     show: ReadableShow,
+    current_user: OptionalUser,
 ) -> ShowInformationOutput:
     """Return what the website and TMDB each say about a `Show`.
 
@@ -165,10 +172,15 @@ def get_show_information(
             tmdb_show_url(counterpart.key),
         )
 
+    editable = current_user is not None and (
+        current_user.is_superuser or current_user.id == show.owner_id(session)
+    )
+
     return ShowInformationOutput(
         show_id=show.id,
         show_identifier=show.show_identifier,
         show_identifier_locked=show.show_identifier_locked,
+        editable=editable,
         issue_reports=list_show_issue_reports(session, show.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
@@ -196,8 +208,17 @@ def update_show(
     A `show_identifier` naming a different TMDB title repoints every `Season` and
     `Episode` at TMDB, so their identifiers follow the title the `User` chose.
     The `show_identifier` itself is what they asked for, so it is left alone.
+
+    A new `show_identifier` naming a TMDB title is checked before it is stored,
+    so a title TMDB does not have is refused rather than kept as a link to
+    nothing, and one it does have is imported for the link to read.
     """
     previous_tmdb_id = show.tmdb_id
+    if (
+        show_input.show_identifier is not None
+        and show_input.show_identifier != show.show_identifier
+    ):
+        check_show_identifier(session, show_input.show_identifier)
     show = show_input.update(session, show)
     if show.tmdb_id != previous_tmdb_id:
         relink_children(session, show)

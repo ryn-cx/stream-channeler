@@ -72,6 +72,47 @@ class LookupMixin(FileMixin, register=False):
             season.season_number == season_number for season in show_detail.seasons
         )
 
+    def has_season_id(
+        self,
+        media_type: Literal["movie", "tv"],
+        tmdb_id: int,
+        season_tmdb_id: int,
+    ) -> bool:
+        """Report whether a title has a season TMDB issued `season_tmdb_id` for.
+
+        TMDB numbers a season within its title but gives it an id of its own, and
+        an identifier carries the id rather than the number. A film has no
+        seasons, so the single season it is stored as is the film itself.
+        """
+        if media_type == "movie":
+            return season_tmdb_id == tmdb_id
+        return any(
+            season.id == season_tmdb_id
+            for season in self.show_detail_file(tmdb_id).parsed().seasons
+        )
+
+    def has_episode_id(
+        self,
+        media_type: Literal["movie", "tv"],
+        tmdb_id: int,
+        episode_tmdb_id: int,
+    ) -> bool:
+        """Report whether a title has an episode TMDB issued `episode_tmdb_id` for.
+
+        Every season of the title is read, since an id says nothing about which
+        season TMDB files it under. A film has no episodes, so the single episode
+        it is stored as is the film itself.
+        """
+        if media_type == "movie":
+            return episode_tmdb_id == tmdb_id
+        return any(
+            episode.id == episode_tmdb_id
+            for season in self.show_detail_file(tmdb_id).parsed().seasons
+            for episode in self.season_detail_file(tmdb_id, season.season_number)
+            .parsed()
+            .episodes
+        )
+
     def has_episode(
         self,
         tmdb_id: int,
