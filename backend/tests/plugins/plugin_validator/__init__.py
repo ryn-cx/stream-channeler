@@ -295,12 +295,18 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         both what records a test's data and what tops it up when a website has
         something new. It is the only test allowed to reach the network.
         """
-        if self.url:
-            self._initialize_import_data(session_with_files)
+        try:
+            if self.url:
+                self._initialize_import_data(session_with_files)
 
-        if self.search_query:
-            # _search freezes the clock so stored search files stay within their TTL.
-            self._search(session_with_files, self.search_query)
+            if self.search_query:
+                # _search freezes the clock so stored search files stay within
+                # their TTL.
+                self._search(session_with_files, self.search_query)
+        finally:
+            # Written even when the run failed, so the files it did reach are
+            # recorded rather than downloaded again by the next run.
+            self._export_files_manifest(session_with_files)
 
 
 class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):

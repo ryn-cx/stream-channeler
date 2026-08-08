@@ -7,26 +7,53 @@ from typing import Any
 
 import pytest
 from freezegun import freeze_time
+from loguru import logger
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.constants import TEST_FILES_FOLDER
+from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     PluginSearchResults,
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import (
     init_db,
     savepoint_session,
     test_engine,
 )
+from tests.plugins.plugin_validator.context_managers import stored_path
 from tests.plugins.plugin_validator.serialization import SerializationMixin
+
+
+def _plugin_class(plugin_key: str) -> type[BasePlugin]:
+    """Return the plugin class for a plugin key.
+
+    Unregistered plugins are included because a registered plugin can create
+    records owned by one (e.g. JustWatch creating Disney+ sources).
+    """
+    import_plugins()
+    for plugin_class in plugins:
+        if plugin_class.plugin_key() == plugin_key:
+            return plugin_class  # type: ignore[return-value]
+
+    remaining: list[type[BasePlugin]] = [BasePlugin]
+    while remaining:
+        plugin_class = remaining.pop()
+        remaining.extend(plugin_class.__subclasses__())
+        if plugin_class.plugin_key() == plugin_key:
+            return plugin_class
+    msg = f"No plugin found for key {plugin_key!r}"
+    raise ValueError(msg)
 
 
 class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
@@ -92,6 +119,57 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def import_url_results_file_path(self) -> Path:
         """Path to the file with the expected import_url result for the test class."""
         return self.files_directory_path() / "import_url_results.json"
+
+    def combined_files_path(self) -> Path:
+        """Path to the list of the stored files this test class needs."""
+        return self.files_directory_path() / "all_files.json"
+
+    def _export_files_manifest(self, session: Session) -> None:
+        """Record which of the stored files this test class needs.
+
+        Only the names are recorded. The files themselves are shared by every
+        test that reaches for them, so all that belongs to one test is which of
+        them it uses, which is what keeps a test from importing the whole store.
+        """
+        statement = select(File.key, Plugin.key).join(Plugin)
+        entries = sorted(
+            {
+                (plugin_key, file_key)
+                for file_key, plugin_key in session.exec(statement).all()
+            },
+        )
+        self.combined_files_path().parent.mkdir(parents=True, exist_ok=True)
+        self.combined_files_path().write_text(
+            json.dumps(
+                [
+                    {"plugin_key": plugin_key, "key": file_key}
+                    for plugin_key, file_key in entries
+                ],
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    def _files_to_import(self) -> list[tuple[str, str, Path]]:
+        """Return the plugin key, file key and stored path of each file needed.
+
+        A file the manifest names that is not stored is left out rather than
+        raised over, so recording a test's data can fill in whatever is missing.
+        """
+        if not self.combined_files_path().exists():
+            return []
+        entries = json.loads(self.combined_files_path().read_text(encoding="utf-8"))
+        files = [
+            (
+                entry["plugin_key"],
+                entry["key"],
+                stored_path(entry["plugin_key"], entry["key"]),
+            )
+            for entry in entries
+        ]
+        return [
+            (plugin_key, key, path) for plugin_key, key, path in files if path.is_file()
+        ]
 
     def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return a plugin with all children selectinloaded."""
@@ -201,18 +279,89 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             return None
         return max(search_timestamps) + timedelta(seconds=1)
 
+    def _import_files(self, session: Session) -> None:
+        """Store every stored test file as a `File` of the plugin that owns it.
+
+        The files are put in place before a test runs so nothing has to be
+        downloaded during it. `serve_downloads_from_disk` is what covers a file
+        that has not been stored yet, which is only ever the case while a test's
+        data is being recorded.
+        """
+        logger.info(f"Importing files for {type(self).__name__}")
+
+        stored = self._files_to_import()
+        plugin_user = get_or_create_plugin_user(session=session)
+
+        # Do not initialize the source until after the files are imported because
+        # initializing the source often requires downloading files.
+        def no_operation(_plugin: BasePlugin) -> None:
+            """No operation function."""
+
+        # A file can belong to a different plugin than the one under test (e.g. TMDB
+        # fallback files), so create a record for each owning plugin. Sources are
+        # only initialized for the plugin under test, at the end.
+        plugin_keys = {plugin_key for plugin_key, _key, _path in stored}
+        plugin_keys.add(self.plugin_class.plugin_key())
+
+        plugin_records: dict[str, Plugin] = {}
+        plugin_under_test: BasePlugin | None = None
+        for plugin_key in plugin_keys:
+            plugin_class = _plugin_class(plugin_key)
+            initialize_sources = plugin_class.initialize_sources
+            plugin_class.initialize_sources = no_operation  # type: ignore[assignment]
+            try:
+                plugin_instance = plugin_class(session)
+            finally:
+                plugin_class.initialize_sources = initialize_sources  # type: ignore[method-assign]
+            if plugin_key == self.plugin_class.plugin_key():
+                plugin_under_test = plugin_instance
+            plugin_records[plugin_key] = Plugin.get_one(
+                session,
+                plugin_user,
+                plugin_key,
+            )
+
+        existing_keys = {
+            plugin_key: {file.key for file in record.files}
+            for plugin_key, record in plugin_records.items()
+        }
+        for plugin_key, file_key, path in stored:
+            if file_key in existing_keys[plugin_key]:
+                continue
+            plugin_records[plugin_key].files.append(
+                File(
+                    key=file_key,
+                    content=path.read_text(encoding="utf-8") or None,
+                    # Only the content of a file is stored, so when it was
+                    # downloaded is taken from the stored file itself. It moves
+                    # only when the file is refreshed, which is what a timestamp
+                    # read off the data would have done too.
+                    data_timestamp=tz_datetime.fromtimestamp(path.stat().st_mtime),
+                ),
+            )
+            existing_keys[plugin_key].add(file_key)
+
+        # Files imported from disk have raw Python types. Expiring forces SQLAlchemy to
+        # re-read from the DB with proper type coercion. This is required to validate
+        # datetime values.
+        session.expire_all()
+
+        # Files are imported so now the plugin under test's source can be run.
+        assert plugin_under_test is not None
+        plugin_under_test.initialize_sources()
+
+        session.commit()  # Set the rollback point.
+
     @pytest.fixture(scope="class")
     def _connection_with_files(self) -> Generator[Connection]:
-        """One class-scoped connection reused by every test in the class.
+        """One class-scoped connection with files imported once for the whole class.
 
-        Nothing is stored up front. A plugin downloads whatever it reaches for,
-        and `serve_downloads_from_disk` answers each download out of the stored
-        test files, so a file arrives as the plugin asks for it rather than
-        having to be put in place beforehand.
+        The files are imported once here and reused by every test in the class via
+        per-test savepoints, so no test re-inserts the shared File rows.
         """
         connection = test_engine.connect()
         transaction = connection.begin()
-        # Clean up even when setup raises, otherwise a failed setup leaks a
+        # Clean up even when setup raises, otherwise a failed import leaks a
         # broken connection back into the pool and poisons later tests.
         try:
             with Session(
@@ -220,7 +369,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
                 join_transaction_mode="create_savepoint",
             ) as session:
                 init_db(session)
-                session.commit()  # Set the rollback point.
+                self._import_files(session)
             yield connection
         finally:
             transaction.rollback()
