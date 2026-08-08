@@ -2893,6 +2893,11 @@ export const EpisodeTmdbLinkInputSchema = {
         tmdb_episode_id: {
             type: 'integer',
             title: 'Tmdb Episode Id'
+        },
+        selected: {
+            type: 'boolean',
+            title: 'Selected',
+            default: false
         }
     },
     type: 'object',

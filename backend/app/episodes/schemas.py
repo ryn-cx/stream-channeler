@@ -176,6 +176,13 @@ class EpisodeTmdbLinkInput(BaseModel):
     """The TMDB episode a `User` is pointing an `Episode` at by hand."""
 
     tmdb_episode_id: int
+    selected: bool = False
+    """Whether the `User` went and found this episode rather than taking the offer.
+
+    Confirming the closest match says only that what was suggested looked right,
+    where picking one out of the title is somebody having looked for it, so the
+    two are worth telling apart when the link is read back later.
+    """
 
 
 class EpisodesPublic(BaseModel):

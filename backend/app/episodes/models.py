@@ -36,7 +36,11 @@ if TYPE_CHECKING:
 # but its own wording; the rest are written where the matching is done.
 NAME_AND_NUMBER_NOTE = "Name and number match"
 DESCRIPTION_NOTE = "Description match"
-MANUAL_NOTE = "Settled by hand"
+# The three ways a `User` settles one, kept apart because taking the match that
+# was put in front of them is a smaller thing than going and finding one.
+MANUALLY_CONFIRMED_NOTE = "Manually confirmed"
+MANUALLY_SELECTED_NOTE = "Manually selected"
+NO_MATCH_NOTE = "No match found"
 
 
 class BaseEpisode(BaseMediaMixin):

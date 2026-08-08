@@ -251,7 +251,12 @@ def admin_link_episode_to_tmdb(
     link_input: EpisodeTmdbLinkInput,
 ) -> EpisodeOutput:
     """Point an `Episode` at the TMDB episode an admin chose for it."""
-    linked = link_episode(session, episode, link_input.tmdb_episode_id)
+    linked = link_episode(
+        session,
+        episode,
+        link_input.tmdb_episode_id,
+        selected=link_input.selected,
+    )
     return _episode_output(session, linked)
 
 

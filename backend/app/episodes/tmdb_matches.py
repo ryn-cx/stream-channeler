@@ -15,7 +15,12 @@ from difflib import SequenceMatcher
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
-from app.episodes.models import MANUAL_NOTE, Episode
+from app.episodes.models import (
+    MANUALLY_CONFIRMED_NOTE,
+    MANUALLY_SELECTED_NOTE,
+    NO_MATCH_NOTE,
+    Episode,
+)
 from app.episodes.schemas import (
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
@@ -474,13 +479,22 @@ def _tmdb_episode(session: Session, tmdb_episode_id: int) -> Episode | None:
     return session.exec(statement).first()
 
 
-def link_episode(session: Session, episode: Episode, tmdb_episode_id: int) -> Episode:
+def link_episode(
+    session: Session,
+    episode: Episode,
+    tmdb_episode_id: int,
+    *,
+    selected: bool = False,
+) -> Episode:
     """Point `episode` at a TMDB episode a `User` chose, and hold it there.
 
     The identifier is taken off the imported TMDB episode rather than built from
     the id given, so an id TMDB has nothing imported for is refused instead of
     stored as a link to a record that will never fill anything in. The link is
     locked, which is what keeps the next import's own guess from replacing it.
+
+    `selected` says the `User` went and found the episode rather than taking the
+    one they were shown, which is the note the link is left with.
     """
     counterpart = _tmdb_episode(session, tmdb_episode_id)
     if counterpart is None:
@@ -491,7 +505,9 @@ def link_episode(session: Session, episode: Episode, tmdb_episode_id: int) -> Ep
 
     episode.episode_identifier = counterpart.episode_identifier
     episode.episode_identifier_locked = True
-    episode.episode_identifier_note = MANUAL_NOTE
+    episode.episode_identifier_note = (
+        MANUALLY_SELECTED_NOTE if selected else MANUALLY_CONFIRMED_NOTE
+    )
     session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -507,7 +523,7 @@ def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:
     the list of episodes still waiting on somebody.
     """
     episode.episode_identifier_locked = True
-    episode.episode_identifier_note = MANUAL_NOTE
+    episode.episode_identifier_note = NO_MATCH_NOTE
     session.add(episode)
     session.commit()
     session.refresh(episode)

@@ -576,6 +576,7 @@ export type EpisodesPublic = {
  */
 export type EpisodeTmdbLinkInput = {
     tmdb_episode_id: number;
+    selected?: boolean;
 };
 
 /**

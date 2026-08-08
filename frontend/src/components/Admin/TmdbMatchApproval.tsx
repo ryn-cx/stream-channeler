@@ -66,11 +66,19 @@ export function TmdbMatchApproval({
   const settleQueries = () =>
     queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
 
+  // Taking the match that was offered and going and finding one are recorded
+  // apart, so a link says which of the two it was when it is read back.
   const linkMutation = useMutation({
-    mutationFn: (tmdbEpisodeId: number) =>
+    mutationFn: ({
+      tmdbEpisodeId,
+      selected,
+    }: {
+      tmdbEpisodeId: number
+      selected: boolean
+    }) =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId: episode.id,
-        requestBody: { tmdb_episode_id: tmdbEpisodeId },
+        requestBody: { tmdb_episode_id: tmdbEpisodeId, selected },
       }),
     onMutate: takeRowOff,
     onSuccess: () => showSuccessToast("Episode linked to TMDB"),
@@ -104,7 +112,10 @@ export function TmdbMatchApproval({
         disabled={!episode.best_match || isSaving}
         onClick={() => {
           if (episode.best_match) {
-            linkMutation.mutate(episode.best_match.tmdb_episode_id)
+            linkMutation.mutate({
+              tmdbEpisodeId: episode.best_match.tmdb_episode_id,
+              selected: false,
+            })
           }
         }}
       >
@@ -134,7 +145,9 @@ export function TmdbMatchApproval({
         episode={episode}
         isOpen={isPicking}
         onOpenChange={setIsPicking}
-        onPick={(tmdbEpisodeId) => linkMutation.mutate(tmdbEpisodeId)}
+        onPick={(tmdbEpisodeId) =>
+          linkMutation.mutate({ tmdbEpisodeId, selected: true })
+        }
         isLinking={linkMutation.isPending}
       />
     </div>
