@@ -1771,6 +1771,26 @@ export const ChannelsPublicSchema = {
     description: 'Schema for returning a page of `Channel`s.'
 } as const;
 
+export const CombinedChannelInputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        use_default_filters: {
+            type: 'boolean',
+            title: 'Use Default Filters',
+            default: false
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['id'],
+    title: 'CombinedChannelInput',
+    description: 'Schema for combining a channel into another channel.'
+} as const;
+
 export const CombinedChannelOutputSchema = {
     properties: {
         id: {
@@ -1788,6 +1808,11 @@ export const CombinedChannelOutputSchema = {
                 }
             ],
             title: 'Name'
+        },
+        use_default_filters: {
+            type: 'boolean',
+            title: 'Use Default Filters',
+            default: false
         }
     },
     type: 'object',

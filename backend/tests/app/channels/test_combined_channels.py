@@ -1,0 +1,391 @@
+# TODO: Validate
+"""Tests for reading a channel that combines other channels.
+
+Covers which channel an episode reads as coming from, and a combined channel
+that contributes the episodes it would show on its own.
+"""
+
+import json
+import uuid
+
+import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+from sqlmodel import Session, col, delete
+
+from app.channels.episode_selector import EpisodeQueryBuilder
+from app.channels.episode_selector.channel_scope import channel_attribution
+from app.channels.models import Channel, ChannelCombinedChannel
+from app.channels.schemas import ChannelOptions
+from app.config import settings
+from app.episodes.models import Episode
+from app.models import Visibility
+from app.plugins.models import Plugin
+from app.users.models import User
+from tests.app.channels.utils import (
+    channel_show_show,
+    create_random_channel,
+    create_random_channel_show,
+)
+from tests.app.episodes.utils import create_random_episode
+from tests.app.plugins.utils import create_random_plugin
+from tests.app.seasons.utils import create_random_season
+from tests.app.users.utils import authentication_token_from_email, create_random_user
+
+
+@pytest.fixture
+def user(session_scoped_session: Session) -> User:
+    return create_random_user(session_scoped_session)
+
+
+@pytest.fixture
+def plugin(session_scoped_session: Session, user: User) -> Plugin:
+    return create_random_plugin(
+        session_scoped_session,
+        user,
+        visibility=Visibility.public,
+    )
+
+
+def _combine(
+    session: Session,
+    channel: Channel,
+    combined: list[tuple[Channel, bool]],
+) -> None:
+    """Replace `channel`'s combined channels, saying which keep their own filters."""
+    session.exec(  # type: ignore[call-overload]
+        delete(ChannelCombinedChannel).where(
+            col(ChannelCombinedChannel.channel_id) == channel.id,
+        ),
+    )
+    for combined_channel, use_default_filters in combined:
+        session.add(
+            ChannelCombinedChannel(
+                channel_id=channel.id,
+                combined_channel_id=combined_channel.id,
+                use_default_filters=use_default_filters,
+            ),
+        )
+    session.flush()
+    session.refresh(channel)
+
+
+def _channel_with_episodes(
+    session: Session,
+    user: User,
+    plugin: Plugin,
+    durations: list[int],
+    channel_id: uuid.UUID | None = None,
+) -> tuple[Channel, list[Episode]]:
+    """Build a channel holding one show whose episodes run for `durations`."""
+    channel = (
+        create_random_channel(session, user=user.id, id=channel_id)
+        if channel_id is not None
+        else create_random_channel(session, user=user.id)
+    )
+    channel_show = create_random_channel_show(
+        session,
+        channel,
+        plugin,
+        is_whitelist=False,
+    )
+    season = create_random_season(session, channel_show_show(session, channel_show))
+    episodes = [
+        create_random_episode(session, season, duration=duration)
+        for duration in durations
+    ]
+    session.flush()
+    return channel, episodes
+
+
+def _episode_ids(
+    session: Session,
+    channel: Channel,
+    user: User,
+    **options: object,
+) -> set[uuid.UUID]:
+    builder = EpisodeQueryBuilder(session, channel, ChannelOptions(**options), user)
+    return {result.episode.id for result in builder.get_episodes()}
+
+
+class TestCombinedChannelsEndpoint:
+    @staticmethod
+    def url(channel_id: uuid.UUID) -> str:
+        return f"{settings.API_V1_STR}/channels/{channel_id}/combined-channels"
+
+    def test_saving_and_reading_back_whether_a_channel_keeps_its_filters(
+        self,
+        session_scoped_client: TestClient,
+        session_scoped_session: Session,
+    ) -> None:
+        session = session_scoped_session
+        user = create_random_user(session)
+        headers = authentication_token_from_email(
+            client=session_scoped_client,
+            email=user.email,
+            session=session,
+        )
+        channel = create_random_channel(session, user=user.id, is_public=True)
+        keeps_filters = create_random_channel(session, user=user.id, is_public=True)
+        follows_the_read = create_random_channel(session, user=user.id, is_public=True)
+        session.commit()
+
+        response = session_scoped_client.put(
+            self.url(channel.id),
+            json=[
+                {"id": str(keeps_filters.id), "use_default_filters": True},
+                {"id": str(follows_the_read.id), "use_default_filters": False},
+            ],
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        read_back = session_scoped_client.get(self.url(channel.id), headers=headers)
+        assert read_back.status_code == status.HTTP_200_OK
+        assert {
+            entry["id"]: entry["use_default_filters"] for entry in read_back.json()
+        } == {
+            str(keeps_filters.id): True,
+            str(follows_the_read.id): False,
+        }
+
+
+class TestChannelAttribution:
+    def test_channel_reads_as_itself(
+        self,
+        session_scoped_session: Session,
+        user: User,
+    ) -> None:
+        channel = create_random_channel(session_scoped_session, user=user.id)
+        assert channel_attribution(session_scoped_session, user, channel) == {
+            channel.id: channel.id,
+        }
+
+    def test_grandchild_reads_as_the_channel_it_was_added_through(
+        self,
+        session_scoped_session: Session,
+        user: User,
+    ) -> None:
+        session = session_scoped_session
+        channel_a = create_random_channel(session, user=user.id)
+        channel_b = create_random_channel(session, user=user.id)
+        channel_c = create_random_channel(session, user=user.id)
+        channel_d = create_random_channel(session, user=user.id)
+        _combine(session, channel_c, [(channel_d, False)])
+        _combine(session, channel_b, [(channel_c, False)])
+        _combine(session, channel_a, [(channel_b, False)])
+
+        attribution = channel_attribution(session, user, channel_a)
+
+        assert attribution[channel_a.id] == channel_a.id
+        assert attribution[channel_b.id] == channel_b.id
+        # The channels below B were added through B rather than through A.
+        assert attribution[channel_c.id] == channel_b.id
+        assert attribution[channel_d.id] == channel_b.id
+
+    def test_a_channel_reached_twice_belongs_to_the_first_that_reaches_it(
+        self,
+        session_scoped_session: Session,
+        user: User,
+    ) -> None:
+        session = session_scoped_session
+        shared = create_random_channel(session, user=user.id)
+        first = create_random_channel(session, user=user.id)
+        second = create_random_channel(session, user=user.id)
+        _combine(session, first, [(shared, False)])
+        _combine(session, second, [(shared, False)])
+        parent = create_random_channel(session, user=user.id)
+        _combine(session, parent, [(first, False), (second, False)])
+
+        attribution = channel_attribution(session, user, parent)
+
+        assert attribution[shared.id] == first.id
+
+
+class TestSortByChannel:
+    def test_episodes_group_by_the_channel_they_were_added_through(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        # The ids are pinned so the order they sort in is known: reading the channel
+        # an episode is held by rather than the one it was added through would put
+        # C's episodes last instead of alongside B's.
+        channel_a, episodes_a = _channel_with_episodes(
+            session,
+            user,
+            plugin,
+            [70, 80],
+            uuid.UUID(int=1),
+        )
+        channel_b, episodes_b = _channel_with_episodes(
+            session,
+            user,
+            plugin,
+            [10, 20],
+            uuid.UUID(int=2),
+        )
+        channel_d, episodes_d = _channel_with_episodes(
+            session,
+            user,
+            plugin,
+            [50, 60],
+            uuid.UUID(int=3),
+        )
+        channel_c, episodes_c = _channel_with_episodes(
+            session,
+            user,
+            plugin,
+            [30, 40],
+            uuid.UUID(int=4),
+        )
+        # C is combined into B, so its episodes read as B's rather than as their own.
+        _combine(session, channel_b, [(channel_c, False)])
+        _combine(session, channel_a, [(channel_b, False), (channel_d, False)])
+
+        builder = EpisodeQueryBuilder(
+            session,
+            channel_a,
+            ChannelOptions(
+                sort_by=[
+                    json.dumps(
+                        {
+                            "model": "channel",
+                            "field": "id",
+                            "direction": "ascending",
+                            "order": "sequential",
+                        },
+                    ),
+                ],
+            ),
+            user,
+        )
+        results = builder.get_episodes()
+        assert len(results) == 8  # noqa: PLR2004
+
+        position = {result.episode.id: index for index, result in enumerate(results)}
+
+        def occupies_one_run(episodes: list[Episode]) -> bool:
+            """Whether `episodes` were read together rather than scattered."""
+            positions = [position[episode.id] for episode in episodes]
+            return max(positions) - min(positions) + 1 == len(positions)
+
+        # C was added through B, so its episodes are read as part of B's rather
+        # than as a group of their own.
+        assert occupies_one_run([*episodes_b, *episodes_c])
+        assert occupies_one_run(episodes_a)
+        assert occupies_one_run(episodes_d)
+
+    def test_sorting_by_channel_is_offered(self) -> None:
+        from app.channels.service import get_sort_options
+
+        labels = {
+            option.label for option in get_sort_options() if option.model == "channel"
+        }
+        assert labels == {"Channel - Id"}
+
+
+class TestCombinedChannelDefaultFilters:
+    def test_off_by_default_so_the_read_s_own_filters_apply(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
+        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
+        # The child would show only its short episode when read on its own.
+        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
+        _combine(session, parent, [(child, False)])
+        session.flush()
+
+        assert _episode_ids(session, parent, user) == {
+            parent_episodes[0].id,
+            child_episodes[0].id,
+            child_episodes[1].id,
+        }
+
+    def test_channel_contributes_what_it_would_show_on_its_own(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
+        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
+        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
+        _combine(session, parent, [(child, True)])
+        session.flush()
+
+        # The child's own filter drops its long episode, and the parent's episodes
+        # are left alone by it.
+        assert _episode_ids(session, parent, user) == {
+            parent_episodes[0].id,
+            child_episodes[0].id,
+        }
+
+    def test_the_read_s_own_filters_still_apply_on_top(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
+        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
+        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
+        _combine(session, parent, [(child, True)])
+        session.flush()
+
+        # A read that keeps only the longest episodes drops what the child kept.
+        assert _episode_ids(session, parent, user, minimum_duration=200) == set()
+        assert parent_episodes[0].duration == 10  # noqa: PLR2004
+        assert child_episodes[1].duration == 300  # noqa: PLR2004
+
+    def test_a_channel_without_its_own_defaults_contributes_everything(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
+        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
+        _combine(session, parent, [(child, True)])
+        session.flush()
+
+        assert _episode_ids(session, parent, user) == {
+            parent_episodes[0].id,
+            *(episode.id for episode in child_episodes),
+        }
+
+    def test_a_grandchild_is_read_through_the_channel_holding_it(
+        self,
+        session_scoped_session: Session,
+        user: User,
+        plugin: Plugin,
+    ) -> None:
+        session = session_scoped_session
+        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
+        child, child_episodes = _channel_with_episodes(session, user, plugin, [20])
+        grandchild, grandchild_episodes = _channel_with_episodes(
+            session,
+            user,
+            plugin,
+            [30, 400],
+        )
+        _combine(session, child, [(grandchild, False)])
+        # The child's own filter covers everything it reads, its grandchild included.
+        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
+        _combine(session, parent, [(child, True)])
+        session.flush()
+
+        assert _episode_ids(session, parent, user) == {
+            parent_episodes[0].id,
+            child_episodes[0].id,
+            grandchild_episodes[0].id,
+        }

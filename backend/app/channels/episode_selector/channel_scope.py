@@ -53,15 +53,23 @@ def channel_attribution(
     reachable through two of them belongs to the first that reaches it.
     """
     attribution = {main_channel.id: main_channel.id}
+    # The whole level is read at once rather than a walk per child, so the depth of
+    # the tree rather than its width is what this costs.
+    to_expand = {
+        child_id: child_id
+        for child_id in child_channel_ids(main_channel)
+        if child_id not in attribution
+    }
 
-    for child_id in child_channel_ids(main_channel):
-        to_expand = {child_id} - attribution.keys()
-        while to_expand:
-            descendants: set[UUID] = set()
-            for channel in readable_channels(session, user, to_expand):
-                attribution[channel.id] = child_id
-                descendants.update(child_channel_ids(channel))
-            to_expand = descendants - attribution.keys()
+    while to_expand:
+        descendants: dict[UUID, UUID] = {}
+        for channel in readable_channels(session, user, to_expand):
+            added_through = to_expand[channel.id]
+            attribution[channel.id] = added_through
+            for descendant_id in child_channel_ids(channel):
+                if descendant_id not in attribution:
+                    descendants.setdefault(descendant_id, added_through)
+        to_expand = descendants
 
     return attribution
 

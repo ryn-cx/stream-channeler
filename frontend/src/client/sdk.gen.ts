@@ -498,7 +498,7 @@ export class ChannelsService {
     
     /**
      * Update Channel Combined Channels
-     * Delete a `Channel`'s `CombinedChannel`s.
+     * Replace a `Channel`'s `CombinedChannel`s.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody

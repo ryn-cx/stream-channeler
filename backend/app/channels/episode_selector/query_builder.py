@@ -77,6 +77,8 @@ class EpisodeQueryBuilder:
         channel: Channel,
         channel_options: ChannelOptions,
         user: CurrentUser | None = None,
+        *,
+        apply_combined_defaults: bool = True,
     ) -> None:
         self._session = session
         self._user = user
@@ -85,6 +87,16 @@ class EpisodeQueryBuilder:
         channel_options = self._resolve_order_preset(channel_options)
         self._channel_options = self._filter_channel_options(channel_options)
         self._channel_ids = self._resolve_channel_ids(channel)
+        # A combined channel asked to keep its own filters contributes whichever
+        # episodes it would show on its own, so they are read with its options and
+        # the ids they come back as are all this read takes from it. A channel it
+        # combines in turn is left to its own reading of itself, which is where the
+        # recursion stops.
+        self._default_filter_scopes = (
+            self._resolve_default_filter_scopes(channel)
+            if apply_combined_defaults
+            else []
+        )
         self._source_config: SourceDedupConfig = source_dedup_config(
             session,
             stored_preferences(self._user.source_preferences) if self._user else [],
@@ -94,7 +106,13 @@ class EpisodeQueryBuilder:
             random_seed=self._channel_options.random_seed,
             user=self._user,
             fallbacks=self._tmdb_fallbacks,
-            channel_attribution=channel_attribution(session, self._user, channel),
+            # Only a read that orders by the channel an episode comes from has to
+            # work out which channel that is.
+            channel_attribution=(
+                channel_attribution(session, self._user, channel)
+                if any(key.model == "channel" for key in self._channel_options.sort_by)
+                else {}
+            ),
         )
 
     def _resolve_order_preset(
@@ -159,6 +177,57 @@ class EpisodeQueryBuilder:
             child_channel_ids(main_channel),
         )
 
+    def _resolve_default_filter_scopes(
+        self,
+        main_channel: Channel,
+    ) -> list[tuple[set[UUID], set[UUID]]]:
+        """Return the episodes each self-filtering combined channel contributes.
+
+        Each entry is the channels a combined channel covers and the ids of the
+        episodes it would show on its own, so a read of the channel it was added to
+        takes those rather than the ones its own filters would leave.
+        """
+        scopes: list[tuple[set[UUID], set[UUID]]] = []
+        for combined in main_channel.combined_channels:
+            if not combined.use_default_filters:
+                continue
+            channel = self._session.get(Channel, combined.combined_channel_id)
+            if channel is None:
+                continue
+            options = (
+                ChannelOptions.model_validate_json(channel.default_order)
+                if channel.default_order
+                else ChannelOptions()
+            )
+            builder = EpisodeQueryBuilder(
+                self._session,
+                channel,
+                options,
+                self._user,
+                apply_combined_defaults=False,
+            )
+            scopes.append(
+                (
+                    builder._channel_ids,  # noqa: SLF001 - the same class reading its own read.
+                    {result.episode.id for result in builder.get_episodes()},
+                ),
+            )
+        return scopes
+
+    def _filter_by_combined_defaults(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        """Hold each self-filtering combined channel to the episodes it chose."""
+        for scope_channel_ids, episode_ids in self._default_filter_scopes:
+            query = query.where(
+                or_(
+                    col(ChannelShow.channel_id).notin_(scope_channel_ids),
+                    col(Episode.id).in_(episode_ids),
+                ),
+            )
+        return query
+
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
         query = self._base_query()
@@ -167,6 +236,7 @@ class EpisodeQueryBuilder:
         query = self._join_saved_order(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
+        query = self._filter_by_combined_defaults(query)
         query = self._apply_channel_specific_blacklist(query)
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_metadata_plugins(query)

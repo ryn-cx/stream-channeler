@@ -9,6 +9,7 @@ import {
   type CombinedChannelOutput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Command,
   CommandEmpty,
@@ -82,7 +83,10 @@ export function AdditionalChannelsPanel({
     mutationFn: () =>
       ChannelsService.updateChannelCombinedChannels({
         channelId,
-        requestBody: localChannels.map((channel) => channel.id),
+        requestBody: localChannels.map((channel) => ({
+          id: channel.id,
+          use_default_filters: channel.use_default_filters ?? false,
+        })),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -104,6 +108,19 @@ export function AdditionalChannelsPanel({
     if (!manualChannelId) return
     addChannel({ id: manualChannelId, name: null })
     setManualChannelId("")
+  }
+
+  const handleToggleDefaultFilters = (
+    idToToggle: string,
+    useDefaultFilters: boolean,
+  ) => {
+    setLocalChannels(
+      localChannels.map((channel) =>
+        channel.id === idToToggle
+          ? { ...channel, use_default_filters: useDefaultFilters }
+          : channel,
+      ),
+    )
   }
 
   const handleRemove = (idToRemove: string) => {
@@ -212,18 +229,35 @@ export function AdditionalChannelsPanel({
             {localChannels.map((channel) => (
               <div
                 key={channel.id}
-                className="flex items-center justify-between p-2 border rounded text-sm"
+                className="flex items-center justify-between gap-3 p-2 border rounded text-sm"
               >
                 <span className="text-xs">{channel.name || channel.id}</span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRemove(channel.id)}
-                  className="h-6 w-6 p-0 text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* A channel reading itself leaves a set of episodes of its own,
+                      which is what it contributes when this is on. */}
+                  <Checkbox
+                    id={`use-default-filters-${channel.id}`}
+                    checked={channel.use_default_filters ?? false}
+                    onCheckedChange={(checked) =>
+                      handleToggleDefaultFilters(channel.id, checked === true)
+                    }
+                  />
+                  <Label
+                    htmlFor={`use-default-filters-${channel.id}`}
+                    className="text-xs font-normal text-muted-foreground"
+                  >
+                    Use its own filters
+                  </Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRemove(channel.id)}
+                    className="h-6 w-6 p-0 text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

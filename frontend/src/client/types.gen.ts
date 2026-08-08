@@ -360,11 +360,20 @@ export type ChannelUpdate = {
 };
 
 /**
+ * Schema for combining a channel into another channel.
+ */
+export type CombinedChannelInput = {
+    id: string;
+    use_default_filters?: boolean;
+};
+
+/**
  * Schema for returning a channel combined into another channel.
  */
 export type CombinedChannelOutput = {
     id: string;
     name: (string | null);
+    use_default_filters?: boolean;
 };
 
 /**
@@ -1778,7 +1787,7 @@ export type ChannelsGetChannelCombinedChannelsResponse = (Array<CombinedChannelO
 
 export type ChannelsUpdateChannelCombinedChannelsData = {
     channelId: string;
-    requestBody: Array<(string)>;
+    requestBody: Array<CombinedChannelInput>;
 };
 
 export type ChannelsUpdateChannelCombinedChannelsResponse = (Message);

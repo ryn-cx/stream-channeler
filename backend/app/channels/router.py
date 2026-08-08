@@ -50,6 +50,7 @@ from app.channels.schemas import (
     ChannelShowStats,
     ChannelsPublic,
     ChannelUpdate,
+    CombinedChannelInput,
     CombinedChannelOutput,
     EpisodeWithDetails,
     SortOptionOutput,
@@ -356,6 +357,7 @@ def get_channel_combined_channels(
             CombinedChannelOutput(
                 id=combined.combined_channel_id,
                 name=combined_channel.name if combined_channel else None,
+                use_default_filters=combined.use_default_filters,
             ),
         )
     return result
@@ -368,19 +370,21 @@ def update_channel_combined_channels(
     session: SessionDep,
     current_user: CurrentUser,
     channel: EditableChannel,
-    combined_channel_ids: list[uuid.UUID],
+    combined_channels: list[CombinedChannelInput],
 ) -> Message:
-    """Delete a `Channel`'s `CombinedChannel`s."""
+    """Replace a `Channel`'s `CombinedChannel`s."""
     readable_ids = {
         readable.id
-        for readable in readable_channels(session, current_user, combined_channel_ids)
+        for readable in readable_channels(
+            session,
+            current_user,
+            [combined.id for combined in combined_channels],
+        )
     }
-    ordered_ids = [
-        combined_id
-        for combined_id in combined_channel_ids
-        if combined_id in readable_ids
+    readable = [
+        combined for combined in combined_channels if combined.id in readable_ids
     ]
-    service.set_channel_combined_channels(session, channel, ordered_ids)
+    service.set_channel_combined_channels(session, channel, readable)
     return Message(message="Combined channels updated successfully")
 
 

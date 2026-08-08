@@ -23,6 +23,7 @@ from app.channels.schemas import (
     ChannelListOutput,
     ChannelOutput,
     ChannelsPublic,
+    CombinedChannelInput,
     SortOptionOutput,
     WhitelistShowInput,
 )
@@ -422,16 +423,21 @@ def set_channel_order(
 def set_channel_combined_channels(
     session: Session,
     channel: Channel,
-    combined_channel_ids: Sequence[UUID],
+    combined_channels: Sequence[CombinedChannelInput],
 ) -> None:
-    """Replace a `Channel`s `CombinedChannel` with the given channel `UUID`s."""
+    """Replace a `Channel`s `CombinedChannel`s with the given channels."""
+    unique = {
+        combined.id: combined
+        for combined in combined_channels
+        if combined.id != channel.id
+    }
     channel.combined_channels = [
         ChannelCombinedChannel(
             channel_id=channel.id,
-            combined_channel_id=combined_channel_id,
+            combined_channel_id=combined.id,
+            use_default_filters=combined.use_default_filters,
         )
-        for combined_channel_id in dict.fromkeys(combined_channel_ids)
-        if combined_channel_id != channel.id
+        for combined in unique.values()
     ]
     session.commit()
 
