@@ -7190,6 +7190,11 @@ export const TmdbEpisodeChoiceSchema = {
         similarity: {
             type: 'number',
             title: 'Similarity'
+        },
+        already_used: {
+            type: 'boolean',
+            title: 'Already Used',
+            default: false
         }
     },
     type: 'object',

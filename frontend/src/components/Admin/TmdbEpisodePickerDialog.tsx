@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { isNumberedTheSame } from "./tmdbNumbering"
 
 type ChoiceOrder = "episode" | "similarity"
+type ChoiceScope = "unused" | "all"
 
 /** "S1E1", or as much of it as TMDB numbered the episode with. */
 function numbering(
@@ -58,6 +59,9 @@ export function TmdbEpisodePickerDialog({
 }) {
   const [search, setSearch] = useState("")
   const [order, setOrder] = useState<ChoiceOrder>("episode")
+  // The episodes still going spare are what a title is usually missing, so they
+  // are what is offered until the whole title is asked for.
+  const [scope, setScope] = useState<ChoiceScope>("unused")
 
   const { data: choices } = useQuery({
     queryKey: ["admin-tmdb-choices", episode.id],
@@ -67,7 +71,10 @@ export function TmdbEpisodePickerDialog({
   })
 
   const query = search.trim().toLowerCase()
-  const matching = (choices ?? []).filter((choice) => {
+  const inScope = (choices ?? []).filter(
+    (choice) => scope === "all" || !choice.already_used,
+  )
+  const matching = inScope.filter((choice) => {
     if (!query) return true
     return [
       choice.name ?? "",
@@ -121,6 +128,15 @@ export function TmdbEpisodePickerDialog({
               <TabsTrigger value="similarity">Name match</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Tabs
+            value={scope}
+            onValueChange={(value) => setScope(value as ChoiceScope)}
+          >
+            <TabsList>
+              <TabsTrigger value="unused">Not yet used</TabsTrigger>
+              <TabsTrigger value="all">All episodes</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         <div className="max-h-96 overflow-y-auto rounded-lg border">
@@ -128,7 +144,9 @@ export function TmdbEpisodePickerDialog({
             <p className="p-4 text-sm text-muted-foreground">Loading…</p>
           ) : ordered.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">
-              No TMDB episodes to choose from.
+              {scope === "unused" && inScope.length !== (choices?.length ?? 0)
+                ? "Every TMDB episode of this title is already used by another episode of this show."
+                : "No TMDB episodes to choose from."}
             </p>
           ) : (
             ordered.map((choice) => {
@@ -157,6 +175,11 @@ export function TmdbEpisodePickerDialog({
                   <span className="flex-1 whitespace-normal wrap-break-word">
                     {choice.name ?? "Unnamed"}
                   </span>
+                  {choice.already_used ? (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      Already used
+                    </span>
+                  ) : null}
                   <span className="shrink-0 tabular-nums text-muted-foreground">
                     {Math.round(choice.similarity * 100)}%
                   </span>

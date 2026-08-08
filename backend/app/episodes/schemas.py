@@ -130,6 +130,13 @@ class TmdbEpisodeChoice(BaseModel):
     absolute_number: int | None
     url: str | None
     similarity: float
+    already_used: bool = False
+    """Whether another episode of the same show is already pointed at this one.
+
+    A TMDB episode stands for one episode of the title, so one already spoken
+    for is rarely the answer for a second, and saying so is what lets the ones
+    still going spare be the ones offered first.
+    """
 
 
 class UnmatchedEpisodeOutput(BaseModel):

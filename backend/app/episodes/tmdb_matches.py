@@ -392,6 +392,29 @@ def list_unlocked_episodes(
     return outputs
 
 
+def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
+    """Return the TMDB identifiers the rest of `episode`'s show already points at.
+
+    Only the show the episode belongs to is read, since another website's copy
+    of the same title has its own episodes pointing at the same TMDB ones and
+    says nothing about which of them this show still has going spare. The
+    episode being linked is left out so the record it already points at is not
+    counted as somebody else's.
+    """
+    statement = (
+        select(Episode.episode_identifier)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(
+            Season.show_id == episode.season.show_id,
+            col(Episode.id) != episode.id,
+            col(Episode.episode_identifier).like(_TMDB_IDENTIFIER_PATTERN),
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+        )
+    )
+    return set(session.exec(statement).all())
+
+
 def list_tmdb_episode_choices(
     session: Session,
     episode: Episode,
@@ -409,6 +432,7 @@ def list_tmdb_episode_choices(
         [],
     )
     absolute_numbers = _candidate_absolute_numbers(candidates)
+    used_identifiers = _identifiers_used_by_show(session, episode)
     choices = [
         choice
         for candidate in candidates
@@ -421,6 +445,10 @@ def list_tmdb_episode_choices(
         )
         is not None
     ]
+    for choice in choices:
+        choice.already_used = (
+            tmdb_identifier(MediaType.tv, choice.tmdb_episode_id) in used_identifiers
+        )
     return sorted(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),

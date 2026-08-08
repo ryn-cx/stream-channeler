@@ -1340,6 +1340,7 @@ export type TmdbEpisodeChoice = {
     absolute_number: (number | null);
     url: (string | null);
     similarity: number;
+    already_used?: boolean;
 };
 
 /**
