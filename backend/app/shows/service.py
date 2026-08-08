@@ -1,11 +1,10 @@
 # TODO: Validate
 """Show services."""
 
-from typing import Literal
-
 from sqlmodel import Session
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.watches.services import get_installed_plugin
@@ -63,7 +62,7 @@ def _relink_episodes(
     tmdb: TMDB,
     season: Season,
     tmdb_id: int | None,
-    media_type: Literal["movie", "tv"],
+    media_type: MediaType,
 ) -> None:
     last_number = highest_episode_number(
         episode.episode_number
@@ -79,7 +78,7 @@ def _relink_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
     episode: Episode,
     season: Season,
     tmdb_id: int | None,
-    media_type: Literal["movie", "tv"],
+    media_type: MediaType,
     last_number: int | None,
 ) -> None:
     locked_identifier = (
@@ -100,7 +99,7 @@ def _relink_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
         episode.episode_identifier = locked_identifier
 
 
-def _tmdb_media_type(session: Session, show: Show) -> Literal["movie", "tv"]:
+def _tmdb_media_type(session: Session, show: Show) -> MediaType:
     """Ask the `Show`'s plugin whether TMDB holds it as a film or a series.
 
     Matched on the method rather than on `TMDBMixin`, because a plugin can hand
@@ -109,5 +108,5 @@ def _tmdb_media_type(session: Session, show: Show) -> Literal["movie", "tv"]:
     """
     plugin_class = get_installed_plugin(show.source.plugin.key)
     if plugin_class is None or not hasattr(plugin_class, "_tmdb_media_type"):
-        return "tv"
+        return MediaType.tv
     return plugin_class(session)._tmdb_media_type(show.key)  # type: ignore[attr-defined,no-any-return]  # noqa: SLF001

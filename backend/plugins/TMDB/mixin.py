@@ -1,8 +1,9 @@
 # TODO: Validate
 from collections.abc import Iterable, Sequence
-from typing import Any, Literal, override
+from typing import Any, override
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -33,7 +34,7 @@ class TMDBMixin(BasePlugin, register=False):
     def _tmdb_search_media(
         self,
         title: str,
-        media_type: Literal["movie", "tv"] | None = "tv",
+        media_type: MediaType | None = MediaType.tv,
         year: int | None = None,
     ) -> int | None:
         """Return the best-match TMDB id for a title, or None.
@@ -56,13 +57,30 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> int | None:
         raise NotImplementedError
 
+    def _fallback_show_identifier(self, show_key: str) -> str:
+        """Return the identifier a `Show` carries while it names no TMDB title.
+
+        A title TMDB does not hold is only ever itself, so the plugin's own key
+        for it is what identifies it. `tmdb_link_show` replaces this with the
+        TMDB id when the title is linked.
+        """
+        return f"{self.plugin_key()} {show_key}"
+
+    def _fallback_season_identifier(self, season_key: str) -> str:
+        """Return the identifier a `Season` carries while it names no TMDB season."""
+        return f"{self.plugin_key()} {season_key}"
+
+    def _fallback_episode_identifier(self, episode_key: str) -> str:
+        """Return the identifier an `Episode` carries while it names no TMDB episode."""
+        return f"{self.plugin_key()} {episode_key}"
+
     def _merge_and_upsert_show(
         self,
         show: Show,
         source: Source,
         existing_show: Show | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"],
+        tmdb_media_type: MediaType,
     ) -> Show:
         """Store the website's own `Show`, pointed at the TMDB title behind it.
 
@@ -70,10 +88,6 @@ class TMDBMixin(BasePlugin, register=False):
         plugin's own media instead, which is what fills in whatever this website
         leaves out when the `Show` is served.
         """
-        # A title TMDB does not hold is only ever itself, so the plugin's own key
-        # for it is what identifies it. `tmdb_link_show` replaces this with the
-        # TMDB id when the title is linked.
-        show.show_identifier = f"{self.plugin_key()} {show_key}"
         tmdb_id = self._cached_tmdb_id(show_key)
         show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
         if show.tmdb_id:
@@ -87,9 +101,8 @@ class TMDBMixin(BasePlugin, register=False):
         show: Show,
         existing_season: Season | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"],
+        tmdb_media_type: MediaType,
     ) -> Season:
-        season.season_identifier = f"{self.plugin_key()} {season.key}"
         season = self.tmdb.tmdb_link_season(
             season,
             show.tmdb_id,
@@ -105,7 +118,7 @@ class TMDBMixin(BasePlugin, register=False):
         season: Season,
         existing_episode: Episode | None,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"],
+        tmdb_media_type: MediaType,
         last_episode_number: int | None = None,
     ) -> Episode:
         episode = self.tmdb.tmdb_link_episode(
@@ -130,8 +143,8 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> int | None:
         raise NotImplementedError
 
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:  # noqa: ARG002
-        return "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:  # noqa: ARG002
+        return MediaType.tv
 
     _tmdb_id: int | None | Sentinel = _UNRESOLVED
 

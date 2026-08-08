@@ -10,16 +10,14 @@ Kept clear of the models so they can read their own identifiers without the
 import going in a circle.
 """
 
-from typing import Literal
-
-type MediaType = Literal["movie", "tv"]
+from app.media.media_type import MediaType
 
 TMDB_PLUGIN_KEY = "TMDB"
 # A record only has a TMDB counterpart while its identifier is one TMDB issued.
 TMDB_IDENTIFIER_PREFIX = f"{TMDB_PLUGIN_KEY} "
 
 
-def tmdb_identifier(media_type: str, tmdb_id: int) -> str:
+def tmdb_identifier(media_type: MediaType, tmdb_id: int) -> str:
     """Return the identifier naming a TMDB record.
 
     TMDB numbers films and series separately, so the media type is part of the
@@ -39,13 +37,9 @@ def parse_tmdb_identifier(identifier: str | None) -> tuple[MediaType, int] | Non
         return None
     _, _, remainder = identifier.partition(" ")
     media_type, _, raw_id = remainder.partition(" ")
-    if not raw_id.isdigit():
+    if not raw_id.isdigit() or media_type not in MediaType:
         return None
-    if media_type == "movie":
-        return "movie", int(raw_id)
-    if media_type == "tv":
-        return "tv", int(raw_id)
-    return None
+    return MediaType(media_type), int(raw_id)
 
 
 def identifier_tmdb_id(identifier: str | None) -> int | None:

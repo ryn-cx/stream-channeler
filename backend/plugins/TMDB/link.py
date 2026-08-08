@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from functools import cache
 from itertools import product
 from math import prod
-from typing import Literal, Protocol
+from typing import Protocol
 
 from pykakasi import kakasi
 from pykakasi.kanji import Kanwa
@@ -13,6 +13,7 @@ from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 
 from app.episodes.models import Episode
 from app.media.identifiers import tmdb_identifier
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from plugins.TMDB.lookup import LookupMixin
@@ -143,7 +144,7 @@ class LinkMixin(LookupMixin, register=False):
         self,
         show: Show,
         tmdb_id: int | None,
-        media_type: Literal["movie", "tv"] = "tv",
+        media_type: MediaType = MediaType.tv,
     ) -> Show:
         """Point a `Show` at its TMDB title.
 
@@ -162,7 +163,7 @@ class LinkMixin(LookupMixin, register=False):
         season: Season,
         tmdb_id: int | None,
         season_number: int | None,
-        media_type: Literal["movie", "tv"],
+        media_type: MediaType,
     ) -> Season:
         """Point a `Season` at its TMDB season.
 
@@ -174,12 +175,12 @@ class LinkMixin(LookupMixin, register=False):
         if not tmdb_id or season.tmdb_id:
             return season
 
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             if movie := self._movie_detail(tmdb_id):
-                season.season_identifier = tmdb_identifier("movie", movie.id)
+                season.season_identifier = tmdb_identifier(MediaType.movie, movie.id)
             return season
 
-        seasons = self.show_detail_file(tmdb_id).parsed().seasons
+        seasons = self._show_seasons(tmdb_id)
         season_detail = next(
             (
                 candidate
@@ -191,7 +192,7 @@ class LinkMixin(LookupMixin, register=False):
         if season_detail is None:
             season_detail = _find_by_name(seasons, season.name)
         if season_detail:
-            season.season_identifier = tmdb_identifier("tv", season_detail.id)
+            season.season_identifier = tmdb_identifier(MediaType.tv, season_detail.id)
         return season
 
     def tmdb_link_episode(  # noqa: PLR0913 - Every part of what names a TMDB episode.
@@ -200,7 +201,7 @@ class LinkMixin(LookupMixin, register=False):
         tmdb_id: int | None,
         season_number: int | None,
         episode_number: int | None,
-        media_type: Literal["movie", "tv"] = "tv",
+        media_type: MediaType = MediaType.tv,
         highest_episode_number: int | None = None,
     ) -> Episode:
         """Point an `Episode` at its TMDB episode.
@@ -219,10 +220,10 @@ class LinkMixin(LookupMixin, register=False):
         if not tmdb_id:
             return episode
 
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             if movie := self._movie_detail(tmdb_id):
                 episode.episode_identifier = tmdb_identifier(
-                    "movie",
+                    MediaType.movie,
                     episode.tmdb_id or movie.id,
                 )
             return episode
@@ -236,7 +237,7 @@ class LinkMixin(LookupMixin, register=False):
         )
         if episode_detail:
             episode.episode_identifier = tmdb_identifier(
-                "tv",
+                MediaType.tv,
                 episode.tmdb_id or episode_detail.id,
             )
         return episode
@@ -344,7 +345,7 @@ class LinkMixin(LookupMixin, register=False):
         if not self.has_season(tmdb_id, season_number):
             return False
 
-        episodes = self.season_detail_file(tmdb_id, season_number).parsed().episodes
+        episodes = self._season_episodes(tmdb_id, season_number)
         tmdb_numbers = [episode.episode_number for episode in episodes]
         if not tmdb_numbers:
             return False
@@ -373,16 +374,14 @@ class LinkMixin(LookupMixin, register=False):
         tmdb_id: int,
         episode: TvSeasonEpisode,
     ) -> frozenset[str]:
-        translations_file = self.episode_translations_file(
-            tmdb_id,
-            episode.season_number,
-            episode.episode_number,
-        )
         return frozenset(
             form
-            for translation in translations_file.parsed()
-            if translation.data.name
-            for form in _plaintext_forms(translation.data.name)
+            for name in self.translated_episode_names(
+                tmdb_id,
+                episode.season_number,
+                episode.episode_number,
+            )
+            for form in _plaintext_forms(name)
         )
 
     def _episode_by_number(
@@ -396,11 +395,10 @@ class LinkMixin(LookupMixin, register=False):
         if not self.has_season(tmdb_id, season_number):
             return None
 
-        episodes = self.season_detail_file(tmdb_id, season_number).parsed().episodes
         return next(
             (
                 candidate
-                for candidate in episodes
+                for candidate in self._season_episodes(tmdb_id, season_number)
                 if candidate.episode_number == episode_number
             ),
             None,
@@ -418,11 +416,7 @@ class LinkMixin(LookupMixin, register=False):
         """
         if self._all_episodes_cache is None:
             episodes: list[TvSeasonEpisode] = []
-            for season in self.show_detail_file(tmdb_id).parsed().seasons:
-                season_detail = self.season_detail_file(
-                    tmdb_id,
-                    season.season_number,
-                ).parsed()
-                episodes.extend(season_detail.episodes)
+            for season in self._show_seasons(tmdb_id):
+                episodes.extend(self._season_episodes(tmdb_id, season.season_number))
             self._all_episodes_cache = episodes
         return self._all_episodes_cache

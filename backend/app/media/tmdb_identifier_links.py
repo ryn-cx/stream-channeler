@@ -12,7 +12,8 @@ the link to read.
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.media.identifiers import MediaType, parse_tmdb_identifier
+from app.media.identifiers import parse_tmdb_identifier
+from app.media.media_type import MediaType
 from plugins.TMDB import TMDB
 
 

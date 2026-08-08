@@ -7,6 +7,7 @@ from typing import ClassVar, override
 from meshfilm.lodp_title_and_plans_page import models as netflix_models
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -48,6 +49,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="TV Show",
                 url=self._show_url(show_key),
                 image_url=show_data.billboard_or_story_art960.url,
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 update_at=self._next_update_at(show_key, data_timestamp),
                 source_id=source.id,
@@ -57,7 +59,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
         self._upsert_tv_seasons(show, force=force)
@@ -80,6 +82,7 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=sort_order + 1,
                     sort_order=sort_order,
                     url=self._show_url(show.key),
+                    season_identifier=self._fallback_season_identifier(season_key),
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -88,7 +91,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show,
                     season,
                     show.key,
-                    "tv",
+                    MediaType.tv,
                 )
 
             self._upsert_tv_episodes(
@@ -138,7 +141,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "tv",
+                MediaType.tv,
                 last_number,
             )
 
@@ -159,6 +162,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._show_url(show_key),
                 image_url=movie_data.billboard_or_story_art960.url,
                 media_type="Movie",
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 update_at=self._next_update_at(show_key, data_timestamp),
                 source_id=source.id,
@@ -168,7 +172,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
 
         self._upsert_movie_season(show, movie_data, force=force)
@@ -190,6 +194,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season_number=0,
                 sort_order=0,
                 url=self._show_url(show.key),
+                season_identifier=self._fallback_season_identifier(season_key),
                 data_timestamp=self.season_data_timestamp(season_key, show.key),
                 show_id=show.id,
             )
@@ -198,7 +203,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show,
                 season,
                 show.key,
-                "movie",
+                MediaType.movie,
             )
 
         episode_key = show.key
@@ -224,7 +229,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show.key,
-                "movie",
+                MediaType.movie,
             )
 
     _WEEKDAYS: ClassVar[dict[str, int]] = {

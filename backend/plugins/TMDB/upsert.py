@@ -4,9 +4,13 @@ from __future__ import annotations
 from typing import override
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
+from app.models import Visibility
+from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.models import User
 from plugins.TMDB.files import (
     air_datetime,
     backdrop_image_url,
@@ -19,7 +23,6 @@ from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.keys import (
     MOVIE_EPISODE_NUMBER,
     MOVIE_SEASON_NUMBER,
-    MediaType,
     episode_key,
     parse_show_key,
     season_key,
@@ -28,6 +31,36 @@ from plugins.TMDB.keys import (
 
 
 class UpsertMixin(HelperMixin, register=False):
+    @override
+    def _upsert_plugin(
+        self,
+        plugin_user: User,
+        existing_plugin: Plugin | None,
+    ) -> Plugin:
+        """Create the `Plugin` record as private.
+
+        Nothing here is streamable, so its media only ever exists to stand in for
+        what another plugin's website leaves out and is never browsed directly.
+        """
+        return Plugin(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            version=self._VERSION,
+            visibility=Visibility.private,
+            anonymous=False,
+            user_id=plugin_user.id,
+        ).upsert_and_set_update_at(plugin_user, existing_plugin)
+
+    @override
+    def _upsert_source(self) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
+
     def import_title(self, media_type: MediaType, tmdb_id: int) -> Show | None:
         """Store a title and everything under it as this plugin's own media.
 
@@ -35,13 +68,14 @@ class UpsertMixin(HelperMixin, register=False):
         does not carry, so a title is imported as soon as one of them resolves
         it rather than only when a `User` asks for it.
 
-        Returns None when TMDB has no files for the title, which leaves the
-        plugin's own media as the only thing there is to serve.
+        Returns None when TMDB has no title for the id, which is stored as an
+        empty file rather than raised, so a caller working from an id a website
+        guessed at is not stopped by one that turned out to be wrong.
         """
         key = show_key(media_type, tmdb_id)
         detail_file = self._show_files(key)[0]
         detail_file.download_if_outdated()
-        if detail_file.is_outdated():
+        if not detail_file.database_record.content:
             return None
         return self._import_show(key)
 
@@ -62,7 +96,7 @@ class UpsertMixin(HelperMixin, register=False):
                 self._show_files(show_key),
             )
 
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             self._upsert_movie_season(show, show_key, force=force)
         else:
             for key in self._season_keys_from_file(show_key):
@@ -73,7 +107,7 @@ class UpsertMixin(HelperMixin, register=False):
 
     def _new_show(self, source: Source, show_key: str) -> Show:
         media_type, tmdb_id = parse_show_key(show_key)
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             movie = self.movie_detail_file(tmdb_id).parsed()
             name = movie.title
             description = movie.overview
@@ -92,7 +126,7 @@ class UpsertMixin(HelperMixin, register=False):
             key=show_key,
             name=name,
             description=description,
-            media_type="Movie" if media_type == "movie" else "TV Show",
+            media_type="Movie" if media_type == MediaType.movie else "TV Show",
             url=title_page_url(media_type, tmdb_id),
             image_url=image_url,
             tmdb_id=tmdb_id,

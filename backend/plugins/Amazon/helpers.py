@@ -1,7 +1,8 @@
 # TODO: Validate
-from typing import Literal, override
+from typing import override
 from urllib.parse import quote_plus
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Amazon.files import FileMixin
@@ -22,12 +23,12 @@ class HelperMixin(FileMixin, register=False):
         self.detail_page(show_key).download_if_outdated()
         page = self.detail_page(show_key)
         if self._is_movie(show_key):
-            return self._tmdb_search_media(page.title(), "movie")
+            return self._tmdb_search_media(page.title(), MediaType.movie)
         return self._tmdb_search_media(page.series_title())
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie(show_key) else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:

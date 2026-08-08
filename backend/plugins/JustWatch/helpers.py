@@ -1,12 +1,13 @@
 # TODO: Validate
 from datetime import date, datetime
 from itertools import chain
-from typing import Literal, cast, override
+from typing import cast, override
 from urllib.parse import parse_qs, urlsplit
 
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.url_title_details import models as url_title_details_models
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
@@ -66,8 +67,10 @@ class HelperMixin(FileMixin, register=False):
         )
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._media_type(show_key) == "Movie" else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return (
+            MediaType.movie if self._media_type(show_key) == "Movie" else MediaType.tv
+        )
 
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:

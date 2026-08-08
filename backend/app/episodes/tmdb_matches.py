@@ -22,6 +22,7 @@ from app.media.identifiers import (
     TMDB_PLUGIN_KEY,
     tmdb_identifier,
 )
+from app.media.media_type import MediaType
 from app.media.tmdb_fallback import tmdb_episode_url
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -335,7 +336,7 @@ def list_tmdb_episode_choices(
 
 def _tmdb_episode(session: Session, tmdb_episode_id: int) -> Episode | None:
     identifiers = {
-        tmdb_identifier(media_type, tmdb_episode_id) for media_type in ("tv", "movie")
+        tmdb_identifier(media_type, tmdb_episode_id) for media_type in MediaType
     }
     statement = (
         select(Episode)

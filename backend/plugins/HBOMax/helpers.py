@@ -1,9 +1,10 @@
 # TODO: Validate
-from typing import Literal, override
+from typing import override
 from urllib.parse import quote
 
 from minbo.movies.models import Idref14 as MovieContent
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.HBOMax.files import FileMixin
 
@@ -30,7 +31,7 @@ class HelperMixin(FileMixin, register=False):
         if self._is_movie():
             self.movie_file(show_key).download_if_outdated()
             movie = self._movie_content(show_key)
-            return self._tmdb_search_media(movie.title.full, "movie")
+            return self._tmdb_search_media(movie.title.full, MediaType.movie)
         self.show_file(show_key).download_if_outdated()
         show = self._show_content(show_key)
         return self._tmdb_search_media(show.title.full)
@@ -51,8 +52,8 @@ class HelperMixin(FileMixin, register=False):
         return episode_number
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie() else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie() else MediaType.tv
 
     @classmethod
     def _show_url(cls, show_key: str) -> str:

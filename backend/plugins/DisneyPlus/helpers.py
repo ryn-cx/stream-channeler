@@ -1,7 +1,8 @@
 # TODO: Validate
 import re
-from typing import Literal, override
+from typing import override
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.DisneyPlus.files import FileMixin
 
@@ -26,16 +27,16 @@ class HelperMixin(FileMixin, register=False):
         if existing_show and existing_show.tmdb_id is not None:
             return existing_show.tmdb_id
         self.entity_file(show_key).download_if_outdated()
-        media_type: Literal["movie", "tv"]
+        media_type: MediaType
         if self._is_movie(show_key):
-            media_type = "movie"
+            media_type = MediaType.movie
         else:
-            media_type = "tv"
+            media_type = MediaType.tv
         return self._tmdb_search_media(self._media_details(show_key).title, media_type)
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie(show_key) else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:

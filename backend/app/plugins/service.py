@@ -6,16 +6,18 @@ from typing import Protocol
 from sqlmodel import Session
 from tminidb.movie_details.models import MovieDetailsModel
 from tminidb.movie_watch_providers.models import MovieWatchProvidersModel
+from tminidb.tv_series_details.models import TvSeriesDetailsModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
+from app.media.media_type import MediaType
 from app.plugins.schemas import (
     TMDBMatch,
     TMDBMediaInfo,
-    TMDBMediaType,
     TMDBWatchProviderItem,
 )
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import (
+    MovieDetails,
     backdrop_image_url,
     logo_image_url,
     poster_image_url,
@@ -74,7 +76,7 @@ def _watch_provider_items(
 def tmdb_match(
     session: Session,
     title: str,
-    media_type: TMDBMediaType,
+    media_type: MediaType,
     year: int | None = None,
 ) -> TMDBMatch | None:
     """Return the TMDB title that best matches a plugin's search result.
@@ -92,13 +94,18 @@ def tmdb_match(
 
 def tmdb_media_info(
     session: Session,
-    media_type: TMDBMediaType,
+    media_type: MediaType,
     tmdb_id: int,
 ) -> TMDBMediaInfo | None:
     tmdb = TMDB(session)
-    detail = tmdb.auto_updating_media_detail(media_type, tmdb_id).parsed()
+    detail_file = tmdb.auto_updating_media_detail(media_type, tmdb_id)
     providers = tmdb.auto_updating_watch_providers(media_type, tmdb_id).parsed()
-    if isinstance(detail, MovieDetailsModel):
+    # Which of the two shapes the detail is has to be read off the file rather
+    # than the parsed model, because a model whose module was reloaded after a
+    # schema change is no longer an instance of the class imported here.
+    detail: MovieDetailsModel | TvSeriesDetailsModel
+    if isinstance(detail_file, MovieDetails):
+        detail = detail_file.parsed()
         title = detail.title
         year = release_year(detail.release_date)
         end_year = None
@@ -106,6 +113,7 @@ def tmdb_media_info(
         number_of_episodes = None
         runtime = detail.runtime
     else:
+        detail = detail_file.parsed()
         title = detail.name
         year = release_year(detail.first_air_date)
         end_year = release_year(detail.last_air_date)

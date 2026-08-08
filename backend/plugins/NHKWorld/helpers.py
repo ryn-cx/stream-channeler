@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import override
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.NHKWorld.files import FileMixin
 
@@ -19,7 +20,7 @@ class HelperMixin(FileMixin, register=False):
         program_file = self.video_program_file(show_key)
         program_file.download_if_outdated()
         # NHK World programs carry no release year, so the title is all TMDB gets.
-        return self._tmdb_search_media(program_file.parsed().title, "tv")
+        return self._tmdb_search_media(program_file.parsed().title, MediaType.tv)
 
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:

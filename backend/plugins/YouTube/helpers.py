@@ -1,7 +1,8 @@
 # TODO: Validate
-from typing import Any, Literal, override
+from typing import Any, override
 from urllib.parse import quote
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.YouTube.files import (
@@ -29,7 +30,7 @@ class HelperMixin(FileMixin, register=False):
 
         if is_video_key(show_key):
             video_item = get_first_item(self.videos_file(show_key).parsed().items)
-            return self._tmdb_search_media(video_item.snippet.title, "movie")
+            return self._tmdb_search_media(video_item.snippet.title, MediaType.movie)
 
         if is_show_key(show_key):
             title = self.show_page_file(show_key).title()
@@ -38,8 +39,8 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if is_video_key(show_key) else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if is_video_key(show_key) else MediaType.tv
 
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:

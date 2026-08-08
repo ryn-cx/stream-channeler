@@ -8,6 +8,7 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
+from app.media.media_type import MediaType
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
@@ -29,7 +30,6 @@ from app.plugins.schemas import (
     PluginURLMatch,
     TMDBMatch,
     TMDBMediaInfo,
-    TMDBMediaType,
 )
 from app.schemas import Message
 from app.users.models import User
@@ -202,7 +202,7 @@ def search_plugin(
 @plugins_router.get("/tmdb/match")
 def tmdb_match(
     title: str,
-    media_type: TMDBMediaType,
+    media_type: MediaType,
     session: SessionDep,
     _current_user: CurrentUser,
     year: int | None = None,
@@ -213,7 +213,7 @@ def tmdb_match(
 
 @plugins_router.get("/tmdb/media-info")
 def tmdb_media_info(
-    media_type: TMDBMediaType,
+    media_type: MediaType,
     tmdb_id: int,
     session: SessionDep,
     _current_user: CurrentUser,

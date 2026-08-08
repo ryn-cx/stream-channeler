@@ -7,6 +7,7 @@ from typing import override
 from wholoo.movies.models import MoviesModel
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -49,6 +50,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="TV Show",
                 url=self._show_url(show_key, "series"),
                 image_url=self._image_url(model.artwork.program_tile.path),
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
@@ -57,7 +59,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
         self._upsert_tv_seasons(show, force=force)
@@ -82,6 +84,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._show_url(show_key, "movie"),
                 image_url=self._image_url(model.artwork.program_tile.path),
                 media_type="Movie",
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -90,7 +93,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
 
         self._upsert_movie_season(show, force=force)
@@ -113,6 +116,7 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=season_number,
                     sort_order=sort_order,
                     url=self._show_url(show.key, "series"),
+                    season_identifier=self._fallback_season_identifier(season_key),
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -121,7 +125,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show,
                     season,
                     show.key,
-                    "tv",
+                    MediaType.tv,
                 )
 
             self._upsert_tv_episodes(season, show.key, season_number, force=force)
@@ -141,6 +145,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season_number=0,
                 sort_order=0,
                 url=self._show_url(show.key, "movie"),
+                season_identifier=self._fallback_season_identifier(season_key),
                 data_timestamp=self.season_data_timestamp(season_key, show.key),
                 show_id=show.id,
             )
@@ -149,7 +154,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show,
                 season,
                 show.key,
-                "movie",
+                MediaType.movie,
             )
 
         self._upsert_movie_episode(season, show.key, model, force=force)
@@ -197,7 +202,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
     def _upsert_movie_episode(
@@ -232,5 +237,5 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "movie",
+                MediaType.movie,
             )

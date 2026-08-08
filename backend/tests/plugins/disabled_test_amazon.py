@@ -4,7 +4,6 @@ from typing import override
 from app.shows.models import Show
 from plugins.Amazon import Amazon
 from tests.plugins.plugin_validator import (
-    InvalidURLValidator,
     PluginValidator,
     StandardTests,
 )

@@ -9,6 +9,7 @@ from diving_board.vod import models as vod_models
 from diving_board.vod.hero.models import VodHeroModel
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season as SeasonModel
 from app.shows.models import Show
 from app.sources.models import Source
@@ -52,6 +53,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Series",
                 url=self._show_url(show_key),
                 image_url=self._series_image_url(series_data),
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -60,7 +62,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
         self._upsert_series_seasons(show, force=force)
@@ -85,6 +87,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._show_url(show_key, "Movie"),
                 image_url=hero.attributes.image.attributes.source,
                 media_type="Movie",
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -93,7 +96,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
 
         self._upsert_movie_seasons(show, force=force)
@@ -130,7 +133,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show,
                     season,
                     show.key,
-                    "tv",
+                    MediaType.tv,
                 )
 
             self._upsert_series_episodes(season, show.key, force=force)
@@ -163,7 +166,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show,
                     season,
                     show.key,
-                    "movie",
+                    MediaType.movie,
                 )
 
             self._upsert_movie_episode(season, show.key, force=force)
@@ -214,7 +217,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
     def _upsert_movie_episode(
@@ -264,7 +267,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
 
     @staticmethod

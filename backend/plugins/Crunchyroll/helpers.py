@@ -1,8 +1,9 @@
 # TODO: Validate
-from typing import Literal, override
+from typing import override
 
 from chirashi.series import models as series_models
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.files import FileMixin
@@ -30,10 +31,10 @@ class HelperMixin(FileMixin, register=False):
         return "type:movie" in self._series_datum(show_key).keywords
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
+    def tmdb_media_type(self, show_key: str) -> MediaType:
         if is_artist_show_key(show_key):
-            return "tv"
-        return "movie" if self._is_movie(show_key) else "tv"
+            return MediaType.tv
+        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
     @override
     def _fetch_tmdb_id(

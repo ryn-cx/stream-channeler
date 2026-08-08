@@ -26,7 +26,6 @@ from plugins.utils.base_plugin import BasePlugin
 from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.context_managers import (
     mock_update,
-    track_downloads,
 )
 from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
@@ -272,76 +271,36 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         except AssertionError as error:
             raise AssertionError(msg) from error
 
-    def _initialize_import_data(
-        self,
-        session: Session,
-        *,
-        files_already_cached: bool,
-    ) -> None:
-        """Import URL data, always exporting files for analysis even on failure."""
-        try:
-            with track_downloads() as download_count:
-                if self.invalid_url:
-                    with pytest.raises(InvalidURLError):
-                        self._import_url(session)
-                else:
-                    results = self._import_url(session)
-                    self._export_import_url_results_file(results)
-        finally:
-            self._export_database_files(session)
+    def _initialize_import_data(self, session: Session) -> None:
+        """Import URL data, saving the expected result the other tests check against."""
+        if self.invalid_url:
+            with pytest.raises(InvalidURLError):
+                self._import_url(session)
+            return
 
-        if not self.invalid_url:
-            self._export_database_dump_file(session)
-
-        if files_already_cached and download_count:
-            pytest.fail(f"Files were downloaded during import: {download_count}")
-
-    def _initialize_search_data(
-        self,
-        session: Session,
-        search_query: str,
-        *,
-        files_already_cached: bool,
-    ) -> None:
-        """Run a search query, always exporting files for analysis even on failure."""
-        # _search freezes the clock so cached search files stay within their TTL.
-        try:
-            with track_downloads() as download_count:
-                self._search(session, search_query)
-        finally:
-            self._export_database_files(session)
-
-        if files_already_cached and download_count:
-            pytest.fail(f"Files were downloaded during search: {download_count}")
+        results = self._import_url(session)
+        self._export_import_url_results_file(results)
+        self._export_database_dump_file(session)
 
     @pytest.mark.enable_socket
     @pytest.mark.skipif(
         "GITHUB_ACTIONS" in os.environ,
         reason="Records/refreshes test data locally; never runs on CI.",
     )
-    def test__initialize_test_data(
-        self,
-        session_with_files: Session,
-    ) -> None:
+    def test__initialize_test_data(self, session_with_files: Session) -> None:
         """Downloads and saves all of the data required for the tests.
 
-        On first run this will download files and export them. Subsequent runs
-        verify that all files are served from cache (no downloads occur).
+        Every file is served from the stored test files, and the ones that are
+        not stored yet are downloaded and stored as they are reached, so this is
+        both what records a test's data and what tops it up when a website has
+        something new. It is the only test allowed to reach the network.
         """
-        files_already_cached = self.combined_files_path().exists()
-
         if self.url:
-            self._initialize_import_data(
-                session_with_files,
-                files_already_cached=files_already_cached,
-            )
+            self._initialize_import_data(session_with_files)
 
         if self.search_query:
-            self._initialize_search_data(
-                session_with_files,
-                self.search_query,
-                files_already_cached=files_already_cached,
-            )
+            # _search freezes the clock so stored search files stay within their TTL.
+            self._search(session_with_files, self.search_query)
 
 
 class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):

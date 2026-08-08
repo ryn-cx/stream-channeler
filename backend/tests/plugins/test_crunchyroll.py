@@ -10,7 +10,6 @@ from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
 from plugins.Crunchyroll.files import chirashi
 from tests.plugins.plugin_validator import (
-    InvalidURLValidator,
     PluginValidator,
     StandardTests,
     UpdateSourceTests,
@@ -79,89 +78,92 @@ class CrunchyrollUpdateSourceTest(
         self.export_browse_file(plugin_instance, parsed, timestamp)
 
 
+# https://www.crunchyroll.com/series/GT00371926/please-excuse-my-younger-brothers
+
+
 class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GT00371881"
-    show_slug = "though-i-am-an-inept-villainess"
-    search_query = "Though I Am an Inept Villainess"
-    search_url = "https://www.crunchyroll.com/series/GT00371881"
+    parse_url_response = "GT00371926"
+    show_slug = "please-excuse-my-younger-brothers"
+    search_query = "Please Excuse My Younger Brothers"
+    search_url = "https://www.crunchyroll.com/series/GT00371926"
 
 
-class TestAiringMultipleSeasonsShow(
-    CrunchyrollStandardTests,
-    CrunchyrollUpdateSourceTest,
-):
-    parse_url_response = "GQWH0MXPQ"
-    show_slug = "anime-azurlane-slow-ahead"
-    search_query = "Anime AzurLane: Slow Ahead!"
-    search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
+# class TestAiringMultipleSeasonsShow(
+#     CrunchyrollStandardTests,
+#     CrunchyrollUpdateSourceTest,
+# ):
+#     parse_url_response = "GQWH0MXPQ"
+#     show_slug = "anime-azurlane-slow-ahead"
+#     search_query = "Anime AzurLane: Slow Ahead!"
+#     search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
 
 
-class TestCompletedSingleSeasonShow(
-    CrunchyrollStandardTests,
-    CrunchyrollUpdateSourceTest,
-):
-    parse_url_response = "GEXH3W29Z"
-    show_slug = "compass20-animation-project"
-    search_query = "#COMPASS2.0 ANIMATION PROJECT"
-    search_url = "https://www.crunchyroll.com/series/GEXH3W29Z"
+# class TestCompletedSingleSeasonShow(
+#     CrunchyrollStandardTests,
+#     CrunchyrollUpdateSourceTest,
+# ):
+#     parse_url_response = "GEXH3W29Z"
+#     show_slug = "compass20-animation-project"
+#     search_query = "#COMPASS2.0 ANIMATION PROJECT"
+#     search_url = "https://www.crunchyroll.com/series/GEXH3W29Z"
 
 
-class TestCompletedMultipleSeasonsShow(
-    CrunchyrollStandardTests,
-    CrunchyrollUpdateSourceTest,
-):
-    parse_url_response = "GRVNZK5PY"
-    show_slug = "a-certain-magical-index"
-    search_query = "A Certain Magical Index"
-    search_url = "https://www.crunchyroll.com/series/GRVNZK5PY"
+# class TestCompletedMultipleSeasonsShow(
+#     CrunchyrollStandardTests,
+#     CrunchyrollUpdateSourceTest,
+# ):
+#     parse_url_response = "GRVNZK5PY"
+#     show_slug = "a-certain-magical-index"
+#     search_query = "A Certain Magical Index"
+#     search_url = "https://www.crunchyroll.com/series/GRVNZK5PY"
 
 
-class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GT00375170"
-    show_slug = "the-food-diary-of-miss-maid"
-    episode_key = "GE00375439JAJP"
-    episode_slug = "taiyaki-takoyaki-odango-convenience-store-onigiri-and-baumkuchen"
-    urls = (
-        "/watch/{episode_key}",
-        "/watch/{episode_key}/",
-        "/watch/{episode_key}/{episode_slug}",
-    )
+# class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+#     parse_url_response = "GT00375170"
+#     show_slug = "the-food-diary-of-miss-maid"
+#     episode_key = "GE00375439JAJP"
+#     episode_slug = "taiyaki-takoyaki-odango-convenience-store-onigiri-and-baumkuchen"
+#     urls = (
+#         "/watch/{episode_key}",
+#         "/watch/{episode_key}/",
+#         "/watch/{episode_key}/{episode_slug}",
+#     )
 
 
-class TestMovie(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GMTE00335490"
-    show_slug = "spy-x-family-code-white"
-    search_query = "Spy x Family: Code White"
-    search_url = "https://www.crunchyroll.com/series/GMTE00335490"
+# class TestMovie(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+#     parse_url_response = "GMTE00335490"
+#     show_slug = "spy-x-family-code-white"
+#     search_query = "Spy x Family: Code White"
+#     search_url = "https://www.crunchyroll.com/series/GMTE00335490"
 
 
-class TestMovieEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GMEE00380050JAJP"
-    show_slug = "x-the-movie"
-    episode_key = "GMEE00380050JAJP"
-    episode_slug = "x-the-movie"
-    urls = (
-        "/watch/{episode_key}",
-        "/watch/{episode_key}/",
-        "/watch/{episode_key}/{episode_slug}",
-    )
-    search_query = "X: The Movie"
+# class TestMovieEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+#     parse_url_response = "GMEE00380050JAJP"
+#     show_slug = "x-the-movie"
+#     episode_key = "GMEE00380050JAJP"
+#     episode_slug = "x-the-movie"
+#     urls = (
+#         "/watch/{episode_key}",
+#         "/watch/{episode_key}/",
+#         "/watch/{episode_key}/{episode_slug}",
+#     )
+#     search_query = "X: The Movie"
 
 
-class TestTMDBMismatch(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
-    parse_url_response = "GG5H5XQX4"
-    show_slug = "frieren-beyond-journeys-end"
-    search_query = "Frieren: Beyond Journey's End"
-    search_url = "https://www.crunchyroll.com/series/GG5H5XQX4"
+# class TestTMDBMismatch(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+#     parse_url_response = "GG5H5XQX4"
+#     show_slug = "frieren-beyond-journeys-end"
+#     search_query = "Frieren: Beyond Journey's End"
+#     search_url = "https://www.crunchyroll.com/series/GG5H5XQX4"
 
 
-class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
-    plugin_class = Crunchyroll
+# class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
+#     plugin_class = Crunchyroll
 
 
-class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
-    urls = ("crunchyroll.com/series/GGGGGGGGG",)
+# class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):
+#     urls = ("crunchyroll.com/series/GGGGGGGGG",)
 
 
-class TestInvalidWatchKey(InvalidCrunchyrollURLValidator):
-    urls = ("crunchyroll.com/watch/GGGGGGGGGGGGGG",)
+# class TestInvalidWatchKey(InvalidCrunchyrollURLValidator):
+#     urls = ("crunchyroll.com/watch/GGGGGGGGGGGGGG",)

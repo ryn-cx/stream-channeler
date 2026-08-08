@@ -183,6 +183,7 @@ class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
 
 class FileMixin(TMDBMixin, register=False):
     """File mixin."""
+
     # The browse listing belongs to the source, so every show reads the same one.
     _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)
 
@@ -299,15 +300,12 @@ class FileMixin(TMDBMixin, register=False):
                 self.artist_music_videos_file(artist_id),
                 self.artist_concerts_file(artist_id),
             ]
-        return self._append_tmdb_show_file(
-            [
-                # Required to detect new seasons.
-                self.seasons_file(show_key),
-                # Required to detect changes to the show.
-                self.series_file(show_key),
-            ],
-            show_key,
-        )
+        return [
+            # Required to detect new seasons.
+            self.seasons_file(show_key),
+            # Required to detect changes to the show.
+            self.series_file(show_key),
+        ]
 
     @override
     def _season_files(
@@ -323,16 +321,12 @@ class FileMixin(TMDBMixin, register=False):
                 # Required to detect changes to the artist.
                 self.artist_file(artist_id),
             ]
-        return self._append_tmdb_season_file(
-            [
-                # Required to detect new episodes.
-                self.season_episodes_file(season_key),
-                # Required to detect changes to the season.
-                self.seasons_file(show_key),
-            ],
-            season_key,
-            show_key,
-        )
+        return [
+            # Required to detect new episodes.
+            self.season_episodes_file(season_key),
+            # Required to detect changes to the season.
+            self.seasons_file(show_key),
+        ]
 
     @override
     def _episode_files(
@@ -345,12 +339,7 @@ class FileMixin(TMDBMixin, register=False):
             # A music video or concert carries its own details, unlike a series
             # episode which is read out of its season's listing.
             return [self.music_file(episode_key)]
-        return self._append_tmdb_episode_file(
-            [self.season_episodes_file(season_key)],
-            episode_key,
-            season_key,
-            show_key,
-        )
+        return [self.season_episodes_file(season_key)]
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:

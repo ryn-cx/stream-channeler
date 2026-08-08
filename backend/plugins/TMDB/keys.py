@@ -1,7 +1,7 @@
 # TODO: Validate
-from typing import Literal, NamedTuple, cast
+from typing import NamedTuple
 
-MediaType = Literal["movie", "tv"]
+from app.media.media_type import MediaType
 
 # A movie has no seasons or episodes of its own, so it is stored as a single
 # season holding a single episode, both numbered zero.
@@ -56,7 +56,7 @@ def episode_key(
 def parse_show_key(key: str) -> ShowKey:
     """Return the media type and TMDB id a `Show` key is built from."""
     media_type, tmdb_id = key.split("/")
-    return ShowKey(cast("MediaType", media_type), int(tmdb_id))
+    return ShowKey(MediaType(media_type), int(tmdb_id))
 
 
 def parse_season_key(key: str) -> SeasonKey:
@@ -66,14 +66,14 @@ def parse_season_key(key: str) -> SeasonKey:
     carries everything the show's does as well.
     """
     media_type, tmdb_id, season_number = key.split("/")
-    return SeasonKey(cast("MediaType", media_type), int(tmdb_id), int(season_number))
+    return SeasonKey(MediaType(media_type), int(tmdb_id), int(season_number))
 
 
 def parse_episode_key(key: str) -> EpisodeKey:
     """Return the parts an `Episode` key is built from."""
     media_type, tmdb_id, season_number, episode_number = key.split("/")
     return EpisodeKey(
-        cast("MediaType", media_type),
+        MediaType(media_type),
         int(tmdb_id),
         int(season_number),
         int(episode_number),

@@ -776,6 +776,11 @@ export type MediaOwner = 'official' | 'others';
 export type MediaScope = 'owned' | 'public' | 'all' | 'official' | 'others';
 
 /**
+ * One of the two halves of the TMDB catalogue.
+ */
+export type MediaType = 'movie' | 'tv';
+
+/**
  * Generic message.
  */
 export type Message = {
@@ -1335,10 +1340,8 @@ export type TmdbEpisodeChoice = {
  */
 export type TMDBMatch = {
     tmdb_id: number;
-    media_type: 'movie' | 'tv';
+    media_type: MediaType;
 };
-
-export type media_type = 'movie' | 'tv';
 
 /**
  * Rich detail for a single movie or TV show plus its US watch providers.
@@ -2300,7 +2303,7 @@ export type PluginsSearchPluginData = {
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
 export type PluginsTmdbMatchData = {
-    mediaType: 'movie' | 'tv';
+    mediaType: MediaType;
     title: string;
     year?: (number | null);
 };
@@ -2308,7 +2311,7 @@ export type PluginsTmdbMatchData = {
 export type PluginsTmdbMatchResponse = ((TMDBMatch | null));
 
 export type PluginsTmdbMediaInfoData = {
-    mediaType: 'movie' | 'tv';
+    mediaType: MediaType;
     tmdbId: number;
 };
 

@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import re
-from typing import Literal, override
+from typing import override
 
 from diving_board.series import models as series_models
 from diving_board.vod.hero.models import VodHeroModel
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.HiDive.files import HiDiveFiles, diving_board
 
@@ -46,16 +47,16 @@ class HelperMixin(HiDiveFiles, register=False):
     ) -> int | None:
         if existing_show and existing_show.tmdb_id:
             return existing_show.tmdb_id
-        media_type: Literal["movie", "tv"]
+        media_type: MediaType
         if self._is_movie():
             self.vod_file(show_key).download_if_outdated()
             hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
             name = self._movie_title(hero)
-            media_type = "movie"
+            media_type = MediaType.movie
         else:
             self.series_file(show_key).download_if_outdated()
             name = self.series_file(show_key).parsed().metadata.series.title
-            media_type = "tv"
+            media_type = MediaType.tv
         return self._tmdb_search_media(name, media_type)
 
     @override
@@ -88,8 +89,8 @@ class HelperMixin(HiDiveFiles, register=False):
         return None
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie() else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie() else MediaType.tv
 
     @classmethod
     def _show_url(cls, key: str | int, media_type: str = "Series") -> str:

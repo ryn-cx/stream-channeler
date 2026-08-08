@@ -10,6 +10,7 @@ from sqlmodel import col, select
 
 from app.files.models import File
 from app.media.identifiers import tmdb_identifier
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -191,9 +192,7 @@ class SourceMixin(UpsertMixin, register=False):
 
         # The TMDB id lives in the identifier now, and a title can be a film or a
         # series, so both identifiers TMDB could have issued are matched.
-        identifiers = [
-            tmdb_identifier(media_type, tmdb_id) for media_type in ("movie", "tv")
-        ]
+        identifiers = [tmdb_identifier(media_type, tmdb_id) for media_type in MediaType]
         statement = (
             select(Show)
             .join(Source)

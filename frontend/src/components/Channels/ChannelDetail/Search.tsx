@@ -1,8 +1,12 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
+import type {
+  PluginSearchResult,
+  TMDBMediaInfo,
+  TMDBWatchProviderItem,
+} from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
@@ -62,6 +66,30 @@ function useAddToQueue(channelId: string) {
   })
 }
 
+// A TMDB result's URL is the title's own TMDB page, so it names the same title
+// as a channel show's `TMDB tv 123` identifier even when the channel holds that
+// title from some other service.
+const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
+
+// Whether a search result is a title the channel already carries. A result from
+// a service is matched on its own URL, and a TMDB result on the title it names.
+function useIsInChannel(channelId: string) {
+  const { data: showsData } = useQuery({
+    queryKey: ["channel-shows", channelId],
+    queryFn: () => ChannelsService.getChannelShows({ channelId }),
+  })
+
+  const shows = showsData?.shows ?? []
+  const urls = new Set(shows.map((show) => show.url))
+  const identifiers = new Set(shows.map((show) => show.show_identifier))
+
+  return (url: string) => {
+    if (urls.has(url)) return true
+    const match = TMDB_TITLE_URL_PATTERN.exec(url)
+    return match != null && identifiers.has(`TMDB ${match[1]} ${match[2]}`)
+  }
+}
+
 function AddToQueueButton({
   url,
   channelId,
@@ -70,6 +98,26 @@ function AddToQueueButton({
   channelId: string
 }) {
   const addUrlMutation = useAddToQueue(channelId)
+  const isInChannel = useIsInChannel(channelId)
+
+  if (isInChannel(url)) {
+    return (
+      <Button size="sm" variant="secondary" className="mt-2 w-full" disabled>
+        <Check className="h-3 w-3 mr-1" />
+        In Channel
+      </Button>
+    )
+  }
+
+  if (addUrlMutation.isSuccess) {
+    return (
+      <Button size="sm" variant="secondary" className="mt-2 w-full" disabled>
+        <Check className="h-3 w-3 mr-1" />
+        Added
+      </Button>
+    )
+  }
+
   return (
     <Button
       size="sm"
@@ -81,7 +129,7 @@ function AddToQueueButton({
       disabled={addUrlMutation.isPending}
     >
       <Plus className="h-3 w-3 mr-1" />
-      Add
+      {addUrlMutation.isPending ? "Adding..." : "Add"}
     </Button>
   )
 }
@@ -283,6 +331,61 @@ function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
   return parts
 }
 
+// The services streaming a title, as TMDB reports them for the US. A provider
+// the app has a plugin for carries a link to that site's search for the title,
+// which is how a user gets to it when the import cannot reach it on its own.
+function WatchProviders({ providers }: { providers: TMDBWatchProviderItem[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold">Where to watch</h3>
+      {providers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No streaming services found for this title.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {providers.map((provider) => {
+            const content = (
+              <>
+                {provider.icon_url && (
+                  <img
+                    src={provider.icon_url}
+                    alt=""
+                    className="size-5 rounded"
+                  />
+                )}
+                {provider.name}
+              </>
+            )
+            const className =
+              "flex items-center gap-2 rounded-full border px-2 py-1 text-xs"
+
+            if (!provider.search_url) {
+              return (
+                <span key={provider.name} className={className}>
+                  {content}
+                </span>
+              )
+            }
+
+            return (
+              <a
+                key={provider.name}
+                href={provider.search_url}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(className, "hover:bg-accent")}
+              >
+                {content}
+              </a>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Fetches a single title's full detail on demand, so a multi-result search never
 // downloads that data for results the user never opens.
 function MediaInfoModal({
@@ -380,6 +483,8 @@ function MediaInfoModal({
               {info.overview && (
                 <p className="text-sm leading-relaxed">{info.overview}</p>
               )}
+
+              <WatchProviders providers={info.providers ?? []} />
             </>
           ) : (
             <p className="text-sm text-muted-foreground">

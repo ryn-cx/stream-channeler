@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import override
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -29,6 +30,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(program.url),
                 image_url=self._get_image_url(program.images.portrait),
                 media_type="TV Show",
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -37,7 +39,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
         self._upsert_season(show, show_key, force=force)
@@ -58,6 +60,7 @@ class UpsertMixin(HelperMixin, register=False):
                 key=show_key,
                 sort_order=0,
                 url=show.url,
+                season_identifier=self._fallback_season_identifier(show_key),
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
             )
@@ -66,7 +69,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show,
                 season,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
 
         self._upsert_episodes(season, show_key, force=force)
@@ -112,6 +115,6 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 episode,
                 show_key,
-                "tv",
+                MediaType.tv,
                 len(items),
             )

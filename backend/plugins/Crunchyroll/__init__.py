@@ -11,6 +11,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import MUSIC_SOURCE_KEY, VIDEO_SOURCE_KEY
+from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.Crunchyroll.url_handlers import (
@@ -29,6 +30,7 @@ class Crunchyroll(
     WatchHistoryMixin,
     UpdateMixin,
     UpsertMixin,
+    SearchMixin,
     HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,
@@ -42,7 +44,7 @@ class Crunchyroll(
     )
 
     _URL_HANDLERS = (
-        CrunchyrollMusicVideoURLHandler, # Must be listed first due to URL overlap.
+        CrunchyrollMusicVideoURLHandler,  # Must be listed first due to URL overlap.
         CrunchyrollConcertURLHandler,
         CrunchyrollArtistURLHandler,
         CrunchyrollSeriesURLHandler,

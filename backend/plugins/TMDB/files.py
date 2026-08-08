@@ -1,28 +1,29 @@
 # TODO: Validate
-from collections.abc import Generator, Sequence
 from datetime import date, datetime
 from functools import cache
 from http import HTTPStatus
 from typing import Any, ClassVar, Literal, overload, override
 
 from pydantic import BaseModel
-from sqlmodel import Session, col, or_, select
+from sqlmodel import Session
 from tminidb import TMiniDB
+from tminidb.exceptions import HTTPError
 from tminidb.movie_details.models import MovieDetailsModel
 from tminidb.movie_watch_providers.models import MovieWatchProvidersModel
 from tminidb.search_movie.models import SearchMovieModel
 from tminidb.search_multi.models import SearchMultiModel
 from tminidb.search_tv.models import SearchTvModel
 from tminidb.tv_episode_details.models import TvEpisodeDetailsModel
+from tminidb.tv_episode_translations.models import TvEpisodeTranslationsModel
 from tminidb.tv_season_details.models import TvSeasonDetailsModel
 from tminidb.tv_series_details.models import TvSeriesDetailsModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
 from app.config import settings
-from app.files.models import File
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, HTMLFile, JSONFile
+from plugins.utils.base_plugin.files import GAPIJSON, HTMLFile
 from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.get_around_client import get_around_client
 
@@ -91,6 +92,14 @@ class _TMDBEndpointFile[T: BaseModel](GAPIJSON[T]):
 
     API_ENDPOINT: ClassVar[Any]
 
+    # Occurs when a user puts in a URL for a title TMDB does not have, and when a
+    # season or an episode is asked for by a number the title does not run to.
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return (
+            isinstance(error, HTTPError) and error.status_code == HTTPStatus.NOT_FOUND
+        )
+
 
 class _TMDBIdEndpointFile[T: BaseModel](_TMDBEndpointFile[T]):
     """A TMDB file the API looks up by a title's numeric id.
@@ -130,84 +139,14 @@ class TvWatchProviders(_TMDBIdEndpointFile[TvWatchProvidersModel]):
 
 
 class ShowDetail(_TMDBIdEndpointFile[TvSeriesDetailsModel]):
-    """Show detail file."""
+    """Show detail file.
+
+    The seasons and episodes under a title are reached through
+    `_season_keys_from_file` and `_episode_keys_from_file`, so this file only
+    carries the title itself.
+    """
 
     API_ENDPOINT = tminidb_client().tv_series_details
-
-    def __init__(self, session: Session, plugin: Plugin, tmdb_id: int) -> None:
-        self.session = session
-        self.plugin = plugin
-        self.tmdb_id = tmdb_id
-        self._children_are_stored = False
-        self._child_records: Sequence[File] = []
-        super().__init__(session, plugin, str(tmdb_id))
-
-    def _preload_child_records(self) -> None:
-        """Load every child's record in one query.
-
-        Each child is looked up by key, which is a query each unless the record is
-        already in the session.
-        """
-        statement = select(File).where(
-            File.plugin_id == self.plugin.id,
-            or_(
-                col(File.key).startswith(f"{SeasonDetail.__name__}/{self.tmdb_id}/"),
-                col(File.key).startswith(f"{EpisodeDetail.__name__}/{self.tmdb_id}/"),
-                col(File.key).startswith(
-                    f"{EpisodeTranslations.__name__}/{self.tmdb_id}/",
-                ),
-            ),
-        )
-        # The session only holds records weakly, so they have to be kept alive for
-        # the lookups to find them.
-        self._child_records = self.session.exec(statement).all()
-
-    def _child_files(self) -> Generator[BaseFile[Any]]:
-        self._preload_child_records()
-        for season in self.parsed().seasons:
-            season_file = SeasonDetail(
-                self.session,
-                self.plugin,
-                self.tmdb_id,
-                season.season_number,
-            )
-            yield season_file
-            if season_file.is_outdated():
-                continue
-            for episode in season_file.parsed().episodes:
-                yield EpisodeDetail(
-                    self.session,
-                    self.plugin,
-                    self.tmdb_id,
-                    season.season_number,
-                    episode.episode_number,
-                )
-                yield EpisodeTranslations(
-                    self.session,
-                    self.plugin,
-                    self.tmdb_id,
-                    season.season_number,
-                    episode.episode_number,
-                )
-
-    @override
-    def _download(self) -> None:
-        super()._download()
-        for child_file in self._child_files():
-            child_file.download_if_outdated()
-
-    @override
-    def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
-        if super().is_outdated(minimum_timestamp):
-            return True
-        # Walking the children is expensive and they are only ever added by
-        # `_download`, so once they are all stored the walk cannot find anything.
-        if self._children_are_stored:
-            return False
-        self._children_are_stored = not any(
-            child_file.is_outdated() for child_file in self._child_files()
-        )
-        return not self._children_are_stored
 
 
 class SeasonDetail(_TMDBEndpointFile[TvSeasonDetailsModel]):
@@ -265,23 +204,10 @@ class EpisodeDetail(_TMDBEndpointFile[TvEpisodeDetailsModel]):
         )
 
 
-class EpisodeTranslationData(BaseModel):
-    """The translated fields of a single translation."""
-
-    name: str | None = None
-    overview: str | None = None
-
-
-class EpisodeTranslation(BaseModel):
-    """One language's version of an episode."""
-
-    iso_639_1: str | None = None
-    iso_3166_1: str | None = None
-    data: EpisodeTranslationData
-
-
-class EpisodeTranslations(JSONFile[list[EpisodeTranslation]]):
+class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
     """Every language's name for a single episode."""
+
+    API_ENDPOINT = tminidb_client().tv_episode_translations
 
     def __init__(
         self,
@@ -294,25 +220,19 @@ class EpisodeTranslations(JSONFile[list[EpisodeTranslation]]):
         self.tmdb_show_id = tmdb_show_id
         self.season_number = season_number
         self.episode_number = episode_number
-        self.unique_identifier = f"{tmdb_show_id}/{season_number}/{episode_number}"
-        super().__init__(session, plugin)
+        super().__init__(
+            session,
+            plugin,
+            f"{tmdb_show_id}/{season_number}/{episode_number}",
+        )
 
     @override
-    def _parse(self, raw: Any) -> list[EpisodeTranslation]:
-        return [
-            EpisodeTranslation.model_validate(translation)
-            for translation in raw["translations"]
-        ]
-
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            endpoint = (
-                f"tv/{self.tmdb_show_id}/season/{self.season_number}"
-                f"/episode/{self.episode_number}/translations"
-            )
-            content = tminidb_client().download(endpoint, {}, log_id=self.file_key())
-            self.write(content)
+    def _get(self) -> TvEpisodeTranslationsModel:
+        return self.API_ENDPOINT.download_and_parse(
+            self.tmdb_show_id,
+            self.season_number,
+            self.episode_number,
+        )
 
 
 class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
@@ -485,43 +405,55 @@ class FileMixin(BasePlugin, register=False):
     @overload
     def media_detail_file(
         self,
-        media_type: Literal["movie"],
+        media_type: Literal[MediaType.movie],
         tmdb_id: int,
     ) -> MovieDetails: ...
     @overload
     def media_detail_file(
         self,
-        media_type: Literal["tv"],
+        media_type: Literal[MediaType.tv],
         tmdb_id: int,
     ) -> TvSeriesDetails: ...
+    @overload
     def media_detail_file(
         self,
-        media_type: Literal["movie", "tv"],
+        media_type: MediaType,
+        tmdb_id: int,
+    ) -> MovieDetails | TvSeriesDetails: ...
+    def media_detail_file(
+        self,
+        media_type: MediaType,
         tmdb_id: int,
     ) -> MovieDetails | TvSeriesDetails:
         """Returns MovieDetails or TvSeriesDetails file."""
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             return self.movie_detail_file(tmdb_id)
         return self.tv_detail_file(tmdb_id)
 
     @overload
     def watch_providers_file(
         self,
-        media_type: Literal["movie"],
+        media_type: Literal[MediaType.movie],
         tmdb_id: int,
     ) -> MovieWatchProviders: ...
     @overload
     def watch_providers_file(
         self,
-        media_type: Literal["tv"],
+        media_type: Literal[MediaType.tv],
         tmdb_id: int,
     ) -> TvWatchProviders: ...
+    @overload
     def watch_providers_file(
         self,
-        media_type: Literal["movie", "tv"],
+        media_type: MediaType,
+        tmdb_id: int,
+    ) -> MovieWatchProviders | TvWatchProviders: ...
+    def watch_providers_file(
+        self,
+        media_type: MediaType,
         tmdb_id: int,
     ) -> MovieWatchProviders | TvWatchProviders:
         """Returns MovieWatchProviders or TvWatchProviders file."""
-        if media_type == "movie":
+        if media_type == MediaType.movie:
             return self.movie_watch_providers_file(tmdb_id)
         return self.tv_watch_providers_file(tmdb_id)

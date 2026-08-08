@@ -2,10 +2,10 @@
 """Plugin schemas."""
 
 import uuid
-from typing import Literal
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
+from app.media.media_type import MediaType
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -78,14 +78,11 @@ class PluginSearchUrl(BaseModel):
     url: str | None = None
 
 
-TMDBMediaType = Literal["movie", "tv"]
-
-
 class TMDBMatch(BaseModel):
     """The TMDB title that best matches a plugin's search result."""
 
     tmdb_id: int
-    media_type: TMDBMediaType
+    media_type: MediaType
 
 
 class TMDBWatchProviderItem(BaseModel):

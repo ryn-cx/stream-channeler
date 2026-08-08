@@ -1,9 +1,10 @@
 # TODO: Validate
-from typing import Literal, override
+from typing import override
 from urllib.parse import quote
 
 from wholoo.movies.models import MoviesModel
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.Hulu.files import FileMixin
 
@@ -34,7 +35,7 @@ class HelperMixin(FileMixin, register=False):
         if self._is_movie():
             self.movie_file(show_key).download_if_outdated()
             movie_entity = self._movie_model(show_key).details.entity
-            return self._tmdb_search_media(movie_entity.name, "movie")
+            return self._tmdb_search_media(movie_entity.name, MediaType.movie)
         self.series_file(show_key).download_if_outdated()
         entity = self._series_model(show_key).details.entity
         return self._tmdb_search_media(entity.name)
@@ -58,8 +59,8 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie() else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie() else MediaType.tv
 
     @classmethod
     def _show_url(cls, show_key: str, media_type: str) -> str:

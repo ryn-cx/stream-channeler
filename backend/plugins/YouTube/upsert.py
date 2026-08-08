@@ -6,6 +6,7 @@ from not_yt_dlapi.channel.models import Item as ChannelItem
 from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -64,12 +65,15 @@ class UpsertMixin(HelperMixin, register=False):
                 name=show_page.title(),
                 url=self.build_url(f"show/{show_key}"),
                 media_type="YouTube Show",
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 # A show only changes when a season is added to it.
                 update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
                 source_id=source.id,
             )
-            show = self._merge_and_upsert_show(new_show, source, show, show_key, "tv")
+            show = self._merge_and_upsert_show(
+                new_show, source, show, show_key, MediaType.tv
+            )
 
         self._upsert_series_seasons(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -93,6 +97,7 @@ class UpsertMixin(HelperMixin, register=False):
                     name=f"Season {season_number}",
                     season_number=int(season_number),
                     url=self.build_url(f"show/{show_key}?season={season_number}"),
+                    season_identifier=self._fallback_season_identifier(season_key),
                     data_timestamp=data_timestamp,
                     update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
                     show_id=show.id,
@@ -102,7 +107,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show,
                     season,
                     show_key,
-                    "tv",
+                    MediaType.tv,
                 )
             self._upsert_episodes(season, show_key, force=force)
 
@@ -161,6 +166,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"watch?v={show_key}"),
                 media_type="YouTube Video",
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 # Movies are only updated once a year to make sure they are still
                 # available.
@@ -172,7 +178,7 @@ class UpsertMixin(HelperMixin, register=False):
                 source,
                 show,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
 
         self._upsert_movie_season(show, show_key, force=force)
@@ -196,6 +202,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=video_item.snippet.title,
                 url=self.build_url(f"watch?v={show_key}"),
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                season_identifier=self._fallback_season_identifier(show_key),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp,
                 show_id=show.id,
@@ -205,7 +212,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show,
                 season,
                 show_key,
-                "movie",
+                MediaType.movie,
             )
         self._upsert_episodes(season, show_key, force=force)
 

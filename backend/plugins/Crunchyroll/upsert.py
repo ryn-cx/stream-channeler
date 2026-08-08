@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import timedelta
-from typing import Literal, Protocol, cast, override
+from typing import Protocol, cast, override
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -101,6 +102,7 @@ class UpsertMixin(HelperMixin, register=False):
                 description=series_data.description,
                 media_type="Movie" if self._is_movie(show_key) else "Series",
                 url=self._show_url(series_data.id),
+                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -121,7 +123,7 @@ class UpsertMixin(HelperMixin, register=False):
     def _upsert_video_seasons(
         self,
         show: Show,
-        tmdb_media_type: Literal["movie", "tv"],
+        tmdb_media_type: MediaType,
         *,
         force: bool = False,
     ) -> None:
@@ -134,6 +136,7 @@ class UpsertMixin(HelperMixin, register=False):
                     name=season_data.title,
                     season_number=season_data.season_number,
                     sort_order=index,
+                    season_identifier=self._fallback_season_identifier(season_data.id),
                     data_timestamp=self.season_data_timestamp(
                         season_data.id,
                         show.key,
@@ -159,7 +162,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         season: Season,
         show_key: str,
-        tmdb_media_type: Literal["movie", "tv"],
+        tmdb_media_type: MediaType,
         *,
         force: bool = False,
     ) -> None:

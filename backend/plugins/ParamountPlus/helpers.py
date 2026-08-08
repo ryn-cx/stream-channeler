@@ -1,6 +1,7 @@
 # TODO: Validate
-from typing import Literal, override
+from typing import override
 
+from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.ParamountPlus.files import FileMixin
 
@@ -23,7 +24,9 @@ class HelperMixin(FileMixin, register=False):
             return existing_show.tmdb_id
         if self._is_movie():
             self.movie_file(show_key).download_if_outdated()
-            return self._tmdb_search_media(self._movie_model(show_key).name, "movie")
+            return self._tmdb_search_media(
+                self._movie_model(show_key).name, MediaType.movie
+            )
         self.show_page_file(show_key).download_if_outdated()
         return self._tmdb_search_media(self._series_title(show_key))
 
@@ -46,8 +49,8 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     @override
-    def tmdb_media_type(self, show_key: str) -> Literal["movie", "tv"]:
-        return "movie" if self._is_movie() else "tv"
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie() else MediaType.tv
 
     @classmethod
     def _show_url(cls, show_key: str) -> str:

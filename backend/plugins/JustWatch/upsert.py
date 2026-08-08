@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from app.episodes.models import Episode
+from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -98,6 +99,7 @@ class UpsertMixin(HelperMixin, register=False):
             url=self._clean_external_url(offer.standard_web_url),
             image_url=self._images_base_url
             + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
+            show_identifier=self._fallback_show_identifier(show_key),
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
         )
@@ -153,6 +155,7 @@ class UpsertMixin(HelperMixin, register=False):
                 key=season_data.id,
                 sort_order=season_data.content.season_number,
                 season_number=season_data.content.season_number,
+                season_identifier=self._fallback_season_identifier(season_data.id),
                 data_timestamp=self.season_data_timestamp(season_data.id, show_key),
                 show_id=show.id,
             )
@@ -161,7 +164,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show,
                 existing_season,
                 show_key,
-                "tv",
+                MediaType.tv,
             )
             self._upsert_season_episodes(
                 show,
@@ -187,6 +190,7 @@ class UpsertMixin(HelperMixin, register=False):
             name="Movie",
             sort_order=0,
             season_number=0,
+            season_identifier=self._fallback_season_identifier(node_id),
             data_timestamp=self.season_data_timestamp(node_id, show_key),
             show_id=show.id,
         )
@@ -195,7 +199,7 @@ class UpsertMixin(HelperMixin, register=False):
             show,
             existing_season,
             show_key,
-            "movie",
+            MediaType.movie,
         )
         upserted_key = self._upsert_movie_episode(show, season, show_key, force=force)
         expected_keys = [upserted_key] if upserted_key else []
@@ -269,7 +273,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 existing_episode,
                 show_key,
-                "tv",
+                MediaType.tv,
                 last_number,
             )
 
@@ -327,6 +331,6 @@ class UpsertMixin(HelperMixin, register=False):
             season,
             existing_episode,
             show_key,
-            "movie",
+            MediaType.movie,
         )
         return episode_info.id

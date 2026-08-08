@@ -3937,6 +3937,13 @@ Mirrors \`RecordScope\`'s \`owned\`, \`public\` and \`all\` so the media tabs ma
 split of everyone else's media. Media has no \`favorites\`.`
 } as const;
 
+export const MediaTypeSchema = {
+    type: 'string',
+    enum: ['movie', 'tv'],
+    title: 'MediaType',
+    description: 'One of the two halves of the TMDB catalogue.'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -6820,9 +6827,7 @@ export const TMDBMatchSchema = {
             title: 'Tmdb Id'
         },
         media_type: {
-            type: 'string',
-            enum: ['movie', 'tv'],
-            title: 'Media Type'
+            '$ref': '#/components/schemas/MediaType'
         }
     },
     type: 'object',
