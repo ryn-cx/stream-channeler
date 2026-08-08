@@ -10,14 +10,17 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
-from plugins.JustWatch.files import just_scrape
+from plugins.JustWatch.files import BuyBoxOffers, just_scrape
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
     StandardTests,
     UpdateSourceTests,
 )
-from tests.plugins.plugin_validator.context_managers import mock_update
+from tests.plugins.plugin_validator.context_managers import (
+    mock_update,
+    track_requested_files,
+)
 from tests.plugins.plugin_validator.validator import Validator
 
 
@@ -204,6 +207,62 @@ class ShowURLs:
 # class TestSingleSeasonShow(ShowURLs, JustWatchStandardTests):
 #     # Strip Law — a single season, streaming on Netflix.
 #     slug = "strip-law"
+
+
+class TestEpisodesWithoutOffers(ShowURLs, JustWatchStandardTests):
+    """Tests a title no service carries.
+
+    Every one of its episodes is listed with no offer, which is what makes it
+    worth keeping: a title like this has nowhere to watch any of it, so none of
+    its buy box offers should be asked for.
+    """
+
+    slug = "encouragement-of-climb"
+
+    def test_no_buy_box_offers_for_episodes_without_offers(
+        self,
+        session_with_files: Session,
+    ) -> None:
+        """An episode with no offer never has its buy box offers asked for.
+
+        A season's episode list already says how many offers each episode has,
+        so an episode with none is known to have nothing to watch without its
+        offers being downloaded. Downloading them anyway is one request per
+        episode that answers the same nothing.
+        """
+        with track_requested_files() as requested:
+            self._import_url(session_with_files)
+
+        plugin_instance = self.imported_plugin
+        show_key = f"/us/tv-show/{self.slug}"
+        offer_counts = {
+            episode.id: episode.unique_offer_count
+            for season_key in plugin_instance._season_keys_from_file(show_key)  # noqa: SLF001
+            for episode in plugin_instance.season_episodes_file(
+                season_key,
+            ).parsed_episodes()
+        }
+
+        # Said out loud so the test reports it rather than passing over it, since
+        # a title whose episodes all have offers cannot show that the ones
+        # without are left alone.
+        assert not all(offer_counts.values()), (
+            "Every episode of this title has an offer, so it no longer covers "
+            "what this test is for."
+        )
+
+        asked_for = {
+            BuyBoxOffers.file_key_to_unique_identifier(key)
+            for key in requested
+            if key.startswith(f"{BuyBoxOffers.__name__}/")
+        }
+        without_offers = {
+            episode_key for episode_key, count in offer_counts.items() if not count
+        }
+        assert not asked_for & without_offers, (
+            "Buy box offers were asked for episodes that have no offer: "
+            f"{sorted(asked_for & without_offers)}"
+        )
 
 
 class TestHuluShow(ShowURLs, JustWatchStandardTests, JustWatchUpdateSourceTest):

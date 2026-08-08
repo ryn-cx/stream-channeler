@@ -173,6 +173,29 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
 
 
 @contextmanager
+def track_requested_files() -> Generator[list[str]]:
+    """Record the key of every file that was asked for.
+
+    Every file a test needs is stored before it runs, so asking for one does not
+    download it. What a test can check is therefore which files a plugin reached
+    for, which is what this records, rather than which ones came over the
+    network.
+    """
+    requested: list[str] = []
+    original_download_if_outdated = BaseFile[Any].download_if_outdated
+
+    def _download_if_outdated(
+        self: BaseFile[Any],
+        update_at: datetime | None = None,
+    ) -> None:
+        requested.append(self.file_key())
+        original_download_if_outdated(self, update_at)
+
+    with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
+        yield requested
+
+
+@contextmanager
 def mock_update() -> Generator[None]:
     """Mock updates by incrementing `data_timestamp`."""
 

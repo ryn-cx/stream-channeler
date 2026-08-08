@@ -37,6 +37,7 @@ from plugins.utils.get_around_client import get_around_client
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
+
 # The worker is shared by every plugin and JustWatch is what leans on it hardest,
 # so its requests go through a proxy of our own whenever one is configured and
 # fall back to the worker when it is not.
@@ -224,6 +225,21 @@ class FileMixin(TMDBMixin, register=False):
         """Contains every episode of a single season."""
         return self._file(SeasonEpisodes, season_key)
 
+    def episode_has_offers(self, episode_key: str, season_key: str) -> bool:
+        """Report whether JustWatch has anywhere to watch an episode.
+
+        A season's episode list already carries how many offers each of its
+        episodes has, so an episode with none is known to have nothing to watch
+        before its buy box offers are asked for. Asking would answer the same
+        nothing, and a title no service carries would ask once per episode for
+        it.
+        """
+        return any(
+            episode.unique_offer_count
+            for episode in self.season_episodes_file(season_key).parsed_episodes()
+            if episode.id == episode_key
+        )
+
     def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
         """Contains which sources added new titles on which dates."""
         if isinstance(end_datetime, File):
@@ -284,12 +300,16 @@ class FileMixin(TMDBMixin, register=False):
         if self._media_type(show_key) == "Movie":
             # Required to detect changes to the episode.
             base_files = [self.url_title_details_file(show_key)]
-        else:
+        elif self.episode_has_offers(episode_key, season_key):
             base_files = [
                 # Required to detect changes to the episode.
                 self.buy_box_offers_file(episode_key),
                 self.season_episodes_file(season_key),
             ]
+        else:
+            # An episode with nowhere to watch it is not stored, so its offers
+            # are never read and are left undownloaded.
+            base_files = [self.season_episodes_file(season_key)]
         return self._append_tmdb_episode_file(
             base_files,
             episode_key,
@@ -315,6 +335,8 @@ class FileMixin(TMDBMixin, register=False):
         # are refreshed here to pick up offer changes for existing episodes.
         if self._media_type(show_key) != "Movie":
             for episode in self.season_episodes_file(season_key).parsed_episodes():
+                if not episode.unique_offer_count:
+                    continue
                 self.buy_box_offers_file(episode.id).download_if_outdated(update_at)
         return files
 

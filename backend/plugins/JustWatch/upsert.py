@@ -239,6 +239,11 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
+            # An episode with no offer at all is on no service, so there is no
+            # buy box offers file for it to be read out of.
+            if not season_episode.unique_offer_count:
+                continue
+
             buy_box_offers = self.buy_box_offers_file(season_episode.id)
             episode_info = self._find_matching_episode(
                 source_key,
