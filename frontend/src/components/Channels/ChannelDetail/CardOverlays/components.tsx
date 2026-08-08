@@ -1,8 +1,36 @@
 // TODO: Validate
 import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeCard"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 /** Props shared by all card overlay components. */
 export type CardOverlayProps = { episode: BaseEpisodeWithDetails }
+
+/**
+ * The source's favicon, naming the source in a tooltip while it is hovered.
+ * Only the favicon is on the card, so the name is only ever read off the
+ * tooltip. A source with no name has nothing to show and renders the icon
+ * alone.
+ */
+function CardSourceIcon({ episode }: CardOverlayProps) {
+  const { favicon_url, name } = episode.source
+  if (!favicon_url) return null
+
+  const icon = (
+    <img src={favicon_url} alt={name ?? undefined} className="size-6" />
+  )
+  if (!name) return icon
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{icon}</TooltipTrigger>
+      <TooltipContent>{name}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 /** Wrapper that adds negative top margin to tighten the gap between the image and the text. */
 export function CardTextArea({ children }: { children: React.ReactNode }) {
@@ -29,13 +57,7 @@ export function CardSourceRow({
       {/* flex-1 - Make the favicon and source name take up as much space as possible so the date and duration will be as far right as possible */}
       {/* min-w-0 - Make sure all columns are always visible. Without this the show name can push the date and duration off of the card */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {episode.source.favicon_url && (
-          <img
-            src={episode.source.favicon_url}
-            alt={episode.source.name ?? undefined}
-            className="size-6"
-          />
-        )}
+        <CardSourceIcon episode={episode} />
         <span className="font-bold text-base truncate group-hover:whitespace-normal group-hover:overflow-visible">
           {episode.show.name}
         </span>
