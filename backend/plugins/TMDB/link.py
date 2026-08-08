@@ -2,6 +2,7 @@
 import re
 import unicodedata
 from collections.abc import Callable, Sequence
+from difflib import SequenceMatcher
 from functools import cache
 from itertools import product
 from math import prod
@@ -112,6 +113,7 @@ _PARTIAL_NAME_NOTE = "One name contains the other"
 _PARTIAL_TRANSLATED_NAME_NOTE = "One name contains the other in another language"
 _NUMBER_ONLY_NOTE = "Numbered the same, with no name to go on"
 _SAME_LENGTH_SEASON_NOTE = "Numbered the same, in a season of the same length"
+_CLOSEST_NAME_AND_NUMBER_NOTE = "Closest name of the title, and the number agrees"
 
 
 class _EpisodeMatch(NamedTuple):
@@ -133,6 +135,34 @@ def _contains_either_way(
         candidate_form in target or target in candidate_form
         for candidate_form, target in product(candidate_forms, targets)
     )
+
+
+def _similarity(name: str | None, other_name: str | None) -> float:
+    """Return how much of two names is the same, from nothing to all of it."""
+    if not name or not other_name:
+        return 0.0
+    plaintext = _plaintext(name)
+    other_plaintext = _plaintext(other_name)
+    if not plaintext or not other_plaintext:
+        return 0.0
+    if plaintext in other_plaintext or other_plaintext in plaintext:
+        return 1.0
+    return SequenceMatcher(None, plaintext, other_plaintext).ratio()
+
+
+def _absolute_numbers(episodes: Sequence[TvSeasonEpisode]) -> dict[int, int]:
+    """Count a title's episodes from its first, and return that count by TMDB id.
+
+    A website that numbers a title straight through names an episode by how far
+    into the title it is rather than by how far into its own season, which is
+    what makes the same episode `S3E2` on one site and `27` on another. Specials
+    are outside the count, so they are left out of it rather than given a place.
+    """
+    ordered = sorted(
+        (episode for episode in episodes if episode.season_number),
+        key=lambda episode: (episode.season_number, episode.episode_number),
+    )
+    return {episode.id: number for number, episode in enumerate(ordered, start=1)}
 
 
 def _find_by_description(
@@ -408,6 +438,53 @@ class LinkMixin(LookupMixin, register=False):
             highest_episode_number,
         ):
             return _EpisodeMatch(match, _SAME_LENGTH_SEASON_NOTE)
+
+        if match := self._closest_name_the_number_agrees_with(
+            tmdb_id,
+            episode_number,
+            episode_name,
+        ):
+            return _EpisodeMatch(match, _CLOSEST_NAME_AND_NUMBER_NOTE)
+        return None
+
+    def _closest_name_the_number_agrees_with(
+        self,
+        tmdb_id: int,
+        episode_number: int | None,
+        episode_name: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the closest named episode, but only where its number agrees too.
+
+        The last thing tried, for the episodes every surer way has passed over. A
+        name that only half matches is not enough to go on and a number by itself
+        is not either, but the closest name in the whole title landing on the very
+        number the website gives the episode is the two of them agreeing, and two
+        weak signs pointing at the same episode are worth taking.
+
+        Either numbering counts, since a website that never restarts its count
+        names the episode by how far into the title it is rather than by how far
+        into its season.
+        """
+        if not episode_name or episode_number is None:
+            return None
+
+        episodes = self._all_episodes(tmdb_id)
+        if not episodes:
+            return None
+
+        similarity, closest = max(
+            (
+                (_similarity(episode_name, episode.name), episode)
+                for episode in episodes
+            ),
+            key=lambda scored: scored[0],
+        )
+        if not similarity:
+            return None
+        if closest.episode_number == episode_number:
+            return closest
+        if _absolute_numbers(episodes).get(closest.id) == episode_number:
+            return closest
         return None
 
     def _exactly_named(
