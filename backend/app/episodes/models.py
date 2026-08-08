@@ -42,6 +42,18 @@ MANUALLY_CONFIRMED_NOTE = "Manually confirmed"
 MANUALLY_SELECTED_NOTE = "Manually selected"
 NO_MATCH_NOTE = "No match found"
 
+MANUAL_NOTES = frozenset({
+    MANUALLY_CONFIRMED_NOTE,
+    MANUALLY_SELECTED_NOTE,
+    NO_MATCH_NOTE,
+})
+"""The notes that stand for a `User` having settled the identifier themselves.
+
+A lock says only that the identifier is settled, where what settled it is the
+difference between a decision worth keeping and a guess the import was sure
+enough of at the time, so the two are told apart by what was written down.
+"""
+
 
 class BaseEpisode(BaseMediaMixin):
     """Base model for an `Episode`."""

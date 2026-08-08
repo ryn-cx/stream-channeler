@@ -29,7 +29,7 @@ class UpsertMixin(HelperMixin, register=False):
         # Every provider gets a source but most are never read again, so they
         # fall out of the session's weak identity map and have to be looked up
         # in the database rather than in memory.
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        existing_source = Source.get(self.session, self.plugin, source_key)
 
         source = Source(
             key=source_key,

@@ -90,7 +90,10 @@ class HelperMixin(FileMixin, register=False):
 
     def _extra_source(self, source_key: str, name: str) -> Source:
         """Return one of the plugin's `Source`s other than its default one."""
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        # Looked up against the database rather than only the session, since a
+        # source other than the default is made the first time a title needs it
+        # and nothing loads it back into a later session before this reads it.
+        existing_source = Source.get(self.session, self.plugin, source_key)
         return Source(
             key=source_key,
             name=name,

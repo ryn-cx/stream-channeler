@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
@@ -11,7 +12,7 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.episodes.models import Episode
+from app.episodes.models import MANUAL_NOTES, Episode
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -40,6 +41,14 @@ _ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
     "update_season": ("season", lambda season: season.show.key),
     "update_episode": ("episode", lambda episode: episode.season.show.key),
 }
+
+
+def _is_settled_by_hand(episode: Episode) -> bool:
+    """Report whether a `User` settled the episode's identifier themselves."""
+    return (
+        episode.episode_identifier_locked
+        and episode.episode_identifier_note in MANUAL_NOTES
+    )
 
 
 def _tracks_show(
@@ -275,7 +284,8 @@ class BasePlugin(
     ) -> None:
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        self.upsert_show(show.source, show.key, force=force)
+        upserted = self.upsert_show(show.source, show.key, force=force)
+        self._unshare_episode_identifiers(upserted)
 
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
@@ -328,7 +338,44 @@ class BasePlugin(
             return show
 
         _cache = self._download_show_files_and_children(show_key)
-        return self.upsert_show(self.source, show_key)
+        show = self.upsert_show(self.source, show_key)
+        self._unshare_episode_identifiers(show)
+        return show
+
+    def _unshare_episode_identifiers(self, show: Show) -> None:
+        """Unlink the episodes of `show` that ended up naming the same record.
+
+        An identifier is what makes two websites' episodes one episode to watch,
+        so two episodes of one show carrying the same identifier is the matching
+        having put both of them on a record that at most one of them is. Neither
+        is the one to keep, so each goes back to this plugin's own identifier
+        and the one they shared is written into the note rather than lost.
+
+        Only what a `User` settled is left alone, which is also what decides a
+        clash between their episode and any other in their favour. A lock the
+        import made itself is no help here: it was made on evidence that has
+        turned out to fit two episodes, so it goes along with the identifier.
+        """
+        episodes = [
+            episode
+            for season in show.active_children
+            for episode in season.active_children
+        ]
+        counts = Counter(episode.episode_identifier for episode in episodes)
+        shared = {identifier for identifier, count in counts.items() if count > 1}
+        if not shared:
+            return
+
+        for episode in episodes:
+            identifier = episode.episode_identifier
+            if identifier not in shared or _is_settled_by_hand(episode):
+                continue
+            logger.info(f"Unsharing {identifier} from episode {episode.key}")
+            episode.episode_identifier_note = (
+                f"Removed {identifier}, which another episode was given too"
+            )
+            episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
+            episode.episode_identifier_locked = False
 
     @abstractmethod
     def upsert_show(

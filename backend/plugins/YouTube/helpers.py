@@ -74,7 +74,11 @@ class HelperMixin(FileMixin, register=False):
         than the uploads of a creator, so it gets a `Source` of its own.
         """
         source_key = f"{self.plugin_key()}:{channel_key}"
-        source = Source.get_from_memory(self.session, self.plugin, source_key)
+        # TODO: THIS IS AI BULLSHIT
+        # Looked up against the database rather than only the session, because a
+        # channel gets a source the first time one of its videos is imported and
+        # nothing loads that source into a later session before this reads it.
+        source = Source.get(self.session, self.plugin, source_key)
         return Source(
             key=source_key,
             name=channel_name,
