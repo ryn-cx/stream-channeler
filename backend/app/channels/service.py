@@ -453,7 +453,7 @@ def get_sort_options() -> list[SortOptionOutput]:
             model=model.__name__.lower(),  # type: ignore[arg-type]
             field=field_name,
         )
-        for model in (Episode, Season, Show, Source, Plugin)
+        for model in (Episode, Season, Show, Source, Plugin, Channel)
         for field_name in model.SORTABLE_FIELDS
     ]
     options.sort(key=lambda option: option.label)

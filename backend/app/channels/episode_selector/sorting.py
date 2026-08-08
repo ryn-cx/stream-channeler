@@ -3,8 +3,9 @@
 
 from datetime import timedelta
 from typing import Any
+from uuid import UUID
 
-from sqlalchemy import String, case, literal_column
+from sqlalchemy import String, case, literal, literal_column
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
@@ -13,7 +14,7 @@ from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
     LAST_WATCHED_COLUMNS,
 )
-from app.channels.models import ChannelSavedEpisodeOrder
+from app.channels.models import ChannelSavedEpisodeOrder, ChannelShow
 from app.channels.schemas import SortKeyInput
 from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
@@ -48,11 +49,13 @@ class SortExpressionBuilder:
         random_seed: int,
         user: User | None,
         fallbacks: TMDBFallbackColumns,
+        channel_attribution: dict[UUID, UUID] | None = None,
     ) -> None:
         """Build the sort expressions for one read of one channel."""
         self._random_seed = random_seed
         self._user = user
         self._fallbacks = fallbacks
+        self._channel_attribution = channel_attribution or {}
 
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         """Return the value `sort_key` orders episodes by."""
@@ -84,9 +87,32 @@ class SortExpressionBuilder:
             ),
         )
 
+    def _channel_expr(self) -> ColumnElement[Any]:
+        """Return the channel an episode reads as coming from.
+
+        An episode is held by whichever channel down the chain carries the title,
+        which is not the channel it was added through, so the channels combined
+        into this one stand for everything they reach.
+        """
+        source_channel = col(ChannelShow.channel_id)
+        if not self._channel_attribution:
+            return source_channel
+        return case(
+            *(
+                (source_channel == channel_id, literal(str(added_through)))
+                for channel_id, added_through in self._channel_attribution.items()
+            ),
+            else_=func.cast(source_channel, String),
+        )
+
     def _value_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:  # noqa: PLR0911
         field = sort_key.field
 
+        if sort_key.model == "channel":
+            channel_expr = self._channel_expr()
+            # Shuffling the channels themselves keeps every episode of one of them
+            # together, which is what a random sort on a channel is asking for.
+            return self.random_hash(channel_expr) if field == "random" else channel_expr
         if field == "random":
             random_ids: dict[str, Any] = {
                 "episode": Episode.id,

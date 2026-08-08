@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from sqlalchemy import util
 from sqlmodel import (
@@ -54,6 +54,10 @@ class BaseChannel(SQLModel):
 
 class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
     """Model representing a Channel."""
+
+    # An episode is sorted by the channel it was added through rather than by
+    # anything stored on the channel itself, so its id is all there is to sort on.
+    SORTABLE_FIELDS: ClassVar[list[str]] = ["id"]
 
     __table_args__ = (
         # Used to lookup a channel by its id.

@@ -40,6 +40,32 @@ def readable_channels(
     return session.exec(query).all()
 
 
+def channel_attribution(
+    session: SessionDep,
+    user: User | None,
+    main_channel: Channel,
+) -> dict[UUID, UUID]:
+    """Map every channel a read covers to the channel it was added through.
+
+    A combined channel can combine further ones, and an episode from a channel
+    that deep reads as belonging to whichever channel was added here rather than
+    to the one holding it, so a grandchild's episodes are its parent's. A channel
+    reachable through two of them belongs to the first that reaches it.
+    """
+    attribution = {main_channel.id: main_channel.id}
+
+    for child_id in child_channel_ids(main_channel):
+        to_expand = {child_id} - attribution.keys()
+        while to_expand:
+            descendants: set[UUID] = set()
+            for channel in readable_channels(session, user, to_expand):
+                attribution[channel.id] = child_id
+                descendants.update(child_channel_ids(channel))
+            to_expand = descendants - attribution.keys()
+
+    return attribution
+
+
 def resolve_channel_ids(
     session: SessionDep,
     user: User | None,

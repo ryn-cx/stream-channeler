@@ -6165,7 +6165,7 @@ export const SortKeyInputSchema = {
     properties: {
         model: {
             type: 'string',
-            enum: ['episode', 'season', 'show', 'source', 'plugin'],
+            enum: ['episode', 'season', 'show', 'source', 'plugin', 'channel'],
             title: 'Model'
         },
         field: {
@@ -6262,7 +6262,7 @@ export const SortOptionOutputSchema = {
         },
         model: {
             type: 'string',
-            enum: ['episode', 'season', 'show', 'source', 'plugin'],
+            enum: ['episode', 'season', 'show', 'source', 'plugin', 'channel'],
             title: 'Model'
         },
         field: {

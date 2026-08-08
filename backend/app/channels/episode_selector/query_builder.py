@@ -15,6 +15,7 @@ from sqlmodel.sql.expression import Select
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channel_orders.models import ChannelOrder
 from app.channels.episode_selector.channel_scope import (
+    channel_attribution,
     child_channel_ids,
     resolve_channel_ids,
 )
@@ -93,6 +94,7 @@ class EpisodeQueryBuilder:
             random_seed=self._channel_options.random_seed,
             user=self._user,
             fallbacks=self._tmdb_fallbacks,
+            channel_attribution=channel_attribution(session, self._user, channel),
         )
 
     def _resolve_order_preset(

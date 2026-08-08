@@ -1184,7 +1184,7 @@ export type ShowUpdate = {
 };
 
 export type SortKeyInput = {
-    model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
+    model: 'episode' | 'season' | 'show' | 'source' | 'plugin' | 'channel';
     field: string;
     direction: 'ascending' | 'descending';
     order: 'sequential' | 'interleave' | 'randomize';
@@ -1194,7 +1194,7 @@ export type SortKeyInput = {
     fuzziness?: (number | null);
 };
 
-export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin';
+export type model = 'episode' | 'season' | 'show' | 'source' | 'plugin' | 'channel';
 
 export type direction = 'ascending' | 'descending';
 
@@ -1210,7 +1210,7 @@ export type SortOption = {
 
 export type SortOptionOutput = {
     label: string;
-    model: 'episode' | 'season' | 'show' | 'source' | 'plugin';
+    model: 'episode' | 'season' | 'show' | 'source' | 'plugin' | 'channel';
     field: string;
 };
 

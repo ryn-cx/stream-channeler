@@ -281,7 +281,7 @@ class WhitelistShowOutput(ShowPublic):
 
 class SortOptionOutput(BaseModel):
     label: str
-    model: Literal["episode", "season", "show", "source", "plugin"]
+    model: Literal["episode", "season", "show", "source", "plugin", "channel"]
     field: str
 
 
@@ -292,15 +292,20 @@ class SortKeyInput(BaseInput):
         alias_generator=to_camel,
     )  # type: ignore[reportAssignmentType]
 
-    _MODEL_MAP: ClassVar[dict[str, type[Episode | Season | Show | Source | Plugin]]] = {
+    _MODEL_MAP: ClassVar[
+        dict[str, type[Episode | Season | Show | Source | Plugin | Channel]]
+    ] = {
         "episode": Episode,
         "season": Season,
         "show": Show,
         "source": Source,
         "plugin": Plugin,
+        # An episode reads as coming from the channel it was added through, which
+        # is a channel of its own rather than one of the media models.
+        "channel": Channel,
     }
 
-    model: Literal["episode", "season", "show", "source", "plugin"]
+    model: Literal["episode", "season", "show", "source", "plugin", "channel"]
     field: str
     direction: Literal["ascending", "descending"]
     order: Literal["sequential", "interleave", "randomize"] = Field()
@@ -310,7 +315,7 @@ class SortKeyInput(BaseInput):
     fuzziness: int | None = Field(default=None, ge=0)
 
     @property
-    def model_class(self) -> type[Episode | Season | Show | Source | Plugin]:
+    def model_class(self) -> type[Episode | Season | Show | Source | Plugin | Channel]:
         return self._MODEL_MAP[self.model]
 
     @model_validator(mode="after")
