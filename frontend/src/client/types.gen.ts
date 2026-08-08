@@ -1399,6 +1399,7 @@ export type Token = {
 export type UnlockedEpisodeOutput = {
     id: string;
     episode_identifier: string;
+    episode_identifier_note: (string | null);
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);
@@ -1417,6 +1418,7 @@ export type UnlockedEpisodeOutput = {
 export type UnmatchedEpisodeOutput = {
     id: string;
     episode_identifier: string;
+    episode_identifier_note: (string | null);
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);

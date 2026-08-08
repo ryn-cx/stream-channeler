@@ -47,7 +47,7 @@ MANUAL_NOTES = frozenset(
         MANUALLY_CONFIRMED_NOTE,
         MANUALLY_SELECTED_NOTE,
         NO_MATCH_NOTE,
-    }
+    },
 )
 """The notes that stand for a `User` having settled the identifier themselves.
 

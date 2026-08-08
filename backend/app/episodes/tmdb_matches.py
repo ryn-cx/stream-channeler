@@ -289,6 +289,7 @@ def list_unmatched_episodes(
         UnmatchedEpisodeOutput(
             id=episode.id,
             episode_identifier=episode.episode_identifier,
+            episode_identifier_note=episode.episode_identifier_note,
             name=episode.name,
             episode_number=episode.episode_number,
             absolute_number=source_numbers.get(episode.id),
@@ -378,6 +379,7 @@ def list_unlocked_episodes(
             UnlockedEpisodeOutput(
                 id=episode.id,
                 episode_identifier=episode.episode_identifier,
+                episode_identifier_note=episode.episode_identifier_note,
                 name=episode.name,
                 episode_number=episode.episode_number,
                 absolute_number=source_numbers.get(episode.id),

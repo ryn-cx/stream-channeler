@@ -145,6 +145,7 @@ class UnmatchedEpisodeOutput(BaseModel):
 
     id: uuid.UUID
     episode_identifier: str
+    episode_identifier_note: str | None
     name: str | None
     episode_number: int | None
     absolute_number: int | None

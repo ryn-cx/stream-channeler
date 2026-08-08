@@ -152,6 +152,11 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
             </a>
           ) : null}
         </span>
+        {row.original.episode_identifier_note ? (
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {row.original.episode_identifier_note}
+          </span>
+        ) : null}
       </WrappingCell>
     ),
   },
