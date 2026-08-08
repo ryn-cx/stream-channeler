@@ -88,6 +88,7 @@ class EpisodeInformationSide(BaseModel):
     key: str
     episode_identifier: str
     episode_identifier_locked: bool
+    episode_identifier_note: str | None
     data_timestamp: datetime | None
     update_at: datetime | None
 
@@ -103,6 +104,7 @@ class EpisodeInformationOutput(BaseModel):
     episode_id: uuid.UUID
     episode_identifier: str
     episode_identifier_locked: bool
+    episode_identifier_note: str | None
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None
@@ -144,6 +146,23 @@ class UnmatchedEpisodeOutput(BaseModel):
     source_name: str | None
     url: str | None
     best_match: TmdbEpisodeChoice | None
+
+
+class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
+    """An episode whose TMDB link no `User` has settled, matched or not.
+
+    Unlike `UnmatchedEpisodeOutput` this covers the episodes that were linked as
+    well, since a link made by name is exactly what a wrong name gets wrong, and
+    a wrong link is only visible next to the TMDB episode it was made against.
+    """
+
+    name_matches: bool
+    """Whether the website and TMDB give the episode the very same name.
+
+    An episode both agree on is locked as it is stored, so one that is named the
+    same and still unlocked is one they disagree about the number of, which is
+    the pair worth looking at first.
+    """
 
 
 class EpisodeTmdbLinkInput(BaseModel):

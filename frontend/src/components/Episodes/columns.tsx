@@ -199,8 +199,13 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     },
     filterFn: "equalsString",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.episode_identifier_locked ? "Yes" : "No"}
+      <span className="flex flex-col text-muted-foreground">
+        <span>{row.original.episode_identifier_locked ? "Yes" : "No"}</span>
+        {row.original.episode_identifier_note ? (
+          <span className="text-xs">
+            {row.original.episode_identifier_note}
+          </span>
+        ) : null}
       </span>
     ),
   },

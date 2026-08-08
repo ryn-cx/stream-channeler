@@ -8,6 +8,7 @@ import {
   ListOrdered,
   Radio,
   Tv,
+  Unlock,
   Users,
 } from "lucide-react"
 import { PageHeader } from "@/components/Common/PageHeader"
@@ -128,6 +129,21 @@ function AdminIndex() {
               <CardDescription>
                 Every episode no TMDB record was found for, beside the closest
                 TMDB episode, to be approved or replaced by hand.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/unlocked-episodes" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Unlock className="size-5" />
+                Unlocked Episodes
+              </CardTitle>
+              <CardDescription>
+                Every episode whose TMDB link nobody has settled, matched or
+                not. A name shown in red is one TMDB agrees with, which means
+                the two disagree about the number.
               </CardDescription>
             </CardHeader>
           </Card>

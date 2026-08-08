@@ -2129,6 +2129,17 @@ export const EpisodeCreateSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
+        },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
         }
     },
     additionalProperties: false,
@@ -2153,6 +2164,17 @@ export const EpisodeInformationOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked'
         },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
+        },
         issue_reports: {
             items: {
                 '$ref': '#/components/schemas/IssueReportOutput'
@@ -2175,7 +2197,7 @@ export const EpisodeInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['episode_id', 'episode_identifier', 'episode_identifier_locked', 'issue_reports', 'source', 'tmdb'],
+    required: ['episode_id', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'issue_reports', 'source', 'tmdb'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -2336,6 +2358,17 @@ export const EpisodeInformationSideSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked'
         },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
+        },
         data_timestamp: {
             anyOf: [
                 {
@@ -2362,7 +2395,7 @@ export const EpisodeInformationSideSchema = {
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'data_timestamp', 'update_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'data_timestamp', 'update_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -2531,6 +2564,17 @@ export const EpisodeListOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
+        },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
         },
         id: {
             type: 'string',
@@ -2800,6 +2844,17 @@ export const EpisodeOutputSchema = {
             title: 'Episode Identifier Locked',
             default: false
         },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -3024,6 +3079,17 @@ export const EpisodeUpdateSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
+        },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
         }
     },
     additionalProperties: false,
@@ -3196,6 +3262,17 @@ export const EpisodeWithDetailsSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
+        },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
         },
         id: {
             type: 'string',
@@ -7154,6 +7231,130 @@ export const URLStatusSchema = {
     description: 'Enum representing the status of a URL in the channel queue.'
 } as const;
 
+export const UnlockedEpisodeOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        episode_identifier: {
+            type: 'string',
+            title: 'Episode Identifier'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        absolute_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Absolute Number'
+        },
+        season_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        show_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Name'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        best_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        name_matches: {
+            type: 'boolean',
+            title: 'Name Matches'
+        }
+    },
+    type: 'object',
+    required: ['id', 'episode_identifier', 'name', 'episode_number', 'absolute_number', 'season_name', 'season_number', 'show_name', 'source_name', 'url', 'best_match', 'name_matches'],
+    title: 'UnlockedEpisodeOutput',
+    description: `An episode whose TMDB link no \`User\` has settled, matched or not.
+
+Unlike \`UnmatchedEpisodeOutput\` this covers the episodes that were linked as
+well, since a link made by name is exactly what a wrong name gets wrong, and
+a wrong link is only visible next to the TMDB episode it was made against.`
+} as const;
+
 export const UnmatchedEpisodeOutputSchema = {
     properties: {
         id: {
@@ -8029,6 +8230,17 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'boolean',
             title: 'Episode Identifier Locked',
             default: false
+        },
+        episode_identifier_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Identifier Note'
         },
         id: {
             type: 'string',

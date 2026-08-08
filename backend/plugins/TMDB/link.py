@@ -5,13 +5,17 @@ from collections.abc import Callable, Sequence
 from functools import cache
 from itertools import product
 from math import prod
-from typing import Protocol
+from typing import NamedTuple, Protocol
 
 from pykakasi import kakasi
 from pykakasi.kanji import Kanwa
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 
-from app.episodes.models import Episode
+from app.episodes.models import (
+    DESCRIPTION_NOTE,
+    NAME_AND_NUMBER_NOTE,
+    Episode,
+)
 from app.media.identifiers import tmdb_identifier
 from app.media.media_type import MediaType
 from app.seasons.models import Season
@@ -100,6 +104,22 @@ def _is_generically_named(name: str) -> bool:
 
 type _Compare = Callable[[frozenset[str], frozenset[str]], bool]
 
+# What an episode was recognised by, said in the words it is shown in. Only the
+# first two are sure enough to settle a link; the rest say how a guess was made.
+_NAME_NOTE = "Named the same"
+_TRANSLATED_NAME_NOTE = "Named the same in another language"
+_PARTIAL_NAME_NOTE = "One name contains the other"
+_PARTIAL_TRANSLATED_NAME_NOTE = "One name contains the other in another language"
+_NUMBER_ONLY_NOTE = "Numbered the same, with no name to go on"
+_SAME_LENGTH_SEASON_NOTE = "Numbered the same, in a season of the same length"
+
+
+class _EpisodeMatch(NamedTuple):
+    """The TMDB episode a website's episode is, and what it was recognised by."""
+
+    episode: TvSeasonEpisode
+    note: str
+
 
 def _matches_exactly(candidate_forms: frozenset[str], targets: frozenset[str]) -> bool:
     return bool(candidate_forms & targets)
@@ -113,6 +133,33 @@ def _contains_either_way(
         candidate_form in target or target in candidate_form
         for candidate_form, target in product(candidate_forms, targets)
     )
+
+
+def _find_by_description(
+    candidates: Sequence[TvSeasonEpisode],
+    description: str | None,
+) -> TvSeasonEpisode | None:
+    """Return the one episode described word for word as `description`.
+
+    A website that takes its descriptions from TMDB carries the very text TMDB
+    wrote, which says which episode it is more surely than a name does: a name
+    gets translated, shortened and rewritten on the way, where a description
+    long enough to be worth copying is copied whole. Two episodes described the
+    same way say nothing about which of them it is, so neither is returned.
+    """
+    if not description:
+        return None
+
+    target = _plaintext(description)
+    if not target:
+        return None
+
+    matches = [
+        candidate
+        for candidate in candidates
+        if _plaintext(candidate.overview) == target
+    ]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _find_by_name[NamedType: _Named](
@@ -228,49 +275,140 @@ class LinkMixin(LookupMixin, register=False):
                 )
             return episode
 
-        episode_detail = self._episode_detail(
+        match = self._episode_detail(
             tmdb_id,
             season_number,
             episode_number,
             episode.name,
             highest_episode_number,
+            description=episode.description,
         )
-        if episode_detail:
+        if match:
             episode.episode_identifier = tmdb_identifier(
                 MediaType.tv,
-                episode.tmdb_id or episode_detail.id,
+                episode.tmdb_id or match.episode.id,
             )
+            # A match sure enough to settle says so in place of how it was made,
+            # which is the same thing said with more behind it.
+            settled = self._lock_reason(
+                tmdb_id,
+                episode,
+                match.episode,
+                season_number,
+                episode_number,
+            )
+            episode.episode_identifier_note = settled or match.note
+            episode.episode_identifier_locked = settled is not None
         return episode
 
-    def _episode_detail(
+    def _lock_reason(
+        self,
+        tmdb_id: int,
+        episode: Episode,
+        episode_detail: TvSeasonEpisode,
+        season_number: int | None,
+        episode_number: int | None,
+    ) -> str | None:
+        """Return why the link is sure enough that no `User` need be asked.
+
+        There are two ways of being that sure, and which one it was is returned
+        rather than only that it was one of them, since a lock is worth as much
+        as the grounds it was made on. The website and TMDB put the same name at
+        the same number, or the website carries the very description TMDB wrote
+        and only one TMDB episode carries it, which is a description copied from
+        the episode itself rather than one that merely reads alike.
+        """
+        if self._agrees_on_name_and_number(
+            episode,
+            episode_detail,
+            season_number,
+            episode_number,
+        ):
+            return NAME_AND_NUMBER_NOTE
+
+        described = _find_by_description(
+            self._all_episodes(tmdb_id),
+            episode.description,
+        )
+        if described is not None and described.id == episode_detail.id:
+            return DESCRIPTION_NOTE
+        return None
+
+    @staticmethod
+    def _agrees_on_name_and_number(
+        episode: Episode,
+        episode_detail: TvSeasonEpisode,
+        season_number: int | None,
+        episode_number: int | None,
+    ) -> bool:
+        """Report whether the website and TMDB agree on both the name and number.
+
+        A website that puts the same name at the same number as TMDB is
+        describing the same episode as plainly as it ever will, so the link is
+        settled and there is nothing left for a `User` to be asked about.
+        """
+        if season_number is None or episode_number is None:
+            return False
+        if (episode_detail.season_number, episode_detail.episode_number) != (
+            season_number,
+            episode_number,
+        ):
+            return False
+        if not episode.name or not episode_detail.name:
+            return False
+        return _matches_exactly(
+            _plaintext_forms(episode_detail.name),
+            _plaintext_forms(episode.name),
+        )
+
+    # PLR0911 - One return per way of naming an episode, tried in order of trust.
+    def _episode_detail(  # noqa: PLR0911, PLR0913 - Every part of what names one.
         self,
         tmdb_id: int,
         season_number: int | None,
         episode_number: int | None,
         episode_name: str | None,
         highest_episode_number: int | None,
-    ) -> TvSeasonEpisode | None:
+        *,
+        description: str | None = None,
+    ) -> _EpisodeMatch | None:
+        """Return the TMDB episode this one is, and what it was recognised by.
+
+        Each way of recognising an episode is tried in the order it is worth
+        trusting, and the one that answered is said along with the episode. A
+        match nothing settles is still worth saying how it was made, since that
+        is most of what anyone looking at it later has to go on.
+        """
+        # Tried ahead of the name because a description is only ever this exact
+        # when it came from TMDB itself, which names the episode outright, and
+        # because it answers for the episodes whose names say nothing.
+        if described := _find_by_description(self._all_episodes(tmdb_id), description):
+            return _EpisodeMatch(described, DESCRIPTION_NOTE)
+
         if not episode_name or _is_generically_named(episode_name):
-            return self._episode_by_number(tmdb_id, season_number, episode_number)
+            numbered = self._episode_by_number(tmdb_id, season_number, episode_number)
+            return _EpisodeMatch(numbered, _NUMBER_ONLY_NOTE) if numbered else None
 
         if match := self._exactly_named(tmdb_id, episode_name):
-            return match
+            return _EpisodeMatch(match, _NAME_NOTE)
 
         if match := self._exactly_named_in_translation(tmdb_id, episode_name):
-            return match
+            return _EpisodeMatch(match, _TRANSLATED_NAME_NOTE)
 
         if match := self._exact_substring(tmdb_id, episode_name):
-            return match
+            return _EpisodeMatch(match, _PARTIAL_NAME_NOTE)
 
         if match := self._named_within_translation(tmdb_id, episode_name):
-            return match
+            return _EpisodeMatch(match, _PARTIAL_TRANSLATED_NAME_NOTE)
 
-        return self._numbered_the_same_way(
+        if match := self._numbered_the_same_way(
             tmdb_id,
             season_number,
             episode_number,
             highest_episode_number,
-        )
+        ):
+            return _EpisodeMatch(match, _SAME_LENGTH_SEASON_NOTE)
+        return None
 
     def _exactly_named(
         self,

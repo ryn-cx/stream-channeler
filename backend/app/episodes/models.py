@@ -31,6 +31,14 @@ if TYPE_CHECKING:
     from app.watches.models import Watch
 
 
+# The notes that stand for a settled identifier rather than a guess at one. A
+# note is free text so that a new way of recognising an episode needs nothing
+# but its own wording; the rest are written where the matching is done.
+NAME_AND_NUMBER_NOTE = "Name and number match"
+DESCRIPTION_NOTE = "Description match"
+MANUAL_NOTE = "Settled by hand"
+
+
 class BaseEpisode(BaseMediaMixin):
     """Base model for an `Episode`."""
 
@@ -45,6 +53,10 @@ class BaseEpisode(BaseMediaMixin):
     air_date: datetime | None = DateTimeField(default=None)
     episode_identifier: str
     episode_identifier_locked: bool = Field(default=False)
+    # How the identifier was arrived at, in words. Written for every match, not
+    # only the ones sure enough to lock, since a guess is worth as much as what
+    # it was made on and there is nothing else to go on when reading one back.
+    episode_identifier_note: str | None = Field(default=None)
 
     @computed_field
     @property
@@ -161,9 +173,9 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     ) -> Self:
         """Upsert the `Episode`, keeping a locked `episode_identifier` intact.
 
-        `episode_identifier_locked` is only ever set by a `User`, so it is always
-        protected, and while the lock is set the automatically detected
-        `episode_identifier` never replaces the one the `User` chose.
+        `episode_identifier_locked` says who settled the identifier, and is
+        always protected so that a later import never unsettles it. While it is
+        set the identifier an import works out never replaces the settled one.
         """
         protected_keys = set(protected_keys or ()) | {"episode_identifier_locked"}
         if existing_record and existing_record.episode_identifier_locked:

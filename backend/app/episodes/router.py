@@ -26,12 +26,14 @@ from app.episodes.schemas import (
     EpisodeTmdbLinkInput,
     EpisodeUpdate,
     TmdbEpisodeChoice,
+    UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
 )
 from app.episodes.tmdb_matches import (
     confirm_no_tmdb_match,
     link_episode,
     list_tmdb_episode_choices,
+    list_unlocked_episodes,
     list_unmatched_episodes,
 )
 from app.issue_reports.service import list_episode_issue_reports
@@ -216,6 +218,18 @@ def admin_get_unmatched_episodes(
 
 
 @episodes_router.get(
+    "/unlocked",
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_get_unlocked_episodes(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[UnlockedEpisodeOutput]:
+    """Get every `Episode` whose TMDB link no `User` has settled."""
+    return list_unlocked_episodes(session, limit)
+
+
+@episodes_router.get(
     "/{episode_id}/tmdb-choices",  # noqa: FAST003 - Used by ExistingEpisode.
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -277,6 +291,7 @@ def _information_side(
         key=episode.key,
         episode_identifier=episode.episode_identifier,
         episode_identifier_locked=episode.episode_identifier_locked,
+        episode_identifier_note=episode.episode_identifier_note,
         data_timestamp=episode.data_timestamp,
         update_at=episode.update_at,
     )
@@ -317,6 +332,7 @@ def get_episode_information(
         episode_id=episode.id,
         episode_identifier=episode.episode_identifier,
         episode_identifier_locked=episode.episode_identifier_locked,
+        episode_identifier_note=episode.episode_identifier_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,

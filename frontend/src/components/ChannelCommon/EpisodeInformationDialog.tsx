@@ -54,6 +54,7 @@ function sideRows(side: EpisodeInformationSide): InformationRows {
     Key: side.key,
     "Episode identifier": side.episode_identifier,
     "Identifier locked": side.episode_identifier_locked ? "Yes" : "No",
+    "Identifier note": side.episode_identifier_note,
     "Data timestamp": formatInformationDate(side.data_timestamp),
     "Update at": formatInformationDate(side.update_at),
   }

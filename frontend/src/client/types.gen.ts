@@ -444,6 +444,7 @@ export type EpisodeCreate = {
     air_date?: (string | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
 };
 
 /**
@@ -457,6 +458,7 @@ export type EpisodeInformationOutput = {
     episode_id: string;
     episode_identifier: string;
     episode_identifier_locked: boolean;
+    episode_identifier_note: (string | null);
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
@@ -482,6 +484,7 @@ export type EpisodeInformationSide = {
     key: string;
     episode_identifier: string;
     episode_identifier_locked: boolean;
+    episode_identifier_note: (string | null);
     data_timestamp: (string | null);
     update_at: (string | null);
 };
@@ -506,6 +509,7 @@ export type EpisodeListOutput = {
     air_date?: (string | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
     id: string;
     season_id: string;
     username: (string | null);
@@ -545,6 +549,7 @@ export type EpisodeOutput = {
     air_date?: (string | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
     id: string;
     season_id: string;
     /**
@@ -593,6 +598,7 @@ export type EpisodeUpdate = {
     air_date?: (string | null);
     episode_identifier?: (string | null);
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -612,6 +618,7 @@ export type EpisodeWithDetails = {
     air_date?: (string | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
     id: string;
     season_id: string;
     watch_date?: (string | null);
@@ -1380,6 +1387,28 @@ export type Token = {
 };
 
 /**
+ * An episode whose TMDB link no `User` has settled, matched or not.
+ *
+ * Unlike `UnmatchedEpisodeOutput` this covers the episodes that were linked as
+ * well, since a link made by name is exactly what a wrong name gets wrong, and
+ * a wrong link is only visible next to the TMDB episode it was made against.
+ */
+export type UnlockedEpisodeOutput = {
+    id: string;
+    episode_identifier: string;
+    name: (string | null);
+    episode_number: (number | null);
+    absolute_number: (number | null);
+    season_name: (string | null);
+    season_number: (number | null);
+    show_name: (string | null);
+    source_name: (string | null);
+    url: (string | null);
+    best_match: (TmdbEpisodeChoice | null);
+    name_matches: boolean;
+};
+
+/**
  * An episode no TMDB record was found for, beside the closest TMDB episode.
  */
 export type UnmatchedEpisodeOutput = {
@@ -1560,6 +1589,7 @@ export type WhitelistEpisodeOutput = {
     air_date?: (string | null);
     episode_identifier: string;
     episode_identifier_locked?: boolean;
+    episode_identifier_note?: (string | null);
     id: string;
     season_id: string;
     filtered: boolean;
@@ -1998,6 +2028,12 @@ export type EpisodesAdminGetUnmatchedEpisodesData = {
 };
 
 export type EpisodesAdminGetUnmatchedEpisodesResponse = (Array<UnmatchedEpisodeOutput>);
+
+export type EpisodesAdminGetUnlockedEpisodesData = {
+    limit?: number;
+};
+
+export type EpisodesAdminGetUnlockedEpisodesResponse = (Array<UnlockedEpisodeOutput>);
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;

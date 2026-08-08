@@ -2,7 +2,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import type { ReactNode } from "react"
 
-import type { UnmatchedEpisodeOutput } from "@/client"
+import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { cn } from "@/lib/utils"
 import { TmdbMatchApproval } from "./TmdbMatchApproval"
@@ -31,6 +31,18 @@ function WrappingCell({
       {children}
     </span>
   )
+}
+
+/**
+ * Whether the website and TMDB give an episode the very same name.
+ *
+ * An episode both agree the name and the number of is locked as it is stored,
+ * so one that is named the same and still listed here is one they disagree
+ * about the number of. Only the unlocked episodes carry this, and a row without
+ * it is one there is nothing to say about.
+ */
+function isExactNameMatch(row: UnmatchedEpisodeOutput): boolean {
+  return (row as Partial<UnlockedEpisodeOutput>).name_matches === true
 }
 
 const NOTHING_TO_AGREE_WITH: Numbered = {
@@ -116,7 +128,14 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "Episode",
     cell: ({ row }) => (
       <WrappingCell className="max-w-64">
-        <span className="font-medium">{row.original.name ?? "Unnamed"}</span>
+        <span
+          className={cn(
+            "font-medium",
+            isExactNameMatch(row.original) && "text-destructive",
+          )}
+        >
+          {row.original.name ?? "Unnamed"}
+        </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Numbering
             record={row.original}

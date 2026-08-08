@@ -41,6 +41,7 @@ import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugi
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
+import { Route as LayoutAdminUnlockedEpisodesRouteImport } from './routes/_layout/admin.unlocked-episodes'
 import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/admin.tmdb-matches'
 import { Route as LayoutAdminShowReportsRouteImport } from './routes/_layout/admin.show-reports'
 import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/admin.season-reports'
@@ -220,6 +221,12 @@ const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutAdminUnlockedEpisodesRoute =
+  LayoutAdminUnlockedEpisodesRouteImport.update({
+    id: '/unlocked-episodes',
+    path: '/unlocked-episodes',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
 const LayoutAdminTmdbMatchesRoute = LayoutAdminTmdbMatchesRouteImport.update({
   id: '/tmdb-matches',
   path: '/tmdb-matches',
@@ -359,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
+  '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -409,6 +417,7 @@ export interface FileRoutesByTo {
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
+  '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -463,6 +472,7 @@ export interface FileRoutesById {
   '/_layout/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/_layout/admin/show-reports': typeof LayoutAdminShowReportsRoute
   '/_layout/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
+  '/_layout/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -517,6 +527,7 @@ export interface FileRouteTypes {
     | '/admin/season-reports'
     | '/admin/show-reports'
     | '/admin/tmdb-matches'
+    | '/admin/unlocked-episodes'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -567,6 +578,7 @@ export interface FileRouteTypes {
     | '/admin/season-reports'
     | '/admin/show-reports'
     | '/admin/tmdb-matches'
+    | '/admin/unlocked-episodes'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -620,6 +632,7 @@ export interface FileRouteTypes {
     | '/_layout/admin/season-reports'
     | '/_layout/admin/show-reports'
     | '/_layout/admin/tmdb-matches'
+    | '/_layout/admin/unlocked-episodes'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
@@ -879,6 +892,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminUsersRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
+    '/_layout/admin/unlocked-episodes': {
+      id: '/_layout/admin/unlocked-episodes'
+      path: '/unlocked-episodes'
+      fullPath: '/admin/unlocked-episodes'
+      preLoaderRoute: typeof LayoutAdminUnlockedEpisodesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/admin/tmdb-matches': {
       id: '/_layout/admin/tmdb-matches'
       path: '/tmdb-matches'
@@ -1023,6 +1043,7 @@ interface LayoutAdminRouteChildren {
   LayoutAdminSeasonReportsRoute: typeof LayoutAdminSeasonReportsRoute
   LayoutAdminShowReportsRoute: typeof LayoutAdminShowReportsRoute
   LayoutAdminTmdbMatchesRoute: typeof LayoutAdminTmdbMatchesRoute
+  LayoutAdminUnlockedEpisodesRoute: typeof LayoutAdminUnlockedEpisodesRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
 }
@@ -1035,6 +1056,7 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminSeasonReportsRoute: LayoutAdminSeasonReportsRoute,
   LayoutAdminShowReportsRoute: LayoutAdminShowReportsRoute,
   LayoutAdminTmdbMatchesRoute: LayoutAdminTmdbMatchesRoute,
+  LayoutAdminUnlockedEpisodesRoute: LayoutAdminUnlockedEpisodesRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,
 }

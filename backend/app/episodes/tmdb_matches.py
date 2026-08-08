@@ -15,8 +15,12 @@ from difflib import SequenceMatcher
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
-from app.episodes.models import Episode
-from app.episodes.schemas import TmdbEpisodeChoice, UnmatchedEpisodeOutput
+from app.episodes.models import MANUAL_NOTE, Episode
+from app.episodes.schemas import (
+    TmdbEpisodeChoice,
+    UnlockedEpisodeOutput,
+    UnmatchedEpisodeOutput,
+)
 from app.media.identifiers import (
     TMDB_IDENTIFIER_PREFIX,
     TMDB_PLUGIN_KEY,
@@ -299,6 +303,95 @@ def list_unmatched_episodes(
     ]
 
 
+def _unlocked_rows(
+    session: Session,
+    limit: int,
+) -> list[tuple[Episode, Season, Show, Source]]:
+    """Return every episode whose TMDB link no `User` has settled.
+
+    The episodes that were linked are kept rather than filtered out, which is
+    what separates this from `_unmatched_rows`: a link made against a wrong name
+    is still a link, and it is only ever spotted beside the TMDB episode it was
+    made against.
+    """
+    statement = (
+        select(Episode, Season, Show, Source)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Source, onclause=col(Show.source_id) == Source.id)
+        .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
+        .where(
+            Plugin.key != TMDB_PLUGIN_KEY,
+            col(Episode.episode_identifier_locked).is_(False),
+            col(Show.show_identifier).like(_TMDB_IDENTIFIER_PATTERN),
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+        )
+        .order_by(
+            col(Show.name),
+            col(Season.season_number),
+            col(Episode.episode_number),
+        )
+        .limit(limit)
+    )
+    return list(session.exec(statement).all())
+
+
+def list_unlocked_episodes(
+    session: Session,
+    limit: int,
+) -> list[UnlockedEpisodeOutput]:
+    """Return every episode whose TMDB link no `User` has settled.
+
+    Only episodes of a title that is itself linked are listed, since a title with
+    no TMDB counterpart has no episodes to be matched against.
+    """
+    rows = _unlocked_rows(session, limit)
+    candidates = _candidates_by_show(
+        session,
+        {show.show_identifier for _episode, _season, show, _source in rows},
+    )
+    candidate_numbers = {
+        show_identifier: _candidate_absolute_numbers(show_candidates)
+        for show_identifier, show_candidates in candidates.items()
+    }
+    source_numbers = _source_absolute_numbers(
+        session,
+        {show.id for _episode, _season, show, _source in rows},
+    )
+
+    outputs: list[UnlockedEpisodeOutput] = []
+    for episode, season, show, source in rows:
+        best_match = _best_match(
+            episode,
+            season,
+            candidates.get(show.show_identifier, []),
+            candidate_numbers.get(show.show_identifier, {}),
+        )
+        outputs.append(
+            UnlockedEpisodeOutput(
+                id=episode.id,
+                episode_identifier=episode.episode_identifier,
+                name=episode.name,
+                episode_number=episode.episode_number,
+                absolute_number=source_numbers.get(episode.id),
+                season_name=season.name,
+                season_number=season.season_number,
+                show_name=show.name,
+                source_name=source.name,
+                url=episode.url,
+                best_match=best_match,
+                name_matches=bool(
+                    best_match
+                    and _plaintext(episode.name)
+                    and _plaintext(episode.name) == _plaintext(best_match.name),
+                ),
+            ),
+        )
+    return outputs
+
+
 def list_tmdb_episode_choices(
     session: Session,
     episode: Episode,
@@ -370,6 +463,7 @@ def link_episode(session: Session, episode: Episode, tmdb_episode_id: int) -> Ep
 
     episode.episode_identifier = counterpart.episode_identifier
     episode.episode_identifier_locked = True
+    episode.episode_identifier_note = MANUAL_NOTE
     session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -385,6 +479,7 @@ def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:
     the list of episodes still waiting on somebody.
     """
     episode.episode_identifier_locked = True
+    episode.episode_identifier_note = MANUAL_NOTE
     session.add(episode)
     session.commit()
     session.refresh(episode)
