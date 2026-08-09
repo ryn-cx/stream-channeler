@@ -523,12 +523,7 @@ def get_channel_shows(
                     channel_show.channel.name,
                 )
 
-            # TMDB is not somewhere a title can be watched, so it is not one of
-            # the sources the list is filtered by and its icon does not stand
-            # beside a title as though it were. A title it is the only copy of
-            # is left with no icon, which is what having nowhere to watch it
-            # looks like.
-            if source.id not in output.sources and plugin.key != TMDB_PLUGIN_KEY:
+            if source.id not in output.sources:
                 output.sources[source.id] = SourcePublic.model_validate(source)
 
     output.shows = list(regular_shows.values())
