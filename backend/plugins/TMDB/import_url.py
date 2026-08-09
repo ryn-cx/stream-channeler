@@ -27,23 +27,30 @@ class ImportURLMixin(
         """Import the title the URL names from wherever it can be watched.
 
         TMDB streams nothing itself, so the page is read for the JustWatch link
-        it lists and the import is handed off to the service the title is on. A
-        title JustWatch does not carry is imported as this plugin's own media
-        instead, which is all there is to serve for it.
+        it lists and the import is handed off to the service the title is on.
+
+        What comes back from that hand-off can be nothing: a title JustWatch
+        knows about but that no service carries has no offer to import through,
+        and a title TMDB lists no JustWatch link for never had one to begin
+        with. Either way the title is still a title somebody asked for, so this
+        plugin's own copy of it is imported instead of the URL adding nothing.
         """
         self._use_tmdb_id(tmdb_id)
         handler = self._get_url_handler(url)
         handler.raise_if_invalid()
 
         justwatch_url = self._justwatch_url(handler.title_page_file())
-        if justwatch_url is None:
-            return handler.import_results(self._import_show(handler.show_key))
+        if justwatch_url is not None:
+            # Imported lazily because JustWatch's files use this plugin to
+            # resolve TMDB ids, so importing it up here would be circular.
+            from plugins.JustWatch import JustWatch  # noqa: PLC0415
 
-        # Imported lazily because JustWatch's files use this plugin to resolve
-        # TMDB ids, so importing it up here would be circular.
-        from plugins.JustWatch import JustWatch  # noqa: PLC0415
+            results = JustWatch(self.session).import_url(
+                justwatch_url,
+                handler.tmdb_id,
+            )
 
-        return JustWatch(self.session).import_url(justwatch_url, handler.tmdb_id)
+        return handler.import_results(self._import_show(handler.show_key))
 
     @staticmethod
     def _justwatch_url(page_file: TitlePage) -> str | None:

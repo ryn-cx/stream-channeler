@@ -36,7 +36,7 @@ const DEFAULT_PLUGIN_KEY = "TMDB"
 
 // The title a details modal is open for, built from the plugin result that was
 // clicked and the TMDB id it was matched to.
-type SelectedTitle = {
+export type SelectedTitle = {
   tmdb_id: number
   media_type: "movie" | "tv"
   title: string
@@ -388,7 +388,7 @@ function WatchProviders({ providers }: { providers: TMDBWatchProviderItem[] }) {
 
 // Fetches a single title's full detail on demand, so a multi-result search never
 // downloads that data for results the user never opens.
-function MediaInfoModal({
+export function MediaInfoModal({
   result,
   channelId,
   onOpenChange,
