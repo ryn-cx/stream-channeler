@@ -87,14 +87,20 @@ interface Source {
 const OTHER_SOURCE_KEY = "Other"
 
 /** The source's favicon, naming the source when it is hovered. */
-function SourceFavicon({ source }: { source: Source | undefined }) {
+function SourceFavicon({
+  source,
+  disabled,
+}: {
+  source: Source | undefined
+  disabled?: boolean
+}) {
   if (!source?.favicon_url) return null
 
   const favicon = (
     <img
       src={source.favicon_url}
       alt={`${source.name} favicon`}
-      className="size-8 shrink-0"
+      className={`size-8 shrink-0${disabled ? " opacity-40 grayscale" : ""}`}
     />
   )
   if (!source.name) return favicon
@@ -132,6 +138,28 @@ function useSourceRank(): (source: Source | undefined) => number {
 }
 
 /**
+ * Whether the user has turned a source off.
+ *
+ * A source nobody has an opinion about is on, which is also every source when
+ * nobody is signed in.
+ */
+function useSourceDisabled(): (source: Source | undefined) => boolean {
+  const { data: preferences } = useQuery({
+    queryKey: ["source-preferences"],
+    queryFn: () => UsersService.readSourcePreferences(),
+    enabled: isLoggedIn(),
+  })
+
+  const disabledKeys = new Set(
+    (preferences ?? [])
+      .filter((preference) => preference.enabled === false)
+      .map((preference) => preference.source_key),
+  )
+
+  return (source) => Boolean(source && disabledKeys.has(source.key))
+}
+
+/**
  * Group shows that are the same title, keeping the order they arrived in.
  *
  * `show_identifier` is what makes the same title on two services one title, so
@@ -160,12 +188,14 @@ function groupShows(shows: Show[]): Show[][] {
  */
 function useShowGroups(shows: Show[], sources: Record<string, Source>) {
   const sourceRank = useSourceRank()
+  const sourceDisabled = useSourceDisabled()
 
   const bySourceRank = (first: Show, second: Show) =>
     sourceRank(sources[first.source_id]) - sourceRank(sources[second.source_id])
 
   return {
     groups: groupShows(shows).map((group) => [...group].sort(bySourceRank)),
+    isShowDisabled: (show: Show) => sourceDisabled(sources[show.source_id]),
   }
 }
 
@@ -190,7 +220,7 @@ function ShowRows({
   renderExpanded?: (show: Show) => ReactNode
   renderLeading?: (show: Show) => ReactNode
 }) {
-  const { groups } = useShowGroups(shows, sources)
+  const { groups, isShowDisabled } = useShowGroups(shows, sources)
 
   return (
     <>
@@ -213,6 +243,7 @@ function ShowRows({
                         <SourceFavicon
                           key={show.id}
                           source={sources[show.source_id]}
+                          disabled={isShowDisabled(show)}
                         />
                       ))}
                     </span>
@@ -265,6 +296,15 @@ function showFacts(
     // move a release just after midnight into the year before it.
     facts.push(stats.first_release_date.slice(0, 4))
   }
+  // A movie is one episode of one season by construction, so counting them says
+  // nothing the "Movie" note has not already said.
+  const countsAreImplied =
+    parsed?.mediaType === "movie" &&
+    stats?.season_count === 1 &&
+    stats?.episode_count === 1
+  if (countsAreImplied) {
+    return facts
+  }
   if (stats?.season_count) {
     const seasonCount = stats.season_count
     facts.push(`${seasonCount} ${seasonCount === 1 ? "season" : "seasons"}`)
@@ -298,7 +338,7 @@ function ShowCards({
   renderExpanded?: (show: Show) => ReactNode
   onSelect?: (show: Show) => void
 }) {
-  const { groups } = useShowGroups(shows, sources)
+  const { groups, isShowDisabled } = useShowGroups(shows, sources)
 
   return (
     <div className="grid items-start gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
@@ -307,6 +347,11 @@ function ShowCards({
         const name = firstShow.name ?? ""
         const artwork = group.find((show) => show.image_url)?.image_url
         const expanded = renderExpanded?.(firstShow)
+        // A favicon is how a card names a site, so a listing whose site has none
+        // to show reads as nothing at all without a note in its place.
+        const streamable = group.filter(
+          (show) => sources[show.source_id]?.favicon_url,
+        )
 
         return (
           <Fragment key={firstShow.id}>
@@ -318,7 +363,7 @@ function ShowCards({
                 className="block w-full text-left"
                 onClick={() => onSelect?.(firstShow)}
               >
-                <div className="aspect-video w-full bg-muted">
+                <div className="relative aspect-video w-full bg-muted">
                   {artwork && (
                     <img
                       src={artwork}
@@ -326,12 +371,14 @@ function ShowCards({
                       className="size-full object-cover"
                     />
                   )}
-                </div>
-                <div className="flex flex-col gap-2 p-3">
-                  <span className="wrap-break-word text-sm font-medium">
+                  {/* The name reads over the artwork so the card stays as short
+                      as the picture it shows. */}
+                  <span className="absolute inset-x-0 bottom-0 wrap-break-word bg-linear-to-t from-black/80 to-transparent p-2 text-sm font-medium text-white">
                     {name}
                   </span>
-                  <div className="flex flex-wrap items-center gap-1 pr-8">
+                </div>
+                <div className="flex flex-col gap-2 p-3">
+                  <div className="flex flex-wrap items-center gap-1">
                     {showFacts(group, stats[firstShow.show_identifier]).map(
                       (fact) => (
                         <Badge key={fact} variant="secondary">
@@ -339,12 +386,21 @@ function ShowCards({
                         </Badge>
                       ),
                     )}
-                    {group.map((show) => (
-                      <SourceFavicon
-                        key={show.id}
-                        source={sources[show.source_id]}
-                      />
-                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1 pr-8">
+                    {streamable.length > 0 ? (
+                      streamable.map((show) => (
+                        <SourceFavicon
+                          key={show.id}
+                          source={sources[show.source_id]}
+                          disabled={isShowDisabled(show)}
+                        />
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        Not Available to Stream
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>
