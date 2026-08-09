@@ -691,13 +691,14 @@ def get_channel_whitelist(
     seen_episodes: set[tuple[uuid.UUID, str]] = set()
 
     shows = service.shows_for_channel_show(session, channel_show)
-    if not shows:
-        raise HTTPException(status_code=404, detail="Show was not found on channel")
-
     # TMDB is not a website the title can be watched on, so it is not one of the
     # copies rows are built from and only stands for the seasons it has a record
     # of, which is all an announced season no site has filled yet can be named by.
+    # A title no website carries at all has nothing else to be listed from, so
+    # there its record is the whole of what there is rather than the remainder.
     tmdb_shows = service.tmdb_shows_for_channel_show(session, channel_show)
+    if not shows and not tmdb_shows:
+        raise HTTPException(status_code=404, detail="Show was not found on channel")
 
     # The websites' copies carrying each season and episode, so a row can name the
     # sites it came from.
@@ -771,7 +772,7 @@ def get_channel_whitelist(
         session,
         [
             WhitelistShowOutput.model_validate(
-                shows[0],
+                (shows or tmdb_shows)[0],
                 update={
                     "is_whitelist": channel_show.is_whitelist,
                     "sources": sources,

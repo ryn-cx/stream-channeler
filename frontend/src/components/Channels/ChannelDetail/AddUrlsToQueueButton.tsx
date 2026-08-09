@@ -32,7 +32,6 @@ export function ManageShowsButton({
   const [isOpen, setIsOpen] = useState(false)
   // Editing shows lays a title's whole filter out inline, which needs the page
   // rather than the width the other tabs read comfortably at.
-  const [isWide, setIsWide] = useState(false)
   useSearchablePlugins()
 
   return (
@@ -46,11 +45,7 @@ export function ManageShowsButton({
           iconTitle="Manage shows"
         />
       </DialogTrigger>
-      <DialogContent
-        className={`${
-          isWide ? "sm:max-w-[calc(100%-2rem)]" : "sm:max-w-5xl"
-        } max-h-[85vh] flex flex-col`}
-      >
+      <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader className="px-8">
           <DialogTitle>Manage Shows</DialogTitle>
           <DialogDescription>
@@ -64,7 +59,6 @@ export function ManageShowsButton({
           tabsListClassName="mx-8 flex-wrap h-auto"
           combinedChannels={combinedChannels}
           onRequestClose={() => setIsOpen(false)}
-          onActiveTabChange={(tab) => setIsWide(tab === "shows")}
         />
 
         <DialogFooter className="px-8">

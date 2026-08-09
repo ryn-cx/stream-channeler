@@ -520,6 +520,8 @@ export function ManageShowsTabs({
   const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
     (a, b) => (a.name ?? "").localeCompare(b.name ?? ""),
   )
+  const selectedShow =
+    showsList.find((show) => show.id === selectedShowId) ?? null
   const showCount = groupShows(showsList).length
   const sources: Record<string, Source> = showsData?.sources || {}
   const shows: Record<string, Show> = {
@@ -854,16 +856,6 @@ export function ManageShowsTabs({
               view={showsView}
               shows={showsList}
               sources={sources}
-              renderExpanded={(show) =>
-                selectedShowId === show.id && (
-                  <WhitelistManager
-                    channelId={channelId}
-                    showId={show.id}
-                    showName={show.name || "Unknown Show"}
-                    onClose={() => setSelectedShowId(null)}
-                  />
-                )
-              }
               stats={showsData?.stats ?? {}}
               onSelect={(show) =>
                 setSelectedShowId(selectedShowId === show.id ? null : show.id)
@@ -902,6 +894,36 @@ export function ManageShowsTabs({
               )}
             />
           )}
+
+          {/*
+            A title's seasons and episodes are a table of their own, so opening
+            one gets a window of its own rather than pushing the list it was
+            opened from out to the width the table wants.
+          */}
+          <Dialog
+            open={selectedShow != null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedShowId(null)
+            }}
+          >
+            <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[85vh] flex flex-col overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedShow?.name || "Unknown Show"}
+                </DialogTitle>
+              </DialogHeader>
+              {selectedShow && (
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <WhitelistManager
+                    channelId={channelId}
+                    showId={selectedShow.id}
+                    showName={selectedShow.name || "Unknown Show"}
+                    onClose={() => setSelectedShowId(null)}
+                  />
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {filterOnlyShowsList.length > 0 && (
             <div className="space-y-2">
