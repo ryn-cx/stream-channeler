@@ -81,8 +81,8 @@ class BasePlugin(
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
 
-    _weakref_file_cache: dict[object, Any]
-    _plugin_file_cache: dict[object, Any]
+    _file_cache: dict[object, Any]
+    _reusable_file_cache: dict[object, Any]
 
     _PLUGIN_WIDE_FILES: ClassVar[tuple[type[BaseFile[Any]], ...]] = ()
     """The file types that describe the plugin or a source rather than one show.
@@ -165,13 +165,13 @@ class BasePlugin(
         for name in list(vars(self)):
             if name not in self.SHOW_INDEPENDENT_ATTRIBUTES:
                 delattr(self, name)
-        self._weakref_file_cache = {}
+        self._file_cache = {}
 
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
         self._source: Source | None = None
-        self._plugin_file_cache = {}
+        self._reusable_file_cache = {}
         # Creates the show file cache, which `initialize_database` needs below.
         self._reset_show_state()
         self.initialize_database()
@@ -442,9 +442,9 @@ class BasePlugin(
     ) -> FileT:
         """Return the cached `file_type` instance for `identifiers`."""
         cache = (
-            self._plugin_file_cache
+            self._reusable_file_cache
             if file_type in self._PLUGIN_WIDE_FILES
-            else self._weakref_file_cache
+            else self._file_cache
         )
         cache_key = (file_type, identifiers)
         if cached := cache.get(cache_key):

@@ -6,9 +6,16 @@ prefixed with what they are to keep them apart from a series' keys and to let a
 key alone say which file it is read from.
 """
 
-from typing import Literal, NamedTuple
+from enum import StrEnum
+from typing import NamedTuple
 
-MusicCategory = Literal["musicvideo", "concert"]
+
+class MusicCategory(StrEnum):
+    """One of the two listings an artist's releases are split into."""
+
+    MUSIC_VIDEO = "musicvideo"
+    CONCERT = "concert"
+
 
 ARTIST_PREFIX = "artist"
 
@@ -19,10 +26,16 @@ VIDEO_SOURCE_NAME = "Crunchyroll"
 MUSIC_SOURCE_KEY = "CrunchyrollMusic"
 MUSIC_SOURCE_NAME = "Crunchyroll Music"
 
+# Every artist Crunchyroll releases music for is queued into one plugin owned
+# channel, since their own site gives no way to browse the catalogue.
+MUSIC_CHANNEL_NAME = "Crunchyroll Music"
+
 # An artist's videos and concerts are two separate listings, so each becomes a
 # season of its own rather than one flat list of everything they released.
-MUSIC_CATEGORIES = ("musicvideo", "concert")
-CATEGORY_NAMES = {"musicvideo": "Music Videos", "concert": "Concerts"}
+CATEGORY_NAMES = {
+    MusicCategory.MUSIC_VIDEO: "Music Videos",
+    MusicCategory.CONCERT: "Concerts",
+}
 
 
 class MusicSeasonKey(NamedTuple):
@@ -66,7 +79,7 @@ def is_music_season_key(season_key: str) -> bool:
 
 def is_music_episode_key(episode_key: str) -> bool:
     """Report whether an `Episode` key belongs to a music video or a concert."""
-    return episode_key.startswith(tuple(f"{name}/" for name in MUSIC_CATEGORIES))
+    return episode_key.startswith(tuple(f"{category}/" for category in MusicCategory))
 
 
 def parse_artist_show_key(show_key: str) -> str:
@@ -81,17 +94,10 @@ def parse_music_season_key(season_key: str) -> MusicSeasonKey:
     carries the artist as well as the category.
     """
     _, artist_id, category = season_key.split("/")
-    return MusicSeasonKey(artist_id, _as_category(category))
+    return MusicSeasonKey(artist_id, MusicCategory(category))
 
 
 def parse_music_episode_key(episode_key: str) -> MusicEpisodeKey:
     """Return the parts a music `Episode` key is built from."""
     category, video_id = episode_key.split("/", 1)
-    return MusicEpisodeKey(_as_category(category), video_id)
-
-
-def _as_category(value: str) -> MusicCategory:
-    if value not in MUSIC_CATEGORIES:
-        msg = f"Unknown Crunchyroll music category: {value!r}"
-        raise ValueError(msg)
-    return value  # type: ignore[return-value]
+    return MusicEpisodeKey(MusicCategory(category), video_id)

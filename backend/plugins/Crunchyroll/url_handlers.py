@@ -194,7 +194,7 @@ class CrunchyrollMusicVideoURLHandler(CrunchyrollMusicURLHandler):
     """
 
     _URL_REGEX = _key_url_regex("watch", "musicvideo", group="music_video_key")
-    _CATEGORY: MusicCategory = "musicvideo"
+    _CATEGORY = MusicCategory.MUSIC_VIDEO
 
 
 class CrunchyrollConcertURLHandler(CrunchyrollMusicURLHandler):
@@ -206,4 +206,4 @@ class CrunchyrollConcertURLHandler(CrunchyrollMusicURLHandler):
     """
 
     _URL_REGEX = _key_url_regex("watch", "concert", group="concert_key")
-    _CATEGORY: MusicCategory = "concert"
+    _CATEGORY = MusicCategory.CONCERT

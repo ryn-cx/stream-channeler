@@ -14,7 +14,6 @@ from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import (
     CATEGORY_NAMES,
-    MUSIC_CATEGORIES,
     MUSIC_SOURCE_KEY,
     MUSIC_SOURCE_NAME,
     VIDEO_SOURCE_KEY,
@@ -258,7 +257,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         # An artist always has both categories, even while one is empty, so a
         # first release into it is a new episode rather than a new season.
-        for sort_order, category in enumerate(MUSIC_CATEGORIES):
+        for sort_order, category in enumerate(MusicCategory):
             season_key = music_season_key(artist_id, category)
 
             season = Season.get_from_memory(self.session, show, season_key)
@@ -294,10 +293,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        listing = cast(
-            "Sequence[_Release]",
-            self.artist_category_file(artist_id, category).parsed().data,
-        )
+        listing = self.concerts_or_music_videos_file(artist_id, category).parsed().data
         # Crunchyroll lists an artist's releases newest first, so the order is
         # reversed to number them the way they were released.
         for sort_order, datum in enumerate(reversed(listing)):
@@ -320,7 +316,6 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=self._largest_image(details.images.thumbnail),
                 duration=details.duration_ms // 1000,
                 sort_order=sort_order,
-                episode_number=sort_order + 1,
                 release_date=details.availability.start_date,
                 air_date=details.original_release,
                 episode_identifier=f"{self.plugin_key()} {datum.id}",

@@ -258,8 +258,7 @@ export function ManageShowsTabs({
       ])
       context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
         oldData.filter(
-          (entry: ChannelQueueOutput) =>
-            entry.status !== "Imported" && entry.status !== "Failed",
+          (entry: ChannelQueueOutput) => entry.status !== "Imported",
         ),
       )
       showSuccessToast("Completed queue entries cleared")
