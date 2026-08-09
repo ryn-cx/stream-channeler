@@ -481,10 +481,14 @@ def get_channel_shows(
         select(ChannelShow).where(col(ChannelShow.channel_id).in_(channel_ids)),
     ).all()
     # A `ChannelShow` is a title, so each one stands for every website's copy of it.
-    copies = service.shows_by_identifier(
-        session,
-        {channel_show.show_identifier for channel_show in channel_shows},
-    )
+    identifiers = {channel_show.show_identifier for channel_show in channel_shows}
+    copies = service.shows_by_identifier(session, identifiers)
+
+    # A title no website carries has only TMDB's own copy of it, and leaving that
+    # out would leave the title out of the list it was added to, which is the one
+    # place it would have shown that it is there at all.
+    unwatchable = {identifier for identifier in identifiers if not copies[identifier]}
+    copies.update(service.tmdb_shows_by_identifier(session, unwatchable))
 
     # A show can appear in several of the combined channels; deduplicate by show id.
     # A show counts as a regular show if any channel includes it normally, even when
@@ -499,7 +503,13 @@ def get_channel_shows(
             source = show.source
             plugin = source.plugin
 
-            if not plugin.is_readable(session, user):
+            # TMDB's plugin is private because its media is never browsed on its
+            # own, but a title it is the only copy of is one the viewer put on
+            # the channel themselves, so it is theirs to see here.
+            if plugin.key != TMDB_PLUGIN_KEY and not plugin.is_readable(
+                session,
+                user,
+            ):
                 continue
 
             if channel_show.is_blacklist_only:

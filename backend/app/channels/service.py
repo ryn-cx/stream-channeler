@@ -1,6 +1,6 @@
 # TODO: Validate
 from collections import defaultdict
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from datetime import datetime
 from functools import cache
 from uuid import UUID
@@ -62,6 +62,36 @@ def shows_by_identifier(
             # TMDB only supplies the metadata other websites left out, so its copy of
             # a title is never one of the websites the title can be watched on.
             Plugin.key != TMDB_PLUGIN_KEY,
+        ),
+    ).all()
+    for show in shows:
+        grouped[show.show_identifier].append(show)
+    return grouped
+
+
+def tmdb_shows_by_identifier(
+    session: Session,
+    identifiers: Iterable[str],
+) -> dict[str, list[Show]]:
+    """Return TMDB's own copy of each title, keyed by the title's identifier.
+
+    TMDB is not one of the websites a title can be watched on, so its copies are
+    gathered apart from theirs rather than alongside them, and are only worth
+    reading for a title that has no website copy to be read instead.
+    """
+    grouped: dict[str, list[Show]] = defaultdict(list)
+    identifiers = set(identifiers)
+    if not identifiers:
+        return grouped
+
+    shows = session.exec(
+        select(Show)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            col(Show.show_identifier).in_(identifiers),
+            col(Show.deleted_at).is_(None),
+            Plugin.key == TMDB_PLUGIN_KEY,
         ),
     ).all()
     for show in shows:
