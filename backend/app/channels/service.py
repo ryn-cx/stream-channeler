@@ -215,19 +215,28 @@ def add_urls_to_channel_import_queue(
     output: list[ChannelQueue] = []
     # Remove duplicates without changing the order allowing the output order to match
     # the input order.
-    unique_urls = dict.fromkeys(urls)
-    for url in unique_urls:
-        stripped_url = url.strip()
-        queue_record = session.get(ChannelQueue, (channel.id, stripped_url))
+    unique_urls = list(dict.fromkeys(url.strip() for url in urls))
+    # Every existing entry is read in one query because a browse file can queue
+    # thousands of URLs at once, which is a query each when they are read one by one.
+    existing_records = {
+        record.url: record
+        for record in session.exec(
+            select(ChannelQueue).where(
+                ChannelQueue.channel_id == channel.id,
+                col(ChannelQueue.url).in_(unique_urls),
+            ),
+        ).all()
+    }
 
+    for url in unique_urls:
         # If the entry already exists reset it to pending because the user may have
         # removed it from the channel or it may have failed to import for some reaosn.
-        if queue_record:
+        if queue_record := existing_records.get(url):
             queue_record.status = URLStatus.PENDING
         else:
             queue_record = ChannelQueue(
                 channel_id=channel.id,
-                url=stripped_url,
+                url=url,
                 status=URLStatus.PENDING,
             )
             session.add(queue_record)

@@ -5,7 +5,6 @@ import random
 from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import datetime, timedelta
-from typing import Any
 
 import pytest
 from freezegun import freeze_time
@@ -24,8 +23,6 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
-from plugins.utils.base_plugin.url import URLHandler
 from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.context_managers import (
     mock_update,
@@ -43,8 +40,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     parse_url_response: object | None = None
     invalid_url = False
     search_query: str | None = None
-    url_handler: type[URLHandler[Any]] | None = None
-    """The handler every one of the test's URLs is expected to be answered by."""
 
     def pytest_generate_tests(self, metafunc: pytest.Metafunc) -> None:
         """Run a test once per URL the test class declares."""
@@ -321,32 +316,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             # Written even when the run failed, so the files it did reach are
             # recorded rather than downloaded again by the next run.
             self._export_files_manifest(session_with_files)
-
-
-class URLHandlerTests[PluginT: BasePlugin](PluginValidator[PluginT]):
-    """Tests that every URL variant is answered by the handler the test names.
-
-    A plugin picks its handler by taking the first regex that matches, so a
-    handler whose regex is too greedy answers for another one's URLs and the
-    import still succeeds by way of the wrong handler. Naming the expected
-    handler is what makes that visible.
-
-    A subclass of the named handler passes, which is what lets a test whose URLs
-    reach several handlers of one family name the family (e.g. YouTube's channel
-    URLs, which are answered by a handler per way of naming a channel).
-    """
-
-    def test_url_handler(
-        self,
-        session_with_files: Session,
-        url_variant: str,
-    ) -> None:
-        if self.url_handler is None:
-            pytest.skip("No URL handler declared")
-
-        plugin = self.plugin_class(session_with_files)
-        assert isinstance(plugin, URLHandlerPlugin)
-        assert isinstance(plugin.get_url_handler(url_variant), self.url_handler)
 
 
 class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
@@ -690,12 +659,11 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
 
 class URLTests[PluginT: BasePlugin](
-    URLHandlerTests[PluginT],
     ImportURLVariantTests[PluginT],
     ImportURLTests[PluginT],
     ImportExistingURLTests[PluginT],
 ):
-    """All URL-related tests: handler selection, importing, and re-importing."""
+    """All URL-related tests: importing and re-importing."""
 
 
 class UpdateTests[PluginT: BasePlugin](

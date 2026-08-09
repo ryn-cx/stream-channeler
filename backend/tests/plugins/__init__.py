@@ -1,2 +1,1 @@
-# TODO: Validate
-"""`Plugin` tests."""
+"""Plugin tests."""

@@ -4,61 +4,26 @@ from typing import override
 
 from chirashi.browse_music.models import BrowseMusicModel
 
-from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
 from plugins.Crunchyroll.files import chirashi
 from plugins.Crunchyroll.music_keys import parse_artist_show_key
-from plugins.Crunchyroll.url_handlers import (
-    CrunchyrollArtistURLHandler,
-    CrunchyrollConcertURLHandler,
-    CrunchyrollMusicVideoURLHandler,
+from tests.plugins.crunchyroll.validators import (
+    CrunchyrollStandardTests,
+    CrunchyrollUpdateSourceTests,
+    CrunchyrollValidator,
+    crunchyroll_urls,
 )
-from tests.plugins.plugin_validator import (
-    InvalidURLValidator,
-    PluginValidator,
-    StandardTests,
-    UpdateSourceTests,
-)
-from tests.plugins.plugin_validator.validator import Validator
-from tests.plugins.test_crunchyroll import crunchyroll_urls
 
 
-class BaseCrunchyrollMusicValidator(PluginValidator[Crunchyroll]):
-    plugin_class = Crunchyroll
-    url_handler = CrunchyrollArtistURLHandler
+class CrunchyrollArtistValidator(CrunchyrollValidator):
     urls = crunchyroll_urls("artist/{parse_url_response}", "{artist_slug}")
 
 
-class CrunchyrollMusicStandardTests(
-    StandardTests[Crunchyroll],
-    BaseCrunchyrollMusicValidator,
-):
-    pass
-
-
 class CrunchyrollMusicUpdateSourceTest(
-    UpdateSourceTests[Crunchyroll],
-    BaseCrunchyrollMusicValidator,
+    CrunchyrollUpdateSourceTests,
+    CrunchyrollArtistValidator,
 ):
-    @override
-    def update_source_validator(self, source: Source) -> Validator:
-        validator = super().update_source_validator(source)
-        # Source.update will mock download a new BrowseMusic file, this file will
-        # then be used to set Source.data_timestamp, then Source.update_at will
-        # be set to a month after Source.data_timestamp.
-        validator = validator.incremented(Source, "update_at")
-
-        # Source.update will mock download a new BrowseMusic that includes a mock
-        # new entry for the artist. An artist carries no per-category timestamp,
-        # so the show and both of its category seasons are marked.
-        validator = validator.incremented(Season, "modified_at")
-        validator = validator.incremented(Show, "modified_at")
-        validator = validator.decremented(Show, "update_at")
-        # The existing seasons may or may not already have an update_at value.
-        return validator.populated_or_decremented(Season, "update_at")
-
     def export_browse_file(
         self,
         plugin_instance: Crunchyroll,
@@ -87,7 +52,7 @@ class CrunchyrollMusicUpdateSourceTest(
 
 
 class TestArtistWithMusicVideosAndConcerts(
-    CrunchyrollMusicStandardTests,
+    CrunchyrollStandardTests,
     CrunchyrollMusicUpdateSourceTest,
 ):
     parse_url_response = "MA179CB50D"
@@ -107,7 +72,6 @@ class TestArtistWithMusicVideosAndConcerts(
 #     artist_slug = "lisa"
 #     music_video_key = "MV5CD8B009"
 #     music_video_slug = "gurenge"
-#     url_handler = CrunchyrollMusicVideoURLHandler
 #     urls = crunchyroll_urls("watch/musicvideo/{music_video_key}", "{music_video_slug}")
 
 
@@ -116,21 +80,16 @@ class TestArtistWithMusicVideosAndConcerts(
 #     artist_slug = "lisa"
 #     concert_key = "MC413F1C5C"
 #     concert_slug = "lisa-ladybug"
-#     url_handler = CrunchyrollConcertURLHandler
 #     urls = crunchyroll_urls("watch/concert/{concert_key}", "{concert_slug}")
 
 
-# class InvalidCrunchyrollMusicURLValidator(InvalidURLValidator[Crunchyroll]):
-#     plugin_class = Crunchyroll
-
-
-# class TestInvalidArtistKey(InvalidCrunchyrollMusicURLValidator):
+# class TestInvalidArtistKey(InvalidCrunchyrollURLValidator):
 #     urls = ("crunchyroll.com/artist/MGGGGGGGG",)
 
 
-# class TestInvalidMusicVideoKey(InvalidCrunchyrollMusicURLValidator):
+# class TestInvalidMusicVideoKey(InvalidCrunchyrollURLValidator):
 #     urls = ("crunchyroll.com/watch/musicvideo/MVGGGGGGG",)
 
 
-# class TestInvalidConcertKey(InvalidCrunchyrollMusicURLValidator):
+# class TestInvalidConcertKey(InvalidCrunchyrollURLValidator):
 #     urls = ("crunchyroll.com/watch/concert/MCGGGGGGG",)

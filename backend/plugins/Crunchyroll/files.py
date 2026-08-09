@@ -26,7 +26,6 @@ from chirashi.seasons import models as seasons_models
 from chirashi.series import models as series_models
 
 from app.files.models import File
-from app.utils import tz_datetime
 from plugins.Crunchyroll.music_keys import (
     MusicCategory,
     is_artist_show_key,
@@ -102,7 +101,7 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     @override
     def _get(self) -> list[browse_series_models.BrowseSeriesModel]:
         return chirashi().browse_series.download_and_parse_until_datetime(
-            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+            end_datetime=self.identifier_datetime(),
         )
 
 

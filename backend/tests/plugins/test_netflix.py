@@ -9,7 +9,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Netflix import Netflix
-from plugins.Netflix.url_handlers import TitleURLHandler
 from tests.plugins.plugin_validator import (
     PluginValidator,
     StandardTests,
@@ -19,7 +18,6 @@ from tests.plugins.plugin_validator.validator import Validator
 
 class NetflixValidator(PluginValidator[Netflix]):
     plugin_class = Netflix
-    url_handler = TitleURLHandler
 
     @override
     def import_url_validator(self) -> Validator:

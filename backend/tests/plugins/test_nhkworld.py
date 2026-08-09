@@ -6,7 +6,6 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.NHKWorld import NHKWorld
 from plugins.NHKWorld.files import naphki
-from plugins.NHKWorld.url_handlers import ShowURLHandler
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -18,7 +17,6 @@ from tests.plugins.plugin_validator.validator import Validator
 
 class NHKWorldValidator(PluginValidator[NHKWorld]):
     plugin_class = NHKWorld
-    url_handler = ShowURLHandler
 
 
 class NHKWorldStandardTests(StandardTests[NHKWorld], NHKWorldValidator):

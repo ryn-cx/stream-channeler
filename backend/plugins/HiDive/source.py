@@ -7,7 +7,6 @@ from typing import override
 from loguru import logger
 
 from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.HiDive.files import (
     Schedule,
     diving_board,
@@ -58,7 +57,7 @@ class SourceMixin(HelperMixin, register=False):
 
     def _upsert_source(self) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
-            latest_schedule_file = self.schedule_file(tz_datetime.now())
+            latest_schedule_file = self._initial_file(Schedule)
             latest_schedule_file.download_if_outdated()
         data_timestamp = latest_schedule_file.data_timestamp
 

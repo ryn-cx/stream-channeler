@@ -22,6 +22,15 @@ from app.utils.sentinels import Sentinel
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
 
+INITIAL_FILE_IDENTIFIER = "Initial"
+"""What a file keyed by a timestamp is identified by before there is one.
+
+The first of a series of timestamped files has no earlier file to catch up to,
+so it is named for being the first rather than for when it was downloaded. That
+keeps its key the same every time one is created from nothing, which a key made
+of the current time never is.
+"""
+
 
 class BaseFile[T](ABC):
     IMMUTABLE: bool = False
@@ -81,6 +90,12 @@ class BaseFile[T](ABC):
         return value
 
     unique_identifier: str
+
+    def identifier_datetime(self) -> datetime:
+        """Return the datetime the identifier names, or now for the initial file."""
+        if self.unique_identifier == INITIAL_FILE_IDENTIFIER:
+            return tz_datetime.now()
+        return tz_datetime.fromisoformat(self.unique_identifier)
 
     @override
     def __eq__(self, other: object) -> bool:

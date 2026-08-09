@@ -7,10 +7,14 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+from uuid import UUID
 
 from loguru import logger
+from pydantic import BaseModel
 
-from app.constants import ALL_TEST_FILES_FOLDER
+from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
+from app.files.models import File
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BaseFile
 
 
@@ -73,8 +77,8 @@ def decode_name(segment: str) -> str:
     return "".join(characters)
 
 
-def stored_path(owner_key: str, file_key: str) -> Path:
-    """Return where the file `file_key` names is kept among the stored test files.
+def _encoded_path(owner_key: str, file_key: str) -> Path:
+    """Return where the file `file_key` names sits under a store's folder.
 
     A file is stored under the plugin that owns it, at the path its own key
     describes, so the stored files are laid out the way the plugins name them
@@ -83,7 +87,17 @@ def stored_path(owner_key: str, file_key: str) -> Path:
     as the folders they describe.
     """
     encoded = "/".join(encode_name(part) for part in file_key.split("/"))
-    return ALL_TEST_FILES_FOLDER / encode_name(owner_key) / encoded
+    return Path(encode_name(owner_key)) / encoded
+
+
+def stored_path(owner_key: str, file_key: str) -> Path:
+    """Return where the content of the file `file_key` names is kept."""
+    return ALL_TEST_FILES_FOLDER / _encoded_path(owner_key, file_key)
+
+
+def stored_metadata_path(owner_key: str, file_key: str) -> Path:
+    """Return where what the file `file_key` names was in the table is kept."""
+    return ALL_TEST_FILES_METADATA_FOLDER / _encoded_path(owner_key, file_key)
 
 
 def stored_key(path: Path) -> tuple[str, str]:
@@ -95,6 +109,70 @@ def stored_key(path: Path) -> tuple[str, str]:
 def stored_file_path(file: BaseFile[Any]) -> Path:
     """Return where `file` is kept among the stored test files."""
     return stored_path(_owner_key(file), file.file_key())
+
+
+class StoredFileMetadata(BaseModel):
+    """What a stored file was in the `File` table when it was downloaded.
+
+    Everything the table holds is kept except the content, which is the stored
+    file itself, and the plugin it belongs to, which is where it is stored.
+    """
+
+    id: UUID
+    key: str
+    created_at: datetime
+    modified_at: datetime
+    data_timestamp: datetime
+    update_at: datetime | None = None
+    deleted_at: datetime | None = None
+    extra: str | None = None
+
+
+def read_stored_metadata(owner_key: str, file_key: str) -> StoredFileMetadata | None:
+    """Return what `file_key` was in the table, or None when it was not stored."""
+    path = stored_metadata_path(owner_key, file_key)
+    if not _exists(path):
+        return None
+    return StoredFileMetadata.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def write_stored_metadata(owner_key: str, file_key: str, record: File) -> None:
+    """Store what `record` is in the table beside the content it was stored for."""
+    path = stored_metadata_path(owner_key, file_key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = StoredFileMetadata.model_validate(record, from_attributes=True)
+    path.write_text(metadata.model_dump_json(indent=2), encoding="utf-8")
+
+
+def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
+    """Put back what `record` was in the table when it was stored.
+
+    A file stored before its metadata was kept has one written for it out of the
+    stored file, so the store fills itself in as it is read rather than having
+    to be recorded from nothing again.
+    """
+    metadata = read_stored_metadata(owner_key, record.key)
+    if metadata is None:
+        record.data_timestamp = tz_datetime.fromtimestamp(path.stat().st_mtime)
+        write_stored_metadata(owner_key, record.key, record)
+        return
+    for field, value in metadata.model_dump().items():
+        setattr(record, field, value)
+
+
+def stored_file_record(owner_key: str, file_key: str, path: Path) -> File:
+    """Return the `File` the stored copy of `file_key` describes."""
+    content = path.read_text(encoding="utf-8") or None
+    if metadata := read_stored_metadata(owner_key, file_key):
+        return File(**metadata.model_dump(), content=content)
+    # A file stored before its metadata was kept is dated by the stored file,
+    # which moves only when the file is refreshed, so it says the same thing a
+    # timestamp read off the data would have.
+    return File(
+        key=file_key,
+        content=content,
+        data_timestamp=tz_datetime.fromtimestamp(path.stat().st_mtime),
+    )
 
 
 def _exists(path: Path) -> bool:
@@ -142,10 +220,16 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         if not self.is_outdated(update_at):
             return
 
+        owner_key = _owner_key(self)
         path = stored_file_path(self)
         if _exists(path):
             logger.debug(f"Serving {self.file_key()} from {path}")
             self.write(path.read_text(encoding="utf-8") or None)
+            # `write` stamps the record with the current time, so what the file
+            # was in the table when it was stored is put back over it. Without
+            # that a recording run records the time it ran while every run after
+            # it reads the stored value, which is a mismatch in every test.
+            restore_stored_metadata(self.database_record, owner_key, path)
             return
 
         original_download_if_outdated(self, update_at)
@@ -153,6 +237,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(self.database_record.content or "", encoding="utf-8")
+            write_stored_metadata(owner_key, self.file_key(), self.database_record)
         except OSError as error:
             # Held until the run is over so the rest of the files are still
             # stored, and the report names every key at fault rather than only

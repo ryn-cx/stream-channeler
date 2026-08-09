@@ -12,10 +12,8 @@ from diving_board.search import models as search_models
 from diving_board.season import models as season_models
 from diving_board.series import models as series_models
 from diving_board.vod import models as vod_models
-from sqlmodel import Session
 
 from app.files.models import File
-from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import (
@@ -77,19 +75,10 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
 
     API_ENDPOINT = diving_board().schedule
 
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        input_date: datetime,
-    ) -> None:
-        self.input_date = input_date
-        super().__init__(session, plugin, input_date.isoformat())
-
     @override
     def _get(self) -> list[schedule_models.ScheduleModel]:
         # Start at the first of the month because it matches the normal API calls.
-        from_ = self.input_date.replace(
+        from_ = self.identifier_datetime().replace(
             day=1,
             hour=0,
             minute=0,
@@ -134,10 +123,10 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
     def schedule_file(self, input_date: datetime | File) -> Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
         if isinstance(input_date, File):
-            input_date = datetime.fromisoformat(
-                Schedule.file_key_to_unique_identifier(input_date.key),
-            )
-        return self._file(Schedule, input_date)
+            identifier = Schedule.file_key_to_unique_identifier(input_date.key)
+        else:
+            identifier = input_date.isoformat()
+        return self._file(Schedule, identifier)
 
     def search_file(self, query: str) -> Search:
         """Return a cached Search for the given query."""

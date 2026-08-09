@@ -10,7 +10,7 @@ from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import (
     CATEGORY_NAMES,
@@ -54,7 +54,7 @@ class UpsertMixin(HelperMixin, register=False):
         # If this is the first time the source is upserted an initial browse file needs
         # to be downloaded.
         if not (latest_browse_file := self.find_newest_browse_file()):
-            latest_browse_file = self.browse_series_file(tz_datetime.now())
+            latest_browse_file = self._initial_file(BrowseSeries)
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
@@ -203,7 +203,7 @@ class UpsertMixin(HelperMixin, register=False):
         # If this is the first time the source is upserted an initial browse file
         # needs to be downloaded.
         if not (latest_browse_file := self.find_newest_music_browse_file()):
-            latest_browse_file = self.browse_music_file(tz_datetime.now())
+            latest_browse_file = self._initial_file(BrowseMusic)
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 

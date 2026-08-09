@@ -11,7 +11,6 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.JustWatch import JustWatch
 from plugins.JustWatch.files import BuyBoxOffers, just_scrape
-from plugins.JustWatch.url_handlers import TitleURLHandler
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -36,7 +35,6 @@ class JustWatchValidator(PluginValidator[JustWatch]):
     """
 
     plugin_class = JustWatch
-    url_handler = TitleURLHandler
 
 
 class JustWatchStandardTests(StandardTests[JustWatch], JustWatchValidator):

@@ -8,7 +8,6 @@ from loguru import logger
 
 from app.shows.models import Show
 from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
 
 
@@ -51,7 +50,7 @@ class SourceMixin(FileMixin, register=False):
 
     def _upsert_source(self) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
-            latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
+            latest_feed_file = self._initial_file(NewVideoEpisodes)
             latest_feed_file.download_if_outdated()
         data_timestamp = latest_feed_file.data_timestamp
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())

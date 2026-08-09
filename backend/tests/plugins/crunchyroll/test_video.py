@@ -4,60 +4,32 @@ from typing import override
 
 from chirashi.browse_series.models import BrowseSeriesModel
 
-from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
 from plugins.Crunchyroll.files import chirashi
-from plugins.Crunchyroll.url_handlers import CrunchyrollSeriesURLHandler
-from tests.plugins.plugin_validator import (
-    PluginValidator,
-    StandardTests,
-    UpdateSourceTests,
+from tests.plugins.crunchyroll.validators import (
+    CrunchyrollStandardTests,
+    CrunchyrollUpdateSourceTests,
+    CrunchyrollValidator,
+    crunchyroll_urls,
 )
-from tests.plugins.plugin_validator.validator import Validator
 
 
-def crunchyroll_urls(path: str, slug: str) -> tuple[str, ...]:
-    locales = ("", "/de", "/pt-br")
-    suffixes = ("", "/", f"/{slug}")
-    return tuple(
-        f"{locale}/{path}{suffix}" for locale in locales for suffix in suffixes
-    )
-
-
-class BaseCrunchyrollValidator(PluginValidator[Crunchyroll]):
-    plugin_class = Crunchyroll
-    url_handler = CrunchyrollSeriesURLHandler
+class CrunchyrollVideoValidator(CrunchyrollValidator):
     urls = crunchyroll_urls("series/{parse_url_response}", "{show_slug}")
 
 
-class CrunchyrollStandardTests(StandardTests[Crunchyroll], BaseCrunchyrollValidator):
+class CrunchyrollVideoStandardTests(
+    CrunchyrollStandardTests,
+    CrunchyrollVideoValidator,
+):
     pass
 
 
-class CrunchyrollUpdateSourceTest(
-    UpdateSourceTests[Crunchyroll],
-    BaseCrunchyrollValidator,
+class CrunchyrollVideoUpdateSourceTest(
+    CrunchyrollUpdateSourceTests,
+    CrunchyrollVideoValidator,
 ):
-    @override
-    def update_source_validator(self, source: Source) -> Validator:
-        validator = super().update_source_validator(source)
-        # Source.update will mock download a new BrowseSeries file, this file will then
-        # be used to set Source.data_timestamp, then Source.update_at will be set to 24
-        # hours after Source.data_timestamp.
-        # TODO: More accurate timestamp checking
-        validator = validator.incremented(Source, "update_at")
-
-        # Source.update will mock download a new BrowseSeries that includes a mock new
-        # entry for the show. When a new entry for a show is added both the show and the
-        # season will have their update_at value set to the timestamp for that show.
-        validator = validator.incremented(Season, "modified_at")
-        validator = validator.incremented(Show, "modified_at")
-        validator = validator.decremented(Show, "update_at")
-        # The existing seasons may or may not already have an update_at value.
-        return validator.populated_or_decremented(Season, "update_at")
-
     def export_browse_file(
         self,
         plugin_instance: Crunchyroll,
@@ -87,7 +59,10 @@ class CrunchyrollUpdateSourceTest(
 # https://www.crunchyroll.com/series/GT00371926/please-excuse-my-younger-brothers
 
 
-class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+class TestAiringSingleSeasonShow(
+    CrunchyrollVideoStandardTests,
+    CrunchyrollVideoUpdateSourceTest,
+):
     parse_url_response = "GT00371926"
     show_slug = "please-excuse-my-younger-brothers"
     search_query = "Please Excuse My Younger Brothers"
@@ -95,8 +70,8 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
 
 
 # class TestAiringMultipleSeasonsShow(
-#     CrunchyrollStandardTests,
-#     CrunchyrollUpdateSourceTest,
+#     CrunchyrollVideoStandardTests,
+#     CrunchyrollVideoUpdateSourceTest,
 # ):
 #     parse_url_response = "GQWH0MXPQ"
 #     show_slug = "anime-azurlane-slow-ahead"
@@ -105,8 +80,8 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
 
 
 # class TestCompletedSingleSeasonShow(
-#     CrunchyrollStandardTests,
-#     CrunchyrollUpdateSourceTest,
+#     CrunchyrollVideoStandardTests,
+#     CrunchyrollVideoUpdateSourceTest,
 # ):
 #     parse_url_response = "GEXH3W29Z"
 #     show_slug = "compass20-animation-project"
@@ -115,8 +90,8 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
 
 
 # class TestCompletedMultipleSeasonsShow(
-#     CrunchyrollStandardTests,
-#     CrunchyrollUpdateSourceTest,
+#     CrunchyrollVideoStandardTests,
+#     CrunchyrollVideoUpdateSourceTest,
 # ):
 #     parse_url_response = "GRVNZK5PY"
 #     show_slug = "a-certain-magical-index"
@@ -124,47 +99,38 @@ class TestAiringSingleSeasonShow(CrunchyrollStandardTests, CrunchyrollUpdateSour
 #     search_url = "https://www.crunchyroll.com/series/GRVNZK5PY"
 
 
-# class TestSingleEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+# class TestSingleEpisode(
+#     CrunchyrollVideoStandardTests,
+#     CrunchyrollVideoUpdateSourceTest,
+# ):
 #     parse_url_response = "GT00375170"
 #     show_slug = "the-food-diary-of-miss-maid"
 #     episode_key = "GE00375439JAJP"
 #     episode_slug = "taiyaki-takoyaki-odango-convenience-store-onigiri-and-baumkuchen"
-#     urls = (
-#         "/watch/{episode_key}",
-#         "/watch/{episode_key}/",
-#         "/watch/{episode_key}/{episode_slug}",
-#     )
+#     urls = crunchyroll_urls("watch/{episode_key}", "{episode_slug}")
 
 
-# class TestMovie(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+# class TestMovie(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
 #     parse_url_response = "GMTE00335490"
 #     show_slug = "spy-x-family-code-white"
 #     search_query = "Spy x Family: Code White"
 #     search_url = "https://www.crunchyroll.com/series/GMTE00335490"
 
 
-# class TestMovieEpisode(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+# class TestMovieEpisode(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
 #     parse_url_response = "GMEE00380050JAJP"
 #     show_slug = "x-the-movie"
 #     episode_key = "GMEE00380050JAJP"
 #     episode_slug = "x-the-movie"
-#     urls = (
-#         "/watch/{episode_key}",
-#         "/watch/{episode_key}/",
-#         "/watch/{episode_key}/{episode_slug}",
-#     )
+#     urls = crunchyroll_urls("watch/{episode_key}", "{episode_slug}")
 #     search_query = "X: The Movie"
 
 
-# class TestTMDBMismatch(CrunchyrollStandardTests, CrunchyrollUpdateSourceTest):
+# class TestTMDBMismatch(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
 #     parse_url_response = "GG5H5XQX4"
 #     show_slug = "frieren-beyond-journeys-end"
 #     search_query = "Frieren: Beyond Journey's End"
 #     search_url = "https://www.crunchyroll.com/series/GG5H5XQX4"
-
-
-# class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
-#     plugin_class = Crunchyroll
 
 
 # class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):

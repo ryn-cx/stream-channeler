@@ -14,7 +14,6 @@ from sqlmodel import Session
 
 from app.files.models import File
 from app.plugins.models import Plugin
-from app.utils import tz_datetime
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
@@ -83,7 +82,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
         # get_all() uses. The initial baseline (to_datetime == now) stops after
         # the first page, and day-to-day there are rarely more than a handful of
         # new episodes, so a single page almost always covers the gap.
-        to_datetime = tz_datetime.fromisoformat(self.unique_identifier)
+        to_datetime = self.identifier_datetime()
         pages: list[VideoEpisodesModel] = []
         offset = 0
         while True:

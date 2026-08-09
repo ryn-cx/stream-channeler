@@ -19,7 +19,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
-from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     PluginSearchResults,
     URLImportResult,
@@ -31,7 +30,10 @@ from tests.conftest import (
     savepoint_session,
     test_engine,
 )
-from tests.plugins.plugin_validator.context_managers import stored_path
+from tests.plugins.plugin_validator.context_managers import (
+    stored_file_record,
+    stored_path,
+)
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
@@ -329,15 +331,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             if file_key in existing_keys[plugin_key]:
                 continue
             plugin_records[plugin_key].files.append(
-                File(
-                    key=file_key,
-                    content=path.read_text(encoding="utf-8") or None,
-                    # Only the content of a file is stored, so when it was
-                    # downloaded is taken from the stored file itself. It moves
-                    # only when the file is refreshed, which is what a timestamp
-                    # read off the data would have done too.
-                    data_timestamp=tz_datetime.fromtimestamp(path.stat().st_mtime),
-                ),
+                stored_file_record(plugin_key, file_key, path),
             )
             existing_keys[plugin_key].add(file_key)
 

@@ -27,7 +27,7 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin.check import CheckMixin
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLHandler, URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
@@ -452,6 +452,13 @@ class BasePlugin(
         file = file_type(self.session, self.plugin, *identifiers)
         cache[cache_key] = file
         return file
+
+    def _initial_file[FileT: BaseFile[Any]](
+        self,
+        file_type: Callable[..., FileT],
+    ) -> FileT:
+        """Return the `file_type` instance a timestamped series of files starts at."""
+        return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
