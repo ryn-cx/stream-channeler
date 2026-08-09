@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router"
 import { List } from "lucide-react"
 import { useState } from "react"
 import { ChannelsService } from "@/client"
+import { ShowCards } from "@/components/Channels/ShowCards"
 import {
   type TriggerVariant,
   VariantTrigger,
@@ -52,7 +53,7 @@ export function ChannelShowsButton({
           iconTitle="List shows"
         />
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Shows</DialogTitle>
           <DialogDescription>
@@ -79,26 +80,11 @@ export function ChannelShowsButton({
                       {group.channel_name || "Unnamed Channel"}
                     </Link>
                   </h3>
-                  <ul className="space-y-1">
-                    {group.shows.map((show) => {
-                      const source = data?.sources?.[show.source_id]
-                      return (
-                        <li
-                          key={show.id}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          {source?.favicon_url && (
-                            <img
-                              src={source.favicon_url}
-                              alt={`${source.name} favicon`}
-                              className="size-4 shrink-0"
-                            />
-                          )}
-                          <span>{show.name}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  <ShowCards
+                    shows={group.shows}
+                    sources={data?.sources ?? {}}
+                    stats={data?.stats ?? {}}
+                  />
                 </div>
               ))}
             </div>
