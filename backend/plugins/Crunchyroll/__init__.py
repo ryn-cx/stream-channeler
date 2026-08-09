@@ -10,7 +10,7 @@ from typing import override
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.music_keys import MUSIC_SOURCE_KEY, VIDEO_SOURCE_KEY
+from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
@@ -20,7 +20,7 @@ from plugins.Crunchyroll.url_handlers import (
     CrunchyrollEpisodeURLHandler,
     CrunchyrollMusicVideoURLHandler,
     CrunchyrollSeriesURLHandler,
-    CrunchyrollURLHandler,
+    _CrunchyrollURLHandler,
 )
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -32,7 +32,7 @@ class Crunchyroll(
     UpsertMixin,
     SearchMixin,
     HelperMixin,
-    URLHandlerPlugin[CrunchyrollURLHandler],
+    URLHandlerPlugin[_CrunchyrollURLHandler],
     register=True,
 ):
     """Crunchyroll plugin."""
@@ -65,13 +65,13 @@ class Crunchyroll(
     def initialize_sources(self) -> None:
         if not hasattr(self, "video_source"):
             self.video_source = (
-                Source.get(self.session, self.plugin, VIDEO_SOURCE_KEY)
+                Source.get(self.session, self.plugin, VIDEO_SOURCE)
                 or self._upsert_video_source()
             )
 
         if not hasattr(self, "music_source"):
             self.music_source = (
-                Source.get(self.session, self.plugin, MUSIC_SOURCE_KEY)
+                Source.get(self.session, self.plugin, MUSIC_SOURCE)
                 or self._upsert_music_source()
             )
 

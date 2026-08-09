@@ -17,47 +17,37 @@ if TYPE_CHECKING:
     from app.shows.models import Show
     from plugins.Crunchyroll import Crunchyroll
 
-# Crunchyroll serves the same page under a locale prefix (`/de/series/...`,
-# `/pt-br/series/...`), which a link from elsewhere may well carry.
-_LOCALE = r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
 
-# Every id Crunchyroll puts in a URL has this shape.
-_KEY = r"[A-Z0-9]{9,}"
-
-# What may follow a key: a slug, a query, a fragment, or the end of the URL. A
-# link from elsewhere keeps its tracking parameters, so a query has to end a key
-# just as a slash does.
-_KEY_END = r"(?:[\/?#]|$)"
-
-
-def _key_url_regex(*path: str, group: str) -> str:
-    """Return the regex for a Crunchyroll path that ends in an id.
-
-    Wraps `path` in the locale prefix and the key terminator so each handler
-    only states the part that is its own.
-    """
-    segments = "".join(rf"\/{segment}" for segment in path)
-    return rf"{_LOCALE}{segments}\/(?P<{group}>{_KEY}){_KEY_END}"
+def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
+    """Return the regex for a Crunchyroll url."""
+    return (
+        "(?x:"
+        # The sometimes present local prefix like de, pt-br, etc.
+        r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
+        # The media type identifier, series, watch, artist, etc.
+        + "".join(rf"\/{segment}" for segment in path)
+        # The Crunchyroll key.
+        + rf"\/(?P<{group}>[A-Z0-9]{{9,}})"
+        # The URL suffix, usually a slug but other options are also valid.
+        r"(?:[\/?#]|$)"
+        ")"
+    )
 
 
-class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
-    """Base URL handler for the Crunchyroll plugin."""
-
+class _CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
     @override
     def __init__(self, plugin: Crunchyroll, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
-class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
+class CrunchyrollSeriesURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll series URL handler.
 
-    Supported URL Formats:
-        - https://www.crunchyroll.com/series/GEXH3W29Z
-        - https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project
+    Example URL https://www.crunchyroll.com/series/GEXH3W29Z
     """
 
-    _URL_REGEX = _key_url_regex("series", group="show_key")
+    _URL_REGEX = _build_crunchyroll_url_regex("series", group="show_key")
 
     @property
     @override
@@ -70,15 +60,13 @@ class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
         self.plugin.raise_if_invalid_file(plugin_file, self.url)
 
 
-class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
+class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll episode URL handler.
 
-    Supported URL Formats:
-        - https://www.crunchyroll.com/watch/GVWU8XW1Z
-        - https://www.crunchyroll.com/watch/GVWU8XW1Z/this-is-compass20
+    Example URL https://www.crunchyroll.com/watch/GVWU8XW1Z
     """
 
-    _URL_REGEX = _key_url_regex("watch", group="episode_key")
+    _URL_REGEX = _build_crunchyroll_url_regex("watch", group="episode_key")
 
     @property
     @override
@@ -91,9 +79,10 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
         objects_file = self.plugin.objects_file(self._key)
         self.plugin.raise_if_invalid_file(objects_file, self.url)
 
-        # Crunchyroll gives an episode an id per audio version and a link can
-        # name any of them, but a show only carries the original one, so the key
-        # becomes that and the dub is not referred to again.
+        # TODO: Is it true the api always returns the original region in the current
+        # setup?
+        # Episodes for different regions have different keys. The show is always
+        # imported for the original region so the episode key also needs to match.
         for version in objects_file.parsed().data[0].episode_metadata.versions:
             if version.original:
                 self._key = version.guid
@@ -105,16 +94,10 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return [
-            URLImportResult.for_episodes(show, [self._stored_episode(show)]),
+            URLImportResult.for_episodes(show, [self._get_matching_episode(show)]),
         ]
 
-    def _stored_episode(self, show: Show) -> Episode:
-        """Return the episode the URL names.
-
-        Raises:
-            `InvalidURLError` if the show does not carry the episode.
-
-        """
+    def _get_matching_episode(self, show: Show) -> Episode:
         for season in show.seasons:
             for episode in season.episodes:
                 if episode.key == self._key:
@@ -124,18 +107,13 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
         raise InvalidURLError(msg)
 
 
-class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
+class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll artist URL handler.
 
-    Importing an artist takes every music video and concert they have released,
-    and every one they release later.
-
-    Supported URL Formats:
-        - https://www.crunchyroll.com/artist/MA899F54A4
-        - https://www.crunchyroll.com/artist/MA899F54A4/lisa
+    Example URL https://www.crunchyroll.com/artist/MA899F54A4
     """
 
-    _URL_REGEX = _key_url_regex("artist", group="artist_key")
+    _URL_REGEX = _build_crunchyroll_url_regex("artist", group="artist_key")
 
     @property
     @override
@@ -148,19 +126,14 @@ class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
         self.plugin.raise_if_invalid_file(artist_file, self.url)
 
 
-class CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
-    """Base handler for a single music video or concert.
-
-    Both are reached through the artist that released them, so the URL only
-    identifies which of the artist's episodes the import should whitelist.
-    """
-
+class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
     _CATEGORY: MusicCategory
 
     @property
     @override
     def show_key(self) -> str:
-        details = self.plugin.music_file(self._episode_key).parsed().data[0]
+        file = self.plugin.concert_or_music_video_file(self._episode_key)
+        details = file.parsed().data[0]
         return artist_show_key(details.artist.id)
 
     @property
@@ -169,7 +142,7 @@ class CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
 
     @override
     def raise_if_invalid(self) -> None:
-        music_file = self.plugin.music_file(self._episode_key)
+        music_file = self.plugin.concert_or_music_video_file(self._episode_key)
         self.plugin.raise_if_invalid_file(music_file, self.url)
 
     @override
@@ -185,25 +158,25 @@ class CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
         raise InvalidURLError(msg)
 
 
-class CrunchyrollMusicVideoURLHandler(CrunchyrollMusicURLHandler):
+class CrunchyrollMusicVideoURLHandler(_CrunchyrollMusicURLHandler):
     """Crunchyroll music video URL handler.
 
-    Supported URL Formats:
-        - https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
-        - https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009/gurenge
+    Example URL https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
     """
 
-    _URL_REGEX = _key_url_regex("watch", "musicvideo", group="music_video_key")
+    _URL_REGEX = _build_crunchyroll_url_regex(
+        "watch",
+        "musicvideo",
+        group="music_video_key",
+    )
     _CATEGORY = MusicCategory.MUSIC_VIDEO
 
 
-class CrunchyrollConcertURLHandler(CrunchyrollMusicURLHandler):
+class CrunchyrollConcertURLHandler(_CrunchyrollMusicURLHandler):
     """Crunchyroll concert URL handler.
 
-    Supported URL Formats:
-        - https://www.crunchyroll.com/watch/concert/MC413F1C5C
-        - https://www.crunchyroll.com/watch/concert/MC413F1C5C/lisa-ladybug
+    Example URL https://www.crunchyroll.com/watch/concert/MC413F1C5C
     """
 
-    _URL_REGEX = _key_url_regex("watch", "concert", group="concert_key")
+    _URL_REGEX = _build_crunchyroll_url_regex("watch", "concert", group="concert_key")
     _CATEGORY = MusicCategory.CONCERT

@@ -14,10 +14,8 @@ from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import (
     CATEGORY_NAMES,
-    MUSIC_SOURCE_KEY,
-    MUSIC_SOURCE_NAME,
-    VIDEO_SOURCE_KEY,
-    VIDEO_SOURCE_NAME,
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
     MusicCategory,
     is_artist_show_key,
     music_episode_key,
@@ -60,10 +58,10 @@ class UpsertMixin(HelperMixin, register=False):
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, VIDEO_SOURCE_KEY)
+        source = Source.get_from_memory(self.session, self.plugin, VIDEO_SOURCE)
         return Source(
-            key=VIDEO_SOURCE_KEY,
-            name=VIDEO_SOURCE_NAME,
+            key=VIDEO_SOURCE,
+            name=VIDEO_SOURCE,
             favicon_url=self.FAVICON_URL,
             data_timestamp=data_timestamp,
             update_at=data_timestamp + timedelta(days=1),
@@ -209,10 +207,10 @@ class UpsertMixin(HelperMixin, register=False):
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, MUSIC_SOURCE_KEY)
+        source = Source.get_from_memory(self.session, self.plugin, MUSIC_SOURCE)
         return Source(
-            key=MUSIC_SOURCE_KEY,
-            name=MUSIC_SOURCE_NAME,
+            key=MUSIC_SOURCE,
+            name=MUSIC_SOURCE,
             favicon_url=self.FAVICON_URL,
             data_timestamp=data_timestamp,
             update_at=data_timestamp + MUSIC_UPDATE_INTERVAL,
@@ -293,7 +291,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        listing = self.concerts_or_music_videos_file(artist_id, category).parsed().data
+        listing = self.artist_concerts_or_artist_music_videos_file(artist_id, category).parsed().data
         # Crunchyroll lists an artist's releases newest first, so the order is
         # reversed to number them the way they were released.
         for sort_order, datum in enumerate(reversed(listing)):
@@ -307,7 +305,7 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
-            details = self.music_file(episode_key).parsed().data[0]
+            details = self.concert_or_music_video_file(episode_key).parsed().data[0]
             Episode(
                 key=episode_key,
                 name=details.title,

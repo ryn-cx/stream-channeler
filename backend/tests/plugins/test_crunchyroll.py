@@ -9,6 +9,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
 from plugins.Crunchyroll.files import chirashi
+from plugins.Crunchyroll.url_handlers import CrunchyrollSeriesURLHandler
 from tests.plugins.plugin_validator import (
     PluginValidator,
     StandardTests,
@@ -17,13 +18,18 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+def crunchyroll_urls(path: str, slug: str) -> tuple[str, ...]:
+    locales = ("", "/de", "/pt-br")
+    suffixes = ("", "/", f"/{slug}")
+    return tuple(
+        f"{locale}/{path}{suffix}" for locale in locales for suffix in suffixes
+    )
+
+
 class BaseCrunchyrollValidator(PluginValidator[Crunchyroll]):
     plugin_class = Crunchyroll
-    urls = (
-        "/series/{parse_url_response}/{show_slug}",
-        "/series/{parse_url_response}/",
-        "/series/{parse_url_response}",
-    )
+    url_handler = CrunchyrollSeriesURLHandler
+    urls = crunchyroll_urls("series/{parse_url_response}", "{show_slug}")
 
 
 class CrunchyrollStandardTests(StandardTests[Crunchyroll], BaseCrunchyrollValidator):

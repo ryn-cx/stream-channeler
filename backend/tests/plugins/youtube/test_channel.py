@@ -2,6 +2,7 @@
 from sqlmodel import Session
 
 from plugins.YouTube import YouTube
+from plugins.YouTube.handlers import ChannelURLHandler
 from tests.plugins.plugin_validator import StandardTests
 from tests.plugins.youtube.validators import (
     ChannelWithNoUploadsMixin,
@@ -21,6 +22,9 @@ def channel_url_patterns(*prefixes: str) -> tuple[str, ...]:
 class ChannelNameValidator(YouTubeValidator):
     """Validate importing a channel by handle or channel id."""
 
+    # A handle and a channel id are answered by a handler each, so the family is
+    # what the URLs have in common.
+    url_handler = ChannelURLHandler
     urls = channel_url_patterns(
         "/@{channel_name}",
         "/channel/{channel_key}",
@@ -31,6 +35,8 @@ class UsernameValidator(YouTubeValidator):
     """Validate importing a channel by username."""
 
     username: str
+    # Only `/user/` reaches the username handler; the other two are handles.
+    url_handler = ChannelURLHandler
     urls = channel_url_patterns(
         "/{username}",
         "/c/{username}",

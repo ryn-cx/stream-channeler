@@ -1,5 +1,6 @@
 # TODO: Validate
 from plugins.YouTube import YouTube
+from plugins.YouTube.handlers import PlaylistURLHandler, PlaylistVideoURLHandler
 from tests.plugins.plugin_validator import StandardTests
 from tests.plugins.youtube.validators import (
     ChannelWithNoUploadsMixin,
@@ -11,6 +12,7 @@ from tests.plugins.youtube.validators import (
 class PlaylistValidator(YouTubeValidator):
     """Validate importing a playlist."""
 
+    url_handler = PlaylistURLHandler
     urls = ("youtube.com/playlist?list={playlist_key}",)
 
 
@@ -18,6 +20,7 @@ class PlaylistVideoValidator(YouTubeValidator):
     """Validate importing a specific video from a playlist."""
 
     video_key: str
+    url_handler = PlaylistVideoURLHandler
     urls = ("/watch?v={video_key}&list={playlist_key}",)
 
 

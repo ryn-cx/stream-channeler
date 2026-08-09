@@ -94,9 +94,9 @@ class StreamChanneler(BasePlugin, register=True):
         url: str,
         tmdb_id: int | None = None,  # noqa: ARG002 - Copies media that already carries its own link.
     ) -> list[URLImportResult]:
-        return self._get_url_handler(url).import_results()
+        return self.get_url_handler(url).import_results()
 
-    def _get_url_handler(self, url: str) -> StreamChannelerURLHandler:
+    def get_url_handler(self, url: str) -> StreamChannelerURLHandler:
         match = re.match(self.url_regex(), url)
         if not match:
             msg = f"Invalid {self.plugin_key()} URL: {url}"

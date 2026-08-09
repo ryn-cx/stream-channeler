@@ -16,8 +16,8 @@ from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.music_keys import (
-    MUSIC_CHANNEL_NAME,
-    MUSIC_SOURCE_KEY,
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
     artist_show_key,
 )
 from plugins.Crunchyroll.upsert import UpsertMixin
@@ -28,15 +28,18 @@ MUSIC_CHANNEL_DESCRIPTION_PATH = Path(__file__).parent / "music_channel_descript
 class UpdateMixin(UpsertMixin, register=False):
     @override
     def update_source(self, source: Source) -> None:
-        if source.key == MUSIC_SOURCE_KEY:
+        if source.key == MUSIC_SOURCE:
             self._update_music_source(source)
-            return
+        elif source.key == VIDEO_SOURCE:
+            self._update_video_source(source)
 
+    def _update_video_source(self, source: Source) -> None:
+        """Look for new series, which the video `Source` is scheduled for daily."""
+        logger.info("Checking Crunchyroll for new releases")
         if source.data_timestamp is None:
             msg = "Cannot update source without a data timestamp."
             raise ValueError(msg)
-        new_browse_file = self.browse_series_file(source.data_timestamp)
-        new_browse_file.download_if_outdated()
+        self.browse_series_file(source.data_timestamp).download_if_outdated()
         self._process_new_browse_files(source)
         self._upsert_video_source()
 
@@ -118,13 +121,13 @@ class UpdateMixin(UpsertMixin, register=False):
         channel = self.session.exec(
             select(Channel)
             .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == MUSIC_CHANNEL_NAME),
+            .where(Channel.name == MUSIC_SOURCE),
         ).first()
         if channel:
             return channel
 
         channel = Channel(
-            name=MUSIC_CHANNEL_NAME,
+            name=MUSIC_SOURCE,
             description=MUSIC_CHANNEL_DESCRIPTION_PATH.read_text(encoding="utf-8"),
             visibility=Visibility.public,
             anonymous=False,

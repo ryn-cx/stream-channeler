@@ -1,10 +1,12 @@
 # TODO: Validate
 from plugins.YouTube import YouTube
+from plugins.YouTube.handlers import VideoURLHandler
 from tests.plugins.plugin_validator import StandardTests
 from tests.plugins.youtube.validators import YouTubeValidator
 
 
 class TestVideo(StandardTests[YouTube], YouTubeValidator):
+    url_handler = VideoURLHandler
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     channel_name = "jawed"
     video_key = "jNQXAC9IVRw"
@@ -26,6 +28,7 @@ class TestYouTubeMovie(StandardTests[YouTube], YouTubeValidator):
     show of its own.
     """
 
+    url_handler = VideoURLHandler
     video_key = "dQB4HJfVj2Q"
     urls = (
         f"youtube.com/watch?v={video_key}",
@@ -39,8 +42,12 @@ class TestYouTubeShowEpisode(StandardTests[YouTube], YouTubeValidator):
 
     The show playlist the URL carries is not a playlist the API can read, so the
     episode is imported as a show of its own the same way a movie is.
+
+    The show playlist is not a `PL` playlist, so even the URL carrying it is
+    answered by the video handler rather than the playlist video one.
     """
 
+    url_handler = VideoURLHandler
     video_key = "TEJevNI9WoA"
     show_playlist_key = "TVSHZ4sc4JoEC9IdUMI4DcegnVhNMxEieH11w"
     urls = (

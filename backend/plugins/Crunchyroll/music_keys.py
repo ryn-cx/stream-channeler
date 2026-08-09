@@ -20,15 +20,11 @@ class MusicCategory(StrEnum):
 ARTIST_PREFIX = "artist"
 
 # Music is its own `Source` so a channel can take an artist without the video
-# catalogue coming with it, and so the two can be scheduled apart.
-VIDEO_SOURCE_KEY = "Crunchyroll"
-VIDEO_SOURCE_NAME = "Crunchyroll"
-MUSIC_SOURCE_KEY = "CrunchyrollMusic"
-MUSIC_SOURCE_NAME = "Crunchyroll Music"
-
-# Every artist Crunchyroll releases music for is queued into one plugin owned
-# channel, since their own site gives no way to browse the catalogue.
-MUSIC_CHANNEL_NAME = "Crunchyroll Music"
+# catalogue coming with it, and so the two can be scheduled apart. Each source is
+# keyed by the name it is shown under, and the plugin owned channel every artist
+# is queued into is named after the music source it collects.
+VIDEO_SOURCE = "Crunchyroll Videos"
+MUSIC_SOURCE = "Crunchyroll Music"
 
 # An artist's videos and concerts are two separate listings, so each becomes a
 # season of its own rather than one flat list of everything they released.

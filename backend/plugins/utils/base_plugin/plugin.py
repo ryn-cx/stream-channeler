@@ -96,7 +96,7 @@ class BasePlugin(
         "plugin",
         "_source",
         "_current_show",
-        "_plugin_file_cache",
+        "_reusable_file_cache",
     })
     """The instance attributes that describe the plugin rather than a show.
 
@@ -463,7 +463,7 @@ class BasePlugin(
 class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=False):
     _URL_HANDLERS: ClassVar[tuple[type[URLHandler[Any]], ...]]
 
-    def _get_url_handler(self, url: str) -> HandlerT:
+    def get_url_handler(self, url: str) -> HandlerT:
         domain_regex = self._domain_regex()
         for handler_class in self._URL_HANDLERS:
             if match := re.match(handler_class._url_regex(domain_regex), url):
@@ -489,7 +489,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         tmdb_id: int | None = None,
     ) -> list[URLImportResult]:
         self._use_tmdb_id(tmdb_id)
-        handler = self._get_url_handler(url)
+        handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key)
         return handler.import_results(show)

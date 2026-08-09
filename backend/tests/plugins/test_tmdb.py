@@ -1,5 +1,6 @@
 # TODO: Validate
 from plugins.TMDB import TMDB
+from plugins.TMDB.url_handlers import MovieURLHandler, TvURLHandler
 from tests.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
@@ -25,6 +26,7 @@ class TMDBValidator(PluginValidator[TMDB]):
 # no show of its own for the update and deletion tests to work on.
 class TestShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
     media_type = "tv"
+    url_handler = TvURLHandler
     parse_url_response = "85937"
     show_slug = "demon-slayer-kimetsu-no-yaiba"
     search_query = "Demon Slayer"
@@ -32,6 +34,7 @@ class TestShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
 
 class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
     media_type = "tv"
+    url_handler = TvURLHandler
     parse_url_response = "64196"
     show_slug = "overlord"
     search_query = "Overlord"
@@ -39,11 +42,13 @@ class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
 
 class TestNoJustWatch(URLTests[TMDB], TMDBValidator):
     media_type = "movie"
+    url_handler = MovieURLHandler
     parse_url_response = "1368337"
     show_slug = "the-odyssey"
 
 
 class TestTemp(URLTests[TMDB], TMDBValidator):
+    url_handler = TvURLHandler
     urls = ("https://www.themoviedb.org/tv/209867/watch?language=en-US",)
 
 

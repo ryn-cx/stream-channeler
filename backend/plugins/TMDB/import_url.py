@@ -36,7 +36,7 @@ class ImportURLMixin(
         plugin's own copy of it is imported instead of the URL adding nothing.
         """
         self._use_tmdb_id(tmdb_id)
-        handler = self._get_url_handler(url)
+        handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
         justwatch_url = self._justwatch_url(handler.title_page_file())

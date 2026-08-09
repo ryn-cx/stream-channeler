@@ -96,7 +96,7 @@ class YouTube(
         )
         return f"(?:{alternatives})"
 
-    def _get_url_handler(self, url: str) -> YouTubeURLHandler:
+    def get_url_handler(self, url: str) -> YouTubeURLHandler:
         long_domain_regex = self._regex_escape_domain(self.__long_domain())
         short_domain_regex = self._regex_escape_domain(self.__short_domain())
         for handler_class in self._URL_HANDLERS:
@@ -114,7 +114,7 @@ class YouTube(
         tmdb_id: int | None = None,
     ) -> list[URLImportResult]:
         self._use_tmdb_id(tmdb_id)
-        handler = self._get_url_handler(url)
+        handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key, handler.playlist_key)
         return handler.import_results(show)

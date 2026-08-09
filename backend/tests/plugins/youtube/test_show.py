@@ -1,5 +1,6 @@
 # TODO: Validate
 from plugins.YouTube import YouTube
+from plugins.YouTube.handlers import ShowURLHandler
 from tests.plugins.plugin_validator import StandardTests
 from tests.plugins.youtube.validators import (
     InvalidYouTubeURLValidator,
@@ -10,6 +11,7 @@ from tests.plugins.youtube.validators import (
 class TestShow(StandardTests[YouTube], YouTubeValidator):
     """Test importing a YouTube show."""
 
+    url_handler = ShowURLHandler
     show_key = "SCYT6SmwXZxUksg_rJd_nzuw"
     urls = ("youtube.com/show/{show_key}",)
     parse_url_response = ("show_key", show_key)
@@ -22,6 +24,7 @@ class TestShowSeason(StandardTests[YouTube], YouTubeValidator):
     imported so the show is complete.
     """
 
+    url_handler = ShowURLHandler
     show_key = "SCcxGQ4YKyH9nQoeu3yH0pwg"
     season_number = "2"
     sbp = (

@@ -35,7 +35,7 @@ class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
         tmdb_id: int | None = None,
     ) -> list[URLImportResult]:
         self._use_tmdb_id(tmdb_id)
-        handler = self._get_url_handler(url)
+        handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         self._media_type_value = handler.media_type
         show = self._import_show(handler.show_key)

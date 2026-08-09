@@ -175,6 +175,7 @@ class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
     IMMUTABLE = True
     API_ENDPOINT = chirashi().browse_music
 
+    # Music seems to be ordered randomly so downloading all of it is required.
     @override
     def _get(self) -> list[browse_music_models.BrowseMusicModel]:
         return chirashi().browse_music.download_and_parse_all()
@@ -202,7 +203,7 @@ class FileMixin(TMDBMixin, register=False):
         return self._file(SeasonEpisodes, season_key)
 
     def browse_series_file(self, browse: datetime | File) -> BrowseSeries:
-        """Returns BrowseSeries file, either for a datetime or a `File` record."""
+        """Returns BrowseSeries file."""
         if isinstance(browse, File):
             return self._file(
                 BrowseSeries,
@@ -226,7 +227,7 @@ class FileMixin(TMDBMixin, register=False):
         """Returns ArtistConcerts file."""
         return self._file(ArtistConcerts, artist_id)
 
-    def concerts_or_music_videos_file(
+    def artist_concerts_or_artist_music_videos_file(
         self,
         artist_id: str,
         category: MusicCategory,
@@ -249,7 +250,7 @@ class FileMixin(TMDBMixin, register=False):
         """Returns Concert file."""
         return self._file(Concert, concert_id)
 
-    def music_file(self, episode_key: str) -> MusicVideo | Concert:
+    def concert_or_music_video_file(self, episode_key: str) -> MusicVideo | Concert:
         """Returns either the Concert or MusicVideo file.
 
         Concerts and Music Videos are saved in the database as seperate seasons. This
@@ -262,7 +263,7 @@ class FileMixin(TMDBMixin, register=False):
         return self.music_video_file(video_id)
 
     def browse_music_file(self, browse: datetime | File) -> BrowseMusic:
-        """Returns BrowseMusic file, either for a datetime or a `File` record."""
+        """Returns BrowseMusic file."""
         if isinstance(browse, File):
             return self._file(
                 BrowseMusic,
@@ -270,24 +271,15 @@ class FileMixin(TMDBMixin, register=False):
             )
         return self._file(BrowseMusic, str(browse))
 
-    def find_newest_music_browse_file(
-        self,
-        *,
-        is_completed: bool = False,
-    ) -> BrowseMusic | None:
+    def find_newest_music_browse_file(self) -> BrowseMusic | None:
         """Returns newest BrowseMusic file, or None when there is none."""
-        extra = "Completed" if is_completed else None
-        if file := self.preload_latest_file(BrowseMusic, extra=extra):
+        if file := self.preload_latest_file(BrowseMusic):
             return self.browse_music_file(file)
         return None
 
-    def get_newest_music_browse_file(
-        self,
-        *,
-        is_completed: bool = False,
-    ) -> BrowseMusic:
+    def get_newest_music_browse_file(self) -> BrowseMusic:
         """Returns newest BrowseMusic file."""
-        if file := self.find_newest_music_browse_file(is_completed=is_completed):
+        if file := self.find_newest_music_browse_file():
             return file
 
         msg = "No music browse file found."
@@ -295,11 +287,11 @@ class FileMixin(TMDBMixin, register=False):
 
     def _music_source_files(self) -> Sequence[BrowseMusic]:
         """Returns the files the music `Source` is dated by."""
-        return [self.get_newest_music_browse_file(is_completed=True)]
+        return [self.get_newest_music_browse_file()]
 
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
-        return [self.get_newest_browse_file(is_completed=True)]
+        return [self.get_newest_browse_file()]
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
@@ -329,7 +321,7 @@ class FileMixin(TMDBMixin, register=False):
             artist_id, category = parse_music_season_key(season_key)
             return [
                 # Required to detect new music videos or concerts.
-                self.concerts_or_music_videos_file(artist_id, category),
+                self.artist_concerts_or_artist_music_videos_file(artist_id, category),
                 # Required to detect changes to the artist.
                 self.artist_file(artist_id),
             ]
@@ -350,7 +342,7 @@ class FileMixin(TMDBMixin, register=False):
         if is_music_episode_key(episode_key):
             # A music video or concert carries its own details, unlike a series
             # episode which is read out of its season's listing.
-            return [self.music_file(episode_key)]
+            return [self.concert_or_music_video_file(episode_key)]
         return [self.season_episodes_file(season_key)]
 
     @override
@@ -385,23 +377,18 @@ class FileMixin(TMDBMixin, register=False):
 
     def _music_episode_keys(self, season_key: str) -> list[str]:
         artist_id, category = parse_music_season_key(season_key)
-        listing = self.concerts_or_music_videos_file(artist_id, category).parsed()
+        listing = self.artist_concerts_or_artist_music_videos_file(artist_id, category).parsed()
         return [music_episode_key(category, datum.id) for datum in listing.data]
 
-    def find_newest_browse_file(
-        self,
-        *,
-        is_completed: bool = False,
-    ) -> BrowseSeries | None:
+    def find_newest_browse_file(self) -> BrowseSeries | None:
         """Returns newest BrowseSeries file, or None when there is none."""
-        extra = "Completed" if is_completed else None
-        if file := self.preload_latest_file(BrowseSeries, extra=extra):
+        if file := self.preload_latest_file(BrowseSeries):
             return self.browse_series_file(file)
         return None
 
-    def get_newest_browse_file(self, *, is_completed: bool = False) -> BrowseSeries:
+    def get_newest_browse_file(self) -> BrowseSeries:
         """Returns newest BrowseSeries file."""
-        if file := self.find_newest_browse_file(is_completed=is_completed):
+        if file := self.find_newest_browse_file():
             return file
 
         msg = "No browse file found."

@@ -33,7 +33,7 @@ class ImportURLMixin(
         from it instead of searching TMDB for the title by its own name.
         """
         self._use_tmdb_id(tmdb_id)
-        handler = self._get_url_handler(url)
+        handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
         results: list[URLImportResult] = []
