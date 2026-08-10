@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
@@ -13,6 +13,7 @@ from loguru import logger
 from sqlmodel import Session
 
 from app.episodes.models import MANUAL_NOTES, Episode
+from app.media.tmdb_fallback import tmdb_episode_counterpart
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -355,6 +356,10 @@ class BasePlugin(
         clash between their episode and any other in their favour. A lock the
         import made itself is no help here: it was made on evidence that has
         turned out to fit two episodes, so it goes along with the identifier.
+
+        An episode numbered the way TMDB numbers the record keeps it, since that
+        tells it apart from the others rather than leaving every one of them a
+        guess, and only the rest go back to this plugin's own identifier.
         """
         episodes = [
             episode
@@ -366,16 +371,54 @@ class BasePlugin(
         if not shared:
             return
 
+        clashing_by_identifier: dict[str, list[Episode]] = defaultdict(list)
         for episode in episodes:
-            identifier = episode.episode_identifier
-            if identifier not in shared or _is_settled_by_hand(episode):
-                continue
-            logger.info(f"Unsharing {identifier} from episode {episode.key}")
-            episode.episode_identifier_note = (
-                f"Removed {identifier}, which another episode was given too"
-            )
-            episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
-            episode.episode_identifier_locked = False
+            if episode.episode_identifier in shared:
+                clashing_by_identifier[episode.episode_identifier].append(episode)
+
+        for identifier, clashing in clashing_by_identifier.items():
+            keeper = self._numbered_as_tmdb_numbers_it(identifier, clashing)
+            for episode in clashing:
+                if episode is keeper or _is_settled_by_hand(episode):
+                    continue
+                logger.info(f"Unsharing {identifier} from episode {episode.key}")
+                episode.episode_identifier_note = (
+                    f"Removed {identifier}, which another episode was given too"
+                )
+                episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
+                episode.episode_identifier_locked = False
+
+    def _numbered_as_tmdb_numbers_it(
+        self,
+        identifier: str,
+        clashing: list[Episode],
+    ) -> Episode | None:
+        """Return the one episode filed where TMDB files the record they share.
+
+        The episodes on one record are all guesses until something tells them
+        apart, and being numbered the way TMDB numbers it is that: whatever put
+        the others there was a name or a count that has turned out to fit more
+        than one of them. Only ever one episode, since two numbered the same way
+        are no more told apart than none were.
+
+        A `User` settling one of them decides the clash by itself, so nothing is
+        kept here while one of them is theirs.
+        """
+        if any(_is_settled_by_hand(episode) for episode in clashing):
+            return None
+
+        counterpart = tmdb_episode_counterpart(self.session, identifier)
+        if counterpart is None:
+            return None
+
+        tmdb_episode, tmdb_season, _show = counterpart
+        numbered = [
+            episode
+            for episode in clashing
+            if episode.episode_number == tmdb_episode.episode_number
+            and episode.season.season_number == tmdb_season.season_number
+        ]
+        return numbered[0] if len(numbered) == 1 else None
 
     @abstractmethod
     def upsert_show(
