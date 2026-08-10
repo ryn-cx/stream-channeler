@@ -149,9 +149,12 @@ class UnmatchedEpisodeOutput(BaseModel):
     name: str | None
     episode_number: int | None
     absolute_number: int | None
+    season_id: uuid.UUID
     season_name: str | None
     season_number: int | None
+    show_id: uuid.UUID
     show_name: str | None
+    source_id: uuid.UUID
     source_name: str | None
     url: str | None
     best_match: TmdbEpisodeChoice | None

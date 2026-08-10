@@ -16,6 +16,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.episodes.models import (
+    MANUAL_NOTES,
     MANUALLY_CONFIRMED_NOTE,
     MANUALLY_SELECTED_NOTE,
     NO_MATCH_NOTE,
@@ -302,9 +303,12 @@ def list_unmatched_episodes(
             name=episode.name,
             episode_number=episode.episode_number,
             absolute_number=source_numbers.get(episode.id),
+            season_id=season.id,
             season_name=season.name,
             season_number=season.season_number,
+            show_id=show.id,
             show_name=show.name,
+            source_id=source.id,
             source_name=source.name,
             url=episode.url,
             best_match=_best_match(
@@ -392,9 +396,12 @@ def list_unlocked_episodes(
                 name=episode.name,
                 episode_number=episode.episode_number,
                 absolute_number=source_numbers.get(episode.id),
+                season_id=season.id,
                 season_name=season.name,
                 season_number=season.season_number,
+                show_id=show.id,
                 show_name=show.name,
+                source_id=source.id,
                 source_name=source.name,
                 url=episode.url,
                 best_match=best_match,
@@ -514,6 +521,8 @@ def link_episode(
             detail=f"No imported TMDB episode has the id {tmdb_episode_id}",
         )
 
+    _unlink_others_sharing(session, episode, counterpart.episode_identifier)
+
     episode.episode_identifier = counterpart.episode_identifier
     episode.episode_identifier_locked = True
     episode.episode_identifier_note = (
@@ -523,6 +532,49 @@ def link_episode(
     session.commit()
     session.refresh(episode)
     return episode
+
+
+def _unlink_others_sharing(
+    session: Session,
+    episode: Episode,
+    identifier: str,
+) -> None:
+    """Take `identifier` off the other episodes of the same copy of the title.
+
+    Two websites' episodes carrying one identifier is what makes them a single
+    episode to watch, so only the title's own other episodes are a clash. A
+    `User` saying which episode the record is has settled which one it is, so
+    whichever was on it by a guess comes off and goes back to the identifier its
+    own website issued.
+
+    An episode another `User` decision put there is left where it is, since one
+    decision is no reason to undo another.
+    """
+    statement = (
+        select(Episode)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(
+            Season.show_id == episode.season.show_id,
+            Episode.episode_identifier == identifier,
+            Episode.id != episode.id,
+            col(Episode.deleted_at).is_(None),
+        )
+    )
+    for other in session.exec(statement).all():
+        if other.episode_identifier_locked and (
+            other.episode_identifier_note in MANUAL_NOTES
+        ):
+            continue
+
+        plugin_key = other.season.show.source.plugin.key
+        removed = f"Removed {identifier}, which was given to another episode by hand"
+        previous = other.episode_identifier_note
+        other.episode_identifier_note = (
+            f"{removed}. {previous}" if previous else removed
+        )
+        other.episode_identifier = f"{plugin_key} {other.key}"
+        other.episode_identifier_locked = False
+        session.add(other)
 
 
 def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:

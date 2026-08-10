@@ -1,4 +1,5 @@
 // TODO: Validate
+import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import type { ReactNode } from "react"
 
@@ -96,7 +97,13 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "Show",
     cell: ({ row }) => (
       <WrappingCell className="max-w-48">
-        {row.original.show_name ?? "Unnamed"}
+        <Link
+          to="/show/$showKey"
+          params={{ showKey: row.original.show_id }}
+          className="hover:underline"
+        >
+          {row.original.show_name ?? "Unnamed"}
+        </Link>
       </WrappingCell>
     ),
   },
@@ -108,7 +115,13 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     filterFn: "equalsString",
     cell: ({ row }) => (
       <WrappingCell className="max-w-32">
-        {row.original.source_name ?? "Unknown source"}
+        <Link
+          to="/source/$sourceKey"
+          params={{ sourceKey: row.original.source_id }}
+          className="hover:underline"
+        >
+          {row.original.source_name ?? "Unknown source"}
+        </Link>
       </WrappingCell>
     ),
   },
@@ -118,7 +131,13 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "Season",
     cell: ({ row }) => (
       <WrappingCell className="max-w-40">
-        {row.original.season_name ?? ""}
+        <Link
+          to="/season/$seasonKey"
+          params={{ seasonKey: row.original.season_id }}
+          className="hover:underline"
+        >
+          {row.original.season_name ?? "Unnamed"}
+        </Link>
       </WrappingCell>
     ),
   },

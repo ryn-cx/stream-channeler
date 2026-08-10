@@ -1401,9 +1401,12 @@ export type UnlockedEpisodeOutput = {
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);
+    season_id: string;
     season_name: (string | null);
     season_number: (number | null);
+    show_id: string;
     show_name: (string | null);
+    source_id: string;
     source_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
@@ -1420,9 +1423,12 @@ export type UnmatchedEpisodeOutput = {
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);
+    season_id: string;
     season_name: (string | null);
     season_number: (number | null);
+    show_id: string;
     show_name: (string | null);
+    source_id: string;
     source_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
