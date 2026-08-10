@@ -225,9 +225,9 @@ export function TmdbEpisodePickerDialog({
           </Button>
         </form>
         <p className="text-xs text-muted-foreground">
-          Taken whether or not it is one of the episodes above, so an episode
-          TMDB files under another title can be reached. It has to name an
-          episode already imported from TMDB.
+          Taken whether or not it is one of the episodes above. The title this
+          show is linked to is read in from TMDB first, so an id of one of its
+          episodes is reached even where nothing has imported it yet.
         </p>
       </DialogContent>
     </Dialog>

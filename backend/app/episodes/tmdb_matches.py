@@ -30,6 +30,7 @@ from app.episodes.schemas import (
 from app.media.identifiers import (
     TMDB_IDENTIFIER_PREFIX,
     TMDB_PLUGIN_KEY,
+    parse_tmdb_identifier,
     tmdb_identifier,
 )
 from app.media.media_type import MediaType
@@ -514,6 +515,8 @@ def link_episode(
     `selected` says the `User` went and found the episode rather than taking the
     one they were shown, which is the note the link is left with.
     """
+    _import_linked_title(session, episode)
+
     counterpart = _tmdb_episode(session, tmdb_episode_id)
     if counterpart is None:
         raise HTTPException(
@@ -532,6 +535,27 @@ def link_episode(
     session.commit()
     session.refresh(episode)
     return episode
+
+
+def _import_linked_title(session: Session, episode: Episode) -> None:
+    """Read in the TMDB title the episode's show names, so its episodes are there.
+
+    A `User` writing an id by hand has no reason to have imported the title
+    holding it first, and an episode is only there to be linked to once its
+    title has been read in. A title already imported is left as it is, so this
+    costs nothing when the episode was picked off the list.
+
+    Imported here rather than at the top of the module because the TMDB plugin
+    is built on the base every plugin is, which reads this module in turn.
+    """
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    parsed = parse_tmdb_identifier(episode.season.show.show_identifier)
+    if parsed is None:
+        return
+
+    media_type, tmdb_id = parsed
+    TMDB(session).import_title(media_type, tmdb_id)
 
 
 def _unlink_others_sharing(
