@@ -152,9 +152,18 @@ def _similarity(name: str | None, other_name: str | None) -> float:
     other_plaintext = _plaintext(other_name)
     if not plaintext or not other_plaintext:
         return 0.0
-    if plaintext in other_plaintext or other_plaintext in plaintext:
-        return 1.0
-    return SequenceMatcher(None, plaintext, other_plaintext).ratio()
+
+    ratio = SequenceMatcher(None, plaintext, other_plaintext).ratio()
+    if plaintext not in other_plaintext and other_plaintext not in plaintext:
+        return ratio
+
+    # One name sitting inside the other is worth only as much of the longer name
+    # as it covers. A name of a letter or two is inside almost every other name,
+    # and reading as a perfect match against the whole catalogue says nothing
+    # about which episode it is. Never below what the names share outright, so
+    # containment can only ever help.
+    shorter, longer = sorted((plaintext, other_plaintext), key=len)
+    return max(ratio, len(shorter) / len(longer))
 
 
 def _absolute_numbers(episodes: Sequence[TvSeasonEpisode]) -> dict[int, int]:
