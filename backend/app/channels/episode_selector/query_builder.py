@@ -1,31 +1,26 @@
-# TODO: Validate
 """Reading the episodes a channel offers, in the order it offers them."""
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import case, distinct
 from sqlalchemy.orm import Mapped, aliased
-from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
+from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
 from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channel_orders.models import ChannelOrder
-from app.channels.episode_selector.channel_scope import (
+from app.channels.channel_scope import (
     channel_attribution,
     child_channel_ids,
     resolve_channel_ids,
 )
 from app.channels.episode_selector.show_counts import limit_shows
 from app.channels.episode_selector.sorting import SortExpressionBuilder
-from app.channels.episode_selector.source_dedup import (
-    SourceDedupConfig,
-    deduplicate_episodes,
-    source_dedup_config,
-)
+from app.channels.episode_selector.source_dedup import source_dedup_config
 from app.channels.episode_selector.tmdb_columns import TMDBFallbackColumns
 from app.channels.episode_selector.visibility import (
     blacklisted_on_channels_condition,
@@ -55,13 +50,13 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.service import stored_preferences
 from app.utils import tz_datetime
 from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
 
 
+# TODO: Validate
 @dataclass
 class EpisodeResult:
     episode: Episode
@@ -70,37 +65,26 @@ class EpisodeResult:
     latest_watch: Watch | None = None
 
 
+# TODO: Validate
 class EpisodeQueryBuilder:
+    # TODO: Validate
     def __init__(
         self,
         session: SessionDep,
         channel: Channel,
         channel_options: ChannelOptions,
         user: CurrentUser | None = None,
-        *,
-        apply_combined_defaults: bool = True,
     ) -> None:
         self._session = session
+        self._channel = channel
         self._user = user
-        self._now = tz_datetime.now()
-        self._main_channel_id = channel.id
-        channel_options = self._resolve_order_preset(channel_options)
-        self._channel_options = self._filter_channel_options(channel_options)
-        self._channel_ids = self._resolve_channel_ids(channel)
-        # A combined channel asked to keep its own filters contributes whichever
-        # episodes it would show on its own, so they are read with its options and
-        # the ids they come back as are all this read takes from it. A channel it
-        # combines in turn is left to its own reading of itself, which is where the
-        # recursion stops.
-        self._default_filter_scopes = (
-            self._resolve_default_filter_scopes(channel)
-            if apply_combined_defaults
-            else []
-        )
-        self._source_config: SourceDedupConfig = source_dedup_config(
-            session,
-            stored_preferences(self._user.source_preferences) if self._user else [],
-        )
+        self._set_channel_options(channel_options)
+
+        self._channel_ids = self._fetch_channel_ids()
+
+        self._source_config = source_dedup_config(session, self._user)
+        self._holds_copied_titles = self._fetch_holds_copied_titles()
+
         self._tmdb_fallbacks = TMDBFallbackColumns()
         self._sort_expressions = SortExpressionBuilder(
             random_seed=self._channel_options.random_seed,
@@ -109,125 +93,84 @@ class EpisodeQueryBuilder:
             # Only a read that orders by the channel an episode comes from has to
             # work out which channel that is.
             channel_attribution=(
-                channel_attribution(session, self._user, channel)
+                channel_attribution(session, self._user, self._channel)
                 if any(key.model == "channel" for key in self._channel_options.sort_by)
                 else {}
             ),
         )
 
-    def _resolve_order_preset(
-        self,
-        channel_options: ChannelOptions,
-    ) -> ChannelOptions:
-        """Replace the channel's options with a referenced `ChannelOrder` preset."""
-        if channel_options.order_preset_id is None:
-            return channel_options
-        order = self._session.exec(
-            select(ChannelOrder).where(
-                ChannelOrder.id == channel_options.order_preset_id,
-            ),
-        ).first()
-        if order is None:
-            return channel_options
-        preset = ChannelOptions.model_validate_json(order.config)
-        # Only override the options the preset actually stored so older presets that
-        # only captured sorting leave the channel's other options untouched.
-        update = {
-            name: getattr(preset, name)
-            for name in preset.model_fields_set
-            if name != "order_preset_id"
-        }
-        return channel_options.model_copy(update=update)
+    def _set_channel_options(self, channel_options: ChannelOptions) -> None:
+        self._channel_options = channel_options.model_copy(deep=True)
+        self._fetch_channel_order_preset()
+        self._filter_channel_options()
+
+    def _fetch_channel_order_preset(self) -> None:
+        """Return the channel's options with a saved `ChannelOrder` preset."""
+        if self._channel_options.order_preset_id:
+            query = select(ChannelOrder).where(
+                ChannelOrder.id == self._channel_options.order_preset_id,
+            )
+            if order := self._session.exec(query).first():
+                self._channel_options = ChannelOptions.model_validate_json(order.config)
 
     def _filter_channel_options(
         self,
-        channel_options: ChannelOptions,
-    ) -> ChannelOptions:
-        """Filter options that require authentication if the user is not authenticated
+    ) -> None:
+        """Removes channel options that require the user to be logged in if they are not logged in."""
+        if not self._user:
+            self._channel_options.sort_by = [
+                sort_key
+                for sort_key in self._channel_options.sort_by
+                if sort_key.field not in LAST_WATCHED_COLUMNS
+            ]
+            self._channel_options.hide_watched = False
+            self._channel_options.hide_unwatched = False
+            self._channel_options.hide_partially_watched = False
+            self._channel_options.maximum_watch_date_absolute = None
+            self._channel_options.maximum_watch_date_relative = None
+            self._channel_options.total_shows_count = None
+            self._channel_options.started_shows_count = None
+            self._channel_options.new_shows_count = None
 
-        Allows an authenticated user to share a URL with an unauthenticated user even if
-        the channel options include options that only authenticated users can use.
+    # TODO: Validate
+    def _fetch_holds_copied_titles(self) -> bool:
+        """Whether the channel can be holding a title as more than one copy.
+
+        Collapsing the copies of an episode means reading every episode the channel
+        offers before any of them can be returned, since a copy the row limit never
+        reached may be the one that wins. A channel with no title to collapse skips
+        the ranking and lets the limit stop it early instead.
+
+        Asked of the titles rather than of their episodes, which is what keeps it
+        cheap: a channel holds tens of titles where it offers thousands of episodes.
+        One website carrying a title twice counts as much as two websites carrying
+        it once, since either leaves an episode with a copy to be ranked against.
         """
-        if self._user is not None:
-            return channel_options
-        return channel_options.model_copy(
-            update={
-                # last_watched sort keys need the user's watch history.
-                "sort_by": [
-                    sort_key
-                    for sort_key in channel_options.sort_by
-                    if sort_key.field not in LAST_WATCHED_COLUMNS
-                ],
-                "hide_watched": False,
-                "hide_unwatched": False,
-                "hide_partially_watched": False,
-                "maximum_watch_date_absolute": None,
-                "maximum_watch_date_relative": None,
-                "total_shows_count": None,
-                "started_shows_count": None,
-                "new_shows_count": None,
-            },
+        totals = (
+            select(
+                func.count(distinct(col(Show.source_id))),
+                func.count(distinct(col(Show.id))),
+                func.count(distinct(col(Show.show_identifier))),
+            )
+            .select_from(ChannelShow)
+            .join(Show, col(ChannelShow.show_identifier) == col(Show.show_identifier))
+            .where(col(ChannelShow.channel_id).in_(self._channel_ids))
+            .where(col(ChannelShow.is_blacklist_only).is_(False))
+            .where(col(Show.deleted_at).is_(None))
         )
+        sources, shows, titles = self._session.exec(totals).one()  # type: ignore[misc]
+        return sources > 1 or shows > titles
 
-    def _resolve_channel_ids(self, main_channel: Channel) -> set[UUID]:
+    # TODO: Validate
+    def _fetch_channel_ids(self) -> set[UUID]:
         return resolve_channel_ids(
             self._session,
             self._user,
-            main_channel,
-            child_channel_ids(main_channel),
+            self._channel,
+            child_channel_ids(self._channel),
         )
 
-    def _resolve_default_filter_scopes(
-        self,
-        main_channel: Channel,
-    ) -> list[tuple[set[UUID], set[UUID]]]:
-        """Return the episodes each self-filtering combined channel contributes.
-
-        Each entry is the channels a combined channel covers and the ids of the
-        episodes it would show on its own, so a read of the channel it was added to
-        takes those rather than the ones its own filters would leave.
-        """
-        scopes: list[tuple[set[UUID], set[UUID]]] = []
-        for combined in main_channel.combined_channels:
-            if not combined.use_default_filters:
-                continue
-            channel = self._session.get(Channel, combined.combined_channel_id)
-            if channel is None:
-                continue
-            options = (
-                ChannelOptions.model_validate_json(channel.default_order)
-                if channel.default_order
-                else ChannelOptions()
-            )
-            builder = EpisodeQueryBuilder(
-                self._session,
-                channel,
-                options,
-                self._user,
-                apply_combined_defaults=False,
-            )
-            scopes.append(
-                (
-                    builder._channel_ids,  # noqa: SLF001 - the same class reading its own read.
-                    {result.episode.id for result in builder.get_episodes()},
-                ),
-            )
-        return scopes
-
-    def _filter_by_combined_defaults(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        """Hold each self-filtering combined channel to the episodes it chose."""
-        for scope_channel_ids, episode_ids in self._default_filter_scopes:
-            query = query.where(
-                or_(
-                    col(ChannelShow.channel_id).notin_(scope_channel_ids),
-                    col(Episode.id).in_(episode_ids),
-                ),
-            )
-        return query
-
+    # TODO: Validate
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
         query = self._base_query()
@@ -236,14 +179,13 @@ class EpisodeQueryBuilder:
         query = self._join_saved_order(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
-        query = self._filter_by_combined_defaults(query)
         query = self._apply_channel_specific_blacklist(query)
         query = self._filter_by_plugin_visibility(query)
         query = self._filter_metadata_plugins(query)
         query = self._filter_disabled_sources(query)
         query = self._filter_by_watch_state(query)
         query = self._filter_by_ranges(query)
-        query = self._sort_episodes(query)
+        query = self._sort_and_deduplicate(query)
         query = self._apply_limit(query)
 
         ordered_episodes: list[Episode] = []
@@ -255,7 +197,6 @@ class EpisodeQueryBuilder:
             if channel_id not in channels_by_episode[episode.id]:
                 channels_by_episode[episode.id].append(channel_id)
 
-        ordered_episodes = self._deduplicate_by_identifier(ordered_episodes)
         ordered_episodes = limit_shows(
             self._session,
             self._user,
@@ -283,6 +224,7 @@ class EpisodeQueryBuilder:
             for episode in ordered_episodes
         ]
 
+    # TODO: Validate
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
         # A channel holds titles rather than one website's copy of them, so every
         # copy of a title the channel holds is joined to the same `ChannelShow`.
@@ -297,6 +239,7 @@ class EpisodeQueryBuilder:
             )
         )
 
+    # TODO: Validate
     def _join_whitelist(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -325,12 +268,13 @@ class EpisodeQueryBuilder:
                     == col(Episode.episode_identifier),
                     or_(
                         col(ChannelEpisodeFilter.expires_at).is_(None),
-                        col(ChannelEpisodeFilter.expires_at) > self._now,
+                        col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
                     ),
                 ),
             )
         )
 
+    # TODO: Validate
     def _join_saved_order(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -343,11 +287,12 @@ class EpisodeQueryBuilder:
         return query.outerjoin(
             ChannelSavedEpisodeOrder,
             and_(
-                ChannelSavedEpisodeOrder.channel_id == self._main_channel_id,
+                ChannelSavedEpisodeOrder.channel_id == self._channel.id,
                 ChannelSavedEpisodeOrder.episode_id == Episode.id,
             ),
         )
 
+    # TODO: Validate
     def _join_last_watched(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -359,6 +304,7 @@ class EpisodeQueryBuilder:
             return query
         return join_last_watched(query, self._user)
 
+    # TODO: Validate
     @staticmethod
     def _parse_date_filter(
         absolute_date: datetime | None,
@@ -368,12 +314,14 @@ class EpisodeQueryBuilder:
             return tz_datetime.now() - timedelta(days=relative_days)
         return absolute_date
 
+    # TODO: Validate
     def _filter_deleted_media(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         return query.where(col(Episode.deleted_at).is_(None))
 
+    # TODO: Validate
     def _filter_by_plugin_visibility(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -400,6 +348,7 @@ class EpisodeQueryBuilder:
                 )
         return query
 
+    # TODO: Validate
     def _filter_metadata_plugins(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -412,6 +361,7 @@ class EpisodeQueryBuilder:
         """
         return query.where(Plugin.key != TMDB_PLUGIN_KEY)
 
+    # TODO: Validate
     def _filter_episodes_by_channels(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -424,14 +374,16 @@ class EpisodeQueryBuilder:
             .where(channel_access_condition())
         )
 
+    # TODO: Validate
     def _apply_channel_specific_blacklist(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         return query.where(
-            ~blacklisted_on_channels_condition(self._channel_ids, self._now),
+            ~blacklisted_on_channels_condition(self._channel_ids, tz_datetime.now()),
         )
 
+    # TODO: Validate
     def _filter_by_watch_state(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -458,6 +410,7 @@ class EpisodeQueryBuilder:
             )
         return query
 
+    # TODO: Validate
     def _episode_range_conditions(self) -> list[ColumnElement[bool]]:
         conditions: list[ColumnElement[bool]] = []
 
@@ -500,6 +453,7 @@ class EpisodeQueryBuilder:
         )
         return conditions
 
+    # TODO: Validate
     def _filter_by_ranges(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -508,19 +462,22 @@ class EpisodeQueryBuilder:
             query = query.where(condition)
         return query
 
+    # TODO: Validate
     def _result_limit(self) -> int:
         """The number of episodes to return after deduplication."""
         user_limit = self._channel_options.limit
         return min(user_limit or MAX_EPISODES_RETURNED, MAX_EPISODES_RETURNED)
 
+    # TODO: Validate
     def _apply_limit(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        # Fetch up to the hard cap regardless of the requested limit so that
-        # deduplication can still fill the requested number of unique episodes.
+        # Fetch up to the hard cap regardless of the requested limit so that the
+        # show counts, which drop episodes after the read, can still fill it.
         return query.limit(MAX_EPISODES_RETURNED)
 
+    # TODO: Validate
     def _filter_disabled_sources(
         self,
         query: Select[tuple[Episode, UUID]],
@@ -539,43 +496,88 @@ class EpisodeQueryBuilder:
             query = query.where(col(Source.key).in_(config.enabled_keys))
         return query
 
-    def _source_keys_by_episode(
-        self,
-        episodes: Sequence[Episode],
-    ) -> dict[UUID, str]:
-        """Map each episode id to its owning source's key."""
-        if not episodes:
-            return {}
-        rows = self._session.exec(
-            select(Episode.id, Source.key)  # type: ignore[call-overload]
-            .select_from(Episode)
-            .join(Season)
-            .join(Show)
-            .join(Source)
-            .where(col(Episode.id).in_([episode.id for episode in episodes])),
-        ).all()
-        return dict(rows)
+    # TODO: Validate
+    def _source_rank_columns(self) -> list[ColumnElement[Any]]:
+        """The source ranking, left out when the channel has nothing to collapse."""
+        if not self._holds_copied_titles:
+            return []
+        return [self._source_rank_column()]
 
-    def _deduplicate_by_identifier(
-        self,
-        episodes: list[Episode],
-    ) -> list[Episode]:
-        """Collapse episodes sharing an `episode_identifier` by source priority."""
-        source_keys = self._source_keys_by_episode(episodes)
-        return deduplicate_episodes(episodes, source_keys, self._source_config)
+    def _source_rank_column(self) -> ColumnElement[Any]:
+        """Rank every copy of an episode against the other copies of it.
 
-    def _sort_episodes(
+        Ties rather than numbers the rows so that a copy held by several channels
+        keeps one row per channel, which is what names the channels it came from.
+        """
+        priority = case(
+            self._source_config.priority,
+            value=col(Source.key),
+            else_=self._source_config.other_priority,
+        )
+        return (
+            func.rank()
+            .over(
+                partition_by=col(Episode.episode_identifier),
+                order_by=[priority, col(Episode.id)],
+            )
+            .label("source_rank")
+        )
+
+    # TODO: Validate
+    def _deduplicate_unsorted(
+        self,
+        query: Select[tuple[Episode, UUID]],
+    ) -> Select[tuple[Episode, UUID]]:
+        """Collapse the copies of an episode when nothing has asked for an order."""
+        query = self._tmdb_fallbacks.join(query)
+        if not self._holds_copied_titles:
+            return query
+        subquery = query.add_columns(self._source_rank_column()).subquery()
+        return select(  # type: ignore[return-value]
+            aliased(Episode, subquery),
+            subquery.c.channel_id,
+        ).where(subquery.c.source_rank == 1)
+
+    def _rank_fuzzy_values(
+        self,
+        subquery: Subquery,
+        fuzzy_labels: dict[int, str],
+        directeds: list[UnaryExpression[Any] | ColumnElement[Any]],
+    ) -> Subquery:
+        """Number the sort values a fuzzy key holds so its jitter has ranks to move."""
+        extra_columns: list[ColumnElement[Any]] = [
+            func.dense_rank().over(order_by=directeds[index]).label(label)
+            for index, label in fuzzy_labels.items()
+        ]
+        carried_rank = [subquery.c.source_rank] if self._holds_copied_titles else []
+        return (
+            select(aliased(Episode, subquery), subquery.c.channel_id)
+            .add_columns(
+                subquery.c.show_id,
+                *carried_rank,
+                *(
+                    getattr(subquery.c, f"sort_value_{index}")
+                    for index in range(len(self._channel_options.sort_by))
+                ),
+                *extra_columns,
+            )
+            .subquery()
+        )
+
+    # TODO: Validate
+    def _sort_and_deduplicate(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         if not self._channel_options.sort_by:
-            return self._tmdb_fallbacks.join(query)
+            return self._deduplicate_unsorted(query)
         expressions = self._sort_expressions
         labeled_values: list[ColumnElement[Any]] = [
             expressions.expression(sort_key).label(f"sort_value_{index}")
             for index, sort_key in enumerate(self._channel_options.sort_by)
         ]
         labeled_values.append(col(Season.show_id).label("show_id"))
+        labeled_values.extend(self._source_rank_columns())
         # Every filter and sort has now asked for its columns, so the levels they
         # borrowed from TMDB are known and can be joined in before the values are
         # frozen into a subquery.
@@ -599,21 +601,7 @@ class EpisodeQueryBuilder:
         fuzzy_labels = {index: f"fuzzy_{index}" for index in fuzzy_indexes}
 
         if fuzzy_indexes:
-            extra_columns: list[ColumnElement[Any]] = [
-                func.dense_rank()
-                .over(order_by=directeds[index])
-                .label(fuzzy_labels[index])
-                for index in fuzzy_indexes
-            ]
-            subquery = (
-                select(aliased(Episode, subquery), subquery.c.channel_id)
-                .add_columns(
-                    subquery.c.show_id,
-                    *(getattr(subquery.c, f"sort_value_{i}") for i in range(len(raws))),
-                    *extra_columns,
-                )
-                .subquery()
-            )
+            subquery = self._rank_fuzzy_values(subquery, fuzzy_labels, directeds)
             raws = [
                 getattr(subquery.c, f"sort_value_{i}")
                 for i in range(len(self._channel_options.sort_by))
@@ -661,4 +649,6 @@ class EpisodeQueryBuilder:
             aliased(Episode, subquery),
             subquery.c.channel_id,
         )
+        if self._holds_copied_titles:
+            outer = outer.where(subquery.c.source_rank == 1)
         return outer.order_by(*order_by)

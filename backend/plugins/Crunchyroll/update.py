@@ -15,11 +15,7 @@ from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
-from plugins.Crunchyroll.music_keys import (
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
-    artist_show_key,
-)
+from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.upsert import UpsertMixin
 
 MUSIC_CHANNEL_DESCRIPTION_PATH = Path(__file__).parent / "music_channel_description.md"
@@ -41,7 +37,7 @@ class UpdateMixin(UpsertMixin, register=False):
             raise ValueError(msg)
         self.browse_series_file(source.data_timestamp).download_if_outdated()
         self._process_new_browse_files(source)
-        self._upsert_video_source()
+        self._upsert_anime_source()
 
     def _update_music_source(self, source: Source) -> None:
         """Look for new music, which the music `Source` is scheduled for monthly."""
@@ -87,7 +83,7 @@ class UpdateMixin(UpsertMixin, register=False):
             artists = chirashi().browse_music.extract_data(browse_json.parsed())
             new_artist_urls: list[str] = []
             for artist in artists:
-                show_key = artist_show_key(artist.id)
+                show_key = artist.id
                 if show := Show.get_from_memory(self.session, source, show_key):
                     logger.info("Matched artist: {}", show.name or artist.id)
                     # An artist carries no per-category timestamp, so both of
@@ -98,7 +94,7 @@ class UpdateMixin(UpsertMixin, register=False):
                         season.set_update_at(artist.updated_at)
                 else:
                     logger.info("Queueing new artist: {}", artist.id)
-                    new_artist_urls.append(self._show_url(show_key))
+                    new_artist_urls.append(self._artist_url(show_key))
 
             # Queued in one call so the whole browse file costs a single commit.
             if new_artist_urls:

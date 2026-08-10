@@ -474,7 +474,6 @@ def set_channel_combined_channels(
         ChannelCombinedChannel(
             channel_id=channel.id,
             combined_channel_id=combined.id,
-            use_default_filters=combined.use_default_filters,
         )
         for combined in unique.values()
     ]

@@ -7,7 +7,6 @@ from chirashi.browse_music.models import BrowseMusicModel
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
 from plugins.Crunchyroll.files import chirashi
-from plugins.Crunchyroll.music_keys import parse_artist_show_key
 from tests.plugins.crunchyroll.validators import (
     CrunchyrollStandardTests,
     CrunchyrollUpdateSourceTests,
@@ -46,7 +45,7 @@ class CrunchyrollMusicUpdateSourceTest(
         assert existing_browse, "The music source is created with a browse file"
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]
-        first_entry.id = parse_artist_show_key(source.shows[0].key)
+        first_entry.id = source.shows[0].key
         first_entry.updated_at = timestamp
         self.export_browse_file(plugin_instance, parsed, timestamp)
 

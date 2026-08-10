@@ -57,7 +57,11 @@ class StreamChanneler(BasePlugin, register=True):
         return []
 
     @override
-    def _episode_keys_from_file(self, season_keys: str | list[str]) -> list[str]:
+    def _episode_keys_from_file(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
         return []
 
     @override

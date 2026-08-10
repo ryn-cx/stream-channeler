@@ -21,7 +21,7 @@ from tests.app.sources.utils import create_random_source
 from tests.app.users.utils import create_random_user
 from tests.app.utils.utils import build_random_model, random_past_timestamp
 
-SHOW_COUNT = 20
+SHOW_COUNT = 100
 SEASONS_PER_SHOW = 5
 EPISODES_PER_SEASON = 100
 EPISODE_COUNT = SHOW_COUNT * SEASONS_PER_SHOW * EPISODES_PER_SEASON

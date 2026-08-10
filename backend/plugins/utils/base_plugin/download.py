@@ -248,7 +248,7 @@ class DownloadMixin(ABC):
     ) -> list[File]:
         season_key = self._get_key(season)
         show_key = self._get_show_key(season, show)
-        video_keys = self._episode_keys_from_file(season_key)
+        video_keys = self._episode_keys_from_file(season_key, show_key)
         _cache = self._preload_episode_files(
             video_keys,
             season_key,
@@ -303,7 +303,7 @@ class DownloadMixin(ABC):
         file_keys = [
             file.file_key()
             for season_key in season_keys
-            for episode_key in self._episode_keys_from_file(season_key)
+            for episode_key in self._episode_keys_from_file(season_key, show_key)
             for file in self._episode_files(episode_key, season_key, show_key)
         ]
         return self._get_files_by_keys(file_keys)
@@ -328,6 +328,10 @@ class DownloadMixin(ABC):
         msg = "This plugin does not have season keys from file."
         raise NotImplementedError(msg)
 
-    def _episode_keys_from_file(self, season_keys: str | list[str]) -> list[str]:
+    def _episode_keys_from_file(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
         msg = "This plugin does not have episode keys from file."
         raise NotImplementedError(msg)

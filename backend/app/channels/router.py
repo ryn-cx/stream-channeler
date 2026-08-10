@@ -18,18 +18,18 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.channels import service
+from app.channels.channel_scope import (
+    child_channel_ids,
+    readable_channels,
+    resolve_channel_ids,
+)
 from app.channels.dependencies import (
     EditableChannel,
     EditableChannelReadableShow,
     ExistingChannel,
     ReadableChannel,
 )
-from app.channels.episode_selector import (
-    EpisodeQueryBuilder,
-    child_channel_ids,
-    readable_channels,
-    resolve_channel_ids,
-)
+from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelFavorite, ChannelQueue, ChannelShow
 from app.channels.schemas import (
     BlacklistEpisodeInput,
@@ -357,7 +357,6 @@ def get_channel_combined_channels(
             CombinedChannelOutput(
                 id=combined.combined_channel_id,
                 name=combined_channel.name if combined_channel else None,
-                use_default_filters=combined.use_default_filters,
             ),
         )
     return result

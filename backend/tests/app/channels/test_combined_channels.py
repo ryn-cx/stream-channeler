@@ -1,8 +1,7 @@
 # TODO: Validate
 """Tests for reading a channel that combines other channels.
 
-Covers which channel an episode reads as coming from, and a combined channel
-that contributes the episodes it would show on its own.
+Covers which channel an episode reads as coming from.
 """
 
 import json
@@ -13,8 +12,8 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, delete
 
+from app.channels.channel_scope import channel_attribution
 from app.channels.episode_selector import EpisodeQueryBuilder
-from app.channels.episode_selector.channel_scope import channel_attribution
 from app.channels.models import Channel, ChannelCombinedChannel
 from app.channels.schemas import ChannelOptions
 from app.config import settings
@@ -50,20 +49,19 @@ def plugin(session_scoped_session: Session, user: User) -> Plugin:
 def _combine(
     session: Session,
     channel: Channel,
-    combined: list[tuple[Channel, bool]],
+    combined: list[Channel],
 ) -> None:
-    """Replace `channel`'s combined channels, saying which keep their own filters."""
+    """Replace `channel`'s combined channels."""
     session.exec(  # type: ignore[call-overload]
         delete(ChannelCombinedChannel).where(
             col(ChannelCombinedChannel.channel_id) == channel.id,
         ),
     )
-    for combined_channel, use_default_filters in combined:
+    for combined_channel in combined:
         session.add(
             ChannelCombinedChannel(
                 channel_id=channel.id,
                 combined_channel_id=combined_channel.id,
-                use_default_filters=use_default_filters,
             ),
         )
     session.flush()
@@ -98,22 +96,12 @@ def _channel_with_episodes(
     return channel, episodes
 
 
-def _episode_ids(
-    session: Session,
-    channel: Channel,
-    user: User,
-    **options: object,
-) -> set[uuid.UUID]:
-    builder = EpisodeQueryBuilder(session, channel, ChannelOptions(**options), user)
-    return {result.episode.id for result in builder.get_episodes()}
-
-
 class TestCombinedChannelsEndpoint:
     @staticmethod
     def url(channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel_id}/combined-channels"
 
-    def test_saving_and_reading_back_whether_a_channel_keeps_its_filters(
+    def test_saving_and_reading_back_a_channel_s_combined_channels(
         self,
         session_scoped_client: TestClient,
         session_scoped_session: Session,
@@ -126,27 +114,22 @@ class TestCombinedChannelsEndpoint:
             session=session,
         )
         channel = create_random_channel(session, user=user.id, is_public=True)
-        keeps_filters = create_random_channel(session, user=user.id, is_public=True)
-        follows_the_read = create_random_channel(session, user=user.id, is_public=True)
+        first = create_random_channel(session, user=user.id, is_public=True)
+        second = create_random_channel(session, user=user.id, is_public=True)
         session.commit()
 
         response = session_scoped_client.put(
             self.url(channel.id),
-            json=[
-                {"id": str(keeps_filters.id), "use_default_filters": True},
-                {"id": str(follows_the_read.id), "use_default_filters": False},
-            ],
+            json=[{"id": str(first.id)}, {"id": str(second.id)}],
             headers=headers,
         )
         assert response.status_code == status.HTTP_200_OK
 
         read_back = session_scoped_client.get(self.url(channel.id), headers=headers)
         assert read_back.status_code == status.HTTP_200_OK
-        assert {
-            entry["id"]: entry["use_default_filters"] for entry in read_back.json()
-        } == {
-            str(keeps_filters.id): True,
-            str(follows_the_read.id): False,
+        assert {entry["id"] for entry in read_back.json()} == {
+            str(first.id),
+            str(second.id),
         }
 
 
@@ -171,9 +154,9 @@ class TestChannelAttribution:
         channel_b = create_random_channel(session, user=user.id)
         channel_c = create_random_channel(session, user=user.id)
         channel_d = create_random_channel(session, user=user.id)
-        _combine(session, channel_c, [(channel_d, False)])
-        _combine(session, channel_b, [(channel_c, False)])
-        _combine(session, channel_a, [(channel_b, False)])
+        _combine(session, channel_c, [channel_d])
+        _combine(session, channel_b, [channel_c])
+        _combine(session, channel_a, [channel_b])
 
         attribution = channel_attribution(session, user, channel_a)
 
@@ -192,10 +175,10 @@ class TestChannelAttribution:
         shared = create_random_channel(session, user=user.id)
         first = create_random_channel(session, user=user.id)
         second = create_random_channel(session, user=user.id)
-        _combine(session, first, [(shared, False)])
-        _combine(session, second, [(shared, False)])
+        _combine(session, first, [shared])
+        _combine(session, second, [shared])
         parent = create_random_channel(session, user=user.id)
-        _combine(session, parent, [(first, False), (second, False)])
+        _combine(session, parent, [first, second])
 
         attribution = channel_attribution(session, user, parent)
 
@@ -242,8 +225,8 @@ class TestSortByChannel:
             uuid.UUID(int=4),
         )
         # C is combined into B, so its episodes read as B's rather than as their own.
-        _combine(session, channel_b, [(channel_c, False)])
-        _combine(session, channel_a, [(channel_b, False), (channel_d, False)])
+        _combine(session, channel_b, [channel_c])
+        _combine(session, channel_a, [channel_b, channel_d])
 
         builder = EpisodeQueryBuilder(
             session,
@@ -285,107 +268,3 @@ class TestSortByChannel:
             option.label for option in get_sort_options() if option.model == "channel"
         }
         assert labels == {"Channel - Id"}
-
-
-class TestCombinedChannelDefaultFilters:
-    def test_off_by_default_so_the_read_s_own_filters_apply(
-        self,
-        session_scoped_session: Session,
-        user: User,
-        plugin: Plugin,
-    ) -> None:
-        session = session_scoped_session
-        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
-        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
-        # The child would show only its short episode when read on its own.
-        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
-        _combine(session, parent, [(child, False)])
-        session.flush()
-
-        assert _episode_ids(session, parent, user) == {
-            parent_episodes[0].id,
-            child_episodes[0].id,
-            child_episodes[1].id,
-        }
-
-    def test_channel_contributes_what_it_would_show_on_its_own(
-        self,
-        session_scoped_session: Session,
-        user: User,
-        plugin: Plugin,
-    ) -> None:
-        session = session_scoped_session
-        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
-        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
-        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
-        _combine(session, parent, [(child, True)])
-        session.flush()
-
-        # The child's own filter drops its long episode, and the parent's episodes
-        # are left alone by it.
-        assert _episode_ids(session, parent, user) == {
-            parent_episodes[0].id,
-            child_episodes[0].id,
-        }
-
-    def test_the_read_s_own_filters_still_apply_on_top(
-        self,
-        session_scoped_session: Session,
-        user: User,
-        plugin: Plugin,
-    ) -> None:
-        session = session_scoped_session
-        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
-        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
-        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
-        _combine(session, parent, [(child, True)])
-        session.flush()
-
-        # A read that keeps only the longest episodes drops what the child kept.
-        assert _episode_ids(session, parent, user, minimum_duration=200) == set()
-        assert parent_episodes[0].duration == 10  # noqa: PLR2004
-        assert child_episodes[1].duration == 300  # noqa: PLR2004
-
-    def test_a_channel_without_its_own_defaults_contributes_everything(
-        self,
-        session_scoped_session: Session,
-        user: User,
-        plugin: Plugin,
-    ) -> None:
-        session = session_scoped_session
-        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
-        child, child_episodes = _channel_with_episodes(session, user, plugin, [20, 300])
-        _combine(session, parent, [(child, True)])
-        session.flush()
-
-        assert _episode_ids(session, parent, user) == {
-            parent_episodes[0].id,
-            *(episode.id for episode in child_episodes),
-        }
-
-    def test_a_grandchild_is_read_through_the_channel_holding_it(
-        self,
-        session_scoped_session: Session,
-        user: User,
-        plugin: Plugin,
-    ) -> None:
-        session = session_scoped_session
-        parent, parent_episodes = _channel_with_episodes(session, user, plugin, [10])
-        child, child_episodes = _channel_with_episodes(session, user, plugin, [20])
-        grandchild, grandchild_episodes = _channel_with_episodes(
-            session,
-            user,
-            plugin,
-            [30, 400],
-        )
-        _combine(session, child, [(grandchild, False)])
-        # The child's own filter covers everything it reads, its grandchild included.
-        child.default_order = ChannelOptions(maximum_duration=100).model_dump_json()
-        _combine(session, parent, [(child, True)])
-        session.flush()
-
-        assert _episode_ids(session, parent, user) == {
-            parent_episodes[0].id,
-            child_episodes[0].id,
-            grandchild_episodes[0].id,
-        }

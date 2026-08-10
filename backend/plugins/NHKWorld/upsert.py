@@ -30,7 +30,6 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(program.url),
                 image_url=self._get_image_url(program.images.portrait),
                 media_type="TV Show",
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -60,7 +59,6 @@ class UpsertMixin(HelperMixin, register=False):
                 key=show_key,
                 sort_order=0,
                 url=show.url,
-                season_identifier=self._fallback_season_identifier(show_key),
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
             )
@@ -102,7 +100,6 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=video.duration,
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
-                episode_identifier=f"NHKWorld {item.id}",
                 data_timestamp=self.episode_data_timestamp(
                     item.id,
                     season.key,

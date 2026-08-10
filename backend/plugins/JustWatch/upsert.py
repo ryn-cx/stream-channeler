@@ -99,7 +99,6 @@ class UpsertMixin(HelperMixin, register=False):
             url=self._clean_external_url(offer.standard_web_url),
             image_url=self._images_base_url
             + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
-            show_identifier=self._fallback_show_identifier(show_key),
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
         )
@@ -155,7 +154,6 @@ class UpsertMixin(HelperMixin, register=False):
                 key=season_data.id,
                 sort_order=season_data.content.season_number,
                 season_number=season_data.content.season_number,
-                season_identifier=self._fallback_season_identifier(season_data.id),
                 data_timestamp=self.season_data_timestamp(season_data.id, show_key),
                 show_id=show.id,
             )
@@ -173,7 +171,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show_key,
                 force=force,
             )
-            self.soft_delete_missing_episodes(season.key)
+            self.soft_delete_missing_episodes(season.key, show_key)
 
     def _upsert_movie_season(
         self,
@@ -190,7 +188,6 @@ class UpsertMixin(HelperMixin, register=False):
             name="Movie",
             sort_order=0,
             season_number=0,
-            season_identifier=self._fallback_season_identifier(node_id),
             data_timestamp=self.season_data_timestamp(node_id, show_key),
             show_id=show.id,
         )
@@ -264,7 +261,6 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=season_episode.content.runtime * 60,
                 sort_order=season_episode.content.episode_number,
                 episode_number=season_episode.content.episode_number,
-                episode_identifier=f"{self.plugin_key()} {season_episode.id}",
                 data_timestamp=self.episode_data_timestamp(
                     season_episode.id,
                     season.key,
@@ -321,7 +317,6 @@ class UpsertMixin(HelperMixin, register=False):
             duration=node.content.runtime * 60,
             sort_order=0,
             episode_number=0,
-            episode_identifier=f"{self.plugin_key()} {episode_info.id}",
             data_timestamp=self.episode_data_timestamp(
                 episode_info.id,
                 season.key,

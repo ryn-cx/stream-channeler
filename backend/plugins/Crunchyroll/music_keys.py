@@ -1,13 +1,18 @@
 # TODO: Validate
 """Keys for Crunchyroll's music catalogue.
 
-Music shares a `Plugin` record with the video catalogue, so an artist's keys are
-prefixed with what they are to keep them apart from a series' keys and to let a
-key alone say which file it is read from.
+Music shares a `Plugin` record with the video catalogue, so an artist's keys sit
+beside a series' keys and have to be told apart from them. Crunchyroll already
+says which of the two an id names in the id itself, so the id is the key, and the
+prefix it carries is what a key alone is read by.
+
+A season is the one key with no id behind it, since splitting an artist's releases
+into videos and concerts is this plugin's doing rather than something Crunchyroll
+numbers, so that key is the listing it stands for. Which artist it belongs to is
+the show's to say, and is passed alongside it rather than repeated inside it.
 """
 
 from enum import StrEnum
-from typing import NamedTuple
 
 
 class MusicCategory(StrEnum):
@@ -17,7 +22,14 @@ class MusicCategory(StrEnum):
     CONCERT = "concert"
 
 
-ARTIST_PREFIX = "artist"
+# The prefix Crunchyroll issues ids under, which is what a key is recognised by.
+ARTIST_ID_PREFIX = "MA"
+SERIES_ID_PREFIX = "G"
+CATEGORY_ID_PREFIXES = {
+    "MV": MusicCategory.MUSIC_VIDEO,
+    "MC": MusicCategory.CONCERT,
+}
+CATEGORY_ID_PREFIX_LENGTH = 2
 
 # Music is its own `Source` so a channel can take an artist without the video
 # catalogue coming with it, and so the two can be scheduled apart. Each source is
@@ -25,75 +37,32 @@ ARTIST_PREFIX = "artist"
 # is queued into is named after the music source it collects.
 VIDEO_SOURCE = "Crunchyroll Videos"
 MUSIC_SOURCE = "Crunchyroll Music"
-
-# An artist's videos and concerts are two separate listings, so each becomes a
-# season of its own rather than one flat list of everything they released.
-CATEGORY_NAMES = {
-    MusicCategory.MUSIC_VIDEO: "Music Videos",
+MUSIC_CATEGORY_TO_NAME = {
     MusicCategory.CONCERT: "Concerts",
+    MusicCategory.MUSIC_VIDEO: "Music Videos",
 }
 
 
-class MusicSeasonKey(NamedTuple):
-    """The parts of a music `Season` key."""
-
-    artist_id: str
-    category: MusicCategory
-
-
-class MusicEpisodeKey(NamedTuple):
-    """The parts of a music `Episode` key."""
-
-    category: MusicCategory
-    video_id: str
-
-
-def artist_show_key(artist_id: str) -> str:
-    """Return the `Show` key for an artist."""
-    return f"{ARTIST_PREFIX}/{artist_id}"
-
-
-def music_season_key(artist_id: str, category: MusicCategory) -> str:
-    """Return the `Season` key for one of an artist's categories."""
-    return f"{ARTIST_PREFIX}/{artist_id}/{category}"
-
-
-def music_episode_key(category: MusicCategory, video_id: str) -> str:
-    """Return the `Episode` key for a music video or a concert."""
-    return f"{category}/{video_id}"
-
-
-def is_artist_show_key(show_key: str) -> bool:
+def is_music_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to an artist rather than a series."""
-    return show_key.startswith(f"{ARTIST_PREFIX}/")
+    return show_key.startswith(ARTIST_ID_PREFIX)
+
+
+def is_anime_show_key(show_key: str) -> bool:
+    """Report whether a `Show` key belongs to a series rather than an artist."""
+    return show_key.startswith(SERIES_ID_PREFIX)
 
 
 def is_music_season_key(season_key: str) -> bool:
     """Report whether a `Season` key belongs to an artist rather than a series."""
-    return season_key.startswith(f"{ARTIST_PREFIX}/")
+    return season_key in set(MusicCategory)
 
 
 def is_music_episode_key(episode_key: str) -> bool:
     """Report whether an `Episode` key belongs to a music video or a concert."""
-    return episode_key.startswith(tuple(f"{category}/" for category in MusicCategory))
+    return episode_key.startswith(tuple(CATEGORY_ID_PREFIXES))
 
 
-def parse_artist_show_key(show_key: str) -> str:
-    """Return the artist id a `Show` key is built from."""
-    return show_key.split("/", 1)[1]
-
-
-def parse_music_season_key(season_key: str) -> MusicSeasonKey:
-    """Return the parts a music `Season` key is built from.
-
-    A season is reached from its key alone, without the show's, so the key
-    carries the artist as well as the category.
-    """
-    _, artist_id, category = season_key.split("/")
-    return MusicSeasonKey(artist_id, MusicCategory(category))
-
-
-def parse_music_episode_key(episode_key: str) -> MusicEpisodeKey:
-    """Return the parts a music `Episode` key is built from."""
-    category, video_id = episode_key.split("/", 1)
-    return MusicEpisodeKey(MusicCategory(category), video_id)
+def music_episode_category(episode_key: str) -> MusicCategory:
+    """Return the listing an episode is a video or a concert of."""
+    return CATEGORY_ID_PREFIXES[episode_key[:CATEGORY_ID_PREFIX_LENGTH]]

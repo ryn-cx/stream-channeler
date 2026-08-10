@@ -88,6 +88,7 @@ class TMDBMixin(BasePlugin, register=False):
         plugin's own media instead, which is what fills in whatever this website
         leaves out when the `Show` is served.
         """
+        show.show_identifier = self._fallback_show_identifier(show_key)
         tmdb_id = self._cached_tmdb_id(show_key)
         show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
         if show.tmdb_id:
@@ -103,6 +104,7 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: MediaType,
     ) -> Season:
+        season.season_identifier = self._fallback_season_identifier(season.key)
         season = self.tmdb.tmdb_link_season(
             season,
             show.tmdb_id,
@@ -121,6 +123,7 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_media_type: MediaType,
         last_episode_number: int | None = None,
     ) -> Episode:
+        episode.episode_identifier = self._fallback_episode_identifier(episode.key)
         episode = self.tmdb.tmdb_link_episode(
             episode,
             season.show.tmdb_id,

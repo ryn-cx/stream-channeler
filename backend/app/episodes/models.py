@@ -15,11 +15,18 @@ from sqlmodel import (
     Session,
     UniqueConstraint,
     select,
+    text,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.media.identifiers import identifier_tmdb_id
-from app.models import BaseMediaMixin, DateTimeField, MediaMixin, sortable_field_indexes
+from app.models import (
+    BaseMediaMixin,
+    DateTimeField,
+    MediaMixin,
+    placeholder_identifier,
+    sortable_field_indexes,
+)
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -34,13 +41,13 @@ if TYPE_CHECKING:
 # The notes that stand for a settled identifier rather than a guess at one. A
 # note is free text so that a new way of recognising an episode needs nothing
 # but its own wording; the rest are written where the matching is done.
-NAME_AND_NUMBER_NOTE = "Name and number match"
-DESCRIPTION_NOTE = "Description match"
+NAME_AND_NUMBER_NOTE = "Automatic: Name and number match"
+DESCRIPTION_NOTE = "Automatic: Description match"
 # The three ways a `User` settles one, kept apart because taking the match that
 # was put in front of them is a smaller thing than going and finding one.
-MANUALLY_CONFIRMED_NOTE = "Manually confirmed"
-MANUALLY_SELECTED_NOTE = "Manually selected"
-NO_MATCH_NOTE = "No match found"
+MANUALLY_CONFIRMED_NOTE = "Manual: Confirmation"
+MANUALLY_SELECTED_NOTE = "Manual: Selection"
+NO_MATCH_NOTE = "Manual: No match found"
 
 MANUAL_NOTES = frozenset(
     {
@@ -123,7 +130,17 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         ),
         Index("Episode-deleted_at-index", "deleted_at"),
         Index("Episode-episode_identifier-index", "episode_identifier", "id"),
+        Index(
+            "Episode-live-episode_identifier-index",
+            "episode_identifier",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )
+
+    # Named after the plugin that read the record by `_merge_and_upsert_*`,
+    # and after the TMDB episode behind it when there is one, so it is not
+    # something the record has to be built with.
+    episode_identifier: str = Field(default_factory=placeholder_identifier)
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")

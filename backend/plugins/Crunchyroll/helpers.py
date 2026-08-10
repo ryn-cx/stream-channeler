@@ -8,9 +8,10 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.music_keys import (
-    is_artist_show_key,
+    is_music_episode_key,
     is_music_season_key,
-    parse_artist_show_key,
+    is_music_show_key,
+    music_episode_category,
 )
 
 
@@ -19,7 +20,7 @@ class HelperMixin(FileMixin, register=False):
     music_source: Source
 
     def _source_from_show_key(self, show_key: str) -> Source:
-        if is_artist_show_key(show_key):
+        if is_music_show_key(show_key):
             return self.music_source
         return self.video_source
 
@@ -32,8 +33,6 @@ class HelperMixin(FileMixin, register=False):
 
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
-        if is_artist_show_key(show_key):
-            return MediaType.tv
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
     @override
@@ -45,7 +44,7 @@ class HelperMixin(FileMixin, register=False):
         if existing_show and existing_show.tmdb_id:
             return existing_show.tmdb_id
         # TMDB catalogues films and series, so an artist has nothing to match.
-        if is_artist_show_key(show_key):
+        if is_music_show_key(show_key):
             return None
         series = self._series_datum(show_key)
         return self._tmdb_search_media(
@@ -79,11 +78,18 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     @classmethod
-    def _show_url(cls, show_key: str) -> str:
-        if is_artist_show_key(show_key):
-            return cls.build_url(f"artist/{parse_artist_show_key(show_key)}")
+    def _series_url(cls, show_key: str) -> str:
         return cls.build_url(f"series/{show_key}")
 
     @classmethod
+    def _artist_url(cls, show_key: str) -> str:
+        return cls.build_url(f"artist/{show_key}")
+
+    @classmethod
     def _episode_url(cls, episode_key: str) -> str:
+        # Crunchyroll files a music video or a concert under the listing it
+        # belongs to, which its id says but the url still has to be told.
+        if is_music_episode_key(episode_key):
+            category = music_episode_category(episode_key)
+            return cls.build_url(f"watch/{category}/{episode_key}")
         return cls.build_url(f"watch/{episode_key}")

@@ -8,6 +8,7 @@ from chirashi.search import models as search_models
 
 from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
+from plugins.Crunchyroll.music_keys import is_music_show_key
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
@@ -34,7 +35,9 @@ class SearchMixin(HelperMixin, register=False):
         results = [
             PluginSearchResult(
                 title=item.title,
-                url=self._show_url(item.id),
+                url=self._artist_url(item.id)
+                if is_music_show_key(item.id)
+                else self._series_url(item.id),
                 year=item.series_metadata.series_launch_year
                 if item.series_metadata
                 else None,

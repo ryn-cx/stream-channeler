@@ -4,11 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from plugins.Crunchyroll.music_keys import (
-    MusicCategory,
-    artist_show_key,
-    music_episode_key,
-)
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
@@ -118,7 +113,7 @@ class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        return artist_show_key(self._key)
+        return self._key
 
     @override
     def raise_if_invalid(self) -> None:
@@ -127,18 +122,16 @@ class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
 
 
 class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
-    _CATEGORY: MusicCategory
-
     @property
     @override
     def show_key(self) -> str:
         file = self.plugin.concert_or_music_video_file(self._episode_key)
         details = file.parsed().data[0]
-        return artist_show_key(details.artist.id)
+        return details.artist.id
 
     @property
     def _episode_key(self) -> str:
-        return music_episode_key(self._CATEGORY, self._key)
+        return self._key
 
     @override
     def raise_if_invalid(self) -> None:
@@ -169,7 +162,6 @@ class CrunchyrollMusicVideoURLHandler(_CrunchyrollMusicURLHandler):
         "musicvideo",
         group="music_video_key",
     )
-    _CATEGORY = MusicCategory.MUSIC_VIDEO
 
 
 class CrunchyrollConcertURLHandler(_CrunchyrollMusicURLHandler):
@@ -179,4 +171,3 @@ class CrunchyrollConcertURLHandler(_CrunchyrollMusicURLHandler):
     """
 
     _URL_REGEX = _build_crunchyroll_url_regex("watch", "concert", group="concert_key")
-    _CATEGORY = MusicCategory.CONCERT

@@ -50,7 +50,6 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="TV Show",
                 url=self._show_url(show_key, "series"),
                 image_url=self._image_url(model.artwork.program_tile.path),
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
@@ -84,7 +83,6 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._show_url(show_key, "movie"),
                 image_url=self._image_url(model.artwork.program_tile.path),
                 media_type="Movie",
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -116,7 +114,6 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=season_number,
                     sort_order=sort_order,
                     url=self._show_url(show.key, "series"),
-                    season_identifier=self._fallback_season_identifier(season_key),
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -145,7 +142,6 @@ class UpsertMixin(HelperMixin, register=False):
                 season_number=0,
                 sort_order=0,
                 url=self._show_url(show.key, "movie"),
-                season_identifier=self._fallback_season_identifier(season_key),
                 data_timestamp=self.season_data_timestamp(season_key, show.key),
                 show_id=show.id,
             )
@@ -189,7 +185,6 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=item.duration,
                 release_date=item.premiere_date,
                 sort_order=sort_order,
-                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,
@@ -224,7 +219,6 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=model.details.entity.duration,
                 episode_number=0,
                 sort_order=0,
-                episode_identifier=f"{self.plugin_key()} {show_key}",
                 data_timestamp=self.episode_data_timestamp(
                     show_key,
                     season.key,

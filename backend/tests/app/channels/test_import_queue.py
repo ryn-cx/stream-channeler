@@ -113,14 +113,12 @@ class TestImportQueue:
         # Correct StreamChanneler URL shape, but the show does not exist, so the plugin
         # raises InvalidURLError and the item is failed rather than importing.
         channel = create_random_channel(function_scoped_session)
-        item = _queue(
-            function_scoped_session,
-            channel.id,
-            f"streamchanneler.com/show/{uuid.uuid4()}/",
-        )
+        url = f"streamchanneler.com/show/{uuid.uuid4()}/"
+        item = _queue(function_scoped_session, channel.id, url)
 
         import_queue(function_scoped_session)
 
         function_scoped_session.refresh(item)
         assert item.status == URLStatus.FAILED
-        assert item.note == "Invalid URL."
+        # The plugin's own explanation is what the user is left with.
+        assert item.note == f"Show not found: {url}"

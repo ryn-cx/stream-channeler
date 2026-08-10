@@ -53,7 +53,6 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Series",
                 url=self._show_url(show_key),
                 image_url=self._series_image_url(series_data),
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -87,7 +86,6 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._show_url(show_key, "Movie"),
                 image_url=hero.attributes.image.attributes.source,
                 media_type="Movie",
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -204,7 +202,6 @@ class UpsertMixin(HelperMixin, register=False):
                 sort_order=sort_order,
                 release_date=release_date,
                 air_date=release_date,
-                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,
@@ -254,7 +251,6 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=duration,
                 release_date=release_date,
                 air_date=release_date,
-                episode_identifier=f"{self.plugin_key()} {episode_key}",
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,

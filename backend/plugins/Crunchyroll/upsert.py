@@ -1,9 +1,14 @@
-# TODO: Validate
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import timedelta
-from typing import Protocol, cast, override
+from typing import override
+
+from chirashi.artist import models as artist_models
+from chirashi.artist_concerts import models as artist_concerts_models
+from chirashi.artist_music_videos import models as artist_music_videos_models
+from chirashi.concert import models as concert_models
+from chirashi.music_video import models as music_video_models
 
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
@@ -13,60 +18,60 @@ from app.sources.models import Source
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import (
-    CATEGORY_NAMES,
+    MUSIC_CATEGORY_TO_NAME,
     MUSIC_SOURCE,
     VIDEO_SOURCE,
     MusicCategory,
-    is_artist_show_key,
-    music_episode_key,
-    music_season_key,
-    parse_artist_show_key,
+    is_anime_show_key,
+    is_music_show_key,
 )
 from plugins.TMDB.mixin import highest_episode_number
 
-# Crunchyroll adds music far more slowly than it airs episodes, and the music
-# catalogue offers no cutoff parameter so every check downloads all of it. The
-# music `Source` is scheduled a month out, which is what makes the check monthly.
-MUSIC_UPDATE_INTERVAL = timedelta(days=30)
 
-
-class _SizedImage(Protocol):
-    """One of the sizes Crunchyroll offers an image in."""
-
-    source: str
-    width: int
-
-
-class _Release(Protocol):
-    """An entry in one of an artist's listings.
-
-    A music video listing and a concert listing are separate models with no
-    shared base beyond pydantic's, so the one field read off both is named here.
-    """
-
-    id: str
-
-
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
 
-    def _upsert_video_source(self) -> Source:
+    def _upsert_anime_source(self) -> Source:
+        return self._upsert_source(
+            VIDEO_SOURCE,
+            self.find_newest_browse_file(),
+            BrowseSeries,
+            timedelta(days=1),  # Check daily for new videos.
+        )
+
+    def _upsert_music_source(self) -> Source:
+        return self._upsert_source(
+            MUSIC_SOURCE,
+            self.find_newest_music_browse_file(),
+            BrowseMusic,
+            timedelta(days=7),  # Check weekly for new music.
+        )
+
+    @override
+    def _upsert_source(
+        self,
+        source_key: str,
+        latest_browse_file: BrowseSeries | BrowseMusic | None,
+        initial_file_type: Callable[..., BrowseSeries | BrowseMusic],
+        update_interval: timedelta,
+    ) -> Source:
         # If this is the first time the source is upserted an initial browse file needs
         # to be downloaded.
-        if not (latest_browse_file := self.find_newest_browse_file()):
-            latest_browse_file = self._initial_file(BrowseSeries)
+        if not latest_browse_file:
+            latest_browse_file = self._initial_file(initial_file_type)
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, VIDEO_SOURCE)
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
-            key=VIDEO_SOURCE,
-            name=VIDEO_SOURCE,
+            key=source_key,
+            name=source_key,
             favicon_url=self.FAVICON_URL,
             data_timestamp=data_timestamp,
-            update_at=data_timestamp + timedelta(days=1),
+            update_at=data_timestamp + update_interval,
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source, self._source_files())
+        ).upsert_and_set_update_at(self.plugin, source, [latest_browse_file])
 
     @override
     def upsert_show(
@@ -76,12 +81,16 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        """Upsert a `Show`, from whichever catalogue its key belongs to."""
-        if is_artist_show_key(show_key):
+        if is_music_show_key(show_key):
             return self._upsert_music_show(source, show_key, force=force)
-        return self._upsert_video_show(source, show_key, force=force)
 
-    def _upsert_video_show(
+        if is_anime_show_key(show_key):
+            return self._upsert_anime_show(source, show_key, force=force)
+
+        msg = f"Show key {show_key} is neither an artist nor a series"
+        raise ValueError(msg)
+
+    def _upsert_anime_show(
         self,
         source: Source,
         show_key: str,
@@ -98,8 +107,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=series_data.title,
                 description=series_data.description,
                 media_type="Movie" if self._is_movie(show_key) else "Series",
-                url=self._show_url(series_data.id),
-                show_identifier=self._fallback_show_identifier(show_key),
+                url=self._series_url(series_data.id),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -111,13 +119,40 @@ class UpsertMixin(HelperMixin, register=False):
                 tmdb_media_type,
             )
 
-        self._upsert_video_seasons(show, tmdb_media_type, force=force)
+        self._upsert_anime_seasons(show, tmdb_media_type, force=force)
         self._soft_delete_missing(show_key)
         self._set_weekly_updates_from_episodes(show)
 
         return show
 
-    def _upsert_video_seasons(
+    def _upsert_music_show(
+        self,
+        source: Source,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            artist_data = self.artist_file(show_key).parsed().data[0]
+            show = Show(
+                key=show_key,
+                name=artist_data.name,
+                description=artist_data.description,
+                media_type="Music",
+                url=self._artist_url(show_key),
+                image_url=self._largest_image(artist_data.images.poster_wide),
+                show_identifier=self._fallback_show_identifier(show_key),
+                data_timestamp=self.show_data_timestamp(show_key),
+                source_id=source.id,
+            ).upsert_and_set_update_at(source, show, self._show_files(show_key))
+
+        self._upsert_music_seasons(show, show_key, force=force)
+        self._soft_delete_missing(show_key)
+
+        return show
+
+    def _upsert_anime_seasons(
         self,
         show: Show,
         tmdb_media_type: MediaType,
@@ -133,7 +168,6 @@ class UpsertMixin(HelperMixin, register=False):
                     name=season_data.title,
                     season_number=season_data.season_number,
                     sort_order=index,
-                    season_identifier=self._fallback_season_identifier(season_data.id),
                     data_timestamp=self.season_data_timestamp(
                         season_data.id,
                         show.key,
@@ -155,6 +189,40 @@ class UpsertMixin(HelperMixin, register=False):
                 force=force,
             )
 
+    # TODO: Validate
+    def _upsert_music_seasons(
+        self,
+        show: Show,
+        artist_id: str,
+        *,
+        force: bool = False,
+    ) -> None:
+
+        for category in MusicCategory:
+            season = Season.get_from_memory(self.session, show, category)
+            if self._season_is_outdated(season, show.key, force=force):
+                season = Season(
+                    key=category,
+                    name=MUSIC_CATEGORY_TO_NAME[category],
+                    url=self._artist_url(show.key),
+                    season_identifier=self._fallback_season_identifier(category),
+                    data_timestamp=self.season_data_timestamp(category, show.key),
+                    show_id=show.id,
+                ).upsert_and_set_update_at(
+                    show,
+                    season,
+                    self._season_files(category, show.key),
+                )
+
+            self._upsert_music_episodes(
+                season,
+                show.key,
+                artist_id,
+                category,
+                force=force,
+            )
+
+    # TODO: Validate
     def _upsert_video_episodes(
         self,
         season: Season,
@@ -182,7 +250,6 @@ class UpsertMixin(HelperMixin, register=False):
                 sort_order=index,
                 release_date=episode_data.premium_available_date,
                 air_date=episode_data.episode_air_date,
-                episode_identifier=f"{self.plugin_key()} {episode_data.id}",
                 data_timestamp=self.episode_data_timestamp(
                     episode_data.id,
                     season.key,
@@ -199,89 +266,7 @@ class UpsertMixin(HelperMixin, register=False):
                 last_number,
             )
 
-    def _upsert_music_source(self) -> Source:
-        # If this is the first time the source is upserted an initial browse file
-        # needs to be downloaded.
-        if not (latest_browse_file := self.find_newest_music_browse_file()):
-            latest_browse_file = self._initial_file(BrowseMusic)
-            latest_browse_file.download_if_outdated()
-        data_timestamp = latest_browse_file.data_timestamp
-
-        source = Source.get_from_memory(self.session, self.plugin, MUSIC_SOURCE)
-        return Source(
-            key=MUSIC_SOURCE,
-            name=MUSIC_SOURCE,
-            favicon_url=self.FAVICON_URL,
-            data_timestamp=data_timestamp,
-            update_at=data_timestamp + MUSIC_UPDATE_INTERVAL,
-            plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source, self._music_source_files())
-
-    def _upsert_music_show(
-        self,
-        source: Source,
-        show_key: str,
-        *,
-        force: bool = False,
-    ) -> Show:
-        artist_id = parse_artist_show_key(show_key)
-
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            artist_data = self.artist_file(artist_id).parsed().data[0]
-            show = Show(
-                key=show_key,
-                name=artist_data.name,
-                description=artist_data.description,
-                media_type="Music",
-                url=self._show_url(show_key),
-                image_url=self._largest_image(artist_data.images.poster_wide),
-                show_identifier=f"{self.plugin_key()} {show_key}",
-                data_timestamp=self.show_data_timestamp(show_key),
-                source_id=source.id,
-            ).upsert_and_set_update_at(source, show, self._show_files(show_key))
-
-        self._upsert_music_seasons(show, artist_id, force=force)
-        self._soft_delete_missing(show_key)
-
-        return show
-
-    def _upsert_music_seasons(
-        self,
-        show: Show,
-        artist_id: str,
-        *,
-        force: bool = False,
-    ) -> None:
-        # An artist always has both categories, even while one is empty, so a
-        # first release into it is a new episode rather than a new season.
-        for sort_order, category in enumerate(MusicCategory):
-            season_key = music_season_key(artist_id, category)
-
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                season = Season(
-                    key=season_key,
-                    name=CATEGORY_NAMES[category],
-                    sort_order=sort_order,
-                    url=self._show_url(show.key),
-                    season_identifier=f"{self.plugin_key()} {season_key}",
-                    data_timestamp=self.season_data_timestamp(season_key, show.key),
-                    show_id=show.id,
-                ).upsert_and_set_update_at(
-                    show,
-                    season,
-                    self._season_files(season_key, show.key),
-                )
-
-            self._upsert_music_episodes(
-                season,
-                show.key,
-                artist_id,
-                category,
-                force=force,
-            )
-
+    # TODO: Validate
     def _upsert_music_episodes(
         self,
         season: Season,
@@ -291,11 +276,17 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        listing = self.artist_concerts_or_artist_music_videos_file(artist_id, category).parsed().data
+        listing: Sequence[
+            artist_concerts_models.Datum | artist_music_videos_models.Datum
+        ] = (
+            self.artist_concerts_or_artist_music_videos_file(artist_id, category)
+            .parsed()
+            .data
+        )
         # Crunchyroll lists an artist's releases newest first, so the order is
         # reversed to number them the way they were released.
         for sort_order, datum in enumerate(reversed(listing)):
-            episode_key = music_episode_key(category, datum.id)
+            episode_key = datum.id
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -316,7 +307,7 @@ class UpsertMixin(HelperMixin, register=False):
                 sort_order=sort_order,
                 release_date=details.availability.start_date,
                 air_date=details.original_release,
-                episode_identifier=f"{self.plugin_key()} {datum.id}",
+                episode_identifier=self._fallback_episode_identifier(datum.id),
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,
@@ -329,8 +320,15 @@ class UpsertMixin(HelperMixin, register=False):
                 self._episode_files(episode_key, season.key, show_key),
             )
 
+    # TODO: Validate
     @staticmethod
-    def _largest_image(images: Sequence[_SizedImage]) -> str | None:
+    def _largest_image(
+        images: Sequence[
+            artist_models.PosterWideItem
+            | concert_models.ThumbnailItem
+            | music_video_models.ThumbnailItem
+        ],
+    ) -> str | None:
         """Return the source of the widest size Crunchyroll offers an image in."""
         if not images:
             return None

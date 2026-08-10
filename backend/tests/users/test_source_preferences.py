@@ -12,7 +12,7 @@ from app.episodes.models import Episode
 from app.models import Visibility
 from app.sources.service import OTHER_SOURCE_KEY, source_keys
 from app.users import service as user_service
-from app.users.models import User
+from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
 from app.users.service import effective_source_preferences
 from tests.app.plugins.utils import create_random_plugin
@@ -184,11 +184,14 @@ def test_dedup_config_priority_and_enabled_sets(
     session_scoped_session: Session,
 ) -> None:
     installed = _installed_source_keys(session_scoped_session, 2)
-    stored = [
-        SourcePreference(source_key=installed[0], enabled=False),
-        SourcePreference(source_key=OTHER_SOURCE_KEY, enabled=True),
+    user = create_random_user(session_scoped_session)
+    user.source_preferences = [
+        UserSourcePreference(source_key=installed[0], priority=0, enabled=False),
+        UserSourcePreference(source_key=OTHER_SOURCE_KEY, priority=1, enabled=True),
     ]
-    config = source_dedup_config(session_scoped_session, stored)
+    session_scoped_session.add(user)
+    session_scoped_session.flush()
+    config = source_dedup_config(session_scoped_session, user)
 
     # Lower index == higher priority; the disabled key still has a rank.
     assert config.priority[installed[0]] < config.priority[OTHER_SOURCE_KEY]
@@ -207,7 +210,7 @@ def test_deduplicate_keeps_higher_priority_source(
     session_scoped_session: Session,
 ) -> None:
     _installed_source_keys(session_scoped_session, 2)
-    config = source_dedup_config(session_scoped_session, [])
+    config = source_dedup_config(session_scoped_session, None)
     installed = source_keys(session_scoped_session)
     higher, lower = installed[0], installed[1]
 
@@ -230,7 +233,7 @@ def test_deduplicate_preserves_order_and_removes_duplicates(
     session_scoped_session: Session,
 ) -> None:
     installed = _installed_source_keys(session_scoped_session, 1)
-    config = source_dedup_config(session_scoped_session, [])
+    config = source_dedup_config(session_scoped_session, None)
     first = _episode("TMDB 1")
     second = _episode("TMDB 2")
     duplicate_of_first = _episode("TMDB 1")
@@ -252,7 +255,7 @@ def test_deduplicate_preserves_order_and_removes_duplicates(
 def test_deduplicate_distinct_identifiers_all_kept(
     session_scoped_session: Session,
 ) -> None:
-    config = source_dedup_config(session_scoped_session, [])
+    config = source_dedup_config(session_scoped_session, None)
     episodes = [_episode(f"TMDB {index}") for index in range(3)]
     episode_source_keys = {episode.id: OTHER_SOURCE_KEY for episode in episodes}
 

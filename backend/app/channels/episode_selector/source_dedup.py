@@ -13,8 +13,8 @@ from uuid import UUID
 from app.auth.dependencies import SessionDep
 from app.episodes.models import Episode
 from app.sources.service import OTHER_SOURCE_KEY
-from app.users.schemas import SourcePreference
-from app.users.service import effective_source_preferences
+from app.users.models import User
+from app.users.service import effective_source_preferences, stored_preferences
 
 
 @dataclass
@@ -36,9 +36,10 @@ class SourceDedupConfig:
 
 def source_dedup_config(
     session: SessionDep,
-    stored: list[SourcePreference],
+    user: User | None,
 ) -> SourceDedupConfig:
     """Resolve a user's effective preferences into priorities and enabled sets."""
+    stored = stored_preferences(user.source_preferences) if user else []
     preferences = effective_source_preferences(session, stored)
     priority = {
         preference.source_key: index for index, preference in enumerate(preferences)

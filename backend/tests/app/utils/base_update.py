@@ -133,7 +133,10 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         # Verify that the database matches the API output.
         database_record = self.get_record_from_db(session_scoped_session, result.id)
-        assert result.model_dump().items() <= database_record.model_dump().items()
+        assert (
+            self.stored_fields(result.model_dump()).items()
+            <= database_record.model_dump().items()
+        )
 
         return [result]
 

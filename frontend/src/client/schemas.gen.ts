@@ -1777,11 +1777,6 @@ export const CombinedChannelInputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
-        },
-        use_default_filters: {
-            type: 'boolean',
-            title: 'Use Default Filters',
-            default: false
         }
     },
     additionalProperties: false,
@@ -1808,11 +1803,6 @@ export const CombinedChannelOutputSchema = {
                 }
             ],
             title: 'Name'
-        },
-        use_default_filters: {
-            type: 'boolean',
-            title: 'Use Default Filters',
-            default: false
         }
     },
     type: 'object',

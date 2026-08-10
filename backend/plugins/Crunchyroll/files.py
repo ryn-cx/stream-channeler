@@ -28,14 +28,10 @@ from chirashi.series import models as series_models
 from app.files.models import File
 from plugins.Crunchyroll.music_keys import (
     MusicCategory,
-    is_artist_show_key,
     is_music_episode_key,
     is_music_season_key,
-    music_episode_key,
-    music_season_key,
-    parse_artist_show_key,
-    parse_music_episode_key,
-    parse_music_season_key,
+    is_music_show_key,
+    music_episode_category,
 )
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
@@ -201,13 +197,11 @@ class FileMixin(TMDBMixin, register=False):
         """Returns SeasonEpisodes file."""
         return self._file(SeasonEpisodes, season_key)
 
-    def browse_series_file(self, browse: datetime | File) -> BrowseSeries:
+    # TODO: This function has weird type hints.
+    def browse_series_file(self, browse: str | datetime | File) -> BrowseSeries:
         """Returns BrowseSeries file."""
         if isinstance(browse, File):
-            return self._file(
-                BrowseSeries,
-                BrowseSeries.file_key_to_unique_identifier(browse.key),
-            )
+            browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
 
     def search_file(self, query: str) -> Search:
@@ -256,18 +250,15 @@ class FileMixin(TMDBMixin, register=False):
         function makes it easier to share code between importing them by dynamically
         getting the correct file for the situation.
         """
-        category, video_id = parse_music_episode_key(episode_key)
-        if category is MusicCategory.CONCERT:
-            return self.concert_file(video_id)
-        return self.music_video_file(video_id)
+        if music_episode_category(episode_key) is MusicCategory.CONCERT:
+            return self.concert_file(episode_key)
+        return self.music_video_file(episode_key)
 
-    def browse_music_file(self, browse: datetime | File) -> BrowseMusic:
+    # TODO: This function has weird type hints.
+    def browse_music_file(self, browse: str | datetime | File) -> BrowseMusic:
         """Returns BrowseMusic file."""
         if isinstance(browse, File):
-            return self._file(
-                BrowseMusic,
-                BrowseMusic.file_key_to_unique_identifier(browse.key),
-            )
+            browse = BrowseMusic.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseMusic, str(browse))
 
     def find_newest_music_browse_file(self) -> BrowseMusic | None:
@@ -294,14 +285,13 @@ class FileMixin(TMDBMixin, register=False):
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        if is_artist_show_key(show_key):
-            artist_id = parse_artist_show_key(show_key)
+        if is_music_show_key(show_key):
             return [
                 # Required to detect changes to the artist.
-                self.artist_file(artist_id),
+                self.artist_file(show_key),
                 # Required to detect new music videos and concerts.
-                self.artist_music_videos_file(artist_id),
-                self.artist_concerts_file(artist_id),
+                self.artist_music_videos_file(show_key),
+                self.artist_concerts_file(show_key),
             ]
         return [
             # Required to detect new seasons.
@@ -317,12 +307,12 @@ class FileMixin(TMDBMixin, register=False):
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         if is_music_season_key(season_key):
-            artist_id, category = parse_music_season_key(season_key)
+            category = MusicCategory(season_key)
             return [
                 # Required to detect new music videos or concerts.
-                self.artist_concerts_or_artist_music_videos_file(artist_id, category),
+                self.artist_concerts_or_artist_music_videos_file(show_key, category),
                 # Required to detect changes to the artist.
-                self.artist_file(artist_id),
+                self.artist_file(show_key),
             ]
         return [
             # Required to detect new episodes.
@@ -346,12 +336,11 @@ class FileMixin(TMDBMixin, register=False):
 
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        if is_artist_show_key(show_key):
-            artist_id = parse_artist_show_key(show_key)
+        if is_music_show_key(show_key):
             # Both categories are always seasons of the artist, even while one is
             # empty, so a first release into it is a new episode rather than a
             # new season the show has to notice.
-            return [music_season_key(artist_id, category) for category in MusicCategory]
+            return [category.value for category in MusicCategory]
         return [
             season_data.id for season_data in self.seasons_file(show_key).parsed().data
         ]
@@ -360,13 +349,14 @@ class FileMixin(TMDBMixin, register=False):
     def _episode_keys_from_file(
         self,
         season_keys: str | list[str],
+        show_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for season_key in season_keys:
             if is_music_season_key(season_key):
-                episode_keys += self._music_episode_keys(season_key)
+                episode_keys += self._music_episode_keys(season_key, show_key)
                 continue
             episode_keys += [
                 episode.id
@@ -374,10 +364,12 @@ class FileMixin(TMDBMixin, register=False):
             ]
         return episode_keys
 
-    def _music_episode_keys(self, season_key: str) -> list[str]:
-        artist_id, category = parse_music_season_key(season_key)
-        listing = self.artist_concerts_or_artist_music_videos_file(artist_id, category).parsed()
-        return [music_episode_key(category, datum.id) for datum in listing.data]
+    def _music_episode_keys(self, season_key: str, show_key: str) -> list[str]:
+        listing = self.artist_concerts_or_artist_music_videos_file(
+            show_key,
+            MusicCategory(season_key),
+        ).parsed()
+        return [datum.id for datum in listing.data]
 
     def find_newest_browse_file(self) -> BrowseSeries | None:
         """Returns newest BrowseSeries file, or None when there is none."""

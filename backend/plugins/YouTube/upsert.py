@@ -65,7 +65,6 @@ class UpsertMixin(HelperMixin, register=False):
                 name=show_page.title(),
                 url=self.build_url(f"show/{show_key}"),
                 media_type="YouTube Show",
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 # A show only changes when a season is added to it.
                 update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
@@ -97,7 +96,6 @@ class UpsertMixin(HelperMixin, register=False):
                     name=f"Season {season_number}",
                     season_number=int(season_number),
                     url=self.build_url(f"show/{show_key}?season={season_number}"),
-                    season_identifier=self._fallback_season_identifier(season_key),
                     data_timestamp=data_timestamp,
                     update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
                     show_id=show.id,
@@ -166,7 +164,6 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"watch?v={show_key}"),
                 media_type="YouTube Video",
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=data_timestamp,
                 # Movies are only updated once a year to make sure they are still
                 # available.
@@ -202,7 +199,6 @@ class UpsertMixin(HelperMixin, register=False):
                 name=video_item.snippet.title,
                 url=self.build_url(f"watch?v={show_key}"),
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
-                season_identifier=self._fallback_season_identifier(show_key),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp,
                 show_id=show.id,
@@ -395,7 +391,6 @@ class UpsertMixin(HelperMixin, register=False):
             image_url=self._best_thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
             episode_number=self._get_episode_number(episode_key, season.key, show_key),
-            episode_identifier=f"{self.plugin_key()} {video_item.id}",
             data_timestamp=self.episode_data_timestamp(
                 episode_key,
                 season.key,

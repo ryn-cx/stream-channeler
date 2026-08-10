@@ -21,7 +21,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
-from app.users.service import stored_preferences
 from app.watches.models import Watch
 
 if TYPE_CHECKING:
@@ -90,9 +89,7 @@ def _config_for_user(
     from app.channels.episode_selector import source_dedup_config  # noqa: PLC0415
 
     if user_id not in cache:
-        user = session.get(User, user_id)
-        preferences = stored_preferences(user.source_preferences) if user else []
-        cache[user_id] = source_dedup_config(session, preferences)
+        cache[user_id] = source_dedup_config(session, session.get(User, user_id))
     return cache[user_id]
 
 

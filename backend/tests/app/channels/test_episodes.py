@@ -11,15 +11,16 @@ from sqlmodel import Session
 from app.channels.models import Channel
 from app.channels.schemas import (
     ChannelEpisodesOutput,
-    ChannelOutput,
     EpisodeWithDetails,
 )
+from app.channels.service import channel_output
 from app.config import settings
 from app.models import Visibility
 from app.plugins.schemas import PluginOutput
 from app.seasons.schemas import SeasonOutput
 from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
+from app.users.models import User
 from tests.app.channels.base import BaseChannelSubEndpointTests
 from tests.app.channels.utils import (
     channel_show_show,
@@ -67,8 +68,6 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             plugins={},
             channels={},
         )
-        expected.channels[channel.id] = ChannelOutput.model_validate(channel)
-
         for _ in range(2):
             plugin = create_random_plugin(
                 session_scoped_session,
@@ -164,17 +163,23 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             )
             return
 
+        viewer: User | None
         if user_is_owner:
             headers = owner_headers
+            viewer = owner
         elif user_is_authenticated:
-            normal_user = create_random_user(session_scoped_session)
+            viewer = create_random_user(session_scoped_session)
             headers = authentication_token_from_email(
                 client=session_scoped_client,
-                email=normal_user.email,
+                email=viewer.email,
                 session=session_scoped_session,
             )
         else:
             headers = {}
+            viewer = None
+        # An anonymous channel hides its owner from everyone but them, so who is
+        # reading it decides what the channel reads as.
+        expected.channels[channel.id] = channel_output(channel, viewer)
         response = session_scoped_client.get(
             self.generic_record_url(channel.id),
             headers=headers,

@@ -479,7 +479,10 @@ class FileMixin(TMDBMixin, register=False):
 
     def show_episode_keys(self, show_key: str) -> list[str]:
         """Return the episode keys of every season of a show, in season order."""
-        return self._episode_keys_from_file(self._season_keys_from_file(show_key))
+        return self._episode_keys_from_file(
+            self._season_keys_from_file(show_key),
+            show_key,
+        )
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
@@ -626,6 +629,7 @@ class FileMixin(TMDBMixin, register=False):
     def _episode_keys_from_file(
         self,
         season_keys: str | list[str],
+        show_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -674,7 +678,7 @@ class FileMixin(TMDBMixin, register=False):
         """Batch download all videos for a season in a single API call."""
         season_key = self._get_key(season)
         show_key = self._get_show_key(season, show)
-        video_keys = self._episode_keys_from_file(season_key)
+        video_keys = self._episode_keys_from_file(season_key, show_key)
         self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
 
         outdated_ids = [

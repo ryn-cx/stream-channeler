@@ -123,16 +123,12 @@ class CombinedChannelOutput(BaseModel):
 
     id: uuid.UUID
     name: str | None
-    # Whether the channel contributes the episodes it would show on its own rather
-    # than the ones the read's own filters leave.
-    use_default_filters: bool = Field(default=False)
 
 
 class CombinedChannelInput(BaseInput):
     """Schema for combining a channel into another channel."""
 
     id: uuid.UUID
-    use_default_filters: bool = Field(default=False)
 
 
 class ChannelQueueOutput(BaseChannelQueue):

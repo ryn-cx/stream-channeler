@@ -66,7 +66,7 @@ class Crunchyroll(
         if not hasattr(self, "video_source"):
             self.video_source = (
                 Source.get(self.session, self.plugin, VIDEO_SOURCE)
-                or self._upsert_video_source()
+                or self._upsert_anime_source()
             )
 
         if not hasattr(self, "music_source"):

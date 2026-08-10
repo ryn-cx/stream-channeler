@@ -64,7 +64,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             expected_dump = list_schema.model_validate(record).model_dump()
             # This works as a check to make sure the responses are not empty
             response_dump = response_by_id[record.id].model_dump()
-            assert expected_dump.items() <= response_dump.items()
+            assert self.stored_fields(expected_dump).items() <= response_dump.items()
 
     def assert_api_get_success(
         self,
@@ -83,7 +83,10 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         assert response.id
         database_record = self.output_schema.model_validate(initial_test_data.record)
         # Make sure returned data matches the datbase record
-        assert database_record.model_dump().items() <= response.model_dump().items()
+        assert (
+            self.stored_fields(database_record.model_dump()).items()
+            <= response.model_dump().items()
+        )
 
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])

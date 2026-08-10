@@ -5,7 +5,7 @@ import dataclasses
 import uuid
 from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from tests.app.utils.route_assertions import Method
@@ -140,6 +140,18 @@ class BaseTests[T: SUPPORTED_MODELS]:
         return session_scoped_session.exec(
             select(self.database_model).where(self.database_model.id == record_id),
         ).one()
+
+    def stored_fields(self, dump: dict[str, Any]) -> dict[str, Any]:
+        """Drop the fields an output schema derives rather than stores.
+
+        `username` and the like are read off a related record when a response is
+        built, so they are not part of what the record itself holds.
+        """
+        return {
+            name: value
+            for name, value in dump.items()
+            if name in self.database_model.model_fields
+        }
 
     @staticmethod
     def get_foreign_keys(model: type[SQLModel]) -> list[str]:

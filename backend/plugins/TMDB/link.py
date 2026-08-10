@@ -3,7 +3,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Sequence
 from difflib import SequenceMatcher
-from functools import cache
+from functools import cache, partial
 from itertools import product
 from math import prod
 from typing import NamedTuple, Protocol
@@ -104,16 +104,23 @@ def _is_generically_named(name: str) -> bool:
 
 
 type _Compare = Callable[[frozenset[str], frozenset[str]], bool]
+type _TranslatedNames = Callable[[TvSeasonEpisode], frozenset[str]]
 
 # What an episode was recognised by, said in the words it is shown in. Only the
 # first two are sure enough to settle a link; the rest say how a guess was made.
-_NAME_NOTE = "Named the same"
-_TRANSLATED_NAME_NOTE = "Named the same in another language"
-_PARTIAL_NAME_NOTE = "One name contains the other"
-_PARTIAL_TRANSLATED_NAME_NOTE = "One name contains the other in another language"
-_NUMBER_ONLY_NOTE = "Numbered the same, with no name to go on"
-_SAME_LENGTH_SEASON_NOTE = "Numbered the same, in a season of the same length"
-_CLOSEST_NAME_AND_NUMBER_NOTE = "Closest name of the title, and the number agrees"
+_NAME_NOTE = "Automatic: Named the same"
+_TRANSLATED_NAME_NOTE = "Automatic: Named the same in another language"
+_PARTIAL_NAME_NOTE = "Automatic: One name contains the other"
+_PARTIAL_TRANSLATED_NAME_NOTE = (
+    "Automatic: One name contains the other in another language"
+)
+_NUMBER_ONLY_NOTE = "Automatic: Numbered the same, with no name to go on"
+_SAME_LENGTH_SEASON_NOTE = (
+    "Automatic: Numbered the same, in a season of the same length"
+)
+_CLOSEST_NAME_AND_NUMBER_NOTE = (
+    "Automatic: Closest name of the title, and the number agrees"
+)
 
 
 class _EpisodeMatch(NamedTuple):
@@ -165,33 +172,6 @@ def _absolute_numbers(episodes: Sequence[TvSeasonEpisode]) -> dict[int, int]:
     return {episode.id: number for number, episode in enumerate(ordered, start=1)}
 
 
-def _find_by_description(
-    candidates: Sequence[TvSeasonEpisode],
-    description: str | None,
-) -> TvSeasonEpisode | None:
-    """Return the one episode described word for word as `description`.
-
-    A website that takes its descriptions from TMDB carries the very text TMDB
-    wrote, which says which episode it is more surely than a name does: a name
-    gets translated, shortened and rewritten on the way, where a description
-    long enough to be worth copying is copied whole. Two episodes described the
-    same way say nothing about which of them it is, so neither is returned.
-    """
-    if not description:
-        return None
-
-    target = _plaintext(description)
-    if not target:
-        return None
-
-    matches = [
-        candidate
-        for candidate in candidates
-        if _plaintext(candidate.overview) == target
-    ]
-    return matches[0] if len(matches) == 1 else None
-
-
 def _find_by_name[NamedType: _Named](
     candidates: Sequence[NamedType],
     name: str | None,
@@ -207,6 +187,198 @@ def _find_by_name[NamedType: _Named](
         if compare(_plaintext_forms(candidate.name), targets)
     ]
     return matches[0] if len(matches) == 1 else None
+
+
+class _Match:
+    """Every way an episode is recognised, in one place and in no order.
+
+    Each is only what it is handed: the title's episodes and what the website
+    says about the one being linked. Which of them is worth trusting over which
+    is `_episode_detail`'s to say rather than anything here.
+    """
+
+    @staticmethod
+    def name_and_number(
+        episodes: Sequence[TvSeasonEpisode],
+        season_number: int | None,
+        episode_number: int | None,
+        episode_name: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the episode both the name and the numbering point at.
+
+        Either on its own is worth less than the two together, so the episode at
+        the number is only taken when the name it carries is the same one, which
+        is the same agreement `_lock_reason` settles a link on.
+        """
+        if not episode_name or _is_generically_named(episode_name):
+            return None
+        numbered = _Match.number(episodes, season_number, episode_number)
+        if numbered is None or not numbered.name:
+            return None
+        if not _matches_exactly(
+            _plaintext_forms(numbered.name),
+            _plaintext_forms(episode_name),
+        ):
+            return None
+        return numbered
+
+    @staticmethod
+    def number(
+        episodes: Sequence[TvSeasonEpisode],
+        season_number: int | None,
+        episode_number: int | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the episode filed at a season and episode number."""
+        if not season_number or not episode_number:
+            return None
+        return next(
+            (
+                candidate
+                for candidate in episodes
+                if candidate.season_number == season_number
+                and candidate.episode_number == episode_number
+            ),
+            None,
+        )
+
+    @staticmethod
+    def name(
+        episodes: Sequence[TvSeasonEpisode],
+        episode_name: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the one episode named exactly as the website names it."""
+        return _find_by_name(episodes, episode_name, _matches_exactly)
+
+    @staticmethod
+    def partial_name(
+        episodes: Sequence[TvSeasonEpisode],
+        episode_name: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the one episode whose name contains the website's, or is inside it."""
+        return _find_by_name(episodes, episode_name, _contains_either_way)
+
+    @staticmethod
+    def translated_name(
+        episodes: Sequence[TvSeasonEpisode],
+        episode_name: str | None,
+        translated_names: _TranslatedNames,
+        compare: _Compare = _matches_exactly,
+    ) -> TvSeasonEpisode | None:
+        """Return the one episode named this way in any language TMDB holds.
+
+        An episode's translations are the one thing about a TMDB episode that is
+        not stored alongside it, so they are handed in rather than reached for.
+        """
+        if not episode_name:
+            return None
+
+        targets = _plaintext_forms(episode_name)
+        matches = [
+            episode
+            for episode in episodes
+            if compare(translated_names(episode), targets)
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    @staticmethod
+    def partial_translated_name(
+        episodes: Sequence[TvSeasonEpisode],
+        episode_name: str | None,
+        translated_names: _TranslatedNames,
+    ) -> TvSeasonEpisode | None:
+        """Return the one episode a translated name contains, or sits inside."""
+        return _Match.translated_name(
+            episodes,
+            episode_name,
+            translated_names,
+            _contains_either_way,
+        )
+
+    @staticmethod
+    def description(
+        episodes: Sequence[TvSeasonEpisode],
+        description: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the one episode described word for word as `description`.
+
+        A website that takes its descriptions from TMDB carries the very text
+        TMDB wrote, which says which episode it is more surely than a name does:
+        a name gets translated, shortened and rewritten on the way, where a
+        description long enough to be worth copying is copied whole. Two
+        episodes described the same way say nothing about which of them it is,
+        so neither is returned.
+        """
+        if not description:
+            return None
+
+        target = _plaintext(description)
+        if not target:
+            return None
+
+        matches = [
+            episode for episode in episodes if _plaintext(episode.overview) == target
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    @staticmethod
+    def same_length_season_and_episode_number(
+        episodes: Sequence[TvSeasonEpisode],
+        season_number: int | None,
+        episode_number: int | None,
+        highest_episode_number: int | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the episode at the number, when the season is as long as TMDB's.
+
+        A number means what the website meant by it only while the two are
+        counting the same episodes, which a season ending on the same number is
+        the sign of.
+        """
+        if season_number is None or highest_episode_number is None:
+            return None
+        numbers = [
+            episode.episode_number
+            for episode in episodes
+            if episode.season_number == season_number
+        ]
+        if not numbers or max(numbers) != highest_episode_number:
+            return None
+        return _Match.number(episodes, season_number, episode_number)
+
+    @staticmethod
+    def closest_name_and_number(
+        episodes: Sequence[TvSeasonEpisode],
+        episode_number: int | None,
+        episode_name: str | None,
+    ) -> TvSeasonEpisode | None:
+        """Return the closest named episode, but only where its number agrees too.
+
+        The last thing tried, for the episodes every surer way has passed over. A
+        name that only half matches is not enough to go on and a number by itself
+        is not either, but the closest name in the whole title landing on the very
+        number the website gives the episode is the two of them agreeing, and two
+        weak signs pointing at the same episode are worth taking.
+
+        Either numbering counts, since a website that never restarts its count
+        names the episode by how far into the title it is rather than by how far
+        into its season.
+        """
+        if not episode_name or episode_number is None or not episodes:
+            return None
+
+        similarity, closest = max(
+            (
+                (_similarity(episode_name, episode.name), episode)
+                for episode in episodes
+            ),
+            key=lambda scored: scored[0],
+        )
+        if not similarity:
+            return None
+        if closest.episode_number == episode_number:
+            return closest
+        if _absolute_numbers(episodes).get(closest.id) == episode_number:
+            return closest
+        return None
 
 
 class LinkMixin(LookupMixin, register=False):
@@ -356,7 +528,7 @@ class LinkMixin(LookupMixin, register=False):
         ):
             return NAME_AND_NUMBER_NOTE
 
-        described = _find_by_description(
+        described = _Match.description(
             self._all_episodes(tmdb_id),
             episode.description,
         )
@@ -409,180 +581,58 @@ class LinkMixin(LookupMixin, register=False):
         match nothing settles is still worth saying how it was made, since that
         is most of what anyone looking at it later has to go on.
         """
-        # Tried ahead of the name because a description is only ever this exact
-        # when it came from TMDB itself, which names the episode outright, and
-        # because it answers for the episodes whose names say nothing.
-        if described := _find_by_description(self._all_episodes(tmdb_id), description):
-            return _EpisodeMatch(described, DESCRIPTION_NOTE)
+        episodes = self._all_episodes(tmdb_id)
+        translated_names = partial(self._translated_names, tmdb_id)
 
+        if match := _Match.name_and_number(
+            episodes,
+            season_number,
+            episode_number,
+            episode_name,
+        ):
+            return _EpisodeMatch(match, NAME_AND_NUMBER_NOTE)
+
+        # If the episode name is useless just hope that the season and episode number
+        # are enough for a match.
         if not episode_name or _is_generically_named(episode_name):
-            numbered = self._episode_by_number(tmdb_id, season_number, episode_number)
+            numbered = _Match.number(episodes, season_number, episode_number)
             return _EpisodeMatch(numbered, _NUMBER_ONLY_NOTE) if numbered else None
 
-        if match := self._exactly_named(tmdb_id, episode_name):
+        if match := _Match.name(episodes, episode_name):
             return _EpisodeMatch(match, _NAME_NOTE)
 
-        if match := self._exactly_named_in_translation(tmdb_id, episode_name):
+        if match := _Match.translated_name(episodes, episode_name, translated_names):
             return _EpisodeMatch(match, _TRANSLATED_NAME_NOTE)
 
-        if match := self._exact_substring(tmdb_id, episode_name):
-            return _EpisodeMatch(match, _PARTIAL_NAME_NOTE)
+        if match := _Match.description(episodes, description):
+            return _EpisodeMatch(match, DESCRIPTION_NOTE)
 
-        if match := self._named_within_translation(tmdb_id, episode_name):
-            return _EpisodeMatch(match, _PARTIAL_TRANSLATED_NAME_NOTE)
+        # if match := _Match.partial_name(episodes, episode_name):
+        #     return _EpisodeMatch(match, _PARTIAL_NAME_NOTE)
 
-        if match := self._numbered_the_same_way(
-            tmdb_id,
+        # if match := _Match.partial_translated_name(
+        #     episodes,
+        #     episode_name,
+        #     translated_names,
+        # ):
+        #     return _EpisodeMatch(match, _PARTIAL_TRANSLATED_NAME_NOTE)
+
+        if match := _Match.closest_name_and_number(
+            episodes,
+            episode_number,
+            episode_name,
+        ):
+            return _EpisodeMatch(match, _CLOSEST_NAME_AND_NUMBER_NOTE)
+
+        if match := _Match.same_length_season_and_episode_number(
+            episodes,
             season_number,
             episode_number,
             highest_episode_number,
         ):
             return _EpisodeMatch(match, _SAME_LENGTH_SEASON_NOTE)
 
-        if match := self._closest_name_the_number_agrees_with(
-            tmdb_id,
-            episode_number,
-            episode_name,
-        ):
-            return _EpisodeMatch(match, _CLOSEST_NAME_AND_NUMBER_NOTE)
         return None
-
-    def _closest_name_the_number_agrees_with(
-        self,
-        tmdb_id: int,
-        episode_number: int | None,
-        episode_name: str | None,
-    ) -> TvSeasonEpisode | None:
-        """Return the closest named episode, but only where its number agrees too.
-
-        The last thing tried, for the episodes every surer way has passed over. A
-        name that only half matches is not enough to go on and a number by itself
-        is not either, but the closest name in the whole title landing on the very
-        number the website gives the episode is the two of them agreeing, and two
-        weak signs pointing at the same episode are worth taking.
-
-        Either numbering counts, since a website that never restarts its count
-        names the episode by how far into the title it is rather than by how far
-        into its season.
-        """
-        if not episode_name or episode_number is None:
-            return None
-
-        episodes = self._all_episodes(tmdb_id)
-        if not episodes:
-            return None
-
-        similarity, closest = max(
-            (
-                (_similarity(episode_name, episode.name), episode)
-                for episode in episodes
-            ),
-            key=lambda scored: scored[0],
-        )
-        if not similarity:
-            return None
-        if closest.episode_number == episode_number:
-            return closest
-        if _absolute_numbers(episodes).get(closest.id) == episode_number:
-            return closest
-        return None
-
-    def _exactly_named(
-        self,
-        tmdb_id: int,
-        episode_name: str,
-    ) -> TvSeasonEpisode | None:
-        return _find_by_name(
-            self._all_episodes(tmdb_id),
-            episode_name,
-            _matches_exactly,
-        )
-
-    def _exactly_named_in_translation(
-        self,
-        tmdb_id: int,
-        episode_name: str,
-    ) -> TvSeasonEpisode | None:
-        return self._find_by_translated_name(
-            tmdb_id,
-            self._all_episodes(tmdb_id),
-            episode_name,
-            _matches_exactly,
-        )
-
-    def _exact_substring(
-        self,
-        tmdb_id: int,
-        episode_name: str,
-    ) -> TvSeasonEpisode | None:
-        return _find_by_name(
-            self._all_episodes(tmdb_id),
-            episode_name,
-            _contains_either_way,
-        )
-
-    def _named_within_translation(
-        self,
-        tmdb_id: int,
-        episode_name: str,
-    ) -> TvSeasonEpisode | None:
-        return self._find_by_translated_name(
-            tmdb_id,
-            self._all_episodes(tmdb_id),
-            episode_name,
-            _contains_either_way,
-        )
-
-    def _numbered_the_same_way(
-        self,
-        tmdb_id: int,
-        season_number: int | None,
-        episode_number: int | None,
-        highest_episode_number: int | None,
-    ) -> TvSeasonEpisode | None:
-        if not self._season_ends_on_the_same_number(
-            tmdb_id,
-            season_number,
-            highest_episode_number,
-        ):
-            return None
-
-        return self._episode_by_number(tmdb_id, season_number, episode_number)
-
-    def _season_ends_on_the_same_number(
-        self,
-        tmdb_id: int,
-        season_number: int | None,
-        highest_episode_number: int | None,
-    ) -> bool:
-        if season_number is None or highest_episode_number is None:
-            return False
-        if not self.has_season(tmdb_id, season_number):
-            return False
-
-        episodes = self._season_episodes(tmdb_id, season_number)
-        tmdb_numbers = [episode.episode_number for episode in episodes]
-        if not tmdb_numbers:
-            return False
-        return max(tmdb_numbers) == highest_episode_number
-
-    def _find_by_translated_name(
-        self,
-        tmdb_id: int,
-        episodes: Sequence[TvSeasonEpisode],
-        episode_name: str | None,
-        compare: _Compare = _matches_exactly,
-    ) -> TvSeasonEpisode | None:
-        if not episode_name:
-            return None
-
-        targets = _plaintext_forms(episode_name)
-        matches = [
-            episode
-            for episode in episodes
-            if compare(self._translated_names(tmdb_id, episode), targets)
-        ]
-        return matches[0] if len(matches) == 1 else None
 
     def _translated_names(
         self,
@@ -597,26 +647,6 @@ class LinkMixin(LookupMixin, register=False):
                 episode.episode_number,
             )
             for form in _plaintext_forms(name)
-        )
-
-    def _episode_by_number(
-        self,
-        tmdb_id: int,
-        season_number: int | None,
-        episode_number: int | None,
-    ) -> TvSeasonEpisode | None:
-        if not season_number or not episode_number:
-            return None
-        if not self.has_season(tmdb_id, season_number):
-            return None
-
-        return next(
-            (
-                candidate
-                for candidate in self._season_episodes(tmdb_id, season_number)
-                if candidate.episode_number == episode_number
-            ),
-            None,
         )
 
     _all_episodes_cache: list[TvSeasonEpisode] | None = None

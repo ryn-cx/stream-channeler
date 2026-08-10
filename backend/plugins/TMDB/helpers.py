@@ -65,7 +65,11 @@ class HelperMixin(FileMixin, register=False):
         ]
 
     @override
-    def _episode_keys_from_file(self, season_keys: str | list[str]) -> list[str]:
+    def _episode_keys_from_file(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
 

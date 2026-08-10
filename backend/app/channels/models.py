@@ -484,12 +484,6 @@ class ChannelCombinedChannel(TimestampIdAndHashMixin, table=True):
         foreign_key="channel.id",
         ondelete="CASCADE",
     )
-    use_default_filters: bool = Field(default=False)
-    """Whether the combined channel's episodes are chosen by that channel's own
-    default filters rather than by the ones the read is being made with. The
-    episodes it contributes are then the ones it would show on its own, while the
-    channel reading them still decides the order they are read in."""
-
     channel: Channel = Relationship(
         back_populates="combined_channels",
         sa_relationship_kwargs={

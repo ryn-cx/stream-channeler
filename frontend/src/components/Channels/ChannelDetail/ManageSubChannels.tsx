@@ -9,7 +9,6 @@ import {
   type CombinedChannelOutput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Command,
   CommandEmpty,
@@ -83,10 +82,7 @@ export function AdditionalChannelsPanel({
     mutationFn: () =>
       ChannelsService.updateChannelCombinedChannels({
         channelId,
-        requestBody: localChannels.map((channel) => ({
-          id: channel.id,
-          use_default_filters: channel.use_default_filters ?? false,
-        })),
+        requestBody: localChannels.map((channel) => ({ id: channel.id })),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -108,19 +104,6 @@ export function AdditionalChannelsPanel({
     if (!manualChannelId) return
     addChannel({ id: manualChannelId, name: null })
     setManualChannelId("")
-  }
-
-  const handleToggleDefaultFilters = (
-    idToToggle: string,
-    useDefaultFilters: boolean,
-  ) => {
-    setLocalChannels(
-      localChannels.map((channel) =>
-        channel.id === idToToggle
-          ? { ...channel, use_default_filters: useDefaultFilters }
-          : channel,
-      ),
-    )
   }
 
   const handleRemove = (idToRemove: string) => {
@@ -233,21 +216,6 @@ export function AdditionalChannelsPanel({
               >
                 <span className="text-xs">{channel.name || channel.id}</span>
                 <div className="flex items-center gap-3">
-                  {/* A channel reading itself leaves a set of episodes of its own,
-                      which is what it contributes when this is on. */}
-                  <Checkbox
-                    id={`use-default-filters-${channel.id}`}
-                    checked={channel.use_default_filters ?? false}
-                    onCheckedChange={(checked) =>
-                      handleToggleDefaultFilters(channel.id, checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor={`use-default-filters-${channel.id}`}
-                    className="text-xs font-normal text-muted-foreground"
-                  >
-                    Use its own filters
-                  </Label>
                   <Button
                     type="button"
                     size="sm"

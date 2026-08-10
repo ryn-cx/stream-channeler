@@ -14,11 +14,17 @@ from sqlmodel import (
     Session,
     UniqueConstraint,
     select,
+    text,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.media.identifiers import identifier_tmdb_id
-from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
+from app.models import (
+    BaseMediaMixin,
+    MediaMixin,
+    placeholder_identifier,
+    sortable_field_indexes,
+)
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.users.models import User
@@ -90,7 +96,17 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         ),
         Index("Show-deleted_at-index", "deleted_at"),
         Index("Show-show_identifier-index", "show_identifier", "id"),
+        Index(
+            "Show-live-show_identifier-index",
+            "show_identifier",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )
+
+    # Named after the plugin that read the record by `_merge_and_upsert_*`,
+    # and after the TMDB title behind it when there is one, so it is not
+    # something the record has to be built with.
+    show_identifier: str = Field(default_factory=placeholder_identifier)
 
     source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
     source: Source = Relationship(back_populates="shows")

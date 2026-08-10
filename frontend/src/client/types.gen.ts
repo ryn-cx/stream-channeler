@@ -364,7 +364,6 @@ export type ChannelUpdate = {
  */
 export type CombinedChannelInput = {
     id: string;
-    use_default_filters?: boolean;
 };
 
 /**
@@ -373,7 +372,6 @@ export type CombinedChannelInput = {
 export type CombinedChannelOutput = {
     id: string;
     name: (string | null);
-    use_default_filters?: boolean;
 };
 
 /**
