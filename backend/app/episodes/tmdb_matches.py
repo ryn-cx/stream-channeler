@@ -43,7 +43,7 @@ _TMDB_IDENTIFIER_PATTERN = f"{TMDB_IDENTIFIER_PREFIX}%"
 _UNNUMBERED = float("inf")
 
 type _Candidate = tuple[Episode, Season, Show]
-type _Numbering = tuple[uuid.UUID, int | None, int | None]
+type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
 def _order(
@@ -56,7 +56,7 @@ def _order(
     )
 
 
-def _absolute_numbers(numberings: Sequence[_Numbering]) -> dict[uuid.UUID, int]:
+def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
     """Count every episode of one title from its first, and return that count by id.
 
     A website that numbers a title straight through names an episode by how far
@@ -69,12 +69,12 @@ def _absolute_numbers(numberings: Sequence[_Numbering]) -> dict[uuid.UUID, int]:
         numberings,
         key=lambda numbering: _order(numbering[1], numbering[2]),
     )
-    absolute_numbers: dict[uuid.UUID, int] = {}
+    numbers: dict[uuid.UUID, int] = {}
     for record_id, season_number, _episode_number in ordered:
         if not season_number:
             continue
-        absolute_numbers[record_id] = len(absolute_numbers) + 1
-    return absolute_numbers
+        numbers[record_id] = len(numbers) + 1
+    return numbers
 
 
 def _plaintext(name: str | None) -> str:
@@ -118,7 +118,7 @@ def _score(
 
 
 def _candidate_absolute_numbers(candidates: list[_Candidate]) -> dict[uuid.UUID, int]:
-    return _absolute_numbers(
+    return absolute_numbers(
         [
             (episode.id, season.season_number, episode.episode_number)
             for episode, season, _show in candidates
@@ -258,16 +258,16 @@ def _source_absolute_numbers(
             col(Season.deleted_at).is_(None),
         )
     )
-    per_show: dict[uuid.UUID, list[_Numbering]] = defaultdict(list)
+    per_show: dict[uuid.UUID, list[Numbering]] = defaultdict(list)
     for episode_id, show_id, season_number, episode_number in session.exec(
         statement,
     ).all():
         per_show[show_id].append((episode_id, season_number, episode_number))
 
-    absolute_numbers: dict[uuid.UUID, int] = {}
+    numbers: dict[uuid.UUID, int] = {}
     for numberings in per_show.values():
-        absolute_numbers |= _absolute_numbers(numberings)
-    return absolute_numbers
+        numbers |= absolute_numbers(numberings)
+    return numbers
 
 
 def list_unmatched_episodes(

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import uuid
 from abc import ABC, abstractmethod
 from collections import Counter, defaultdict
 from collections.abc import Callable
@@ -13,6 +14,7 @@ from loguru import logger
 from sqlmodel import Session
 
 from app.episodes.models import MANUAL_NOTES, Episode
+from app.episodes.tmdb_matches import absolute_numbers
 from app.media.tmdb_fallback import tmdb_episode_counterpart
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
@@ -42,6 +44,15 @@ _ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
     "update_season": ("season", lambda season: season.show.key),
     "update_episode": ("episode", lambda episode: episode.season.show.key),
 }
+
+
+def _numberings(show: Show) -> list[tuple[uuid.UUID, int | None, int | None]]:
+    """Return how a title numbers each of its episodes, for counting them through."""
+    return [
+        (episode.id, season.season_number, episode.episode_number)
+        for season in show.active_children
+        for episode in season.active_children
+    ]
 
 
 def _is_settled_by_hand(episode: Episode) -> bool:
@@ -377,7 +388,7 @@ class BasePlugin(
                 clashing_by_identifier[episode.episode_identifier].append(episode)
 
         for identifier, clashing in clashing_by_identifier.items():
-            keeper = self._numbered_as_tmdb_numbers_it(identifier, clashing)
+            keeper = self._kept_from_clash(identifier, clashing)
             for episode in clashing:
                 if episode is keeper or _is_settled_by_hand(episode):
                     continue
@@ -393,21 +404,25 @@ class BasePlugin(
                 episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
                 episode.episode_identifier_locked = False
 
-    def _numbered_as_tmdb_numbers_it(
+    def _kept_from_clash(
         self,
         identifier: str,
         clashing: list[Episode],
     ) -> Episode | None:
-        """Return the one episode filed where TMDB files the record they share.
+        """Return the one episode of a clash numbered the way TMDB numbers it.
 
         The episodes on one record are all guesses until something tells them
-        apart, and being numbered the way TMDB numbers it is that: whatever put
-        the others there was a name or a count that has turned out to fit more
-        than one of them. Only ever one episode, since two numbered the same way
-        are no more told apart than none were.
+        apart, and the numbering is that: whatever put the others there was a
+        name or a count that has turned out to fit more than one of them.
 
-        A `User` settling one of them decides the clash by itself, so nothing is
-        kept here while one of them is theirs.
+        A website filing a special among a season's episodes gives it the same
+        season and episode number as the episode it sits beside, so how far into
+        the title each one is counts as well. That is the number the two of them
+        differ by, and without it neither is told from the other.
+
+        Only ever a single episode, since two the numbering fits are no more
+        told apart than none were. A `User` settling one of them decides the
+        clash by itself, so nothing is kept here while one of them is theirs.
         """
         if any(_is_settled_by_hand(episode) for episode in clashing):
             return None
@@ -415,13 +430,17 @@ class BasePlugin(
         counterpart = tmdb_episode_counterpart(self.session, identifier)
         if counterpart is None:
             return None
+        tmdb_episode, tmdb_season, tmdb_show = counterpart
 
-        tmdb_episode, tmdb_season, _show = counterpart
+        tmdb_absolute = absolute_numbers(_numberings(tmdb_show)).get(tmdb_episode.id)
+        source_absolute = absolute_numbers(_numberings(clashing[0].season.show))
+
         numbered = [
             episode
             for episode in clashing
             if episode.episode_number == tmdb_episode.episode_number
             and episode.season.season_number == tmdb_season.season_number
+            and source_absolute.get(episode.id) == tmdb_absolute
         ]
         return numbered[0] if len(numbered) == 1 else None
 
