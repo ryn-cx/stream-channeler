@@ -382,8 +382,13 @@ class BasePlugin(
                 if episode is keeper or _is_settled_by_hand(episode):
                     continue
                 logger.info(f"Unsharing {identifier} from episode {episode.key}")
+                removed = f"Removed {identifier}, which another episode was given too"
+                # What the episode was matched on is kept behind the removal
+                # rather than written over it, since how it came to be given the
+                # identifier is most of what says whether it should have kept it.
+                previous = episode.episode_identifier_note
                 episode.episode_identifier_note = (
-                    f"Removed {identifier}, which another episode was given too"
+                    f"{removed}. {previous}" if previous else removed
                 )
                 episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
                 episode.episode_identifier_locked = False
