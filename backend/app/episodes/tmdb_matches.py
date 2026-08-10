@@ -439,18 +439,44 @@ def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
     return set(session.exec(statement).all())
 
 
+def _imported_title_identifier(session: Session, tmdb_show_id: int) -> str:
+    """Read a TMDB series in and return the identifier its episodes are under.
+
+    Read in rather than looked for, since a title nothing has imported has no
+    episodes stored to choose from and naming it is the asking for it.
+    """
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    if TMDB(session).import_title(MediaType.tv, tmdb_show_id) is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"TMDB has no series with the id {tmdb_show_id}",
+        )
+    return tmdb_identifier(MediaType.tv, tmdb_show_id)
+
+
 def list_tmdb_episode_choices(
     session: Session,
     episode: Episode,
+    tmdb_show_id: int | None = None,
 ) -> list[TmdbEpisodeChoice]:
-    """Return every TMDB episode of the title `episode` belongs to, in order.
+    """Return every TMDB episode of a title, in the order the title runs.
 
     They are ordered as the title runs rather than as TMDB returns them, so the
     one an episode is meant to be is found by counting through the title the same
     way the website that holds it does. Each carries how much of its name it
     shares with `episode`, which is the other order they are worth reading in.
+
+    The title is the one the episode's show is linked to, unless another is named
+    outright. TMDB files some episodes under a title of their own, so an episode
+    is not always among the episodes of the title its show is, and naming the
+    title it is under is the only way to reach it.
     """
-    show_identifier = episode.season.show.show_identifier
+    show_identifier = (
+        episode.season.show.show_identifier
+        if tmdb_show_id is None
+        else _imported_title_identifier(session, tmdb_show_id)
+    )
     candidates = _candidates_by_show(session, {show_identifier}).get(
         show_identifier,
         [],
@@ -479,10 +505,29 @@ def list_tmdb_episode_choices(
     )
 
 
-def _tmdb_episode(session: Session, tmdb_episode_id: int) -> Episode | None:
-    identifiers = {
-        tmdb_identifier(media_type, tmdb_episode_id) for media_type in MediaType
-    }
+def _tmdb_episode_identifiers(
+    tmdb_episode_id: int,
+    media_type: MediaType | None,
+) -> set[str]:
+    """Return the identifiers an id could be, given what is known of its half."""
+    if media_type is not None:
+        return {tmdb_identifier(media_type, tmdb_episode_id)}
+    return {tmdb_identifier(half, tmdb_episode_id) for half in MediaType}
+
+
+def _tmdb_episode(
+    session: Session,
+    tmdb_episode_id: int,
+    media_type: MediaType | None = None,
+) -> Episode | None:
+    """Return the imported TMDB episode an id names, in one half of the catalogue.
+
+    An id said to be a movie's is only ever looked for as a movie, so a series
+    episode that happens to carry the same number is never taken for it, and the
+    other way about. An id with neither said of it is looked for as both, which
+    is what a choice taken off the list is.
+    """
+    identifiers = _tmdb_episode_identifiers(tmdb_episode_id, media_type)
     statement = (
         select(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
@@ -503,6 +548,7 @@ def link_episode(
     episode: Episode,
     tmdb_episode_id: int,
     *,
+    media_type: MediaType | None = None,
     selected: bool = False,
 ) -> Episode:
     """Point `episode` at a TMDB episode a `User` chose, and hold it there.
@@ -515,13 +561,16 @@ def link_episode(
     `selected` says the `User` went and found the episode rather than taking the
     one they were shown, which is the note the link is left with.
     """
-    _import_linked_title(session, episode)
+    _import_named_media(session, episode, tmdb_episode_id, media_type)
 
-    counterpart = _tmdb_episode(session, tmdb_episode_id)
+    counterpart = _tmdb_episode(session, tmdb_episode_id, media_type)
     if counterpart is None:
+        looked_for = " or ".join(
+            sorted(_tmdb_episode_identifiers(tmdb_episode_id, media_type)),
+        )
         raise HTTPException(
             status_code=404,
-            detail=f"No imported TMDB episode has the id {tmdb_episode_id}",
+            detail=f"TMDB has no imported episode that is {looked_for}",
         )
 
     _unlink_others_sharing(session, episode, counterpart.episode_identifier)
@@ -537,25 +586,41 @@ def link_episode(
     return episode
 
 
-def _import_linked_title(session: Session, episode: Episode) -> None:
-    """Read in the TMDB title the episode's show names, so its episodes are there.
+def _import_named_media(
+    session: Session,
+    episode: Episode,
+    tmdb_episode_id: int,
+    media_type: MediaType | None,
+) -> None:
+    """Read in from TMDB whatever holds the episode an id names.
 
-    A `User` writing an id by hand has no reason to have imported the title
-    holding it first, and an episode is only there to be linked to once its
-    title has been read in. A title already imported is left as it is, so this
-    costs nothing when the episode was picked off the list.
+    A `User` writing an id by hand has no reason to have imported what holds it
+    first, and an episode is only there to be linked to once it has been read in.
+    Whatever is already imported is left as it is, so this costs nothing when the
+    episode was picked off the list.
+
+    A movie is its own record, so an id said to be a movie's is the movie and is
+    read in from that alone, whatever title the show is linked to. A series
+    numbers its episodes apart from the series itself, so an episode's id names
+    no title to read in and the title the show is linked to is all there is to
+    go on.
 
     Imported here rather than at the top of the module because the TMDB plugin
     is built on the base every plugin is, which reads this module in turn.
     """
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    parsed = parse_tmdb_identifier(episode.season.show.show_identifier)
-    if parsed is None:
+    tmdb = TMDB(session)
+    if media_type is MediaType.movie:
+        tmdb.import_title(MediaType.movie, tmdb_episode_id)
         return
 
-    media_type, tmdb_id = parsed
-    TMDB(session).import_title(media_type, tmdb_id)
+    linked = parse_tmdb_identifier(episode.season.show.show_identifier)
+    if linked is None:
+        return
+
+    linked_media_type, linked_tmdb_id = linked
+    tmdb.import_title(linked_media_type, linked_tmdb_id)
 
 
 def _unlink_others_sharing(

@@ -7,6 +7,7 @@ import {
   type ApiError,
   type EpisodeOutput,
   EpisodesService,
+  type MediaType,
   type UnmatchedEpisodeOutput,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -71,14 +72,20 @@ export function TmdbMatchApproval({
   const linkMutation = useMutation({
     mutationFn: ({
       tmdbEpisodeId,
+      mediaType,
       selected,
     }: {
       tmdbEpisodeId: number
+      mediaType?: MediaType
       selected: boolean
     }) =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId: episode.id,
-        requestBody: { tmdb_episode_id: tmdbEpisodeId, selected },
+        requestBody: {
+          tmdb_episode_id: tmdbEpisodeId,
+          media_type: mediaType ?? null,
+          selected,
+        },
       }),
     onMutate: takeRowOff,
     onSuccess: () => showSuccessToast("Episode linked to TMDB"),
@@ -145,8 +152,8 @@ export function TmdbMatchApproval({
         episode={episode}
         isOpen={isPicking}
         onOpenChange={setIsPicking}
-        onPick={(tmdbEpisodeId) =>
-          linkMutation.mutate({ tmdbEpisodeId, selected: true })
+        onPick={(tmdbEpisodeId, mediaType) =>
+          linkMutation.mutate({ tmdbEpisodeId, mediaType, selected: true })
         }
         isLinking={linkMutation.isPending}
       />

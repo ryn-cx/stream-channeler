@@ -575,6 +575,7 @@ export type EpisodesPublic = {
  */
 export type EpisodeTmdbLinkInput = {
     tmdb_episode_id: number;
+    media_type?: (MediaType | null);
     selected?: boolean;
 };
 
@@ -2046,6 +2047,7 @@ export type EpisodesAdminGetUnlockedEpisodesResponse = (Array<UnlockedEpisodeOut
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;
+    tmdbShowId?: (number | null);
 };
 
 export type EpisodesAdminGetTmdbEpisodeChoicesResponse = (Array<TmdbEpisodeChoice>);

@@ -2896,6 +2896,16 @@ export const EpisodeTmdbLinkInputSchema = {
             type: 'integer',
             title: 'Tmdb Episode Id'
         },
+        media_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/MediaType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         selected: {
             type: 'boolean',
             title: 'Selected',

@@ -8,6 +8,7 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from app.episodes.models import BaseEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
+from app.media.media_type import MediaType
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
@@ -181,6 +182,18 @@ class EpisodeTmdbLinkInput(BaseModel):
     """The TMDB episode a `User` is pointing an `Episode` at by hand."""
 
     tmdb_episode_id: int
+    media_type: MediaType | None = None
+    """Which half of the TMDB catalogue the id belongs to, where it is known.
+
+    A movie is one record, so the id of the episode standing for it is the id of
+    the movie itself and the movie can be read in from that alone. A series
+    numbers its episodes apart from the series, so an episode's id says nothing
+    about which series holds it and only the title already read in has it.
+
+    Left unsaid by a choice taken off the list, which is an episode of the title
+    the show is already linked to whichever half of the catalogue that is in.
+    """
+
     selected: bool = False
     """Whether the `User` went and found this episode rather than taking the offer.
 

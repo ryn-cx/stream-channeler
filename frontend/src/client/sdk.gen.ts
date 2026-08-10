@@ -1220,8 +1220,12 @@ export class EpisodesService {
     /**
      * Admin Get Tmdb Episode Choices
      * Get every TMDB episode an `Episode` could be linked to, in the title's order.
+     *
+     * `tmdb_show_id` reads the episodes of a series other than the one the show is
+     * linked to, which is what reaches an episode TMDB files under its own title.
      * @param data The data for the request.
      * @param data.episodeId
+     * @param data.tmdbShowId
      * @returns TmdbEpisodeChoice Successful Response
      * @throws ApiError
      */
@@ -1231,6 +1235,9 @@ export class EpisodesService {
             url: '/api/v1/episodes/{episode_id}/tmdb-choices',
             path: {
                 episode_id: data.episodeId
+            },
+            query: {
+                tmdb_show_id: data.tmdbShowId
             },
             errors: {
                 422: 'Validation Error'

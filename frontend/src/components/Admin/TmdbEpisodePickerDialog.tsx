@@ -2,11 +2,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
-import { EpisodesService, type UnmatchedEpisodeOutput } from "@/client"
 import {
-  parseTmdbIdentifier,
-  TmdbIdentifierField,
-} from "@/components/Common/TmdbIdentifierField"
+  EpisodesService,
+  type MediaType,
+  type UnmatchedEpisodeOutput,
+} from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,6 +29,17 @@ function numbering(
   episodeNumber: number | null,
 ): string {
   return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
+}
+
+/** The id in a TMDB address, so a page can be pasted in rather than read off. */
+const TMDB_URL_ID = /themoviedb\.org\/(?:tv|movie)\/(\d+)/
+
+/** Return the TMDB id a URL or a bare number names, or null where it names none. */
+function parseTmdbId(value: string): number | null {
+  const trimmed = value.trim()
+  const inUrl = TMDB_URL_ID.exec(trimmed)
+  const digits = inUrl ? inUrl[1] : trimmed
+  return /^\d+$/.test(digits) ? Number(digits) : null
 }
 
 /** Order two numbers, putting the one nothing numbered last. */
@@ -58,20 +69,27 @@ export function TmdbEpisodePickerDialog({
   episode: UnmatchedEpisodeOutput
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
-  onPick: (tmdbEpisodeId: number) => void
+  onPick: (tmdbEpisodeId: number, mediaType?: MediaType) => void
   isLinking: boolean
 }) {
   const [search, setSearch] = useState("")
-  const [manualIdentifier, setManualIdentifier] = useState("")
+  const [movieId, setMovieId] = useState("")
+  const [seriesInput, setSeriesInput] = useState("")
+  // The title whose episodes are being read, where it is not the one the show
+  // is linked to.
+  const [loadedSeriesId, setLoadedSeriesId] = useState<number | null>(null)
   const [order, setOrder] = useState<ChoiceOrder>("episode")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
   const [scope, setScope] = useState<ChoiceScope>("unused")
 
   const { data: choices } = useQuery({
-    queryKey: ["admin-tmdb-choices", episode.id],
+    queryKey: ["admin-tmdb-choices", episode.id, loadedSeriesId],
     queryFn: () =>
-      EpisodesService.adminGetTmdbEpisodeChoices({ episodeId: episode.id }),
+      EpisodesService.adminGetTmdbEpisodeChoices({
+        episodeId: episode.id,
+        tmdbShowId: loadedSeriesId,
+      }),
     enabled: isOpen,
   })
 
@@ -92,12 +110,8 @@ export function TmdbEpisodePickerDialog({
       .includes(query)
   })
 
-  // An identifier built by hand reaches the episodes the list cannot offer,
-  // which is every episode TMDB files under a title other than the one this
-  // show is linked to. It is only an identifier once it names a number, and it
-  // is the number the link is made by.
-  const built = parseTmdbIdentifier(manualIdentifier)
-  const typedEpisodeId = built ? Number(built.tmdbId) : null
+  const typedSeriesId = parseTmdbId(seriesInput)
+  const typedMovieId = parseTmdbId(movieId)
 
   const ordered = [...matching].sort((left, right) => {
     const numbered =
@@ -122,6 +136,41 @@ export function TmdbEpisodePickerDialog({
             {episode.absolute_number ? ` · #${episode.absolute_number}` : ""}
           </DialogDescription>
         </DialogHeader>
+
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            setLoadedSeriesId(typedSeriesId)
+          }}
+        >
+          <Input
+            value={seriesInput}
+            onChange={(event) => setSeriesInput(event.target.value)}
+            placeholder="TMDB series URL or id, to read another title's episodes"
+            aria-label="TMDB series URL or id"
+            className="min-w-48 flex-1"
+          />
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={typedSeriesId === null}
+          >
+            Load series
+          </Button>
+          {loadedSeriesId === null ? null : (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setLoadedSeriesId(null)
+                setSeriesInput("")
+              }}
+            >
+              Back to linked title
+            </Button>
+          )}
+        </form>
 
         <div className="flex flex-wrap items-center gap-2">
           <Input
@@ -202,32 +251,34 @@ export function TmdbEpisodePickerDialog({
         </div>
 
         <form
-          className="flex items-end gap-2"
+          className="flex items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault()
-            if (typedEpisodeId !== null) {
-              onPick(typedEpisodeId)
+            if (typedMovieId !== null) {
+              onPick(typedMovieId, "movie")
             }
           }}
         >
-          <div className="flex-1">
-            <TmdbIdentifierField
-              identifier={manualIdentifier}
-              onChange={setManualIdentifier}
-            />
-          </div>
+          <Input
+            value={movieId}
+            onChange={(event) => setMovieId(event.target.value)}
+            inputMode="numeric"
+            placeholder="TMDB movie id"
+            aria-label="TMDB movie id"
+            className="min-w-48 flex-1"
+          />
           <Button
             type="submit"
             variant="outline"
-            disabled={typedEpisodeId === null || isLinking}
+            disabled={typedMovieId === null || isLinking}
           >
-            Link
+            Link movie
           </Button>
         </form>
         <p className="text-xs text-muted-foreground">
-          Taken whether or not it is one of the episodes above. The title this
-          show is linked to is read in from TMDB first, so an id of one of its
-          episodes is reached even where nothing has imported it yet.
+          A movie is one record, so its id is enough to read it in and link to
+          it on its own. A series episode is numbered apart from its series, so
+          one is reached by loading the series above rather than by its id.
         </p>
       </DialogContent>
     </Dialog>

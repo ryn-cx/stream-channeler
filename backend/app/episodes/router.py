@@ -236,9 +236,14 @@ def admin_get_unlocked_episodes(
 def admin_get_tmdb_episode_choices(
     session: SessionDep,
     episode: ExistingEpisode,
+    tmdb_show_id: int | None = None,
 ) -> list[TmdbEpisodeChoice]:
-    """Get every TMDB episode an `Episode` could be linked to, in the title's order."""
-    return list_tmdb_episode_choices(session, episode)
+    """Get every TMDB episode an `Episode` could be linked to, in the title's order.
+
+    `tmdb_show_id` reads the episodes of a series other than the one the show is
+    linked to, which is what reaches an episode TMDB files under its own title.
+    """
+    return list_tmdb_episode_choices(session, episode, tmdb_show_id)
 
 
 @episodes_router.put(
@@ -255,6 +260,7 @@ def admin_link_episode_to_tmdb(
         session,
         episode,
         link_input.tmdb_episode_id,
+        media_type=link_input.media_type,
         selected=link_input.selected,
     )
     return _episode_output(session, linked)
