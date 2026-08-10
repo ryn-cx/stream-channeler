@@ -43,7 +43,9 @@ class CrunchyrollUpdateSourceTests(
         # be used to set Source.data_timestamp, then Source.update_at will be set
         # to the interval the source is scheduled at after Source.data_timestamp.
         # TODO: More accurate timestamp checking
-        validator = validator.incremented(Source, "update_at")
+        # Only the source being updated, since this plugin reads two of them and
+        # updating one leaves the other where it was.
+        validator = validator.incremented(source.id, "update_at")
 
         # Source.update will mock download a new browse file that includes a mock
         # new entry for the show. There is no way to tell what part of the show

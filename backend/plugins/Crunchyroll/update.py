@@ -70,12 +70,15 @@ class UpdateMixin(UpsertMixin, register=False):
             browse_json.database_record.extra = "Completed"
 
     def _process_new_music_browse_files(self, source: Source) -> None:
-        _cache = self._preload_sources(preload_seasons=True).all()
-
         for browse_json in self.get_incomplete_files(
             BrowseMusic,
             self.browse_music_file,
         ):
+            # Queueing the artists a file found commits, which lets go of every
+            # show read for it, and a show nothing holds is not in memory to be
+            # matched. Read back per file rather than once, so that a file after
+            # the first still recognises the artists already imported.
+            _cache = self._preload_sources(preload_seasons=True).all()
             logger.info(
                 "Processing music browse file: {}",
                 browse_json.database_record.key,
