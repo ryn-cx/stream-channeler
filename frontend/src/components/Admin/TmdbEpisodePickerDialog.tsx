@@ -3,6 +3,10 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { EpisodesService, type UnmatchedEpisodeOutput } from "@/client"
+import {
+  parseTmdbIdentifier,
+  TmdbIdentifierField,
+} from "@/components/Common/TmdbIdentifierField"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -58,6 +62,7 @@ export function TmdbEpisodePickerDialog({
   isLinking: boolean
 }) {
   const [search, setSearch] = useState("")
+  const [manualIdentifier, setManualIdentifier] = useState("")
   const [order, setOrder] = useState<ChoiceOrder>("episode")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
@@ -86,6 +91,13 @@ export function TmdbEpisodePickerDialog({
       .toLowerCase()
       .includes(query)
   })
+
+  // An identifier built by hand reaches the episodes the list cannot offer,
+  // which is every episode TMDB files under a title other than the one this
+  // show is linked to. It is only an identifier once it names a number, and it
+  // is the number the link is made by.
+  const built = parseTmdbIdentifier(manualIdentifier)
+  const typedEpisodeId = built ? Number(built.tmdbId) : null
 
   const ordered = [...matching].sort((left, right) => {
     const numbered =
@@ -188,6 +200,35 @@ export function TmdbEpisodePickerDialog({
             })
           )}
         </div>
+
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (typedEpisodeId !== null) {
+              onPick(typedEpisodeId)
+            }
+          }}
+        >
+          <div className="flex-1">
+            <TmdbIdentifierField
+              identifier={manualIdentifier}
+              onChange={setManualIdentifier}
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="outline"
+            disabled={typedEpisodeId === null || isLinking}
+          >
+            Link
+          </Button>
+        </form>
+        <p className="text-xs text-muted-foreground">
+          Taken whether or not it is one of the episodes above, so an episode
+          TMDB files under another title can be reached. It has to name an
+          episode already imported from TMDB.
+        </p>
       </DialogContent>
     </Dialog>
   )
