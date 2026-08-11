@@ -400,37 +400,37 @@ class InvalidURLError(Exception):
 class URLImportResult(BaseModel):
     """What a channel takes on from importing a single URL.
 
-    A channel holds identifiers rather than one website's records, so this is
-    what an import has to say and nothing more. The identifiers are also what
-    makes the same title, season or episode on two websites a single thing, so a
-    result stays true no matter which website's copy it was imported from.
+    A channel holds the media itself rather than one website's records, so a
+    result names what was imported by the keys of the records the plugin just
+    wrote, and `add_results_to_channel` resolves each one to the canonical row
+    that record is a copy of.
 
     Example outputs:
 
       If a user adds a URL for a show it is assumed the user wants every
       season/episode of that show and all future episodes as well:
-          show_identifier - Always required.
+          show_key - Always required.
           is_whitelist=False - New seasons/episodes are added automatically.
 
       If the user adds a URL for a season it is assumed the user wants just the
       episodes from that season and all other seasons excluded:
-          season_identifiers - Just the imported season.
+          season_keys - Just the imported season.
           is_whitelist=True - New seasons need to be whitelisted by hand.
 
       If the user adds a URL for an episode it is assumed the user wants just
       that episode and all other episodes excluded:
-          episode_identifiers - Just the imported episode.
+          episode_keys - Just the imported episode.
           is_whitelist=True - New episodes need to be whitelisted by hand.
 
     """
 
-    show_identifier: str
+    show_key: str
     """The title that was imported from the URL."""
 
-    season_identifiers: list[str] = Field(default=[])
+    season_keys: list[str] = Field(default=[])
     """Seasons to prepopulate in the user's whitelist/blacklist."""
 
-    episode_identifiers: list[str] = Field(default=[])
+    episode_keys: list[str] = Field(default=[])
     """Episodes to prepopulate in the user's whitelist/blacklist."""
 
     is_whitelist: bool = Field(default=False)
@@ -446,15 +446,15 @@ class URLImportResult(BaseModel):
     @classmethod
     def for_show(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
-        return cls(show_identifier=show.show_identifier, is_whitelist=is_whitelist)
+        return cls(show_key=show.key, is_whitelist=is_whitelist)
 
     # TODO: Validate
     @classmethod
     def for_seasons(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
         """Return the result of importing only `seasons` of `show`."""
         return cls(
-            show_identifier=show.show_identifier,
-            season_identifiers=[season.season_identifier for season in seasons],
+            show_key=show.key,
+            season_keys=[season.key for season in seasons],
             is_whitelist=True,
         )
 
@@ -463,8 +463,8 @@ class URLImportResult(BaseModel):
     def for_episodes(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
         """Return the result of importing only `episodes` of `show`."""
         return cls(
-            show_identifier=show.show_identifier,
-            episode_identifiers=[episode.episode_identifier for episode in episodes],
+            show_key=show.key,
+            episode_keys=[episode.key for episode in episodes],
             is_whitelist=True,
         )
 

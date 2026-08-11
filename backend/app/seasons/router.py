@@ -10,18 +10,17 @@ from app.auth.dependencies import (
     SessionDep,
 )
 from app.issue_reports.service import list_season_issue_reports
+from app.media.canonical_metadata import (
+    canonical_season_of,
+    fill_seasons,
+    tmdb_season_url,
+)
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
-from app.media.tmdb_fallback import (
-    TMDB_PLUGIN_KEY,
-    fill_seasons,
-    tmdb_season_counterpart,
-    tmdb_season_url,
-)
-from app.media.tmdb_identifier_links import check_season_identifier
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -39,7 +38,6 @@ from app.seasons.schemas import (
 from app.service import list_response
 from app.shows.dependencies import EditableShow, ReadableShow
 from app.shows.models import Show
-from app.shows.service import relink_season_children
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -73,16 +71,7 @@ def create_season(
     show: EditableShow,
     season_input: SeasonCreate,
 ) -> SeasonOutput:
-    """Create a `Season` if the `Show` is editable by the `User`.
-
-    A `season_identifier` naming a TMDB season is checked before it is stored,
-    and the title holding it is imported for the link to read.
-    """
-    check_season_identifier(
-        session,
-        season_input.season_identifier,
-        show.show_identifier,
-    )
+    """Create a `Season` if the `Show` is editable by the `User`."""
     return _season_output(session, season_input.create(session, Season, show))
 
 
@@ -207,20 +196,23 @@ def get_season_information(
     show = season.show
     source = show.source
 
-    counterpart = tmdb_season_counterpart(session, season.season_identifier)
+    counterpart = canonical_season_of(session, season.canonical_season_id)
     tmdb: SeasonInformationSide | None = None
     if counterpart:
-        tmdb_season, tmdb_show = counterpart
+        canonical_season, canonical_show = counterpart
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
-            tmdb_season,
-            tmdb_show,
-            tmdb_season_url(tmdb_show.key, tmdb_season.season_number),
+            canonical_season,
+            canonical_show,
+            tmdb_season_url(
+                canonical_show.tmdb_media_type,
+                canonical_show.tmdb_id,
+                canonical_season.season_number,
+            ),
         )
 
     return SeasonInformationOutput(
         season_id=season.id,
-        season_identifier=season.season_identifier,
         issue_reports=list_season_issue_reports(session, season.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
@@ -248,28 +240,10 @@ def update_season(
 ) -> SeasonOutput:
     """Update and return a `Season` if it's editable by the `User`.
 
-    A `season_identifier` naming a different TMDB season repoints every
-    `Episode` at TMDB, so their identifiers follow the season the `User` chose.
-    The `season_identifier` itself is what they asked for, so it is left alone.
-
-    A new `season_identifier` naming a TMDB season is checked before it is
-    stored, so a season the title does not have is refused rather than kept as a
-    link to nothing, and the title is imported for the link to read.
+    Which season this is a copy of is the linker's to work out during an import,
+    so there is nothing to repoint here.
     """
-    previous_tmdb_id = season.tmdb_id
-    if (
-        season_input.season_identifier is not None
-        and season_input.season_identifier != season.season_identifier
-    ):
-        check_season_identifier(
-            session,
-            season_input.season_identifier,
-            season.show.show_identifier,
-        )
-    season = season_input.update(session, season)
-    if season.tmdb_id != previous_tmdb_id:
-        relink_season_children(session, season)
-    return _season_output(session, season)
+    return _season_output(session, season_input.update(session, season))
 
 
 # TODO: Validate

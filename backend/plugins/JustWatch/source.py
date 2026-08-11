@@ -8,9 +8,8 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import col, select
 
+from app.canonical_shows.models import CanonicalShow
 from app.files.models import File
-from app.media.identifiers import tmdb_identifier
-from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -199,15 +198,15 @@ class SourceMixin(UpsertMixin, register=False):
         if tmdb_id is None:
             return
 
-        # The TMDB id lives in the identifier now, and a title can be a film or a
-        # series, so both identifiers TMDB could have issued are matched.
-        identifiers = [tmdb_identifier(media_type, tmdb_id) for media_type in MediaType]
+        # A title can be a film or a series, so both canonical rows TMDB could
+        # have issued the id under are matched.
         statement = (
             select(Show)
+            .join(CanonicalShow, col(Show.canonical_show_id) == CanonicalShow.id)
             .join(Source)
             .join(Plugin)
             .where(
-                col(Show.show_identifier).in_(identifiers),
+                CanonicalShow.tmdb_id == tmdb_id,
                 Plugin.key == plugin_class.plugin_key(),
                 col(Show.deleted_at).is_(None),
             )

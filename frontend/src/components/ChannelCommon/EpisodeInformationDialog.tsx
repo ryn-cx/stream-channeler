@@ -54,9 +54,8 @@ function sideRows(side: EpisodeInformationSide): InformationRows {
       <ExternalAnchor href={side.image_url} label={side.image_url} />
     ) : null,
     Key: side.key,
-    "Episode identifier": side.episode_identifier,
-    "Identifier locked": side.episode_identifier_locked ? "Yes" : "No",
-    "Identifier note": side.episode_identifier_note,
+    "Link locked": side.canonical_episode_locked ? "Yes" : "No",
+    "Link note": side.canonical_episode_note,
     "Data timestamp": formatInformationDate(side.data_timestamp),
     "Update at": formatInformationDate(side.update_at),
     "Modified at": formatInformationDate(side.modified_at),

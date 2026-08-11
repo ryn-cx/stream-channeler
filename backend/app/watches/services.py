@@ -38,8 +38,9 @@ from plugins.utils.manage_plugins import import_plugins, plugins
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
-# The episode a watch points at; reads still group watches by that episode's
-# `episode_identifier` so a watch counts across every source sharing it.
+# The episode a watch was recorded against. Reads group watches by the canonical
+# episode the watch itself names, so a watch counts across every source carrying
+# that episode and goes on counting once the copy it was made against is gone.
 WatchedEpisode = aliased(Episode)
 
 
@@ -52,23 +53,23 @@ def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
 
 
 # TODO: Validate
-def _watched_identifiers_subquery(user_id: uuid.UUID):  # noqa: ANN202
-    return (
-        select(col(WatchedEpisode.episode_identifier))
-        .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
-        .where(Watch.user_id == user_id)
+def _watched_canonical_subquery(user_id: uuid.UUID):  # noqa: ANN202
+    """The canonical episodes the `User` has watched anything of."""
+    return select(col(Watch.canonical_episode_id)).where(
+        Watch.user_id == user_id,
+        col(Watch.canonical_episode_id).is_not(None),
     )
 
 
 # TODO: Validate
-def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: ANN001, ANN202
-    """One representative visible episode per `episode_identifier`.
+def _representative_episode_subquery(user_id: uuid.UUID, canonical_ids):  # noqa: ANN001, ANN202
+    """One representative visible copy per canonical episode.
 
-    A watch keys on `episode_identifier`, which can resolve to an episode in every
-    source that shares it. This picks a single visible episode per identifier so a
-    watch can be joined to concrete media for display and visibility filtering.
-    Restricted to `identifiers` so it only resolves the identifiers actually in play
-    instead of the whole episode catalog.
+    A watch names the episode itself, which every website carrying it has a copy
+    of. This picks a single visible copy per episode so a watch can be joined to
+    concrete media for display and visibility filtering. Restricted to
+    `canonical_ids` so it only resolves the episodes actually in play instead of
+    the whole episode catalog.
 
     TMDB is what a website's media is filled in from rather than a website an
     episode can be watched on, so its own copy is never what a watch is shown
@@ -76,7 +77,7 @@ def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: 
     """
     return (
         select(
-            col(Episode.episode_identifier).label("episode_identifier"),
+            col(Episode.canonical_episode_id).label("canonical_episode_id"),
             col(Episode.id).label("episode_id"),
         )
         .join(Season, col(Season.id) == col(Episode.season_id))
@@ -86,9 +87,9 @@ def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: 
         .where(col(Episode.deleted_at).is_(None))
         .where(_visible_plugin_condition(user_id))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
-        .where(col(Episode.episode_identifier).in_(identifiers))
-        .distinct(col(Episode.episode_identifier))
-        .order_by(col(Episode.episode_identifier), col(Episode.id))
+        .where(col(Episode.canonical_episode_id).in_(canonical_ids))
+        .distinct(col(Episode.canonical_episode_id))
+        .order_by(col(Episode.canonical_episode_id), col(Episode.id))
         .subquery()
     )
 
@@ -120,15 +121,16 @@ def _own_visible_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
 def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     representative = _representative_episode_subquery(
         user_id,
-        _watched_identifiers_subquery(user_id),
+        _watched_canonical_subquery(user_id),
     )
+    # Joined on the watch's own pointer rather than through the copy it was
+    # recorded against, so a watch whose copy has since been deleted is still
+    # listed under another website's copy of the same episode.
     return (
         select(Watch)
-        .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
         .join(
             representative,
-            representative.c.episode_identifier
-            == col(WatchedEpisode.episode_identifier),
+            representative.c.canonical_episode_id == col(Watch.canonical_episode_id),
         )
         .join(
             Episode,
@@ -176,22 +178,22 @@ def get_watched_episodes(
 
 
 # TODO: Validate
-def _representative_episodes_by_identifier(
+def _representative_episodes_by_canonical_id(
     session: Session,
     user_id: uuid.UUID,
-    identifiers: set[str],
-) -> dict[str, Episode]:
-    """Load the representative visible `Episode` for each `episode_identifier`."""
-    if not identifiers:
+    canonical_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, Episode]:
+    """Load the representative visible `Episode` for each canonical episode."""
+    if not canonical_ids:
         return {}
-    representative = _representative_episode_subquery(user_id, identifiers)
+    representative = _representative_episode_subquery(user_id, canonical_ids)
     episodes = session.exec(
         select(Episode).join(
             representative,
             col(Episode.id) == representative.c.episode_id,
         ),
     ).all()
-    return {episode.episode_identifier: episode for episode in episodes}
+    return {episode.canonical_episode_id: episode for episode in episodes}
 
 
 # TODO: Validate
@@ -200,21 +202,21 @@ def _format_watched_episodes_data(
     user_id: uuid.UUID,
     episode_watches: Sequence[Watch],
 ) -> WatchesListOutput:
-    episodes_dict: dict[str, EpisodeOutput] = {}
+    episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
     shows_dict: dict[uuid.UUID, ShowPublic] = {}
     sources_dict: dict[uuid.UUID, SourcePublic] = {}
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
 
-    episode_by_identifier = _representative_episodes_by_identifier(
+    episode_by_canonical_id = _representative_episodes_by_canonical_id(
         session,
         user_id,
-        {watch.episode_identifier for watch in episode_watches},
+        {watch.canonical_episode_id for watch in episode_watches},
     )
 
     for episode_watch in episode_watches:
-        episode = episode_by_identifier.get(episode_watch.episode_identifier)
+        episode = episode_by_canonical_id.get(episode_watch.canonical_episode_id)
         if episode is None:
             continue
         season = episode.season
@@ -222,8 +224,8 @@ def _format_watched_episodes_data(
         source = show.source
         plugin = source.plugin
 
-        if episode.episode_identifier not in episodes_dict:
-            episodes_dict[episode.episode_identifier] = EpisodeOutput.model_validate(
+        if episode.canonical_episode_id not in episodes_dict:
+            episodes_dict[episode.canonical_episode_id] = EpisodeOutput.model_validate(
                 episode,
             )
         if season.id not in seasons_dict:
@@ -239,7 +241,7 @@ def _format_watched_episodes_data(
             WatchItem(
                 id=episode_watch.id,
                 episode_id=episode_watch.episode_id,
-                episode_identifier=episode_watch.episode_identifier,
+                canonical_episode_id=episode_watch.canonical_episode_id,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,
             ),
@@ -262,16 +264,14 @@ def create_watches(
     episode: Episode,
     watch_input: WatchCreate,
 ) -> list[WatchOutput]:
-    """Create a watch for the episode's `episode_identifier`.
+    """Create a watch of the episode `episode` is a copy of.
 
-    Raises 409 Conflict if the identifier already has an unverified watch.
+    Raises 409 Conflict if that episode already has an unverified watch.
     """
     existing_unverified = session.exec(
-        select(Watch)
-        .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
-        .where(
+        select(Watch).where(
             Watch.user_id == user_id,
-            col(WatchedEpisode.episode_identifier) == episode.episode_identifier,
+            col(Watch.canonical_episode_id) == episode.canonical_episode_id,
             col(Watch.verified) == False,  # noqa: E712 - TODO: SQLAlchemy comparison requires == False
         ),
     ).first()
@@ -285,7 +285,7 @@ def create_watches(
         watch_input,
         update={
             "episode_id": episode.id,
-            "episode_identifier": episode.episode_identifier,
+            "canonical_episode_id": episode.canonical_episode_id,
             "user_id": user_id,
         },
     )

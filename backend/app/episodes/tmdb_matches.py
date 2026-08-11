@@ -2,7 +2,7 @@
 """Episodes no TMDB record was found for, each beside the closest TMDB episode.
 
 An import points an episode at TMDB by name, and an episode whose name matched
-nothing keeps the identifier its own website issued. Those are what is gathered
+nothing is left standing only for itself. Those are what is gathered
 here, each paired with the TMDB episode that came closest, so the link a name
 could not make can be made by hand instead.
 """
@@ -15,6 +15,10 @@ from difflib import SequenceMatcher
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.service import point_episode_at, standalone_episode
+from app.canonical_seasons.models import CanonicalSeason
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import (
     MANUAL_NOTES,
     MANUALLY_CONFIRMED_NOTE,
@@ -27,24 +31,20 @@ from app.episodes.schemas import (
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
 )
-from app.media.identifiers import (
-    TMDB_IDENTIFIER_PREFIX,
-    TMDB_PLUGIN_KEY,
-    parse_tmdb_identifier,
-    tmdb_identifier,
-)
+from app.media.canonical_metadata import tmdb_episode_url
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
-from app.media.tmdb_fallback import tmdb_episode_url
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 
-_TMDB_IDENTIFIER_PATTERN = f"{TMDB_IDENTIFIER_PREFIX}%"
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
 
-type _Candidate = tuple[Episode, Season, Show]
+# What an `Episode` can be pointed at: the episode itself, the season holding
+# it, and the title above that, all as TMDB has them.
+type _Candidate = tuple[CanonicalEpisode, CanonicalSeason, CanonicalShow]
 type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
@@ -150,7 +150,12 @@ def _choice(
         season_number=season.season_number,
         episode_number=episode.episode_number,
         absolute_number=absolute_numbers.get(episode.id),
-        url=tmdb_episode_url(show.key, season.season_number, episode.episode_number),
+        url=tmdb_episode_url(
+            show.tmdb_media_type,
+            show.tmdb_id,
+            season.season_number,
+            episode.episode_number,
+        ),
         similarity=similarity,
     )
 
@@ -193,14 +198,25 @@ def _unmatched_rows(
         .join(Show, onclause=col(Season.show_id) == Show.id)
         .join(Source, onclause=col(Show.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
+        .join(
+            CanonicalEpisode,
+            onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
+        )
+        .join(
+            CanonicalShow,
+            onclause=col(Show.canonical_show_id) == CanonicalShow.id,
+        )
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
-            col(Episode.episode_identifier).not_like(_TMDB_IDENTIFIER_PATTERN),
-            # A locked identifier is one a `User` has already settled, whether by
+            # The episode is a copy of something TMDB has no record of, while
+            # the title above it is one TMDB does hold: that gap is exactly what
+            # is left to match.
+            col(CanonicalEpisode.tmdb_id).is_(None),
+            col(CanonicalShow.tmdb_id).is_not(None),
+            # A locked link is one a `User` has already settled, whether by
             # pointing the episode at a TMDB record or by saying there is none to
             # point it at, so it is no longer waiting on anybody.
-            col(Episode.episode_identifier_locked).is_(False),
-            col(Show.show_identifier).like(_TMDB_IDENTIFIER_PATTERN),
+            col(Episode.canonical_episode_locked).is_(False),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -218,33 +234,35 @@ def _unmatched_rows(
 # TODO: Validate
 def _candidates_by_show(
     session: Session,
-    show_identifiers: set[str],
-) -> dict[str, list[_Candidate]]:
-    """Return every TMDB episode of each linked title, keyed by the title's identifier.
+    canonical_show_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, list[_Candidate]]:
+    """Return every TMDB episode of each linked title, keyed by the title.
 
     A title's episodes are read once for the whole page rather than once per
     episode, since every episode of the same title is compared against the same
     list.
     """
-    if not show_identifiers:
+    if not canonical_show_ids:
         return {}
 
     statement = (
-        select(Episode, Season, Show)
-        .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
-        .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
+        select(CanonicalEpisode, CanonicalSeason, CanonicalShow)
+        .join(
+            CanonicalSeason,
+            onclause=col(CanonicalEpisode.canonical_season_id) == CanonicalSeason.id,
+        )
+        .join(
+            CanonicalShow,
+            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+        )
         .where(
-            Plugin.key == TMDB_PLUGIN_KEY,
-            col(Show.show_identifier).in_(show_identifiers),
-            col(Episode.deleted_at).is_(None),
-            col(Season.deleted_at).is_(None),
+            col(CanonicalShow.id).in_(canonical_show_ids),
+            col(CanonicalEpisode.tmdb_id).is_not(None),
         )
     )
-    candidates: dict[str, list[_Candidate]] = defaultdict(list)
+    candidates: dict[uuid.UUID, list[_Candidate]] = defaultdict(list)
     for episode, season, show in session.exec(statement).all():
-        candidates[show.show_identifier].append((episode, season, show))
+        candidates[show.id].append((episode, season, show))
     return candidates
 
 
@@ -288,7 +306,7 @@ def list_unmatched_episodes(
     session: Session,
     limit: int,
 ) -> list[UnmatchedEpisodeOutput]:
-    """Return the episodes still carrying their own website's identifier.
+    """Return the episodes that are still a copy of nothing but themselves.
 
     Only episodes of a title that is itself linked are listed, since a title with
     no TMDB counterpart has no episodes to be matched against and nothing to
@@ -297,11 +315,15 @@ def list_unmatched_episodes(
     rows = _unmatched_rows(session, limit)
     candidates = _candidates_by_show(
         session,
-        {show.show_identifier for _episode, _season, show, _source in rows},
+        {
+            show.canonical_show_id
+            for _episode, _season, show, _source in rows
+            if show.canonical_show_id
+        },
     )
     candidate_numbers = {
-        show_identifier: _candidate_absolute_numbers(show_candidates)
-        for show_identifier, show_candidates in candidates.items()
+        canonical_show_id: _candidate_absolute_numbers(show_candidates)
+        for canonical_show_id, show_candidates in candidates.items()
     }
     source_numbers = _source_absolute_numbers(
         session,
@@ -311,8 +333,8 @@ def list_unmatched_episodes(
     return [
         UnmatchedEpisodeOutput(
             id=episode.id,
-            episode_identifier=episode.episode_identifier,
-            episode_identifier_note=episode.episode_identifier_note,
+            canonical_episode_id=episode.canonical_episode_id,
+            canonical_episode_note=episode.canonical_episode_note,
             name=episode.name,
             episode_number=episode.episode_number,
             absolute_number=source_numbers.get(episode.id),
@@ -327,8 +349,8 @@ def list_unmatched_episodes(
             best_match=_best_match(
                 episode,
                 season,
-                candidates.get(show.show_identifier, []),
-                candidate_numbers.get(show.show_identifier, {}),
+                candidates.get(show.canonical_show_id, []),
+                candidate_numbers.get(show.canonical_show_id, {}),
             ),
         )
         for episode, season, show, source in rows
@@ -355,8 +377,8 @@ def _unlocked_rows(
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
-            col(Episode.episode_identifier_locked).is_(False),
-            col(Show.show_identifier).like(_TMDB_IDENTIFIER_PATTERN),
+            col(Episode.canonical_episode_locked).is_(False),
+            col(CanonicalShow.tmdb_id).is_not(None),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -384,11 +406,15 @@ def list_unlocked_episodes(
     rows = _unlocked_rows(session, limit)
     candidates = _candidates_by_show(
         session,
-        {show.show_identifier for _episode, _season, show, _source in rows},
+        {
+            show.canonical_show_id
+            for _episode, _season, show, _source in rows
+            if show.canonical_show_id
+        },
     )
     candidate_numbers = {
-        show_identifier: _candidate_absolute_numbers(show_candidates)
-        for show_identifier, show_candidates in candidates.items()
+        canonical_show_id: _candidate_absolute_numbers(show_candidates)
+        for canonical_show_id, show_candidates in candidates.items()
     }
     source_numbers = _source_absolute_numbers(
         session,
@@ -400,14 +426,14 @@ def list_unlocked_episodes(
         best_match = _best_match(
             episode,
             season,
-            candidates.get(show.show_identifier, []),
-            candidate_numbers.get(show.show_identifier, {}),
+            candidates.get(show.canonical_show_id, []),
+            candidate_numbers.get(show.canonical_show_id, {}),
         )
         outputs.append(
             UnlockedEpisodeOutput(
                 id=episode.id,
-                episode_identifier=episode.episode_identifier,
-                episode_identifier_note=episode.episode_identifier_note,
+                canonical_episode_id=episode.canonical_episode_id,
+                canonical_episode_note=episode.canonical_episode_note,
                 name=episode.name,
                 episode_number=episode.episode_number,
                 absolute_number=source_numbers.get(episode.id),
@@ -431,8 +457,8 @@ def list_unlocked_episodes(
 
 
 # TODO: Validate
-def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
-    """Return the TMDB identifiers the rest of `episode`'s show already points at.
+def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
+    """Return the TMDB episodes the rest of `episode`'s show already points at.
 
     Only the show the episode belongs to is read, since another website's copy
     of the same title has its own episodes pointing at the same TMDB ones and
@@ -441,34 +467,39 @@ def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
     counted as somebody else's.
     """
     statement = (
-        select(Episode.episode_identifier)
+        select(CanonicalEpisode.tmdb_id)
+        .join(
+            Episode,
+            onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
+        )
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
             Season.show_id == episode.season.show_id,
             col(Episode.id) != episode.id,
-            col(Episode.episode_identifier).like(_TMDB_IDENTIFIER_PATTERN),
+            col(CanonicalEpisode.tmdb_id).is_not(None),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
         )
     )
-    return set(session.exec(statement).all())
+    return {tmdb_id for tmdb_id in session.exec(statement).all() if tmdb_id}
 
 
 # TODO: Validate
-def _imported_title_identifier(session: Session, tmdb_show_id: int) -> str:
-    """Read a TMDB series in and return the identifier its episodes are under.
+def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
+    """Read a TMDB series in and return the title its episodes are under.
 
     Read in rather than looked for, since a title nothing has imported has no
     episodes stored to choose from and naming it is the asking for it.
     """
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    if TMDB(session).import_title(MediaType.tv, tmdb_show_id) is None:
+    canonical_show = TMDB(session).import_title(MediaType.tv, tmdb_show_id)
+    if canonical_show is None:
         raise HTTPException(
             status_code=400,
             detail=f"TMDB has no series with the id {tmdb_show_id}",
         )
-    return tmdb_identifier(MediaType.tv, tmdb_show_id)
+    return canonical_show.id
 
 
 # TODO: Validate
@@ -489,17 +520,19 @@ def list_tmdb_episode_choices(
     is not always among the episodes of the title its show is, and naming the
     title it is under is the only way to reach it.
     """
-    show_identifier = (
-        episode.season.show.show_identifier
+    canonical_show_id = (
+        episode.season.show.canonical_show_id
         if tmdb_show_id is None
-        else _imported_title_identifier(session, tmdb_show_id)
+        else _imported_title(session, tmdb_show_id)
     )
-    candidates = _candidates_by_show(session, {show_identifier}).get(
-        show_identifier,
+    if canonical_show_id is None:
+        return []
+    candidates = _candidates_by_show(session, {canonical_show_id}).get(
+        canonical_show_id,
         [],
     )
     absolute_numbers = _candidate_absolute_numbers(candidates)
-    used_identifiers = _identifiers_used_by_show(session, episode)
+    used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
     choices = [
         choice
         for candidate in candidates
@@ -513,9 +546,7 @@ def list_tmdb_episode_choices(
         is not None
     ]
     for choice in choices:
-        choice.already_used = (
-            tmdb_identifier(MediaType.tv, choice.tmdb_episode_id) in used_identifiers
-        )
+        choice.already_used = choice.tmdb_episode_id in used_tmdb_ids
     return sorted(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
@@ -523,14 +554,9 @@ def list_tmdb_episode_choices(
 
 
 # TODO: Validate
-def _tmdb_episode_identifiers(
-    tmdb_episode_id: int,
-    media_type: MediaType | None,
-) -> set[str]:
-    """Return the identifiers an id could be, given what is known of its half."""
-    if media_type is not None:
-        return {tmdb_identifier(media_type, tmdb_episode_id)}
-    return {tmdb_identifier(half, tmdb_episode_id) for half in MediaType}
+def _tmdb_halves(media_type: MediaType | None) -> list[MediaType]:
+    """Return the halves of the catalogue an id could belong to."""
+    return [media_type] if media_type is not None else list(MediaType)
 
 
 # TODO: Validate
@@ -538,7 +564,7 @@ def _tmdb_episode(
     session: Session,
     tmdb_episode_id: int,
     media_type: MediaType | None = None,
-) -> Episode | None:
+) -> CanonicalEpisode | None:
     """Return the imported TMDB episode an id names, in one half of the catalogue.
 
     An id said to be a movie's is only ever looked for as a movie, so a series
@@ -546,18 +572,9 @@ def _tmdb_episode(
     other way about. An id with neither said of it is looked for as both, which
     is what a choice taken off the list is.
     """
-    identifiers = _tmdb_episode_identifiers(tmdb_episode_id, media_type)
-    statement = (
-        select(Episode)
-        .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
-        .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
-        .where(
-            Plugin.key == TMDB_PLUGIN_KEY,
-            col(Episode.episode_identifier).in_(identifiers),
-            col(Episode.deleted_at).is_(None),
-        )
+    statement = select(CanonicalEpisode).where(
+        CanonicalEpisode.tmdb_id == tmdb_episode_id,
+        col(CanonicalEpisode.tmdb_media_type).in_(_tmdb_halves(media_type)),
     )
     return session.exec(statement).first()
 
@@ -573,9 +590,9 @@ def link_episode(
 ) -> Episode:
     """Point `episode` at a TMDB episode a `User` chose, and hold it there.
 
-    The identifier is taken off the imported TMDB episode rather than built from
-    the id given, so an id TMDB has nothing imported for is refused instead of
-    stored as a link to a record that will never fill anything in. The link is
+    The episode is pointed at the row already read in rather than at one built
+    from the id given, so an id TMDB has nothing imported for is refused instead
+    of stored as a link to a record that will never fill anything in. The link is
     locked, which is what keeps the next import's own guess from replacing it.
 
     `selected` says the `User` went and found the episode rather than taking the
@@ -585,22 +602,23 @@ def link_episode(
 
     counterpart = _tmdb_episode(session, tmdb_episode_id, media_type)
     if counterpart is None:
-        looked_for = " or ".join(
-            sorted(_tmdb_episode_identifiers(tmdb_episode_id, media_type)),
-        )
+        halves = " or ".join(sorted(str(half) for half in _tmdb_halves(media_type)))
         raise HTTPException(
             status_code=404,
-            detail=f"TMDB has no imported episode that is {looked_for}",
+            detail=(
+                f"TMDB has no imported episode with the id {tmdb_episode_id} "
+                f"as a {halves}"
+            ),
         )
 
-    _unlink_others_sharing(session, episode, counterpart.episode_identifier)
+    _unlink_others_sharing(session, episode, counterpart.id)
 
-    episode.episode_identifier = counterpart.episode_identifier
-    episode.episode_identifier_locked = True
-    episode.episode_identifier_note = (
+    episode.canonical_episode_locked = True
+    episode.canonical_episode_note = (
         MANUALLY_SELECTED_NOTE if selected else MANUALLY_CONFIRMED_NOTE
     )
     session.add(episode)
+    point_episode_at(session, episode, counterpart)
     session.commit()
     session.refresh(episode)
     return episode
@@ -636,7 +654,12 @@ def _import_named_media(
         tmdb.import_title(MediaType.movie, tmdb_episode_id)
         return
 
-    linked = parse_tmdb_identifier(episode.season.show.show_identifier)
+    canonical_show = episode.season.show.canonical_show
+    linked = (
+        (MediaType(canonical_show.tmdb_media_type), canonical_show.tmdb_id)
+        if canonical_show and canonical_show.tmdb_id and canonical_show.tmdb_media_type
+        else None
+    )
     if linked is None:
         return
 
@@ -648,15 +671,15 @@ def _import_named_media(
 def _unlink_others_sharing(
     session: Session,
     episode: Episode,
-    identifier: str,
+    canonical_episode_id: uuid.UUID,
 ) -> None:
-    """Take `identifier` off the other episodes of the same copy of the title.
+    """Take the episode off the other copies of the same title.
 
-    Two websites' episodes carrying one identifier is what makes them a single
+    Two websites' episodes pointing at one record is what makes them a single
     episode to watch, so only the title's own other episodes are a clash. A
     `User` saying which episode the record is has settled which one it is, so
-    whichever was on it by a guess comes off and goes back to the identifier its
-    own website issued.
+    whichever was on it by a guess comes off and is left for `reconcile_show` to
+    give a row of its own.
 
     An episode another `User` decision put there is left where it is, since one
     decision is no reason to undo another.
@@ -666,39 +689,49 @@ def _unlink_others_sharing(
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
             Season.show_id == episode.season.show_id,
-            Episode.episode_identifier == identifier,
+            Episode.canonical_episode_id == canonical_episode_id,
             Episode.id != episode.id,
             col(Episode.deleted_at).is_(None),
         )
     )
     for other in session.exec(statement).all():
-        if other.episode_identifier_locked and (
-            other.episode_identifier_note in MANUAL_NOTES
+        if other.canonical_episode_locked and (
+            other.canonical_episode_note in MANUAL_NOTES
         ):
             continue
 
-        plugin_key = other.season.show.source.plugin.key
-        removed = f"Removed {identifier}, which was given to another episode by hand"
-        previous = other.episode_identifier_note
-        other.episode_identifier_note = (
+        removed = (
+            f"Removed {canonical_episode_id}, which was given to another "
+            "episode by hand"
+        )
+        previous = other.canonical_episode_note
+        other.canonical_episode_note = (
             f"{removed}. {previous}" if previous else removed
         )
-        other.episode_identifier = f"{plugin_key} {other.key}"
-        other.episode_identifier_locked = False
+        other.canonical_episode_id = None
+        other.canonical_episode_locked = False
         session.add(other)
+        # Left pointing at nothing, so it is given a row standing only for
+        # itself rather than left as a copy of nothing at all.
+        session.flush()
+        point_episode_at(
+            session,
+            other,
+            standalone_episode(session, other, other.season.canonical_season),
+        )
 
 
 # TODO: Validate
 def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:
-    """Hold `episode` at the identifier its own website issued.
+    """Hold `episode` as a copy of nothing but itself.
 
     An episode TMDB has no counterpart for is as settled as one that was linked,
-    so the identifier it already carries is locked rather than replaced. That is
+    so the row it already stands for is locked rather than replaced. That is
     what keeps the next import from guessing at it again and what takes it off
     the list of episodes still waiting on somebody.
     """
-    episode.episode_identifier_locked = True
-    episode.episode_identifier_note = NO_MATCH_NOTE
+    episode.canonical_episode_locked = True
+    episode.canonical_episode_note = NO_MATCH_NOTE
     session.add(episode)
     session.commit()
     session.refresh(episode)

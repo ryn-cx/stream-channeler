@@ -38,7 +38,7 @@ class WatchOutput(BaseWatch):
 
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    episode_identifier: str
+    canonical_episode_id: uuid.UUID
     user_id: uuid.UUID
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
     # the value will always be present so they need to be overridden.
@@ -50,7 +50,9 @@ class WatchOutput(BaseWatch):
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    episode_identifier: str
+    # The episode itself, which is what the watch is of and what keys `episodes`
+    # on the list output.
+    canonical_episode_id: uuid.UUID
 
     # TODO: Validate
     def __hash__(self) -> int:
@@ -66,7 +68,7 @@ class WatchItem(BaseWatch):
 # TODO: Validate
 class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
-    episodes: dict[str, EpisodeOutput] = Field()
+    episodes: dict[uuid.UUID, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
     shows: dict[uuid.UUID, ShowPublic] = Field()
     sources: dict[uuid.UUID, SourcePublic] = Field()

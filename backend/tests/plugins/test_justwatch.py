@@ -4,7 +4,7 @@ from typing import override
 
 from sqlmodel import Session, col, select
 
-from app.media.tmdb_fallback import TMDB_PLUGIN_KEY
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import { Fragment, type ReactNode } from "react"
 import type { ChannelShowStats } from "@/client"
 import { UsersService } from "@/client"
-import { parseTmdbIdentifier } from "@/components/Common/TmdbIdentifierField"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import {
@@ -18,7 +17,9 @@ export interface Show {
   name?: string | null
   source_id: string
   url?: string | null
-  show_identifier: string
+  media_type?: string | null
+  tmdb_id?: number | null
+  canonical_show_id?: string | null
   image_url?: string | null
 }
 
@@ -110,15 +111,14 @@ function useSourceDisabled(): (source: Source | undefined) => boolean {
 /**
  * Group shows that are the same title, keeping the order they arrived in.
  *
- * `show_identifier` is what makes the same title on two services one title, so
- * it is the whole of the grouping. It is the TMDB id when the show is linked to
- * TMDB and the plugin's own key for it when it is not, which leaves an unlinked
- * show in a group of its own.
+ * `canonical_show_id` names the title itself rather than one service's copy of
+ * it, so it is the whole of the grouping. A copy that has no title yet stands
+ * for itself under its own id, rather than every such copy reading as one title.
  */
 export function groupShows(shows: Show[]): Show[][] {
   const groups = new Map<string, Show[]>()
   for (const show of shows) {
-    const key = show.show_identifier
+    const key = show.canonical_show_id ?? show.id
     const group = groups.get(key)
     if (group) {
       group.push(show)
@@ -153,23 +153,15 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
 /**
  * What is known about a title from the channel's own listing of it.
  *
- * The listing carries the identifier rather than TMDB's account of the title, so
- * a card reads what the identifier itself names and leaves the rest to the
- * information panel.
+ * The listing carries the title's own account of itself, so a card reads that
+ * and leaves the rest to the information panel.
  */
 function showFacts(
   group: Show[],
   stats: ChannelShowStats | undefined,
 ): string[] {
   const [firstShow] = group
-  const parsed = parseTmdbIdentifier(firstShow.show_identifier)
-  const facts = [
-    parsed
-      ? parsed.mediaType === "tv"
-        ? "TV"
-        : "Movie"
-      : "Not linked to TMDB",
-  ]
+  const facts = [firstShow.media_type ?? "Not linked to TMDB"]
   if (stats?.first_release_date) {
     // Read off the stored date rather than the reader's own clock, which would
     // move a release just after midnight into the year before it.
@@ -178,7 +170,7 @@ function showFacts(
   // A movie is one episode of one season by construction, so counting them says
   // nothing the "Movie" note has not already said.
   const countsAreImplied =
-    parsed?.mediaType === "movie" &&
+    firstShow.media_type === "Movie" &&
     stats?.season_count === 1 &&
     stats?.episode_count === 1
   if (countsAreImplied) {
@@ -261,13 +253,16 @@ export function ShowCards({
                 </div>
                 <div className="flex flex-col gap-2 p-3">
                   <div className="flex flex-wrap items-center gap-1">
-                    {showFacts(group, stats[firstShow.show_identifier]).map(
-                      (fact) => (
-                        <Badge key={fact} variant="secondary">
-                          {fact}
-                        </Badge>
-                      ),
-                    )}
+                    {showFacts(
+                      group,
+                      firstShow.canonical_show_id
+                        ? stats[firstShow.canonical_show_id]
+                        : undefined,
+                    ).map((fact) => (
+                      <Badge key={fact} variant="secondary">
+                        {fact}
+                      </Badge>
+                    ))}
                   </div>
                   <div
                     className={`flex flex-wrap items-center gap-1${actions ? " pr-8" : ""}`}

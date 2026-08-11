@@ -237,9 +237,9 @@ class ChannelShowsOutput(BaseModel):
     # The regular shows grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelShowGroup] = Field(default_factory=list)
-    # What each title adds up to, keyed by `show_identifier` because the stats are
-    # about the title rather than one website's copy of it.
-    stats: dict[str, ChannelShowStats] = Field(default_factory=dict)
+    # What each title adds up to, keyed by `canonical_show_id` because the stats
+    # are about the title rather than one website's copy of it.
+    stats: dict[uuid.UUID, ChannelShowStats] = Field(default_factory=dict)
 
 
 # TODO: Validate

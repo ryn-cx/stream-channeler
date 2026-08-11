@@ -440,9 +440,8 @@ export type EpisodeCreate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier: string;
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
 };
 
 /**
@@ -454,9 +453,8 @@ export type EpisodeCreate = {
  */
 export type EpisodeInformationOutput = {
     episode_id: string;
-    episode_identifier: string;
-    episode_identifier_locked: boolean;
-    episode_identifier_note: (string | null);
+    canonical_episode_locked: boolean;
+    canonical_episode_note: (string | null);
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
@@ -480,9 +478,8 @@ export type EpisodeInformationSide = {
     show_name: (string | null);
     url: (string | null);
     key: string;
-    episode_identifier: string;
-    episode_identifier_locked: boolean;
-    episode_identifier_note: (string | null);
+    canonical_episode_locked: boolean;
+    canonical_episode_note: (string | null);
     data_timestamp: (string | null);
     update_at: (string | null);
     modified_at: (string | null);
@@ -506,11 +503,12 @@ export type EpisodeListOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier: string;
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
+    canonical_episode_id: string;
+    tmdb_id?: (number | null);
     username: (string | null);
     season_name: (string | null);
     show_id: string;
@@ -519,13 +517,6 @@ export type EpisodeListOutput = {
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
-    /**
-     * The TMDB episode `episode_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -546,18 +537,12 @@ export type EpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier: string;
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
-    /**
-     * The TMDB episode `episode_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
+    canonical_episode_id: string;
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -597,9 +582,8 @@ export type EpisodeUpdate = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier?: (string | null);
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -617,11 +601,12 @@ export type EpisodeWithDetails = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier: string;
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
+    canonical_episode_id: string;
+    tmdb_id?: (number | null);
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
@@ -631,13 +616,6 @@ export type EpisodeWithDetails = {
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
-    /**
-     * The TMDB episode `episode_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -950,7 +928,6 @@ export type SeasonCreate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    season_identifier: string;
 };
 
 /**
@@ -962,7 +939,6 @@ export type SeasonCreate = {
  */
 export type SeasonInformationOutput = {
     season_id: string;
-    season_identifier: string;
     issue_reports: Array<IssueReportOutput>;
     source: SeasonInformationSide;
     tmdb: (SeasonInformationSide | null);
@@ -996,22 +972,16 @@ export type SeasonListOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    season_identifier: string;
     show_id: string;
     id: string;
+    canonical_season_id: string;
+    tmdb_id?: (number | null);
     username: (string | null);
     show_name: (string | null);
     source_id: string;
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
-    /**
-     * The TMDB season `season_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -1028,16 +998,10 @@ export type SeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    season_identifier: string;
     show_id: string;
     id: string;
-    /**
-     * The TMDB season `season_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
+    canonical_season_id: string;
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -1064,7 +1028,6 @@ export type SeasonUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    season_identifier?: (string | null);
 };
 
 /**
@@ -1082,8 +1045,8 @@ export type ShowCreate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    show_identifier: string;
-    show_identifier_locked?: boolean;
+    canonical_show_locked?: boolean;
+    canonical_show_note?: (string | null);
 };
 
 /**
@@ -1095,8 +1058,7 @@ export type ShowCreate = {
  */
 export type ShowInformationOutput = {
     show_id: string;
-    show_identifier: string;
-    show_identifier_locked: boolean;
+    canonical_show_locked: boolean;
     editable: boolean;
     issue_reports: Array<IssueReportOutput>;
     source: ShowInformationSide;
@@ -1131,21 +1093,16 @@ export type ShowListPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    show_identifier: string;
-    show_identifier_locked?: boolean;
+    canonical_show_locked?: boolean;
+    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
+    canonical_show_id: string;
+    tmdb_id?: (number | null);
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
-    /**
-     * The TMDB title `show_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 /**
@@ -1163,17 +1120,12 @@ export type ShowPublic = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    show_identifier: string;
-    show_identifier_locked?: boolean;
+    canonical_show_locked?: boolean;
+    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
-    /**
-     * The TMDB title `show_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
+    canonical_show_id: string;
+    tmdb_id?: (number | null);
 };
 
 /**
@@ -1201,8 +1153,8 @@ export type ShowUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    show_identifier?: (string | null);
-    show_identifier_locked?: boolean;
+    canonical_show_locked?: boolean;
+    canonical_show_note?: (string | null);
 };
 
 export type SortKeyInput = {
@@ -1397,8 +1349,8 @@ export type Token = {
  */
 export type UnlockedEpisodeOutput = {
     id: string;
-    episode_identifier: string;
-    episode_identifier_note: (string | null);
+    canonical_episode_id: (string | null);
+    canonical_episode_note: (string | null);
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);
@@ -1419,8 +1371,8 @@ export type UnlockedEpisodeOutput = {
  */
 export type UnmatchedEpisodeOutput = {
     id: string;
-    episode_identifier: string;
-    episode_identifier_note: (string | null);
+    canonical_episode_id: (string | null);
+    canonical_episode_note: (string | null);
     name: (string | null);
     episode_number: (number | null);
     absolute_number: (number | null);
@@ -1553,7 +1505,7 @@ export type WatchItem = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
-    episode_identifier: string;
+    canonical_episode_id: string;
 };
 
 /**
@@ -1564,7 +1516,7 @@ export type WatchOutput = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
-    episode_identifier: string;
+    canonical_episode_id: string;
     user_id: string;
 };
 
@@ -1597,24 +1549,18 @@ export type WhitelistEpisodeOutput = {
     duration?: (number | null);
     release_date?: (string | null);
     air_date?: (string | null);
-    episode_identifier: string;
-    episode_identifier_locked?: boolean;
-    episode_identifier_note?: (string | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
+    canonical_episode_id: string;
+    tmdb_id?: (number | null);
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
-    /**
-     * The TMDB episode `episode_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 export type WhitelistSeasonOutput = {
@@ -1628,19 +1574,13 @@ export type WhitelistSeasonOutput = {
     url?: (string | null);
     image_url?: (string | null);
     season_number?: (number | null);
-    season_identifier: string;
     show_id: string;
     id: string;
+    canonical_season_id: string;
+    tmdb_id?: (number | null);
     filtered: boolean;
     show_ids: Array<(string)>;
     tmdb_season_number?: (number | null);
-    /**
-     * The TMDB season `season_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 export type WhitelistShowInput = {
@@ -1662,21 +1602,16 @@ export type WhitelistShowOutput = {
     url?: (string | null);
     image_url?: (string | null);
     icon?: (string | null);
-    show_identifier: string;
-    show_identifier_locked?: boolean;
+    canonical_show_locked?: boolean;
+    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
+    canonical_show_id: string;
+    tmdb_id?: (number | null);
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
     episodes: Array<WhitelistEpisodeOutput>;
-    /**
-     * The TMDB title `show_identifier` names, if it names one.
-     *
-     * Read off the identifier rather than stored beside it, so the two can
-     * never disagree about which TMDB record this is.
-     */
-    readonly tmdb_id: (number | null);
 };
 
 /**

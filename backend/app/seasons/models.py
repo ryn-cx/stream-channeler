@@ -4,7 +4,6 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
-from pydantic import computed_field
 from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
@@ -14,15 +13,13 @@ from sqlmodel import (
     Session,
     UniqueConstraint,
     select,
-    text,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.media.identifiers import identifier_tmdb_id
+from app.canonical_seasons.models import CanonicalSeason
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
-    placeholder_identifier,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
@@ -44,30 +41,15 @@ class BaseSeason(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
-    # What makes the same season on two websites one season rather than two. It
-    # is the TMDB id whenever the season is linked to TMDB, and the plugin's own
-    # key for the season when it is not.
-    season_identifier: str
-
-    # TODO: Validate
-    @computed_field
-    @property
-    def tmdb_id(self) -> int | None:
-        """The TMDB season `season_identifier` names, if it names one.
-
-        Read off the identifier rather than stored beside it, so the two can
-        never disagree about which TMDB record this is.
-        """
-        return identifier_tmdb_id(self.season_identifier)
 
 
+# TODO: Validate
 # TODO: Validate
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     """Model representing a `Season`."""
 
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "name",
-        "season_identifier",
         "season_number",
         "sort_order",
     ]
@@ -87,21 +69,24 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         *sortable_field_indexes(
             "Season",
             DIRECT_SORTABLE_FIELDS,
-            already_indexed=("season_identifier",),
         ),
         Index("Season-deleted_at-index", "deleted_at"),
-        Index("Season-season_identifier-index", "season_identifier", "id"),
-        Index(
-            "Season-live-season_identifier-index",
-            "season_identifier",
-            postgresql_where=text("deleted_at IS NULL"),
-        ),
+        Index("Season-canonical_season_id-index", "canonical_season_id"),
     )
 
-    # Named after the plugin that read the record by `_merge_and_upsert_*`,
-    # and after the TMDB season behind it when there is one, so it is not
-    # something the record has to be built with.
-    season_identifier: str = Field(default_factory=placeholder_identifier)
+    # The season this is a copy of. Never absent: `canonical_media.hooks`
+    # gives a record one at the flush, before it can reach the database.
+    canonical_season_id: uuid.UUID = Field(
+        foreign_key="canonicalseason.id",
+        ondelete="RESTRICT",
+    )
+    canonical_season: CanonicalSeason = Relationship()
+
+    # TODO: Validate
+    @property
+    def tmdb_id(self) -> int | None:
+        """The TMDB season this is a copy of, if TMDB has a record of it."""
+        return self.canonical_season.tmdb_id if self.canonical_season else None
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")

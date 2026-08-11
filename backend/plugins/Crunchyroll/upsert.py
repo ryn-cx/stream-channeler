@@ -149,7 +149,6 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Music",
                 url=self._artist_url(show_key),
                 image_url=self._largest_image(artist_data.images.poster_wide),
-                show_identifier=self._fallback_show_identifier(show_key),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             ).upsert_and_set_update_at(source, show, self._show_files(show_key))
@@ -213,7 +212,6 @@ class UpsertMixin(HelperMixin, register=False):
                     key=category,
                     name=MUSIC_CATEGORY_TO_NAME[category],
                     url=self._artist_url(show.key),
-                    season_identifier=self._fallback_season_identifier(category),
                     data_timestamp=self.season_data_timestamp(category, show.key),
                     show_id=show.id,
                 ).upsert_and_set_update_at(
@@ -315,7 +313,6 @@ class UpsertMixin(HelperMixin, register=False):
                 sort_order=sort_order,
                 release_date=details.availability.start_date,
                 air_date=details.original_release,
-                episode_identifier=self._fallback_episode_identifier(datum.id),
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,

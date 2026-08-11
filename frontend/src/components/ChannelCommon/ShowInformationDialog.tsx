@@ -1,6 +1,5 @@
 // TODO: Validate
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import type { ShowInformationOutput, ShowInformationSide } from "@/client"
 import { ShowsService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
@@ -12,9 +11,7 @@ import {
 } from "@/components/ChannelCommon/InformationTable"
 import { IssueReportsSection } from "@/components/ChannelCommon/IssueReportsSection"
 import { ModalContent } from "@/components/Common/ModalContent"
-import { TmdbIdentifierField } from "@/components/Common/TmdbIdentifierField"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogBody,
@@ -23,11 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { LoadingButton } from "@/components/ui/loading-button"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
 
 interface ShowInformationDialogProps {
   showId: string
@@ -69,85 +61,6 @@ function heroLinks(data: ShowInformationOutput) {
     links.push({ label: data.tmdb.label, href: data.tmdb.url })
   }
   return links
-}
-
-interface ShowIdentifierEditorProps {
-  showId: string
-  showIdentifier: string
-  showIdentifierLocked: boolean
-  informationQueryKey: string[]
-}
-
-// TODO: Validate
-function ShowIdentifierEditor({
-  showId,
-  showIdentifier,
-  showIdentifierLocked,
-  informationQueryKey,
-}: ShowIdentifierEditorProps) {
-  const [identifier, setIdentifier] = useState(showIdentifier)
-  const [locked, setLocked] = useState(showIdentifierLocked)
-  const queryClient = useQueryClient()
-  const { showSuccessToast, showErrorToast } = useCustomToast()
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      ShowsService.updateShow({
-        showId,
-        requestBody: {
-          show_identifier: identifier,
-          show_identifier_locked: locked,
-        },
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      queryClient.invalidateQueries({ queryKey: ["shows"] })
-      showSuccessToast("Show identifier updated successfully")
-    },
-    onError: handleError.bind(showErrorToast),
-  })
-
-  return (
-    <div className="mt-4 grid gap-3 rounded-lg border p-4">
-      <TmdbIdentifierField
-        identifier={identifier}
-        onChange={(nextIdentifier) => {
-          setIdentifier(nextIdentifier)
-          setLocked(true)
-        }}
-      />
-      <div className="grid gap-2">
-        <Label htmlFor="show-identifier">Show identifier</Label>
-        <Input
-          id="show-identifier"
-          value={identifier}
-          onChange={(event) => {
-            setIdentifier(event.target.value)
-            setLocked(true)
-          }}
-        />
-      </div>
-      <div className="flex items-center gap-3">
-        <Checkbox
-          id="show-identifier-locked"
-          checked={locked}
-          onCheckedChange={(checked) => setLocked(checked === true)}
-        />
-        <Label htmlFor="show-identifier-locked" className="font-normal">
-          Lock show identifier?
-        </Label>
-      </div>
-      <div className="flex justify-end">
-        <LoadingButton
-          onClick={() => mutation.mutate()}
-          loading={mutation.isPending}
-          disabled={!identifier}
-        >
-          Save Identifier
-        </LoadingButton>
-      </div>
-    </div>
-  )
 }
 
 interface ShowInformationPanelProps {
@@ -214,21 +127,10 @@ export function ShowInformationPanel({
       </CollapsibleSection>
 
       <div className="grid items-start gap-4 sm:grid-cols-2">
-        {data.editable ? (
-          <ShowIdentifierEditor
-            showId={showId}
-            showIdentifier={data.show_identifier}
-            showIdentifierLocked={data.show_identifier_locked}
-            informationQueryKey={queryKey}
-          />
-        ) : (
-          <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">Show identifier</dt>
-            <dd className="break-all">{data.show_identifier}</dd>
-            <dt className="text-muted-foreground">Identifier locked</dt>
-            <dd>{data.show_identifier_locked ? "Yes" : "No"}</dd>
-          </dl>
-        )}
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-muted-foreground">Link locked</dt>
+          <dd>{data.canonical_show_locked ? "Yes" : "No"}</dd>
+        </dl>
 
         <IssueReportsSection
           target="show"

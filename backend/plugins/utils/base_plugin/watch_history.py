@@ -47,7 +47,7 @@ class WatchHistoryMixin(WatchMixin):
 
         episode_keys = [entry.episode_key for entry in parsed_entries]
         episodes_on_database = self._get_episodes_by_key(episode_keys)
-        watched_identifier_dates = self._get_watched_identifier_dates(
+        watched_canonical_dates = self._get_watched_canonical_dates(
             user,
             episodes_on_database,
         )
@@ -62,10 +62,17 @@ class WatchHistoryMixin(WatchMixin):
                 skipped_watches.append(entry.import_result)
                 continue
 
-            # A watch keys on the episode's `episode_identifier`, which is shared by
-            # the same content across every source, so a single watch is recorded.
-            identifier = episode.episode_identifier
-            watched_dates = watched_identifier_dates.setdefault(identifier, [])
+            # A watch is of the episode itself, which every source carrying it
+            # has a copy of, so a single watch is recorded for all of them. A
+            # copy that is not of anything yet is skipped rather than counted as
+            # a watch of nothing.
+            if episode.canonical_episode_id is None:
+                skipped_watches.append(entry.import_result)
+                continue
+            watched_dates = watched_canonical_dates.setdefault(
+                episode.canonical_episode_id,
+                [],
+            )
             if (new_only and watched_dates) or entry.watch_date in watched_dates:
                 existing_watches.append(entry.import_result)
                 continue
@@ -74,7 +81,7 @@ class WatchHistoryMixin(WatchMixin):
                 Watch(
                     user_id=user.id,
                     episode_id=episode.id,
-                    episode_identifier=identifier,
+                    canonical_episode_id=episode.canonical_episode_id,
                     watch_date=entry.watch_date,
                     verified=verified,
                 ),

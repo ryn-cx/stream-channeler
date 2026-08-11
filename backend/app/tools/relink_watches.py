@@ -3,9 +3,9 @@
 
 Deleting an episode leaves its watches behind with no `episode_id`. A watch
 still names what it watched, so once an episode carrying that
-`episode_identifier` exists again the watch can be attached to it. The same
-identifier usually resolves to an episode on several sources, so the one the
-`User` ranked highest is chosen, exactly as playback would.
+copy of that episode exists again the watch can be attached to it. An episode
+usually has a copy on several sources, so the one the `User` ranked highest is
+chosen, exactly as playback would.
 """
 
 from collections import defaultdict
@@ -41,12 +41,12 @@ def _detached_watches(session: Session) -> list[Watch]:
 
 
 # TODO: Validate
-def _candidates_by_identifier(
+def _candidates_by_canonical_id(
     session: Session,
-    identifiers: set[str],
-) -> dict[str, list[tuple[Episode, str]]]:
-    """Return the live episodes each identifier resolves to, with their source key."""
-    if not identifiers:
+    canonical_ids: set[UUID],
+) -> dict[UUID, list[tuple[Episode, str]]]:
+    """Return the live copies of each episode, with their source key."""
+    if not canonical_ids:
         return {}
 
     rows = session.exec(
@@ -55,14 +55,14 @@ def _candidates_by_identifier(
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
         .where(
-            col(Episode.episode_identifier).in_(identifiers),
+            col(Episode.canonical_episode_id).in_(canonical_ids),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
 
-    candidates: dict[str, list[tuple[Episode, str]]] = defaultdict(list)
+    candidates: dict[UUID, list[tuple[Episode, str]]] = defaultdict(list)
     for episode, source_key in rows:
-        candidates[episode.episode_identifier].append((episode, source_key))
+        candidates[episode.canonical_episode_id].append((episode, source_key))
     return candidates
 
 
@@ -74,7 +74,7 @@ def _preferred_episode(
     """Return the candidate whose source the `User` ranked highest.
 
     Ties break on the episode id so a rerun makes the same choice, matching how
-    playback collapses episodes that share an identifier.
+    playback collapses the copies of one episode.
     """
     episode, _ = min(
         candidates,
@@ -98,34 +98,34 @@ def _config_for_user(
 
 
 # TODO: Validate
-def _report_unresolvable(session: Session, identifiers: set[str]) -> None:
-    """Log why the watches on `identifiers` have nothing to be pointed at.
+def _report_unresolvable(session: Session, canonical_ids: set[UUID]) -> None:
+    """Log why the watches on `canonical_ids` have nothing to be pointed at.
 
     A watch outlives the episode it names, so it can name one this database has
     never held, and there is nothing a rerun will do about it until that episode
     is imported. Saying which of the two it is separates a library that has yet
     to catch up from an episode that was deleted and is still there to restore.
     """
-    if not identifiers:
+    if not canonical_ids:
         return
 
     soft_deleted = set(
         session.exec(
-            select(Episode.episode_identifier).where(
-                col(Episode.episode_identifier).in_(identifiers),
+            select(Episode.canonical_episode_id).where(
+                col(Episode.canonical_episode_id).in_(canonical_ids),
             ),
         ).all(),
     )
-    unknown = identifiers - soft_deleted
+    unknown = canonical_ids - soft_deleted
     logger.info(
-        "{} identifiers name only a deleted episode, {} name no episode at all",
+        "{} episodes have only a deleted copy, {} have no copy at all",
         len(soft_deleted),
         len(unknown),
     )
     if unknown:
         logger.info(
-            "Identifiers with no episode, first few: {}",
-            ", ".join(sorted(unknown)[:5]),
+            "Episodes with no copy, first few: {}",
+            ", ".join(str(canonical_id) for canonical_id in sorted(unknown)[:5]),
         )
 
 
@@ -138,14 +138,14 @@ def relink_watches(session: Session) -> int:
         return 0
 
     logger.info("Found {} detached watches", len(detached))
-    identifiers = {watch.episode_identifier for watch in detached}
-    candidates = _candidates_by_identifier(session, identifiers)
-    _report_unresolvable(session, identifiers - candidates.keys())
+    canonical_ids = {watch.canonical_episode_id for watch in detached}
+    candidates = _candidates_by_canonical_id(session, canonical_ids)
+    _report_unresolvable(session, canonical_ids - candidates.keys())
     configs: dict[UUID, SourceDedupConfig] = {}
 
     relinked = 0
     for watch in detached:
-        matches = candidates.get(watch.episode_identifier)
+        matches = candidates.get(watch.canonical_episode_id)
         if not matches:
             continue
 
@@ -157,7 +157,7 @@ def relink_watches(session: Session) -> int:
             "Relinked watch {} to episode {} ({})",
             watch.id,
             episode.key,
-            watch.episode_identifier,
+            watch.canonical_episode_id,
         )
 
     session.commit()

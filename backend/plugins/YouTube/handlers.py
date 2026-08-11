@@ -293,8 +293,8 @@ class ChannelURLHandler(YouTubeURLHandler):
             seasons = list(show.seasons)
         return [
             URLImportResult(
-                show_identifier=show.show_identifier,
-                season_identifiers=[season.season_identifier for season in seasons],
+                show_key=show.key,
+                season_keys=[season.key for season in seasons],
                 is_whitelist=is_whitelist,
             ),
         ]

@@ -46,23 +46,11 @@ class SupportsDataTimestamp(Protocol):
     def data_timestamp(self) -> datetime: ...
 
 
-# TODO: Validate
-def placeholder_identifier() -> str:
-    """Return the name a record wears until it is given one to be found by.
-
-    `_merge_and_upsert_*` names a record after the plugin that read it before
-    TMDB is asked about it, so this only ever stands while a record is being
-    built. It carries a uuid so that two records wearing one are never read as
-    the same media, and says what it is so that one which reaches the database
-    is recognised rather than puzzled over.
-    """
-    return f"Placeholder {uuid.uuid4()}"
-
-
 # A sortable field ending in this is the same sort with the number 0 pushed past
 # every other number instead of ahead of them, which is where a season or episode
 # numbered 0 belongs when it is the specials rather than the first of the run.
 ZERO_LAST_SUFFIX = "_zero_last"
+
 
 
 # TODO: Validate

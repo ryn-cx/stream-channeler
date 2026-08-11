@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import override
 
-from app.channels.service import shows_by_identifier
+from app.canonical_media.service import canonical_ids_by_key
+from app.channels.service import shows_by_canonical_id
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import JustWatchURLHandler
@@ -122,25 +123,30 @@ class ImportURLMixin(
         so it is told the TMDB title again rather than being left to search for
         it by name.
         """
-        if len(plugin_results) != 1 or not plugin_results[0].episode_identifiers:
+        if len(plugin_results) != 1 or not plugin_results[0].episode_keys:
             msg = (
                 f"Expected one episode from Crunchyroll, got {len(plugin_results)} "
-                f"results: {[result.show_identifier for result in plugin_results]}"
+                f"results: {[result.show_key for result in plugin_results]}"
             )
             raise ValueError(msg)
 
-        show_identifier = plugin_results[0].show_identifier
-        copies = shows_by_identifier(self.session, {show_identifier})
+        result_show_key = plugin_results[0].show_key
+        canonical_show_id = canonical_ids_by_key(
+            self.session,
+            {result_show_key},
+            Show,
+        ).get(result_show_key)
+        copies = shows_by_canonical_id(self.session, {canonical_show_id})
         show = next(
             (
                 copy
-                for copy in copies[show_identifier]
+                for copy in copies[canonical_show_id]
                 if copy.source.plugin.key == plugin_class.plugin_key() and copy.url
             ),
             None,
         )
         if show is None or show.url is None:
-            msg = f"Crunchyroll {show_identifier} has no URL to import the title from"
+            msg = f"Crunchyroll {result_show_key} has no URL to import the title from"
             raise ValueError(msg)
 
         return handler.narrow_to_season(

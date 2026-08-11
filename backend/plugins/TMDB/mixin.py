@@ -63,26 +63,6 @@ class TMDBMixin(BasePlugin, register=False):
         raise NotImplementedError
 
     # TODO: Validate
-    def _fallback_show_identifier(self, show_key: str) -> str:
-        """Return the identifier a `Show` carries while it names no TMDB title.
-
-        A title TMDB does not hold is only ever itself, so the plugin's own key
-        for it is what identifies it. `tmdb_link_show` replaces this with the
-        TMDB id when the title is linked.
-        """
-        return f"{self.plugin_key()} {show_key}"
-
-    # TODO: Validate
-    def _fallback_season_identifier(self, season_key: str) -> str:
-        """Return the identifier a `Season` carries while it names no TMDB season."""
-        return f"{self.plugin_key()} {season_key}"
-
-    # TODO: Validate
-    def _fallback_episode_identifier(self, episode_key: str) -> str:
-        """Return the identifier an `Episode` carries while it names no TMDB episode."""
-        return f"{self.plugin_key()} {episode_key}"
-
-    # TODO: Validate
     def _merge_and_upsert_show(
         self,
         show: Show,
@@ -93,11 +73,11 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> Show:
         """Store the website's own `Show`, pointed at the TMDB title behind it.
 
-        Nothing is copied off TMDB here. The title is imported as the TMDB
-        plugin's own media instead, which is what fills in whatever this website
-        leaves out when the `Show` is served.
+        Nothing is copied off TMDB here. The title is imported as canonical
+        media instead, which is what fills in whatever this website leaves out
+        when the `Show` is served. A title TMDB does not hold is left for
+        `reconcile_show` to give a row of its own.
         """
-        show.show_identifier = self._fallback_show_identifier(show_key)
         tmdb_id = self._cached_tmdb_id(show_key)
         show = self.tmdb.tmdb_link_show(show, tmdb_id, tmdb_media_type)
         if show.tmdb_id:
@@ -114,7 +94,6 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: MediaType,
     ) -> Season:
-        season.season_identifier = self._fallback_season_identifier(season.key)
         season = self.tmdb.tmdb_link_season(
             season,
             show.tmdb_id,
@@ -134,7 +113,6 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_media_type: MediaType,
         last_episode_number: int | None = None,
     ) -> Episode:
-        episode.episode_identifier = self._fallback_episode_identifier(episode.key)
         episode = self.tmdb.tmdb_link_episode(
             episode,
             season.show.tmdb_id,

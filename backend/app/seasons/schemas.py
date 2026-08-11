@@ -34,6 +34,11 @@ class SeasonOutput(BaseSeason):
 
     show_id: uuid.UUID
     id: uuid.UUID
+    # The season this is a copy of, which is what the record is served as and
+    # what a channel's season filter names.
+    canonical_season_id: uuid.UUID
+    # The TMDB season behind that, when TMDB has a record of it.
+    tmdb_id: int | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -83,7 +88,6 @@ class SeasonInformationOutput(BaseModel):
     """
 
     season_id: uuid.UUID
-    season_identifier: str
     issue_reports: list[IssueReportOutput]
     source: SeasonInformationSide
     tmdb: SeasonInformationSide | None

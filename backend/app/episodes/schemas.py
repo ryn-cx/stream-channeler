@@ -36,6 +36,11 @@ class EpisodeOutput(BaseEpisode):
 
     id: uuid.UUID
     season_id: uuid.UUID
+    # The episode this is a copy of, which is what the record is served as and
+    # what a watch, a channel filter and a saved position all name.
+    canonical_episode_id: uuid.UUID
+    # The TMDB episode behind that, when TMDB has a record of it.
+    tmdb_id: int | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -92,9 +97,8 @@ class EpisodeInformationSide(BaseModel):
     show_name: str | None
     url: str | None
     key: str
-    episode_identifier: str
-    episode_identifier_locked: bool
-    episode_identifier_note: str | None
+    canonical_episode_locked: bool
+    canonical_episode_note: str | None
     data_timestamp: datetime | None
     update_at: datetime | None
     modified_at: datetime | None
@@ -110,9 +114,8 @@ class EpisodeInformationOutput(BaseModel):
     """
 
     episode_id: uuid.UUID
-    episode_identifier: str
-    episode_identifier_locked: bool
-    episode_identifier_note: str | None
+    canonical_episode_locked: bool
+    canonical_episode_note: str | None
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None
@@ -153,8 +156,8 @@ class UnmatchedEpisodeOutput(BaseModel):
     """An episode no TMDB record was found for, beside the closest TMDB episode."""
 
     id: uuid.UUID
-    episode_identifier: str
-    episode_identifier_note: str | None
+    canonical_episode_id: uuid.UUID | None
+    canonical_episode_note: str | None
     name: str | None
     episode_number: int | None
     absolute_number: int | None

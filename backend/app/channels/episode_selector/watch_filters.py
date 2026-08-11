@@ -1,9 +1,14 @@
 # TODO: Validate
 """What a `User` has watched, as the episode query reads it.
 
-A `Watch` points at one website's copy of an episode, but it counts for every
-copy of that episode, so everything here goes through the `episode_identifier`
-the copies share rather than through the episode a watch happens to name.
+A `Watch` is recorded against one website's copy of an episode but is of the
+episode itself, so everything here reads the `canonical_episode_id` the watch
+carries. That makes a watch count for every copy of what was watched, and go on
+counting once the copy it was made against has been deleted.
+
+A watch made before its copy was reconciled has no canonical episode yet, and is
+skipped rather than treated as a watch of nothing: unmatched nulls would
+otherwise turn every `NOT IN` here into a filter that keeps nothing at all.
 """
 
 from collections.abc import Sequence
@@ -11,7 +16,6 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import case
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, and_, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
@@ -21,11 +25,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
 from app.watches.models import Watch
-
-# The episode a watch points at. Watches link to a specific episode, but they still
-# count for every episode sharing that episode's `episode_identifier`, so reads join
-# through this alias to reach the identifier a watch stands for.
-WatchedEpisode = aliased(Episode)
 
 # Labels used to compose raw SQL references from Postgres subquery + column
 # names. Callers of `literal_column` rely on the producing subquery being
@@ -45,27 +44,25 @@ LAST_WATCHED_COLUMNS = {
 
 
 # TODO: Validate
-def verified_watch_identifiers(user: User) -> SelectOfScalar[str]:
-    """Episode identifiers the `User` has a verified watch of."""
-    return (
-        select(WatchedEpisode.episode_identifier)
-        .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
-        .where(
-            and_(
-                Watch.user_id == user.id,
-                col(Watch.verified).is_(True),
-            ),
-        )
+def verified_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
+    """The canonical episodes the `User` has a verified watch of."""
+    return select(col(Watch.canonical_episode_id)).where(
+        and_(
+            Watch.user_id == user.id,
+            col(Watch.verified).is_(True),
+            col(Watch.canonical_episode_id).is_not(None),
+        ),
     )
 
 
 # TODO: Validate
-def any_watch_identifiers(user: User) -> SelectOfScalar[str]:
-    """Episode identifiers with any watch (verified or not) for the user."""
-    return (
-        select(WatchedEpisode.episode_identifier)
-        .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
-        .where(Watch.user_id == user.id)
+def any_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
+    """The canonical episodes with any watch (verified or not) for the user."""
+    return select(col(Watch.canonical_episode_id)).where(
+        and_(
+            Watch.user_id == user.id,
+            col(Watch.canonical_episode_id).is_not(None),
+        ),
     )
 
 
@@ -83,7 +80,7 @@ def hide_watched_condition(
     watched = verified_watch_identifiers(user)
     if maximum_watch_date:
         watched = watched.where(Watch.watch_date > maximum_watch_date)
-    return col(Episode.episode_identifier).not_in(watched)
+    return col(Episode.canonical_episode_id).not_in(watched)
 
 
 # TODO: Validate
@@ -93,7 +90,7 @@ def hide_unwatched_condition(user: User) -> ColumnElement[bool]:
     Unwatched = no watch at all. Partially watched (unverified) and verified
     episodes are kept.
     """
-    return col(Episode.episode_identifier).in_(any_watch_identifiers(user))
+    return col(Episode.canonical_episode_id).in_(any_watch_identifiers(user))
 
 
 # TODO: Validate
@@ -104,8 +101,8 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
     episodes are kept.
     """
     return or_(
-        col(Episode.episode_identifier).not_in(any_watch_identifiers(user)),
-        col(Episode.episode_identifier).in_(verified_watch_identifiers(user)),
+        col(Episode.canonical_episode_id).not_in(any_watch_identifiers(user)),
+        col(Episode.canonical_episode_id).in_(verified_watch_identifiers(user)),
     )
 
 
@@ -133,7 +130,7 @@ def join_last_watched(
     """
     last_watched = (
         select(
-            WatchedEpisode.episode_identifier,
+            col(Watch.canonical_episode_id),
             func.max(
                 case((col(Watch.verified).is_(True), Watch.watch_date)),
             ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
@@ -142,15 +139,15 @@ def join_last_watched(
             ).label(EPISODE_LAST_WATCH_INCOMPLETE_COLUMN),
         )
         .select_from(Watch)
-        .join(WatchedEpisode, col(Watch.episode_id) == col(WatchedEpisode.id))
         .where(col(Watch.user_id) == user.id)
-        .group_by(col(WatchedEpisode.episode_identifier))
+        .where(col(Watch.canonical_episode_id).is_not(None))
+        .group_by(col(Watch.canonical_episode_id))
         .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
     )
 
     return query.outerjoin(
         last_watched,
-        col(Episode.episode_identifier) == last_watched.c.episode_identifier,
+        col(Episode.canonical_episode_id) == last_watched.c.canonical_episode_id,
     )
 
 
@@ -159,25 +156,24 @@ def latest_watch_by_identifier(
     session: Session,
     user: User,
     episodes: Sequence[Episode],
-) -> dict[str, Watch]:
-    """The `User`'s most recent `Watch` of each episode, keyed by identifier."""
+) -> dict[UUID, Watch]:
+    """The `User`'s most recent `Watch` of each episode, keyed by canonical id."""
     if not episodes:
         return {}
 
-    identifiers = [episode.episode_identifier for episode in episodes]
+    identifiers = [episode.canonical_episode_id for episode in episodes]
     rows = session.exec(
-        select(WatchedEpisode.episode_identifier, Watch)  # type: ignore[call-overload]
-        .join(Watch, col(Watch.episode_id) == col(WatchedEpisode.id))
+        select(col(Watch.canonical_episode_id), Watch)  # type: ignore[call-overload]
         .where(
-            col(WatchedEpisode.episode_identifier).in_(identifiers),
+            col(Watch.canonical_episode_id).in_(identifiers),
             Watch.user_id == user.id,
         )
         .order_by(
-            col(WatchedEpisode.episode_identifier),
+            col(Watch.canonical_episode_id),
             desc(Watch.watch_date),
             desc(Watch.id),
         )
-        .distinct(col(WatchedEpisode.episode_identifier)),
+        .distinct(col(Watch.canonical_episode_id)),
     ).all()
 
     return dict(rows)

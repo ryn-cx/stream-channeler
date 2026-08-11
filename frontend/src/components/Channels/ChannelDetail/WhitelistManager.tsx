@@ -190,7 +190,7 @@ function groupSeasons(
       // entry there naming them all.
       const listed = group.episodes.find(
         (listedEpisode) =>
-          listedEpisode.episode_identifier === episode.episode_identifier,
+          listedEpisode.canonical_episode_id === episode.canonical_episode_id,
       )
       if (listed) {
         listed.show_ids = [
@@ -308,7 +308,7 @@ export function WhitelistManager({
             .filter(
               (episode) => episode.filtered && !isExpired(episode.expires_at),
             )
-            .map((episode) => episode.episode_identifier),
+            .map((episode) => episode.canonical_episode_id),
         ),
       )
       setEpisodeExpiry(
@@ -318,7 +318,7 @@ export function WhitelistManager({
               (episode) => episode.expires_at && !isExpired(episode.expires_at),
             )
             .map((episode) => [
-              episode.episode_identifier,
+              episode.canonical_episode_id,
               isoToLocalInput(episode.expires_at),
             ]),
         ),
@@ -413,8 +413,8 @@ export function WhitelistManager({
   // optional expiry via a popup.
   // TODO: Validate
   const handleEpisodeClick = (episode: WhitelistEpisodeOutput) => {
-    if (enabledEpisodeIdentifiers.has(episode.episode_identifier)) {
-      toggleEpisodeEnabled(episode.episode_identifier)
+    if (enabledEpisodeIdentifiers.has(episode.canonical_episode_id)) {
+      toggleEpisodeEnabled(episode.canonical_episode_id)
     } else {
       setPendingEpisode(episode)
     }
@@ -424,9 +424,9 @@ export function WhitelistManager({
   const confirmEpisodeExpiry = (expiresAtLocal: string) => {
     if (!pendingEpisode) return
     setEnabledEpisodeIdentifiers((previous) =>
-      new Set(previous).add(pendingEpisode.episode_identifier),
+      new Set(previous).add(pendingEpisode.canonical_episode_id),
     )
-    setEpisodeExpiryValue(pendingEpisode.episode_identifier, expiresAtLocal)
+    setEpisodeExpiryValue(pendingEpisode.canonical_episode_id, expiresAtLocal)
     setPendingEpisode(null)
   }
 
@@ -448,9 +448,11 @@ export function WhitelistManager({
       })),
       episodes: whitelistData.episodes.map((episode) => ({
         id: episode.id,
-        marked: enabledEpisodeIdentifiers.has(episode.episode_identifier),
-        expires_at: enabledEpisodeIdentifiers.has(episode.episode_identifier)
-          ? localInputToIso(episodeExpiry.get(episode.episode_identifier) ?? "")
+        marked: enabledEpisodeIdentifiers.has(episode.canonical_episode_id),
+        expires_at: enabledEpisodeIdentifiers.has(episode.canonical_episode_id)
+          ? localInputToIso(
+              episodeExpiry.get(episode.canonical_episode_id) ?? "",
+            )
           : null,
       })),
     }
@@ -798,7 +800,7 @@ export function WhitelistManager({
                                   group.episodes.map((episode) => {
                                     const episodeEnabled =
                                       enabledEpisodeIdentifiers.has(
-                                        episode.episode_identifier,
+                                        episode.canonical_episode_id,
                                       )
                                     return (
                                       <div key={episode.id}>
@@ -818,13 +820,13 @@ export function WhitelistManager({
                                             {getEpisodeLabel(episode)}
                                             {episodeEnabled &&
                                               episodeExpiry.get(
-                                                episode.episode_identifier,
+                                                episode.canonical_episode_id,
                                               ) && (
                                                 <span className="ml-2 text-xs text-muted-foreground">
                                                   (until{" "}
                                                   {new Date(
                                                     episodeExpiry.get(
-                                                      episode.episode_identifier,
+                                                      episode.canonical_episode_id,
                                                     )!,
                                                   ).toLocaleString()}
                                                   )
@@ -912,7 +914,7 @@ export function WhitelistManager({
             groupEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
           )}
           initialExpiry={
-            episodeExpiry.get(pendingEpisode.episode_identifier) ?? ""
+            episodeExpiry.get(pendingEpisode.canonical_episode_id) ?? ""
           }
           onConfirm={confirmEpisodeExpiry}
           onOpenChange={(open) => {

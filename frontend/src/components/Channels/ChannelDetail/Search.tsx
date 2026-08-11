@@ -84,12 +84,14 @@ function useIsInChannel(channelId: string) {
 
   const shows = showsData?.shows ?? []
   const urls = new Set(shows.map((show) => show.url))
-  const identifiers = new Set(shows.map((show) => show.show_identifier))
+  const tmdbIds = new Set(
+    shows.map((show) => show.tmdb_id).filter((id) => id != null),
+  )
 
   return (url: string) => {
     if (urls.has(url)) return true
     const match = TMDB_TITLE_URL_PATTERN.exec(url)
-    return match != null && identifiers.has(`TMDB ${match[1]} ${match[2]}`)
+    return match != null && tmdbIds.has(Number(match[2]))
   }
 }
 

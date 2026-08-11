@@ -10,18 +10,17 @@ from app.auth.dependencies import (
     SessionDep,
 )
 from app.issue_reports.service import list_show_issue_reports
+from app.media.canonical_metadata import (
+    canonical_show_of,
+    fill_shows,
+    tmdb_show_url,
+)
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
-from app.media.tmdb_fallback import (
-    TMDB_PLUGIN_KEY,
-    fill_shows,
-    tmdb_show_counterpart,
-    tmdb_show_url,
-)
-from app.media.tmdb_identifier_links import check_show_identifier
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -37,7 +36,6 @@ from app.shows.schemas import (
     ShowsPublic,
     ShowUpdate,
 )
-from app.shows.service import relink_children
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -68,12 +66,7 @@ def create_show(
     source: EditableSource,
     show_input: ShowCreate,
 ) -> ShowPublic:
-    """Create a `Show` if the `Source` is editable by the `User`.
-
-    A `show_identifier` naming a TMDB title is checked before it is stored, and
-    the title it names is imported for the link to read.
-    """
-    check_show_identifier(session, show_input.show_identifier)
+    """Create a `Show` if the `Source` is editable by the `User`."""
     return _show_output(session, show_input.create(session, Show, source))
 
 
@@ -170,13 +163,13 @@ def get_show_information(
     """
     source = show.source
 
-    counterpart = tmdb_show_counterpart(session, show.show_identifier)
+    counterpart = canonical_show_of(session, show.canonical_show_id)
     tmdb: ShowInformationSide | None = None
     if counterpart:
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
             counterpart,
-            tmdb_show_url(counterpart.key),
+            tmdb_show_url(counterpart.tmdb_media_type, counterpart.tmdb_id),
         )
 
     editable = current_user is not None and (
@@ -185,8 +178,7 @@ def get_show_information(
 
     return ShowInformationOutput(
         show_id=show.id,
-        show_identifier=show.show_identifier,
-        show_identifier_locked=show.show_identifier_locked,
+        canonical_show_locked=show.canonical_show_locked,
         editable=editable,
         issue_reports=list_show_issue_reports(session, show.id),
         source=_information_side(
@@ -214,24 +206,11 @@ def update_show(
 ) -> ShowPublic:
     """Update and return a `Show` if it's editable by the `User`.
 
-    A `show_identifier` naming a different TMDB title repoints every `Season` and
-    `Episode` at TMDB, so their identifiers follow the title the `User` chose.
-    The `show_identifier` itself is what they asked for, so it is left alone.
-
-    A new `show_identifier` naming a TMDB title is checked before it is stored,
-    so a title TMDB does not have is refused rather than kept as a link to
-    nothing, and one it does have is imported for the link to read.
+    Which title this is a copy of is not something an update writes: it is the
+    linker's to work out during an import, or a `User`'s to settle through the
+    TMDB matching screens, so there is nothing to repoint here.
     """
-    previous_tmdb_id = show.tmdb_id
-    if (
-        show_input.show_identifier is not None
-        and show_input.show_identifier != show.show_identifier
-    ):
-        check_show_identifier(session, show_input.show_identifier)
-    show = show_input.update(session, show)
-    if show.tmdb_id != previous_tmdb_id:
-        relink_children(session, show)
-    return _show_output(session, show)
+    return _show_output(session, show_input.update(session, show))
 
 
 # TODO: Validate

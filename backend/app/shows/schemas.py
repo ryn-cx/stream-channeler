@@ -34,6 +34,11 @@ class ShowPublic(BaseShow):
 
     source_id: uuid.UUID
     id: uuid.UUID
+    # The title this is a copy of, which is what groups two websites' copies into
+    # one card and what the channel's per-title stats are keyed by.
+    canonical_show_id: uuid.UUID
+    # The TMDB title behind that, when TMDB has a record of it.
+    tmdb_id: int | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -76,8 +81,7 @@ class ShowInformationOutput(BaseModel):
     """
 
     show_id: uuid.UUID
-    show_identifier: str
-    show_identifier_locked: bool
+    canonical_show_locked: bool
     editable: bool
     issue_reports: list[IssueReportOutput]
     source: ShowInformationSide

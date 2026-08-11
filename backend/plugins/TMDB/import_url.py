@@ -42,18 +42,20 @@ class ImportURLMixin(
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
+        # The title itself is read into the canonical tables, which is all TMDB
+        # has to contribute; where it can be watched is JustWatch's to say, and
+        # its results are what the channel takes on.
+        self.import_title(handler.media_type, handler.tmdb_id)
+
         justwatch_url = self._justwatch_url(handler.title_page_file())
-        if justwatch_url is not None:
-            # Imported lazily because JustWatch's files use this plugin to
-            # resolve TMDB ids, so importing it up here would be circular.
-            from plugins.JustWatch import JustWatch  # noqa: PLC0415
+        if justwatch_url is None:
+            return []
 
-            results = JustWatch(self.session).import_url(
-                justwatch_url,
-                handler.tmdb_id,
-            )
+        # Imported lazily because JustWatch's files use this plugin to resolve
+        # TMDB ids, so importing it up here would be circular.
+        from plugins.JustWatch import JustWatch  # noqa: PLC0415
 
-        return handler.import_results(self._import_show(handler.show_key))
+        return JustWatch(self.session).import_url(justwatch_url, handler.tmdb_id)
 
     # TODO: Validate
     @staticmethod

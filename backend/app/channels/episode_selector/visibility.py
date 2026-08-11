@@ -67,12 +67,12 @@ def channel_access_condition() -> ColumnElement[bool]:
                 col(ChannelShow.is_whitelist).is_(True),
                 or_(
                     and_(
-                        col(ChannelSeasonFilter.season_identifier).is_not(None),
-                        col(ChannelEpisodeFilter.episode_identifier).is_(None),
+                        col(ChannelSeasonFilter.canonical_season_id).is_not(None),
+                        col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonFilter.season_identifier).is_(None),
-                        col(ChannelEpisodeFilter.episode_identifier).is_not(None),
+                        col(ChannelSeasonFilter.canonical_season_id).is_(None),
+                        col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
                     ),
                 ),
             ),
@@ -80,12 +80,12 @@ def channel_access_condition() -> ColumnElement[bool]:
                 col(ChannelShow.is_whitelist).is_(False),
                 or_(
                     and_(
-                        col(ChannelSeasonFilter.season_identifier).is_(None),
-                        col(ChannelEpisodeFilter.episode_identifier).is_(None),
+                        col(ChannelSeasonFilter.canonical_season_id).is_(None),
+                        col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonFilter.season_identifier).is_not(None),
-                        col(ChannelEpisodeFilter.episode_identifier).is_not(None),
+                        col(ChannelSeasonFilter.canonical_season_id).is_not(None),
+                        col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
                     ),
                 ),
             ),
@@ -107,7 +107,7 @@ def blacklisted_on_channels_condition(
     filter_only_show = aliased(ChannelShow)
     filter_only_filter = aliased(ChannelEpisodeFilter)
     return (
-        select(filter_only_filter.episode_identifier)
+        select(filter_only_filter.canonical_episode_id)
         .select_from(filter_only_filter)
         .join(
             filter_only_show,
@@ -116,8 +116,8 @@ def blacklisted_on_channels_condition(
         .where(
             col(filter_only_show.is_blacklist_only).is_(True),
             col(filter_only_show.channel_id).in_(channel_ids),
-            col(filter_only_filter.episode_identifier)
-            == col(Episode.episode_identifier),
+            col(filter_only_filter.canonical_episode_id)
+            == col(Episode.canonical_episode_id),
             or_(
                 col(filter_only_filter.expires_at).is_(None),
                 col(filter_only_filter.expires_at) > now,

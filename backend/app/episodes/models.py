@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
-from pydantic import computed_field
+from sqlalchemy import text
 from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
@@ -15,16 +15,14 @@ from sqlmodel import (
     Session,
     UniqueConstraint,
     select,
-    text,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.media.identifiers import identifier_tmdb_id
+from app.canonical_episodes.models import CanonicalEpisode
 from app.models import (
     BaseMediaMixin,
     DateTimeField,
     MediaMixin,
-    placeholder_identifier,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
@@ -38,7 +36,7 @@ if TYPE_CHECKING:
     from app.watches.models import Watch
 
 
-# The notes that stand for a settled identifier rather than a guess at one. A
+# The notes that stand for a settled link rather than a guess at one. A
 # note is free text so that a new way of recognising an episode needs nothing
 # but its own wording; the rest are written where the matching is done.
 NAME_AND_NUMBER_NOTE = "Automatic: Name and number match"
@@ -56,9 +54,9 @@ MANUAL_NOTES = frozenset(
         NO_MATCH_NOTE,
     },
 )
-"""The notes that stand for a `User` having settled the identifier themselves.
+"""The notes that stand for a `User` having settled the link themselves.
 
-A lock says only that the identifier is settled, where what settled it is the
+A lock says only that the link is settled, where what settled it is the
 difference between a decision worth keeping and a guess the import was sure
 enough of at the time, so the two are told apart by what was written down.
 """
@@ -77,25 +75,14 @@ class BaseEpisode(BaseMediaMixin):
     duration: int | None = Field(ge=0, default=None)
     release_date: datetime | None = DateTimeField(default=None)
     air_date: datetime | None = DateTimeField(default=None)
-    episode_identifier: str
-    episode_identifier_locked: bool = Field(default=False)
-    # How the identifier was arrived at, in words. Written for every match, not
-    # only the ones sure enough to lock, since a guess is worth as much as what
-    # it was made on and there is nothing else to go on when reading one back.
-    episode_identifier_note: str | None = Field(default=None)
-
-    # TODO: Validate
-    @computed_field
-    @property
-    def tmdb_id(self) -> int | None:
-        """The TMDB episode `episode_identifier` names, if it names one.
-
-        Read off the identifier rather than stored beside it, so the two can
-        never disagree about which TMDB record this is.
-        """
-        return identifier_tmdb_id(self.episode_identifier)
+    canonical_episode_locked: bool = Field(default=False)
+    # How the link was arrived at, in words. Written for every match, not only
+    # the ones sure enough to lock, since a guess is worth as much as what it
+    # was made on and there is nothing else to go on when reading one back.
+    canonical_episode_note: str | None = Field(default=None)
 
 
+# TODO: Validate
 # TODO: Validate
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     """Model representing an episode."""
@@ -103,7 +90,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "air_date",
         "duration",
-        "episode_identifier",
         "episode_number",
         "name",
         "release_date",
@@ -129,21 +115,34 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         *sortable_field_indexes(
             "Episode",
             DIRECT_SORTABLE_FIELDS,
-            already_indexed=("episode_identifier",),
         ),
         Index("Episode-deleted_at-index", "deleted_at"),
-        Index("Episode-episode_identifier-index", "episode_identifier", "id"),
+        Index("Episode-canonical_episode_id-index", "canonical_episode_id"),
+        # A copy names one episode at most, within the season holding it. The
+        # show-wide rule this stands in for is still Python's to keep, since an
+        # `Episode` has no `show_id` to constrain on.
         Index(
-            "Episode-live-episode_identifier-index",
-            "episode_identifier",
+            "Episode-live-season_id-canonical_episode_id-key",
+            "season_id",
+            "canonical_episode_id",
+            unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 
-    # Named after the plugin that read the record by `_merge_and_upsert_*`,
-    # and after the TMDB episode behind it when there is one, so it is not
-    # something the record has to be built with.
-    episode_identifier: str = Field(default_factory=placeholder_identifier)
+    # The episode this is a copy of. Never absent: `canonical_media.hooks`
+    # gives a record one at the flush, before it can reach the database.
+    canonical_episode_id: uuid.UUID = Field(
+        foreign_key="canonicalepisode.id",
+        ondelete="RESTRICT",
+    )
+    canonical_episode: CanonicalEpisode = Relationship()
+
+    # TODO: Validate
+    @property
+    def tmdb_id(self) -> int | None:
+        """The TMDB episode this is a copy of, if TMDB has a record of it."""
+        return self.canonical_episode.tmdb_id if self.canonical_episode else None
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
@@ -215,15 +214,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         existing_record: Self | None,
         protected_keys: set[str] | None = None,
     ) -> Self:
-        """Upsert the `Episode`, keeping a locked `episode_identifier` intact.
+        """Upsert the `Episode`, keeping a locked the episode a `User` chose intact.
 
-        `episode_identifier_locked` says who settled the identifier, and is
+        `canonical_episode_locked` says who settled the link, and is
         always protected so that a later import never unsettles it. While it is
-        set the identifier an import works out never replaces the settled one.
+        set, the link an import works out never replaces the settled one.
         """
-        protected_keys = set(protected_keys or ()) | {"episode_identifier_locked"}
-        if existing_record and existing_record.episode_identifier_locked:
-            protected_keys.add("episode_identifier")
+        protected_keys = set(protected_keys or ()) | {"canonical_episode_locked"}
+        if existing_record and existing_record.canonical_episode_locked:
+            protected_keys.add("canonical_episode_id")
         return super().upsert(parent, existing_record, protected_keys)
 
     # TODO: Validate

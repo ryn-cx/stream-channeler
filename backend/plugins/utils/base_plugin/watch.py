@@ -1,4 +1,5 @@
 # TODO: Validate
+import uuid
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime
@@ -23,9 +24,9 @@ class WatchMixin(ABC):
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:
         """Load this plugin's `Episode` for each key.
 
-        A watch keys on the episode's `episode_identifier`, which is shared across
-        every source for the same content, so recording a single watch per key is
-        enough - no per-source duplication is needed.
+        A watch is of the episode itself rather than of one website's copy, so
+        recording a single watch per key is enough - no per-source duplication is
+        needed.
         """
         if not episode_keys:
             return {}
@@ -40,22 +41,24 @@ class WatchMixin(ABC):
         return {episode.key: episode for episode in self.session.exec(statement)}
 
     # TODO: Validate
-    def _get_watched_identifier_dates(
+    def _get_watched_canonical_dates(
         self,
         user: User,
         episodes_by_key: dict[str, Episode],
-    ) -> dict[str, list[datetime]]:
-        """Load watched dates grouped by `episode_identifier`."""
-        identifiers = {
-            episode.episode_identifier for episode in episodes_by_key.values()
+    ) -> dict[uuid.UUID, list[datetime]]:
+        """Load watched dates grouped by the canonical episode they are of."""
+        canonical_ids = {
+            episode.canonical_episode_id
+            for episode in episodes_by_key.values()
+            if episode.canonical_episode_id
         }
-        if not identifiers:
+        if not canonical_ids:
             return {}
-        statement = select(Watch.episode_identifier, Watch.watch_date).where(
+        statement = select(Watch.canonical_episode_id, Watch.watch_date).where(
             Watch.user_id == user.id,
-            col(Watch.episode_identifier).in_(identifiers),
+            col(Watch.canonical_episode_id).in_(canonical_ids),
         )
-        result: dict[str, list[datetime]] = defaultdict(list)
-        for episode_identifier, watch_date in self.session.exec(statement):
-            result[episode_identifier].append(watch_date)
+        result: dict[uuid.UUID, list[datetime]] = defaultdict(list)
+        for canonical_episode_id, watch_date in self.session.exec(statement):
+            result[canonical_episode_id].append(watch_date)
         return result

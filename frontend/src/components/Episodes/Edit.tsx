@@ -8,18 +8,8 @@ import { z } from "zod"
 import { EpisodesService, type EpisodeUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
-import { TmdbIdentifierField } from "@/components/Common/TmdbIdentifierField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import {
   nullifyBlanks,
   optionalInt,
@@ -43,8 +33,6 @@ const formSchema = z.object({
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
-  episode_identifier: z.string().min(1, "Episode identifier is required"),
-  episode_identifier_locked: z.boolean(),
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -75,8 +63,6 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       data_timestamp: episode.data_timestamp?.slice(0, 16) ?? "",
       update_at: episode.update_at?.slice(0, 16) ?? "",
       key: episode.key ?? "",
-      episode_identifier: episode.episode_identifier,
-      episode_identifier_locked: episode.episode_identifier_locked ?? false,
     },
   })
 
@@ -190,59 +176,6 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         />
         <div className="sm:col-span-2">
           <FormTextField control={form.control} label="Key" type="text" />
-        </div>
-        <TmdbIdentifierField
-          identifier={form.watch("episode_identifier")}
-          onChange={(identifier) => {
-            form.setValue("episode_identifier", identifier, {
-              shouldValidate: true,
-              shouldDirty: true,
-            })
-            form.setValue("episode_identifier_locked", true)
-          }}
-        />
-        <FormField
-          control={form.control}
-          name="episode_identifier"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>
-                Episode Identifier<span className="text-destructive"> *</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  aria-invalid={fieldState.invalid}
-                  required
-                  type="text"
-                  {...field}
-                  onChange={(event) => {
-                    field.onChange(event)
-                    form.setValue("episode_identifier_locked", true)
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="sm:col-span-2">
-          <FormField
-            control={form.control}
-            name="episode_identifier_locked"
-            render={({ field }) => (
-              <FormItem className="flex items-center gap-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel className="font-normal">
-                  Lock episode identifier?
-                </FormLabel>
-              </FormItem>
-            )}
-          />
         </div>
       </div>
     </FormModal>

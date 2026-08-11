@@ -103,7 +103,7 @@ function SeasonInformation({
 
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Season identifier</dt>
-        <dd className="break-all">{data.season_identifier}</dd>
+        <dd className="break-all">{data.season_id}</dd>
       </dl>
 
       <IssueReportsSection

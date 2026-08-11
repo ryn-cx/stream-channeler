@@ -218,11 +218,11 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
   },
   {
     id: "identifier_note",
-    accessorFn: (row) => row.episode_identifier_note ?? "",
+    accessorFn: (row) => row.canonical_episode_note ?? "",
     header: "Note",
     cell: ({ row }) => (
       <WrappingCell className="max-w-48 text-xs text-muted-foreground">
-        {row.original.episode_identifier_note ?? ""}
+        {row.original.canonical_episode_note ?? ""}
       </WrappingCell>
     ),
   },

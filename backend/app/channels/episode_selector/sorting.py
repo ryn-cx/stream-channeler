@@ -9,7 +9,7 @@ from sqlalchemy import String, case, literal, literal_column
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.channels.episode_selector.tmdb_columns import TMDBFallbackColumns
+from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
     LAST_WATCHED_COLUMNS,
@@ -51,7 +51,7 @@ class SortExpressionBuilder:
         self,
         random_seed: int,
         user: User | None,
-        fallbacks: TMDBFallbackColumns,
+        fallbacks: CanonicalColumns,
         channel_attribution: dict[UUID, UUID] | None = None,
     ) -> None:
         """Build the sort expressions for one read of one channel."""
@@ -229,36 +229,40 @@ class SortExpressionBuilder:
             return zero_last(number) if zero_last_numbers else number
 
         if model == "episode":
-            tmdb_number = numbered(self._fallbacks.number("episode"))
+            canonical_number = numbered(self._fallbacks.number("episode"))
             return func.dense_rank().over(
                 partition_by=func.coalesce(
-                    self._fallbacks.episode_season("season_identifier"),
-                    col(Season.season_identifier),
+                    self._fallbacks.episode_season_id(),
+                    col(Season.id),
                 ),
                 order_by=(
-                    case((tmdb_number.is_(None), 1), else_=0),
-                    tmdb_number,
+                    case((canonical_number.is_(None), 1), else_=0),
+                    canonical_number,
                     case(
-                        (tmdb_number.is_(None), numbered(col(Episode.episode_number))),
+                        (
+                            canonical_number.is_(None),
+                            numbered(col(Episode.episode_number)),
+                        ),
                     ),
                 ),
             )
         if model == "season":
-            tmdb_number = numbered(
-                func.coalesce(
-                    self._fallbacks.episode_season("season_number"),
-                    self._fallbacks.number("season"),
-                ),
-            )
+            canonical_number = numbered(self._fallbacks.number("season"))
             return func.dense_rank().over(
-                partition_by=col(Show.show_identifier),
+                partition_by=func.coalesce(
+                    self._fallbacks.show_id(),
+                    col(Show.id),
+                ),
                 order_by=(
-                    case((tmdb_number.is_(None), 1), else_=0),
-                    tmdb_number,
+                    case((canonical_number.is_(None), 1), else_=0),
+                    canonical_number,
                     case(
-                        (tmdb_number.is_(None), numbered(col(Season.season_number))),
+                        (
+                            canonical_number.is_(None),
+                            numbered(col(Season.season_number)),
+                        ),
                     ),
-                    case((tmdb_number.is_(None), col(Season.sort_order))),
+                    case((canonical_number.is_(None), col(Season.sort_order))),
                 ),
             )
         msg = f"sequential is not supported for model '{model}'"

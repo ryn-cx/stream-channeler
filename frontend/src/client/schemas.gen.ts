@@ -1661,6 +1661,9 @@ export const ChannelShowsOutputSchema = {
             additionalProperties: {
                 '$ref': '#/components/schemas/ChannelShowStats'
             },
+            propertyNames: {
+                format: 'uuid'
+            },
             type: 'object',
             title: 'Stats'
         }
@@ -2111,16 +2114,12 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -2129,12 +2128,12 @@ export const EpisodeCreateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key', 'episode_identifier'],
+    required: ['key'],
     title: 'EpisodeCreate',
     description: 'Schema for creating an `Episode`.'
 } as const;
@@ -2146,15 +2145,11 @@ export const EpisodeInformationOutputSchema = {
             format: 'uuid',
             title: 'Episode Id'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked'
+            title: 'Canonical Episode Locked'
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -2163,7 +2158,7 @@ export const EpisodeInformationOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         issue_reports: {
             items: {
@@ -2187,7 +2182,7 @@ export const EpisodeInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['episode_id', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'issue_reports', 'source', 'tmdb'],
+    required: ['episode_id', 'canonical_episode_locked', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -2340,15 +2335,11 @@ export const EpisodeInformationSideSchema = {
             type: 'string',
             title: 'Key'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked'
+            title: 'Canonical Episode Locked'
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -2357,7 +2348,7 @@ export const EpisodeInformationSideSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         data_timestamp: {
             anyOf: [
@@ -2397,7 +2388,7 @@ export const EpisodeInformationSideSchema = {
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'episode_identifier', 'episode_identifier_locked', 'episode_identifier_note', 'data_timestamp', 'update_at', 'modified_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -2558,16 +2549,12 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -2576,7 +2563,7 @@ export const EpisodeListOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         id: {
             type: 'string',
@@ -2587,6 +2574,22 @@ export const EpisodeListOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Season Id'
+        },
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         username: {
             anyOf: [
@@ -2657,26 +2660,10 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Plugin Name'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB episode \`episode_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -2837,16 +2824,12 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -2855,7 +2838,7 @@ export const EpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         id: {
             type: 'string',
@@ -2867,6 +2850,11 @@ export const EpisodeOutputSchema = {
             format: 'uuid',
             title: 'Season Id'
         },
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
         tmdb_id: {
             anyOf: [
                 {
@@ -2876,16 +2864,11 @@ export const EpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Tmdb Id',
-            description: `The TMDB episode \`episode_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
+            title: 'Tmdb Id'
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'tmdb_id'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
 } as const;
@@ -3081,23 +3064,12 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -3106,7 +3078,7 @@ export const EpisodeUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         }
     },
     additionalProperties: false,
@@ -3271,16 +3243,12 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -3289,7 +3257,7 @@ export const EpisodeWithDetailsSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         id: {
             type: 'string',
@@ -3300,6 +3268,22 @@ export const EpisodeWithDetailsSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Season Id'
+        },
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         watch_date: {
             anyOf: [
@@ -3392,26 +3376,10 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Tmdb Episode Number'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB episode \`episode_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'channel_id', 'tmdb_id'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'channel_id'],
     title: 'EpisodeWithDetails'
 } as const;
 
@@ -4839,15 +4807,11 @@ export const SeasonCreateSchema = {
                 }
             ],
             title: 'Season Number'
-        },
-        season_identifier: {
-            type: 'string',
-            title: 'Season Identifier'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key', 'season_identifier'],
+    required: ['key'],
     title: 'SeasonCreate',
     description: 'Schema for creating a `Season`.'
 } as const;
@@ -4858,10 +4822,6 @@ export const SeasonInformationOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Season Id'
-        },
-        season_identifier: {
-            type: 'string',
-            title: 'Season Identifier'
         },
         issue_reports: {
             items: {
@@ -4885,7 +4845,7 @@ export const SeasonInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['season_id', 'season_identifier', 'issue_reports', 'source', 'tmdb'],
+    required: ['season_id', 'issue_reports', 'source', 'tmdb'],
     title: 'SeasonInformationOutput',
     description: `What the website and TMDB each say about a season, side by side.
 
@@ -5086,10 +5046,6 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Season Number'
         },
-        season_identifier: {
-            type: 'string',
-            title: 'Season Identifier'
-        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -5099,6 +5055,22 @@ export const SeasonListOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        canonical_season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Season Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         username: {
             anyOf: [
@@ -5153,26 +5125,10 @@ export const SeasonListOutputSchema = {
                 }
             ],
             title: 'Plugin Name'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB season \`season_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
+    required: ['key', 'show_id', 'id', 'canonical_season_id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -5286,10 +5242,6 @@ export const SeasonOutputSchema = {
             ],
             title: 'Season Number'
         },
-        season_identifier: {
-            type: 'string',
-            title: 'Season Identifier'
-        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -5300,6 +5252,11 @@ export const SeasonOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        canonical_season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Season Id'
+        },
         tmdb_id: {
             anyOf: [
                 {
@@ -5309,16 +5266,11 @@ export const SeasonOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Tmdb Id',
-            description: `The TMDB season \`season_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
+            title: 'Tmdb Id'
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id', 'tmdb_id'],
+    required: ['key', 'show_id', 'id', 'canonical_season_id'],
     title: 'SeasonOutput',
     description: 'Schema for returning a `Season`.'
 } as const;
@@ -5438,17 +5390,6 @@ export const SeasonUpdateSchema = {
                 }
             ],
             title: 'Season Number'
-        },
-        season_identifier: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Season Identifier'
         }
     },
     additionalProperties: false,
@@ -5605,19 +5546,26 @@ export const ShowCreateSchema = {
             ],
             title: 'Icon'
         },
-        show_identifier: {
-            type: 'string',
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
+        canonical_show_locked: {
             type: 'boolean',
-            title: 'Show Identifier Locked',
+            title: 'Canonical Show Locked',
             default: false
+        },
+        canonical_show_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Note'
         }
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key', 'show_identifier'],
+    required: ['key'],
     title: 'ShowCreate',
     description: 'Schema for creating a `Show`.'
 } as const;
@@ -5629,13 +5577,9 @@ export const ShowInformationOutputSchema = {
             format: 'uuid',
             title: 'Show Id'
         },
-        show_identifier: {
-            type: 'string',
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
+        canonical_show_locked: {
             type: 'boolean',
-            title: 'Show Identifier Locked'
+            title: 'Canonical Show Locked'
         },
         editable: {
             type: 'boolean',
@@ -5663,7 +5607,7 @@ export const ShowInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['show_id', 'show_identifier', 'show_identifier_locked', 'editable', 'issue_reports', 'source', 'tmdb'],
+    required: ['show_id', 'canonical_show_locked', 'editable', 'issue_reports', 'source', 'tmdb'],
     title: 'ShowInformationOutput',
     description: `What the website and TMDB each say about a title, side by side.
 
@@ -5865,14 +5809,21 @@ export const ShowListPublicSchema = {
             ],
             title: 'Icon'
         },
-        show_identifier: {
-            type: 'string',
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
+        canonical_show_locked: {
             type: 'boolean',
-            title: 'Show Identifier Locked',
+            title: 'Canonical Show Locked',
             default: false
+        },
+        canonical_show_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -5883,6 +5834,22 @@ export const ShowListPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        canonical_show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Show Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         username: {
             anyOf: [
@@ -5921,26 +5888,10 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Plugin Name'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB title \`show_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name', 'tmdb_id'],
+    required: ['key', 'source_id', 'id', 'canonical_show_id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -6066,14 +6017,21 @@ export const ShowPublicSchema = {
             ],
             title: 'Icon'
         },
-        show_identifier: {
-            type: 'string',
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
+        canonical_show_locked: {
             type: 'boolean',
-            title: 'Show Identifier Locked',
+            title: 'Canonical Show Locked',
             default: false
+        },
+        canonical_show_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -6085,6 +6043,11 @@ export const ShowPublicSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        canonical_show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Show Id'
+        },
         tmdb_id: {
             anyOf: [
                 {
@@ -6094,16 +6057,11 @@ export const ShowPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Tmdb Id',
-            description: `The TMDB title \`show_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
+            title: 'Tmdb Id'
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id', 'tmdb_id'],
+    required: ['key', 'source_id', 'id', 'canonical_show_id'],
     title: 'ShowPublic',
     description: 'Schema for returning a `Show`.'
 } as const;
@@ -6236,7 +6194,12 @@ export const ShowUpdateSchema = {
             ],
             title: 'Icon'
         },
-        show_identifier: {
+        canonical_show_locked: {
+            type: 'boolean',
+            title: 'Canonical Show Locked',
+            default: false
+        },
+        canonical_show_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -6245,12 +6208,7 @@ export const ShowUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
-            type: 'boolean',
-            title: 'Show Identifier Locked',
-            default: false
+            title: 'Canonical Show Note'
         }
     },
     additionalProperties: false,
@@ -7260,11 +7218,19 @@ export const UnlockedEpisodeOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
+        canonical_episode_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Id'
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -7273,7 +7239,7 @@ export const UnlockedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         name: {
             anyOf: [
@@ -7394,7 +7360,7 @@ export const UnlockedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'episode_identifier', 'episode_identifier_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match', 'name_matches'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -7410,11 +7376,19 @@ export const UnmatchedEpisodeOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
+        canonical_episode_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Id'
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -7423,7 +7397,7 @@ export const UnmatchedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         name: {
             anyOf: [
@@ -7540,7 +7514,7 @@ export const UnmatchedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'episode_identifier', 'episode_identifier_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;
@@ -7960,13 +7934,14 @@ export const WatchItemSchema = {
             ],
             title: 'Episode Id'
         },
-        episode_identifier: {
+        canonical_episode_id: {
             type: 'string',
-            title: 'Episode Identifier'
+            format: 'uuid',
+            title: 'Canonical Episode Id'
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id', 'episode_identifier'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'canonical_episode_id'],
     title: 'WatchItem'
 } as const;
 
@@ -7998,9 +7973,10 @@ export const WatchOutputSchema = {
             ],
             title: 'Episode Id'
         },
-        episode_identifier: {
+        canonical_episode_id: {
             type: 'string',
-            title: 'Episode Identifier'
+            format: 'uuid',
+            title: 'Canonical Episode Id'
         },
         user_id: {
             type: 'string',
@@ -8009,7 +7985,7 @@ export const WatchOutputSchema = {
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id', 'episode_identifier', 'user_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'canonical_episode_id', 'user_id'],
     title: 'WatchOutput',
     description: 'Schema for returning a `Watch`.'
 } as const;
@@ -8045,6 +8021,9 @@ export const WatchesListOutputSchema = {
         episodes: {
             additionalProperties: {
                 '$ref': '#/components/schemas/EpisodeOutput'
+            },
+            propertyNames: {
+                format: 'uuid'
             },
             type: 'object',
             title: 'Episodes'
@@ -8296,16 +8275,12 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Air Date'
         },
-        episode_identifier: {
-            type: 'string',
-            title: 'Episode Identifier'
-        },
-        episode_identifier_locked: {
+        canonical_episode_locked: {
             type: 'boolean',
-            title: 'Episode Identifier Locked',
+            title: 'Canonical Episode Locked',
             default: false
         },
-        episode_identifier_note: {
+        canonical_episode_note: {
             anyOf: [
                 {
                     type: 'string'
@@ -8314,7 +8289,7 @@ export const WhitelistEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Identifier Note'
+            title: 'Canonical Episode Note'
         },
         id: {
             type: 'string',
@@ -8325,6 +8300,22 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Season Id'
+        },
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         filtered: {
             type: 'boolean',
@@ -8382,26 +8373,10 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Episode Number'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB episode \`episode_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'episode_identifier', 'id', 'season_id', 'filtered', 'show_ids', 'tmdb_id'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'filtered', 'show_ids'],
     title: 'WhitelistEpisodeOutput'
 } as const;
 
@@ -8514,10 +8489,6 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Season Number'
         },
-        season_identifier: {
-            type: 'string',
-            title: 'Season Identifier'
-        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -8527,6 +8498,22 @@ export const WhitelistSeasonOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        canonical_season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Season Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         filtered: {
             type: 'boolean',
@@ -8550,26 +8537,10 @@ export const WhitelistSeasonOutputSchema = {
                 }
             ],
             title: 'Tmdb Season Number'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB season \`season_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'season_identifier', 'show_id', 'id', 'filtered', 'show_ids', 'tmdb_id'],
+    required: ['key', 'show_id', 'id', 'canonical_season_id', 'filtered', 'show_ids'],
     title: 'WhitelistSeasonOutput'
 } as const;
 
@@ -8734,14 +8705,21 @@ export const WhitelistShowOutputSchema = {
             ],
             title: 'Icon'
         },
-        show_identifier: {
-            type: 'string',
-            title: 'Show Identifier'
-        },
-        show_identifier_locked: {
+        canonical_show_locked: {
             type: 'boolean',
-            title: 'Show Identifier Locked',
+            title: 'Canonical Show Locked',
             default: false
+        },
+        canonical_show_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -8752,6 +8730,22 @@ export const WhitelistShowOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        canonical_show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Show Id'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
         },
         is_whitelist: {
             type: 'boolean',
@@ -8777,26 +8771,10 @@ export const WhitelistShowOutputSchema = {
             },
             type: 'array',
             title: 'Episodes'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id',
-            description: `The TMDB title \`show_identifier\` names, if it names one.
-
-Read off the identifier rather than stored beside it, so the two can
-never disagree about which TMDB record this is.`,
-            readOnly: true
         }
     },
     type: 'object',
-    required: ['key', 'show_identifier', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes', 'tmdb_id'],
+    required: ['key', 'source_id', 'id', 'canonical_show_id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
     title: 'WhitelistShowOutput'
 } as const;
 

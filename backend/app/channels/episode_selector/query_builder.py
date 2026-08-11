@@ -19,10 +19,10 @@ from app.channels.channel_scope import (
     child_channel_ids,
     resolve_channel_ids,
 )
+from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.show_counts import limit_shows
 from app.channels.episode_selector.sorting import SortExpressionBuilder
 from app.channels.episode_selector.source_dedup import source_dedup_config
-from app.channels.episode_selector.tmdb_columns import TMDBFallbackColumns
 from app.channels.episode_selector.visibility import (
     blacklisted_on_channels_condition,
     channel_access_condition,
@@ -45,7 +45,7 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
-from app.media.tmdb_fallback import TMDB_PLUGIN_KEY
+from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -55,6 +55,17 @@ from app.utils import tz_datetime
 from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
+
+
+# TODO: Validate
+def _media_id(episode: Episode) -> UUID:
+    """Return the media `episode` is a copy of, for grouping the copies by.
+
+    Falls back on the copy's own id so that a copy whose pointer has not been
+    filled in yet stands for itself, rather than every such copy reading as the
+    same media and all but one of them being dropped.
+    """
+    return episode.canonical_episode_id or episode.id
 
 
 # TODO: Validate
@@ -86,11 +97,11 @@ class EpisodeQueryBuilder:
         self._source_config = source_dedup_config(session, self._user)
         self._holds_copied_titles = self._fetch_holds_copied_titles()
 
-        self._tmdb_fallbacks = TMDBFallbackColumns()
+        self._canonical_columns = CanonicalColumns()
         self._sort_expressions = SortExpressionBuilder(
             random_seed=self._channel_options.random_seed,
             user=self._user,
-            fallbacks=self._tmdb_fallbacks,
+            fallbacks=self._canonical_columns,
             # Only a read that orders by the channel an episode comes from has to
             # work out which channel that is.
             channel_attribution=(
@@ -154,10 +165,20 @@ class EpisodeQueryBuilder:
             select(
                 func.count(distinct(col(Show.source_id))),
                 func.count(distinct(col(Show.id))),
-                func.count(distinct(col(Show.show_identifier))),
+                func.count(
+                    distinct(
+                        func.coalesce(
+                            col(Show.canonical_show_id),
+                            col(Show.id),
+                        ),
+                    ),
+                ),
             )
             .select_from(ChannelShow)
-            .join(Show, col(ChannelShow.show_identifier) == col(Show.show_identifier))
+            .join(
+                Show,
+                col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
+            )
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
             .where(col(Show.deleted_at).is_(None))
@@ -193,14 +214,14 @@ class EpisodeQueryBuilder:
         query = self._apply_limit(query)
 
         ordered_episodes: list[Episode] = []
-        channels_by_identifier: dict[str, list[UUID]] = {}
+        channels_by_media: dict[UUID, list[UUID]] = {}
         for episode, channel_id in self._session.exec(query).all():
-            identifier = episode.episode_identifier
-            if identifier not in channels_by_identifier:
-                channels_by_identifier[identifier] = []
+            media_id = _media_id(episode)
+            if media_id not in channels_by_media:
+                channels_by_media[media_id] = []
                 ordered_episodes.append(episode)
-            if channel_id not in channels_by_identifier[identifier]:
-                channels_by_identifier[identifier].append(channel_id)
+            if channel_id not in channels_by_media[media_id]:
+                channels_by_media[media_id].append(channel_id)
 
         ordered_episodes = limit_shows(
             self._session,
@@ -222,9 +243,9 @@ class EpisodeQueryBuilder:
         return [
             EpisodeResult(
                 episode=episode,
-                channel_id=channels_by_identifier[episode.episode_identifier][0],
-                channel_ids=channels_by_identifier[episode.episode_identifier],
-                latest_watch=watches.get(episode.episode_identifier),
+                channel_id=channels_by_media[_media_id(episode)][0],
+                channel_ids=channels_by_media[_media_id(episode)],
+                latest_watch=watches.get(_media_id(episode)),
             )
             for episode in ordered_episodes
         ]
@@ -240,7 +261,7 @@ class EpisodeQueryBuilder:
             .join(Show)
             .join(
                 ChannelShow,
-                col(ChannelShow.show_identifier) == col(Show.show_identifier),
+                col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
             )
         )
 
@@ -261,16 +282,16 @@ class EpisodeQueryBuilder:
                 ChannelSeasonFilter,
                 and_(
                     ChannelSeasonFilter.channel_show_id == ChannelShow.id,
-                    col(ChannelSeasonFilter.season_identifier)
-                    == col(Season.season_identifier),
+                    col(ChannelSeasonFilter.canonical_season_id)
+                    == col(Season.canonical_season_id),
                 ),
             )
             .outerjoin(
                 ChannelEpisodeFilter,
                 and_(
                     ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
-                    col(ChannelEpisodeFilter.episode_identifier)
-                    == col(Episode.episode_identifier),
+                    col(ChannelEpisodeFilter.canonical_episode_id)
+                    == col(Episode.canonical_episode_id),
                     or_(
                         col(ChannelEpisodeFilter.expires_at).is_(None),
                         col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
@@ -293,7 +314,8 @@ class EpisodeQueryBuilder:
             ChannelSavedEpisodeOrder,
             and_(
                 ChannelSavedEpisodeOrder.channel_id == self._channel.id,
-                ChannelSavedEpisodeOrder.episode_id == Episode.id,
+                ChannelSavedEpisodeOrder.canonical_episode_id
+                == Episode.canonical_episode_id,
             ),
         )
 
@@ -431,7 +453,7 @@ class EpisodeQueryBuilder:
                 conditions.append(or_(column <= max_value, column.is_(None)))
 
         add_range(
-            self._tmdb_fallbacks.column("episode", "air_date", Episode),
+            self._canonical_columns.column("episode", "air_date", Episode),
             self._parse_date_filter(
                 self._channel_options.minimum_air_date_absolute,
                 self._channel_options.minimum_air_date_relative,
@@ -442,7 +464,7 @@ class EpisodeQueryBuilder:
             ),
         )
         add_range(
-            self._tmdb_fallbacks.column("episode", "release_date", Episode),
+            self._canonical_columns.column("episode", "release_date", Episode),
             self._parse_date_filter(
                 self._channel_options.minimum_release_date_absolute,
                 self._channel_options.minimum_release_date_relative,
@@ -453,7 +475,7 @@ class EpisodeQueryBuilder:
             ),
         )
         add_range(
-            self._tmdb_fallbacks.column("episode", "duration", Episode),
+            self._canonical_columns.column("episode", "duration", Episode),
             self._channel_options.minimum_duration,
             self._channel_options.maximum_duration,
         )
@@ -524,7 +546,13 @@ class EpisodeQueryBuilder:
         return (
             func.rank()
             .over(
-                partition_by=col(Episode.episode_identifier),
+                # Falling back on the copy's own id so that a copy whose pointer
+                # has not been filled in yet is ranked against itself alone,
+                # rather than every such copy collapsing into one group.
+                partition_by=func.coalesce(
+                    col(Episode.canonical_episode_id),
+                    col(Episode.id),
+                ),
                 order_by=[priority, col(Episode.id)],
             )
             .label("source_rank")
@@ -536,7 +564,7 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         """Collapse the copies of an episode when nothing has asked for an order."""
-        query = self._tmdb_fallbacks.join(query)
+        query = self._canonical_columns.join(query)
         if not self._holds_copied_titles:
             return query
         subquery = query.add_columns(self._source_rank_column()).subquery()
@@ -589,7 +617,7 @@ class EpisodeQueryBuilder:
         # Every filter and sort has now asked for its columns, so the levels they
         # borrowed from TMDB are known and can be joined in before the values are
         # frozen into a subquery.
-        query = self._tmdb_fallbacks.join(query)
+        query = self._canonical_columns.join(query)
         subquery = query.add_columns(*labeled_values).subquery()
 
         raws = [

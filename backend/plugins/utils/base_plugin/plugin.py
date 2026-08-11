@@ -13,9 +13,11 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
+from app.canonical_media.service import reconcile_show
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import MANUAL_NOTES, Episode
 from app.episodes.tmdb_matches import absolute_numbers
-from app.media.tmdb_fallback import tmdb_episode_counterpart
+from app.media.canonical_metadata import canonical_episode_of
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -57,11 +59,27 @@ def _numberings(show: Show) -> list[tuple[uuid.UUID, int | None, int | None]]:
 
 
 # TODO: Validate
+def _canonical_numberings(
+    canonical_show: CanonicalShow,
+) -> list[tuple[uuid.UUID, int | None, int | None]]:
+    """Return how the title itself numbers its episodes, for counting them through.
+
+    The canonical mirror of `_numberings`. Canonical rows are never soft
+    deleted, so every season and episode under the title counts.
+    """
+    return [
+        (episode.id, season.season_number, episode.episode_number)
+        for season in canonical_show.canonical_seasons
+        for episode in season.canonical_episodes
+    ]
+
+
+# TODO: Validate
 def _is_settled_by_hand(episode: Episode) -> bool:
-    """Report whether a `User` settled the episode's identifier themselves."""
+    """Report whether a `User` settled which episode this is a copy of."""
     return (
-        episode.episode_identifier_locked
-        and episode.episode_identifier_note in MANUAL_NOTES
+        episode.canonical_episode_locked
+        and episode.canonical_episode_note in MANUAL_NOTES
     )
 
 
@@ -232,7 +250,14 @@ class BasePlugin(
 
     # TODO: Validate
     def initialize_plugin(self) -> None:
-        """Create the `Plugin` record(s) and set `self.plugin`."""
+        """Create the `Plugin` record(s) and set `self.plugin`.
+
+        A newly created row is committed before anything else happens. A file
+        download writes through a session of its own, so that it is kept even
+        when the import that triggered it fails, and a session of its own cannot
+        see a `Plugin` this one has not committed yet. Nothing else is pending
+        this early, so the commit carries only the plugin.
+        """
         if hasattr(self, "plugin") and self.plugin:
             return
         plugin_user = get_or_create_plugin_user(session=self.session)
@@ -240,6 +265,7 @@ class BasePlugin(
             self.plugin = existing_plugin
         else:
             self.plugin = self._upsert_plugin(plugin_user, existing_plugin)
+            self.session.commit()
 
     # TODO: Validate
     def initialize_sources(self) -> None:
@@ -250,7 +276,10 @@ class BasePlugin(
         if existing_source := Source.get(self.session, self.plugin, self.plugin_key()):
             self.source = existing_source
         else:
+            # Committed for the same reason the plugin is: a download writes
+            # through a session that cannot see what this one still holds.
             self.source = self._upsert_source()
+            self.session.commit()
 
     # TODO: Validate
     def _upsert_plugin(
@@ -319,7 +348,8 @@ class BasePlugin(
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
         upserted = self.upsert_show(show.source, show.key, force=force)
-        self._unshare_episode_identifiers(upserted)
+        self._unshare_canonical_episodes(upserted)
+        self._reconcile_canonical_media(upserted)
 
     # TODO: Validate
     @override
@@ -382,64 +412,80 @@ class BasePlugin(
 
         _cache = self._download_show_files_and_children(show_key)
         show = self.upsert_show(self.source, show_key)
-        self._unshare_episode_identifiers(show)
+        self._unshare_canonical_episodes(show)
+        self._reconcile_canonical_media(show)
         return show
 
     # TODO: Validate
-    def _unshare_episode_identifiers(self, show: Show) -> None:
-        """Unlink the episodes of `show` that ended up naming the same record.
+    def _reconcile_canonical_media(self, show: Show) -> None:
+        """Point the show and everything under it at the media it is a copy of.
 
-        An identifier is what makes two websites' episodes one episode to watch,
-        so two episodes of one show carrying the same identifier is the matching
-        having put both of them on a record that at most one of them is. Neither
-        is the one to keep, so each goes back to this plugin's own identifier
-        and the one they shared is written into the note rather than lost.
+        Run after `_unshare_canonical_episodes`, which is the last thing that
+        can still change which record an episode says it is of.
+        """
+        reconcile_show(self.session, show, self.plugin_key())
+
+    # TODO: Validate
+    def _unshare_canonical_episodes(self, show: Show) -> None:
+        """Unlink the episodes of `show` that ended up pointing at the same record.
+
+        One canonical episode is one episode to watch, so two episodes of a
+        single show pointing at it is the matching having put both of them on a
+        record that at most one of them is. Neither is the one to keep, so each
+        is let go of and what they shared is written into the note rather than
+        lost. A copy left pointing at nothing is given a row of its own by
+        `reconcile_show`, which runs straight after this.
 
         Only what a `User` settled is left alone, which is also what decides a
         clash between their episode and any other in their favour. A lock the
         import made itself is no help here: it was made on evidence that has
-        turned out to fit two episodes, so it goes along with the identifier.
+        turned out to fit two episodes, so it goes along with the link.
 
-        An episode numbered the way TMDB numbers the record keeps it, since that
-        tells it apart from the others rather than leaving every one of them a
-        guess, and only the rest go back to this plugin's own identifier.
+        An episode numbered the way the record numbers it keeps the link, since
+        that tells it apart from the others rather than leaving every one of
+        them a guess, and only the rest are let go of.
         """
         episodes = [
             episode
             for season in show.active_children
             for episode in season.active_children
+            if episode.canonical_episode_id is not None
         ]
-        counts = Counter(episode.episode_identifier for episode in episodes)
-        shared = {identifier for identifier, count in counts.items() if count > 1}
+        counts = Counter(episode.canonical_episode_id for episode in episodes)
+        shared = {
+            canonical_id for canonical_id, count in counts.items() if count > 1
+        }
         if not shared:
             return
 
-        clashing_by_identifier: dict[str, list[Episode]] = defaultdict(list)
+        clashing_by_canonical: dict[uuid.UUID, list[Episode]] = defaultdict(list)
         for episode in episodes:
-            if episode.episode_identifier in shared:
-                clashing_by_identifier[episode.episode_identifier].append(episode)
+            if episode.canonical_episode_id in shared:
+                clashing_by_canonical[episode.canonical_episode_id].append(episode)
 
-        for identifier, clashing in clashing_by_identifier.items():
-            keeper = self._kept_from_clash(identifier, clashing)
+        for canonical_id, clashing in clashing_by_canonical.items():
+            keeper = self._kept_from_clash(canonical_id, clashing)
             for episode in clashing:
                 if episode is keeper or _is_settled_by_hand(episode):
                     continue
-                logger.info(f"Unsharing {identifier} from episode {episode.key}")
-                removed = f"Removed {identifier}, which another episode was given too"
+                logger.info(f"Unsharing {canonical_id} from episode {episode.key}")
+                removed = (
+                    f"Removed {canonical_id}, which another episode was given too"
+                )
                 # What the episode was matched on is kept behind the removal
-                # rather than written over it, since how it came to be given the
-                # identifier is most of what says whether it should have kept it.
-                previous = episode.episode_identifier_note
-                episode.episode_identifier_note = (
+                # rather than written over it, since how it came to be linked is
+                # most of what says whether it should have kept the link.
+                previous = episode.canonical_episode_note
+                episode.canonical_episode_note = (
                     f"{removed}. {previous}" if previous else removed
                 )
-                episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
-                episode.episode_identifier_locked = False
+                episode.canonical_episode_id = None
+                episode.canonical_episode_locked = False
 
     # TODO: Validate
     def _kept_from_clash(
         self,
-        identifier: str,
+        canonical_id: uuid.UUID,
         clashing: list[Episode],
     ) -> Episode | None:
         """Return the one episode of a clash numbered the way TMDB numbers it.
@@ -460,12 +506,14 @@ class BasePlugin(
         if any(_is_settled_by_hand(episode) for episode in clashing):
             return None
 
-        counterpart = tmdb_episode_counterpart(self.session, identifier)
+        counterpart = canonical_episode_of(self.session, canonical_id)
         if counterpart is None:
             return None
         tmdb_episode, tmdb_season, tmdb_show = counterpart
 
-        tmdb_absolute = absolute_numbers(_numberings(tmdb_show)).get(tmdb_episode.id)
+        tmdb_absolute = absolute_numbers(_canonical_numberings(tmdb_show)).get(
+            tmdb_episode.id,
+        )
         source_absolute = absolute_numbers(_numberings(clashing[0].season.show))
 
         numbered = [

@@ -8,22 +8,12 @@ import { z } from "zod"
 import { SeasonsService, type SeasonUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
-import { TmdbIdentifierField } from "@/components/Common/TmdbIdentifierField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import {
   nullifyBlanks,
   optionalInt,
   optionalString,
-  requiredIdentifier,
   requiredKey,
 } from "@/lib/formSchemas"
 
@@ -38,7 +28,6 @@ const formSchema = z.object({
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
-  season_identifier: requiredIdentifier,
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -65,7 +54,6 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       data_timestamp: season.data_timestamp?.slice(0, 16) ?? "",
       update_at: season.update_at?.slice(0, 16) ?? "",
       key: season.key ?? "",
-      season_identifier: season.season_identifier,
     },
   })
 
@@ -142,35 +130,6 @@ const EditSeason = ({ season }: EditSeasonProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
-      <TmdbIdentifierField
-        identifier={form.watch("season_identifier")}
-        onChange={(identifier) =>
-          form.setValue("season_identifier", identifier, {
-            shouldValidate: true,
-            shouldDirty: true,
-          })
-        }
-      />
-      <FormField
-        control={form.control}
-        name="season_identifier"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <FormLabel>
-              Season Identifier<span className="text-destructive"> *</span>
-            </FormLabel>
-            <FormControl>
-              <Input
-                aria-invalid={fieldState.invalid}
-                required
-                type="text"
-                {...field}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
     </FormModal>
   )
 }

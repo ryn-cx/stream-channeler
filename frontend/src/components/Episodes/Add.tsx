@@ -9,16 +9,7 @@ import { type ApiError, type EpisodeCreate, EpisodesService } from "@/client"
 import { AddButton } from "@/components/Common/AddButton"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
-import { Checkbox } from "@/components/ui/checkbox"
 import { DialogTrigger } from "@/components/ui/dialog"
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import {
   optionalInt,
@@ -41,8 +32,6 @@ const formSchema = z.object({
   data_timestamp: optionalString,
   update_at: optionalString,
   key: requiredKey,
-  episode_identifier: optionalString,
-  episode_identifier_locked: z.boolean(),
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -76,8 +65,6 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
       data_timestamp: "",
       update_at: "",
       key: crypto.randomUUID(),
-      episode_identifier: "",
-      episode_identifier_locked: false,
     },
   })
 
@@ -100,12 +87,9 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()
-    // Manually-added episodes have no cross-source content to sync with, so an
-    // unset identifier is keyed on the episode's own unique key.
-    mutation.mutate({
-      ...data,
-      episode_identifier: data.episode_identifier ?? `Manual ${data.key}`,
-    })
+    // A manually-added episode is a copy of nothing but itself; the canonical
+    // row it stands for is created for it as it is stored.
+    mutation.mutate(data)
   }
 
   return (
@@ -180,45 +164,6 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
         type="datetime-local"
       />
       <FormTextField control={form.control} label="Key" type="text" />
-      <FormField
-        control={form.control}
-        name="episode_identifier"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <FormLabel>Episode Identifier</FormLabel>
-            <FormControl>
-              <Input
-                aria-invalid={fieldState.invalid}
-                type="text"
-                placeholder="Manual <key>"
-                {...field}
-                onChange={(event) => {
-                  field.onChange(event)
-                  form.setValue("episode_identifier_locked", true)
-                }}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="episode_identifier_locked"
-        render={({ field }) => (
-          <FormItem className="flex items-center gap-3 space-y-0">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-            <FormLabel className="font-normal">
-              Lock episode identifier?
-            </FormLabel>
-          </FormItem>
-        )}
-      />
     </FormModal>
   )
 }

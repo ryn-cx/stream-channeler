@@ -37,15 +37,14 @@ from app.episodes.tmdb_matches import (
     list_unmatched_episodes,
 )
 from app.issue_reports.service import list_episode_issue_reports
-from app.media.schemas import MediaReadOptions
-from app.media.service import delete_record, media_scoped_list_response
-from app.media.tmdb_fallback import (
-    TMDB_PLUGIN_KEY,
+from app.media.canonical_metadata import (
+    canonical_episode_of,
     fill_episodes,
-    tmdb_episode_counterpart,
     tmdb_episode_url,
 )
-from app.media.tmdb_identifier_links import check_episode_identifier
+from app.media.identifiers import TMDB_PLUGIN_KEY
+from app.media.schemas import MediaReadOptions
+from app.media.service import delete_record, media_scoped_list_response
 from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
@@ -90,16 +89,7 @@ def create_episode(
     season: EditableSeason,
     episode_input: EpisodeCreate,
 ) -> EpisodeOutput:
-    """Create an `Episode` if the `Season` is editable by the `User`.
-
-    An `episode_identifier` naming a TMDB episode is checked before it is stored,
-    and the title holding it is imported for the link to read.
-    """
-    check_episode_identifier(
-        session,
-        episode_input.episode_identifier,
-        season.show.show_identifier,
-    )
+    """Create an `Episode` if the `Season` is editable by the `User`."""
     return _episode_output(session, episode_input.create(session, Episode, season))
 
 
@@ -313,9 +303,8 @@ def _information_side(
         show_name=show.name,
         url=url,
         key=episode.key,
-        episode_identifier=episode.episode_identifier,
-        episode_identifier_locked=episode.episode_identifier_locked,
-        episode_identifier_note=episode.episode_identifier_note,
+        canonical_episode_locked=episode.canonical_episode_locked,
+        canonical_episode_note=episode.canonical_episode_note,
         data_timestamp=episode.data_timestamp,
         update_at=episode.update_at,
         modified_at=episode.modified_at,
@@ -338,27 +327,31 @@ def get_episode_information(
     show = season.show
     source = show.source
 
-    counterpart = tmdb_episode_counterpart(session, episode.episode_identifier)
+    # The episode itself, beside the website's account of it. Named for TMDB
+    # because that is where a canonical row's values come from when TMDB has a
+    # record; media it has never heard of is described by its one copy, so the
+    # two sides read alike and the comparison is empty rather than misleading.
+    counterpart = canonical_episode_of(session, episode.canonical_episode_id)
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
-        tmdb_episode, tmdb_season, tmdb_show = counterpart
+        canonical_episode, canonical_season, canonical_show = counterpart
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
-            tmdb_episode,
-            tmdb_season,
-            tmdb_show,
+            canonical_episode,
+            canonical_season,
+            canonical_show,
             tmdb_episode_url(
-                tmdb_show.key,
-                tmdb_season.season_number,
-                tmdb_episode.episode_number,
+                canonical_show.tmdb_media_type,
+                canonical_show.tmdb_id,
+                canonical_season.season_number,
+                canonical_episode.episode_number,
             ),
         )
 
     return EpisodeInformationOutput(
         episode_id=episode.id,
-        episode_identifier=episode.episode_identifier,
-        episode_identifier_locked=episode.episode_identifier_locked,
-        episode_identifier_note=episode.episode_identifier_note,
+        canonical_episode_locked=episode.canonical_episode_locked,
+        canonical_episode_note=episode.canonical_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
@@ -380,19 +373,9 @@ def update_episode(
 ) -> EpisodeOutput:
     """Update and return an `Episode` if it's editable by the `User`.
 
-    A new `episode_identifier` naming a TMDB episode is checked before it is
-    stored, so an episode the title does not have is refused rather than kept as
-    a link to nothing, and the title is imported for the link to read.
+    Which episode this is a copy of is settled by the TMDB matching screens
+    rather than written here, so there is nothing to check.
     """
-    if (
-        episode_input.episode_identifier is not None
-        and episode_input.episode_identifier != episode.episode_identifier
-    ):
-        check_episode_identifier(
-            session,
-            episode_input.episode_identifier,
-            episode.season.show.show_identifier,
-        )
     return _episode_output(session, episode_input.update(session, episode))
 
 

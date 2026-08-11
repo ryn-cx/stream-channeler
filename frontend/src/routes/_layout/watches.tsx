@@ -80,14 +80,20 @@ function WatchesTableContent() {
     placeholderData: keepPreviousData,
   })
 
+  // A watch names the episode itself, and the listing carries one visible copy
+  // of each, so that is what the rest of the row is read from. A watch whose
+  // episode has no copy the viewer can see has no row to show.
   const watchesWithDetails: WatchWithDetails[] = watches
-    ? watches.watches.map((watch) => {
-        const episode = watches.episodes[watch.episode_identifier]
+    ? watches.watches.flatMap((watch) => {
+        const episode = watch.canonical_episode_id
+          ? watches.episodes[watch.canonical_episode_id]
+          : undefined
+        if (!episode) return []
         const season = watches.seasons[episode.season_id]
         const show = watches.shows[season.show_id]
         const source = watches.sources[show.source_id]
         const plugin = watches.plugins[source.plugin_id]
-        return { ...watch, episode, season, show, source, plugin }
+        return [{ ...watch, episode, season, show, source, plugin }]
       })
     : []
 

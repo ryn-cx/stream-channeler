@@ -180,16 +180,9 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     ),
   },
   {
-    accessorKey: "episode_identifier",
-    header: "Episode Identifier",
-    cell: ({ row }) => (
-      <TruncatedCell value={row.original.episode_identifier} />
-    ),
-  },
-  {
-    accessorFn: (row) => (row.episode_identifier_locked ? "true" : "false"),
-    id: "episode_identifier_locked",
-    header: "Identifier Locked",
+    accessorFn: (row) => (row.canonical_episode_locked ? "true" : "false"),
+    id: "canonical_episode_locked",
+    header: "Link Locked",
     meta: {
       filterVariant: "select",
       filterOptions: [
@@ -200,16 +193,16 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     filterFn: "equalsString",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.episode_identifier_locked ? "Yes" : "No"}
+        {row.original.canonical_episode_locked ? "Yes" : "No"}
       </span>
     ),
   },
   {
-    accessorKey: "episode_identifier_note",
-    header: "Identifier Note",
+    accessorKey: "canonical_episode_note",
+    header: "Link Note",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.episode_identifier_note ?? "-"}
+        {row.original.canonical_episode_note ?? "-"}
       </span>
     ),
   },

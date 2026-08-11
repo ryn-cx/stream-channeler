@@ -10,9 +10,9 @@ from sqlmodel import (
     Relationship,
     Session,
     SQLModel,
-    UniqueConstraint,
 )
 
+from app.canonical_episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.models import TimestampIdAndHashMixin
 from app.users.models import User
@@ -33,22 +33,23 @@ class BaseWatch(SQLModel):
 # TODO: Validate
 class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
-        # Keyed on the identifier rather than the episode so a watch keeps its
-        # identity after the episode it pointed at is deleted. One watch per
-        # `User`, per logical episode, per moment, whether linked or not.
+        # Keyed on the episode itself rather than on the copy, so a watch keeps
+        # its identity after the copy it was recorded against is deleted.
         PrimaryKeyConstraint("id"),
-        UniqueConstraint(
-            "user_id",
-            "episode_identifier",
-            "watch_date",
-            name="Watch-user_id-episode_identifier-watch_date-key",
-        ),
         # Used in episode_selector and watch services to look up a user's watches.
         Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),
         # Used when an episode is deleted and its watches are detached.
         Index("Watch-episode_id-index", "episode_id"),
-        # Used by the relink tool to find the watches with no episode left.
-        Index("Watch-episode_identifier-index", "episode_identifier"),
+        # Used by watch_filters to match watches to canonical episodes.
+        Index("Watch-canonical_episode_id-index", "canonical_episode_id"),
+        # One watch per `User`, per episode, per moment.
+        Index(
+            "Watch-user_id-canonical_episode_id-watch_date-key",
+            "user_id",
+            "canonical_episode_id",
+            "watch_date",
+            unique=True,
+        ),
         # Used in episode_selector._apply_hide_watched and
         # episode_selector._filter_show_counts to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
@@ -60,10 +61,13 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="watched_episodes")
 
-    # What was watched, kept on the watch itself so deleting the episode leaves
-    # the watch intact rather than taking it with it. `app.tools.relink_watches`
-    # is what points a detached watch at an episode again.
-    episode_identifier: str = Field(index=False)
+    # The episode itself, as against the website's copy of it in `episode_id`.
+    # This is what the watch is of, and it outlives every copy being deleted.
+    canonical_episode_id: uuid.UUID = Field(
+        foreign_key="canonicalepisode.id",
+        ondelete="RESTRICT",
+    )
+    canonical_episode: CanonicalEpisode = Relationship()
 
     # The episode the watch was recorded against, or None once that episode has
     # been deleted. Reads join through it, so a detached watch is dormant until

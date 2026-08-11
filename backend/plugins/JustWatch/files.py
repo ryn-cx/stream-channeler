@@ -6,7 +6,6 @@ from typing import Any, cast, override
 
 import httpx
 from get_around import GetAround
-from good_ass_pydantic_integrator import ParseLevel
 from just_scrape import JustScrape
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.exceptions import GraphQLError

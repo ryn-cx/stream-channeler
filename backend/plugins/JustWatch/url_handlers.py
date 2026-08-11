@@ -4,14 +4,15 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from app.channels.service import shows_by_identifier
+from app.canonical_media.service import canonical_ids_by_key
+from app.channels.service import shows_by_canonical_id
+from app.shows.models import Show
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.shows.models import Show
     from plugins.JustWatch import JustWatch
 
 _SEASON_NUMBER_REGEX = r"\/season-(\d+)"
@@ -59,20 +60,23 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
 
         The offer URL handed to the other plugin points at the whole title, so a
         season URL has to be applied to the title it imported. A result names
-        that title by its identifier, so the copies standing behind it are looked
-        up to find which of their seasons the URL asked for.
+        that title by the key of the record it wrote, so the copies standing
+        behind it are looked up to find which of their seasons the URL asked for.
         """
         if self.season_number is None:
             return list(results)
 
-        copies = shows_by_identifier(
+        canonical_ids = canonical_ids_by_key(
             self.plugin.session,
-            {result.show_identifier for result in results},
+            {result.show_key for result in results},
+            Show,
         )
+        copies = shows_by_canonical_id(self.plugin.session, set(canonical_ids.values()))
         return [
             narrowed
             for result in results
-            for show in copies[result.show_identifier]
+            if result.show_key in canonical_ids
+            for show in copies[canonical_ids[result.show_key]]
             for narrowed in self._results_for_show(show)
         ]
 

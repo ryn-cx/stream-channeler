@@ -12,12 +12,16 @@ from pykakasi import kakasi
 from pykakasi.kanji import Kanwa
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 
+from app.canonical_media.service import (
+    canonical_episode_for,
+    canonical_season_for,
+    canonical_show_for,
+)
 from app.episodes.models import (
     DESCRIPTION_NOTE,
     NAME_AND_NUMBER_NOTE,
     Episode,
 )
-from app.media.identifiers import tmdb_identifier
 from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -419,11 +423,17 @@ class _Match:
 
 # TODO: Validate
 class LinkMixin(LookupMixin, register=False):
-    """Points a plugin's own media at the TMDB media standing in for it.
+    """Points a plugin's own media at the media it is a copy of.
 
-    Only the ids and the `episode_identifier` are stored. Everything a website
-    leaves out is read off the linked TMDB record when the media is served, so
-    it follows TMDB without the stored record having to be rewritten.
+    A record TMDB has an entry for is pointed at the one canonical row standing
+    for that entry, which is what makes the same episode on two websites a
+    single episode to watch. Everything a website leaves out is read off that
+    row when the media is served, so a copy follows it without ever being
+    rewritten.
+
+    A lookup that finds nothing leaves the copy pointing where it already
+    pointed, so a TMDB outage cannot quietly unlink a library. Unlinking is an
+    explicit act, and `confirm_no_tmdb_match` is what performs it.
     """
 
     # TODO: Validate
@@ -433,16 +443,20 @@ class LinkMixin(LookupMixin, register=False):
         tmdb_id: int | None,
         media_type: MediaType = MediaType.tv,
     ) -> Show:
-        """Point a `Show` at its TMDB title.
+        """Point a `Show` at the title TMDB holds for it.
 
-        The `show_identifier` is taken from TMDB whenever one is found, since it
-        is what makes the same title on two websites a single title rather than
-        two, and it is the only place the TMDB id is kept. A title already linked
-        keeps the id it has, so a fresh guess never displaces one.
+        A title already linked keeps the id it has, so a fresh guess never
+        displaces one.
         """
         linked_id = show.tmdb_id or tmdb_id
         if linked_id:
-            show.show_identifier = tmdb_identifier(media_type, linked_id)
+            # The relationship rather than the id, so `show.tmdb_id` reads the
+            # title straight away instead of the stale one still loaded.
+            show.canonical_show = canonical_show_for(
+                self.session,
+                media_type,
+                linked_id,
+            )
         return show
 
     # TODO: Validate
@@ -453,19 +467,26 @@ class LinkMixin(LookupMixin, register=False):
         season_number: int | None,
         media_type: MediaType,
     ) -> Season:
-        """Point a `Season` at its TMDB season.
+        """Point a `Season` at the season TMDB holds for it.
 
-        The `season_identifier` is taken from TMDB whenever one is found, since
-        it is what makes the same season on two websites a single season rather
-        than two. TMDB numbers films and seasons separately, so the media type is
-        part of the identifier to keep two that share a number apart.
+        TMDB numbers films and seasons separately, so the media type is part of
+        what names the season, to keep two that share a number apart.
         """
         if not tmdb_id or season.tmdb_id:
             return season
 
+        canonical_show_id = season.show.canonical_show_id
+        if canonical_show_id is None:
+            return season
+
         if media_type == MediaType.movie:
             if movie := self._movie_detail(tmdb_id):
-                season.season_identifier = tmdb_identifier(MediaType.movie, movie.id)
+                season.canonical_season = canonical_season_for(
+                    self.session,
+                    MediaType.movie,
+                    movie.id,
+                    canonical_show_id,
+                )
             return season
 
         seasons = self._show_seasons(tmdb_id)
@@ -480,7 +501,12 @@ class LinkMixin(LookupMixin, register=False):
         if season_detail is None:
             season_detail = _find_by_name(seasons, season.name)
         if season_detail:
-            season.season_identifier = tmdb_identifier(MediaType.tv, season_detail.id)
+            season.canonical_season = canonical_season_for(
+                self.session,
+                MediaType.tv,
+                season_detail.id,
+                canonical_show_id,
+            )
         return season
 
     # TODO: Validate
@@ -493,13 +519,10 @@ class LinkMixin(LookupMixin, register=False):
         media_type: MediaType = MediaType.tv,
         highest_episode_number: int | None = None,
     ) -> Episode:
-        """Point an `Episode` at its TMDB episode.
+        """Point an `Episode` at the episode TMDB holds for it.
 
-        The `episode_identifier` is taken from TMDB whenever one is found, since
-        it is what makes the same episode on two websites a single episode to
-        watch rather than two. TMDB numbers films and episodes separately, so the
-        media type is part of the identifier to keep two that share a number
-        apart.
+        TMDB numbers films and episodes separately, so the media type is part of
+        what names the episode, to keep two that share a number apart.
 
         `highest_episode_number` is the last episode number the website gives
         the season. A season the website and TMDB both end on the same number is
@@ -509,11 +532,17 @@ class LinkMixin(LookupMixin, register=False):
         if not tmdb_id:
             return episode
 
+        canonical_season_id = episode.season.canonical_season_id
+        if canonical_season_id is None:
+            return episode
+
         if media_type == MediaType.movie:
             if movie := self._movie_detail(tmdb_id):
-                episode.episode_identifier = tmdb_identifier(
+                episode.canonical_episode = canonical_episode_for(
+                    self.session,
                     MediaType.movie,
                     episode.tmdb_id or movie.id,
+                    canonical_season_id,
                 )
             return episode
 
@@ -526,9 +555,11 @@ class LinkMixin(LookupMixin, register=False):
             description=episode.description,
         )
         if match:
-            episode.episode_identifier = tmdb_identifier(
+            episode.canonical_episode = canonical_episode_for(
+                self.session,
                 MediaType.tv,
                 episode.tmdb_id or match.episode.id,
+                canonical_season_id,
             )
             # A match sure enough to settle says so in place of how it was made,
             # which is the same thing said with more behind it.
@@ -539,8 +570,8 @@ class LinkMixin(LookupMixin, register=False):
                 season_number,
                 episode_number,
             )
-            episode.episode_identifier_note = settled or match.note
-            episode.episode_identifier_locked = settled is not None
+            episode.canonical_episode_note = settled or match.note
+            episode.canonical_episode_locked = settled is not None
         return episode
 
     # TODO: Validate

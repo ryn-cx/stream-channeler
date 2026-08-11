@@ -41,9 +41,9 @@ MediaClass = type[MediaMixin[Any, Any]]
 def _channel_inclusion_clause() -> ColumnElement[bool]:
     return col(ChannelShow.is_blacklist_only).is_(False) & or_(
         col(ChannelShow.is_whitelist).is_(True)
-        & col(ChannelSeasonFilter.season_identifier).is_not(None),
+        & col(ChannelSeasonFilter.canonical_season_id).is_not(None),
         col(ChannelShow.is_whitelist).is_(False)
-        & col(ChannelSeasonFilter.season_identifier).is_(None),
+        & col(ChannelSeasonFilter.canonical_season_id).is_(None),
     )
 
 
@@ -51,21 +51,22 @@ def _channel_inclusion_clause() -> ColumnElement[bool]:
 def _season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Season to be included in some channel."""
     # A channel holds a title rather than one website's copy of it, so the show the
-    # season belongs to is reached through the identifier the copies share.
+    # season belongs to is reached through the title the copies are all of.
     channel_show_of = aliased(Show)
     return (
         select(ChannelShow.id)
         .select_from(ChannelShow)
         .join(
             channel_show_of,
-            col(channel_show_of.show_identifier) == col(ChannelShow.show_identifier),
+            col(channel_show_of.canonical_show_id)
+            == col(ChannelShow.canonical_show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
             & (
-                col(ChannelSeasonFilter.season_identifier)
-                == col(Season.season_identifier)
+                col(ChannelSeasonFilter.canonical_season_id)
+                == col(Season.canonical_season_id)
             ),
         )
         .where(
@@ -86,14 +87,15 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(channel_show_of, col(channel_show_of.id) == col(Season.show_id))
         .join(
             ChannelShow,
-            col(ChannelShow.show_identifier) == col(channel_show_of.show_identifier),
+            col(ChannelShow.canonical_show_id)
+            == col(channel_show_of.canonical_show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
             & (
-                col(ChannelSeasonFilter.season_identifier)
-                == col(Season.season_identifier)
+                col(ChannelSeasonFilter.canonical_season_id)
+                == col(Season.canonical_season_id)
             ),
         )
         .where(
@@ -112,14 +114,14 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(
             ChannelShow,
-            col(ChannelShow.show_identifier) == col(Show.show_identifier),
+            col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
             & (
-                col(ChannelSeasonFilter.season_identifier)
-                == col(Season.season_identifier)
+                col(ChannelSeasonFilter.canonical_season_id)
+                == col(Season.canonical_season_id)
             ),
         )
         .where(
@@ -139,14 +141,14 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(
             ChannelShow,
-            col(ChannelShow.show_identifier) == col(Show.show_identifier),
+            col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
             & (
-                col(ChannelSeasonFilter.season_identifier)
-                == col(Season.season_identifier)
+                col(ChannelSeasonFilter.canonical_season_id)
+                == col(Season.canonical_season_id)
             ),
         )
         .where(
