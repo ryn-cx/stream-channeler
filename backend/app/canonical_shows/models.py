@@ -47,6 +47,10 @@ class BaseCanonicalShow(SQLModel):
     tmdb_id: int | None = Field(default=None)
 
     name: str | None = Field(default=None)
+    # The title's own page, as against a copy's `url`, which is where that
+    # one website streams it. TMDB's row points at themoviedb.org; a row only
+    # one website knows about points wherever that website put it.
+    url: str | None = Field(default=None)
     media_type: str | None = Field(default=None)
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)

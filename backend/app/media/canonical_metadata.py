@@ -44,6 +44,8 @@ SHOW_ID_FIELD = "canonical_show_id"
 SEASON_ID_FIELD = "canonical_season_id"
 EPISODE_ID_FIELD = "canonical_episode_id"
 
+CANONICAL_KEY_FIELD = "canonical_key"
+
 TMDB_SEASON_NUMBER_FIELD = "tmdb_season_number"
 TMDB_SEASON_NAME_FIELD = "tmdb_season_name"
 TMDB_EPISODE_NUMBER_FIELD = "tmdb_episode_number"
@@ -98,6 +100,7 @@ def _fill[RowT](
         for field in fields:
             if getattr(row, field) is None:
                 setattr(row, field, getattr(canonical, field))
+        _label(row, canonical)
     return rows
 
 
@@ -125,7 +128,15 @@ def _prefer[RowT](
             value = getattr(canonical, field)
             if value is not None:
                 setattr(row, field, value)
+        _label(row, canonical)
     return rows
+
+
+# TODO: Validate
+def _label(row: Any, canonical: Any) -> None:  # noqa: ANN401 - Any output row.
+    """Hand the row the key saying what it is, where it has somewhere to put it."""
+    if hasattr(row, CANONICAL_KEY_FIELD):
+        setattr(row, CANONICAL_KEY_FIELD, canonical.key)
 
 
 # TODO: Validate

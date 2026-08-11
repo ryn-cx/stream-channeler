@@ -6,7 +6,10 @@ from collections.abc import Generator
 
 import pytest
 
-from tests.plugins.plugin_validator.context_managers import serve_downloads_from_disk
+from tests.plugins.plugin_validator.context_managers import (
+    check_episodes_before_grouped_download,
+    serve_downloads_from_disk,
+)
 
 # Plugin tests should not be run on GitHub Actions because there are no cached
 # files to use.
@@ -29,6 +32,12 @@ def _stored_downloads() -> Generator[list[str]]:
     runs. A narrower fixture would be set up after that and leave those
     downloads to reach the network and go unstored, which is what made a source
     re-download its listing on every run.
+
+    A grouped episode download goes around the store, so each episode is reached
+    for on its own first and only what that leaves missing is downloaded.
     """
-    with serve_downloads_from_disk() as downloaded:
+    with (
+        check_episodes_before_grouped_download(),
+        serve_downloads_from_disk() as downloaded,
+    ):
         yield downloaded

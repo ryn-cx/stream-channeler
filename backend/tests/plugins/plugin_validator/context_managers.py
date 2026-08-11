@@ -1,8 +1,8 @@
 # TODO: Validate
 """Context managers for PluginValidator."""
 
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import Callable, Generator, Sequence
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -14,8 +14,11 @@ from pydantic import BaseModel
 
 from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
 from app.files.models import File
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BaseFile
+from plugins.utils.base_plugin import BaseFile, BasePlugin
+from plugins.utils.manage_plugins import import_plugins
 
 
 # TODO: Validate
@@ -272,6 +275,84 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         keys = "\n".join(unstorable)
         msg = f"The file system would not store these file keys:\n{keys}"
         raise OSError(msg)
+
+
+_GROUPED_DOWNLOAD = "_download_all_episode_files"
+
+
+# TODO: Validate
+def _grouped_download_overrides() -> list[type[BasePlugin]]:
+    """Return every plugin that downloads a season's episodes as a group.
+
+    A plugin that keeps the one-file-at-a-time download it inherits is left out,
+    since it already reaches for each episode on its own.
+    """
+    import_plugins()
+    remaining: list[type[BasePlugin]] = [BasePlugin]
+    overrides: list[type[BasePlugin]] = []
+    while remaining:
+        plugin_class = remaining.pop()
+        remaining.extend(plugin_class.__subclasses__())
+        if _GROUPED_DOWNLOAD in plugin_class.__dict__:
+            overrides.append(plugin_class)
+    return overrides
+
+
+# TODO: Validate
+def _serve_before_grouping(
+    grouped_download: Callable[..., list[File]],
+) -> Callable[..., list[File]]:
+    """Wrap a grouped download so each episode is served on its own first."""
+
+    # TODO: Validate
+    def _download_all_episode_files(
+        self: BasePlugin,
+        season: str | Season,
+        show: str | Show | None = None,
+        preloaded_files: Sequence[File] | None = None,
+    ) -> list[File]:
+        season_key = self._get_key(season)
+        show_key = self._get_show_key(season, show)
+        episode_keys = self._episode_keys_from_file(season_key, show_key)
+        # Held for as long as the files are being reached for, because a preload
+        # only warms the session and what it warmed is dropped once it is let go.
+        _cache = self._preload_episode_files(
+            episode_keys,
+            season_key,
+            show_key,
+            preloaded_files,
+        )
+        for episode_key in episode_keys:
+            self._download_outdated_files(
+                self._episode_files(episode_key, season_key, show_key),
+            )
+        return grouped_download(self, season, show, preloaded_files)
+
+    return _download_all_episode_files
+
+
+# TODO: Validate
+@contextmanager
+def check_episodes_before_grouped_download() -> Generator[None]:
+    """Reach for each episode on its own before a plugin downloads them as a group.
+
+    A plugin that fetches a season's episodes in one request goes around
+    `download_if_outdated`, which is what serves a file out of the store, so a
+    whole group is downloaded again when a single episode of it is missing.
+    Asking for each episode first leaves the group download only the episodes
+    that really are missing, and the run that records a test's data downloads
+    the one new video rather than the season it belongs to.
+    """
+    with ExitStack() as stack:
+        for plugin_class in _grouped_download_overrides():
+            stack.enter_context(
+                patch.object(
+                    plugin_class,
+                    _GROUPED_DOWNLOAD,
+                    _serve_before_grouping(plugin_class.__dict__[_GROUPED_DOWNLOAD]),
+                ),
+            )
+        yield
 
 
 # TODO: Validate

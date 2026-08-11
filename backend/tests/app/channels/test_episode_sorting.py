@@ -1534,14 +1534,14 @@ class TestWhitelistWithEpisodeExclusion:
         session_scoped_session.add(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_identifier=season.season_identifier,
+                canonical_season_id=season.canonical_season_id,
             ),
         )
         # Also mark the episode — this should exclude it from the whitelisted season
         session_scoped_session.add(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_identifier=episode_excluded.episode_identifier,
+                canonical_episode_id=episode_excluded.canonical_episode_id,
             ),
         )
         session_scoped_session.flush()
@@ -1588,14 +1588,14 @@ class TestBlacklistWithEpisodeInclusion:
         session_scoped_session.add(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                season_identifier=season.season_identifier,
+                canonical_season_id=season.canonical_season_id,
             ),
         )
         # Also mark the episode — this should include it despite the season blacklist
         session_scoped_session.add(
             ChannelEpisodeFilter(
                 channel_show_id=channel_show.id,
-                episode_identifier=episode_included.episode_identifier,
+                canonical_episode_id=episode_included.canonical_episode_id,
             ),
         )
         session_scoped_session.flush()
@@ -1682,7 +1682,7 @@ class TestNestedChannelBlacklist:
         session.add(
             ChannelEpisodeFilter(
                 channel_show_id=blacklist_show.id,
-                episode_identifier=episode_z.episode_identifier,
+                canonical_episode_id=episode_z.canonical_episode_id,
             ),
         )
 

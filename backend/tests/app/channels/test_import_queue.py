@@ -48,7 +48,7 @@ class TestImportQueue:
             select(ChannelShow).where(ChannelShow.channel_id == channel.id),
         ).all()
         assert len(channel_shows) == 1
-        assert channel_shows[0].show_identifier == show.show_identifier
+        assert channel_shows[0].canonical_show_id == show.canonical_show_id
 
     # TODO: Validate
     def test_uses_the_callers_session_database(
@@ -94,8 +94,10 @@ class TestImportQueue:
         channel_shows = function_scoped_session.exec(
             select(ChannelShow).where(ChannelShow.channel_id == channel.id),
         ).all()
-        assert {channel_show.show_identifier for channel_show in channel_shows} == {
-            show.show_identifier,
+        assert {
+            channel_show.canonical_show_id for channel_show in channel_shows
+        } == {
+            show.canonical_show_id,
         }
 
     # TODO: Validate

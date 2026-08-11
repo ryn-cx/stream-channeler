@@ -41,6 +41,11 @@ class EpisodeOutput(BaseEpisode):
     canonical_episode_id: uuid.UUID
     # The TMDB episode behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
+    # What the episode is, said the same way wherever it turns up. Two rows
+    # sharing it are the same episode listed twice -- deliberately, so each
+    # listing can be filtered on its own -- and this is what collapses them
+    # when a normalised view is wanted.
+    canonical_key: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.

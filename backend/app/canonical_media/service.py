@@ -63,7 +63,10 @@ def canonical_season_by_key(
 ) -> CanonicalSeason:
     """Return the season `key` names, creating it if nothing claims it yet."""
     existing = session.exec(
-        select(CanonicalSeason).where(CanonicalSeason.key == key),
+        select(CanonicalSeason).where(
+            CanonicalSeason.canonical_show_id == canonical_show_id,
+            CanonicalSeason.key == key,
+        ),
     ).first()
     if existing:
         return existing
@@ -81,7 +84,10 @@ def canonical_episode_by_key(
 ) -> CanonicalEpisode:
     """Return the episode `key` names, creating it if nothing claims it yet."""
     existing = session.exec(
-        select(CanonicalEpisode).where(CanonicalEpisode.key == key),
+        select(CanonicalEpisode).where(
+            CanonicalEpisode.canonical_season_id == canonical_season_id,
+            CanonicalEpisode.key == key,
+        ),
     ).first()
     if existing:
         return existing
@@ -183,6 +189,7 @@ def _record_key(plugin_key: str, record: Show | Season | Episode) -> str:
 # TODO: Validate
 def _copy_show_metadata(show: Show, canonical: CanonicalShow) -> None:
     canonical.name = show.name
+    canonical.url = show.url
     canonical.media_type = show.media_type
     canonical.description = show.description
     canonical.image_url = show.image_url
@@ -192,6 +199,7 @@ def _copy_show_metadata(show: Show, canonical: CanonicalShow) -> None:
 # TODO: Validate
 def _copy_season_metadata(season: Season, canonical: CanonicalSeason) -> None:
     canonical.name = season.name
+    canonical.url = season.url
     canonical.season_number = season.season_number
     canonical.image_url = season.image_url
     canonical.sort_order = season.sort_order
@@ -199,9 +207,11 @@ def _copy_season_metadata(season: Season, canonical: CanonicalSeason) -> None:
 
 # TODO: Validate
 def _copy_episode_metadata(episode: Episode, canonical: CanonicalEpisode) -> None:
-    # `url` is deliberately left out: it is the one field that says where rather
-    # than what, and belongs to the copy alone.
+    # The copy's `url` is carried over as the episode's own page, which is
+    # right while this is the only copy there is. A row TMDB holds keeps
+    # themoviedb.org, since the guard above stops a website writing over it.
     canonical.name = episode.name
+    canonical.url = episode.url
     canonical.description = episode.description
     canonical.image_url = episode.image_url
     canonical.episode_number = episode.episode_number
@@ -392,6 +402,40 @@ def point_episode_at(
 
 
 # TODO: Validate
+def _discard_abandoned(
+    session: Session,
+    *,
+    kept_show_id: uuid.UUID,
+    shows: set[uuid.UUID],
+    seasons: set[uuid.UUID],
+    episodes: set[uuid.UUID],
+) -> None:
+    """Drop the rows the keys moved every copy off, deepest level first.
+
+    Only ever rows nobody claimed: ones the flush hook minted to satisfy a
+    pointer before `reconcile_show` worked out what the record really is of.
+    """
+    session.flush()
+    for canonical_id in episodes:
+        discard_if_unused(session, canonical_id)
+    session.flush()
+
+    # A season under a title that is going anyway is taken by the cascade, so
+    # deleting it here as well would issue a statement that matches nothing.
+    doomed_shows = {
+        canonical_id for canonical_id in shows if canonical_id != kept_show_id
+    }
+    for canonical_id in seasons:
+        season_row = session.get(CanonicalSeason, canonical_id)
+        if season_row and season_row.canonical_show_id not in doomed_shows:
+            _discard_season_if_unused(session, canonical_id)
+    session.flush()
+
+    for canonical_id in doomed_shows:
+        _discard_show_if_unused(session, canonical_id)
+
+
+# TODO: Validate
 def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
     """Give `show` and everything under it the canonical rows they are of.
 
@@ -449,21 +493,10 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
                 if previous_id:
                     abandoned_episodes.add(previous_id)
 
-    session.flush()
-    for canonical_id in abandoned_episodes:
-        discard_if_unused(session, canonical_id)
-    session.flush()
-    # A season under a title that is going anyway is taken by the cascade, so
-    # deleting it here as well would issue a statement that matches nothing.
-    doomed_shows = {
-        canonical_id
-        for canonical_id in abandoned_shows
-        if canonical_id != canonical_show.id
-    }
-    for canonical_id in abandoned_seasons:
-        season_row = session.get(CanonicalSeason, canonical_id)
-        if season_row and season_row.canonical_show_id not in doomed_shows:
-            _discard_season_if_unused(session, canonical_id)
-    session.flush()
-    for canonical_id in doomed_shows:
-        _discard_show_if_unused(session, canonical_id)
+    _discard_abandoned(
+        session,
+        kept_show_id=canonical_show.id,
+        shows=abandoned_shows,
+        seasons=abandoned_seasons,
+        episodes=abandoned_episodes,
+    )

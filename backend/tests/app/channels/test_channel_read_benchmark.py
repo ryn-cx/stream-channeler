@@ -74,7 +74,7 @@ def _add_watches(session: Session, user: User, episodes: list[Episode]) -> None:
             Watch,
             user_id=user.id,
             episode_id=episode.id,
-            episode_identifier=episode.episode_identifier,
+            canonical_episode_id=episode.canonical_episode_id,
             verified=index % 2 == 0,
             watch_date=random_past_timestamp(),
         )

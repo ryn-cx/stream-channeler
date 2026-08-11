@@ -1,14 +1,27 @@
 # TODO: Validate
 from typing import override
 
+from sqlmodel import Session
+
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.YouTube import YouTube
-from plugins.YouTube.files import is_show_season_key
+from plugins.YouTube.files import is_show_season_key, is_video_key
 from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
 from tests.plugins.plugin_validator.validator import Validator
+
+
+# TODO: Validate
+def _reads_a_feed(season_key: str) -> bool:
+    """Report whether the season's update reads a feed for new videos.
+
+    A season that is a single video, and a season of a show, are re-read from
+    the page describing them instead, which is a file the season already has.
+    """
+    return not (is_video_key(season_key) or is_show_season_key(season_key))
 
 
 # TODO: Validate
@@ -39,12 +52,33 @@ class YouTubeValidator(PluginValidator[YouTube]):
 
     # TODO: Validate
     @override
+    def _initialize_extra_files(self, session: Session) -> None:
+        """Store the feed each season's update reads for new videos.
+
+        Nothing asks for it while a URL is being imported, so it is the one file
+        an update needs that recording the import does not leave behind.
+        """
+        plugin = self.plugin_class(session)
+        for source in self.select_plugin_with_children(session).sources:
+            for show in source.shows:
+                for season in show.seasons:
+                    if _reads_a_feed(season.key):
+                        plugin.playlist_feed_file(season.key).download_if_outdated(
+                            tz_datetime.now(),
+                        )
+
+    # TODO: Validate
+    @override
     def update_season_validator(self, season: Season) -> Validator:
+        # A season read from a feed only re-reads its own files when the feed
+        # lists a video it does not have, so an update that finds nothing new
+        # leaves the season with nothing but the update_at the feed sets.
+        if _reads_a_feed(season.key):
+            return Validator().incremented(season.id, "update_at", "modified_at")
+
         output = super().update_season_validator(season)
         # Season update_at is recalculated from the RSS feed in update_season.
         output.incremented(season.id, "update_at")
-        # # The show is also re-upserted during update_season.
-        # output.incremented(season.show.id, "data_timestamp", "modified_at")
         return output
 
     # TODO: Validate

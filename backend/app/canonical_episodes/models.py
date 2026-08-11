@@ -32,7 +32,9 @@ class BaseCanonicalEpisode(SQLModel):
     # What makes two copies of this episode one episode rather than two.
     # Namespaced by whoever issued it — "TMDB tv 1234" for a record TMDB holds,
     # "YouTube dQw4w9WgXcQ" for one only YouTube knows about — so no two
-    # sources can collide on it. `None` while nothing has claimed the episode.
+    # sources can collide on it. Unique within one season rather than
+    # across all of them, since a plugin only promises a key means one
+    # thing under the season holding it. `None` while nothing has claimed the episode.
     key: str | None = Field(default=None)
 
     # TMDB's own account of the episode, kept as columns rather than read back
@@ -42,6 +44,10 @@ class BaseCanonicalEpisode(SQLModel):
     tmdb_id: int | None = Field(default=None)
 
     name: str | None = Field(default=None)
+    # The episode's own page, as against a copy's `url`, which is where that
+    # one website streams it. TMDB's row points at themoviedb.org; a row only
+    # one website knows about points wherever that website put it.
+    url: str | None = Field(default=None)
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     episode_number: int | None = Field(default=None)
@@ -66,7 +72,11 @@ class CanonicalEpisode(TimestampIdAndHashMixin, BaseCanonicalEpisode, table=True
 
     __table_args__ = (
         PrimaryKeyConstraint("id"),
-        UniqueConstraint("key", name="CanonicalEpisode-key-key"),
+        UniqueConstraint(
+            "canonical_season_id",
+            "key",
+            name="CanonicalEpisode-canonical_season_id-key-key",
+        ),
         UniqueConstraint(
             "tmdb_media_type",
             "tmdb_id",

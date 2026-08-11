@@ -119,7 +119,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         # Get values then delete existing watch so multiple will be created at once.
         plugin = initial_test_data.record.episode.season.show.source.plugin
         key = initial_test_data.record.episode.key
-        identifier = initial_test_data.record.episode.episode_identifier
+        canonical_episode_id = initial_test_data.record.episode.canonical_episode_id
         session_scoped_session.delete(initial_test_data.record)
 
         sibling_episodes = [
@@ -127,7 +127,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 session_scoped_session,
                 plugin,
                 key=key,
-                episode_identifier=identifier,
+                canonical_episode_id=canonical_episode_id,
             )
             for _ in range(sibling_count)
         ]
@@ -154,7 +154,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             ),
         ).all()
         # The watch links to one episode; the siblings sharing its
-        # `episode_identifier` are resolved when the watches are read instead.
+        # the canonical episode are resolved when the watches are read instead.
         watched_episode_ids = {watch.episode_id for watch in watches}
         assert len(watches) == 1
         assert watched_episode_ids == {initial_test_data.record.episode.id}
@@ -207,7 +207,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
             session_scoped_session,
             initial_test_data.record.episode.season.show.source.plugin,
             key=initial_test_data.record.episode.key,
-            episode_identifier=initial_test_data.record.episode.episode_identifier,
+            canonical_episode_id=initial_test_data.record.episode.canonical_episode_id,
         )
 
         with self.assert_no_db_change(session_scoped_session):

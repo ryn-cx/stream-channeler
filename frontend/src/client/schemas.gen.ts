@@ -2591,6 +2591,17 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
+        },
         username: {
             anyOf: [
                 {
@@ -2865,6 +2876,17 @@ export const EpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         }
     },
     type: 'object',
@@ -3284,6 +3306,17 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         },
         watch_date: {
             anyOf: [
@@ -5072,6 +5105,17 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
+        },
         username: {
             anyOf: [
                 {
@@ -5267,6 +5311,17 @@ export const SeasonOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         }
     },
     type: 'object',
@@ -5851,6 +5906,17 @@ export const ShowListPublicSchema = {
             ],
             title: 'Tmdb Id'
         },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
+        },
         username: {
             anyOf: [
                 {
@@ -6058,6 +6124,17 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         }
     },
     type: 'object',
@@ -8317,6 +8394,17 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
+        },
         filtered: {
             type: 'boolean',
             title: 'Filtered'
@@ -8514,6 +8602,17 @@ export const WhitelistSeasonOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         },
         filtered: {
             type: 'boolean',
@@ -8746,6 +8845,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         },
         is_whitelist: {
             type: 'boolean',

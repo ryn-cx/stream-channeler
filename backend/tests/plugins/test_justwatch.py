@@ -136,8 +136,8 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
                 .join(Source)
                 .join(Plugin)
                 .where(
-                    col(Show.show_identifier).in_(
-                        {result.show_identifier for result in results},
+                    col(Show.key).in_(
+                        {result.show_key for result in results},
                     ),
                     col(Show.deleted_at).is_(None),
                     Plugin.key != JustWatch.plugin_key(),

@@ -35,7 +35,7 @@ def _auth_headers(client: TestClient, session: Session) -> dict[str, str]:
 
 # TODO: Validate
 def _episode(identifier: str) -> Episode:
-    return build_random_model(Episode, episode_identifier=identifier, deleted_at=None)
+    return build_random_model(Episode, canonical_episode_id=identifier, deleted_at=None)
 
 
 # TODO: Validate

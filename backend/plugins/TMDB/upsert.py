@@ -149,6 +149,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
 
         canonical = canonical_show_for(self.session, media_type, tmdb_id)
+        canonical.url = title_page_url(media_type, tmdb_id)
         canonical.name = name
         canonical.description = description
         canonical.media_type = (
@@ -180,6 +181,7 @@ class UpsertMixin(HelperMixin, register=False):
             detail.id,
             canonical_show.id,
         )
+        canonical_season.url = title_page_url(MediaType.tv, tmdb_id)
         canonical_season.name = detail.name
         canonical_season.season_number = season_number
         canonical_season.sort_order = season_number
@@ -195,6 +197,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
             self._write_episode(
                 canonical_episode,
+                url=title_page_url(MediaType.tv, tmdb_id),
                 name=episode.name,
                 description=episode.overview,
                 image_url=still_image_url(episode.still_path),
@@ -214,6 +217,7 @@ class UpsertMixin(HelperMixin, register=False):
             movie.id,
             canonical_show.id,
         )
+        canonical_season.url = title_page_url(MediaType.movie, tmdb_id)
         canonical_season.name = movie.title
         canonical_season.season_number = MOVIE_SEASON_NUMBER
         canonical_season.sort_order = MOVIE_SEASON_NUMBER
@@ -228,6 +232,7 @@ class UpsertMixin(HelperMixin, register=False):
         )
         self._write_episode(
             canonical_episode,
+            url=title_page_url(MediaType.movie, tmdb_id),
             name=movie.title,
             description=movie.overview,
             image_url=backdrop_image_url(movie.backdrop_path),
@@ -242,6 +247,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         canonical_episode: CanonicalEpisode,
         *,
+        url: str | None,
         name: str | None,
         description: str | None,
         image_url: str | None,
@@ -251,6 +257,7 @@ class UpsertMixin(HelperMixin, register=False):
         sort_order: int,
     ) -> None:
         """Write what TMDB says about an episode onto the row standing for it."""
+        canonical_episode.url = url
         canonical_episode.name = name
         canonical_episode.description = description
         canonical_episode.image_url = image_url

@@ -53,7 +53,7 @@ def create_random_channel_show(
     channel_show = build_random_model(
         ChannelShow,
         channel_id=channel.id,
-        show_identifier=parent.show_identifier,
+        canonical_show_id=parent.canonical_show_id,
         **kwargs,
     )
     session.add(channel_show)

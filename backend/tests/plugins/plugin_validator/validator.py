@@ -7,6 +7,9 @@ from typing import Any, Literal, Self, get_args
 
 from pydantic import BaseModel
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
@@ -15,6 +18,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
+from tests.plugins.plugin_validator.serialization import Record, children
 
 ValidatorRuleType = Literal[
     "Static",
@@ -29,7 +33,23 @@ ValidatorRuleType = Literal[
 ValidatorKey = type[BaseModel] | uuid.UUID | str
 ChangedToValue = datetime | int | str
 
-_ALL_MODELS = (Plugin, Source, Show, Season, Episode)
+_ALL_MODELS = (
+    Plugin,
+    Source,
+    Show,
+    Season,
+    Episode,
+    CanonicalShow,
+    CanonicalSeason,
+    CanonicalEpisode,
+)
+
+
+# A record is paired with the one it stands for by its key, and by its name when
+# there is no key, which is the case for a canonical row nothing has claimed.
+# TODO: Validate
+def _pairing_key(record: Record) -> tuple[str, str]:
+    return (record.key or "", record.name or "")
 
 
 # TODO: Validate
@@ -246,14 +266,14 @@ class Validator:
     # TODO: Validate
     def get_rule(
         self,
-        obj: Plugin | Source | Show | Season | Episode | File,
+        obj: Record | File,
         field_name: str,
     ) -> ValidatorRuleType | None:
         """Get the validation rule for a specific object and field.
 
         Checks in priority order: id, key, class type.
         """
-        for rules_key in (obj.id, obj.key, type(obj)):
+        for rules_key in (obj.id, obj.key or "", type(obj)):
             rules = self._rules[rules_key]
             for rule_type in get_args(ValidatorRuleType):
                 if field_name in rules[rule_type]:
@@ -263,11 +283,11 @@ class Validator:
     # TODO: Validate
     def _get_changed_to_value(
         self,
-        obj: Plugin | Source | Show | Season | Episode | File,
+        obj: Record | File,
         field_name: str,
     ) -> ChangedToValue:
         """Get the expected value for a ChangedTo field, checking id, key, then type."""
-        for rules_key in (obj.id, obj.key, type(obj)):
+        for rules_key in (obj.id, obj.key or "", type(obj)):
             if field_name in self._changed_to_values[rules_key]:
                 return self._changed_to_values[rules_key][field_name]
         message = f"No changed_to value configured for {field_name}"
@@ -288,50 +308,65 @@ class Validator:
             raise AssertionError("\n\n".join(errors))
 
     # TODO: Validate
-    def _validate_fields[T: Plugin | Source | Show | Season | Episode](
+    def validate_canonical_shows(
         self,
-        original: T,
-        actual: T,
+        original: Sequence[CanonicalShow],
+        actual: Sequence[CanonicalShow],
+    ) -> None:
+        """Validate the rows every copy is of against the recorded ones.
+
+        A canonical row belongs to no one plugin, so the rows are validated as a
+        set of their own rather than as part of a plugin's tree. Their count is
+        what says a video that turns up twice is one episode and not two.
+
+        Raises:
+            AssertionError: If validation fails with details about mismatches.
+        """
+        if errors := self._validate_records("Canonical shows", original, actual):
+            raise AssertionError("\n\n".join(errors))
+
+    # TODO: Validate
+    def _validate_records(
+        self,
+        label: str,
+        original: Sequence[Record],
+        actual: Sequence[Record],
     ) -> list[str]:
-        errors: list[str] = []
-
-        if len(original.children) != len(actual.children):
-            original_children = original.children
-            actual_children = actual.children
-            missing = [
-                original_child
-                for original_child in original_children
-                if original_child not in actual_children
-            ]
-            extra = [
-                actual_child
-                for actual_child in actual_children
-                if actual_child not in original_children
-            ]
+        if len(original) != len(actual):
+            missing = [record for record in original if record not in actual]
+            extra = [record for record in actual if record not in original]
             detail_lines = [
-                f"\n{original}",
-                "Number of children do not match.",
-                f"Original: {len(original_children)}",
-                f"Actual  : {len(actual_children)}",
+                f"\n{label}",
+                "Number of records do not match.",
+                f"Original: {len(original)}",
+                f"Actual  : {len(actual)}",
             ]
-            detail_lines.extend(f"Missing : {child}" for child in missing)
-            detail_lines.extend(f"Extra   : {child}" for child in extra)
-            errors.append("\n".join(detail_lines))
-            # If the number of children don't match there is no point in further
-            # comparisons because they will be junk.
-            return errors
+            detail_lines.extend(f"Missing : {record}" for record in missing)
+            detail_lines.extend(f"Extra   : {record}" for record in extra)
+            # If the counts don't match there is no point in comparing the
+            # records themselves because the pairings will be junk.
+            return ["\n".join(detail_lines)]
 
-        # Recursively validate children
-        if isinstance(original, (Plugin, Source, Show, Season)):
-            for original_child, actual_child in zip(
-                sorted(original.children, key=lambda x: x.key),
-                sorted(actual.children, key=lambda x: x.key),
-                strict=True,
-            ):
-                # Help MyPy identify the objects correctly.
-                assert isinstance(original_child, (Source, Show, Season, Episode))
-                assert isinstance(actual_child, (Source, Show, Season, Episode))
-                errors.extend(self._validate_fields(original_child, actual_child))
+        errors: list[str] = []
+        for original_record, actual_record in zip(
+            sorted(original, key=_pairing_key),
+            sorted(actual, key=_pairing_key),
+            strict=True,
+        ):
+            errors.extend(self._validate_fields(original_record, actual_record))
+        return errors
+
+    # TODO: Validate
+    def _validate_fields(
+        self,
+        original: Record,
+        actual: Record,
+    ) -> list[str]:
+        errors = self._validate_records(
+            str(original),
+            children(original),
+            children(actual),
+        )
 
         # Validate each individual field
         for field_name in type(original).model_fields:
@@ -353,7 +388,7 @@ class Validator:
     # TODO: Validate
     def _validate_field[T: str | int | datetime](  # noqa: PLR0911, PLR0912, C901
         self,
-        original_obj: Plugin | Source | Show | Season | Episode | File,
+        original_obj: Record | File,
         field_name: str,
         original_value: T | None,
         new_value: T | None,

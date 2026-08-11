@@ -509,6 +509,7 @@ export type EpisodeListOutput = {
     season_id: string;
     canonical_episode_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     username: (string | null);
     season_name: (string | null);
     show_id: string;
@@ -543,6 +544,7 @@ export type EpisodeOutput = {
     season_id: string;
     canonical_episode_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
 };
 
 /**
@@ -607,6 +609,7 @@ export type EpisodeWithDetails = {
     season_id: string;
     canonical_episode_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
@@ -976,6 +979,7 @@ export type SeasonListOutput = {
     id: string;
     canonical_season_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     username: (string | null);
     show_name: (string | null);
     source_id: string;
@@ -1002,6 +1006,7 @@ export type SeasonOutput = {
     id: string;
     canonical_season_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
 };
 
 /**
@@ -1099,6 +1104,7 @@ export type ShowListPublic = {
     id: string;
     canonical_show_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
@@ -1126,6 +1132,7 @@ export type ShowPublic = {
     id: string;
     canonical_show_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
 };
 
 /**
@@ -1555,6 +1562,7 @@ export type WhitelistEpisodeOutput = {
     season_id: string;
     canonical_episode_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
@@ -1578,6 +1586,7 @@ export type WhitelistSeasonOutput = {
     id: string;
     canonical_season_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     filtered: boolean;
     show_ids: Array<(string)>;
     tmdb_season_number?: (number | null);
@@ -1608,6 +1617,7 @@ export type WhitelistShowOutput = {
     id: string;
     canonical_show_id: string;
     tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;

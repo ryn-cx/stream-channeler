@@ -152,12 +152,27 @@ class YouTube(
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
-            return self.upsert_show(self.source, show_key)
+            return self._upsert_and_reconcile_show(show_key)
 
         if self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            return self.upsert_show(self.source, show_key)
+            return self._upsert_and_reconcile_show(show_key)
 
+        return show
+
+    # TODO: Validate
+    def _upsert_and_reconcile_show(self, show_key: str) -> Show:
+        """Upsert the show and point it at the media it is a copy of.
+
+        What `_import_show` does for every other plugin, kept here because a
+        YouTube show is imported for one playlist at a time. Without it a video
+        that is in the uploads and in a playlist would be two episodes to watch
+        rather than one, and the first update of the show would have to move
+        every copy onto the record it was always of.
+        """
+        show = self.upsert_show(self.source, show_key)
+        self._unshare_canonical_episodes(show)
+        self._reconcile_canonical_media(show)
         return show
 
     # TODO: Validate

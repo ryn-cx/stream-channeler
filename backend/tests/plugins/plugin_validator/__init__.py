@@ -11,6 +11,10 @@ from freezegun import freeze_time
 from sqlalchemy import inspect as sa_inspect
 from sqlmodel import Session, col, select
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.service import reconcile_show
+from app.canonical_seasons.models import CanonicalSeason
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -27,7 +31,7 @@ from tests.app.utils.utils import build_random_model
 from tests.plugins.plugin_validator.context_managers import (
     mock_update,
 )
-from tests.plugins.plugin_validator.database import DatabaseMixin
+from tests.plugins.plugin_validator.database import DatabaseMixin, DatabaseState
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.validator import Validator
 
@@ -61,6 +65,48 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         return self._load_model(Plugin, dumped)
 
     # TODO: Validate
+    def get_detached_canonical_shows(self, session: Session) -> list[CanonicalShow]:
+        """Return detached copies of every canonical row to use with validation."""
+        return [
+            self._load_model(CanonicalShow, self._dump_model(canonical_show))
+            for canonical_show in self.select_canonical_shows_with_children(session)
+        ]
+
+    # TODO: Validate
+    def detached_state(self, session: Session) -> DatabaseState:
+        """Return a detached copy of everything a test compares."""
+        return DatabaseState(
+            self.get_detached_plugin(session),
+            self.get_detached_canonical_shows(session),
+        )
+
+    # TODO: Validate
+    def settle_canonical_media(self, session: Session, show: Show) -> None:
+        """Give the records built by hand the canonical rows an import would have.
+
+        A fabricated record is handed a row by the flush hook and nothing has
+        claimed it, where a record an import wrote is of the row its key names.
+        Reconciling before the state is captured is what makes the two the same,
+        so the update under test is not also the first thing to settle the link.
+        """
+        reconcile_show(session, show, self.plugin_class.plugin_key())
+        session.flush()
+
+    # TODO: Validate
+    def validate_state(
+        self,
+        validator: Validator,
+        original: DatabaseState,
+        actual: DatabaseState,
+    ) -> None:
+        """Validate the plugin's tree and the rows its records are copies of."""
+        validator.validate(original.plugin, actual.plugin)
+        validator.validate_canonical_shows(
+            original.canonical_shows,
+            actual.canonical_shows,
+        )
+
+    # TODO: Validate
     def import_url_validator(self) -> Validator:
         return (
             Validator()
@@ -73,6 +119,13 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             .changed(Show, "source_id")
             .changed(Season, "show_id")
             .changed(Episode, "season_id")
+            # The row each copy is of is created alongside it, so its id is as
+            # freshly generated as the copy's own.
+            .changed(Show, "canonical_show_id")
+            .changed(Season, "canonical_season_id")
+            .changed(Episode, "canonical_episode_id")
+            .changed(CanonicalSeason, "canonical_show_id")
+            .changed(CanonicalEpisode, "canonical_season_id")
         )
 
     # TODO: Validate
@@ -129,6 +182,16 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         return self.generic_deleted_validator(episode)
 
     # TODO: Validate
+    def deleted_episode_update_show_validator(self, episode: Episode) -> Validator:
+        """Rules for an episode a `update_show` is what soft deletes.
+
+        Kept apart from `deleted_episode_validator` because what a plugin reads
+        to update one season is not what it reads to update the show, so what
+        the update leaves behind on the way is not the same either.
+        """
+        return self.generic_deleted_validator(episode)
+
+    # TODO: Validate
     def imported_shows(
         self,
         session: Session,
@@ -136,26 +199,25 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     ) -> list[Show]:
         """Return the plugin's own `Show`s behind `results`.
 
-        A result names a title by identifier rather than carrying one website's
-        record of it, so the records are looked up here. A title can be stored
-        under several plugins - JustWatch imports through every service that has
-        an offer, and TMDB holds its own copy of everything - so only the copies
-        belonging to the plugin under test are returned, which are the only ones
-        that plugin can update.
+        A result names a title by the key of the record the plugin just wrote,
+        so the records are looked up here. A title can be stored under several
+        plugins - JustWatch imports through every service that has an offer -
+        so only the copies belonging to the plugin under test are returned,
+        which are the only ones that plugin can update.
         """
-        identifiers = {result.show_identifier for result in results}
+        show_keys = {result.show_key for result in results}
         shows = session.exec(
             select(Show)
             .join(Source)
             .join(Plugin)
             .where(
-                col(Show.show_identifier).in_(identifiers),
+                col(Show.key).in_(show_keys),
                 col(Show.deleted_at).is_(None),
                 Plugin.key == self.plugin_class.plugin_key(),
             ),
         ).all()
         if not shows:
-            msg = f"No {self.plugin_class.plugin_key()} shows for {identifiers}"
+            msg = f"No {self.plugin_class.plugin_key()} shows for {show_keys}"
             raise ValueError(msg)
         return list(shows)
 
@@ -264,7 +326,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     def _update_and_validate(
         self,
         session: Session,
-        original_plugin: Plugin,
+        original: DatabaseState,
         entity: Plugin | Source | Show | Season | Episode,
         validator: Validator | None = None,
         *,
@@ -300,7 +362,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
 
         msg = f"Failed updating: {entity}"
         try:
-            validator.validate(original_plugin, self.get_detached_plugin(session))
+            self.validate_state(validator, original, self.detached_state(session))
         except AssertionError as error:
             raise AssertionError(msg) from error
 
@@ -315,6 +377,16 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         results = self._import_url(session)
         self._export_import_url_results_file(results)
         self._export_database_dump_file(session)
+
+    # TODO: Validate
+    def _initialize_extra_files(self, session: Session) -> None:
+        """Store the files that only an update reaches for.
+
+        A test's data is recorded by importing a URL, which never asks for the
+        files a plugin only reads when checking an existing record for changes.
+        Left unstored, those are what an update test has to reach the network
+        for, which it is not allowed to do.
+        """
 
     # TODO: Validate
     @pytest.mark.enable_socket
@@ -333,6 +405,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         try:
             if self.url:
                 self._initialize_import_data(session_with_files)
+                self._initialize_extra_files(session_with_files)
 
             if self.search_query:
                 # _search freezes the clock so stored search files stay within
@@ -373,11 +446,10 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         with log_stats(self):
             results = self.plugin_class(session_with_files).import_url(self.url)
 
-        original_plugin = self.load_database_dump_plugin()
-        validator = self.import_url_validator()
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        self.validate_state(
+            self.import_url_validator(),
+            self.dumped_state(),
+            self.detached_state(session_with_files),
         )
 
         expected_results = json.loads(self.import_url_results_file_path().read_text())
@@ -407,14 +479,14 @@ class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             pytest.skip()
 
         self._import_url(session_with_files)
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         with log_stats(self):
             self.plugin_class(session_with_files).import_url(self.url)
 
-        validator = self.existing_url_validator()
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        self.validate_state(
+            self.existing_url_validator(),
+            original,
+            self.detached_state(session_with_files),
         )
 
 
@@ -425,9 +497,9 @@ class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     # TODO: Validate
     def test_update_show(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         entity = self.get_random_show(session_with_files, results)
-        self._update_and_validate(session_with_files, original_plugin, entity)
+        self._update_and_validate(session_with_files, original, entity)
 
 
 # TODO: Validate
@@ -437,9 +509,9 @@ class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     # TODO: Validate
     def test_update_season(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         entity = self.get_random_season(session_with_files, results)
-        self._update_and_validate(session_with_files, original_plugin, entity)
+        self._update_and_validate(session_with_files, original, entity)
 
 
 # TODO: Validate
@@ -449,9 +521,9 @@ class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     # TODO: Validate
     def test_update_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         entity = self.get_random_episode(session_with_files, results)
-        self._update_and_validate(session_with_files, original_plugin, entity)
+        self._update_and_validate(session_with_files, original, entity)
 
 
 # TODO: Validate
@@ -493,8 +565,8 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             if season.update_at:
                 season.update_at = timestamp + timedelta(minutes=1)
 
-        original_plugin = self.get_detached_plugin(session_with_files)
-        self._update_and_validate(session_with_files, original_plugin, source)
+        original = self.detached_state(session_with_files)
+        self._update_and_validate(session_with_files, original, source)
 
 
 # TODO: Validate
@@ -514,11 +586,13 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                 Episode,
                 "full",
                 season_id=season.id,
+                canonical_episode_id=None,
                 deleted_at=tz_datetime.now(),
             )
-        season.episodes.append(fake_episode)
+            season.episodes.append(fake_episode)
+            self.settle_canonical_media(session_with_files, season.show)
 
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         fake_episode.soft_undelete()
         session_with_files.flush()
 
@@ -527,9 +601,10 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             self.plugin_class(session_with_files).update_season(season=season)
 
         validator = self.deleted_episode_validator(fake_episode)
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        self.validate_state(
+            validator,
+            original,
+            self.detached_state(session_with_files),
         )
 
 
@@ -550,11 +625,13 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                 Season,
                 "full",
                 show_id=show.id,
+                canonical_season_id=None,
                 deleted_at=tz_datetime.now(),
             )
-        show.seasons.append(fake_season)
+            show.seasons.append(fake_season)
+            self.settle_canonical_media(session_with_files, show)
 
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         fake_season.soft_undelete()
         session_with_files.flush()
 
@@ -563,9 +640,10 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             self.plugin_class(session_with_files).update_show(show=show)
 
         validator = self.deleted_season_validator(fake_season)
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        self.validate_state(
+            validator,
+            original,
+            self.detached_state(session_with_files),
         )
 
 
@@ -587,11 +665,13 @@ class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT
                 Episode,
                 "full",
                 season_id=season.id,
+                canonical_episode_id=None,
                 deleted_at=tz_datetime.now(),
             )
-        season.episodes.append(fake_episode)
+            season.episodes.append(fake_episode)
+            self.settle_canonical_media(session_with_files, season.show)
 
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         fake_episode.soft_undelete()
         session_with_files.flush()
 
@@ -599,10 +679,11 @@ class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT
         with freeze_time(freeze_at), log_stats(self):
             self.plugin_class(session_with_files).update_show(show=show)
 
-        validator = self.deleted_episode_validator(fake_episode)
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        validator = self.deleted_episode_update_show_validator(fake_episode)
+        self.validate_state(
+            validator,
+            original,
+            self.detached_state(session_with_files),
         )
 
 
@@ -623,18 +704,21 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
                 Season,
                 "full",
                 show_id=show.id,
+                canonical_season_id=None,
                 deleted_at=tz_datetime.now(),
             )
             fake_episode = build_random_model(
                 Episode,
                 "full",
                 season_id=fake_season.id,
+                canonical_episode_id=None,
                 deleted_at=tz_datetime.now(),
             )
-        fake_season.episodes.append(fake_episode)
-        show.seasons.append(fake_season)
+            fake_season.episodes.append(fake_episode)
+            show.seasons.append(fake_season)
+            self.settle_canonical_media(session_with_files, show)
 
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         fake_season.soft_undelete()
         session_with_files.flush()
 
@@ -644,9 +728,10 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
 
         validator = self.deleted_season_validator(fake_season)
         validator.incremented(fake_episode.id, "deleted_at", "modified_at")
-        validator.validate(
-            original_plugin,
-            self.get_detached_plugin(session_with_files),
+        self.validate_state(
+            validator,
+            original,
+            self.detached_state(session_with_files),
         )
 
 
@@ -689,25 +774,25 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     @pytest.mark.skip(reason="Exhaustive test - run manually")
     def test_all_updates(self, session_with_files: Session) -> None:
         self._import_url(session_with_files)
-        original_plugin = self.get_detached_plugin(session_with_files)
+        original = self.detached_state(session_with_files)
         plugin = self.select_plugin_with_children(session_with_files)
 
         for source in plugin.sources:
             for show in source.shows:
                 if show.data_timestamp:
-                    self._update_and_validate(session_with_files, original_plugin, show)
+                    self._update_and_validate(session_with_files, original, show)
                     session_with_files.rollback()
                 for season in show.seasons:
                     self._update_and_validate(
                         session_with_files,
-                        original_plugin,
+                        original,
                         season,
                     )
                     session_with_files.rollback()
                     for episode in season.episodes:
                         self._update_and_validate(
                             session_with_files,
-                            original_plugin,
+                            original,
                             episode,
                         )
                         session_with_files.rollback()

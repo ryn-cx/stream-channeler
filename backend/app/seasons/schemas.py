@@ -39,6 +39,11 @@ class SeasonOutput(BaseSeason):
     canonical_season_id: uuid.UUID
     # The TMDB season behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
+    # What the season is, said the same way wherever it turns up. Two rows
+    # sharing it are the same season listed twice -- deliberately, so each
+    # listing can be filtered on its own -- and this is what collapses them
+    # when a normalised view is wanted.
+    canonical_key: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.

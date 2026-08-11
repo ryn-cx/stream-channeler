@@ -2,8 +2,8 @@
 # TODO: This is entirely AI generated and is probably garbage.
 """Integration tests for source deduplication and global enable/disable.
 
-Exercises `EpisodeQueryBuilder` end to end: the same episode (shared
-`episode_identifier`) offered by two sources must collapse to one, the winner
+Exercises `EpisodeQueryBuilder` end to end: the same episode (one canonical
+episode) offered by two sources must collapse to one, the winner
 follows the user's source priority, disabling a source hides it globally, and
 the per-channel `source_ids` filter still stacks on top.
 """
@@ -13,6 +13,9 @@ import uuid
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
+from app.canonical_shows.models import CanonicalShow
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
 from app.models import Visibility
@@ -30,7 +33,6 @@ from tests.app.plugins.utils import create_random_plugin
 from tests.app.sources.utils import create_random_source
 from tests.app.users.utils import create_random_user
 
-SHARED_IDENTIFIER = "TMDB shared-episode"
 SOURCE_KEY_A = "DedupTestSourceA"
 SOURCE_KEY_B = "DedupTestSourceB"
 
@@ -43,6 +45,18 @@ def _build_duplicated_channel(
     """A channel with the same episode imported from two installed sources."""
     channel = create_random_channel(session, user, is_public=False)
     plugin_user = user_service.get_or_create_plugin_user(session=session)
+    # The one episode both sources carry a copy of. Made up front so the two
+    # copies can be pointed at it, which is what they would share after an
+    # import reconciled them.
+    shared_show = CanonicalShow()
+    session.add(shared_show)
+    session.flush()
+    shared_season = CanonicalSeason(canonical_show_id=shared_show.id)
+    session.add(shared_season)
+    session.flush()
+    shared_episode = CanonicalEpisode(canonical_season_id=shared_season.id)
+    session.add(shared_episode)
+    session.flush()
     shows: dict[str, Show] = {}
     for key in (SOURCE_KEY_A, SOURCE_KEY_B):
         plugin = create_random_plugin(
@@ -60,7 +74,7 @@ def _build_duplicated_channel(
         create_random_episode(
             session,
             channel_show_show(session, channel_show),
-            episode_identifier=SHARED_IDENTIFIER,
+            canonical_episode_id=shared_episode.id,
         )
         shows[key] = channel_show_show(session, channel_show)
     return channel, shows
