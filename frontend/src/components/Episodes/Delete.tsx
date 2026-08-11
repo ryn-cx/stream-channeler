@@ -13,6 +13,7 @@ interface DeleteEpisodeProps {
   episode: EpisodeTableData
 }
 
+// TODO: Validate
 const DeleteEpisode = ({ episode }: DeleteEpisodeProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

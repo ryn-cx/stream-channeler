@@ -8,6 +8,7 @@ from enum import StrEnum
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 
+# TODO: Validate
 class IssueReportMediaType(StrEnum):
     """Which kind of record a report was left on."""
 
@@ -16,18 +17,21 @@ class IssueReportMediaType(StrEnum):
     show = "show"
 
 
+# TODO: Validate
 class IssueReportCreate(BaseModel):
     """Schema for leaving an `IssueReport` on a record."""
 
     report: str = Field(min_length=1)
 
 
+# TODO: Validate
 class IssueReportUpdate(BaseModel):
     """Schema for rewriting an `IssueReport`."""
 
     report: str = Field(min_length=1)
 
 
+# TODO: Validate
 class IssueReportOutput(BaseModel):
     """Schema for returning an `IssueReport`.
 
@@ -45,6 +49,7 @@ class IssueReportOutput(BaseModel):
     username: str | None = Field(validation_alias=AliasPath("user", "username"))
 
 
+# TODO: Validate
 class IssueReportListOutput(IssueReportOutput):
     """Schema for returning an `IssueReport` alongside the record it was left on."""
 
@@ -56,6 +61,7 @@ class IssueReportListOutput(IssueReportOutput):
     source_name: str | None
 
 
+# TODO: Validate
 class IssueReportsListOutput(BaseModel):
     """Schema for returning every `IssueReport` on the site."""
 

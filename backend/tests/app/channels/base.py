@@ -17,6 +17,7 @@ from tests.app.utils.base import BaseTests
 from tests.app.utils.route_assertions import Method, assert_not_found, make_request
 
 
+# TODO: Validate
 class ChannelTestMixin(BaseTests[Channel]):
     database_model = Channel
     create_schema = ChannelCreate
@@ -26,19 +27,23 @@ class ChannelTestMixin(BaseTests[Channel]):
 
     # Channels do not rely on plugins for visibility and instead have their own
     # visibility column.
+    # TODO: Validate
     def set_visibility(self, record: Channel, *, record_is_public: bool) -> None:
         record.visibility = (
             Visibility.public if record_is_public else Visibility.private
         )
 
 
+# TODO: Validate
 class BaseChannelSubEndpointTests(ChannelTestMixin):
     sub_http_method: Method
     sub_parameters: dict[str, Any] | list[Any] | None = None
 
+    # TODO: Validate
     def sub_url(self, channel_id: uuid.UUID) -> str:
         raise NotImplementedError
 
+    # TODO: Validate
     def can_access_sub_endpoint(
         self,
         *,
@@ -48,6 +53,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
     ) -> bool:
         return (user_is_authenticated and user_is_owner) or record_is_public
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -96,6 +102,7 @@ class BaseChannelSubEndpointTests(ChannelTestMixin):
                 headers=initial_test_data.headers,
             )
 
+    # TODO: Validate
     def test_not_found(
         self,
         session_scoped_client: TestClient,

@@ -40,6 +40,7 @@ from tests.app.utils.utils import dump_random_model
 from tests.app.watches.utils import create_random_watch
 
 
+# TODO: Validate
 class WatchTestMixin(BaseTests[Watch]):
     database_model = Watch
     create_schema = WatchCreate
@@ -54,6 +55,7 @@ class WatchTestMixin(BaseTests[Watch]):
 
     # Watch has multiple foreign keys so this value needs to be manually specified as
     # episode_id because it connects to plugin which is responsible for the permissions.
+    # TODO: Validate
     @property
     def parent_key_name(self) -> str:
         return "episode_id"
@@ -61,12 +63,15 @@ class WatchTestMixin(BaseTests[Watch]):
 
 # There is somehow no overlap with UserOwnedCreateMixin so it is intentionally not used
 # for this class.
+# TODO: Validate
 class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
+    # TODO: Validate
     def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:
         return f"{settings.API_V1_STR}/episodes/{parent_id}/watches"
 
     # The user does not need to own a plugin to create watches for it if the plugin is
     # public.
+    # TODO: Validate
     def can_create_record(
         self,
         *,
@@ -83,6 +88,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
 
     # Watches have different properties if unverified siblings exist that are tested
     # independently.
+    # TODO: Validate
     @pytest.mark.skip
     def test_create_with_existing_records(
         self,
@@ -92,6 +98,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
     ) -> None:
         pass
 
+    # TODO: Validate
     @pytest.mark.parametrize("sibling_count", [1, 2])
     def test_create_watch_creates_siblings(
         self,
@@ -154,6 +161,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
         for episode in sibling_episodes:
             assert episode.id not in watched_episode_ids
 
+    # TODO: Validate
     def test_create_watch_rejects_when_unverified_exists(
         self,
         session_scoped_client: TestClient,
@@ -179,6 +187,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 parameters=dump_random_model(WatchCreate),
             )
 
+    # TODO: Validate
     def test_create_watch_rejects_when_sibling_has_unverified(
         self,
         session_scoped_client: TestClient,
@@ -211,6 +220,7 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
                 parameters=dump_random_model(WatchCreate),
             )
 
+    # TODO: Validate
     def test_create_watch_allowed_after_verification(
         self,
         session_scoped_client: TestClient,
@@ -238,21 +248,26 @@ class TestCreateWatch(WatchTestMixin, BaseCreateTests[Watch]):
 
 # Pretty much completely rewritten from BaseGetTests because the verification is more
 # complex.
+# TODO: Validate
 class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
+    # TODO: Validate
     @pytest.mark.skip(reason="`Watch` has no single-record GET route.")
     def test_get_permissions(self) -> None:  # type: ignore[override]
         ...
 
+    # TODO: Validate
     @pytest.mark.skip(reason="`Watch` has no single-record GET route.")
     def test_get_not_found(self) -> None:  # type: ignore[override]
         ...
 
+    # TODO: Validate
     def get_record_list_url(
         self,
         parent_id: uuid.UUID | str | None = None,  # noqa: ARG002
     ) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
+    # TODO: Validate
     @staticmethod
     def build_expected(*watches: Watch) -> WatchesListOutput:
         expected = WatchesListOutput(
@@ -278,6 +293,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             expected.plugins[plugin.id] = PluginOutput.model_validate(plugin)
         return expected
 
+    # TODO: Validate
     @staticmethod
     def assert_watches(
         output: WatchesListOutput,
@@ -298,6 +314,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
 
     # Watches need completely different verification style due to the data structure
     # being completely different since they include season/show/source/plugin data.
+    # TODO: Validate
     @override
     def assert_api_get_list_success(
         self,
@@ -321,6 +338,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         expected = self.build_expected(*all_watches)
         self.assert_watches(output, expected)
 
+    # TODO: Validate
     def can_get_record(
         self,
         *,
@@ -335,6 +353,7 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
             return True
         return user_is_superuser
 
+    # TODO: Validate
     def test_list_excludes_other_users_watches(
         self,
         session_scoped_client: TestClient,
@@ -362,13 +381,16 @@ class TestGetWatch(WatchTestMixin, UserOwnedGetMixin[Watch]):
         )
 
 
+# TODO: Validate
 class TestUpdateWatch(WatchTestMixin, BaseUpdateTests[Watch]):
     pass
 
 
+# TODO: Validate
 class TestDeleteWatch(WatchTestMixin, BaseDeleteTests[Watch]):
     pass
 
 
+# TODO: Validate
 class TestSyncWatches:
     """Syncing should create watches for sibling episodes that are missing them."""

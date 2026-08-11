@@ -13,6 +13,7 @@ from tests.app.utils.base_get import UserOwnedGetMixin
 from tests.app.utils.base_update import BaseUpdateTests
 
 
+# TODO: Validate
 class PluginTestMixin(BaseTests[Plugin]):
     database_model = Plugin
     create_schema = PluginCreate
@@ -21,17 +22,21 @@ class PluginTestMixin(BaseTests[Plugin]):
     create_record_function = staticmethod(create_random_plugin)
 
 
+# TODO: Validate
 class TestCreatePlugin(PluginTestMixin, UserOwnedCreateMixin[Plugin]):
     pass
 
 
+# TODO: Validate
 class TestUpdatePlugin(PluginTestMixin, BaseUpdateTests[Plugin]):
     pass
 
 
+# TODO: Validate
 class TestGetPlugin(PluginTestMixin, UserOwnedGetMixin[Plugin]):
     pass
 
 
+# TODO: Validate
 class TestDeletePlugin(PluginTestMixin, BaseDeleteTests[Plugin]):
     pass

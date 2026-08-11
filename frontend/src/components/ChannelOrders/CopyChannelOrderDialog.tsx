@@ -25,6 +25,7 @@ interface CopyChannelOrderDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 export function CopyChannelOrderDialog({
   order,
   open,

@@ -1,3 +1,4 @@
+# TODO: Validate
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -8,6 +9,7 @@ from app.users.schemas import UserCreate, UserUpdate
 from tests.utils.utils import random_email, random_lower_string
 
 
+# TODO: Validate
 def user_authentication_headers(
     *,
     client: TestClient,
@@ -22,6 +24,7 @@ def user_authentication_headers(
     return {"Authorization": f"Bearer {auth_token}"}
 
 
+# TODO: Validate
 def create_random_user(db: Session) -> User:
     email = random_email()
     password = random_lower_string()
@@ -29,6 +32,7 @@ def create_random_user(db: Session) -> User:
     return user_service.create_user(session=db, user_create=user_in)
 
 
+# TODO: Validate
 def authentication_token_from_email(
     *,
     client: TestClient,

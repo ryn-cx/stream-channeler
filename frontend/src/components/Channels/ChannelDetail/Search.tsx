@@ -26,6 +26,7 @@ import { useSearchablePlugins } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
+// TODO: Validate
 function mediaTypeLabel(mediaType: string): string {
   return mediaType === "movie" ? "Movie" : "TV Show"
 }
@@ -46,6 +47,7 @@ export type SelectedTitle = {
   image_url?: string | null
 }
 
+// TODO: Validate
 function useAddToQueue(channelId: string) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -73,6 +75,7 @@ const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 
 // Whether a search result is a title the channel already carries. A result from
 // a service is matched on its own URL, and a TMDB result on the title it names.
+// TODO: Validate
 function useIsInChannel(channelId: string) {
   const { data: showsData } = useQuery({
     queryKey: ["channel-shows", channelId],
@@ -90,6 +93,7 @@ function useIsInChannel(channelId: string) {
   }
 }
 
+// TODO: Validate
 function AddToQueueButton({
   url,
   channelId,
@@ -142,6 +146,7 @@ const PORTRAIT_WIDTH = 144
 const LANDSCAPE_WIDTH = 256
 const DEFAULT_ASPECT_RATIO = 2 / 3
 
+// TODO: Validate
 function ResultCard({
   imageUrl,
   title,
@@ -201,6 +206,7 @@ function ResultCard({
   )
 }
 
+// TODO: Validate
 function PluginResultCard({
   result,
   channelId,
@@ -231,6 +237,7 @@ function PluginResultCard({
 // Every source pages its search differently, so the backend hands back an
 // opaque cursor for the page after the current one. Keeping the cursor of each
 // page that has been visited is what makes stepping back possible.
+// TODO: Validate
 function useSearchCursors() {
   const [pages, setPages] = useState<{
     cursors: (string | null)[]
@@ -260,6 +267,7 @@ function useSearchCursors() {
   }
 }
 
+// TODO: Validate
 function SearchPager({
   pageIndex,
   nextCursor,
@@ -304,6 +312,7 @@ function SearchPager({
 }
 
 // Builds the "Movie • 2023 • 8.8★" style metadata line for a media detail.
+// TODO: Validate
 function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
   const parts: string[] = []
 
@@ -334,6 +343,7 @@ function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
 // The services streaming a title, as TMDB reports them for the US. A provider
 // the app has a plugin for carries a link to that site's search for the title,
 // which is how a user gets to it when the import cannot reach it on its own.
+// TODO: Validate
 function WatchProviders({ providers }: { providers: TMDBWatchProviderItem[] }) {
   return (
     <div className="flex flex-col gap-2">
@@ -388,6 +398,7 @@ function WatchProviders({ providers }: { providers: TMDBWatchProviderItem[] }) {
 
 // Fetches a single title's full detail on demand, so a multi-result search never
 // downloads that data for results the user never opens.
+// TODO: Validate
 export function MediaInfoModal({
   result,
   channelId,
@@ -512,6 +523,7 @@ interface ShowSearchProps {
   initialQuery?: string
 }
 
+// TODO: Validate
 export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? "")
 
@@ -610,6 +622,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     }
   }, [pluginKey, inAppPlugins])
 
+  // TODO: Validate
   const runSearch = async (key: string, rawQuery: string) => {
     const trimmed = rawQuery.trim()
     if (!key || !trimmed) return
@@ -665,6 +678,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     }
   }
 
+  // TODO: Validate
   const handleSearch = () => runSearch(pluginKey, searchQuery)
   const isSearching = isCheckingUrl || isFetching
 

@@ -18,12 +18,14 @@ from app.shows.models import Show
 from app.users.models import User
 
 
+# TODO: Validate
 class BaseIssueReport(SQLModel):
     """Base model for an issue report."""
 
     report: str = Field(min_length=1)
 
 
+# TODO: Validate
 class IssueReportMixin(BaseIssueReport, TimestampIdAndHashMixin):
     """Mixin for the report tables hanging off each kind of media record.
 
@@ -43,6 +45,7 @@ class IssueReportMixin(BaseIssueReport, TimestampIdAndHashMixin):
     )
 
 
+# TODO: Validate
 class EpisodeIssueReport(IssueReportMixin, table=True):
     """Model representing what a `User` says is wrong with an `Episode`."""
 
@@ -60,6 +63,7 @@ class EpisodeIssueReport(IssueReportMixin, table=True):
     user: User | None = Relationship()
 
 
+# TODO: Validate
 class SeasonIssueReport(IssueReportMixin, table=True):
     """Model representing what a `User` says is wrong with a `Season`."""
 
@@ -77,6 +81,7 @@ class SeasonIssueReport(IssueReportMixin, table=True):
     user: User | None = Relationship()
 
 
+# TODO: Validate
 class ShowIssueReport(IssueReportMixin, table=True):
     """Model representing what a `User` says is wrong with a `Show`."""
 

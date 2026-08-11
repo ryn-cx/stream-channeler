@@ -6,6 +6,7 @@ interface ClampedContentProps {
   className?: string
 }
 
+// TODO: Validate
 /**
  * Content held to four lines until it is asked for in full.
  *

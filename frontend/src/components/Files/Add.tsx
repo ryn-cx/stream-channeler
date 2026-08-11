@@ -31,6 +31,7 @@ interface AddFileProps {
   pluginId: string
 }
 
+// TODO: Validate
 const AddFile = ({ pluginId }: AddFileProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -66,6 +67,7 @@ const AddFile = ({ pluginId }: AddFileProps) => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

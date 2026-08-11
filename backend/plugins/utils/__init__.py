@@ -6,9 +6,11 @@ import logging
 from loguru import logger
 
 
+# TODO: Validate
 class _InterceptHandler(logging.Handler):
     """Route standard library logging messages through loguru."""
 
+    # TODO: Validate
     def emit(self, record: logging.LogRecord) -> None:
         try:
             level = logger.level(record.levelname).name

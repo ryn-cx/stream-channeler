@@ -26,6 +26,7 @@ from app.utils import tz_datetime
 COMMENTS_PAGE_SIZE = 20
 
 
+# TODO: Validate
 def _reply_counts(
     session: Session,
     comment_ids: Sequence[uuid.UUID],
@@ -41,6 +42,7 @@ def _reply_counts(
     return {parent_id: count for parent_id, count in rows if parent_id is not None}
 
 
+# TODO: Validate
 def _output(comment: Comment, reply_count: int = 0) -> CommentOutput:
     return CommentOutput(
         id=comment.id,
@@ -55,6 +57,7 @@ def _output(comment: Comment, reply_count: int = 0) -> CommentOutput:
     )
 
 
+# TODO: Validate
 def _outputs_with_reply_counts(
     session: Session,
     comments: Sequence[Comment],
@@ -63,6 +66,7 @@ def _outputs_with_reply_counts(
     return [_output(comment, counts.get(comment.id, 0)) for comment in comments]
 
 
+# TODO: Validate
 def _comment_page(
     session: Session,
     *,
@@ -95,6 +99,7 @@ def _comment_page(
     )
 
 
+# TODO: Validate
 def get_comments(
     session: Session,
     channel: Channel,
@@ -111,6 +116,7 @@ def get_comments(
     )
 
 
+# TODO: Validate
 def _descendants(session: Session, comment: Comment) -> list[Comment]:
     """Return every comment below `comment`, at any depth, oldest first."""
     descendant_ids = (
@@ -133,6 +139,7 @@ def _descendants(session: Session, comment: Comment) -> list[Comment]:
     )
 
 
+# TODO: Validate
 def get_replies(session: Session, comment: Comment) -> CommentsListOutput:
     """Return the whole thread below a `Comment`, nested by parent.
 
@@ -157,6 +164,7 @@ def get_replies(session: Session, comment: Comment) -> CommentsListOutput:
     return CommentsListOutput(comments=roots, total_count=len(descendants))
 
 
+# TODO: Validate
 def create_comment(
     session: Session,
     user: User,
@@ -195,6 +203,7 @@ def create_comment(
     return _output(comment)
 
 
+# TODO: Validate
 def _users_to_notify(
     channel: Channel,
     parent: Comment | None,
@@ -207,6 +216,7 @@ def _users_to_notify(
     return notified - {author.id}
 
 
+# TODO: Validate
 def update_comment(
     session: Session,
     comment: Comment,
@@ -217,6 +227,7 @@ def update_comment(
     return _output(comment, _reply_counts(session, [comment.id]).get(comment.id, 0))
 
 
+# TODO: Validate
 def delete_comment(session: Session, comment: Comment) -> Message:
     """Delete a `Comment` and every reply nested underneath it."""
     session.delete(comment)
@@ -224,6 +235,7 @@ def delete_comment(session: Session, comment: Comment) -> Message:
     return Message(message="Comment deleted successfully")
 
 
+# TODO: Validate
 def get_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     session: Session,
     user: User,
@@ -277,6 +289,7 @@ def get_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     )
 
 
+# TODO: Validate
 def unread_notification_count(session: Session, user: User) -> int:
     """Return how many comment notifications the `User` has not read yet."""
     statement = (
@@ -290,6 +303,7 @@ def unread_notification_count(session: Session, user: User) -> int:
     return session.exec(statement).one()
 
 
+# TODO: Validate
 def mark_notifications_read(
     session: Session,
     user: User,

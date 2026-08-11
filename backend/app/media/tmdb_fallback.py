@@ -48,6 +48,7 @@ NAME_FIELD = "name"
 TMDB_PAGE_URL = "https://www.themoviedb.org"
 
 
+# TODO: Validate
 def _tmdb_shows(identifiers: set[str]) -> SelectOfScalar[Show]:
     return (
         select(Show)
@@ -61,6 +62,7 @@ def _tmdb_shows(identifiers: set[str]) -> SelectOfScalar[Show]:
     )
 
 
+# TODO: Validate
 def _tmdb_seasons(identifiers: set[str]) -> SelectOfScalar[Season]:
     return (
         select(Season)
@@ -75,6 +77,7 @@ def _tmdb_seasons(identifiers: set[str]) -> SelectOfScalar[Season]:
     )
 
 
+# TODO: Validate
 def _tmdb_episodes(identifiers: set[str]) -> SelectOfScalar[Episode]:
     return (
         select(Episode)
@@ -90,6 +93,7 @@ def _tmdb_episodes(identifiers: set[str]) -> SelectOfScalar[Episode]:
     )
 
 
+# TODO: Validate
 def _counterparts(
     session: Session,
     rows: Sequence[Any],
@@ -106,6 +110,7 @@ def _counterparts(
     }
 
 
+# TODO: Validate
 def _fill[RowT](
     session: Session,
     rows: Sequence[RowT],
@@ -132,6 +137,7 @@ def _fill[RowT](
     return rows
 
 
+# TODO: Validate
 def _prefer[RowT](
     session: Session,
     rows: Sequence[RowT],
@@ -157,6 +163,7 @@ def _prefer[RowT](
     return rows
 
 
+# TODO: Validate
 def fill_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Fill what the website left out of each `Show` row from TMDB."""
     return _fill(
@@ -168,6 +175,7 @@ def fill_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     )
 
 
+# TODO: Validate
 def fill_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Fill what the website left out of each `Season` row from TMDB."""
     return _fill(
@@ -179,6 +187,7 @@ def fill_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]
     )
 
 
+# TODO: Validate
 def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each linked `Show` row as TMDB has it, falling back on the site."""
     return _prefer(
@@ -190,6 +199,7 @@ def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]
     )
 
 
+# TODO: Validate
 def prefer_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each linked `Season` row as TMDB has it, falling back on the site."""
     return _prefer(
@@ -201,6 +211,7 @@ def prefer_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
     )
 
 
+# TODO: Validate
 def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each linked `Episode` row as TMDB has it, falling back on the site."""
     return _prefer(
@@ -212,6 +223,7 @@ def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT
     )
 
 
+# TODO: Validate
 def tmdb_episode_counterpart(
     session: Session,
     episode_identifier: str,
@@ -239,6 +251,7 @@ def tmdb_episode_counterpart(
     return session.exec(statement).first()
 
 
+# TODO: Validate
 def tmdb_season_counterpart(
     session: Session,
     season_identifier: str,
@@ -265,6 +278,7 @@ def tmdb_season_counterpart(
     return session.exec(statement).first()
 
 
+# TODO: Validate
 def tmdb_show_counterpart(session: Session, show_identifier: str) -> Show | None:
     """Return the TMDB title standing in for `show_identifier`.
 
@@ -277,6 +291,7 @@ def tmdb_show_counterpart(session: Session, show_identifier: str) -> Show | None
     return session.exec(_tmdb_shows({show_identifier})).first()
 
 
+# TODO: Validate
 def _tmdb_identified(rows: Sequence[Any], identifier_field: str) -> set[str]:
     return {
         getattr(row, identifier_field)
@@ -285,6 +300,7 @@ def _tmdb_identified(rows: Sequence[Any], identifier_field: str) -> set[str]:
     }
 
 
+# TODO: Validate
 def prefer_tmdb_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Replace each linked `Season` row's name and number with TMDB's own.
 
@@ -310,6 +326,7 @@ def prefer_tmdb_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequenc
     return rows
 
 
+# TODO: Validate
 def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Set each linked `Episode` row's page on themoviedb.org.
 
@@ -351,6 +368,7 @@ def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
     return rows
 
 
+# TODO: Validate
 def tmdb_episode_url(
     show_key: str,
     season_number: int | None,
@@ -375,6 +393,7 @@ def tmdb_episode_url(
     )
 
 
+# TODO: Validate
 def tmdb_season_url(show_key: str, season_number: int | None) -> str | None:
     """Return the page for a TMDB season, given the show key it belongs to.
 
@@ -389,6 +408,7 @@ def tmdb_season_url(show_key: str, season_number: int | None) -> str | None:
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}/season/{season_number}"
 
 
+# TODO: Validate
 def tmdb_show_url(show_key: str) -> str | None:
     """Return the page for a TMDB title, given its key."""
     media_type, _, tmdb_id = show_key.partition("/")
@@ -397,6 +417,7 @@ def tmdb_show_url(show_key: str) -> str | None:
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
 
 
+# TODO: Validate
 def prefer_tmdb_episodes[RowT](
     session: Session,
     rows: Sequence[RowT],

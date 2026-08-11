@@ -8,6 +8,7 @@ import type { MoveDirection } from "@/components/ChannelCommon/EpisodeCard"
 export const EPISODE_GRID_CLASSES =
   "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 5xl:grid-cols-8 gap-4 items-start"
 
+// TODO: Validate
 /** Measure the number of cards on the first row of an episode grid so vertical
  * reorder moves can step by a full row at a time. */
 export function useColumnCount(ref: RefObject<HTMLDivElement | null>): number {
@@ -16,6 +17,7 @@ export function useColumnCount(ref: RefObject<HTMLDivElement | null>): number {
   useEffect(() => {
     const grid = ref.current
     if (!grid) return
+    // TODO: Validate
     const measure = () => {
       const children = Array.from(grid.children) as HTMLElement[]
       if (children.length === 0) return
@@ -36,6 +38,7 @@ export function useColumnCount(ref: RefObject<HTMLDivElement | null>): number {
   return columnCount
 }
 
+// TODO: Validate
 /** Resolve an arrow-key reorder direction into a target index, given the
  * current grid layout. Callers pass the result to their swap/move helper. */
 export function resolveArrowMove(

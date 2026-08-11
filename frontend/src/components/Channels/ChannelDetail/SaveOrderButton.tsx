@@ -12,6 +12,7 @@ interface SaveOrderButtonProps {
   variant?: "button" | "menu" | "icon"
 }
 
+// TODO: Validate
 export function SaveOrderButton({
   channelId,
   episodes,
@@ -34,6 +35,7 @@ export function SaveOrderButton({
     },
   })
 
+  // TODO: Validate
   const save = () => mutation.mutate()
 
   return (

@@ -20,6 +20,7 @@ from plugins.HiDive.url_handlers import (
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
+# TODO: Validate
 class HiDive(
     SourceMixin,
     UpsertMixin,
@@ -40,11 +41,13 @@ class HiDive(
         "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
     )
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "hidive.com"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

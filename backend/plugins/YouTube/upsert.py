@@ -26,7 +26,9 @@ _VIDEO_UPDATE_INTERVAL = timedelta(days=7)
 _SERIES_UPDATE_INTERVAL = timedelta(days=7)
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -41,6 +43,7 @@ class UpsertMixin(HelperMixin, register=False):
             return self._upsert_series_show(show_key, force=force)
         return self._upsert_channel_show(source, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_series_show(
         self,
         show_key: str,
@@ -79,6 +82,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_series_seasons(
         self,
         show: Show,
@@ -109,6 +113,7 @@ class UpsertMixin(HelperMixin, register=False):
                 )
             self._upsert_episodes(season, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_channel_show(
         self,
         source: Source,
@@ -140,6 +145,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie_show(
         self,
         show_key: str,
@@ -183,6 +189,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,
@@ -212,6 +219,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
         self._upsert_episodes(season, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_seasons(
         self,
         show: Show,
@@ -223,6 +231,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._upsert_playlist_seasons(show, show_key, force=force)
         self._upsert_album_seasons(show, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_season(  # noqa: PLR0913
         self,
         show: Show,
@@ -249,6 +258,7 @@ class UpsertMixin(HelperMixin, register=False):
             ).upsert_and_set_update_at(show, season, season_files)
         self._upsert_episodes(season, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_channel_uploads_season(
         self,
         show: Show,
@@ -271,6 +281,7 @@ class UpsertMixin(HelperMixin, register=False):
             force=force,
         )
 
+    # TODO: Validate
     def _upsert_album_seasons(
         self,
         show: Show,
@@ -291,6 +302,7 @@ class UpsertMixin(HelperMixin, register=False):
                 force=force,
             )
 
+    # TODO: Validate
     def _upsert_playlist_seasons(
         self,
         show: Show,
@@ -318,6 +330,7 @@ class UpsertMixin(HelperMixin, register=False):
                     force=force,
                 )
 
+    # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
@@ -357,6 +370,7 @@ class UpsertMixin(HelperMixin, register=False):
                 force=force,
             )
 
+    # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,

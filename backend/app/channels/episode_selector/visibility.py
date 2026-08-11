@@ -26,6 +26,7 @@ from app.channels.models import (
 from app.episodes.models import Episode
 
 
+# TODO: Validate
 def source_access_condition() -> ColumnElement[bool]:
     """Whether this website's copy of the title is one the channel takes.
 
@@ -54,6 +55,7 @@ def source_access_condition() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def channel_access_condition() -> ColumnElement[bool]:
     """Whether the channel offers this episode, after every filter on it."""
     # An episode entry inverts what the season entry decided, which is what
@@ -91,6 +93,7 @@ def channel_access_condition() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def blacklisted_on_channels_condition(
     channel_ids: Collection[UUID],
     now: datetime,

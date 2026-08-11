@@ -18,24 +18,29 @@ from app.config import settings
 from app.utils import tz_datetime
 
 
+# TODO: Validate
 def random_lower_string() -> str:
     return "".join(random.choices(string.ascii_lowercase, k=32))  # noqa: S311
 
 
+# TODO: Validate
 def random_email() -> str:
     return f"{random_lower_string()}@{random_lower_string()}.com"
 
 
+# TODO: Validate
 def random_integer(min_value: int = 0, max_value: int = 2**16) -> int:
     """Get a random integer between min_value and max_value."""
     return random.randint(min_value, max_value)  # noqa: S311
 
 
+# TODO: Validate
 def random_bool() -> bool:
     """Get a random boolean value."""
     return random.choice([True, False])  # noqa: S311
 
 
+# TODO: Validate
 def random_past_timestamp(maximum_distance: int = 31536000) -> datetime:
     """Get a random timestamp in the past.
 
@@ -54,6 +59,7 @@ def random_past_timestamp(maximum_distance: int = 31536000) -> datetime:
     return tz_datetime.fromtimestamp(random_timestamp)
 
 
+# TODO: Validate
 def random_future_timestamp(maximum_distance: int = 31536000) -> datetime:
     """Get a random timestamp in the future.
 
@@ -67,6 +73,7 @@ def random_future_timestamp(maximum_distance: int = 31536000) -> datetime:
     return tz_datetime.fromtimestamp(random_timestamp)
 
 
+# TODO: Validate
 def random_optional_past_timestamp() -> datetime | None:
     """Get a random deleted_at timestamp.
 
@@ -77,6 +84,7 @@ def random_optional_past_timestamp() -> datetime | None:
     return None
 
 
+# TODO: Validate
 def random_optional_future_timestamp() -> datetime | None:
     """Get a random update_at timestamp.
 
@@ -87,6 +95,7 @@ def random_optional_future_timestamp() -> datetime | None:
     return None
 
 
+# TODO: Validate
 def _random_sort_key_input() -> SortKeyInput:
     model_map = SortKeyInput._MODEL_MAP  # noqa: SLF001
     model_name: str = random.choice(list(model_map))  # noqa: S311
@@ -115,6 +124,7 @@ _TYPE_GENERATORS: dict[type, Callable[[], object]] = {
 }
 
 
+# TODO: Validate
 def _is_nullable(annotation: type | None) -> tuple[bool, type]:
     """Return (is_nullable, inner_type) for a type annotation."""
     args = get_args(annotation)
@@ -126,6 +136,7 @@ def _is_nullable(annotation: type | None) -> tuple[bool, type]:
     return False, annotation
 
 
+# TODO: Validate
 def _random_value(object_type: type) -> object:
     """Generate a random value for a given type."""
     generator = _TYPE_GENERATORS.get(object_type)
@@ -148,6 +159,7 @@ def _random_value(object_type: type) -> object:
     raise ValueError(msg)
 
 
+# TODO: Validate
 def _bounded_int(info: FieldInfo) -> int:
     """Generate a random int within the field's `ge`/`gt`/`le`/`lt` bounds."""
     min_value, max_value = 0, 2**16
@@ -163,12 +175,14 @@ def _bounded_int(info: FieldInfo) -> int:
     return random_integer(min_value, max_value)
 
 
+# TODO: Validate
 def _random_field_value(inner_type: type, info: FieldInfo) -> object:
     if inner_type is int:
         return _bounded_int(info)
     return _random_value(inner_type)
 
 
+# TODO: Validate
 def request_payload(model: BaseModel, *, exclude_unset: bool = True) -> dict[str, Any]:
     """Return `model` as a request body would carry it.
 
@@ -183,6 +197,7 @@ def request_payload(model: BaseModel, *, exclude_unset: bool = True) -> dict[str
     )
 
 
+# TODO: Validate
 def build_random_model[T: BaseModel](
     model: type[T],
     mode: Literal["random", "full", "minimal"] = "random",
@@ -210,6 +225,7 @@ def build_random_model[T: BaseModel](
     return model(**kwargs)  # type: ignore[return-value]
 
 
+# TODO: Validate
 def dump_random_model(
     model: type[BaseModel],
     mode: Literal["random", "full", "minimal"] = "random",
@@ -220,6 +236,7 @@ def dump_random_model(
     return request_payload(build_random_model(model, mode, **required_kwargs))
 
 
+# TODO: Validate
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     login_data = {
         "username": settings.FIRST_SUPERUSER,

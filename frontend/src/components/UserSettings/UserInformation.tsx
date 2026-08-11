@@ -28,6 +28,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const UserInformation = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -44,6 +45,7 @@ const UserInformation = () => {
     },
   })
 
+  // TODO: Validate
   const toggleEditMode = () => {
     setEditMode(!editMode)
   }
@@ -61,6 +63,7 @@ const UserInformation = () => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     const updateData: UserUpdateMe = {}
 
@@ -75,6 +78,7 @@ const UserInformation = () => {
     mutation.mutate(updateData)
   }
 
+  // TODO: Validate
   const onCancel = () => {
     form.reset()
     toggleEditMode()

@@ -1,3 +1,4 @@
+# TODO: Validate
 """Reading the episodes a channel offers, in the order it offers them."""
 
 from dataclasses import dataclass
@@ -99,11 +100,13 @@ class EpisodeQueryBuilder:
             ),
         )
 
+    # TODO: Validate
     def _set_channel_options(self, channel_options: ChannelOptions) -> None:
         self._channel_options = channel_options.model_copy(deep=True)
         self._fetch_channel_order_preset()
         self._filter_channel_options()
 
+    # TODO: Validate
     def _fetch_channel_order_preset(self) -> None:
         """Return the channel's options with a saved `ChannelOrder` preset."""
         if self._channel_options.order_preset_id:
@@ -113,6 +116,7 @@ class EpisodeQueryBuilder:
             if order := self._session.exec(query).first():
                 self._channel_options = ChannelOptions.model_validate_json(order.config)
 
+    # TODO: Validate
     def _filter_channel_options(
         self,
     ) -> None:
@@ -189,13 +193,14 @@ class EpisodeQueryBuilder:
         query = self._apply_limit(query)
 
         ordered_episodes: list[Episode] = []
-        channels_by_episode: dict[UUID, list[UUID]] = {}
+        channels_by_identifier: dict[str, list[UUID]] = {}
         for episode, channel_id in self._session.exec(query).all():
-            if episode.id not in channels_by_episode:
-                channels_by_episode[episode.id] = []
+            identifier = episode.episode_identifier
+            if identifier not in channels_by_identifier:
+                channels_by_identifier[identifier] = []
                 ordered_episodes.append(episode)
-            if channel_id not in channels_by_episode[episode.id]:
-                channels_by_episode[episode.id].append(channel_id)
+            if channel_id not in channels_by_identifier[identifier]:
+                channels_by_identifier[identifier].append(channel_id)
 
         ordered_episodes = limit_shows(
             self._session,
@@ -217,8 +222,8 @@ class EpisodeQueryBuilder:
         return [
             EpisodeResult(
                 episode=episode,
-                channel_id=channels_by_episode[episode.id][0],
-                channel_ids=channels_by_episode[episode.id],
+                channel_id=channels_by_identifier[episode.episode_identifier][0],
+                channel_ids=channels_by_identifier[episode.episode_identifier],
                 latest_watch=watches.get(episode.episode_identifier),
             )
             for episode in ordered_episodes
@@ -414,6 +419,7 @@ class EpisodeQueryBuilder:
     def _episode_range_conditions(self) -> list[ColumnElement[bool]]:
         conditions: list[ColumnElement[bool]] = []
 
+        # TODO: Validate
         def add_range(
             column: ColumnElement[Any] | Mapped[Any],
             min_value: datetime | int | None,
@@ -503,6 +509,7 @@ class EpisodeQueryBuilder:
             return []
         return [self._source_rank_column()]
 
+    # TODO: Validate
     def _source_rank_column(self) -> ColumnElement[Any]:
         """Rank every copy of an episode against the other copies of it.
 
@@ -538,6 +545,7 @@ class EpisodeQueryBuilder:
             subquery.c.channel_id,
         ).where(subquery.c.source_rank == 1)
 
+    # TODO: Validate
     def _rank_fuzzy_values(
         self,
         subquery: Subquery,
@@ -611,6 +619,7 @@ class EpisodeQueryBuilder:
                 for i, key in enumerate(self._channel_options.sort_by)
             ]
 
+        # TODO: Validate
         def fuzzy_expression(index: int) -> ColumnElement[Any]:
             sort_key = self._channel_options.sort_by[index]
             rank_column = getattr(subquery.c, fuzzy_labels[index])

@@ -1,3 +1,4 @@
+// TODO: Validate
 export const TABLE_FILTER_INPUT_CLASS =
   "h-7 text-xs font-normal normal-case tracking-normal"
 

@@ -14,6 +14,7 @@ interface DeleteWatchProps {
   onSuccess?: () => void
 }
 
+// TODO: Validate
 const DeleteWatch = ({ id, onSuccess = () => {} }: DeleteWatchProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()

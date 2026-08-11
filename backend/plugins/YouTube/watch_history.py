@@ -12,9 +12,11 @@ from plugins.utils.base_plugin.watch_history import (
 )
 
 
+# TODO: Validate
 class WatchHistoryMixin(BaseWatchHistoryMixin):
     import_watch_history_file_extension = ".json"
 
+    # TODO: Validate
     @override
     def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
         """Parse YouTube watch history from Google Takeout JSON content."""

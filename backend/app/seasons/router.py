@@ -60,11 +60,13 @@ SEASON_EXTRA_COLUMNS: dict[str, Any] = {
 }
 
 
+# TODO: Validate
 def _season_output(session: SessionDep, season: Season) -> SeasonOutput:
     """Return a `Season` with whatever its website left out taken from TMDB."""
     return fill_seasons(session, [SeasonOutput.model_validate(season)])[0]
 
 
+# TODO: Validate
 @show_seasons_router.post("/seasons")
 def create_season(
     session: SessionDep,
@@ -84,6 +86,7 @@ def create_season(
     return _season_output(session, season_input.create(session, Season, show))
 
 
+# TODO: Validate
 @seasons_router.get("")
 def get_seasons(
     session: SessionDep,
@@ -104,6 +107,7 @@ def get_seasons(
     return seasons
 
 
+# TODO: Validate
 @show_seasons_router.get("/seasons")
 def get_show_seasons(
     session: SessionDep,
@@ -125,6 +129,7 @@ def get_show_seasons(
     return seasons
 
 
+# TODO: Validate
 @plugin_seasons_router.get("/seasons")
 def get_plugin_seasons(
     session: SessionDep,
@@ -146,6 +151,7 @@ def get_plugin_seasons(
     return seasons
 
 
+# TODO: Validate
 @source_seasons_router.get("/seasons")
 def get_source_seasons(
     session: SessionDep,
@@ -167,6 +173,7 @@ def get_source_seasons(
     return seasons
 
 
+# TODO: Validate
 def _information_side(
     label: str,
     season: Season,
@@ -185,6 +192,7 @@ def _information_side(
     )
 
 
+# TODO: Validate
 @seasons_router.get("/{season_id}/information")  # noqa: FAST003 - Used by ReadableSeason.
 def get_season_information(
     session: SessionDep,
@@ -224,12 +232,14 @@ def get_season_information(
     )
 
 
+# TODO: Validate
 @seasons_router.get("/{season_id}")  # noqa: FAST003 - Used by ReadableSeason.
 def get_season(session: SessionDep, season: ReadableSeason) -> SeasonOutput:
     """Get a `Season` if it's readable by the `User`."""
     return _season_output(session, season)
 
 
+# TODO: Validate
 @seasons_router.patch("/{season_id}")  # noqa: FAST003 - Used by EditableSeason.
 def update_season(
     session: SessionDep,
@@ -262,6 +272,7 @@ def update_season(
     return _season_output(session, season)
 
 
+# TODO: Validate
 @seasons_router.delete("/{season_id}")  # noqa: FAST003 - Used by EditableSeason.
 def delete_season(session: SessionDep, season: EditableSeason) -> Message:
     """Delete a `Season` if it's editable by the `User`."""

@@ -14,6 +14,7 @@ interface EpisodeRowProps {
   onNextEpisode: (currentEpisodeId: string) => void
 }
 
+// TODO: Validate
 export function EpisodeRow({
   title,
   episodes,
@@ -25,6 +26,7 @@ export function EpisodeRow({
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
 
+  // TODO: Validate
   const updateArrows = () => {
     const container = scrollRef.current
     if (!container) return
@@ -34,6 +36,7 @@ export function EpisodeRow({
     )
   }
 
+  // TODO: Validate
   const scroll = (direction: "left" | "right") => {
     const container = scrollRef.current
     if (!container) return

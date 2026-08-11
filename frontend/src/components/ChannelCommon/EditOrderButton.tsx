@@ -12,6 +12,7 @@ interface EditOrderButtonProps {
   variant?: TriggerVariant
 }
 
+// TODO: Validate
 export function EditOrderButton({
   editOrder,
   onToggle,

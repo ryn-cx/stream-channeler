@@ -13,6 +13,7 @@ import { channelQueueColumns } from "./channelQueueColumns"
 
 const ownerScopes = [undefined, "official", "others"] as const
 
+// TODO: Validate
 export function ChannelQueuesAdminTable() {
   const results = useQueries({
     queries: ownerScopes.map((owner) => ({

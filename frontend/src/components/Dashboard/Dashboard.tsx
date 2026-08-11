@@ -20,6 +20,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 
+// TODO: Validate
 function ChannelFieldDescriptions() {
   return (
     <ul className="list-disc list-inside ml-2 space-y-1 text-muted-foreground">
@@ -48,6 +49,7 @@ function ChannelFieldDescriptions() {
   )
 }
 
+// TODO: Validate
 export function Dashboard() {
   return (
     <div className="max-w-4xl mx-auto space-y-10 px-4 py-8">

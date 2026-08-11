@@ -43,6 +43,7 @@ type SidebarContextProps = {
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
 
+// TODO: Validate
 function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
@@ -52,6 +53,7 @@ function useSidebar() {
   return context
 }
 
+// TODO: Validate
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -68,6 +70,7 @@ function SidebarProvider({
   const isMobile = useIsNarrowViewport()
   const [openMobile, setOpenMobile] = React.useState(false)
 
+  // TODO: Validate
   const getInitialOpen = () => {
     if (typeof document === "undefined") return defaultOpen
 
@@ -106,6 +109,7 @@ function SidebarProvider({
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
+    // TODO: Validate
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
@@ -162,6 +166,7 @@ function SidebarProvider({
   )
 }
 
+// TODO: Validate
 function Sidebar({
   side = "left",
   variant = "sidebar",
@@ -264,6 +269,7 @@ function Sidebar({
   )
 }
 
+// TODO: Validate
 function SidebarTrigger({
   className,
   onClick,
@@ -291,6 +297,7 @@ function SidebarTrigger({
   )
 }
 
+// TODO: Validate
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   const { toggleSidebar } = useSidebar()
 
@@ -316,6 +323,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   )
 }
 
+// TODO: Validate
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
@@ -330,6 +338,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   )
 }
 
+// TODO: Validate
 function SidebarInput({
   className,
   ...props
@@ -344,6 +353,7 @@ function SidebarInput({
   )
 }
 
+// TODO: Validate
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -355,6 +365,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -366,6 +377,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SidebarSeparator({
   className,
   ...props
@@ -380,6 +392,7 @@ function SidebarSeparator({
   )
 }
 
+// TODO: Validate
 function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -394,6 +407,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -405,6 +419,7 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SidebarGroupLabel({
   className,
   asChild = false,
@@ -426,6 +441,7 @@ function SidebarGroupLabel({
   )
 }
 
+// TODO: Validate
 function SidebarGroupAction({
   className,
   asChild = false,
@@ -449,6 +465,7 @@ function SidebarGroupAction({
   )
 }
 
+// TODO: Validate
 function SidebarGroupContent({
   className,
   ...props
@@ -463,6 +480,7 @@ function SidebarGroupContent({
   )
 }
 
+// TODO: Validate
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
@@ -474,6 +492,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   )
 }
 
+// TODO: Validate
 function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
@@ -507,6 +526,7 @@ const sidebarMenuButtonVariants = cva(
   },
 )
 
+// TODO: Validate
 function SidebarMenuButton({
   asChild = false,
   isActive = false,
@@ -557,6 +577,7 @@ function SidebarMenuButton({
   )
 }
 
+// TODO: Validate
 function SidebarMenuAction({
   className,
   asChild = false,
@@ -589,6 +610,7 @@ function SidebarMenuAction({
   )
 }
 
+// TODO: Validate
 function SidebarMenuBadge({
   className,
   ...props
@@ -611,6 +633,7 @@ function SidebarMenuBadge({
   )
 }
 
+// TODO: Validate
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
@@ -649,6 +672,7 @@ function SidebarMenuSkeleton({
   )
 }
 
+// TODO: Validate
 function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
@@ -664,6 +688,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
   )
 }
 
+// TODO: Validate
 function SidebarMenuSubItem({
   className,
   ...props
@@ -678,6 +703,7 @@ function SidebarMenuSubItem({
   )
 }
 
+// TODO: Validate
 function SidebarMenuSubButton({
   asChild = false,
   size = "md",

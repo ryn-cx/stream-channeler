@@ -24,6 +24,7 @@ interface EpisodeCardsProps {
   editOrder?: boolean
 }
 
+// TODO: Validate
 export function EpisodeCard({
   episode,
   channelId,
@@ -54,6 +55,7 @@ export function EpisodeCard({
     watchFilters,
   })
 
+  // TODO: Validate
   const onCardClick = () => {
     setClicked(true)
     watchedMutation.mutate(episode.id)
@@ -85,6 +87,7 @@ export function EpisodeCard({
   )
 }
 
+// TODO: Validate
 export function EpisodeCards({
   episodes,
   channelId,
@@ -107,6 +110,7 @@ export function EpisodeCards({
     lastSeenByShow.set(showId, i)
   }
 
+  // TODO: Validate
   const handleNextEpisode = (currentEpisodeId: string) => {
     const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
     if (currentIndex === -1) return
@@ -155,6 +159,7 @@ export function EpisodeCards({
     )
   }
 
+  // TODO: Validate
   const swapEpisodes = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
     queryClient.setQueriesData<ChannelEpisodesOutput>(
@@ -178,6 +183,7 @@ export function EpisodeCards({
     )
   }
 
+  // TODO: Validate
   const moveEpisode = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return
     queryClient.setQueriesData<ChannelEpisodesOutput>(
@@ -202,6 +208,7 @@ export function EpisodeCards({
     )
   }
 
+  // TODO: Validate
   const handleArrowMove = (index: number, direction: MoveDirection) => {
     const move = resolveArrowMove(
       index,

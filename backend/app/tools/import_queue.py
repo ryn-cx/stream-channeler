@@ -32,6 +32,7 @@ import_plugins()
 PLUGIN_LOCKS = {plugin_class.plugin_key(): threading.Lock() for plugin_class in plugins}
 
 
+# TODO: Validate
 def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D103
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
@@ -41,6 +42,7 @@ def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D10
             break
 
 
+# TODO: Validate
 def import_queue(session: Session) -> None:
     """Actually import the queue in separate threads for each plugin."""
     for plugin_class, items in _group_pending_urls_by_plugin(session).items():
@@ -49,6 +51,7 @@ def import_queue(session: Session) -> None:
                 _import_one(session, item, plugin_class)
 
 
+# TODO: Validate
 def _get_plugin(url: str) -> type[AbstractPlugin] | None:
     for plugin_class in plugins:
         if plugin_class.is_valid_url_format(url):
@@ -56,6 +59,7 @@ def _get_plugin(url: str) -> type[AbstractPlugin] | None:
     return None
 
 
+# TODO: Validate
 def _group_pending_urls_by_plugin(
     session: Session,
 ) -> dict[type[AbstractPlugin], list[ChannelQueue]]:
@@ -85,6 +89,7 @@ def _group_pending_urls_by_plugin(
     return by_plugin
 
 
+# TODO: Validate
 def _import_one(
     session: Session,
     queue_item: ChannelQueue,
@@ -123,6 +128,7 @@ def _import_one(
         session.commit()
 
 
+# TODO: Validate
 def add_results_to_channel(
     session: Session,
     results: list[URLImportResult],
@@ -142,6 +148,7 @@ def add_results_to_channel(
             )
 
 
+# TODO: Validate
 def _create_channel_show(
     channel: Channel,
     result: URLImportResult,
@@ -173,6 +180,7 @@ def _create_channel_show(
     return channel_show
 
 
+# TODO: Validate
 def _update_channel_show(
     session: Session,
     existing_channel_show: ChannelShow,
@@ -219,6 +227,7 @@ def _update_channel_show(
     _merge_filters(existing_channel_show, seasons, episodes)
 
 
+# TODO: Validate
 def _season_identifiers_for_episodes(
     session: Session,
     episode_identifiers: set[str],
@@ -234,6 +243,7 @@ def _season_identifiers_for_episodes(
     return dict(rows)
 
 
+# TODO: Validate
 def _merge_filters(
     channel_show: ChannelShow,
     season_identifiers: set[str],

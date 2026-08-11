@@ -70,6 +70,7 @@ for (const path in allModules) {
   }
 }
 
+// TODO: Validate
 function EpisodeCardOverlay({ episode }: { episode: BaseEpisodeWithDetails }) {
   const mediaType = episode.show.media_type || ""
   const pluginKey = episode.plugin.key
@@ -113,6 +114,7 @@ interface EpisodeCardProps {
   onDrop?: (fromIndex: number, toIndex: number) => void
 }
 
+// TODO: Validate
 export function EpisodeCard({
   episode,
   menuItems,
@@ -133,6 +135,7 @@ export function EpisodeCard({
   const moveArrowBaseClass =
     "absolute z-20 h-7 w-7 rounded-full bg-background/90 hover:bg-background text-foreground shadow-md flex items-center justify-center transition-colors"
 
+  // TODO: Validate
   const handleArrowClick = (
     event: React.MouseEvent<HTMLButtonElement>,
     direction: MoveDirection,

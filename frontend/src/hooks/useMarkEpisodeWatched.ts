@@ -5,6 +5,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { isHiddenByWatchFilters, type WatchFilters } from "@/lib/watchFilters"
 import { handleError } from "@/utils"
 
+// TODO: Validate
 function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
   if (!oldData) return oldData
   return {
@@ -15,6 +16,7 @@ function updateEpisodeInData(oldData: any, episodeId: string, patch: object) {
   }
 }
 
+// TODO: Validate
 function removeEpisodeFromData(oldData: any, episodeId: string) {
   if (!oldData) return oldData
   return {
@@ -23,6 +25,7 @@ function removeEpisodeFromData(oldData: any, episodeId: string) {
   }
 }
 
+// TODO: Validate
 /**
  * @param watchFilters The channel's active watch filters. Marking an episode
  * watched leaves it partially watched, so it is dropped from the cache only when
@@ -68,6 +71,7 @@ export function useMarkWatched(
       // Optimistically update all matching cache entries, dropping the episode
       // when the filters hide the state it ends up in, so the list matches what
       // the next fetch would return.
+      // TODO: Validate
       const applyOptimisticUpdate = (oldData: any) =>
         isHiddenByWatchFilters("partiallyWatched", watchFilters)
           ? removeEpisodeFromData(oldData, episodeId)

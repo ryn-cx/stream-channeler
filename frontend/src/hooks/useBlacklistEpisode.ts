@@ -14,6 +14,7 @@ interface BlacklistEpisodeParams {
 // Blacklists a single episode on a chosen channel (a base channel the episode belongs
 // to, or the channel currently being viewed). `currentChannelId` is only used to
 // optimistically drop the episode from the channel page the user is looking at.
+// TODO: Validate
 export function useBlacklistEpisode(currentChannelId: string) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -42,6 +43,7 @@ export function useBlacklistEpisode(currentChannelId: string) {
         queryKey: ["episodes", currentChannelId],
       })
 
+      // TODO: Validate
       const removeEpisode = (oldData: any) => {
         if (!oldData) return oldData
         return {

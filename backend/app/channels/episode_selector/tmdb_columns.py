@@ -25,6 +25,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 
 
+# TODO: Validate
 class TMDBFallbackColumns:
     """The TMDB stand-in of each media level, joined in so SQL can read it.
 
@@ -66,10 +67,12 @@ class TMDBFallbackColumns:
         "season_identifier",
     )
 
+    # TODO: Validate
     def __init__(self) -> None:
         """Start with nothing joined; each column asked for adds its level."""
         self._subqueries: dict[str, Any] = {}
 
+    # TODO: Validate
     @staticmethod
     def _subquery(model: str) -> Any:  # noqa: ANN401 - A subquery of whichever level was asked for.
         episode = aliased(Episode)
@@ -116,6 +119,7 @@ class TMDBFallbackColumns:
             .subquery()
         )
 
+    # TODO: Validate
     def column(
         self,
         model: str,
@@ -132,6 +136,7 @@ class TMDBFallbackColumns:
             self._subqueries[model] = self._subquery(model)
         return func.coalesce(self._subqueries[model].c[field], own)
 
+    # TODO: Validate
     def _preferred_number(
         self,
         model: str,
@@ -152,6 +157,7 @@ class TMDBFallbackColumns:
             )
         return func.coalesce(self.number(model), own)
 
+    # TODO: Validate
     def number(self, model: str) -> ColumnElement[Any]:
         """Return the number TMDB gives the record, or `NULL` when it has none."""
         field = self._NUMBER_FIELDS[model]
@@ -159,12 +165,14 @@ class TMDBFallbackColumns:
             self._subqueries[model] = self._subquery(model)
         return self._subqueries[model].c[field]
 
+    # TODO: Validate
     def episode_season(self, field: str) -> ColumnElement[Any]:
         """Return `field` of the season TMDB puts the episode in."""
         if "episode" not in self._subqueries:
             self._subqueries["episode"] = self._subquery("episode")
         return self._subqueries["episode"].c[field]
 
+    # TODO: Validate
     def join(
         self,
         query: Select[tuple[Episode, UUID]],

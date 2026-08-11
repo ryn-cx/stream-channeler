@@ -16,12 +16,14 @@ from plugins.utils.abstract_plugin import (
 # TODO: Add support for individual episodes of a series.
 
 
+# TODO: Validate
 class SearchMixin(HelperMixin, register=False):
     CONVER_SEARCH_TYPE: ClassVar[dict[str, str]] = {
         "SERIES": "Series",
         "VOD": "Movie",
     }
 
+    # TODO: Validate
     @override
     def search(self, query: str) -> PluginSearchResults:
         search_file = self.search_file(query)
@@ -44,6 +46,7 @@ class SearchMixin(HelperMixin, register=False):
                 )
         return PluginSearchResults(results=results)
 
+    # TODO: Validate
     @staticmethod
     def _search_card_image(card: search_models.Card) -> str:
         for header in card.attributes.header:

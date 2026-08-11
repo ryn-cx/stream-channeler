@@ -12,10 +12,12 @@ import {
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
+// TODO: Validate
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
 }
 
+// TODO: Validate
 const useAuth = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -27,6 +29,7 @@ const useAuth = () => {
     enabled: isLoggedIn(),
   })
 
+  // TODO: Validate
   const login = async (data: AccessToken) => {
     const response = await LoginService.loginAccessToken({
       formData: data,
@@ -57,6 +60,7 @@ const useAuth = () => {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const logout = () => {
     localStorage.removeItem("access_token")
     navigate({ to: "/login" })

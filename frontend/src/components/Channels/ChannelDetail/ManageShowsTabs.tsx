@@ -59,6 +59,7 @@ import { AdditionalChannelsPanel } from "./ManageSubChannels"
 import { ShowSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
 
+// TODO: Validate
 function getStatusBadgeVariant(status: string) {
   switch (status) {
     case "Imported":
@@ -91,6 +92,7 @@ interface ManageShowsTabsProps {
   onActiveTabChange?: (tab: string) => void
 }
 
+// TODO: Validate
 export function ManageShowsTabs({
   channelId,
   contentClassName = "overflow-y-auto flex-1 min-h-0 py-4",
@@ -110,6 +112,7 @@ export function ManageShowsTabs({
   const [blacklistShowId, setBlacklistShowId] = useState<string | null>(null)
   const [removeShowId, setRemoveShowId] = useState<string | null>(null)
   const [activeTab, setActiveTabState] = useState<string>("search")
+  // TODO: Validate
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab)
     onActiveTabChange?.(tab)
@@ -325,6 +328,7 @@ export function ManageShowsTabs({
 
   // endregion Mutations
 
+  // TODO: Validate
   const handleSubmit = () => {
     const urls = urlsInput
       .split("\n")
@@ -339,11 +343,13 @@ export function ManageShowsTabs({
     addUrlsMutation.mutate(urls)
   }
 
+  // TODO: Validate
   const showNote = (note: string | null | undefined) => {
     setSelectedNote(note || null)
     setNoteDialogOpen(true)
   }
 
+  // TODO: Validate
   const handleRemoveShow = (showId: string) => {
     setRemoveShowId(showId)
   }

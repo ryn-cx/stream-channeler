@@ -14,6 +14,7 @@ import_plugins()
 load_models()
 
 
+# TODO: Validate
 def reimport_single_show(session: Session, show_id: uuid.UUID) -> None:
     """Read one `Show` again from the website it came from."""
     show = session.exec(Show.select_with_plugin().where(Show.id == show_id)).one()

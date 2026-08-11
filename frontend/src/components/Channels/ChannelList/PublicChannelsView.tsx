@@ -28,6 +28,7 @@ import PendingChannelList from "@/components/Pending/PendingChannelList"
 import useAuth from "@/hooks/useAuth"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
+// TODO: Validate
 export function PublicChannelsView({
   scopeTabs,
   viewMode,
@@ -54,6 +55,7 @@ export function PublicChannelsView({
 
   // The table view lets the page size grow past what browse offers, so clamp it
   // back down to browse's maximum on the way in.
+  // TODO: Validate
   const changeViewMode = (mode: ViewMode) => {
     if (mode === "browse") {
       setPagination((current) => ({

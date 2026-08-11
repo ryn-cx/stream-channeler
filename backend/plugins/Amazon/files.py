@@ -33,6 +33,7 @@ _PAGE_HEADERS = {
 }
 
 
+# TODO: Validate
 def _pick_image(images: dict[str, Any]) -> str | None:
     for key in _IMAGE_PREFERENCE:
         if url := images.get(key):
@@ -48,6 +49,7 @@ _PRIME_BENEFIT_IDS = frozenset({"Prime"})
 _PURCHASE_DATA_KEY = "purchaseData"
 
 
+# TODO: Validate
 def _episode_from_detail(asin: str, detail: dict[str, Any]) -> AmazonEpisode:
     return AmazonEpisode(
         asin=asin,
@@ -60,6 +62,7 @@ def _episode_from_detail(asin: str, detail: dict[str, Any]) -> AmazonEpisode:
     )
 
 
+# TODO: Validate
 def _channel_name(label: str) -> str:
     name = label.split("{lineBreak}", 1)[0].removeprefix("Watch with ").strip()
     if not name:
@@ -68,12 +71,14 @@ def _channel_name(label: str) -> str:
     return name
 
 
+# TODO: Validate
 @dataclass
 class AmazonChannel:
     benefit_id: str
     name: str
 
 
+# TODO: Validate
 @dataclass
 class AmazonSeason:
     asin: str
@@ -81,6 +86,7 @@ class AmazonSeason:
     season_number: int
 
 
+# TODO: Validate
 @dataclass
 class AmazonEpisode:
     asin: str
@@ -92,9 +98,11 @@ class AmazonEpisode:
     image_url: str | None
 
 
+# TODO: Validate
 class DetailPage(HTMLFile):
     """Detail page file."""
 
+    # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, asin: str) -> None:
         self.asin = asin
         self.session = session
@@ -102,11 +110,13 @@ class DetailPage(HTMLFile):
         self._hydration_cache: dict[str, Any] | None = None
         super().__init__(session, plugin, asin)
 
+    # TODO: Validate
     @override
     def write(self, content: str | None, extra: str | None = None) -> None:
         self._hydration_cache = None
         super().write(content, extra)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.asin):
@@ -125,6 +135,7 @@ class DetailPage(HTMLFile):
         for page in self._episode_pages():
             page.download_if_outdated()
 
+    # TODO: Validate
     def _episode_pages(self) -> list[EpisodeListPage]:
         if not self.database_record.content:
             return []
@@ -133,6 +144,7 @@ class DetailPage(HTMLFile):
             for index in range(len(self.episode_page_tokens()))
         ]
 
+    # TODO: Validate
     @override
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         if super().is_outdated(minimum_timestamp):
@@ -141,6 +153,7 @@ class DetailPage(HTMLFile):
         # missing page of it makes this page outdated as well.
         return any(page.is_outdated() for page in self._episode_pages())
 
+    # TODO: Validate
     @override
     def parsed(self) -> BeautifulSoup:
         """Return only the page's hydration-data script element."""
@@ -155,6 +168,7 @@ class DetailPage(HTMLFile):
             )
         return self._cached_parsed
 
+    # TODO: Validate
     def _hydration(self) -> dict[str, Any]:
         if self._hydration_cache is None:
             script = self.parsed().find("script", id=_HYDRATION_SCRIPT_ID)
@@ -164,9 +178,11 @@ class DetailPage(HTMLFile):
             self._hydration_cache = json.loads(script.string)
         return self._hydration_cache
 
+    # TODO: Validate
     def _body(self) -> dict[str, Any]:
         return self._hydration()["init"]["preparations"]["body"]
 
+    # TODO: Validate
     def _page_id(self) -> str:
         # The URL ASIN can differ from the page Amazon resolves to (redirects),
         # so the hydration data is keyed by the page's own title id.
@@ -176,35 +192,45 @@ class DetailPage(HTMLFile):
             return page_id
         return next(iter(header_detail))
 
+    # TODO: Validate
     def _header(self) -> dict[str, Any]:
         return self._body()["atf"]["state"]["detail"]["headerDetail"][self._page_id()]
 
+    # TODO: Validate
     def entity_type(self) -> str:
         return self._header()["entityType"]
 
+    # TODO: Validate
     def title(self) -> str:
         return self._header()["title"]
 
+    # TODO: Validate
     def series_title(self) -> str:
         header = self._header()
         return header.get("parentTitle") or header["title"]
 
+    # TODO: Validate
     def synopsis(self) -> str | None:
         return self._header().get("synopsis")
 
+    # TODO: Validate
     def image_url(self) -> str | None:
         return _pick_image(self._header().get("images", {}))
 
+    # TODO: Validate
     def release_date(self) -> str | None:
         return self._header().get("releaseDate")
 
+    # TODO: Validate
     def season_number(self) -> int | None:
         return self._header().get("seasonNumber")
 
+    # TODO: Validate
     def _subscriptions(self) -> list[dict[str, Any]]:
         actions = self._body()["atf"]["state"]["action"]["atf"].get(self._page_id(), {})
         found: list[dict[str, Any]] = []
 
+        # TODO: Validate
         def collect(node: object) -> None:
             if isinstance(node, dict):
                 mapping = cast("dict[str, Any]", node)
@@ -219,6 +245,7 @@ class DetailPage(HTMLFile):
         collect(actions)
         return found
 
+    # TODO: Validate
     def channels(self) -> list[AmazonChannel]:
         """Return every Amazon Channel this title can be watched with.
 
@@ -238,6 +265,7 @@ class DetailPage(HTMLFile):
             channels.append(AmazonChannel(benefit_id, _channel_name(label)))
         return channels
 
+    # TODO: Validate
     def included_with_prime(self) -> bool:
         """Report whether a Prime subscription is enough to watch this title."""
         return any(
@@ -245,6 +273,7 @@ class DetailPage(HTMLFile):
             for subscription in self._subscriptions()
         )
 
+    # TODO: Validate
     def purchasable(self) -> bool:
         """Report whether this title can be bought or rented.
 
@@ -253,6 +282,7 @@ class DetailPage(HTMLFile):
         """
         actions = self._body()["atf"]["state"]["action"]["atf"].get(self._page_id(), {})
 
+        # TODO: Validate
         def has_purchase_data(node: object) -> bool:
             if isinstance(node, dict):
                 mapping = cast("dict[str, Any]", node)
@@ -266,6 +296,7 @@ class DetailPage(HTMLFile):
 
         return has_purchase_data(actions)
 
+    # TODO: Validate
     def seasons(self) -> list[AmazonSeason]:
         seasons_by_id = self._body()["atf"]["state"].get("seasons", {})
         entries = seasons_by_id.get(self._page_id(), [])
@@ -278,6 +309,7 @@ class DetailPage(HTMLFile):
             for entry in entries
         ]
 
+    # TODO: Validate
     def episode_page_tokens(self) -> list[str]:
         """Return the token of every page the episode list is split over.
 
@@ -287,6 +319,7 @@ class DetailPage(HTMLFile):
         actions = self._body()["btf"]["state"].get("episodeList", {}).get("actions", {})
         return [page["token"] for page in actions.get("episodePages", [])]
 
+    # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:
         """Return every episode of the season, across all of its pages."""
         episodes: list[AmazonEpisode] = []
@@ -299,6 +332,7 @@ class DetailPage(HTMLFile):
         return episodes
 
 
+# TODO: Validate
 class EpisodeListPage(JSONFile[dict[str, Any]]):
     """One page of a season's episode list.
 
@@ -306,6 +340,7 @@ class EpisodeListPage(JSONFile[dict[str, Any]]):
     the token the detail page carries for them.
     """
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -320,10 +355,12 @@ class EpisodeListPage(JSONFile[dict[str, Any]]):
         self.unique_identifier = f"{asin}/{page_index}"
         super().__init__(session, plugin)
 
+    # TODO: Validate
     @override
     def _parse(self, raw: Any) -> dict[str, Any]:
         return cast("dict[str, Any]", raw)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -347,6 +384,7 @@ class EpisodeListPage(JSONFile[dict[str, Any]]):
             response.raise_for_status()
             self.write(response.text)
 
+    # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:
         """Return the episodes this page holds."""
         episode_list = self.parsed().get("widgets", {}).get("episodeList", {})
@@ -357,14 +395,18 @@ class EpisodeListPage(JSONFile[dict[str, Any]]):
         ]
 
 
+# TODO: Validate
 class FileMixin(TMDBMixin, register=False):
+    # TODO: Validate
     def detail_page(self, asin: str) -> DetailPage:
         """Returns DetailPage file."""
         return self._file(DetailPage, asin)
 
+    # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return self.detail_page(show_key).entity_type() == "Movie"
 
+    # TODO: Validate
     def _season_entries(self, show_key: str) -> list[AmazonSeason]:
         page = self.detail_page(show_key)
         if seasons := page.seasons():
@@ -377,10 +419,12 @@ class FileMixin(TMDBMixin, register=False):
             ),
         ]
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_show_file([self.detail_page(show_key)], show_key)
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_season_file(
@@ -389,6 +433,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -403,12 +448,14 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
             return [show_key]
         return [season.asin for season in self._season_entries(show_key)]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

@@ -37,6 +37,7 @@ channel_comments_router = APIRouter(
 comments_router = APIRouter(prefix="/comments", tags=["comments"])
 
 
+# TODO: Validate
 @channel_comments_router.get("")
 def read_channel_comments(
     session: SessionDep,
@@ -48,6 +49,7 @@ def read_channel_comments(
     return get_comments(session, channel, offset, limit)
 
 
+# TODO: Validate
 @channel_comments_router.post("")
 def create_channel_comment(
     session: SessionDep,
@@ -59,6 +61,7 @@ def create_channel_comment(
     return create_comment(session, current_user, channel, comment_input)
 
 
+# TODO: Validate
 @comments_router.get("/mine")
 def read_my_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     session: SessionDep,
@@ -85,6 +88,7 @@ def read_my_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     )
 
 
+# TODO: Validate
 @comments_router.get("/{comment_id}/replies")  # noqa: FAST003 - Used by ReadableComment.
 def read_comment_replies(
     session: SessionDep,
@@ -94,12 +98,14 @@ def read_comment_replies(
     return get_replies(session, comment)
 
 
+# TODO: Validate
 @comments_router.get("/unread-count")
 def read_unread_comment_count(session: SessionDep, current_user: CurrentUser) -> int:
     """Get how many comment notifications the `User` has not read."""
     return unread_notification_count(session, current_user)
 
 
+# TODO: Validate
 @comments_router.post("/read")
 def mark_comments_read(
     session: SessionDep,
@@ -110,6 +116,7 @@ def mark_comments_read(
     return mark_notifications_read(session, current_user, comment_id)
 
 
+# TODO: Validate
 @comments_router.patch("/{comment_id}")  # noqa: FAST003 - Used by EditableComment.
 def update_channel_comment(
     session: SessionDep,
@@ -120,6 +127,7 @@ def update_channel_comment(
     return update_comment(session, comment, comment_input)
 
 
+# TODO: Validate
 @comments_router.delete("/{comment_id}")  # noqa: FAST003 - Used by EditableComment.
 def delete_channel_comment(session: SessionDep, comment: EditableComment) -> Message:
     """Delete a `Comment` written by the `User` and every reply to it."""

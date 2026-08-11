@@ -10,6 +10,7 @@ from app.tools import import_queue, update_outdated
 logger = logger.bind(source="updater")
 
 
+# TODO: Validate
 def run(stop_event: threading.Event) -> None:  # noqa: D103
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [
@@ -20,6 +21,7 @@ def run(stop_event: threading.Event) -> None:  # noqa: D103
             future.result()
 
 
+# TODO: Validate
 def start() -> None:  # noqa: D103
     threading.Thread(target=run, args=(threading.Event(),), daemon=True).start()
 

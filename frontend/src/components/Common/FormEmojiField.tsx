@@ -16,6 +16,7 @@ interface FormEmojiFieldProps<TFieldValues extends FieldValues> {
   label: string
 }
 
+// TODO: Validate
 export function FormEmojiField<TFieldValues extends FieldValues>({
   control,
   name,

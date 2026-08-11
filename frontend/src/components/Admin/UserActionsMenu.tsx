@@ -1,3 +1,4 @@
+// TODO: Validate
 import type { UserPublic } from "@/client"
 import useAuth from "@/hooks/useAuth"
 import DeleteUser from "./DeleteUser"
@@ -7,6 +8,7 @@ interface UserActionsMenuProps {
   user: UserPublic
 }
 
+// TODO: Validate
 export const UserActionsMenu = ({ user }: UserActionsMenuProps) => {
   const { user: currentUser } = useAuth()
 

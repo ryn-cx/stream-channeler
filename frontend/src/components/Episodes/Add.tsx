@@ -52,6 +52,7 @@ interface AddEpisodeProps {
   seasonKey: string
 }
 
+// TODO: Validate
 const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -95,6 +96,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

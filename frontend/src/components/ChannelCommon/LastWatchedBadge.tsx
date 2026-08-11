@@ -8,6 +8,7 @@ interface LastWatchedBadgeProps {
   }
 }
 
+// TODO: Validate
 /** "Last Watched" marker shared by the episode cards and the hero billboard. */
 export function LastWatchedBadge({ episode }: LastWatchedBadgeProps) {
   if (!episode.watch_date) return null

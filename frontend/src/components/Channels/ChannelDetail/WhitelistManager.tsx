@@ -24,6 +24,7 @@ import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
 
+// TODO: Validate
 /** The favicons of the websites' copies a season or episode was found on. */
 function SourceFavicons({
   showIds,
@@ -76,6 +77,7 @@ interface SeasonGroup {
 // wrote it as "Episode 3", "EP 3", or just "3".
 const NUMBERED_EPISODE_NAME = /^(?:episode|ep\.?)?\s*0*(\d+)$/i
 
+// TODO: Validate
 function tmdbGroupKey(tmdbSeasonNumber: number) {
   return `tmdb-${tmdbSeasonNumber}`
 }
@@ -83,10 +85,12 @@ function tmdbGroupKey(tmdbSeasonNumber: number) {
 // A season TMDB has a record of is one row for every site carrying it, so the
 // episodes under it TMDB has no record of would be read as one site's had they
 // only their season to go by. They are told apart by the sites carrying them.
+// TODO: Validate
 function siteGroupKey(seasonId: string, showIds: string[]) {
   return `season-${seasonId}-${[...showIds].sort().join("-")}`
 }
 
+// TODO: Validate
 function siteSeasonLabel(
   season: WhitelistSeasonOutput,
   anySeasonHasNumber: boolean,
@@ -98,6 +102,7 @@ function siteSeasonLabel(
   return `Season ${season.season_number ?? "?"}${seasonName}`
 }
 
+// TODO: Validate
 function groupSeasons(
   seasons: WhitelistSeasonOutput[],
   episodes: WhitelistEpisodeOutput[],
@@ -114,6 +119,7 @@ function groupSeasons(
   }
 
   const groups = new Map<string, SeasonGroup>()
+  // TODO: Validate
   const groupFor = (key: string, label: string) => {
     const existing = groups.get(key)
     if (existing) return existing
@@ -127,6 +133,7 @@ function groupSeasons(
   // has no record of are kept out of the rows TMDB numbers, so a season carrying
   // both is listed in each. A season with no episodes at all has only its own
   // TMDB number to go by.
+  // TODO: Validate
   const groupKeysOfSeason = (season: WhitelistSeasonOutput) => {
     const seasonEpisodes = episodesBySeasonId.get(season.id) ?? []
     const keys = new Set(
@@ -142,6 +149,7 @@ function groupSeasons(
       : [siteGroupKey(season.id, season.show_ids)]
   }
 
+  // TODO: Validate
   const labelForKey = (
     key: string,
     season: WhitelistSeasonOutput | undefined,
@@ -227,6 +235,7 @@ interface WhitelistManagerProps {
   onClose: () => void
 }
 
+// TODO: Validate
 export function WhitelistManager({
   channelId,
   showId,
@@ -335,10 +344,12 @@ export function WhitelistManager({
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const toggleIsWhitelist = () => {
     setIsWhitelist(!isWhitelist)
   }
 
+  // TODO: Validate
   const toggleGroupExpanded = (groupKey: string) => {
     const newExpanded = new Set(expandedSeasons)
     if (newExpanded.has(groupKey)) {
@@ -349,6 +360,7 @@ export function WhitelistManager({
     setExpandedSeasons(newExpanded)
   }
 
+  // TODO: Validate
   const toggleSourceEnabled = (showId: string) => {
     const newEnabled = new Set(enabledSourceIds)
     if (newEnabled.has(showId)) {
@@ -360,6 +372,7 @@ export function WhitelistManager({
   }
 
   // A row can stand for more than one stored season, and they are marked together.
+  // TODO: Validate
   const toggleSeasonsEnabled = (seasonIds: string[], enabled: boolean) => {
     const newEnabled = new Set(enabledSeasonIds)
     for (const seasonId of seasonIds) {
@@ -372,6 +385,7 @@ export function WhitelistManager({
     setEnabledSeasonIds(newEnabled)
   }
 
+  // TODO: Validate
   const toggleEpisodeEnabled = (episodeIdentifier: string) => {
     const newEnabled = new Set(enabledEpisodeIdentifiers)
     if (newEnabled.has(episodeIdentifier)) {
@@ -382,6 +396,7 @@ export function WhitelistManager({
     setEnabledEpisodeIdentifiers(newEnabled)
   }
 
+  // TODO: Validate
   const setEpisodeExpiryValue = (episodeIdentifier: string, value: string) => {
     setEpisodeExpiry((previous) => {
       const next = new Map(previous)
@@ -396,6 +411,7 @@ export function WhitelistManager({
 
   // Clicking an episode toggles it; removing is immediate, adding first asks for the
   // optional expiry via a popup.
+  // TODO: Validate
   const handleEpisodeClick = (episode: WhitelistEpisodeOutput) => {
     if (enabledEpisodeIdentifiers.has(episode.episode_identifier)) {
       toggleEpisodeEnabled(episode.episode_identifier)
@@ -404,6 +420,7 @@ export function WhitelistManager({
     }
   }
 
+  // TODO: Validate
   const confirmEpisodeExpiry = (expiresAtLocal: string) => {
     if (!pendingEpisode) return
     setEnabledEpisodeIdentifiers((previous) =>
@@ -413,6 +430,7 @@ export function WhitelistManager({
     setPendingEpisode(null)
   }
 
+  // TODO: Validate
   const handleSave = () => {
     if (!whitelistData) return
 
@@ -439,6 +457,7 @@ export function WhitelistManager({
     saveMutation.mutate(input)
   }
 
+  // TODO: Validate
   const getEpisodeLabel = (episode: WhitelistEpisodeOutput) => {
     const episodeName = episode.name ?? ""
     const episodeNumber = episode.tmdb_episode_number ?? episode.sort_order
@@ -452,6 +471,7 @@ export function WhitelistManager({
     return `Episode ${episodeNumber}${named ? ` - ${episodeName}` : ""}`
   }
 
+  // TODO: Validate
   const getSeasonActionLabel = (enabled: boolean) => {
     if (isWhitelist) {
       return enabled ? "Remove from Whitelist" : "Add to Whitelist"
@@ -464,6 +484,7 @@ export function WhitelistManager({
   // is skipped on.
   const getSourceActionLabel = getSeasonActionLabel
 
+  // TODO: Validate
   const getEpisodeActionLabel = (
     episodeEnabled: boolean,
     seasonEnabled: boolean,
@@ -494,6 +515,7 @@ export function WhitelistManager({
       .filter((source) => source.is_tmdb)
       .map((source) => source.show_id),
   )
+  // TODO: Validate
   const watchableShowIds = (showIds: string[]) =>
     showIds.filter((showId) => !tmdbShowIds.has(showId))
   const watchableSources = whitelistData.sources.filter(
@@ -503,6 +525,7 @@ export function WhitelistManager({
   // season can be a shell a site announced and never filled. TMDB is among them
   // wherever an episode has a TMDB id, and stands on its own season record when
   // the row has no episodes at all.
+  // TODO: Validate
   const seasonShowIds = (group: SeasonGroup) => {
     if (group.episodes.length > 0) {
       return [...new Set(group.episodes.flatMap((episode) => episode.show_ids))]
@@ -519,6 +542,7 @@ export function WhitelistManager({
     whitelistData.seasons,
     whitelistData.episodes,
   )
+  // TODO: Validate
   const isGroupEnabled = (group: SeasonGroup) =>
     group.seasons.length > 0 &&
     group.seasons.every((season) => enabledSeasonIds.has(season.id))

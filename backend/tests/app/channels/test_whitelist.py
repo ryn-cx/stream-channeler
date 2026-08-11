@@ -31,9 +31,11 @@ from tests.app.users.utils import create_random_user
 from tests.app.utils.route_assertions import assert_forbidden, assert_success
 
 
+# TODO: Validate
 class TestGetWhitelist(BaseChannelSubEndpointTests):
     sub_http_method = "get"
 
+    # TODO: Validate
     def can_access_sub_endpoint(
         self,
         *,
@@ -44,10 +46,12 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
     ) -> bool:
         return user_is_authenticated and user_is_owner
 
+    # TODO: Validate
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
 
     # TODO: reduce parameter count, e.g. group args into a params/dataclass object.
+    # TODO: Validate
     def assert_whitelist_success(  # noqa: PLR0913
         self,
         session_scoped_client: TestClient,
@@ -76,6 +80,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
             EpisodeOutput.model_validate(episode) for episode in episodes
         ]
 
+    # TODO: Validate
     @pytest.mark.parametrize("plugin_is_public", [True, False])
     @pytest.mark.parametrize("user_owns_plugin", [True, False])
     def test_get_shows_permissions(
@@ -130,6 +135,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         else:
             assert len(result.shows) == 0
 
+    # TODO: Validate
     @pytest.mark.parametrize("plugin_is_public", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
     def test_get_whitelist_permissions(
@@ -195,6 +201,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
                 headers=initial_test_data.headers,
             )
 
+    # TODO: Validate
     @pytest.mark.parametrize("episode_count", [0, 1, 2])
     def test_read_whitelist(
         self,
@@ -229,6 +236,7 @@ class TestGetWhitelist(BaseChannelSubEndpointTests):
         )
 
 
+# TODO: Validate
 @dataclass
 class WhitelistUpdateTestData:
     user: User
@@ -242,10 +250,12 @@ class WhitelistUpdateTestData:
     initial_input: WhitelistShowInput
 
 
+# TODO: Validate
 class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     sub_http_method = "patch"
     sub_parameters = WhitelistShowInput(is_whitelist=True).model_dump(mode="json")
 
+    # TODO: Validate
     def can_access_sub_endpoint(
         self,
         *,
@@ -256,9 +266,11 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
     ) -> bool:
         return user_is_authenticated and user_is_owner
 
+    # TODO: Validate
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/{self.endpoint_name}/{channel_id}/whitelist/{uuid.uuid4()}"
 
+    # TODO: Validate
     @staticmethod
     def assert_whitelist_state(
         result: WhitelistShowOutput,
@@ -272,6 +284,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
         assert {s.id for s in result.seasons if s.filtered} == expected_season_ids
 
     # TODO: reduce parameter count, e.g. group args into a params/dataclass object.
+    # TODO: Validate
     def assert_update_result(  # noqa: PLR0913
         self,
         session_scoped_client: TestClient,
@@ -297,6 +310,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             expected_season_ids=expected_season_ids,
         )
 
+    # TODO: Validate
     def create_whitelist_test_data(
         self,
         session_scoped_client: TestClient,
@@ -352,6 +366,7 @@ class TestUpdateWhitelist(BaseChannelSubEndpointTests):
             initial_input=initial_input,
         )
 
+    # TODO: Validate
     def test_update_whitelist_data(
         self,
         session_scoped_client: TestClient,

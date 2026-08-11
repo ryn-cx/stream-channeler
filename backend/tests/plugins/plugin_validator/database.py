@@ -37,6 +37,7 @@ from tests.plugins.plugin_validator.context_managers import (
 from tests.plugins.plugin_validator.serialization import SerializationMixin
 
 
+# TODO: Validate
 def _plugin_class(plugin_key: str) -> type[BasePlugin]:
     """Return the plugin class for a plugin key.
 
@@ -58,6 +59,7 @@ def _plugin_class(plugin_key: str) -> type[BasePlugin]:
     raise ValueError(msg)
 
 
+# TODO: Validate
 class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
@@ -65,6 +67,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     invalid_url: bool
     imported_plugin: PluginT
 
+    # TODO: Validate
     def _url_variants(self) -> list[str]:
         class_attrs = {
             key: value
@@ -82,11 +85,13 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
                 variants.append(formatted)
         return variants
 
+    # TODO: Validate
     @property
     def url(self) -> str | None:
         variants = self._url_variants()
         return variants[0] if variants else None
 
+    # TODO: Validate
     def files_directory_path(self) -> Path:
         """Path to the directory where all files for the test class are stored.
 
@@ -102,30 +107,37 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             / test_class.__name__
         )
 
+    # TODO: Validate
     def stats_directory_path(self, label: str) -> Path:
         """Path to the directory where a specific test's profiling output is stored."""
         return self.files_directory_path() / "stats" / label
 
+    # TODO: Validate
     def stats_file_path(self) -> Path:
         """Path to the file holding the stats of every test of the test class."""
         return self.files_directory_path() / "stats.json"
 
+    # TODO: Validate
     def slow_stats_file_path(self) -> Path:
         """Path to the file holding the stats of every test that got worse."""
         return self.files_directory_path() / "slow.json"
 
+    # TODO: Validate
     def database_dump_file_path(self) -> Path:
         """Path to the file that has the expected output for the test class."""
         return self.files_directory_path() / "database_dump.json"
 
+    # TODO: Validate
     def import_url_results_file_path(self) -> Path:
         """Path to the file with the expected import_url result for the test class."""
         return self.files_directory_path() / "import_url_results.json"
 
+    # TODO: Validate
     def combined_files_path(self) -> Path:
         """Path to the list of the stored files this test class needs."""
         return self.files_directory_path() / "all_files.json"
 
+    # TODO: Validate
     def _export_files_manifest(self, session: Session) -> None:
         """Record which of the stored files this test class needs.
 
@@ -152,6 +164,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
+    # TODO: Validate
     def _files_to_import(self) -> list[tuple[str, str, Path]]:
         """Return the plugin key, file key and stored path of each file needed.
 
@@ -173,6 +186,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             (plugin_key, key, path) for plugin_key, key, path in files if path.is_file()
         ]
 
+    # TODO: Validate
     def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return a plugin with all children selectinloaded."""
         select_statement = self._plugin_with_children_statement().where(
@@ -180,11 +194,13 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         )
         return session.exec(select_statement).one()
 
+    # TODO: Validate
     def select_plugins_with_children(self, session: Session) -> list[Plugin]:
         """Return every plugin in the database with all children selectinloaded."""
         statement = self._plugin_with_children_statement().order_by(Plugin.key)  # type: ignore[arg-type]
         return list(session.exec(statement).all())
 
+    # TODO: Validate
     @staticmethod
     def _plugin_with_children_statement() -> Any:
         return select(Plugin).options(
@@ -194,6 +210,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             .selectinload(Season.episodes),  # type: ignore[arg-type]
         )
 
+    # TODO: Validate
     def _export_database_dump_file(self, session: Session) -> None:
         """Export the database dump file to disk if it does not already exist.
 
@@ -212,10 +229,12 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
+    # TODO: Validate
     def load_database_dump(self) -> list[dict[str, Any]]:
         """Load every plugin's dumped state from the database dump file."""
         return json.loads(self.database_dump_file_path().read_text(encoding="utf-8"))
 
+    # TODO: Validate
     def load_database_dump_plugin(self) -> Plugin:
         """Load the plugin under test from the database dump file."""
         plugin_key = self.plugin_class.plugin_key()
@@ -225,6 +244,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         msg = f"No dumped plugin for key {plugin_key!r}"
         raise ValueError(msg)
 
+    # TODO: Validate
     @staticmethod
     def _simplify_import_url_results(
         results: list[URLImportResult],
@@ -240,6 +260,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             for result in results
         ]
 
+    # TODO: Validate
     def _export_import_url_results_file(self, results: list[URLImportResult]) -> None:
         """Export the expected import result to disk if it does not already exist."""
         if self.import_url_results_file_path().exists():
@@ -250,6 +271,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             encoding="utf-8",
         )
 
+    # TODO: Validate
     def _import_url(
         self,
         session: Session,
@@ -266,10 +288,12 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         return output
 
+    # TODO: Validate
     def _search(self, session: Session, query: str) -> PluginSearchResults:
         with freeze_time(self._search_files_freeze_target(session)):
             return self.plugin_class(session).search(query)
 
+    # TODO: Validate
     def _search_files_freeze_target(self, session: Session) -> datetime | None:
         plugin = self.select_plugin_with_children(session)
         search_timestamps = [
@@ -281,6 +305,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             return None
         return max(search_timestamps) + timedelta(seconds=1)
 
+    # TODO: Validate
     def _import_files(self, session: Session) -> None:
         """Store every stored test file as a `File` of the plugin that owns it.
 
@@ -296,6 +321,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
+        # TODO: Validate
         def no_operation(_plugin: BasePlugin) -> None:
             """No operation function."""
 
@@ -346,6 +372,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
         session.commit()  # Set the rollback point.
 
+    # TODO: Validate
     @pytest.fixture(scope="class")
     def _connection_with_files(self) -> Generator[Connection]:
         """One class-scoped connection with files imported once for the whole class.
@@ -369,6 +396,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
             transaction.rollback()
             connection.close()
 
+    # TODO: Validate
     @pytest.fixture
     def session_with_files(
         self,

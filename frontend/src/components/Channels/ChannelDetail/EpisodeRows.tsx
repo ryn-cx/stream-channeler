@@ -9,6 +9,7 @@ interface EpisodeRowsProps {
   channelId: string
 }
 
+// TODO: Validate
 export function EpisodeRows({ episodes, channelId }: EpisodeRowsProps) {
   const queryClient = useQueryClient()
 
@@ -24,6 +25,7 @@ export function EpisodeRows({ episodes, channelId }: EpisodeRowsProps) {
     lastSeenByShow.set(showId, index)
   }
 
+  // TODO: Validate
   const handleNextEpisode = (currentEpisodeId: string) => {
     const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
     if (currentIndex === -1) return

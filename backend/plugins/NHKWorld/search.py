@@ -12,7 +12,9 @@ from plugins.utils.abstract_plugin import (
 )
 
 
+# TODO: Validate
 class SearchMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         offset = int(cursor) if cursor else 0

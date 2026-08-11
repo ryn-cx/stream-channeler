@@ -42,19 +42,24 @@ MAXIMUM_DURATION = 3600
 REPEATS = 7
 
 
+# TODO: Validate
 class UnguardedEpisodeQueryBuilder(EpisodeQueryBuilder):
     """SQL dedup with no single-source guard: the window runs unconditionally."""
 
+    # TODO: Validate
     def _fetch_holds_copied_titles(self) -> bool:
         return True
 
 
+# TODO: Validate
 class LegacyEpisodeQueryBuilder(EpisodeQueryBuilder):
     """The reading this branch replaced: no SQL dedup, collapsed in Python after."""
 
+    # TODO: Validate
     def _source_rank_column(self):  # noqa: ANN202
         return literal(1).label("source_rank")
 
+    # TODO: Validate
     def _source_keys_by_episode(
         self,
         episodes: Sequence[Episode],
@@ -71,6 +76,7 @@ class LegacyEpisodeQueryBuilder(EpisodeQueryBuilder):
         ).all()
         return dict(rows)
 
+    # TODO: Validate
     def _deduplicate_by_identifier(
         self,
         episodes: list[Episode],
@@ -78,6 +84,7 @@ class LegacyEpisodeQueryBuilder(EpisodeQueryBuilder):
         source_keys = self._source_keys_by_episode(episodes)
         return deduplicate_episodes(episodes, source_keys, self._source_config)
 
+    # TODO: Validate
     def get_episodes(self) -> list[EpisodeResult]:
         query: Select[tuple[Episode, UUID]] = self._base_query()
         query = self._join_whitelist(query)
@@ -128,6 +135,7 @@ class LegacyEpisodeQueryBuilder(EpisodeQueryBuilder):
         ]
 
 
+# TODO: Validate
 def _build_channel(
     session: Session,
     user: User,
@@ -178,6 +186,7 @@ def _build_channel(
     return channel, episodes
 
 
+# TODO: Validate
 def _add_watches(session: Session, user: User, episodes: list[Episode]) -> None:
     watched = random.sample(episodes, WATCH_COUNT)
     session.add_all(
@@ -194,6 +203,7 @@ def _add_watches(session: Session, user: User, episodes: list[Episode]) -> None:
     session.flush()
 
 
+# TODO: Validate
 def _complex_options() -> ChannelOptions:
     return ChannelOptions(
         sort_by=[
@@ -233,6 +243,7 @@ def _complex_options() -> ChannelOptions:
     )
 
 
+# TODO: Validate
 def _time_read(
     builder_class: type[EpisodeQueryBuilder],
     session: Session,
@@ -245,6 +256,7 @@ def _time_read(
     return time.perf_counter() - start, len(results)
 
 
+# TODO: Validate
 def _compare(
     session: Session,
     channel: Channel,
@@ -280,6 +292,7 @@ def _compare(
     logger.info(f"[{label}] {report}")
 
 
+# TODO: Validate
 def _filtered_query(
     builder: EpisodeQueryBuilder,
 ) -> Select[tuple[Episode, UUID]]:
@@ -297,6 +310,7 @@ def _filtered_query(
     return builder._filter_by_ranges(query)  # noqa: SLF001
 
 
+# TODO: Validate
 def _time_query(session: Session, query: object, repeats: int = 5) -> float:
     times = []
     for _ in range(repeats):
@@ -307,6 +321,7 @@ def _time_query(session: Session, query: object, repeats: int = 5) -> float:
     return statistics.median(times)
 
 
+# TODO: Validate
 def _isolate_unsorted_cost(
     session: Session,
     channel: Channel,
@@ -341,7 +356,9 @@ def _isolate_unsorted_cost(
     )
 
 
+# TODO: Validate
 class TestDedupBenchmarkDuplicated:
+    # TODO: Validate
     def test_three_sources_per_title(self, class_scoped_session: Session) -> None:
         session = class_scoped_session
         user = create_random_user(session)
@@ -354,7 +371,9 @@ class TestDedupBenchmarkDuplicated:
         _compare(session, channel, user, _complex_options(), "3 sources, complex sort")
 
 
+# TODO: Validate
 class TestDedupBenchmarkSingleSource:
+    # TODO: Validate
     def test_one_source_per_title(self, class_scoped_session: Session) -> None:
         session = class_scoped_session
         user = create_random_user(session)

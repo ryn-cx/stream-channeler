@@ -9,7 +9,9 @@ from plugins.JustWatch.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginSearchResult, PluginSearchResults
 
 
+# TODO: Validate
 class SearchMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         search_file = self.search_titles_file(query, cursor)

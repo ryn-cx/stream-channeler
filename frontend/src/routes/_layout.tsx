@@ -9,6 +9,7 @@ export const Route = createFileRoute("/_layout")({
   component: Layout,
 })
 
+// TODO: Validate
 function Layout() {
   return (
     <TooltipProvider>

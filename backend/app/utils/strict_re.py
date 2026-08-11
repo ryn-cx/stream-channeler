@@ -8,6 +8,7 @@ from app.utils.copy_params import copy_func_params
 
 
 # ANN401 Any is ok because the actual types are set by the copy_func_params.
+# TODO: Validate
 @copy_func_params(re.match)
 def strict_match(
     pattern: str | re.Pattern[str],
@@ -27,6 +28,7 @@ def strict_match(
     return match
 
 
+# TODO: Validate
 def strict_group(match: re.Match[str], group: int | str) -> str:
     """Get a regex group from a match or raise an error if the group is not found."""
     result = match.group(group)

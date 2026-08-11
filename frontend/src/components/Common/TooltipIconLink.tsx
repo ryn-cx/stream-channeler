@@ -12,6 +12,7 @@ interface TooltipIconLinkProps {
   children: ReactNode
 }
 
+// TODO: Validate
 export function TooltipIconLink({ label, children }: TooltipIconLinkProps) {
   return (
     <Tooltip>

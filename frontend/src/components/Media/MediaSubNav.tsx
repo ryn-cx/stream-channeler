@@ -18,6 +18,7 @@ const adminItem = { title: "Files", path: "/files" } as const
 
 // Secondary navigation shown on every custom-media page so the user can jump
 // between the different media types they own.
+// TODO: Validate
 export function MediaSubNav() {
   const router = useRouterState()
   const currentPath = router.location.pathname

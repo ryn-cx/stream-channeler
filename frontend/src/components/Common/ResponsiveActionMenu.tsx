@@ -40,6 +40,7 @@ interface ResponsiveActionMenuProps {
   onTriggerClick?: (event: React.MouseEvent) => void
 }
 
+// TODO: Validate
 function MenuRow({
   item,
   className,
@@ -79,6 +80,7 @@ function MenuRow({
   )
 }
 
+// TODO: Validate
 export function ResponsiveActionMenu({
   items,
   trigger,

@@ -19,6 +19,7 @@ interface FileContentCellProps {
   fileName: string
 }
 
+// TODO: Validate
 export function FileContentCell({ fileId, fileName }: FileContentCellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { data, isFetching } = useQuery({

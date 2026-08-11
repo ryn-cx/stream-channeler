@@ -28,6 +28,7 @@ __all__ = ["Sentinel"]
 # copying/unpickling.
 
 
+# TODO: Validate
 class Sentinel:
     """Create a unique sentinel object.
 
@@ -46,6 +47,7 @@ class Sentinel:
     _repr: str
     _module_name: str
 
+    # TODO: Validate
     def __new__(  # noqa: ANN204
         cls,
         name: str,
@@ -77,9 +79,11 @@ class Sentinel:
         with _lock:
             return _registry.setdefault(registry_key, sentinel)
 
+    # TODO: Validate
     def __repr__(self):  # noqa: ANN204
         return self._repr
 
+    # TODO: Validate
     def __reduce__(self):  # noqa: ANN204
         return (
             self.__class__,
@@ -104,6 +108,7 @@ _registry: dict[str, Sentinel] = {}
 #
 # For reference, see the implementation of namedtuple:
 # https://github.com/python/cpython/blob/67444902a0f10419a557d0a2d3b8675c31b075a9/Lib/collections/__init__.py#L503
+# TODO: Validate
 def _get_parent_frame():  # noqa: ANN202
     """Return the frame object for the caller's parent stack frame."""
     try:
@@ -112,6 +117,7 @@ def _get_parent_frame():  # noqa: ANN202
     except AttributeError, ValueError:
         global _get_parent_frame  # noqa: PLW0603
 
+        # TODO: Validate
         def _get_parent_frame():  # noqa: ANN202
             """Return the frame object for the caller's parent stack frame."""
             try:
@@ -122,6 +128,7 @@ def _get_parent_frame():  # noqa: ANN202
                 except Exception:  # noqa: BLE001
                     global _get_parent_frame  # noqa: PLW0603
 
+                    # TODO: Validate
                     def _get_parent_frame():  # noqa: ANN202
                         """Return the frame object for the caller's parent stack frame."""
                         return

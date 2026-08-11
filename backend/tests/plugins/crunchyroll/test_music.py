@@ -15,14 +15,17 @@ from tests.plugins.crunchyroll.validators import (
 )
 
 
+# TODO: Validate
 class CrunchyrollArtistValidator(CrunchyrollValidator):
     urls = crunchyroll_urls("artist/{parse_url_response}", "{artist_slug}")
 
 
+# TODO: Validate
 class CrunchyrollMusicUpdateSourceTest(
     CrunchyrollUpdateSourceTests,
     CrunchyrollArtistValidator,
 ):
+    # TODO: Validate
     def export_browse_file(
         self,
         plugin_instance: Crunchyroll,
@@ -34,6 +37,7 @@ class CrunchyrollMusicUpdateSourceTest(
         new_browse.write(dumped)
         new_browse.database_record.data_timestamp = timestamp
 
+    # TODO: Validate
     @override
     def _create_source_update_entry(
         self,
@@ -50,6 +54,7 @@ class CrunchyrollMusicUpdateSourceTest(
         self.export_browse_file(plugin_instance, parsed, timestamp)
 
 
+# TODO: Validate
 class TestArtistWithMusicVideosAndConcerts(
     CrunchyrollStandardTests,
     CrunchyrollMusicUpdateSourceTest,

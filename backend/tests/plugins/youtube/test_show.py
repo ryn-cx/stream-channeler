@@ -7,6 +7,7 @@ from tests.plugins.youtube.validators import (
 )
 
 
+# TODO: Validate
 class TestShow(StandardTests[YouTube], YouTubeValidator):
     """Test importing a YouTube show."""
 
@@ -15,6 +16,7 @@ class TestShow(StandardTests[YouTube], YouTubeValidator):
     parse_url_response = ("show_key", show_key)
 
 
+# TODO: Validate
 class TestShowSeason(StandardTests[YouTube], YouTubeValidator):
     """Test importing a single season of a show.
 
@@ -35,5 +37,6 @@ class TestShowSeason(StandardTests[YouTube], YouTubeValidator):
     parse_url_response = ("show_key", show_key)
 
 
+# TODO: Validate
 class TestInvalidShow(InvalidYouTubeURLValidator):
     urls = ("youtube.com/show/SC0123456789ABCDEFGHIJHI",)

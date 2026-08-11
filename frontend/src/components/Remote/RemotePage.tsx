@@ -9,6 +9,7 @@ const INSTALL_URL =
 const SOURCE_URL = "https://github.com/ryn-cx/stream-channeler-remote"
 const TAMPERMONKEY_URL = "https://www.tampermonkey.net/"
 
+// TODO: Validate
 export function RemotePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-10 px-4 py-8">

@@ -7,6 +7,7 @@ interface EmptyStateProps {
   description: string
 }
 
+// TODO: Validate
 export function EmptyState({
   icon: Icon,
   title,

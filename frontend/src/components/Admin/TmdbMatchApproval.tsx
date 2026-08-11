@@ -21,6 +21,7 @@ interface RemovedRows {
   previousRows?: UnmatchedEpisodeOutput[]
 }
 
+// TODO: Validate
 /**
  * Settle which TMDB episode an episode is, or settle that it is none of them.
  *
@@ -40,6 +41,7 @@ export function TmdbMatchApproval({
   // An episode that has been settled is off the list whichever way it was
   // settled, so the row is taken out as the button is pressed rather than left
   // sitting there until the server has been asked and the table read back.
+  // TODO: Validate
   const takeRowOff = async (): Promise<RemovedRows> => {
     await queryClient.cancelQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
     const previousRows = queryClient.getQueryData<UnmatchedEpisodeOutput[]>(
@@ -53,6 +55,7 @@ export function TmdbMatchApproval({
     return { previousRows }
   }
 
+  // TODO: Validate
   const putRowBack = (
     error: ApiError,
     _variables: unknown,
@@ -64,6 +67,7 @@ export function TmdbMatchApproval({
     handleError.call(showErrorToast, error)
   }
 
+  // TODO: Validate
   const settleQueries = () =>
     queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
 

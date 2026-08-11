@@ -1,3 +1,4 @@
+# TODO: Validate
 """Crunchyroll URL handlers."""
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
     from plugins.Crunchyroll import Crunchyroll
 
 
+# TODO: Validate
 def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
     """Return the regex for a Crunchyroll url."""
     return (
@@ -29,13 +31,16 @@ def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
     )
 
 
+# TODO: Validate
 class _CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
+    # TODO: Validate
     @override
     def __init__(self, plugin: Crunchyroll, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
+# TODO: Validate
 class CrunchyrollSeriesURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll series URL handler.
 
@@ -44,17 +49,20 @@ class CrunchyrollSeriesURLHandler(_CrunchyrollURLHandler):
 
     _URL_REGEX = _build_crunchyroll_url_regex("series", group="show_key")
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         plugin_file = self.plugin.series_file(self._key)
         self.plugin.raise_if_invalid_file(plugin_file, self.url)
 
 
+# TODO: Validate
 class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll episode URL handler.
 
@@ -63,12 +71,14 @@ class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
 
     _URL_REGEX = _build_crunchyroll_url_regex("watch", group="episode_key")
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         objects_file = self.plugin.objects_file(self._key)
         return objects_file.parsed().data[0].episode_metadata.series_id
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         objects_file = self.plugin.objects_file(self._key)
@@ -86,12 +96,14 @@ class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
         original_file = self.plugin.objects_file(self._key)
         self.plugin.raise_if_invalid_file(original_file, self.url)
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return [
             URLImportResult.for_episodes(show, [self._get_matching_episode(show)]),
         ]
 
+    # TODO: Validate
     def _get_matching_episode(self, show: Show) -> Episode:
         for season in show.seasons:
             for episode in season.episodes:
@@ -102,6 +114,7 @@ class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
         raise InvalidURLError(msg)
 
 
+# TODO: Validate
 class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
     """Crunchyroll artist URL handler.
 
@@ -110,18 +123,22 @@ class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
 
     _URL_REGEX = _build_crunchyroll_url_regex("artist", group="artist_key")
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         artist_file = self.plugin.artist_file(self._key)
         self.plugin.raise_if_invalid_file(artist_file, self.url)
 
 
+# TODO: Validate
 class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
@@ -129,15 +146,18 @@ class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
         details = file.parsed().data[0]
         return details.artist.id
 
+    # TODO: Validate
     @property
     def _episode_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         music_file = self.plugin.concert_or_music_video_file(self._episode_key)
         self.plugin.raise_if_invalid_file(music_file, self.url)
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         for season in show.seasons:
@@ -151,6 +171,7 @@ class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
         raise InvalidURLError(msg)
 
 
+# TODO: Validate
 class CrunchyrollMusicVideoURLHandler(_CrunchyrollMusicURLHandler):
     """Crunchyroll music video URL handler.
 
@@ -164,6 +185,7 @@ class CrunchyrollMusicVideoURLHandler(_CrunchyrollMusicURLHandler):
     )
 
 
+# TODO: Validate
 class CrunchyrollConcertURLHandler(_CrunchyrollMusicURLHandler):
     """Crunchyroll concert URL handler.
 

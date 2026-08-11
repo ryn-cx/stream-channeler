@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_layout/plugins")({
   }),
 })
 
+// TODO: Validate
 function PluginPage() {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false

@@ -1,8 +1,10 @@
+// TODO: Validate
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Tabs({
   className,
   ...props
@@ -16,6 +18,7 @@ function Tabs({
   )
 }
 
+// TODO: Validate
 function TabsList({
   className,
   ...props
@@ -32,6 +35,7 @@ function TabsList({
   )
 }
 
+// TODO: Validate
 function TabsTrigger({
   className,
   ...props
@@ -48,6 +52,7 @@ function TabsTrigger({
   )
 }
 
+// TODO: Validate
 function TabsContent({
   className,
   ...props

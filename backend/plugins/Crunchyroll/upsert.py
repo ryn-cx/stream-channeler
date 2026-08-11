@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
@@ -32,6 +33,7 @@ from plugins.TMDB.mixin import highest_episode_number
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
 
+    # TODO: Validate
     def _upsert_anime_source(self) -> Source:
         return self._upsert_source(
             VIDEO_SOURCE,
@@ -40,6 +42,7 @@ class UpsertMixin(HelperMixin, register=False):
             timedelta(days=1),  # Check daily for new videos.
         )
 
+    # TODO: Validate
     def _upsert_music_source(self) -> Source:
         return self._upsert_source(
             MUSIC_SOURCE,
@@ -48,6 +51,7 @@ class UpsertMixin(HelperMixin, register=False):
             timedelta(days=7),  # Check weekly for new music.
         )
 
+    # TODO: Validate
     @override
     def _upsert_source(
         self,
@@ -73,6 +77,7 @@ class UpsertMixin(HelperMixin, register=False):
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source, [latest_browse_file])
 
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -90,6 +95,7 @@ class UpsertMixin(HelperMixin, register=False):
         msg = f"Show key {show_key} is neither an artist nor a series"
         raise ValueError(msg)
 
+    # TODO: Validate
     def _upsert_anime_show(
         self,
         source: Source,
@@ -125,6 +131,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_music_show(
         self,
         source: Source,
@@ -152,6 +159,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_anime_seasons(
         self,
         show: Show,

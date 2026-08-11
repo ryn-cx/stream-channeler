@@ -23,6 +23,7 @@ interface ChannelShowsButtonProps {
   variant?: TriggerVariant
 }
 
+// TODO: Validate
 export function ChannelShowsButton({
   channelId,
   variant = "icon",

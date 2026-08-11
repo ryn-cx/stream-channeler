@@ -28,12 +28,14 @@ from plugins.utils.manage_plugins import sorted_plugins
 _STREAMING_CATEGORIES = ("flatrate", "free", "ads")
 
 
+# TODO: Validate
 class WatchProvider(Protocol):
     logo_path: str
     provider_id: int
     provider_name: str
 
 
+# TODO: Validate
 def _watch_provider_items(
     watch_providers: TvWatchProvidersModel | MovieWatchProvidersModel | None,
     title: str | None,
@@ -73,6 +75,7 @@ def _watch_provider_items(
     return items
 
 
+# TODO: Validate
 def tmdb_match(
     session: Session,
     title: str,
@@ -92,6 +95,7 @@ def tmdb_match(
     return TMDBMatch(tmdb_id=results[0].id, media_type=media_type)
 
 
+# TODO: Validate
 def tmdb_media_info(
     session: Session,
     media_type: MediaType,

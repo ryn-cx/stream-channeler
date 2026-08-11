@@ -18,6 +18,7 @@ from plugins.Hulu.url_handlers import (
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
+# TODO: Validate
 class Hulu(
     SourceMixin,
     UpsertMixin,
@@ -34,6 +35,7 @@ class Hulu(
     TMDB_PROVIDER_NAMES = ("Hulu",)
     FAVICON_URL = "https://www.hulu.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:

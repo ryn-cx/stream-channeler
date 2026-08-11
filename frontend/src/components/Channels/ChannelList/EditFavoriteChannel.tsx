@@ -9,6 +9,7 @@ interface EditFavoriteChannelProps {
   channel: ChannelListOutput
 }
 
+// TODO: Validate
 const EditFavoriteChannel = ({ channel }: EditFavoriteChannelProps) => {
   const [open, setOpen] = useState(false)
 

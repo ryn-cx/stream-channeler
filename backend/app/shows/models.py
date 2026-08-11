@@ -30,6 +30,7 @@ from app.sources.models import Source
 from app.users.models import User
 
 
+# TODO: Validate
 class BaseShow(BaseMediaMixin):
     """Base model for a `Show`."""
 
@@ -49,6 +50,7 @@ class BaseShow(BaseMediaMixin):
     # replace it.
     show_identifier_locked: bool = Field(default=False)
 
+    # TODO: Validate
     @computed_field
     @property
     def tmdb_id(self) -> int | None:
@@ -69,6 +71,7 @@ if TYPE_CHECKING:
 # The name "Show" was used instead of "Series" because it has a distinct singular and
 # plural form and some people may use "Series" to refer to a "Season" so the word "Show"
 # is less ambiguous and more flexible.
+# TODO: Validate
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     """Model representing a `Show`."""
 
@@ -126,6 +129,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return session.exec(
@@ -135,11 +139,13 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
             .where(Source.id == self.source_id),
         ).one()
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Source).join(Plugin)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -153,16 +159,19 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
             )
         )
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Season]:
         return self.seasons
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> Source:
         return self.source
 
+    # TODO: Validate
     @override
     def upsert(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
@@ -181,6 +190,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
             protected_keys.add("show_identifier")
         return super().upsert(parent, existing_record, protected_keys)
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Show`."""
         base_show = "Show:"

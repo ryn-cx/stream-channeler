@@ -15,10 +15,12 @@ from app.shows.models import BaseShow, Show
 from app.sources.models import Source
 
 
+# TODO: Validate
 class ShowCreate(BaseCreateWithParentAndKey[Show, Source], BaseShow):
     """Schema for creating a `Show`."""
 
 
+# TODO: Validate
 class ShowUpdate(
     make_model_with_all_fields_optional(BaseShow),
     BaseUpdateWithKey[Show],
@@ -26,6 +28,7 @@ class ShowUpdate(
     """Schema for updating a `Show`."""
 
 
+# TODO: Validate
 class ShowPublic(BaseShow):
     """Schema for returning a `Show`."""
 
@@ -34,6 +37,7 @@ class ShowPublic(BaseShow):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class ShowListPublic(ShowPublic):
     """Schema for returning a list of `Show`s, with parent information."""
 
@@ -49,6 +53,7 @@ class ShowListPublic(ShowPublic):
     )
 
 
+# TODO: Validate
 class ShowInformationSide(BaseModel):
     """One record's own account of a title, as the website that holds it has it."""
 
@@ -61,6 +66,7 @@ class ShowInformationSide(BaseModel):
     key: str
 
 
+# TODO: Validate
 class ShowInformationOutput(BaseModel):
     """What the website and TMDB each say about a title, side by side.
 
@@ -78,6 +84,7 @@ class ShowInformationOutput(BaseModel):
     tmdb: ShowInformationSide | None
 
 
+# TODO: Validate
 class ShowsPublic(BaseModel):
     """Schema for returning a list of `Show`s."""
 

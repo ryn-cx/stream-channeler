@@ -10,9 +10,11 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class AmazonValidator(PluginValidator[Amazon]):
     plugin_class = Amazon
 
+    # TODO: Validate
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
@@ -20,10 +22,12 @@ class AmazonValidator(PluginValidator[Amazon]):
         return output
 
 
+# TODO: Validate
 class AmazonStandardTests(StandardTests[Amazon], AmazonValidator):
     pass
 
 
+# TODO: Validate
 class DetailURLs:
     urls: tuple[str, ...] = (
         "/dp/{asin}",
@@ -32,42 +36,49 @@ class DetailURLs:
     )
 
 
+# TODO: Validate
 class TestFreeMovie(DetailURLs, AmazonStandardTests):
     """Test a free movie on Prime Video."""
 
     asin = "B0GHXVBQLM"
 
 
+# TODO: Validate
 class TestPaidMovie(DetailURLs, AmazonStandardTests):
     """Test a paid movie on Prime Video."""
 
     asin = "B0H3QRLYCN"
 
 
+# TODO: Validate
 class TestPaidOrRentMovie(DetailURLs, AmazonStandardTests):
     """Test a paid or rent movie on Prime Video."""
 
     asin = "B0FZLW2HCF"
 
 
+# TODO: Validate
 class TestFreeTVShow(DetailURLs, AmazonStandardTests):
     """Test a free TV show on Prime Video."""
 
     asin = "B09PWHKFR2"
 
 
+# TODO: Validate
 class TestPaidTVShow(DetailURLs, AmazonStandardTests):
     """Test a paid TV show on Prime Video."""
 
     asin = "B09PWHKFR2"
 
 
+# TODO: Validate
 class TestPaidOrRentTVShow(DetailURLs, AmazonStandardTests):
     """Test a paid or rent TV show on Prime Video."""
 
     asin = "B00C16ID14"
 
 
+# TODO: Validate
 class TestTVShowPaginatedEpisode(DetailURLs, AmazonStandardTests):
     """Test a TV show whose episodes do not fit on one page.
 

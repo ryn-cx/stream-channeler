@@ -25,7 +25,9 @@ _SEARCH_MAX_AGE = timedelta(days=7)
 _MEDIA_INFO_MAX_AGE = timedelta(days=7)
 
 
+# TODO: Validate
 class LookupMixin(FileMixin, register=False):
+    # TODO: Validate
     def auto_updating_search_media(
         self,
         media_type: MediaType | None,
@@ -42,6 +44,7 @@ class LookupMixin(FileMixin, register=False):
         search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
         return search_file
 
+    # TODO: Validate
     def auto_updating_watch_providers(
         self,
         media_type: MediaType,
@@ -51,6 +54,7 @@ class LookupMixin(FileMixin, register=False):
         providers_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
         return providers_file
 
+    # TODO: Validate
     def auto_updating_media_detail(
         self,
         media_type: MediaType,
@@ -66,9 +70,11 @@ class LookupMixin(FileMixin, register=False):
         detail_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
         return detail_file
 
+    # TODO: Validate
     def _movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
         return self.media_detail_file(MediaType.movie, tmdb_id).parsed()
 
+    # TODO: Validate
     def translated_episode_names(
         self,
         tmdb_id: int,
@@ -96,6 +102,7 @@ class LookupMixin(FileMixin, register=False):
             if translation.data.name
         ]
 
+    # TODO: Validate
     def _show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
         """Return the seasons of a title, downloading the title if needed.
 
@@ -109,6 +116,7 @@ class LookupMixin(FileMixin, register=False):
             return []
         return show_file.parsed().seasons
 
+    # TODO: Validate
     def _season_episodes(
         self,
         tmdb_id: int,
@@ -128,12 +136,14 @@ class LookupMixin(FileMixin, register=False):
             return []
         return season_file.parsed().episodes
 
+    # TODO: Validate
     def has_season(self, tmdb_id: int, season_number: int) -> bool:
         return any(
             season.season_number == season_number
             for season in self._show_seasons(tmdb_id)
         )
 
+    # TODO: Validate
     def has_season_id(
         self,
         media_type: MediaType,
@@ -152,6 +162,7 @@ class LookupMixin(FileMixin, register=False):
             season.id == season_tmdb_id for season in self._show_seasons(tmdb_id)
         )
 
+    # TODO: Validate
     def has_episode_id(
         self,
         media_type: MediaType,
@@ -172,6 +183,7 @@ class LookupMixin(FileMixin, register=False):
             for episode in self._season_episodes(tmdb_id, season.season_number)
         )
 
+    # TODO: Validate
     def has_episode(
         self,
         tmdb_id: int,

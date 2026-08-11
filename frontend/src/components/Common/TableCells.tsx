@@ -23,6 +23,7 @@ type ParentLinkCellProps =
       name: string | null
     }
 
+// TODO: Validate
 export function ParentLinkCell({ to, params, name }: ParentLinkCellProps) {
   return (
     <Link
@@ -35,6 +36,7 @@ export function ParentLinkCell({ to, params, name }: ParentLinkCellProps) {
   )
 }
 
+// TODO: Validate
 export function TruncatedCell({ value }: CellProps) {
   return (
     <span className="text-muted-foreground text-sm truncate max-w-48 block">
@@ -43,6 +45,7 @@ export function TruncatedCell({ value }: CellProps) {
   )
 }
 
+// TODO: Validate
 export function DateCell({ value }: CellProps) {
   return (
     <span className="text-muted-foreground text-sm">

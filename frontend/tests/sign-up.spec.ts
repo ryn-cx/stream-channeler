@@ -5,6 +5,7 @@ import { randomEmail, randomPassword } from "./utils/random"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
+// TODO: Validate
 const fillForm = async (
   page: Page,
   full_name: string,
@@ -18,6 +19,7 @@ const fillForm = async (
   await page.getByTestId("confirm-password-input").fill(confirm_password)
 }
 
+// TODO: Validate
 const verifyInput = async (page: Page, testId: string) => {
   const input = page.getByTestId(testId)
   await expect(input).toBeVisible()

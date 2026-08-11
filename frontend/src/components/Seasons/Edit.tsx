@@ -48,6 +48,7 @@ interface EditSeasonProps {
   season: SeasonTableData
 }
 
+// TODO: Validate
 const EditSeason = ({ season }: EditSeasonProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -75,6 +76,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
     successMessage: "Season updated successfully",
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     mutation.mutate(nullifyBlanks(data))

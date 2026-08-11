@@ -19,12 +19,14 @@ from app.models import DateTimeField, RootRecordMixin, TimestampIdAndHashMixin
 from app.users.models import User
 
 
+# TODO: Validate
 class BaseComment(SQLModel):
     """Base model representing a `Comment` left on a `Channel`."""
 
     body: str = Field(min_length=1)
 
 
+# TODO: Validate
 class Comment(BaseComment, TimestampIdAndHashMixin, RootRecordMixin, table=True):
     """Model representing a `Comment` left on a `Channel`.
 
@@ -69,10 +71,12 @@ class Comment(BaseComment, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Channel:
         return self.channel
 
+    # TODO: Validate
     @override
     def owner_id(self, _session: Session) -> uuid.UUID:
         """Return the author of the comment rather than the channel's owner.
@@ -83,6 +87,7 @@ class Comment(BaseComment, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         return self.user_id
 
 
+# TODO: Validate
 class CommentNotification(TimestampIdAndHashMixin, table=True):
     """Model representing a `User` being notified about a `Comment`."""
 
@@ -101,10 +106,12 @@ class CommentNotification(TimestampIdAndHashMixin, table=True):
 
     read_at: datetime | None = DateTimeField(default=None)
 
+    # TODO: Validate
     def owner_id(self, _session: Session) -> uuid.UUID:
         """Return the `id` of the notified `User`."""
         return self.user_id
 
+    # TODO: Validate
     def is_publically_readable(self, _session: Session) -> bool:
         """Return false because a notification is only visible to its `User`."""
         return False

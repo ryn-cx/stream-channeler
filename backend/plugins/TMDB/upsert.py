@@ -30,7 +30,9 @@ from plugins.TMDB.keys import (
 )
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def _upsert_plugin(
         self,
@@ -51,6 +53,7 @@ class UpsertMixin(HelperMixin, register=False):
             user_id=plugin_user.id,
         ).upsert_and_set_update_at(plugin_user, existing_plugin)
 
+    # TODO: Validate
     @override
     def _upsert_source(self) -> Source:
         source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
@@ -61,6 +64,7 @@ class UpsertMixin(HelperMixin, register=False):
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 
+    # TODO: Validate
     def import_title(self, media_type: MediaType, tmdb_id: int) -> Show | None:
         """Store a title and everything under it as this plugin's own media.
 
@@ -79,6 +83,7 @@ class UpsertMixin(HelperMixin, register=False):
             return None
         return self._import_show(key)
 
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -105,6 +110,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _new_show(self, source: Source, show_key: str) -> Show:
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
@@ -135,6 +141,7 @@ class UpsertMixin(HelperMixin, register=False):
             source_id=source.id,
         )
 
+    # TODO: Validate
     def _upsert_season(
         self,
         show: Show,
@@ -204,6 +211,7 @@ class UpsertMixin(HelperMixin, register=False):
                 self._episode_files(key, season_key, show_key),
             )
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,

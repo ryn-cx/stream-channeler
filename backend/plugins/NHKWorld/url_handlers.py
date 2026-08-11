@@ -9,23 +9,28 @@ if TYPE_CHECKING:
     from plugins.NHKWorld import NHKWorld
 
 
+# TODO: Validate
 class NHKWorldURLHandler(URLHandler["NHKWorld"]):
+    # TODO: Validate
     def __init__(self, plugin: NHKWorld, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
+# TODO: Validate
 class ShowURLHandler(NHKWorldURLHandler):
     # https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
     # The lookahead requires a non-numeric character so this matches show slugs but
     # not numeric episode URLs like https://www3.nhk.or.jp/nhkworld/en/shows/5001461/
     _URL_REGEX = r"\/nhkworld\/en\/shows\/(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)\/?(?:$|[?#])"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(

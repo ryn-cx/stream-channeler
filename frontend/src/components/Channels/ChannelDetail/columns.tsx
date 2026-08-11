@@ -23,11 +23,13 @@ export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
   channel: ChannelOutput
 }
 
+// TODO: Validate
 function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
   const { channelId } = useParams({ strict: false })
   const watchFilters = useSearch({ strict: false }) as WatchFilters
   const mutation = useMarkWatched(channelId, watchFilters)
 
+  // TODO: Validate
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     mutation.mutate(episode.id)

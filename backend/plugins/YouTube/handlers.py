@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     )
 
 
+# TODO: Validate
 def _single_video_import_results(
     show: Show,
     playlist_key: str,
@@ -46,30 +47,37 @@ def _single_video_import_results(
     ]
 
 
+# TODO: Validate
 class YouTubeURLHandler(URLHandler["YouTube"]):
+    # TODO: Validate
     def __init__(self, plugin: YouTube, url: str, match: re.Match[str]) -> None:
         self._match = match
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @classmethod
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:  # noqa: ARG003
         return long_domain_regex + cls._URL_REGEX
 
+    # TODO: Validate
     @property
     @abstractmethod
     def playlist_key(self) -> str: ...
 
+    # TODO: Validate
     @property
     def video_key(self) -> str | None:
         return None
 
 
+# TODO: Validate
 class VideoURLHandler(YouTubeURLHandler):
     # https://www.youtube.com/watch?v=jNQXAC9IVRw
     # https://www.youtube.com/shorts/jNQXAC9IVRw
     # https://youtu.be/jNQXAC9IVRw
     _URL_REGEX = r"(?P<video_key>[A-Za-z0-9_-]{11})(?:$|[?&])"
 
+    # TODO: Validate
     @classmethod
     @override
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:
@@ -77,11 +85,13 @@ class VideoURLHandler(YouTubeURLHandler):
         short_path = rf"{short_domain_regex}\/"
         return rf"(?:{long_paths}|{short_path})" + cls._URL_REGEX
 
+    # TODO: Validate
     @property
     @override
     def video_key(self) -> str:
         return self._match.group("video_key")
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
@@ -93,6 +103,7 @@ class VideoURLHandler(YouTubeURLHandler):
             return self.video_key
         return channel_key
 
+    # TODO: Validate
     @property
     def playlist_key(self) -> str:
         show_key = self.show_key
@@ -100,6 +111,7 @@ class VideoURLHandler(YouTubeURLHandler):
             return show_key
         return self.plugin.channel_uploads_playlist_key(show_key)
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -107,17 +119,21 @@ class VideoURLHandler(YouTubeURLHandler):
             self.url,
         )
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return _single_video_import_results(show, self.playlist_key, self.video_key)
 
 
+# TODO: Validate
 class PlaylistBasedURLHandler(YouTubeURLHandler):
+    # TODO: Validate
     @property
     @override
     def playlist_key(self) -> str:
         return self._match.group("playlist_key")
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
@@ -138,6 +154,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
             return owner_channel_id
         return first_item.snippet.channel_id
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -146,16 +163,19 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
         )
 
 
+# TODO: Validate
 class PlaylistURLHandler(PlaylistBasedURLHandler):
     # https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     _URL_REGEX = r"\/playlist\?list=(?P<playlist_key>(?:PL|OLAK5uy_)[^&]+)"
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
         return [URLImportResult.for_seasons(show, seasons)]
 
 
+# TODO: Validate
 class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
@@ -164,37 +184,44 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
         r"list=(?P<playlist_key>(?:PL|OLAK5uy_)[^&]+)"
     )
 
+    # TODO: Validate
     @classmethod
     @override
     def full_regex(cls, long_domain_regex: str, short_domain_regex: str) -> str:
         return rf"(?:{long_domain_regex}|{short_domain_regex})" + cls._URL_REGEX
 
+    # TODO: Validate
     @property
     @override
     def video_key(self) -> str:
         return self._match.group("video_key")
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         return _single_video_import_results(show, self.playlist_key, self.video_key)
 
 
+# TODO: Validate
 class ShowURLHandler(YouTubeURLHandler):
     # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw
     # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw?season=23&sbp=...
     _URL_REGEX = r"\/show\/(?P<show_key>SC[A-Za-z0-9_-]+?)(?:$|[/?])"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._match.group("show_key")
 
+    # TODO: Validate
     @property
     def _season_number(self) -> str | None:
         """Return the season the URL asks for, or None when it asks for the show."""
         season = parse_qs(urlparse(self.url).query).get("season", [])
         return season[0] if season else None
 
+    # TODO: Validate
     @property
     @override
     def playlist_key(self) -> str:
@@ -203,6 +230,7 @@ class ShowURLHandler(YouTubeURLHandler):
             return self.show_key
         return show_season_key(self.show_key, season_number)
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         show_page = self.plugin.show_page_file(self.show_key)
@@ -211,6 +239,7 @@ class ShowURLHandler(YouTubeURLHandler):
             msg = f"Invalid {self.plugin.plugin_key()} URL: {self.url}"
             raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         # A URL for one season only asks for that season, where a URL for the show
@@ -221,17 +250,21 @@ class ShowURLHandler(YouTubeURLHandler):
         return [URLImportResult.for_seasons(show, seasons)]
 
 
+# TODO: Validate
 class ChannelURLHandler(YouTubeURLHandler):
+    # TODO: Validate
     @property
     @abstractmethod
     def _channel_file(self) -> BaseFile[Any]:
         """Return the file that resolves the URL to a channel."""
 
+    # TODO: Validate
     @property
     @override
     def playlist_key(self) -> str:
         return self.plugin.channel_uploads_playlist_key(self.show_key)
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(self._channel_file, self.url)
@@ -245,6 +278,7 @@ class ChannelURLHandler(YouTubeURLHandler):
             )
             raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
@@ -266,30 +300,36 @@ class ChannelURLHandler(YouTubeURLHandler):
         ]
 
 
+# TODO: Validate
 class ChannelKeyURLHandler(ChannelURLHandler):
     # https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A
     _URL_REGEX = r"\/channel\/(?P<channel_key>UC.{22})(?:$|\/)"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._match.group("channel_key")
 
+    # TODO: Validate
     @property
     @override
     def _channel_file(self) -> ChannelByChannelId:
         return self.plugin.channel_by_channel_id_file(self.show_key)
 
 
+# TODO: Validate
 class ChannelUsernameURLHandler(ChannelURLHandler):
     # https://www.youtube.com/user/jawed
     _URL_REGEX = r"\/user\/(?P<channel_username>.+?)(?:$|\/)"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return get_first_item(self._channel_file.parsed().items).id
 
+    # TODO: Validate
     @property
     @override
     def _channel_file(self) -> ChannelByUsername:
@@ -298,17 +338,20 @@ class ChannelUsernameURLHandler(ChannelURLHandler):
         )
 
 
+# TODO: Validate
 class ChannelHandleURLHandler(ChannelURLHandler):
     # https://www.youtube.com/@jawed
     # https://www.youtube.com/c/jawed
     # https://www.youtube.com/jawed
     _URL_REGEX = r"\/(?:c\/|@)?(?P<channel_handle>.+?)(?:$|\/)"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return get_first_item(self._channel_file.parsed().items).id
 
+    # TODO: Validate
     @property
     @override
     def _channel_file(self) -> ChannelByHandle:

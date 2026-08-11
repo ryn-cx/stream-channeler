@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.sources.models import Source
 
 
+# TODO: Validate
 class BasePlugin(BaseMediaMixin):
     """Base model for a `Plugin`."""
 
@@ -38,6 +39,7 @@ class BasePlugin(BaseMediaMixin):
     version: str | None = Field(default=None)
 
 
+# TODO: Validate
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     """Model representing a `Plugin`."""
 
@@ -63,11 +65,13 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     sources: list[Source] = Relationship(back_populates="plugin", cascade_delete=True)
     files: list[File] = Relationship(back_populates="plugin", cascade_delete=True)
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> User:
         return self.user
 
+    # TODO: Validate
     @override
     def add_child(self, child: Source | File) -> None:
         from app.files.models import File  # noqa: PLC0415
@@ -85,16 +89,19 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         else:
             self.sources.append(child)
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         # A `Plugin` is its own owning `Plugin`, so there is nothing to join.
         return select(cls)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -106,11 +113,13 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
             )
         )
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Source | File]:
         return [*self.sources, *self.files]
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Plugin`."""
         base_plugin = "Plugin:"

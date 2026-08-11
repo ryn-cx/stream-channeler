@@ -36,11 +36,13 @@ if TYPE_CHECKING:
     from app.comments.models import Comment
 
 
+# TODO: Validate
 def _show_identifier(show: Show | str) -> str:
     """Return the identifier of the title `show` is a copy of."""
     return show.show_identifier if isinstance(show, Show) else show
 
 
+# TODO: Validate
 class BaseChannel(SQLModel):
     """Base model representing a Channel."""
 
@@ -52,6 +54,7 @@ class BaseChannel(SQLModel):
     anonymous: bool = Field()
 
 
+# TODO: Validate
 class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
     """Model representing a Channel."""
 
@@ -97,16 +100,19 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @property
     def parent(self) -> User:
         """Return the `User` that owns this `Channel`."""
         return self.user
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Channel:
         return self
 
 
+# TODO: Validate
 class BaseChannelShow(SQLModel):
     """Base model representing the media that belongs to a `Channel`."""
 
@@ -126,6 +132,7 @@ class BaseChannelShow(SQLModel):
     """If true this `ChannelShow` is only used to filter out episodes and seasons."""
 
 
+# TODO: Validate
 class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     """Model representing the media that belongs to a `Channel`."""
 
@@ -152,6 +159,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -186,6 +194,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
             bind_arguments=bind_arguments,
         )
 
+    # TODO: Validate
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -224,12 +233,14 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         )
 
 
+# TODO: Validate
 class BaseChannelSourceFilter(SQLModel):
     """Base model representing the `Show`s that are filtered for a `ChannelShow`."""
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
 
 
+# TODO: Validate
 class ChannelSourceFilter(BaseChannelSourceFilter, TimestampIdAndHashMixin, table=True):
     """Model representing the `Show`s that are filtered for a `ChannelShow`.
 
@@ -249,6 +260,7 @@ class ChannelSourceFilter(BaseChannelSourceFilter, TimestampIdAndHashMixin, tabl
     channel_show: ChannelShow = Relationship(back_populates="source_filters")
     show: Show = Relationship(back_populates="channel_filters")
 
+    # TODO: Validate
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -284,6 +296,7 @@ class ChannelSourceFilter(BaseChannelSourceFilter, TimestampIdAndHashMixin, tabl
         )
 
 
+# TODO: Validate
 class BaseChannelSeasonFilter(SQLModel):
     """Base model representing the seasons that are filtered for a `ChannelShow`."""
 
@@ -292,6 +305,7 @@ class BaseChannelSeasonFilter(SQLModel):
     filter covers the same season on every website the title is on."""
 
 
+# TODO: Validate
 class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, table=True):
     """Model representing the seasons that are filtered for a `ChannelShow`."""
 
@@ -304,6 +318,7 @@ class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, tabl
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
     channel_show: ChannelShow = Relationship(back_populates="season_filters")
 
+    # TODO: Validate
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -340,6 +355,7 @@ class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, tabl
         )
 
 
+# TODO: Validate
 class BaseChannelEpisodeFilter(SQLModel):
     """Base model representing the episodes that are filtered for a `ChannelShow`."""
 
@@ -352,6 +368,7 @@ class BaseChannelEpisodeFilter(SQLModel):
     expires_at: datetime | None = DateTimeField(default=None)
 
 
+# TODO: Validate
 class ChannelEpisodeFilter(
     BaseChannelEpisodeFilter,
     TimestampIdAndHashMixin,
@@ -368,6 +385,7 @@ class ChannelEpisodeFilter(
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
     channel_show: ChannelShow = Relationship(back_populates="episode_filters")
 
+    # TODO: Validate
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -406,6 +424,7 @@ class ChannelEpisodeFilter(
         )
 
 
+# TODO: Validate
 class URLStatus(Enum):
     """Enum representing the status of a URL in the channel queue."""
 
@@ -415,6 +434,7 @@ class URLStatus(Enum):
     IMPORTING = "Importing"
 
 
+# TODO: Validate
 class BaseChannelQueue(SQLModel):
     """Base model representing a URL in a channel's import queue."""
 
@@ -426,6 +446,7 @@ class BaseChannelQueue(SQLModel):
     import_at: datetime | None = DateTimeField(default=None)
 
 
+# TODO: Validate
 class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
     """Model representing a URL in a channel's import queue."""
 
@@ -436,12 +457,14 @@ class ChannelQueue(BaseChannelQueue, TimestampIdAndHashMixin, table=True):
     channel: Channel = Relationship(back_populates="queue")
 
 
+# TODO: Validate
 class BaseChannelSavedEpisodeOrder(SQLModel):
     # Position of the episode in the channel's saved order (0-indexed). Episodes
     # without a row are appended to the end ordered by their creation time.
     position: int = Field()
 
 
+# TODO: Validate
 class ChannelSavedEpisodeOrder(
     BaseChannelSavedEpisodeOrder,
     TimestampIdAndHashMixin,
@@ -464,6 +487,7 @@ class ChannelSavedEpisodeOrder(
     episode: Episode = Relationship()
 
 
+# TODO: Validate
 class ChannelCombinedChannel(TimestampIdAndHashMixin, table=True):
     """Model representing the additional `Channel`s combined into a `Channel`."""
 
@@ -492,6 +516,7 @@ class ChannelCombinedChannel(TimestampIdAndHashMixin, table=True):
     )
 
 
+# TODO: Validate
 class ChannelFavorite(TimestampIdAndHashMixin, table=True):
     """Model representing a `Channel` a `User` has favorited."""
 
@@ -515,15 +540,18 @@ class ChannelFavorite(TimestampIdAndHashMixin, table=True):
     name: str | None = Field(default=None)
     channel_number: float | None = Field(default=None)
 
+    # TODO: Validate
     @property
     def parent(self) -> Channel:
         """Return the `Channel` that was favorited."""
         return self.channel
 
+    # TODO: Validate
     def owner_id(self, _session: Session) -> uuid.UUID:
         """Return the `id` of the `User` who favorited the `Channel`."""
         return self.user_id
 
+    # TODO: Validate
     def is_publically_readable(self, _session: Session) -> bool:
         """Return false because a favorite is only ever readable by its `User`."""
         return False

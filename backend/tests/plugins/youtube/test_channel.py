@@ -10,6 +10,7 @@ from tests.plugins.youtube.validators import (
 )
 
 
+# TODO: Validate
 def channel_url_patterns(*prefixes: str) -> tuple[str, ...]:
     return tuple(
         "youtube.com" + prefix + suffix
@@ -18,6 +19,7 @@ def channel_url_patterns(*prefixes: str) -> tuple[str, ...]:
     )
 
 
+# TODO: Validate
 class ChannelNameValidator(YouTubeValidator):
     """Validate importing a channel by handle or channel id."""
 
@@ -29,6 +31,7 @@ class ChannelNameValidator(YouTubeValidator):
     )
 
 
+# TODO: Validate
 class UsernameValidator(YouTubeValidator):
     """Validate importing a channel by username."""
 
@@ -42,6 +45,7 @@ class UsernameValidator(YouTubeValidator):
 
 
 # It is important that TestChannelByHandle
+# TODO: Validate
 class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
     """Test importing a channel by handle.
 
@@ -55,6 +59,7 @@ class TestChannelByHandle(StandardTests[YouTube], ChannelNameValidator):
 
 
 # Caused a crash.
+# TODO: Validate
 class TestVideoWith0x00CharacterInDescription(
     StandardTests[YouTube],
     ChannelNameValidator,
@@ -64,6 +69,7 @@ class TestVideoWith0x00CharacterInDescription(
     parse_url_response = ("channel_handle", channel_name)
 
 
+# TODO: Validate
 class TestChannelWithVideoInMultiplePlaylists(
     StandardTests[YouTube],
     ChannelNameValidator,
@@ -79,6 +85,7 @@ class TestChannelWithVideoInMultiplePlaylists(
     channel_name = "jawed"
     parse_url_response = ("channel_handle", channel_name)
 
+    # TODO: Validate
     def test_episode_in_multiple_seasons(self, session_with_files: Session) -> None:
         """Test that episodes that belong to multiple seasons works correctly."""
         results = self._import_url(session_with_files)
@@ -91,6 +98,7 @@ class TestChannelWithVideoInMultiplePlaylists(
         assert episode_count == 2  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestChannelByUsername(StandardTests[YouTube], UsernameValidator):
     """Test importing a channel by username.
 
@@ -105,6 +113,7 @@ class TestChannelByUsername(StandardTests[YouTube], UsernameValidator):
 
 # A channel with no uploads can be imported because the channel may have playlists with
 # videos.
+# TODO: Validate
 class TestChannelWithoutUploads(
     StandardTests[YouTube],
     ChannelWithNoUploadsMixin,
@@ -116,6 +125,7 @@ class TestChannelWithoutUploads(
 
 
 # A channel with no playlists can be imported because the channel may have uploads.
+# TODO: Validate
 class TestChannelWithoutPlaylists(StandardTests[YouTube], ChannelNameValidator):
     channel_key = "UCVlx-IvZ_TBWRKU0UQCaueQ"
     channel_name = "chad"
@@ -125,6 +135,7 @@ class TestChannelWithoutPlaylists(StandardTests[YouTube], ChannelNameValidator):
 # The official YouTube Movies & TV channel truncates every listing it exposes, so
 # importing the channel would import almost none of the videos it owns. Its videos are
 # imported one at a time instead, as shows of their own.
+# TODO: Validate
 class TestStandaloneVideoChannel(InvalidYouTubeURLValidator):
     channel_key = "UCuVPpxrm2VAgpH3Ktln4HXg"
     urls = (
@@ -133,9 +144,11 @@ class TestStandaloneVideoChannel(InvalidYouTubeURLValidator):
     )
 
 
+# TODO: Validate
 class TestInvalidChannelName(InvalidYouTubeURLValidator):
     urls = ("youtube.com/@jawed0123456789",)
 
 
+# TODO: Validate
 class TestInvalidChannelId(InvalidYouTubeURLValidator):
     urls = ("youtube.com/channel/UC0123456789ABCDEFGHIJHI",)

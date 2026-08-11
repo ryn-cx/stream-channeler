@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Skeleton } from "@/components/ui/skeleton"
 
+// TODO: Validate
 const PendingChannelList = () => (
   <div className="flex flex-col gap-6">
     <div className="flex flex-wrap items-center justify-between gap-2 px-[4%] pt-4 pb-2">

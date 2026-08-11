@@ -17,6 +17,7 @@ from app.users.models import User
 from app.users.service import effective_source_preferences, stored_preferences
 
 
+# TODO: Validate
 @dataclass
 class SourceDedupConfig:
     """Resolved priority and enabled state used while selecting episodes."""
@@ -27,6 +28,7 @@ class SourceDedupConfig:
     enabled_keys: set[str]
     other_enabled: bool
 
+    # TODO: Validate
     def priority_for(self, source_key: str | None) -> int:
         """Return the priority of a source key, falling back to `Other`."""
         if source_key is None:
@@ -34,6 +36,7 @@ class SourceDedupConfig:
         return self.priority.get(source_key, self.other_priority)
 
 
+# TODO: Validate
 def source_dedup_config(
     session: SessionDep,
     user: User | None,
@@ -68,6 +71,7 @@ def source_dedup_config(
     )
 
 
+# TODO: Validate
 def deduplicate_episodes(
     episodes: list[Episode],
     source_key_by_episode_id: dict[UUID, str],
@@ -79,6 +83,7 @@ def deduplicate_episodes(
     the original ordering is preserved by first occurrence.
     """
 
+    # TODO: Validate
     def priority(episode: Episode) -> int:
         return config.priority_for(source_key_by_episode_id.get(episode.id))
 

@@ -13,6 +13,7 @@ interface DeletePluginProps {
   plugin: PluginTableData
 }
 
+// TODO: Validate
 const DeletePlugin = ({ plugin }: DeletePluginProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

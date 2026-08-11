@@ -15,7 +15,9 @@ _CHILDREN: dict[type, tuple[str, type]] = {
 }
 
 
+# TODO: Validate
 class SerializationMixin:
+    # TODO: Validate
     @staticmethod
     def _dump_model(model: Plugin | Source | Show | Season) -> dict[str, Any]:
         """Recursively dump a model into a dict."""
@@ -31,6 +33,7 @@ class SerializationMixin:
             )
         return data
 
+    # TODO: Validate
     @staticmethod
     def _load_model[T: (Plugin, Source, Show, Season, Episode)](
         model_class: type[T],

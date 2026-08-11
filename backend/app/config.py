@@ -18,6 +18,7 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# TODO: Validate
 def parse_cors(v: str | list[str] | None) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
         return [i.strip() for i in v.split(",") if i.strip()]
@@ -26,6 +27,7 @@ def parse_cors(v: str | list[str] | None) -> list[str] | str:
     raise ValueError(v)
 
 
+# TODO: Validate
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Top level env files (one level above ./backend/). `.env` holds committed
@@ -51,6 +53,7 @@ class Settings(BaseSettings):
         BeforeValidator(parse_cors),
     ] = []
 
+    # TODO: Validate
     @computed_field  # type: ignore[prop-decorator]
     @property
     def all_cors_origins(self) -> list[str]:
@@ -66,6 +69,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
 
+    # TODO: Validate
     @computed_field  # type: ignore[prop-decorator]
     @property
     # N802 - Error from original template.
@@ -88,6 +92,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: EmailStr | None = None
     EMAILS_FROM_NAME: str | None = None
 
+    # TODO: Validate
     @model_validator(mode="after")
     def _set_default_emails_from(self) -> Self:
         if not self.EMAILS_FROM_NAME:
@@ -96,6 +101,7 @@ class Settings(BaseSettings):
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
 
+    # TODO: Validate
     @computed_field  # type: ignore[prop-decorator]
     @property
     def emails_enabled(self) -> bool:
@@ -106,6 +112,7 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_USERNAME: str = "admin"
     FIRST_SUPERUSER_PASSWORD: str
 
+    # TODO: Validate
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (
@@ -117,6 +124,7 @@ class Settings(BaseSettings):
             else:
                 raise ValueError(message)
 
+    # TODO: Validate
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
@@ -143,6 +151,7 @@ class Settings(BaseSettings):
     TMDB_API_READ_TOKEN: str = ""
 
     # TODO: This function sucks
+    # TODO: Validate
     @model_validator(mode="before")
     @classmethod
     def _get_keyring_or_env(cls, data: Any) -> Any:  # noqa: ANN401

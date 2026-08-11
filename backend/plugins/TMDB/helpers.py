@@ -16,9 +16,11 @@ from plugins.TMDB.keys import (
 from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
     """The files and keys the TMDB plugin imports its own media from."""
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         media_type, tmdb_id = parse_show_key(show_key)
@@ -27,6 +29,7 @@ class HelperMixin(FileMixin, register=False):
         # `ShowDetail` downloads every season and episode file along with itself.
         return [self.show_detail_file(tmdb_id)]
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         media_type, tmdb_id, season_number = parse_season_key(season_key)
@@ -34,6 +37,7 @@ class HelperMixin(FileMixin, register=False):
             return [self.movie_detail_file(tmdb_id)]
         return [self.season_detail_file(tmdb_id, season_number)]
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -54,6 +58,7 @@ class HelperMixin(FileMixin, register=False):
             self.episode_translations_file(tmdb_id, season_number, episode_number),
         ]
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         media_type, tmdb_id = parse_show_key(show_key)
@@ -64,6 +69,7 @@ class HelperMixin(FileMixin, register=False):
             for season in self.show_detail_file(tmdb_id).parsed().seasons
         ]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

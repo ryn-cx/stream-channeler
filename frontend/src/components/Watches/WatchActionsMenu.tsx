@@ -8,6 +8,7 @@ interface WatchActionsMenuProps {
   watch: WatchWithDetails
 }
 
+// TODO: Validate
 export const WatchActionsMenu = ({ watch }: WatchActionsMenuProps) => {
   return (
     <div className="flex items-center justify-end gap-1">

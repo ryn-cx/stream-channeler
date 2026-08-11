@@ -20,6 +20,7 @@ interface EditOrderConfigDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 export function EditOrderConfigDialog({
   order,
   open,

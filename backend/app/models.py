@@ -39,11 +39,14 @@ if TYPE_CHECKING:
 DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
 
 
+# TODO: Validate
 class SupportsDataTimestamp(Protocol):
+    # TODO: Validate
     @property
     def data_timestamp(self) -> datetime: ...
 
 
+# TODO: Validate
 def placeholder_identifier() -> str:
     """Return the name a record wears until it is given one to be found by.
 
@@ -62,6 +65,7 @@ def placeholder_identifier() -> str:
 ZERO_LAST_SUFFIX = "_zero_last"
 
 
+# TODO: Validate
 def sortable_field_indexes(
     model_name: str,
     direct_sortable_fields: Iterable[str],
@@ -80,6 +84,7 @@ def sortable_field_indexes(
     )
 
 
+# TODO: Validate
 class Visibility(StrEnum):
     """Visibility enum for `Channel`s and `Plugin`s."""
 
@@ -88,20 +93,24 @@ class Visibility(StrEnum):
     private = "private"
 
 
+# TODO: Validate
 class RootRecordMixin(ABC):
     """Mixin for any model that a `User` can own.
 
     Subclasses must implement `root_record`.
     """
 
+    # TODO: Validate
     @abstractmethod
     def _root_record(self, session: Session) -> Channel | Plugin | ChannelOrder:
         """Return the root record directly owned by the `User`."""
 
+    # TODO: Validate
     def owner_id(self, session: Session) -> uuid.UUID:
         """Return the `id` of the `User` who owns this record."""
         return self._root_record(session).user_id
 
+    # TODO: Validate
     def is_publically_readable(self, session: Session) -> bool:
         """Return true if this record's `visibility` is `public` or `unlisted`."""
         return self._root_record(session).visibility in (
@@ -109,6 +118,7 @@ class RootRecordMixin(ABC):
             Visibility.unlisted,
         )
 
+    # TODO: Validate
     def is_readable(self, session: Session, user: User | None) -> bool:
         """Return whether `user` can read this record.
 
@@ -123,6 +133,7 @@ class RootRecordMixin(ABC):
         )
 
 
+# TODO: Validate
 class TimestampIdAndHashMixin(SQLModel):
     """Mixin that adds `id`, `created_at`, and `modified_at` fields to a model.
 
@@ -139,15 +150,18 @@ class TimestampIdAndHashMixin(SQLModel):
         default_factory=tz_datetime.now,
     )
 
+    # TODO: Validate
     def __hash__(self) -> int:
         """Return a hash representation of the record based on the `id`."""
         return hash(self.id)
 
+    # TODO: Validate
     def __eq__(self, other: object) -> bool:
         """Two records are equal when they share the same `id`."""
         return isinstance(other, TimestampIdAndHashMixin) and self.id == other.id
 
 
+# TODO: Validate
 class BaseMediaMixin(SQLModel):
     """Mixin for base media models.
 
@@ -165,6 +179,7 @@ class BaseMediaMixin(SQLModel):
     extra: str | None = Field(default=None)
 
 
+# TODO: Validate
 class MediaMixin[
     ParentT: User | Plugin | Source | Show | Season,
     ChildT: Plugin | Source | Show | Season | Episode | File,
@@ -179,6 +194,7 @@ class MediaMixin[
     `select_with_plugin`.
     """
 
+    # TODO: Validate
     @property
     @abstractmethod
     def parent(self) -> ParentT:
@@ -191,6 +207,7 @@ class MediaMixin[
         - `Episode` -> `Season`
         """
 
+    # TODO: Validate
     @property
     @abstractmethod
     def children(self) -> list[ChildT]:
@@ -203,6 +220,7 @@ class MediaMixin[
         - `Episode` -> `[]`
         """
 
+    # TODO: Validate
     @property
     def active_children(self) -> list[ChildT]:
         """Return the direct children of the record that are not deleted.
@@ -215,16 +233,19 @@ class MediaMixin[
         """
         return [child for child in self.children if child.deleted_at is None]
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def select_with_plugin(cls) -> SelectOfScalar[Any]:
         """Return a select joined to `Plugin`."""
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def select_with_user_eager(cls) -> SelectOfScalar[Any]:
         """Return a select joined to `User` with contains_eager."""
 
+    # TODO: Validate
     @classmethod
     def get(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -258,6 +279,7 @@ class MediaMixin[
             bind_arguments=bind_arguments,
         )
 
+    # TODO: Validate
     @classmethod
     def get_one(  # noqa: PLR0913 - Copied from wrapped function
         cls,
@@ -295,6 +317,7 @@ class MediaMixin[
             bind_arguments=bind_arguments,
         )
 
+    # TODO: Validate
     @classmethod
     def get_from_memory(
         cls,
@@ -312,6 +335,7 @@ class MediaMixin[
         """
         return session.identity_map.get((cls, (parent.id, key), None))
 
+    # TODO: Validate
     @classmethod
     def get_one_from_memory(
         cls,
@@ -332,6 +356,7 @@ class MediaMixin[
         """
         return session.identity_map[(cls, (parent.id, key), None)]
 
+    # TODO: Validate
     def set_update_at(
         self,
         new_update_at_value: datetime | None,
@@ -375,10 +400,12 @@ class MediaMixin[
         if self.update_at is None or new_update_at_value < self.update_at:
             self.update_at = new_update_at_value
 
+    # TODO: Validate
     def add_child(self, child: ChildT) -> None:
         """Add a child to the record."""
         self.children.append(child)
 
+    # TODO: Validate
     @classmethod
     def parent_id_field(cls) -> str:
         """Return the name of the parent id column."""
@@ -388,6 +415,7 @@ class MediaMixin[
 
     # TODO: Consider implementing a recursive version of this so only one upsert needs
     # to be called when upserting a tree of records.
+    # TODO: Validate
     def upsert(
         self,
         parent: ParentT,
@@ -420,6 +448,7 @@ class MediaMixin[
         parent.add_child(self)  # type: ignore[arg-type]
         return self
 
+    # TODO: Validate
     def upsert_and_set_update_at(
         self,
         parent: ParentT,
@@ -438,6 +467,7 @@ class MediaMixin[
             record.set_update_at(self.update_at, files)
         return record
 
+    # TODO: Validate
     def soft_delete(
         self,
         timestamp: datetime | None = None,
@@ -462,6 +492,7 @@ class MediaMixin[
             for child in self.children:
                 child.soft_delete(timestamp)
 
+    # TODO: Validate
     def soft_undelete(self, *, recursive: bool = True) -> None:
         """Soft undelete the record.
 
@@ -476,6 +507,7 @@ class MediaMixin[
             for child in self.children:
                 child.soft_undelete()
 
+    # TODO: Validate
     def soft_delete_missing_children(self, found_keys: Iterable[str]) -> None:
         """Soft delete children whose keys are not in `found_keys`."""
         found_keys = set(found_keys)

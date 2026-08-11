@@ -15,26 +15,32 @@ from plugins.Crunchyroll.music_keys import (
 )
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
     video_source: Source
     music_source: Source
 
+    # TODO: Validate
     def _source_from_show_key(self, show_key: str) -> Source:
         if is_music_show_key(show_key):
             return self.music_source
         return self.video_source
 
+    # TODO: Validate
     def _series_datum(self, show_key: str) -> series_models.Datum:
         series_file = self.series_file(show_key)
         return series_file.parsed().data[0]
 
+    # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return "type:movie" in self._series_datum(show_key).keywords
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -53,6 +59,7 @@ class HelperMixin(FileMixin, register=False):
             series.series_launch_year,
         )
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         if is_music_season_key(season_key):
@@ -63,6 +70,7 @@ class HelperMixin(FileMixin, register=False):
         msg = f"Season with key {season_key} not found for show {show_key}"
         raise ValueError(msg)
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -77,14 +85,17 @@ class HelperMixin(FileMixin, register=False):
                 return episode_data.episode_number
         return None
 
+    # TODO: Validate
     @classmethod
     def _series_url(cls, show_key: str) -> str:
         return cls.build_url(f"series/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _artist_url(cls, show_key: str) -> str:
         return cls.build_url(f"artist/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         # Crunchyroll files a music video or a concert under the listing it

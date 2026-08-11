@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_layout/show/$showKey")({
   }),
 })
 
+// TODO: Validate
 function ShowDetailPage() {
   const { showKey } = Route.useParams()
   const { data: show } = useShow(showKey)

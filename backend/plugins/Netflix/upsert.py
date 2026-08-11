@@ -15,7 +15,9 @@ from plugins.Netflix.helpers import HelperMixin
 from plugins.TMDB.mixin import highest_episode_number
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -31,6 +33,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._soft_delete_missing(show_key)
         return show
 
+    # TODO: Validate
     def _upsert_tv_show(
         self,
         source: Source,
@@ -65,6 +68,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_tv_seasons(
         self,
         show: Show,
@@ -99,6 +103,7 @@ class UpsertMixin(HelperMixin, register=False):
                 force=force,
             )
 
+    # TODO: Validate
     def _upsert_tv_episodes(
         self,
         season: Season,
@@ -142,6 +147,7 @@ class UpsertMixin(HelperMixin, register=False):
                 last_number,
             )
 
+    # TODO: Validate
     def _upsert_movie(
         self,
         source: Source,
@@ -175,6 +181,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,
@@ -236,6 +243,7 @@ class UpsertMixin(HelperMixin, register=False):
         "Sunday": 6,
     }
 
+    # TODO: Validate
     def _upcoming_weekday(self, show_key: str) -> int | None:
         """The weekday an upcoming episode is scheduled for, or None if none.
 
@@ -248,6 +256,7 @@ class UpsertMixin(HelperMixin, register=False):
                     return weekday
         return None
 
+    # TODO: Validate
     def _next_update_at(self, show_key: str, data_timestamp: datetime) -> datetime:
         """When to next refresh the title.
 

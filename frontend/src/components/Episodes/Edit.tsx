@@ -54,6 +54,7 @@ interface EditEpisodeProps {
   episode: EpisodeTableData
 }
 
+// TODO: Validate
 const EditEpisode = ({ episode }: EditEpisodeProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -89,6 +90,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
     successMessage: "Episode updated successfully",
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     mutation.mutate(nullifyBlanks(data))

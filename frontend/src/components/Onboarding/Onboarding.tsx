@@ -30,6 +30,7 @@ import { handleError } from "@/utils"
 
 const TOTAL_STEPS = 4
 
+// TODO: Validate
 function OnboardingShell({
   currentStep,
   children,
@@ -56,6 +57,7 @@ function OnboardingShell({
   )
 }
 
+// TODO: Validate
 export function OnboardingCreateName() {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
@@ -89,6 +91,7 @@ export function OnboardingCreateName() {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const handleSubmit = () => {
     if (!channelName.trim()) {
       showErrorToast("Please enter a channel name")
@@ -191,6 +194,7 @@ export function OnboardingCreateName() {
   )
 }
 
+// TODO: Validate
 export function OnboardingEditName({ channelId }: { channelId: string }) {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
@@ -246,6 +250,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const handleSubmit = () => {
     if (!channelName.trim()) {
       showErrorToast("Please enter a channel name")
@@ -349,6 +354,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
   )
 }
 
+// TODO: Validate
 export function OnboardingShows({ channelId }: { channelId: string }) {
   const navigate = useNavigate()
 
@@ -396,6 +402,7 @@ export function OnboardingShows({ channelId }: { channelId: string }) {
   )
 }
 
+// TODO: Validate
 export function OnboardingSort({ channelId }: { channelId: string }) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const { showErrorToast } = useCustomToast()
@@ -423,6 +430,7 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const handleSave = () => {
     if (!selectedOrderId) {
       showErrorToast("Please select a sort option")
@@ -512,6 +520,7 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
   )
 }
 
+// TODO: Validate
 export function OnboardingDone({
   channelId,
   orderPresetId,

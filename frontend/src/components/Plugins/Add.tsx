@@ -43,6 +43,7 @@ const formSchema = z.object({
 type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
+// TODO: Validate
 const AddPlugin = () => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -78,6 +79,7 @@ const AddPlugin = () => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

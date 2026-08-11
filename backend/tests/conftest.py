@@ -51,6 +51,7 @@ test_engine = create_engine(str(TEST_DATABASE_URI))
 admin_engine = create_engine(str(ADMIN_DATABASE_URI))
 
 
+# TODO: Validate
 def create_test_database() -> None:
     # AUTOCOMMIT is required to drop/create a database.
     with admin_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
@@ -69,6 +70,7 @@ def create_test_database() -> None:
     SQLModel.metadata.create_all(test_engine)
 
 
+# TODO: Validate
 def drop_test_database() -> None:
     """Drop the test database, terminating any lingering connections first."""
     test_engine.dispose()
@@ -84,6 +86,7 @@ def drop_test_database() -> None:
 
 
 # For every test session create a single database that is dropped afterwards.
+# TODO: Validate
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database() -> Generator[None]:
     """Load models, copy the application database, and tear it down at the end."""
@@ -93,6 +96,7 @@ def setup_test_database() -> Generator[None]:
     return
 
 
+# TODO: Validate
 def savepoint_session(
     connection: Connection,
     *,
@@ -108,6 +112,7 @@ def savepoint_session(
         transaction.rollback()
 
 
+# TODO: Validate
 def _init_connection() -> Generator[Connection]:
     """Create a connection and initialize the database."""
     connection = test_engine.connect()
@@ -119,26 +124,31 @@ def _init_connection() -> Generator[Connection]:
         connection.close()
 
 
+# TODO: Validate
 @pytest.fixture
 def function_scoped_connection() -> Generator[Connection]:
     yield from _init_connection()
 
 
+# TODO: Validate
 @pytest.fixture(scope="class")
 def class_scoped_connection() -> Generator[Connection]:
     yield from _init_connection()
 
 
+# TODO: Validate
 @pytest.fixture(scope="module")
 def module_scoped_connection() -> Generator[Connection]:
     yield from _init_connection()
 
 
+# TODO: Validate
 @pytest.fixture(scope="session")
 def session_scoped_connection() -> Generator[Connection]:
     yield from _init_connection()
 
 
+# TODO: Validate
 @pytest.fixture
 def function_scoped_session(
     function_scoped_connection: Connection,
@@ -147,24 +157,28 @@ def function_scoped_session(
     yield from savepoint_session(function_scoped_connection)
 
 
+# TODO: Validate
 @pytest.fixture
 def class_scoped_session(class_scoped_connection: Connection) -> Generator[Session]:
     """Class-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(class_scoped_connection)
 
 
+# TODO: Validate
 @pytest.fixture
 def module_scoped_session(module_scoped_connection: Connection) -> Generator[Session]:
     """Module-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(module_scoped_connection)
 
 
+# TODO: Validate
 @pytest.fixture
 def session_scoped_session(session_scoped_connection: Connection) -> Generator[Session]:
     """Session-scoped database with per-test savepoint isolation."""
     yield from savepoint_session(session_scoped_connection)
 
 
+# TODO: Validate
 def _create_client(session: Session) -> Generator[TestClient]:
     """Provide a test client that shares the given database session."""
     app.dependency_overrides[get_db] = lambda: session
@@ -173,36 +187,42 @@ def _create_client(session: Session) -> Generator[TestClient]:
     app.dependency_overrides.clear()
 
 
+# TODO: Validate
 @pytest.fixture
 def function_scoped_client(function_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a function-scoped database session."""
     yield from _create_client(function_scoped_session)
 
 
+# TODO: Validate
 @pytest.fixture
 def class_scoped_client(class_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a class-scoped database session."""
     yield from _create_client(class_scoped_session)
 
 
+# TODO: Validate
 @pytest.fixture
 def module_scoped_client(module_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a module-scoped database session."""
     yield from _create_client(module_scoped_session)
 
 
+# TODO: Validate
 @pytest.fixture
 def session_scoped_client(session_scoped_session: Session) -> Generator[TestClient]:
     """Provide a test client using a session-scoped database session."""
     yield from _create_client(session_scoped_session)
 
 
+# TODO: Validate
 @pytest.fixture
 def superuser_token_headers(session_scoped_client: TestClient) -> dict[str, str]:
     """Provide authentication headers for the superuser."""
     return get_superuser_token_headers(session_scoped_client)
 
 
+# TODO: Validate
 @pytest.fixture
 def normal_user_token_headers(
     session_scoped_client: TestClient,

@@ -14,6 +14,7 @@ from tests.plugins.plugin_validator.context_managers import serve_downloads_from
 collect_ignore_glob = ["test_*.py"] if "GITHUB_ACTIONS" in os.environ else []
 
 
+# TODO: Validate
 @pytest.fixture(scope="session", autouse=True)
 def _stored_downloads() -> Generator[list[str]]:
     """Answer every download out of the stored test files.

@@ -61,6 +61,7 @@ show_issue_report_router = APIRouter(
 issue_reports_router = APIRouter(prefix="/issue-reports", tags=["issue reports"])
 
 
+# TODO: Validate
 @episode_issue_reports_router.get("")
 def get_episode_issue_reports(
     session: SessionDep,
@@ -70,6 +71,7 @@ def get_episode_issue_reports(
     return list_episode_issue_reports(session, episode.id)
 
 
+# TODO: Validate
 @episode_issue_reports_router.post("")
 def create_episode_issue_report(
     session: SessionDep,
@@ -84,6 +86,7 @@ def create_episode_issue_report(
     )
 
 
+# TODO: Validate
 @season_issue_reports_router.get("")
 def get_season_issue_reports(
     session: SessionDep,
@@ -93,6 +96,7 @@ def get_season_issue_reports(
     return list_season_issue_reports(session, season.id)
 
 
+# TODO: Validate
 @season_issue_reports_router.post("")
 def create_season_issue_report(
     session: SessionDep,
@@ -107,6 +111,7 @@ def create_season_issue_report(
     )
 
 
+# TODO: Validate
 @show_issue_reports_router.get("")
 def get_show_issue_reports(
     session: SessionDep,
@@ -116,6 +121,7 @@ def get_show_issue_reports(
     return list_show_issue_reports(session, show.id)
 
 
+# TODO: Validate
 @show_issue_reports_router.post("")
 def create_show_issue_report(
     session: SessionDep,
@@ -130,6 +136,7 @@ def create_show_issue_report(
     )
 
 
+# TODO: Validate
 @episode_issue_report_router.patch("/{issue_report_id}")  # noqa: FAST003 - Used by EditableEpisodeIssueReport.
 def update_episode_issue_report(
     session: SessionDep,
@@ -140,6 +147,7 @@ def update_episode_issue_report(
     return update_issue_report_record(session, issue_report, report_input)
 
 
+# TODO: Validate
 @episode_issue_report_router.delete("/{issue_report_id}")  # noqa: FAST003 - Used by EditableEpisodeIssueReport.
 def delete_episode_issue_report(
     session: SessionDep,
@@ -149,6 +157,7 @@ def delete_episode_issue_report(
     return delete_issue_report_record(session, issue_report)
 
 
+# TODO: Validate
 @season_issue_report_router.patch("/{issue_report_id}")  # noqa: FAST003 - Used by EditableSeasonIssueReport.
 def update_season_issue_report(
     session: SessionDep,
@@ -159,6 +168,7 @@ def update_season_issue_report(
     return update_issue_report_record(session, issue_report, report_input)
 
 
+# TODO: Validate
 @season_issue_report_router.delete("/{issue_report_id}")  # noqa: FAST003 - Used by EditableSeasonIssueReport.
 def delete_season_issue_report(
     session: SessionDep,
@@ -168,6 +178,7 @@ def delete_season_issue_report(
     return delete_issue_report_record(session, issue_report)
 
 
+# TODO: Validate
 @show_issue_report_router.patch("/{issue_report_id}")  # noqa: FAST003 - Used by EditableShowIssueReport.
 def update_show_issue_report(
     session: SessionDep,
@@ -178,6 +189,7 @@ def update_show_issue_report(
     return update_issue_report_record(session, issue_report, report_input)
 
 
+# TODO: Validate
 @show_issue_report_router.delete("/{issue_report_id}")  # noqa: FAST003 - Used by EditableShowIssueReport.
 def delete_show_issue_report(
     session: SessionDep,
@@ -187,6 +199,7 @@ def delete_show_issue_report(
     return delete_issue_report_record(session, issue_report)
 
 
+# TODO: Validate
 @issue_reports_router.get("", dependencies=[Depends(get_current_active_superuser)])
 def get_issue_reports(
     session: SessionDep,

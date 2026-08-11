@@ -6,7 +6,9 @@ from app.shows.models import Show
 from plugins.Roku.files import FileMixin, content_id
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -24,15 +26,18 @@ class HelperMixin(FileMixin, register=False):
         content = self._content(show_key)
         return self._tmdb_search_media(content.title, media_type, content.release_year)
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_number = self._split_season_key(season_key)
         return season_number
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -48,14 +53,17 @@ class HelperMixin(FileMixin, register=False):
                 return int(episode.episode_number)
         return None
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str) -> str:
         return cls.build_url(f"details/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _video_url(cls, episode_key: str) -> str:
         return cls.build_url(f"watch/{episode_key}")
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:

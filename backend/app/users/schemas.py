@@ -11,10 +11,12 @@ from app.users.models import BaseUserSourcePreference, UserBase
 
 
 # Properties to receive via API on creation
+# TODO: Validate
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
 
 
+# TODO: Validate
 class UserRegister(SQLModel):
     email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=128)
@@ -22,10 +24,12 @@ class UserRegister(SQLModel):
 
 
 # Properties to receive via API on update, all are optional
+# TODO: Validate
 class UserUpdate(make_model_with_all_fields_optional(UserBase)):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
+# TODO: Validate
 class UserUpdateMe(SQLModel):
     username: str | None = Field(default=None, min_length=1, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
@@ -37,20 +41,24 @@ class UserUpdateMe(SQLModel):
 
 
 # Properties to return via API, id is always required
+# TODO: Validate
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None
 
 
+# TODO: Validate
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
 
 
+# TODO: Validate
 class SourcePreference(BaseUserSourcePreference):
     pass
 
 
+# TODO: Validate
 class SourcePreferenceOutput(SourcePreference):
     name: str | None = None
     favicon_url: str | None = None

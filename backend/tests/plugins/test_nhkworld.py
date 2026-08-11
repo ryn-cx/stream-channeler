@@ -15,15 +15,19 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class NHKWorldValidator(PluginValidator[NHKWorld]):
     plugin_class = NHKWorld
 
 
+# TODO: Validate
 class NHKWorldStandardTests(StandardTests[NHKWorld], NHKWorldValidator):
     pass
 
 
+# TODO: Validate
 class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
+    # TODO: Validate
     @override
     def update_source_validator(self, source: Source) -> Validator:
         validator = super().update_source_validator(source)
@@ -40,6 +44,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
 
         return validator
 
+    # TODO: Validate
     @staticmethod
     def _create_fake_feed_file(
         plugin_instance: NHKWorld,
@@ -65,6 +70,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
         new_feed.write(naphki().video_episodes.model_dump(parsed))  # pyright: ignore[reportPrivateUsage]
         new_feed._existing_database_record.data_timestamp = timestamp  # type: ignore[union-attr] # noqa: SLF001
 
+    # TODO: Validate
     @override
     def _create_source_update_entry(
         self,
@@ -75,6 +81,7 @@ class NHKWorldUpdateSourceTest(UpdateSourceTests[NHKWorld], NHKWorldValidator):
         self._create_fake_feed_file(plugin_instance, timestamp, source.shows[0].key)
 
 
+# TODO: Validate
 class TestShow(NHKWorldStandardTests, NHKWorldUpdateSourceTest):
     parse_url_response = "dwc"
     urls = (
@@ -84,15 +91,18 @@ class TestShow(NHKWorldStandardTests, NHKWorldUpdateSourceTest):
     search_query = "Dining with the Chef"
 
 
+# TODO: Validate
 class InvalidNHKWorldURLValidator(InvalidURLValidator[NHKWorld]):
     plugin_class = NHKWorld
 
 
+# TODO: Validate
 class TestInvalidShowKey(InvalidNHKWorldURLValidator):
     # Correctly formatted show URL whose program does not exist.
     urls = ("https://www3.nhk.or.jp/nhkworld/en/shows/zzzzzzzzzz/",)
 
 
+# TODO: Validate
 class TestInvalidURL(InvalidNHKWorldURLValidator):
     # Numeric key is an episode URL, not a show, so the regex rejects it.
     urls = ("https://www3.nhk.or.jp/nhkworld/en/shows/3025240/",)

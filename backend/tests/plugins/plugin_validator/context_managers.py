@@ -18,6 +18,7 @@ from app.utils import tz_datetime
 from plugins.utils.base_plugin import BaseFile
 
 
+# TODO: Validate
 def _owner_key(file: BaseFile[Any]) -> str:
     """Return the plugin a file class belongs to.
 
@@ -43,10 +44,12 @@ _ESCAPED_CHARACTERS = frozenset('<>:"\\|?*' + ESCAPE_PREFIX) | {
 _ESCAPED_ENDINGS = (".", " ")
 
 
+# TODO: Validate
 def _escape(character: str) -> str:
     return f"{ESCAPE_PREFIX}{ord(character):02X}"
 
 
+# TODO: Validate
 def encode_name(segment: str) -> str:
     """Return one part of a key as a name the file system will take.
 
@@ -63,6 +66,7 @@ def encode_name(segment: str) -> str:
     return encoded
 
 
+# TODO: Validate
 def decode_name(segment: str) -> str:
     """Return the part of a key that `encode_name` built `segment` from."""
     characters: list[str] = []
@@ -77,6 +81,7 @@ def decode_name(segment: str) -> str:
     return "".join(characters)
 
 
+# TODO: Validate
 def _encoded_path(owner_key: str, file_key: str) -> Path:
     """Return where the file `file_key` names sits under a store's folder.
 
@@ -90,27 +95,32 @@ def _encoded_path(owner_key: str, file_key: str) -> Path:
     return Path(encode_name(owner_key)) / encoded
 
 
+# TODO: Validate
 def stored_path(owner_key: str, file_key: str) -> Path:
     """Return where the content of the file `file_key` names is kept."""
     return ALL_TEST_FILES_FOLDER / _encoded_path(owner_key, file_key)
 
 
+# TODO: Validate
 def stored_metadata_path(owner_key: str, file_key: str) -> Path:
     """Return where what the file `file_key` names was in the table is kept."""
     return ALL_TEST_FILES_METADATA_FOLDER / _encoded_path(owner_key, file_key)
 
 
+# TODO: Validate
 def stored_key(path: Path) -> tuple[str, str]:
     """Return the owning plugin and file key that `path` was stored for."""
     owner, *rest = path.relative_to(ALL_TEST_FILES_FOLDER).parts
     return decode_name(owner), "/".join(decode_name(part) for part in rest)
 
 
+# TODO: Validate
 def stored_file_path(file: BaseFile[Any]) -> Path:
     """Return where `file` is kept among the stored test files."""
     return stored_path(_owner_key(file), file.file_key())
 
 
+# TODO: Validate
 class StoredFileMetadata(BaseModel):
     """What a stored file was in the `File` table when it was downloaded.
 
@@ -128,6 +138,7 @@ class StoredFileMetadata(BaseModel):
     extra: str | None = None
 
 
+# TODO: Validate
 def read_stored_metadata(owner_key: str, file_key: str) -> StoredFileMetadata | None:
     """Return what `file_key` was in the table, or None when it was not stored."""
     path = stored_metadata_path(owner_key, file_key)
@@ -136,6 +147,7 @@ def read_stored_metadata(owner_key: str, file_key: str) -> StoredFileMetadata | 
     return StoredFileMetadata.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+# TODO: Validate
 def write_stored_metadata(owner_key: str, file_key: str, record: File) -> None:
     """Store what `record` is in the table beside the content it was stored for."""
     path = stored_metadata_path(owner_key, file_key)
@@ -144,6 +156,7 @@ def write_stored_metadata(owner_key: str, file_key: str, record: File) -> None:
     path.write_text(metadata.model_dump_json(indent=2), encoding="utf-8")
 
 
+# TODO: Validate
 def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
     """Put back what `record` was in the table when it was stored.
 
@@ -160,6 +173,7 @@ def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
         setattr(record, field, value)
 
 
+# TODO: Validate
 def stored_file_record(owner_key: str, file_key: str, path: Path) -> File:
     """Return the `File` the stored copy of `file_key` describes."""
     content = path.read_text(encoding="utf-8") or None
@@ -175,6 +189,7 @@ def stored_file_record(owner_key: str, file_key: str, path: Path) -> File:
     )
 
 
+# TODO: Validate
 def _exists(path: Path) -> bool:
     """Report whether `path` is stored, counting one it could not be as not stored.
 
@@ -188,6 +203,7 @@ def _exists(path: Path) -> bool:
         return False
 
 
+# TODO: Validate
 @contextmanager
 def serve_downloads_from_disk() -> Generator[list[str]]:
     """Serve every download from the stored test files, downloading what is missing.
@@ -213,6 +229,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
     # Patched on `download_if_outdated` rather than on `_download`, because a
     # file class is free to download however it likes and most of them override
     # `_download` to do it. Only `download_if_outdated` is every file's way in.
+    # TODO: Validate
     def _download_if_outdated(
         self: BaseFile[Any],
         update_at: datetime | None = None,
@@ -257,6 +274,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         raise OSError(msg)
 
 
+# TODO: Validate
 @contextmanager
 def track_requested_files() -> Generator[list[str]]:
     """Record the key of every file that was asked for.
@@ -269,6 +287,7 @@ def track_requested_files() -> Generator[list[str]]:
     requested: list[str] = []
     original_download_if_outdated = BaseFile[Any].download_if_outdated
 
+    # TODO: Validate
     def _download_if_outdated(
         self: BaseFile[Any],
         update_at: datetime | None = None,
@@ -280,10 +299,12 @@ def track_requested_files() -> Generator[list[str]]:
         yield requested
 
 
+# TODO: Validate
 @contextmanager
 def mock_update() -> Generator[None]:
     """Mock updates by incrementing `data_timestamp`."""
 
+    # TODO: Validate
     def _mock(self: BaseFile[Any], update_at: datetime | None = None) -> None:
         if not self.is_outdated(update_at):
             return

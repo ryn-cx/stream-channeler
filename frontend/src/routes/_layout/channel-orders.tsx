@@ -86,6 +86,7 @@ const emptyStates: Record<Scope, { title: string; description: string }> = {
 
 // Admins read every tab through the admin endpoint, which is the only one that
 // carries `score`; everyone else uses the owned and public endpoints.
+// TODO: Validate
 function useScopedOrders(
   scope: Scope,
   isAdmin: boolean,
@@ -118,6 +119,7 @@ function useScopedOrders(
   })
 }
 
+// TODO: Validate
 function OrdersTable({
   scope,
   scopeTabs,
@@ -268,6 +270,7 @@ function OrdersTable({
   )
 }
 
+// TODO: Validate
 function OrdersPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
@@ -276,6 +279,7 @@ function OrdersPage() {
   const scope: Scope = search.view ?? "owned"
   const [createOpen, setCreateOpen] = useState(false)
 
+  // TODO: Validate
   const setScope = (next: Scope) => {
     navigate({
       to: "/channel-orders",

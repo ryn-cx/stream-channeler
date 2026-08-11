@@ -12,6 +12,7 @@ from app.users.schemas import UserCreate, UserUpdate
 from tests.app.utils.utils import random_email, random_lower_string
 
 
+# TODO: Validate
 def user_authentication_headers(
     *,
     client: TestClient,
@@ -25,6 +26,7 @@ def user_authentication_headers(
     return {"Authorization": f"Bearer {auth_token}"}
 
 
+# TODO: Validate
 def create_random_user(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
@@ -32,6 +34,7 @@ def create_random_user(session: Session) -> User:
     return user_service.create_user(session=session, user_create=user_in)
 
 
+# TODO: Validate
 def create_random_superuser(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
@@ -44,6 +47,7 @@ def create_random_superuser(session: Session) -> User:
     return user_service.create_user(session=session, user_create=user_in)
 
 
+# TODO: Validate
 def authentication_token_from_email(
     *,
     client: TestClient,
@@ -69,6 +73,7 @@ def authentication_token_from_email(
     return user_authentication_headers(client=client, email=email, password=password)
 
 
+# TODO: Validate
 class CreatedUser(BaseModel):
     id: uuid.UUID
     email: str
@@ -77,6 +82,7 @@ class CreatedUser(BaseModel):
 
 
 # TODO: Rename this or something.
+# TODO: Validate
 def create_random_user_alt(client: TestClient, session: Session) -> CreatedUser:
     email = random_email()
     password = random_lower_string()

@@ -17,6 +17,7 @@ from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandl
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class DisneyPlus(
     SourceMixin,
     UpsertMixin,
@@ -31,11 +32,13 @@ class DisneyPlus(
     TMDB_PROVIDER_NAMES = ("Disney+",)
     FAVICON_URL = "https://www.disneyplus.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "disneyplus.com"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

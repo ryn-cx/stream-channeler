@@ -90,6 +90,7 @@ declare module "@tanstack/react-table" {
   }
 }
 
+// TODO: Validate
 function usePersistentState<T>(key: string | undefined, initialValue: T) {
   const [value, setValue] = useState<T>(() => {
     if (!key) return initialValue
@@ -132,6 +133,7 @@ interface DataTableProps<TData extends { id: string }, TValue> {
   serverSide?: ServerSideTableState
 }
 
+// TODO: Validate
 function useTableState(
   serverSide: ServerSideTableState | undefined,
   storageKey: string | undefined,
@@ -175,6 +177,7 @@ function useTableState(
   }
 }
 
+// TODO: Validate
 export function DataTable<TData extends { id: string }, TValue>({
   columns,
   data,
@@ -346,6 +349,7 @@ export function DataTable<TData extends { id: string }, TValue>({
   )
 }
 
+// TODO: Validate
 function TablePagination<TData>({
   table,
   filteredRows,
@@ -457,6 +461,7 @@ function TablePagination<TData>({
 
 const SELECT_ALL_VALUE = "__all__"
 
+// TODO: Validate
 function Filter<TData, TValue>({
   column,
   isServerSide,
@@ -498,6 +503,7 @@ function Filter<TData, TValue>({
 
     // Picking a date without a time covers the whole day: the minimum defaults to the
     // start of the day and the maximum to the end of the day.
+    // TODO: Validate
     const setBound = (index: 0 | 1, date: string, time: string) => {
       const defaultTime = index === 0 ? "00:00" : "23:59"
       const nextValue = date ? `${date}T${time || defaultTime}` : ""
@@ -558,6 +564,7 @@ function Filter<TData, TValue>({
 
     // Merge against the latest filter value (not a render-time snapshot) so the
     // debounced min/max inputs don't clobber each other when their timers race.
+    // TODO: Validate
     const setBound = (index: 0 | 1, next: string | number) => {
       column.setFilterValue((previous: [string, string] | undefined) => {
         const value: [string, string] = [
@@ -654,6 +661,7 @@ function Filter<TData, TValue>({
 
 // Copied from https://tanstack.com/table/v8/docs/framework/react/examples/filters
 // A typical debounced input react component
+// TODO: Validate
 function DebouncedInput({
   value: initialValue,
   onChange,
@@ -701,6 +709,7 @@ export interface MediaTableResult<TData> {
   is_server_side: boolean
 }
 
+// TODO: Validate
 function columnId<TData>(
   column: ColumnDef<TData, unknown>,
 ): string | undefined {
@@ -709,6 +718,7 @@ function columnId<TData>(
   return undefined
 }
 
+// TODO: Validate
 export function serializeTableQuery<TData>(
   params: MediaPageParams,
   columns: ColumnDef<TData, unknown>[],
@@ -754,6 +764,7 @@ interface MediaTablePageProps<TData extends { id: string }> {
   resetKey?: unknown
 }
 
+// TODO: Validate
 export function MediaTablePage<TData extends { id: string }>({
   columns,
   queryKey,
@@ -872,6 +883,7 @@ interface DetailTablePageProps<TData extends { id: string }> {
   backButton?: ReactNode
 }
 
+// TODO: Validate
 export function DetailTablePage<TData extends { id: string }>({
   title,
   columns,
@@ -932,6 +944,7 @@ export type MediaPath =
   | "/episodes"
   | "/files"
 
+// TODO: Validate
 export const validateMediaSearch = (
   search: Record<string, unknown>,
 ): MediaSearch => ({
@@ -969,6 +982,7 @@ interface MediaListPageProps<TData extends { id: string }> {
   ) => Promise<MediaTableResult<TData>>
 }
 
+// TODO: Validate
 export function MediaListPage<TData extends { id: string }>({
   title,
   path,
@@ -1000,6 +1014,7 @@ export function MediaListPage<TData extends { id: string }>({
     }
   }, [search.view, rememberedScope, setRememberedScope])
 
+  // TODO: Validate
   const setScopeTab = (next: MediaScope) => {
     setRememberedScope(next)
     navigate({

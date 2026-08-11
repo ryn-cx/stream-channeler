@@ -42,6 +42,7 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const AddUser = () => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -76,6 +77,7 @@ const AddUser = () => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     const { confirm_password: _, ...userCreate } = data
     setIsOpen(false)

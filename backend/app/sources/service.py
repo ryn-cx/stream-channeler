@@ -16,6 +16,7 @@ from app.users.models import User
 OTHER_SOURCE_KEY = "Other"
 
 
+# TODO: Validate
 def sources_by_key(session: Session) -> dict[str, Source]:
     """Return the installed plugins' stored `Source`s, keyed by source key.
 
@@ -37,6 +38,7 @@ def sources_by_key(session: Session) -> dict[str, Source]:
     return {source.key: source for source in sources}
 
 
+# TODO: Validate
 def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     """Return the number of live episodes each `Source` provides, keyed by source id."""
     rows = session.exec(
@@ -53,6 +55,7 @@ def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     return dict(rows)
 
 
+# TODO: Validate
 def source_keys(session: Session) -> list[str]:
     """Return the key of every installed plugin's `Source`, ordered for display."""
     return list(sources_by_key(session))

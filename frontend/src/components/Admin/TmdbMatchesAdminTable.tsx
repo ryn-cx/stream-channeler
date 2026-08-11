@@ -14,6 +14,7 @@ import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
 
 const STORAGE_KEY = "admin-tmdb-matches"
 
+// TODO: Validate
 export function TmdbMatchesAdminTable() {
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>(`${STORAGE_KEY}-visibility`, {})

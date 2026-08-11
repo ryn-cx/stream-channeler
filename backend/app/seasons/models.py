@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from app.issue_reports.models import SeasonIssueReport
 
 
+# TODO: Validate
 class BaseSeason(BaseMediaMixin):
     """Base model for an `Season`."""
 
@@ -48,6 +49,7 @@ class BaseSeason(BaseMediaMixin):
     # key for the season when it is not.
     season_identifier: str
 
+    # TODO: Validate
     @computed_field
     @property
     def tmdb_id(self) -> int | None:
@@ -59,6 +61,7 @@ class BaseSeason(BaseMediaMixin):
         return identifier_tmdb_id(self.season_identifier)
 
 
+# TODO: Validate
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     """Model representing a `Season`."""
 
@@ -110,16 +113,19 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> Show:
         return self.show
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Episode]:
         return self.episodes
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return session.exec(
@@ -130,11 +136,13 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
             .where(Show.id == self.show_id),
         ).one()
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Show).join(Source).join(Plugin)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -149,6 +157,7 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
             )
         )
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Season`."""
         base_season = "Season:"

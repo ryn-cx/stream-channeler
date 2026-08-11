@@ -7,6 +7,7 @@ export interface ChannelOrderConfig {
   randomSeed?: number
 }
 
+// TODO: Validate
 export function parseOrderConfig(config: string): ChannelOrderConfig {
   try {
     return JSON.parse(config) as ChannelOrderConfig
@@ -15,10 +16,12 @@ export function parseOrderConfig(config: string): ChannelOrderConfig {
   }
 }
 
+// TODO: Validate
 export function serializeOrderConfig(config: ChannelOrderConfig): string {
   return JSON.stringify(config)
 }
 
+// TODO: Validate
 export function orderSortStepCount(config: string): number {
   return parseOrderConfig(config).sortBy?.length ?? 0
 }

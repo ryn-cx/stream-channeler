@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any, Concatenate, cast
 
 
+# TODO: Validate
 def copy_func_params[**Param, RV](
     source_func: Callable[Param, Any],  # noqa: ARG001
 ) -> Callable[[Callable[..., RV]], Callable[Param, RV]]:
@@ -29,12 +30,14 @@ def copy_func_params[**Param, RV](
        *source_func* changes.
     """
 
+    # TODO: Validate
     def return_func(func: Callable[..., RV]) -> Callable[Param, RV]:
         return cast("Callable[Param, RV]", func)
 
     return return_func
 
 
+# TODO: Validate
 def copy_method_params[**Param, Arg1, RV](
     source_method: Callable[Concatenate[Any, Param], Any],  # noqa: ARG001
 ) -> Callable[
@@ -47,6 +50,7 @@ def copy_method_params[**Param, Arg1, RV](
     It keeps the first argument (`self`/`cls`) of the decorated method.
     """
 
+    # TODO: Validate
     def return_func(
         func: Callable[Concatenate[Arg1, ...], RV],
     ) -> Callable[Concatenate[Arg1, Param], RV]:

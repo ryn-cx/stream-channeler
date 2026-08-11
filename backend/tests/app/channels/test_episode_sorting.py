@@ -38,6 +38,7 @@ from tests.app.users.utils import create_random_user
 from tests.app.watches.utils import create_random_watch
 
 
+# TODO: Validate
 class ShowSetup(TypedDict):
     show: Show
     season: Season
@@ -45,17 +46,20 @@ class ShowSetup(TypedDict):
     old: Episode
 
 
+# TODO: Validate
 class BuildSetup(TypedDict):
     channel: Channel
     user: User
     session: Session
 
 
+# TODO: Validate
 class EpisodeSetup(BuildSetup):
     plugin: Plugin
     shows: list[ShowSetup]
 
 
+# TODO: Validate
 def _sort_key(
     model_field: str,
     direction: str = "ascending",
@@ -77,6 +81,7 @@ def _sort_key(
     return json.dumps(data)
 
 
+# TODO: Validate
 @pytest.fixture
 def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
     """Create a channel with 2 shows, each with 2 episodes (recent + old air dates)."""
@@ -135,6 +140,7 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
     }
 
 
+# TODO: Validate
 def _build_results(setup: BuildSetup, **filter_kwargs: object) -> list[EpisodeResult]:
     channel_options = ChannelOptions(**filter_kwargs)
     builder = EpisodeQueryBuilder(
@@ -146,10 +152,12 @@ def _build_results(setup: BuildSetup, **filter_kwargs: object) -> list[EpisodeRe
     return builder.get_episodes()
 
 
+# TODO: Validate
 def _build(setup: BuildSetup, **filter_kwargs: object) -> list[Episode]:
     return [r.episode for r in _build_results(setup, **filter_kwargs)]
 
 
+# TODO: Validate
 def _combine_channels(
     session: Session,
     channel: Channel,
@@ -172,6 +180,7 @@ def _combine_channels(
     session.flush()
 
 
+# TODO: Validate
 def _all_episode_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     return {
         setup["shows"][0]["recent"].id,
@@ -181,6 +190,7 @@ def _all_episode_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     }
 
 
+# TODO: Validate
 def _recent_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     return {
         setup["shows"][0]["recent"].id,
@@ -188,12 +198,15 @@ def _recent_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     }
 
 
+# TODO: Validate
 class TestBasicRetrieval:
+    # TODO: Validate
     def test_returns_all_episodes(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(episode_setup)
         assert len(episodes) == 4  # noqa: PLR2004
         assert {ep.id for ep in episodes} == _all_episode_ids(episode_setup)
 
+    # TODO: Validate
     def test_default_sort_when_no_sort_specified(
         self,
         episode_setup: EpisodeSetup,
@@ -201,10 +214,12 @@ class TestBasicRetrieval:
         episodes = _build(episode_setup)
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_respects_limit(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(episode_setup, limit=2)
         assert len(episodes) == 2  # noqa: PLR2004
 
+    # TODO: Validate
     def test_empty_channel_returns_no_episodes(
         self,
         session_scoped_session: Session,
@@ -221,7 +236,9 @@ class TestBasicRetrieval:
         assert len(episodes) == 0
 
 
+# TODO: Validate
 class TestSortDirection:
+    # TODO: Validate
     def test_ascending_air_date(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -230,6 +247,7 @@ class TestSortDirection:
         air_dates = [ep.air_date for ep in episodes]
         assert air_dates == sorted(air_dates)
 
+    # TODO: Validate
     def test_descending_air_date(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -238,6 +256,7 @@ class TestSortDirection:
         air_dates = [ep.air_date for ep in episodes]
         assert air_dates == sorted(air_dates, reverse=True)
 
+    # TODO: Validate
     def test_ascending_duration(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -246,6 +265,7 @@ class TestSortDirection:
         durations = [ep.duration for ep in episodes]
         assert durations == sorted(durations)
 
+    # TODO: Validate
     def test_descending_duration(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -255,7 +275,9 @@ class TestSortDirection:
         assert durations == sorted(durations, reverse=True)
 
 
+# TODO: Validate
 class TestSortByShowFields:
+    # TODO: Validate
     def test_sort_by_show_name(self, episode_setup: EpisodeSetup) -> None:
         """Sorting by show name should group episodes by show."""
         # Set distinct names so sorting is deterministic
@@ -272,7 +294,9 @@ class TestSortByShowFields:
         assert show_names[2:] == ["Beta", "Beta"]
 
 
+# TODO: Validate
 class TestRecentlyAired:
+    # TODO: Validate
     def test_recently_aired_groups_recent_first(
         self,
         episode_setup: EpisodeSetup,
@@ -286,6 +310,7 @@ class TestRecentlyAired:
         assert result_ids[0] in recent
         assert result_ids[1] in recent
 
+    # TODO: Validate
     @pytest.mark.parametrize("days", [7, 30, 365])
     def test_recently_aired_custom_days(
         self,
@@ -304,6 +329,7 @@ class TestRecentlyAired:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_recently_aired_defaults_to_7_days(
         self,
         episode_setup: EpisodeSetup,
@@ -326,7 +352,9 @@ class TestRecentlyAired:
         assert [ep.id for ep in episodes_default] == [ep.id for ep in episodes_explicit]
 
 
+# TODO: Validate
 class TestInterleave:
+    # TODO: Validate
     def test_sequential_interleave_alternates_shows(
         self,
         episode_setup: EpisodeSetup,
@@ -354,6 +382,7 @@ class TestInterleave:
         for index in range(len(show_ids) - 1):
             assert show_ids[index] != show_ids[index + 1]
 
+    # TODO: Validate
     def test_random_interleave_returns_all_episodes(
         self,
         episode_setup: EpisodeSetup,
@@ -372,6 +401,7 @@ class TestInterleave:
         )
         assert {ep.id for ep in episodes} == _all_episode_ids(episode_setup)
 
+    # TODO: Validate
     def test_random_interleave_is_deterministic_with_seed(
         self,
         episode_setup: EpisodeSetup,
@@ -388,7 +418,9 @@ class TestInterleave:
         assert [ep.id for ep in first] == [ep.id for ep in second]
 
 
+# TODO: Validate
 class TestGroupByShow:
+    # TODO: Validate
     def test_group_by_show_sum_duration(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -402,6 +434,7 @@ class TestGroupByShow:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_group_by_show_max_air_date(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -415,6 +448,7 @@ class TestGroupByShow:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_group_by_show_with_show_field(self, episode_setup: EpisodeSetup) -> None:
         """Group by show with a show field just returns the field value directly."""
         episodes = _build(
@@ -426,7 +460,9 @@ class TestGroupByShow:
         assert len(episodes) == 4  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestLastWatchedSort:
+    # TODO: Validate
     def test_last_watched_sort_ascending(self, episode_setup: EpisodeSetup) -> None:
         """Episodes watched longer ago should appear first with ascending."""
         old_watch_date = tz_datetime.now() - timedelta(days=30)
@@ -461,6 +497,7 @@ class TestLastWatchedSort:
             newer_episode.id,
         )
 
+    # TODO: Validate
     def test_last_watched_incomplete_uses_only_unverified_watches(
         self,
         episode_setup: EpisodeSetup,
@@ -504,6 +541,7 @@ class TestLastWatchedSort:
         ]
         assert min(show_1_positions) < min(show_0_positions)
 
+    # TODO: Validate
     def test_last_watched_without_user_ignored(
         self,
         episode_setup: EpisodeSetup,
@@ -521,7 +559,9 @@ class TestLastWatchedSort:
         assert len(episodes) == 4  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestWatchFilters:
+    # TODO: Validate
     def test_hide_watched_excludes_watched_episodes(
         self,
         episode_setup: EpisodeSetup,
@@ -538,6 +578,7 @@ class TestWatchFilters:
         assert watched_episode.id not in result_ids
         assert len(episodes) == 3  # noqa: PLR2004
 
+    # TODO: Validate
     def test_hide_unwatched_only_shows_watched(
         self,
         episode_setup: EpisodeSetup,
@@ -553,6 +594,7 @@ class TestWatchFilters:
         result_ids = {ep.id for ep in episodes}
         assert result_ids == {watched_episode.id}
 
+    # TODO: Validate
     def test_unverified_watch_not_counted_as_watched(
         self,
         episode_setup: EpisodeSetup,
@@ -569,7 +611,9 @@ class TestWatchFilters:
         assert watched_episode.id in result_ids
 
 
+# TODO: Validate
 class TestShowFilters:
+    # TODO: Validate
     def test_only_started_shows(self, episode_setup: EpisodeSetup) -> None:
         started_episode = episode_setup["shows"][0]["recent"]
         create_random_watch(
@@ -582,6 +626,7 @@ class TestShowFilters:
         show_ids = {ep.season.show_id for ep in episodes}
         assert show_ids == {episode_setup["shows"][0]["show"].id}
 
+    # TODO: Validate
     def test_only_new_shows(self, episode_setup: EpisodeSetup) -> None:
         started_episode = episode_setup["shows"][0]["recent"]
         create_random_watch(
@@ -595,15 +640,19 @@ class TestShowFilters:
         assert show_ids == {episode_setup["shows"][1]["show"].id}
 
 
+# TODO: Validate
 class TestDurationFilter:
+    # TODO: Validate
     def test_minimum_duration(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(episode_setup, minimum_duration=150)
         assert all(ep.duration >= 150 for ep in episodes)  # noqa: PLR2004
 
+    # TODO: Validate
     def test_maximum_duration(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(episode_setup, maximum_duration=150)
         assert all(ep.duration <= 150 for ep in episodes)  # noqa: PLR2004
 
+    # TODO: Validate
     def test_duration_range(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -613,7 +662,9 @@ class TestDurationFilter:
         assert all(50 <= ep.duration <= 150 for ep in episodes)  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestAirDateFilter:
+    # TODO: Validate
     def test_minimum_air_date_absolute(self, episode_setup: EpisodeSetup) -> None:
         cutoff = tz_datetime.now() - timedelta(days=30)
         episodes = _build(
@@ -624,6 +675,7 @@ class TestAirDateFilter:
             if episode.air_date is not None:
                 assert episode.air_date >= cutoff
 
+    # TODO: Validate
     def test_minimum_air_date_relative(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(episode_setup, minimum_air_date_relative=30)
         cutoff = tz_datetime.now() - timedelta(days=30)
@@ -632,7 +684,9 @@ class TestAirDateFilter:
                 assert episode.air_date >= cutoff
 
 
+# TODO: Validate
 class TestPluginVisibility:
+    # TODO: Validate
     def test_private_plugin_hidden_from_non_owner(
         self,
         session_scoped_session: Session,
@@ -667,6 +721,7 @@ class TestPluginVisibility:
         )
         assert len(episodes) == 0
 
+    # TODO: Validate
     def test_public_plugin_visible_to_non_owner(
         self,
         session_scoped_session: Session,
@@ -702,7 +757,9 @@ class TestPluginVisibility:
         assert len(episodes) == 1
 
 
+# TODO: Validate
 class TestDeletedEpisodes:
+    # TODO: Validate
     def test_deleted_episodes_excluded(self, episode_setup: EpisodeSetup) -> None:
         deleted_episode = episode_setup["shows"][0]["recent"]
         deleted_episode.deleted_at = tz_datetime.now()
@@ -714,13 +771,16 @@ class TestDeletedEpisodes:
         assert len(episodes) == 3  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestInvalidSortKeys:
+    # TODO: Validate
     def test_invalid_field_raises(self) -> None:
         with pytest.raises(ValidationError):
             ChannelOptions(
                 sort_by=[_sort_key("episode.nonexistent_field")],
             )
 
+    # TODO: Validate
     def test_invalid_mode_raises(self) -> None:
         with pytest.raises(ValidationError):
             ChannelOptions(
@@ -734,6 +794,7 @@ class TestInvalidSortKeys:
                 ],
             )
 
+    # TODO: Validate
     def test_invalid_direction_raises(self) -> None:
         with pytest.raises(ValidationError):
             ChannelOptions(
@@ -747,12 +808,15 @@ class TestInvalidSortKeys:
                 ],
             )
 
+    # TODO: Validate
     def test_invalid_json_raises(self) -> None:
         with pytest.raises(ValidationError):
             ChannelOptions(sort_by=["not valid json"])
 
 
+# TODO: Validate
 class TestMultipleSortKeys:
+    # TODO: Validate
     def test_multiple_sorts_applied(self, episode_setup: EpisodeSetup) -> None:
         """Last sort key is primary, earlier ones are secondary."""
         episodes = _build(
@@ -765,7 +829,9 @@ class TestMultipleSortKeys:
         assert len(episodes) == 4  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestRandomSort:
+    # TODO: Validate
     def test_random_sort_deterministic_with_seed(
         self,
         episode_setup: EpisodeSetup,
@@ -775,6 +841,7 @@ class TestRandomSort:
         second = _build(episode_setup, sort_by=sort_by, random_seed=42)
         assert [ep.id for ep in first] == [ep.id for ep in second]
 
+    # TODO: Validate
     def test_different_seeds_produce_different_order(
         self,
         episode_setup: EpisodeSetup,
@@ -786,7 +853,9 @@ class TestRandomSort:
         assert [ep.id for ep in first] != [ep.id for ep in second]
 
 
+# TODO: Validate
 class TestGroupByShowAggregations:
+    # TODO: Validate
     @pytest.mark.parametrize("aggregation", ["max", "min", "avg"])
     def test_all_aggregation_functions(
         self,
@@ -805,6 +874,7 @@ class TestGroupByShowAggregations:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_group_by_show_groups_episodes_by_show(
         self,
         episode_setup: EpisodeSetup,
@@ -828,6 +898,7 @@ class TestGroupByShowAggregations:
                 seen_shows.append(show_id)
         assert len(seen_shows) == 2  # noqa: PLR2004
 
+    # TODO: Validate
     def test_group_by_show_min_duration(self, episode_setup: EpisodeSetup) -> None:
         """Min aggregation should sort by minimum episode duration per show."""
         episodes = _build(
@@ -843,7 +914,9 @@ class TestGroupByShowAggregations:
         assert len(episodes) == 4  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestFilterCombinations:
+    # TODO: Validate
     def test_hide_watched_with_duration_filter(
         self,
         episode_setup: EpisodeSetup,
@@ -864,6 +937,7 @@ class TestFilterCombinations:
         assert watched_episode.id not in result_ids
         assert all(ep.duration >= 150 for ep in episodes)  # noqa: PLR2004
 
+    # TODO: Validate
     def test_only_started_shows_with_duration_filter(
         self,
         episode_setup: EpisodeSetup,
@@ -884,6 +958,7 @@ class TestFilterCombinations:
         assert show_ids == {episode_setup["shows"][0]["show"].id}
         assert all(ep.duration >= 150 for ep in episodes)  # noqa: PLR2004
 
+    # TODO: Validate
     def test_hide_watched_with_air_date_filter(
         self,
         episode_setup: EpisodeSetup,
@@ -904,6 +979,7 @@ class TestFilterCombinations:
         result_ids = {ep.id for ep in episodes}
         assert watched_episode.id not in result_ids
 
+    # TODO: Validate
     def test_all_filters_combined(self, episode_setup: EpisodeSetup) -> None:
         """Apply multiple filters simultaneously."""
         watched_episode = episode_setup["shows"][0]["recent"]
@@ -924,7 +1000,9 @@ class TestFilterCombinations:
         assert all(50 <= ep.duration <= 250 for ep in episodes)  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestSortWithFilterCombinations:
+    # TODO: Validate
     def test_sort_ascending_with_hide_watched(
         self,
         episode_setup: EpisodeSetup,
@@ -945,6 +1023,7 @@ class TestSortWithFilterCombinations:
         durations = [ep.duration for ep in episodes]
         assert durations == sorted(durations)
 
+    # TODO: Validate
     def test_interleave_with_duration_filter(
         self,
         episode_setup: EpisodeSetup,
@@ -964,6 +1043,7 @@ class TestSortWithFilterCombinations:
         )
         assert all(ep.duration >= 150 for ep in episodes)  # noqa: PLR2004
 
+    # TODO: Validate
     def test_group_by_show_with_hide_watched(
         self,
         episode_setup: EpisodeSetup,
@@ -988,6 +1068,7 @@ class TestSortWithFilterCombinations:
         )
         assert watched_episode.id not in {ep.id for ep in episodes}
 
+    # TODO: Validate
     def test_interleave_with_only_started_shows(
         self,
         episode_setup: EpisodeSetup,
@@ -1014,6 +1095,7 @@ class TestSortWithFilterCombinations:
         show_ids = {ep.season.show_id for ep in episodes}
         assert show_ids == {episode_setup["shows"][0]["show"].id}
 
+    # TODO: Validate
     def test_random_sort_with_limit(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -1024,7 +1106,9 @@ class TestSortWithFilterCombinations:
         assert len(episodes) == 2  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestMultipleSortKeyCombinations:
+    # TODO: Validate
     def test_group_by_show_then_episode_sort(self, episode_setup: EpisodeSetup) -> None:
         """Group by show as primary, episode field as secondary."""
         episodes = _build(
@@ -1040,6 +1124,7 @@ class TestMultipleSortKeyCombinations:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_interleave_with_secondary_sort(
         self,
         episode_setup: EpisodeSetup,
@@ -1060,6 +1145,7 @@ class TestMultipleSortKeyCombinations:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_two_normal_sorts(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -1070,6 +1156,7 @@ class TestMultipleSortKeyCombinations:
         )
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_show_field_with_interleave(self, episode_setup: EpisodeSetup) -> None:
         episodes = _build(
             episode_setup,
@@ -1088,7 +1175,9 @@ class TestMultipleSortKeyCombinations:
         assert len(show_ids) == 2  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestWatchDateFilter:
+    # TODO: Validate
     def test_hide_watched_recent_watch_hidden(
         self,
         episode_setup: EpisodeSetup,
@@ -1112,6 +1201,7 @@ class TestWatchDateFilter:
         # Watch (1 hour ago) > cutoff (15 days ago), so episode is hidden
         assert watched_episode.id not in {ep.id for ep in episodes}
 
+    # TODO: Validate
     def test_hide_watched_old_watch_still_visible(
         self,
         episode_setup: EpisodeSetup,
@@ -1135,6 +1225,7 @@ class TestWatchDateFilter:
         # Watch (30 days ago) <= cutoff (15 days ago), so episode stays visible
         assert watched_episode.id in {ep.id for ep in episodes}
 
+    # TODO: Validate
     def test_hide_watched_with_max_watch_date_relative(
         self,
         episode_setup: EpisodeSetup,
@@ -1157,7 +1248,9 @@ class TestWatchDateFilter:
         assert watched_episode.id not in {ep.id for ep in episodes}
 
 
+# TODO: Validate
 class TestNoUser:
+    # TODO: Validate
     def test_episodes_returned_without_user(
         self,
         episode_setup: EpisodeSetup,
@@ -1172,6 +1265,7 @@ class TestNoUser:
         episodes = builder.get_episodes()
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_watch_filters_ignored_without_user(
         self,
         episode_setup: EpisodeSetup,
@@ -1186,6 +1280,7 @@ class TestNoUser:
         episodes = builder.get_episodes()
         assert len(episodes) == 4  # noqa: PLR2004
 
+    # TODO: Validate
     def test_show_filters_ignored_without_user(
         self,
         episode_setup: EpisodeSetup,
@@ -1203,7 +1298,9 @@ class TestNoUser:
         assert len(episodes) == 4  # noqa: PLR2004
 
 
+# TODO: Validate
 class TestAdditionalChannels:
+    # TODO: Validate
     def test_episodes_from_additional_channel_included(
         self,
         episode_setup: EpisodeSetup,
@@ -1226,6 +1323,7 @@ class TestAdditionalChannels:
         assert extra_episode.id in {ep.id for ep in episodes}
         assert len(episodes) == 5  # noqa: PLR2004
 
+    # TODO: Validate
     def test_recursively_included_channels_included(
         self,
         episode_setup: EpisodeSetup,
@@ -1239,6 +1337,7 @@ class TestAdditionalChannels:
         user = episode_setup["user"]
         plugin = episode_setup["plugin"]
 
+        # TODO: Validate
         def _channel_with_episode() -> tuple[Channel, Episode]:
             channel = create_random_channel(session, user=user.id)
             channel_show = create_random_channel_show(
@@ -1270,6 +1369,7 @@ class TestAdditionalChannels:
         assert _all_episode_ids(episode_setup) <= episode_ids
 
 
+# TODO: Validate
 class TestRecentlyAiredGroupByShow:
     """Test group_by_show + recently_aired sorting.
 
@@ -1277,6 +1377,7 @@ class TestRecentlyAiredGroupByShow:
     appear before shows that have no recently aired episodes.
     """
 
+    # TODO: Validate
     def test_interleave_sequential_with_group_by_show_and_duration(
         self,
         session_scoped_session: Session,
@@ -1398,12 +1499,14 @@ class TestRecentlyAiredGroupByShow:
             )
 
 
+# TODO: Validate
 class TestWhitelistWithEpisodeExclusion:
     """When a season is whitelisted and an episode within it is also marked,
     the episode-level entry should act as an exclusion (blacklist within the
     whitelist).
     """
 
+    # TODO: Validate
     def test_whitelisted_season_with_marked_episode_excludes_episode(
         self,
         session_scoped_session: Session,
@@ -1451,11 +1554,13 @@ class TestWhitelistWithEpisodeExclusion:
         assert episode_excluded.id not in episode_ids
 
 
+# TODO: Validate
 class TestBlacklistWithEpisodeInclusion:
     """When a season is blacklisted and an episode within it is also marked,
     the episode-level entry should invert it so that episode shows up.
     """
 
+    # TODO: Validate
     def test_blacklisted_season_with_marked_episode_includes_episode(
         self,
         session_scoped_session: Session,
@@ -1503,13 +1608,16 @@ class TestBlacklistWithEpisodeInclusion:
         assert episode_excluded.id not in episode_ids
 
 
+# TODO: Validate
 class TestEpisodeResult:
+    # TODO: Validate
     def test_results_include_channel_id(self, episode_setup: EpisodeSetup) -> None:
         results = _build_results(episode_setup)
         assert len(results) == 4  # noqa: PLR2004
         for result in results:
             assert result.channel_id == episode_setup["channel"].id
 
+    # TODO: Validate
     def test_results_include_watch_data(self, episode_setup: EpisodeSetup) -> None:
         watched_episode = episode_setup["shows"][0]["recent"]
         create_random_watch(
@@ -1528,6 +1636,7 @@ class TestEpisodeResult:
         assert unwatched_result.latest_watch is None
 
 
+# TODO: Validate
 class TestNestedChannelBlacklist:
     """A blacklist on an including channel propagates to channels that include it.
 
@@ -1536,6 +1645,7 @@ class TestNestedChannelBlacklist:
     must not include episode Z.
     """
 
+    # TODO: Validate
     def test_blacklist_propagates_through_nested_inclusion(
         self,
         session_scoped_session: Session,
@@ -1580,6 +1690,7 @@ class TestNestedChannelBlacklist:
         channel_c = create_random_channel(session, user=user.id)
         session.flush()
 
+        # TODO: Validate
         def included_episode_ids(
             channel: Channel,
             included: list[uuid.UUID],

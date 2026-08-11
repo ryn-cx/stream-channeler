@@ -11,6 +11,7 @@ import {
 
 export type InformationRows = Record<string, React.ReactNode>
 
+// TODO: Validate
 export function ExternalAnchor({
   href,
   label,
@@ -30,6 +31,7 @@ export function ExternalAnchor({
   )
 }
 
+// TODO: Validate
 export function formatInformationDate(value: string | null) {
   if (!value) return null
   return new Date(value).toLocaleString()
@@ -43,6 +45,7 @@ interface InformationTableProps {
   tmdbRows: InformationRows | null
 }
 
+// TODO: Validate
 /**
  * What the website and TMDB each say about one record, side by side, so the two
  * accounts can be compared rather than one standing in for the other.

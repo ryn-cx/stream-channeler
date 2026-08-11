@@ -1,6 +1,7 @@
 // TODO: Validate
 import { useCallback, useState } from "react"
 
+// TODO: Validate
 /**
  * Like useState but persists the value to localStorage.
  * Falls back to defaultValue if nothing is stored or the stored value is invalid.
@@ -14,6 +15,7 @@ export function usePersistedState<T extends string>(
     return stored !== null ? (stored as T) : defaultValue
   })
 
+  // TODO: Validate
   const setPersisted = (newValue: T) => {
     localStorage.setItem(key, newValue)
     setValue(newValue)
@@ -22,6 +24,7 @@ export function usePersistedState<T extends string>(
   return [value, setPersisted]
 }
 
+// TODO: Validate
 /**
  * Like useState but persists a JSON-serializable value to localStorage,
  * mirroring how table sorting is persisted in DataTable: the stored value is

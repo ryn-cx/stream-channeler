@@ -41,6 +41,7 @@ from plugins.utils.base_plugin.files import (
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
@@ -49,6 +50,7 @@ def not_yt_dlapi() -> NotYTDLAPI:
     )
 
 
+# TODO: Validate
 def is_music_playlist_key(key: str) -> bool:
     """Report whether a playlist key belongs to an auto-generated album."""
     return key.startswith("OLAK5uy_")
@@ -60,6 +62,7 @@ def is_music_playlist_key(key: str) -> bool:
 _STANDALONE_VIDEO_CHANNEL_KEYS = frozenset({"UCuVPpxrm2VAgpH3Ktln4HXg"})
 
 
+# TODO: Validate
 def is_standalone_video_channel(channel_key: str) -> bool:
     """Report whether a channel's videos are imported one video at a time.
 
@@ -69,6 +72,7 @@ def is_standalone_video_channel(channel_key: str) -> bool:
     return channel_key in _STANDALONE_VIDEO_CHANNEL_KEYS
 
 
+# TODO: Validate
 def is_video_key(key: str) -> bool:
     """Report whether a key belongs to a video rather than a channel or playlist.
 
@@ -80,27 +84,32 @@ def is_video_key(key: str) -> bool:
     return len(key) == 11  # noqa: PLR2004
 
 
+# TODO: Validate
 def is_show_key(key: str) -> bool:
     """Report whether a key belongs to a show page."""
     return key.startswith("SC")
 
 
+# TODO: Validate
 def show_season_key(show_key: str, season_number: str) -> str:
     """Return the season key for one season of a show."""
     return f"{show_key}/{season_number}"
 
 
+# TODO: Validate
 def is_show_season_key(key: str) -> bool:
     """Report whether a key belongs to one season of a show."""
     return is_show_key(key) and "/" in key
 
 
+# TODO: Validate
 def split_show_season_key(season_key: str) -> tuple[str, str]:
     """Split a season key back into its show key and season number."""
     show_key, _, season_number = season_key.partition("/")
     return show_key, season_number
 
 
+# TODO: Validate
 def has_tmdb_entry(show_key: str) -> bool:
     """Report whether a show is the sort of title TMDB lists.
 
@@ -115,6 +124,7 @@ def has_tmdb_entry(show_key: str) -> bool:
 _QUOTA_REASONS = frozenset({"dailyLimitExceeded", "quotaExceeded"})
 
 
+# TODO: Validate
 def is_quota_error(error: BaseException) -> bool:
     """Report whether `error` is the YouTube API refusing calls until quota resets."""
     if not isinstance(error, NotYTDLAPIError):
@@ -123,6 +133,7 @@ def is_quota_error(error: BaseException) -> bool:
     return any(item.get("reason") in _QUOTA_REASONS for item in errors)
 
 
+# TODO: Validate
 def get_first_item[T](items: list[T] | None) -> T:
     if not items:
         msg = "Expected at least one item, got none"
@@ -130,6 +141,7 @@ def get_first_item[T](items: list[T] | None) -> T:
     return items[0]
 
 
+# TODO: Validate
 def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
     """Merge paginated API responses into a single response with all items."""
     merged = dict(pages[0])
@@ -137,56 +149,67 @@ def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
     return merged
 
 
+# TODO: Validate
 class ChannelByChannelId(GAPIJSONNoGet[ChannelsModel]):
     """Channel by channel ID file."""
 
     API_ENDPOINT = not_yt_dlapi().channel
 
+    # TODO: Validate
     @override
     def _get(self) -> ChannelsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
         return endpoint.download_and_parse(channel_id=self.unique_identifier)
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ChannelNotFoundError)
 
 
+# TODO: Validate
 class ChannelByHandle(GAPIJSONNoGet[ChannelsModel]):
     """Channel by handle file."""
 
     API_ENDPOINT = not_yt_dlapi().channel
 
+    # TODO: Validate
     @override
     def _get(self) -> ChannelsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
         return endpoint.download_and_parse(channel_handle=self.unique_identifier)
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ChannelNotFoundError)
 
 
+# TODO: Validate
 class ChannelByUsername(GAPIJSONNoGet[ChannelsModel]):
     """Channel by username file."""
 
     API_ENDPOINT = not_yt_dlapi().channel
 
+    # TODO: Validate
     @override
     def _get(self) -> ChannelsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, ChannelEndpoint)
         return endpoint.download_and_parse(channel_username=self.unique_identifier)
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ChannelNotFoundError)
 
 
+# TODO: Validate
 class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
     """Channel playlists file."""
 
     API_ENDPOINT = not_yt_dlapi().playlists
 
+    # TODO: Validate
     @override
     def _get(self) -> PlaylistsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
@@ -194,22 +217,26 @@ class ChannelPlaylists(GAPIJSONNoGet[PlaylistsModel]):
             _merge_pages(endpoint.download_all(self.unique_identifier)),
         )
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ChannelNotFoundError)
 
 
+# TODO: Validate
 class PlaylistInfo(GAPIJSONNoGet[PlaylistsModel]):
     """Playlist info file."""
 
     API_ENDPOINT = not_yt_dlapi().playlists
 
+    # TODO: Validate
     @override
     def _get(self) -> PlaylistsModel:
         endpoint = self.raise_if_not_is_instance(self.API_ENDPOINT, PlaylistsEndpoint)
         return endpoint.download_and_parse(playlist_id=self.unique_identifier)
 
 
+# TODO: Validate
 class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
     """Playlist items file."""
 
@@ -217,6 +244,7 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
 
     # Due to API limits this function merges new videos with existing videos instead of
     # downloading all videos every time.
+    # TODO: Validate
     @override
     def _get(self) -> PlaylistItemsModel:
         endpoint = self.raise_if_not_is_instance(
@@ -280,20 +308,24 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
         ]
         return endpoint.parse(merged)
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, PlaylistNotFoundError)
 
 
+# TODO: Validate
 class Videos(GAPIJSON[VideosModel]):
     """Videos file."""
 
     API_ENDPOINT = not_yt_dlapi().videos
 
 
+# TODO: Validate
 class PlaylistFeed(XMLFile):
     """Playlist feed file."""
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -314,6 +346,7 @@ class PlaylistFeed(XMLFile):
                 return
             self.write(response.text)
 
+    # TODO: Validate
     def video_ids(self) -> list[str]:
         namespaces = {
             "atom": "http://www.w3.org/2005/Atom",
@@ -327,6 +360,7 @@ class PlaylistFeed(XMLFile):
         return result
 
 
+# TODO: Validate
 def _find_renderer(node: object, name: str) -> dict[str, Any] | None:
     """Return the first renderer called `name` anywhere in the page data."""
     if isinstance(node, dict):
@@ -345,6 +379,7 @@ def _find_renderer(node: object, name: str) -> dict[str, Any] | None:
     return None
 
 
+# TODO: Validate
 class ShowPage(HTMLFile):
     """Show page file.
 
@@ -352,6 +387,7 @@ class ShowPage(HTMLFile):
     page YouTube serves for it.
     """
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -366,6 +402,7 @@ class ShowPage(HTMLFile):
         )
         super().__init__(session, plugin, identifier)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -385,9 +422,11 @@ class ShowPage(HTMLFile):
                 return
             self.write(response.text)
 
+    # TODO: Validate
     def _content(self) -> str:
         return self.database_record.content or ""
 
+    # TODO: Validate
     def _initial_data(self) -> dict[str, Any]:
         match = re.search(r"var ytInitialData = (\{.*?\});</script>", self._content())
         if not match:
@@ -395,6 +434,7 @@ class ShowPage(HTMLFile):
             raise ValueError(msg)
         return cast("dict[str, Any]", json.loads(match.group(1)))
 
+    # TODO: Validate
     def title(self) -> str | None:
         """Return the name of the show.
 
@@ -404,6 +444,7 @@ class ShowPage(HTMLFile):
         match = re.search(r'"title":\s*\{"simpleText":"([^"]+)"', self._content())
         return json.loads(f'"{match.group(1)}"') if match else None
 
+    # TODO: Validate
     def season_numbers(self) -> list[str]:
         """Return the season numbers the show lists, in the order it lists them."""
         sub_menu = _find_renderer(self._initial_data(), "sortFilterSubMenuRenderer")
@@ -420,6 +461,7 @@ class ShowPage(HTMLFile):
                 season_numbers.append(season[0])
         return season_numbers
 
+    # TODO: Validate
     def episode_keys(self) -> list[str]:
         """Return the video keys of the episodes of the season this page shows."""
         video_list = _find_renderer(self._initial_data(), "playlistVideoListRenderer")
@@ -434,41 +476,51 @@ class ShowPage(HTMLFile):
         return episode_keys
 
 
+# TODO: Validate
 class FileMixin(TMDBMixin, register=False):
     _importing_album_playlist_key: str | None = None
 
+    # TODO: Validate
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
         """Return a cached ChannelByChannelId for the given show key."""
         return self._file(ChannelByChannelId, show_key)
 
+    # TODO: Validate
     def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
         """Return a cached ChannelByHandle for the given channel handle."""
         return self._file(ChannelByHandle, channel_handle)
 
+    # TODO: Validate
     def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
         """Return a cached ChannelByUsername for the given channel username."""
         return self._file(ChannelByUsername, channel_username)
 
+    # TODO: Validate
     def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
         """Return a cached ChannelPlaylists for the given show key."""
         return self._file(ChannelPlaylists, show_key)
 
+    # TODO: Validate
     def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
         """Return a cached PlaylistInfo for the given playlist key."""
         return self._file(PlaylistInfo, playlist_key)
 
+    # TODO: Validate
     def playlist_items_file(self, season_key: str) -> PlaylistItems:
         """Return a cached PlaylistItems for the given season key."""
         return self._file(PlaylistItems, season_key)
 
+    # TODO: Validate
     def videos_file(self, episode_key: str) -> Videos:
         """Return a cached Videos for the given episode key."""
         return self._file(Videos, episode_key)
 
+    # TODO: Validate
     def playlist_feed_file(self, season_key: str) -> PlaylistFeed:
         """Return a cached PlaylistFeed for the given season key."""
         return self._file(PlaylistFeed, season_key)
 
+    # TODO: Validate
     def show_page_file(
         self,
         show_key: str,
@@ -477,6 +529,7 @@ class FileMixin(TMDBMixin, register=False):
         """Return a cached ShowPage for the given show key and season."""
         return self._file(ShowPage, show_key, season_number)
 
+    # TODO: Validate
     def show_episode_keys(self, show_key: str) -> list[str]:
         """Return the episode keys of every season of a show, in season order."""
         return self._episode_keys_from_file(
@@ -484,6 +537,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # A movie and a show are cross referenced against TMDB, where a channel is
@@ -505,6 +559,7 @@ class FileMixin(TMDBMixin, register=False):
             self.channel_by_channel_id_file(show_key),
         ]
 
+    # TODO: Validate
     @override
     def _season_files(
         self,
@@ -538,6 +593,7 @@ class FileMixin(TMDBMixin, register=False):
             files.append(self.playlist_info_file(season_key))
         return files
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -556,14 +612,17 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     def _video_is_valid(self, video_title: str) -> bool:
         """Check if a video is valid for importing."""
         return video_title not in ("Deleted video", "Private video")
 
+    # TODO: Validate
     def channel_uploads_playlist_key(self, show_key: str) -> str:
         """Return the playlist ID for the channel's uploads."""
         return show_key[:1] + "U" + show_key[2:]
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         # A show that is a single video has that video as its only season.
@@ -607,6 +666,7 @@ class FileMixin(TMDBMixin, register=False):
 
         return season_keys
 
+    # TODO: Validate
     def _album_season_keys(self, show_key: str) -> list[str]:
         season_keys: list[str] = []
         if self._importing_album_playlist_key:
@@ -625,6 +685,7 @@ class FileMixin(TMDBMixin, register=False):
                     season_keys.append(season.key)
         return season_keys
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,
@@ -642,6 +703,7 @@ class FileMixin(TMDBMixin, register=False):
                     video_keys.append(video_key)
         return video_keys
 
+    # TODO: Validate
     def _season_episode_keys(self, season_key: str) -> list[str]:
         """Return the episode keys held by a single season."""
         # A season that is a single video holds only that video.
@@ -668,6 +730,7 @@ class FileMixin(TMDBMixin, register=False):
             if self._video_is_valid(item.snippet.title)
         ]
 
+    # TODO: Validate
     @override
     def _download_all_episode_files(
         self,

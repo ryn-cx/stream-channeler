@@ -21,7 +21,9 @@ from plugins.HiDive.helpers import HelperMixin
 # TODO: Add support for individual episodes of a series.
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -37,6 +39,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._soft_delete_missing(show_key)
         return show
 
+    # TODO: Validate
     def _upsert_series_show(
         self,
         source: Source,
@@ -69,6 +72,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie_show(
         self,
         source: Source,
@@ -101,6 +105,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_series_seasons(
         self,
         show: Show,
@@ -136,6 +141,7 @@ class UpsertMixin(HelperMixin, register=False):
 
             self._upsert_series_episodes(season, show.key, force=force)
 
+    # TODO: Validate
     def _upsert_movie_seasons(
         self,
         show: Show,
@@ -169,6 +175,7 @@ class UpsertMixin(HelperMixin, register=False):
 
             self._upsert_movie_episode(season, show.key, force=force)
 
+    # TODO: Validate
     def _upsert_series_episodes(
         self,
         season: SeasonModel,
@@ -217,6 +224,7 @@ class UpsertMixin(HelperMixin, register=False):
                 MediaType.tv,
             )
 
+    # TODO: Validate
     def _upsert_movie_episode(
         self,
         season: SeasonModel,
@@ -266,6 +274,7 @@ class UpsertMixin(HelperMixin, register=False):
                 MediaType.movie,
             )
 
+    # TODO: Validate
     @staticmethod
     def _extract_release_date(vod_data: vod_models.VodModel) -> datetime | None:
         """Extract the release date from the "Original Premiere" tag in the VOD hero."""
@@ -280,6 +289,7 @@ class UpsertMixin(HelperMixin, register=False):
                     return datetime.strptime(date_string, "%B %d, %Y").astimezone()
         return None
 
+    # TODO: Validate
     @staticmethod
     def _movie_description(hero: VodHeroModel) -> str | None:
         """Return the movie's synopsis from the first hero content block with text."""

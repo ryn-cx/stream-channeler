@@ -23,6 +23,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void
 }
 
+// TODO: Validate
 export function ConfirmDialog({
   open,
   onOpenChange,

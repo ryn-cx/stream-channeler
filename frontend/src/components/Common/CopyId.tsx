@@ -7,6 +7,7 @@ interface CopyIdProps {
   id: string
 }
 
+// TODO: Validate
 export function CopyId({ id }: CopyIdProps) {
   const [copiedText, copy] = useCopyToClipboard()
   const isCopied = copiedText === id

@@ -25,6 +25,7 @@ export interface WatchWithDetails extends WatchItem {
   pending?: boolean
 }
 
+// TODO: Validate
 function useIsAdmin() {
   const { user } = useAuth()
   return Boolean(user?.is_superuser)
@@ -34,6 +35,7 @@ const adminLinkClassName =
   "inline-flex shrink-0 text-muted-foreground hover:text-primary"
 const adminIconClassName = "size-3.5"
 
+// TODO: Validate
 function SourceAdminLink({ sourceId }: { sourceId: string }) {
   const isAdmin = useIsAdmin()
   if (!isAdmin) return null
@@ -49,6 +51,7 @@ function SourceAdminLink({ sourceId }: { sourceId: string }) {
   )
 }
 
+// TODO: Validate
 function ShowAdminLink({ showId }: { showId: string }) {
   const isAdmin = useIsAdmin()
   if (!isAdmin) return null
@@ -64,6 +67,7 @@ function ShowAdminLink({ showId }: { showId: string }) {
   )
 }
 
+// TODO: Validate
 function SeasonAdminLink({ seasonId }: { seasonId: string }) {
   const isAdmin = useIsAdmin()
   if (!isAdmin) return null

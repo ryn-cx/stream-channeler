@@ -8,6 +8,7 @@ interface FileActionsMenuProps {
   file: FileTableData
 }
 
+// TODO: Validate
 export const FileActionsMenu = ({ file }: FileActionsMenuProps) => {
   return (
     <ActionsMenu>

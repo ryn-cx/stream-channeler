@@ -19,6 +19,7 @@ import_plugins()
 load_models()
 
 
+# TODO: Validate
 def _all_subclasses(base_class: type) -> set[type]:
     subclasses: set[type] = set()
     for subclass in base_class.__subclasses__():
@@ -27,11 +28,13 @@ def _all_subclasses(base_class: type) -> set[type]:
     return subclasses
 
 
+# TODO: Validate
 def _plugin_package(cls: type) -> str:
     module_parts = cls.__module__.split(".")
     return module_parts[1] if len(module_parts) > 1 else module_parts[0]
 
 
+# TODO: Validate
 def _gapi_file_classes_by_package() -> dict[str, dict[str, type[PartialGAPIJSON]]]:
     mapping: dict[str, dict[str, type[PartialGAPIJSON]]] = {}
     for file_class in _all_subclasses(PartialGAPIJSON):
@@ -43,6 +46,7 @@ def _gapi_file_classes_by_package() -> dict[str, dict[str, type[PartialGAPIJSON]
     return mapping
 
 
+# TODO: Validate
 def _parse_file(
     file_class: type[PartialGAPIJSON],
     raw_json: Any,  # noqa: ANN401 - Raw deserialized JSON is always Any.
@@ -57,12 +61,14 @@ def _parse_file(
         endpoint.parse(raw_json, update_model=update_model)
 
 
+# TODO: Validate
 def _scraper_package(file_class: type[PartialGAPIJSON]) -> str:
     endpoint = file_class.API_ENDPOINT
     endpoint_class = endpoint if isinstance(endpoint, type) else type(endpoint)
     return endpoint_class.__module__.split(".")[0]
 
 
+# TODO: Validate
 def _copy_corpus(scraper_package: str, scrapers_root: Path) -> int:
     # A scraper's regeneration corpus is `<package>/_files`; mirror it into the
     # scraper's source layout, matching how `rip_files` lays it out on disk.
@@ -91,6 +97,7 @@ def _copy_corpus(scraper_package: str, scrapers_root: Path) -> int:
     return copied_count
 
 
+# TODO: Validate
 def regenerate_stale_models(session: Session, scrapers_root: Path) -> None:
     plugin_classes_by_key = {
         plugin_class.plugin_key(): plugin_class for plugin_class in plugins

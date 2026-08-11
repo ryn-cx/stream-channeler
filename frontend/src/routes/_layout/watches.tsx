@@ -38,6 +38,7 @@ export const Route = createFileRoute("/_layout/watches")({
   }),
 })
 
+// TODO: Validate
 function ImportWatchesButton() {
   return (
     <Button asChild>
@@ -49,6 +50,7 @@ function ImportWatchesButton() {
   )
 }
 
+// TODO: Validate
 function WatchesTableContent() {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -150,6 +152,7 @@ function WatchesTableContent() {
   )
 }
 
+// TODO: Validate
 function Watches() {
   return (
     <div className="flex flex-col gap-6">

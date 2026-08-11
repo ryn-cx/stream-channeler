@@ -14,6 +14,7 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 def crunchyroll_urls(path: str, slug: str) -> tuple[str, ...]:
     locales = ("", "/de", "/pt-br")
     suffixes = ("", "/", f"/{slug}")
@@ -22,20 +23,24 @@ def crunchyroll_urls(path: str, slug: str) -> tuple[str, ...]:
     )
 
 
+# TODO: Validate
 class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     """Validate all Crunchyroll content."""
 
     plugin_class = Crunchyroll
 
 
+# TODO: Validate
 class CrunchyrollStandardTests(StandardTests[Crunchyroll], CrunchyrollValidator):
     pass
 
 
+# TODO: Validate
 class CrunchyrollUpdateSourceTests(
     UpdateSourceTests[Crunchyroll],
     CrunchyrollValidator,
 ):
+    # TODO: Validate
     @override
     def update_source_validator(self, source: Source) -> Validator:
         validator = super().update_source_validator(source)
@@ -57,5 +62,6 @@ class CrunchyrollUpdateSourceTests(
         return validator.populated_or_decremented(Season, "update_at")
 
 
+# TODO: Validate
 class InvalidCrunchyrollURLValidator(InvalidURLValidator[Crunchyroll]):
     plugin_class = Crunchyroll

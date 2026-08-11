@@ -8,7 +8,9 @@ from app.shows.models import Show
 from plugins.NHKWorld.files import FileMixin
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -22,11 +24,13 @@ class HelperMixin(FileMixin, register=False):
         # NHK World programs carry no release year, so the title is all TMDB gets.
         return self._tmdb_search_media(program_file.parsed().title, MediaType.tv)
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         # NHK World has no seasons, so there is no number to match against TMDB.
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,

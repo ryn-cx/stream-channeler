@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_layout/admin")({
   },
 })
 
+// TODO: Validate
 function AdminLayout() {
   return <Outlet />
 }

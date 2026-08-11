@@ -62,6 +62,7 @@ const publicItems: NavItem[] = [
   { icon: Radio, title: "Channels", path: "/channels" },
 ]
 
+// TODO: Validate
 function NavLinks({
   items,
   onClick,
@@ -96,6 +97,7 @@ function NavLinks({
   )
 }
 
+// TODO: Validate
 function MobileNavLinks({
   items,
   onClick,
@@ -132,6 +134,7 @@ function MobileNavLinks({
   )
 }
 
+// TODO: Validate
 function UserMenu() {
   const { user: currentUser, logout } = useAuth()
 
@@ -176,6 +179,7 @@ function UserMenu() {
   )
 }
 
+// TODO: Validate
 export function TopNav() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -189,6 +193,7 @@ export function TopNav() {
     : publicItems
 
   useEffect(() => {
+    // TODO: Validate
     const handleScroll = () => setScrolled(window.scrollY > 10)
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)

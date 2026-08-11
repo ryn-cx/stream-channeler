@@ -26,6 +26,7 @@ interface ModalContentProps extends React.ComponentProps<typeof DialogContent> {
   size?: ModalSize
 }
 
+// TODO: Validate
 /**
  * Shared dialog body that gives every modal the same width and scroll
  * behavior. The `size` prop tweaks the width when a specific modal needs to be

@@ -12,6 +12,7 @@ from plugins.TMDB import TMDB
 from plugins.TMDB.mixin import highest_episode_number
 
 
+# TODO: Validate
 def relink_children(session: Session, show: Show) -> None:
     """Repoint every child of a `Show` at the TMDB title it now names.
 
@@ -36,6 +37,7 @@ def relink_children(session: Session, show: Show) -> None:
     session.commit()
 
 
+# TODO: Validate
 def relink_season_children(session: Session, season: Season) -> None:
     """Repoint every `Episode` of a `Season` at TMDB after its `tmdb_id` changed.
 
@@ -58,6 +60,7 @@ def relink_season_children(session: Session, season: Season) -> None:
     session.commit()
 
 
+# TODO: Validate
 def _relink_episodes(
     tmdb: TMDB,
     season: Season,
@@ -73,6 +76,7 @@ def _relink_episodes(
         _relink_episode(tmdb, episode, season, tmdb_id, media_type, last_number)
 
 
+# TODO: Validate
 def _relink_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
     tmdb: TMDB,
     episode: Episode,
@@ -99,6 +103,7 @@ def _relink_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
         episode.episode_identifier = locked_identifier
 
 
+# TODO: Validate
 def _tmdb_media_type(session: Session, show: Show) -> MediaType:
     """Ask the `Show`'s plugin whether TMDB holds it as a film or a series.
 

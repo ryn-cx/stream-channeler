@@ -11,7 +11,9 @@ from app.sources.models import Source
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
 
 
+# TODO: Validate
 class SourceMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
         if source.data_timestamp is None:
@@ -22,6 +24,7 @@ class SourceMixin(FileMixin, register=False):
         self._process_new_episodes_files(source)
         self._upsert_source()
 
+    # TODO: Validate
     def _process_new_episodes_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_shows=True).all()
 
@@ -48,6 +51,7 @@ class SourceMixin(FileMixin, register=False):
 
             feed_file.database_record.extra = "Completed"
 
+    # TODO: Validate
     def _upsert_source(self) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self._initial_file(NewVideoEpisodes)

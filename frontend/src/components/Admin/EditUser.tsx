@@ -46,6 +46,7 @@ interface EditUserProps {
   user: UserPublic
 }
 
+// TODO: Validate
 const EditUser = ({ user }: EditUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -117,6 +118,7 @@ const EditUser = ({ user }: EditUserProps) => {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     // exclude confirm_password from submission data and remove password if empty
     const { confirm_password: _, ...userUpdate } = data

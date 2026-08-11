@@ -13,15 +13,18 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class PlutoValidator(PluginValidator[Pluto]):
     plugin_class = Pluto
 
+    # TODO: Validate
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
         output.incremented(show.id, "update_at")
         return output
 
+    # TODO: Validate
     @override
     def update_season_validator(self, season: Season) -> Validator:
         output = super().update_season_validator(season)
@@ -32,6 +35,7 @@ class PlutoValidator(PluginValidator[Pluto]):
         output.incremented(season.id, "update_at")
         return output
 
+    # TODO: Validate
     @override
     def update_episode_validator(self, episode: Episode) -> Validator:
         output = super().update_episode_validator(episode)
@@ -41,10 +45,12 @@ class PlutoValidator(PluginValidator[Pluto]):
         return output
 
 
+# TODO: Validate
 class PlutoStandardTests(StandardTests[Pluto], PlutoValidator):
     pass
 
 
+# TODO: Validate
 class MovieURLs:
     urls: tuple[str, ...] = (
         "/en/on-demand/movies/{item_id}/details",
@@ -54,6 +60,7 @@ class MovieURLs:
     )
 
 
+# TODO: Validate
 class SeriesURLs:
     urls: tuple[str, ...] = (
         "/en/on-demand/series/{item_id}/details",
@@ -64,28 +71,34 @@ class SeriesURLs:
     )
 
 
+# TODO: Validate
 class TestMovie(MovieURLs, PlutoStandardTests):
     # Hansan: Rising Dragon (2022).
     item_id = "68a54f49df1220b53566f16e"
 
 
+# TODO: Validate
 class TestSingleSeasonShow(SeriesURLs, PlutoStandardTests):
     # Gordon Ramsay Behind Bars — a single season with four episodes.
     item_id = "66abc7823653a6001363e279"
 
 
+# TODO: Validate
 class TestMultipleSeasonsShow(SeriesURLs, PlutoStandardTests):
     # On Death Row — two seasons with four episodes each.
     item_id = "5ef05c6acdce3c001a779a79"
 
 
+# TODO: Validate
 class InvalidPlutoValidator(InvalidURLValidator[Pluto]):
     plugin_class = Pluto
 
 
+# TODO: Validate
 class TestInvalidMovie(MovieURLs, InvalidPlutoValidator):
     item_id = "aaaaaaaaaaaaaaaaaaaaaaaa"
 
 
+# TODO: Validate
 class TestInvalidSeries(SeriesURLs, InvalidPlutoValidator):
     item_id = "aaaaaaaaaaaaaaaaaaaaaaaa"

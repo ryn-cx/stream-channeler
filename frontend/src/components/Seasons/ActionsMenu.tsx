@@ -8,6 +8,7 @@ interface SeasonActionsMenuProps {
   season: SeasonTableData
 }
 
+// TODO: Validate
 export const SeasonActionsMenu = ({ season }: SeasonActionsMenuProps) => {
   return (
     <ActionsMenu>

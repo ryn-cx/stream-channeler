@@ -13,6 +13,7 @@ export interface WatchFilters {
   hidePartiallyWatched?: boolean
 }
 
+// TODO: Validate
 /**
  * Whether the active filters exclude an episode in `state`.
  *

@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 
 # Shared properties
+# TODO: Validate
 class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_active: bool = True
@@ -34,6 +35,7 @@ class UserBase(SQLModel):
 
 
 # Database model, database table inferred from class name
+# TODO: Validate
 class User(UserBase, table=True):
     __table_args__ = (
         Index("ix_user_username_lower", text("lower(username)"), unique=True),
@@ -68,6 +70,7 @@ class User(UserBase, table=True):
         cascade_delete=True,
     )
 
+    # TODO: Validate
     def add_child(self, child: Plugin | Channel | ChannelOrder) -> None:
         from app.channel_orders.models import ChannelOrder  # noqa: PLC0415
         from app.channels.models import Channel  # noqa: PLC0415
@@ -80,6 +83,7 @@ class User(UserBase, table=True):
             self.plugins.append(child)
 
 
+# TODO: Validate
 class BaseUserSourcePreference(SQLModel):
     """Base model for a `User`'s `Source` preferences."""
 
@@ -87,6 +91,7 @@ class BaseUserSourcePreference(SQLModel):
     enabled: bool = Field(default=True)
 
 
+# TODO: Validate
 class UserSourcePreference(
     BaseUserSourcePreference,
     TimestampIdAndHashMixin,

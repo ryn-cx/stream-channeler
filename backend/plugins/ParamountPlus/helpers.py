@@ -6,7 +6,9 @@ from app.shows.models import Show
 from plugins.ParamountPlus.files import FileMixin
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _set_media_type_from_show(self, show: Show) -> None:
         if not show.media_type:
@@ -14,6 +16,7 @@ class HelperMixin(FileMixin, register=False):
             raise AttributeError(msg)
         self._media_type_value = "movie" if show.media_type == "Movie" else "series"
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -30,11 +33,13 @@ class HelperMixin(FileMixin, register=False):
         self.show_page_file(show_key).download_if_outdated()
         return self._tmdb_search_media(self._series_title(show_key))
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_number = self._split_season_key(season_key)
         return season_number
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -48,18 +53,22 @@ class HelperMixin(FileMixin, register=False):
                 return int(episode.episode_number)
         return None
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie() else MediaType.tv
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str) -> str:
         return cls.build_url(f"shows/{show_key}/")
 
+    # TODO: Validate
     @classmethod
     def _movie_url(cls, movie_key: str) -> str:
         return cls.build_url(f"movies/video/{movie_key}/")
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:

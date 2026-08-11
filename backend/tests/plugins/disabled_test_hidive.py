@@ -18,6 +18,7 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class HiDiveValidator(PluginValidator[HiDive]):
     plugin_class = HiDive
     urls = (
@@ -26,6 +27,7 @@ class HiDiveValidator(PluginValidator[HiDive]):
     )
 
 
+# TODO: Validate
 class HiDiveMovieValidator(PluginValidator[HiDive]):
     plugin_class = HiDive
     urls = (
@@ -34,11 +36,14 @@ class HiDiveMovieValidator(PluginValidator[HiDive]):
     )
 
 
+# TODO: Validate
 class HiDiveStandardTests(StandardTests[HiDive], HiDiveValidator):
     pass
 
 
+# TODO: Validate
 class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
+    # TODO: Validate
     @override
     def update_source_validator(self, source: Source) -> Validator:
         validator = super().update_source_validator(source)
@@ -56,6 +61,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         # The existing seasons may or may not already have an update_at value.
         return validator.populated_or_decremented(Season, "update_at")
 
+    # TODO: Validate
     @override
     def _create_source_update_entry(
         self,
@@ -69,6 +75,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         self._add_show_to_schedule(parsed, timestamp, show_name)
         self._export_schedule_file(plugin_instance, parsed, timestamp)
 
+    # TODO: Validate
     def _add_show_to_schedule(
         self,
         parsed: list[ScheduleModel],
@@ -94,6 +101,7 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
                 )
                 break
 
+    # TODO: Validate
     def _export_schedule_file(
         self,
         plugin_instance: HiDive,
@@ -106,18 +114,21 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
         new_schedule.database_record.data_timestamp = timestamp
 
 
+# TODO: Validate
 class TestSingleSeasonShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "20022"
     search_query = "Tamako Market"
     search_url = "https://www.hidive.com/series/1286"
 
 
+# TODO: Validate
 class TestMultipleSeasonsShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "19427"
     search_query = "K-On"
     search_url = "https://www.hidive.com/series/1091"
 
 
+# TODO: Validate
 class TestMultipleSeasonsShowSecondSeasonURL(
     HiDiveStandardTests,
     HiDiveUpdateSourceTest,
@@ -127,6 +138,7 @@ class TestMultipleSeasonsShowSecondSeasonURL(
     search_url = "https://www.hidive.com/series/1189"
 
 
+# TODO: Validate
 class HiDiveMovieStandardTests(
     StandardTests[HiDive],
     HiDiveMovieValidator,
@@ -135,25 +147,30 @@ class HiDiveMovieStandardTests(
     pass
 
 
+# TODO: Validate
 class TestMovie(HiDiveMovieStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "586784"
     search_query = "K-ON!: The Movie"
 
 
+# TODO: Validate
 class InvalidHiDiveURLValidator(InvalidURLValidator[HiDive]):
     plugin_class = HiDive
 
 
+# TODO: Validate
 class TestInvalidVideo(InvalidHiDiveURLValidator):
     parse_url_response = "1"
     urls = (f"hidive.com/video/{parse_url_response}",)
 
 
+# TODO: Validate
 class TestInvalidPlaylist(InvalidHiDiveURLValidator):
     parse_url_response = "1"
     urls = (f"hidive.com/playlist/{parse_url_response}",)
 
 
+# TODO: Validate
 class TestInvalidSeason(InvalidHiDiveURLValidator):
     parse_url_response = "1"
     urls = (f"hidive.com/season/{parse_url_response}",)

@@ -21,6 +21,7 @@ interface EmojiPickerProps {
   id?: string
 }
 
+// TODO: Validate
 export function EmojiPicker({ value, onChange, id }: EmojiPickerProps) {
   const [open, setOpen] = useState(false)
   const { resolvedTheme } = useTheme()

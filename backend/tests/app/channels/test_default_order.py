@@ -21,11 +21,14 @@ from tests.app.utils.route_assertions import (
 from tests.app.utils.utils import dump_random_model
 
 
+# TODO: Validate
 class TestUpdateDefaultOrder:
+    # TODO: Validate
     @staticmethod
     def url(channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel_id}/default-order"
 
+    # TODO: Validate
     def assert_update(
         self,
         session_scoped_client: TestClient,
@@ -41,6 +44,7 @@ class TestUpdateDefaultOrder:
         assert response.status_code == status.HTTP_200_OK
         return ChannelOutput.model_validate(response.json())
 
+    # TODO: Validate
     @pytest.mark.parametrize("initial_mode", ["minimal", "full"])
     @pytest.mark.parametrize("update_mode", ["minimal", "full"])
     def test_update_default_order(
@@ -66,6 +70,7 @@ class TestUpdateDefaultOrder:
         )
         self.assert_update(session_scoped_client, channel.id, user_headers, update_mode)
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_type", ["normal_user", "anon"])
     def test_update_default_order_errors(
         self,
@@ -97,6 +102,7 @@ class TestUpdateDefaultOrder:
                 url=self.url(channel.id),
             )
 
+    # TODO: Validate
     def test_not_found(
         self,
         session_scoped_client: TestClient,

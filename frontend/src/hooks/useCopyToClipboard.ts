@@ -1,3 +1,4 @@
+// TODO: Validate
 // source: https://usehooks-ts.com/react-hook/use-copy-to-clipboard
 import { useCallback, useState } from "react"
 
@@ -5,6 +6,7 @@ type CopiedValue = string | null
 
 type CopyFn = (text: string) => Promise<boolean>
 
+// TODO: Validate
 export function useCopyToClipboard(): [CopiedValue, CopyFn] {
   const [copiedText, setCopiedText] = useState<CopiedValue>(null)
 

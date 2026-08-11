@@ -38,6 +38,7 @@ interface BlacklistTarget {
   owned: boolean
 }
 
+// TODO: Validate
 export function BlacklistEpisodeDialog({
   episode,
   currentChannelId,
@@ -96,6 +97,7 @@ export function BlacklistEpisodeDialog({
     (target) => target.owned && selectedChannelIds.has(target.id),
   )
 
+  // TODO: Validate
   const toggleChannel = (channelId: string) => {
     setSelectedChannelIds((previous) => {
       const next = new Set(previous)
@@ -108,6 +110,7 @@ export function BlacklistEpisodeDialog({
     })
   }
 
+  // TODO: Validate
   const handleBlacklist = (permanent: boolean) => {
     if (selectedOwned.length === 0) return
     const expiresAt = permanent ? null : localInputToIso(expiresAtLocal)
@@ -122,6 +125,7 @@ export function BlacklistEpisodeDialog({
     onOpenChange(false)
   }
 
+  // TODO: Validate
   const targetLabel = (target: BlacklistTarget) => {
     const number =
       target.channel.channel_number != null

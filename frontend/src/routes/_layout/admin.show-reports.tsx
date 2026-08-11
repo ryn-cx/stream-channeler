@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_layout/admin/show-reports")({
   }),
 })
 
+// TODO: Validate
 function AdminShowReports() {
   return (
     <div className="flex flex-col gap-6">

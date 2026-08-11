@@ -6,6 +6,7 @@ import {
 
 // The card style is the one the onboarding sort step uses to present orders:
 // an emoji icon, the name, and the description on a bordered row.
+// TODO: Validate
 export function OrdersBrowse({
   orders,
   canManage,

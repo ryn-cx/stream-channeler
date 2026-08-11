@@ -27,6 +27,7 @@ interface IssueReportsAdminTableProps {
   grouped?: boolean
 }
 
+// TODO: Validate
 export function IssueReportsAdminTable({
   title,
   mediaType,

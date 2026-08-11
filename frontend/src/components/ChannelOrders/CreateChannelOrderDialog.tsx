@@ -40,6 +40,7 @@ interface CreateChannelOrderDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 export function CreateChannelOrderDialog({
   open,
   onOpenChange,

@@ -21,6 +21,7 @@ interface VerifyWatchProps {
   verified: boolean
 }
 
+// TODO: Validate
 export default function VerifyWatch({ id, verified }: VerifyWatchProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 

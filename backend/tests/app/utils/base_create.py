@@ -32,18 +32,22 @@ from tests.app.utils.utils import (
 )
 
 
+# TODO: Validate
 @runtime_checkable
 class HasID(Protocol):
     id: uuid.UUID
 
 
+# TODO: Validate
 class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
+    # TODO: Validate
     def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:
         """Return the URL used to create a record."""
         if parent_id:
             return f"{settings.API_V1_STR}/{self.parent_endpoint_name}/{parent_id}/{self.endpoint_name}"
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
+    # TODO: Validate
     def create_parent(
         self,
         session_scoped_session: Session,
@@ -54,6 +58,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             return None
         return self.create_parent_function(session_scoped_session, user)
 
+    # TODO: Validate
     def can_create_record(
         self,
         *,
@@ -69,6 +74,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             return True
         return user_is_superuser
 
+    # TODO: Validate
     def assert_record_saved_to_db(
         self,
         session_scoped_session: Session,
@@ -82,6 +88,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         database_dump = type(expected).model_validate(record).model_dump()
         assert expected_dump.items() <= database_dump.items()
 
+    # TODO: Validate
     def assert_create_record_success(
         self,
         client: TestClient,
@@ -156,6 +163,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         return result
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -215,6 +223,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters_model=build_random_model(self.create_schema),
             )
 
+    # TODO: Validate
     @pytest.mark.parametrize("mode", ["full", "minimal"])
     def test_create_data(
         self,
@@ -245,6 +254,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             parameters_model,
         )
 
+    # TODO: Validate
     @pytest.mark.parametrize("existing_record_count", [1, 2])
     def test_create_with_existing_records(
         self,
@@ -277,6 +287,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             parameters_model,
         )
 
+    # TODO: Validate
     def test_create_shared_key(
         self,
         session_scoped_client: TestClient,
@@ -316,6 +327,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             parameters_model,
         )
 
+    # TODO: Validate
     def test_create_duplicate_key(
         self,
         session_scoped_client: TestClient,
@@ -345,6 +357,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters=dump_random_model(self.create_schema, key=record.key),  # type: ignore[union-attr]
             )
 
+    # TODO: Validate
     def test_create_parent_not_found(
         self,
         session_scoped_client: TestClient,
@@ -371,6 +384,7 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters=dump_random_model(self.create_schema),
             )
 
+    # TODO: Validate
     def test_create_generates_key(
         self,
         session_scoped_client: TestClient,
@@ -398,12 +412,15 @@ class BaseCreateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         assert result.key  # type: ignore[union-attr]
 
 
+# TODO: Validate
 class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     """Mixin for models where the parent is the authenticated user (channels, plugins)."""
 
+    # TODO: Validate
     def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:  # noqa: ARG002
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
+    # TODO: Validate
     def create_parent(
         self,
         session_scoped_session: Session,  # noqa: ARG002
@@ -413,6 +430,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
 
     # Creating a record without a user id is the same as creating while not
     # authenticated because the user id is taken directly from the authenticated user.
+    # TODO: Validate
     @pytest.mark.skip
     def test_create_parent_not_found(
         self,
@@ -424,6 +442,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
     # POST /{endpoint} always owns the new record by the authenticated user,
     # so user_is_owner is always True and the plugin-user/other-user parent
     # scenarios are not expressible via this endpoint.
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True])
@@ -447,6 +466,7 @@ class UserOwnedCreateMixin[T: SUPPORTED_MODELS](BaseCreateTests[T]):
             user_is_superuser=user_is_superuser,
         )
 
+    # TODO: Validate
     def test_create_rejects_extra_fields(
         self,
         session_scoped_client: TestClient,

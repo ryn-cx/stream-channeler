@@ -15,6 +15,7 @@ from app.schemas import (
 )
 
 
+# TODO: Validate
 class ChannelOrderConfig(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -26,10 +27,12 @@ class ChannelOrderConfig(BaseModel):
     random_seed: int | None = None
 
 
+# TODO: Validate
 class ChannelOrderCreate(BaseInput, BaseChannelOrder):
     """Schema for creating a `ChannelOrder`."""
 
 
+# TODO: Validate
 class ChannelOrderUpdate(
     make_model_with_all_fields_optional(BaseChannelOrder),
     BaseUpdateWithoutKey[ChannelOrder],
@@ -37,6 +40,7 @@ class ChannelOrderUpdate(
     """Schema for updating a `ChannelOrder`."""
 
 
+# TODO: Validate
 class ChannelOrderOutput(BaseChannelOrder):
     """Schema for returning a `ChannelOrder`."""
 
@@ -44,6 +48,7 @@ class ChannelOrderOutput(BaseChannelOrder):
     user_id: uuid.UUID | None
 
 
+# TODO: Validate
 class ChannelOrderListOutput(BaseChannelOrder):
     """Schema for returning a `ChannelOrder` alongside its owner.
 
@@ -58,6 +63,7 @@ class ChannelOrderListOutput(BaseChannelOrder):
     score: int
 
 
+# TODO: Validate
 class ChannelOrdersPublic(BaseModel):
     """Schema for returning a page of `ChannelOrder`s."""
 
@@ -67,6 +73,7 @@ class ChannelOrdersPublic(BaseModel):
     is_server_side: bool
 
 
+# TODO: Validate
 class ChannelOrderReadOptions(ScopedReadOptions):
     """Read options for the `ChannelOrder` list.
 
@@ -77,6 +84,7 @@ class ChannelOrderReadOptions(ScopedReadOptions):
     scope: RecordScope = RecordScope.owned
 
 
+# TODO: Validate
 class ChannelOrderAdminUpdate(
     make_model_with_all_fields_optional(BaseChannelOrder),
     BaseInput,
@@ -86,6 +94,7 @@ class ChannelOrderAdminUpdate(
     score: int | None = Field(default=None)
 
 
+# TODO: Validate
 class ChannelOrderCopyInput(BaseInput):
     """Schema for copying an existing `ChannelOrder` into the user's account."""
 

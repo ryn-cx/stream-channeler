@@ -16,6 +16,7 @@ from plugins.Roku.url_handlers import (
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class Roku(
     SourceMixin,
     UpsertMixin,
@@ -34,11 +35,13 @@ class Roku(
     TMDB_PROVIDER_NAMES = ("The Roku Channel",)
     FAVICON_URL = "https://therokuchannel.roku.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "therokuchannel.roku.com"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

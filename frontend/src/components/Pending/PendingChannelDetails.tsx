@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Skeleton } from "@/components/ui/skeleton"
 
+// TODO: Validate
 const PendingChannelDetails = () => (
   <div className="flex flex-col">
     {/* Hero skeleton */}

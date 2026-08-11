@@ -13,6 +13,7 @@ interface DeleteFileProps {
   file: FileTableData
 }
 
+// TODO: Validate
 const DeleteFile = ({ file }: DeleteFileProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

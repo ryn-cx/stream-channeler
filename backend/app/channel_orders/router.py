@@ -44,6 +44,7 @@ admin_channel_orders_router = APIRouter(
 )
 
 
+# TODO: Validate
 @channel_orders_router.post("", response_model=ChannelOrderOutput)
 def create_channel_order(
     session: SessionDep,
@@ -61,6 +62,7 @@ def create_channel_order(
     return order
 
 
+# TODO: Validate
 @channel_orders_router.get("")
 def get_channel_orders(
     session: SessionDep,
@@ -71,6 +73,7 @@ def get_channel_orders(
     return service.scoped_channel_order_list_output(session, current_user, read_options)
 
 
+# TODO: Validate
 @channel_orders_router.get("/featured")
 def get_featured_channel_orders(
     session: SessionDep,
@@ -79,6 +82,7 @@ def get_featured_channel_orders(
     return service.featured_channel_orders(session)
 
 
+# TODO: Validate
 @channel_orders_router.get("/favorite-ids")
 def get_favorite_channel_order_ids(
     session: SessionDep,
@@ -98,6 +102,7 @@ def get_favorite_channel_order_ids(
     )
 
 
+# TODO: Validate
 @channel_orders_router.post("/{channel_order_id}/favorite")  # noqa: FAST003 - Used by ReadableChannelOrder
 def favorite_channel_order(
     session: SessionDep,
@@ -114,6 +119,7 @@ def favorite_channel_order(
     return Message(message="Order favorited successfully")
 
 
+# TODO: Validate
 @channel_orders_router.delete("/{channel_order_id}/favorite")  # noqa: FAST003 - Used by ReadableChannelOrder
 def unfavorite_channel_order(
     session: SessionDep,
@@ -128,6 +134,7 @@ def unfavorite_channel_order(
     return Message(message="Order unfavorited successfully")
 
 
+# TODO: Validate
 @channel_orders_router.post(
     "/{channel_order_id}/copy",  # noqa: FAST003 - Used by ReadableChannelOrder
     response_model=ChannelOrderOutput,
@@ -155,6 +162,7 @@ def copy_channel_order(
     return new_order
 
 
+# TODO: Validate
 @channel_orders_router.get("/{channel_order_id}", response_model=ChannelOrderOutput)  # noqa: FAST003 - Used by ReadableChannelOrder
 def get_channel_order(
     order: ReadableChannelOrder,
@@ -164,6 +172,7 @@ def get_channel_order(
     return service.channel_order_output(order, optional_user)
 
 
+# TODO: Validate
 @channel_orders_router.patch("/{channel_order_id}", response_model=ChannelOrderOutput)  # noqa: FAST003 - Used by EditableChannelOrder
 def update_channel_order(
     session: SessionDep,
@@ -174,6 +183,7 @@ def update_channel_order(
     return order_in.update(session, order)
 
 
+# TODO: Validate
 @channel_orders_router.delete("/{channel_order_id}")  # noqa: FAST003 - Used by EditableChannelOrder
 def delete_channel_order(
     session: SessionDep,
@@ -183,6 +193,7 @@ def delete_channel_order(
     return delete_record(session, order)
 
 
+# TODO: Validate
 @admin_channel_orders_router.patch("/{channel_order_id}")  # noqa: FAST003 - Used by ExistingChannelOrder
 def admin_update_channel_order(
     session: SessionDep,

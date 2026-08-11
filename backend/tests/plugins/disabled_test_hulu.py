@@ -10,6 +10,7 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class HuluValidator(PluginValidator[Hulu]):
     plugin_class = Hulu
     urls: tuple[str, ...] = (
@@ -17,6 +18,7 @@ class HuluValidator(PluginValidator[Hulu]):
         "/series/{parse_url_response}/",
     )
 
+    # TODO: Validate
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
@@ -24,6 +26,7 @@ class HuluValidator(PluginValidator[Hulu]):
         return output
 
 
+# TODO: Validate
 class HuluMovieValidator(PluginValidator[Hulu]):
     plugin_class = Hulu
     urls: tuple[str, ...] = (
@@ -32,14 +35,17 @@ class HuluMovieValidator(PluginValidator[Hulu]):
     )
 
 
+# TODO: Validate
 class HuluStandardTests(StandardTests[Hulu], HuluValidator):
     pass
 
 
+# TODO: Validate
 class HuluMovieStandardTests(StandardTests[Hulu], HuluMovieValidator):
     pass
 
 
+# TODO: Validate
 class TestAiringShow(HuluStandardTests):
     """Tests automatically setting the next update_at value for a season"""
 
@@ -53,6 +59,7 @@ class TestAiringShow(HuluStandardTests):
     search_url = "https://www.hulu.com/series/4e0f6374-fc81-4da2-b7a9-f7f8c29e7acc"
 
 
+# TODO: Validate
 class TestMovie(HuluMovieStandardTests):
     """Tests automatically setting the next update_at value for a season"""
 

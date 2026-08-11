@@ -38,6 +38,7 @@ _QUOTA_RETRY_DELAY = timedelta(hours=24)
 _VIDEO_SEASON_UPDATE_DELAY = timedelta(days=7)
 
 
+# TODO: Validate
 class YouTube(
     SourceMixin,
     UpsertMixin,
@@ -66,19 +67,23 @@ class YouTube(
         ChannelHandleURLHandler,
     )
 
+    # TODO: Validate
     @classmethod
     def __long_domain(cls) -> str:
         return "youtube.com"
 
+    # TODO: Validate
     @classmethod
     def __short_domain(cls) -> str:
         return "youtu.be"
 
+    # TODO: Validate
     @classmethod
     @override
     def domains(cls) -> list[str]:
         return [cls.__long_domain(), cls.__short_domain()]
 
+    # TODO: Validate
     @classmethod
     @override
     def url_regex(cls) -> str:
@@ -96,6 +101,7 @@ class YouTube(
         )
         return f"(?:{alternatives})"
 
+    # TODO: Validate
     def get_url_handler(self, url: str) -> YouTubeURLHandler:
         long_domain_regex = self._regex_escape_domain(self.__long_domain())
         short_domain_regex = self._regex_escape_domain(self.__short_domain())
@@ -107,6 +113,7 @@ class YouTube(
         msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
     def import_url(
         self,
@@ -119,6 +126,7 @@ class YouTube(
         show = self._import_show(handler.show_key, handler.playlist_key)
         return handler.import_results(show)
 
+    # TODO: Validate
     @override
     def on_import_url_failure(
         self,
@@ -139,6 +147,7 @@ class YouTube(
         queue_item.note = "YouTube API quota exceeded, retrying in 24 hours."
 
     # A YouTube show is always imported for a specific playlist.
+    # TODO: Validate
     def _import_show(self, show_key: str, playlist_key: str) -> Show:  # type: ignore[override]
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
@@ -151,6 +160,7 @@ class YouTube(
 
         return show
 
+    # TODO: Validate
     def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
         # A URL for a whole show asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
@@ -166,6 +176,7 @@ class YouTube(
                 return False
         return not Season.get_from_memory(self.session, show, playlist_key)
 
+    # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
@@ -222,6 +233,7 @@ class YouTube(
         self._preload_and_upsert_show(season.show)
         season.update_at = playlist_feed.data_timestamp + timedelta(hours=1)
 
+    # TODO: Validate
     @override
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
         season.update_at = tz_datetime.now() + timedelta(hours=1)

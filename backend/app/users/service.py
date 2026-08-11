@@ -11,6 +11,7 @@ from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference, UserCreate, UserUpdate
 
 
+# TODO: Validate
 def get_or_create_plugin_user(*, session: Session) -> User:
     """Get or create the user that owns installed plugins."""
     if not (user := get_user_by_email(session=session, email=PLUGIN_USER_EMAIL)):
@@ -26,6 +27,7 @@ def get_or_create_plugin_user(*, session: Session) -> User:
     return user
 
 
+# TODO: Validate
 def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
         user_create,
@@ -37,6 +39,7 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     return db_obj
 
 
+# TODO: Validate
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> User:
     user_data = user_in.model_dump(exclude_unset=True)
     extra_data: dict[str, str] = {}
@@ -51,16 +54,19 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> User
     return db_user
 
 
+# TODO: Validate
 def get_user_by_email(*, session: Session, email: str) -> User | None:
     statement = select(User).where(func.lower(User.email) == func.lower(email))
     return session.exec(statement).first()
 
 
+# TODO: Validate
 def get_user_by_username(*, session: Session, username: str) -> User | None:
     statement = select(User).where(func.lower(User.username) == func.lower(username))
     return session.exec(statement).first()
 
 
+# TODO: Validate
 def stored_preferences(
     rows: Iterable[UserSourcePreference],
 ) -> list[SourcePreference]:
@@ -71,6 +77,7 @@ def stored_preferences(
     ]
 
 
+# TODO: Validate
 def effective_source_preferences(
     session: Session,
     stored: list[SourcePreference],

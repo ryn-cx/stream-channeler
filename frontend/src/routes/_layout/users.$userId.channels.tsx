@@ -17,6 +17,7 @@ export const Route = createFileRoute("/_layout/users/$userId/channels")({
   }),
 })
 
+// TODO: Validate
 function UserChannels() {
   const { userId } = Route.useParams()
   const { user } = useAuth()

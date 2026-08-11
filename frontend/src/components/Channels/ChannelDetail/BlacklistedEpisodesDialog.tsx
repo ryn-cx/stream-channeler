@@ -25,6 +25,7 @@ interface BlacklistedEpisodesDialogProps {
 // letting the user remove individual blacklist entries. Reuses the whitelist endpoints:
 // every episode comes back with a `filtered` flag, so the blacklisted ones are the
 // filtered episodes of a blacklist-mode show.
+// TODO: Validate
 export function BlacklistedEpisodesDialog({
   channelId,
   showId,
@@ -67,6 +68,7 @@ export function BlacklistedEpisodesDialog({
     (episode) => episode.filtered,
   )
 
+  // TODO: Validate
   const handleRemove = (episodeId: string) => {
     // Removing the final entry deletes the filter-only show on the backend, so
     // close the dialog instead of leaving it on a stale/missing show.
@@ -78,6 +80,7 @@ export function BlacklistedEpisodesDialog({
     })
   }
 
+  // TODO: Validate
   const episodeLabel = (
     episode: NonNullable<typeof whitelistData>["episodes"][number],
   ) => {

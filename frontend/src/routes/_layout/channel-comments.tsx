@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_layout/channel-comments")({
   }),
 })
 
+// TODO: Validate
 function ChannelComments() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(0)

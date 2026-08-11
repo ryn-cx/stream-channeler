@@ -13,6 +13,7 @@ interface DeleteSourceProps {
   source: SourceTableData
 }
 
+// TODO: Validate
 const DeleteSource = ({ source }: DeleteSourceProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

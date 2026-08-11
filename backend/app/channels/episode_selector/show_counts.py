@@ -17,6 +17,7 @@ from app.seasons.models import Season
 from app.users.models import User
 
 
+# TODO: Validate
 def limit_shows(
     session: Session,
     user: User | None,
@@ -66,6 +67,7 @@ def limit_shows(
     ]
 
 
+# TODO: Validate
 def _select_show_subset(
     show_order: list[tuple[UUID, bool]],
     total: int | None,

@@ -39,6 +39,7 @@ USER_OWNED_MODELS = (
 
 # TODO: This can be improved upstream, this one changes return to Any as a workaround.
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
+# TODO: Validate
 def make_model_with_all_fields_optional(cls: type[BaseModel]) -> Any:  # noqa: ANN401
     """Return a new Pydantic model based on `cls`, but with all fields optional."""
     # Note 1: I believe there isn't any need to look for conflicts with computed fields.
@@ -55,6 +56,7 @@ def make_model_with_all_fields_optional(cls: type[BaseModel]) -> Any:  # noqa: A
 
 
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
+# TODO: Validate
 def _get_field_tuple(field_info: FieldInfo) -> Any:  # noqa: ANN401
     """Return a tuple as required by Pydantic's ``create_model()`` API."""
     annotation = field_info.annotation
@@ -77,12 +79,14 @@ def _get_field_tuple(field_info: FieldInfo) -> Any:  # noqa: ANN401
     return Annotated[annotation, field_info]
 
 
+# TODO: Validate
 class Message(BaseModel):
     """Generic message."""
 
     message: str
 
 
+# TODO: Validate
 class SortOption(BaseModel):
     """Sort option for a list of records."""
 
@@ -91,6 +95,7 @@ class SortOption(BaseModel):
     desc: bool = False
 
 
+# TODO: Validate
 class FilterOption(BaseModel):
     """Filter option for a list of records.
 
@@ -103,6 +108,7 @@ class FilterOption(BaseModel):
     value: str | list[str]
 
 
+# TODO: Validate
 class ReadOptions(BaseModel):
     """Options for reading a list of records."""
 
@@ -112,6 +118,7 @@ class ReadOptions(BaseModel):
     limit: int = Field(default=100, ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM)
 
 
+# TODO: Validate
 class RecordScope(StrEnum):
     """Which records an admin list endpoint returns."""
 
@@ -121,6 +128,7 @@ class RecordScope(StrEnum):
     all = "all"
 
 
+# TODO: Validate
 class ScopedReadOptions(ReadOptions):
     """Read options for the admin list endpoints, which serve every scope tab.
 
@@ -131,12 +139,14 @@ class ScopedReadOptions(ReadOptions):
     scope: RecordScope = RecordScope.all
 
 
+# TODO: Validate
 class BaseInput(SQLModel):
     """Base class for input schemas."""
 
     model_config = ConfigDict(extra="forbid")  # type: ignore[assignment]
 
 
+# TODO: Validate
 class BaseCreateWithParentAndKey[
     ModelT: MediaMixin[Any, Any],
     ParentT: Plugin | Source | Show | Season | User,
@@ -145,6 +155,7 @@ class BaseCreateWithParentAndKey[
 
     key: str
 
+    # TODO: Validate
     def create(self, session: Session, model: type[ModelT], parent: ParentT) -> ModelT:
         """Create and return the record if it is does not already exist."""
         if model.get(session, parent, self.key):
@@ -159,11 +170,13 @@ class BaseCreateWithParentAndKey[
         return child
 
 
+# TODO: Validate
 class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
     """Base update schemas for models with a key field."""
 
     key: str | None
 
+    # TODO: Validate
     def update(self, session: Session, existing_record: ModelT) -> ModelT:
         """Update the `existing_record` and return it.
 
@@ -187,9 +200,11 @@ class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
         return existing_record
 
 
+# TODO: Validate
 class BaseUpdateWithoutKey[ModelT: Channel | Watch | ChannelOrder | Comment](BaseInput):
     """Base update schemas for models without a key field."""
 
+    # TODO: Validate
     def update(self, session: Session, existing_record: ModelT) -> ModelT:
         """Update the `existing_record` and return it."""
         existing_record.sqlmodel_update(self.model_dump(exclude_unset=True))

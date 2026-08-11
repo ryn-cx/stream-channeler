@@ -11,6 +11,7 @@ from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class NHKWorld(
     SourceMixin,
     UpsertMixin,
@@ -26,11 +27,13 @@ class NHKWorld(
     # TODO: Don't hardcode the favicon URL
     FAVICON_URL = "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "www3.nhk.or.jp"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

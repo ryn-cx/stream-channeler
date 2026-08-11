@@ -1,6 +1,7 @@
 // TODO: Validate
 import DeleteConfirmation from "./DeleteConfirmation"
 
+// TODO: Validate
 const DeleteAccount = () => {
   return (
     <div className="mt-4 rounded-lg border border-destructive/50 p-4">

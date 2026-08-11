@@ -11,12 +11,14 @@ const AUTO_EXPAND_DEPTH = 2
 
 type InitialState = "default" | "expanded" | "collapsed"
 
+// TODO: Validate
 function isContainer(
   value: unknown,
 ): value is Record<string, unknown> | unknown[] {
   return typeof value === "object" && value !== null
 }
 
+// TODO: Validate
 function PrimitiveValue({ value }: { value: unknown }) {
   if (typeof value === "string") {
     return (
@@ -36,6 +38,7 @@ function PrimitiveValue({ value }: { value: unknown }) {
   return <span className="text-muted-foreground">null</span>
 }
 
+// TODO: Validate
 function KeyLabel({ name, isIndex }: { name: string; isIndex: boolean }) {
   return (
     <span
@@ -49,6 +52,7 @@ function KeyLabel({ name, isIndex }: { name: string; isIndex: boolean }) {
   )
 }
 
+// TODO: Validate
 function JsonNode({
   name,
   isIndex,
@@ -149,11 +153,13 @@ function JsonNode({
   )
 }
 
+// TODO: Validate
 export function JsonViewer({ value }: { value: unknown }) {
   const [initialState, setInitialState] = useState<InitialState>("default")
   // Bumping the key remounts the tree so every node re-reads `initialState`.
   const [generation, setGeneration] = useState(0)
 
+  // TODO: Validate
   const applyState = (next: InitialState) => {
     setInitialState(next)
     setGeneration((previous) => previous + 1)

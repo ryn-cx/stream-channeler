@@ -13,6 +13,7 @@ from app.service import scoped_list_response
 from app.users.models import User
 
 
+# TODO: Validate
 def scoped_channel_order_list_output(
     session: Session,
     viewer: User | None,
@@ -31,6 +32,7 @@ def scoped_channel_order_list_output(
     )
 
 
+# TODO: Validate
 def channel_order_output(
     order: ChannelOrder,
     viewer: User | None,
@@ -44,6 +46,7 @@ def channel_order_output(
     return output
 
 
+# TODO: Validate
 def public_channel_order_output(
     order: ChannelOrder,
     username: str | None,
@@ -63,6 +66,7 @@ def public_channel_order_output(
     )
 
 
+# TODO: Validate
 def featured_channel_orders(
     session: Session,
 ) -> list[ChannelOrderListOutput]:
@@ -82,6 +86,7 @@ def featured_channel_orders(
     return [public_channel_order_output(order, order.user.username) for order in rows]
 
 
+# TODO: Validate
 def admin_channel_order_output(
     order: ChannelOrder,
     username: str | None,

@@ -34,6 +34,7 @@ interface CommentFormProps {
   onCancel?: () => void
 }
 
+// TODO: Validate
 function CommentForm({
   placeholder,
   submitLabel,
@@ -85,6 +86,7 @@ interface CommentNodeProps {
 // A top level comment shows on its own until its thread is asked for, and the thread
 // request returns every descendant nested, so one click reveals the whole tree. Replies
 // rendered from that response already carry their own children and never refetch.
+// TODO: Validate
 function CommentNode({
   comment,
   currentUserId,
@@ -198,6 +200,7 @@ interface CommentsDialogProps {
   variant?: TriggerVariant
 }
 
+// TODO: Validate
 export function CommentsDialog({
   channelId,
   channelName,
@@ -220,6 +223,7 @@ export function CommentsDialog({
     enabled: isOpen,
   })
 
+  // TODO: Validate
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["channelComments", channelId] })
     queryClient.invalidateQueries({ queryKey: ["commentReplies"] })

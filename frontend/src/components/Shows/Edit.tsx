@@ -46,6 +46,7 @@ interface EditShowProps {
   show: ShowTableData
 }
 
+// TODO: Validate
 const EditShow = ({ show }: EditShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -75,6 +76,7 @@ const EditShow = ({ show }: EditShowProps) => {
     successMessage: "Show updated successfully",
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     mutation.mutate(nullifyBlanks(data))

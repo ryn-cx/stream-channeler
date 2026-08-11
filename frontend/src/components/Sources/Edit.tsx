@@ -30,6 +30,7 @@ interface EditSourceProps {
   source: SourceTableData
 }
 
+// TODO: Validate
 const EditSource = ({ source }: EditSourceProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -54,6 +55,7 @@ const EditSource = ({ source }: EditSourceProps) => {
     successMessage: "Source updated successfully",
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     mutation.mutate(nullifyBlanks(data))

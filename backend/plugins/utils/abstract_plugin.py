@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from app.users.models import User
 
 
+# TODO: Validate
 class AbstractPlugin(ABC):
     """Base class every plugin must implement."""
 
@@ -48,6 +49,7 @@ class AbstractPlugin(ABC):
     # pastes still imports, it is just not advertised as a way in.
     LISTED_FOR_IMPORT_URL: ClassVar[bool] = True
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def plugin_key(cls) -> str:
@@ -60,6 +62,7 @@ class AbstractPlugin(ABC):
 
         """
 
+    # TODO: Validate
     @abstractmethod
     def __init__(self, session: Session) -> None:
         """Initialize the plugin class.
@@ -73,6 +76,7 @@ class AbstractPlugin(ABC):
 
         """
 
+    # TODO: Validate
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:  # noqa: ARG003
         """Check if `url` has the right format for the plugin.
@@ -89,6 +93,7 @@ class AbstractPlugin(ABC):
         """
         return False
 
+    # TODO: Validate
     def import_url(
         self,
         url: str,
@@ -117,6 +122,7 @@ class AbstractPlugin(ABC):
         msg = "import_url is not supported by this plugin."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def on_import_url_failure(
         self,
         queue_item: ChannelQueue,  # noqa: ARG002 - `queue_item` is used by overrides.
@@ -130,6 +136,7 @@ class AbstractPlugin(ABC):
         """
         raise error
 
+    # TODO: Validate
     @classmethod
     def _read_instructions_file(cls, file_name: str, default: str) -> str:
         """Return the contents of `file_name` from the plugin's directory."""
@@ -141,6 +148,7 @@ class AbstractPlugin(ABC):
     # The markdown file, stored next to the plugin, describing the URLs it supports.
     IMPORT_URL_INSTRUCTIONS_FILE: ClassVar[str] = "import_url_instructions.md"
 
+    # TODO: Validate
     @classmethod
     @cache
     def import_url_instructions(cls) -> str:
@@ -155,6 +163,7 @@ class AbstractPlugin(ABC):
             "This plugin does not have specific URL import instructions.",
         )
 
+    # TODO: Validate
     def update_plugin(self, plugin: Plugin) -> None:
         """Update an existing plugin in the database.
 
@@ -169,6 +178,7 @@ class AbstractPlugin(ABC):
         """
         plugin.update_at = None
 
+    # TODO: Validate
     def update_source(self, source: Source) -> None:
         """Update an existing source in the database.
 
@@ -183,6 +193,7 @@ class AbstractPlugin(ABC):
         """
         source.update_at = None
 
+    # TODO: Validate
     def update_show(self, show: Show, *, force: bool = False) -> None:
         """Update an existing show in the database.
 
@@ -198,6 +209,7 @@ class AbstractPlugin(ABC):
         """
         show.update_at = None
 
+    # TODO: Validate
     def update_season(self, season: Season) -> None:
         """Update an existing season in the database.
 
@@ -212,6 +224,7 @@ class AbstractPlugin(ABC):
         """
         season.update_at = None
 
+    # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
         """Update an existing episode in the database.
 
@@ -226,6 +239,7 @@ class AbstractPlugin(ABC):
         """
         episode.update_at = None
 
+    # TODO: Validate
     def update_file(self, file: File) -> None:
         """Update an existing file in the database.
 
@@ -239,6 +253,7 @@ class AbstractPlugin(ABC):
         file.update_at = None
 
     # TODO: Consider automatically setting the update_at values to max here.
+    # TODO: Validate
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:  # noqa: ARG002 - `plugin` is used by overrides.
         """Handle a failure while updating a `Plugin`.
 
@@ -247,6 +262,7 @@ class AbstractPlugin(ABC):
         """
         raise error
 
+    # TODO: Validate
     def on_update_source_failure(self, source: Source, error: Exception) -> None:  # noqa: ARG002 - `source` is used by overrides.
         """Handle a failure while updating a `Source`.
 
@@ -255,6 +271,7 @@ class AbstractPlugin(ABC):
         """
         raise error
 
+    # TODO: Validate
     def on_update_show_failure(self, show: Show, error: Exception) -> None:  # noqa: ARG002 - `show` is used by overrides.
         """Handle a failure while updating a `Show`.
 
@@ -263,6 +280,7 @@ class AbstractPlugin(ABC):
         """
         raise error
 
+    # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:  # noqa: ARG002 - `season` is used by overrides.
         """Handle a failure while updating a `Season`.
 
@@ -271,6 +289,7 @@ class AbstractPlugin(ABC):
         """
         raise error
 
+    # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:  # noqa: ARG002 - `episode` is used by overrides.
         """Handle a failure while updating an `Episode`.
 
@@ -288,6 +307,7 @@ class AbstractPlugin(ABC):
         "import_watch_history_instructions.md"
     )
 
+    # TODO: Validate
     @classmethod
     @cache
     def import_watch_history_instructions(cls) -> str:
@@ -301,6 +321,7 @@ class AbstractPlugin(ABC):
             "This plugin does not have specific watch history import instructions.",
         )
 
+    # TODO: Validate
     def import_watch_history(
         self,
         content: str,
@@ -321,6 +342,7 @@ class AbstractPlugin(ABC):
         msg = "import_watch_history is not supported by this plugin."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         """Search for media.
 
@@ -333,6 +355,7 @@ class AbstractPlugin(ABC):
         msg = "search is not supported by this plugin."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     @classmethod
     def search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
         """Return the plugin website's own search-page URL for `query`.
@@ -342,6 +365,7 @@ class AbstractPlugin(ABC):
         """
         return None
 
+    # TODO: Validate
     @override
     def __init_subclass__(cls, *, register: bool = True, **kwargs: Any) -> None:
         """Auto-register every concrete subclass as a plugin.
@@ -354,6 +378,7 @@ class AbstractPlugin(ABC):
         if register:
             register_plugins(cls)
 
+    # TODO: Validate
     @classmethod
     def implements(cls, method_name: str) -> bool:
         """Return True when the subclass has overridden `method_name`.
@@ -366,10 +391,12 @@ class AbstractPlugin(ABC):
         return child_implementation is not abstract_implementation
 
 
+# TODO: Validate
 class InvalidURLError(Exception):
     """Raised during `import_url` when a URL with a correct format is invalid."""
 
 
+# TODO: Validate
 class URLImportResult(BaseModel):
     """What a channel takes on from importing a single URL.
 
@@ -415,11 +442,13 @@ class URLImportResult(BaseModel):
     must blacklist anything they don't want.
     """
 
+    # TODO: Validate
     @classmethod
     def for_show(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
         return cls(show_identifier=show.show_identifier, is_whitelist=is_whitelist)
 
+    # TODO: Validate
     @classmethod
     def for_seasons(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
         """Return the result of importing only `seasons` of `show`."""
@@ -429,6 +458,7 @@ class URLImportResult(BaseModel):
             is_whitelist=True,
         )
 
+    # TODO: Validate
     @classmethod
     def for_episodes(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
         """Return the result of importing only `episodes` of `show`."""
@@ -439,6 +469,7 @@ class URLImportResult(BaseModel):
         )
 
 
+# TODO: Validate
 class PluginSearchResult(BaseModel):
     """Search result from a plugin.
 
@@ -459,6 +490,7 @@ class PluginSearchResult(BaseModel):
     """Media type of the search result."""
 
 
+# TODO: Validate
 class PluginSearchResults(BaseModel):
     """A single page of results from a search query."""
 
@@ -473,6 +505,7 @@ class PluginSearchResults(BaseModel):
     """
 
 
+# TODO: Validate
 def paginate_search_results(
     results: list[PluginSearchResult],
     cursor: str | None,

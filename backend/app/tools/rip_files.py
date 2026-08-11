@@ -14,6 +14,7 @@ GAPI_PLUGINS = [
 ]
 
 
+# TODO: Validate
 def main() -> None:
     for dashed_plugin in GAPI_PLUGINS:
         underscored_plugin = dashed_plugin.replace("-", "_")

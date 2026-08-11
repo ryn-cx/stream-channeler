@@ -5,6 +5,7 @@ import { OpenAPI, PrivateService } from "../../src/client"
 
 OpenAPI.BASE = `${process.env.VITE_API_URL}`
 
+// TODO: Validate
 export const createUser = async ({
   email,
   password,

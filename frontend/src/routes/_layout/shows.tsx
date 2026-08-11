@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_layout/shows")({
   }),
 })
 
+// TODO: Validate
 function ShowsPage() {
   return (
     <MediaListPage<ShowTableData>

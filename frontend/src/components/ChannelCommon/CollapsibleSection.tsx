@@ -10,6 +10,7 @@ interface CollapsibleSectionProps {
   defaultOpen?: boolean
 }
 
+// TODO: Validate
 /**
  * A section that stays out of the way until it is asked for.
  *

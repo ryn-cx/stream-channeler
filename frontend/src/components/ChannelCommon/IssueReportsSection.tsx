@@ -21,6 +21,7 @@ interface IssueReportsSectionProps {
   informationQueryKey: unknown[]
 }
 
+// TODO: Validate
 function createReport(
   target: IssueReportTarget,
   mediaId: string,
@@ -45,6 +46,7 @@ function createReport(
   })
 }
 
+// TODO: Validate
 function updateReport(
   target: IssueReportTarget,
   issueReportId: string,
@@ -69,6 +71,7 @@ function updateReport(
   })
 }
 
+// TODO: Validate
 function deleteReport(target: IssueReportTarget, issueReportId: string) {
   if (target === "episode") {
     return IssueReportsService.deleteEpisodeIssueReport({ issueReportId })
@@ -79,6 +82,7 @@ function deleteReport(target: IssueReportTarget, issueReportId: string) {
   return IssueReportsService.deleteShowIssueReport({ issueReportId })
 }
 
+// TODO: Validate
 /**
  * Every issue reported against one record, and the box for adding another.
  *
@@ -99,6 +103,7 @@ export function IssueReportsSection({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
+  // TODO: Validate
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: informationQueryKey })
     queryClient.invalidateQueries({ queryKey: ["issue-reports"] })
@@ -133,6 +138,7 @@ export function IssueReportsSection({
     onError: (error: unknown) => handleError.call(showErrorToast, error as any),
   })
 
+  // TODO: Validate
   const canEdit = (report: IssueReportOutput) =>
     !!user && (user.is_superuser || user.id === report.user_id)
 

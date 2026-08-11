@@ -14,22 +14,26 @@ from plugins.utils.base_plugin.files import GAPIJSON, BaseFile
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def meshfilm() -> Meshfilm:
     return Meshfilm(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class Title(GAPIJSON[netflix_models.LodpTitleAndPlansPageModel]):
     """Title file."""
 
     API_ENDPOINT = meshfilm().lodp_title_and_plans_page
 
 
+# TODO: Validate
 class Search(GAPIJSON[search_models.SearchPageResultsModel]):
     """Search file."""
 
     API_ENDPOINT = meshfilm().search_page_results
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -41,6 +45,7 @@ class Search(GAPIJSON[search_models.SearchPageResultsModel]):
         self.cursor = cursor
         super().__init__(session, plugin, f"{query}/{cursor}")
 
+    # TODO: Validate
     @override
     def _get(self) -> search_models.SearchPageResultsModel:
         return meshfilm().search_page_results.download_and_parse(
@@ -49,15 +54,19 @@ class Search(GAPIJSON[search_models.SearchPageResultsModel]):
         )
 
 
+# TODO: Validate
 class FileMixin(TMDBMixin, register=False):
+    # TODO: Validate
     def title_file(self, title_key: str) -> Title:
         """Contains all of a Netflix title's data (show, seasons, episodes)."""
         return self._file(Title, title_key)
 
+    # TODO: Validate
     def search_file(self, query: str, cursor: str | None) -> Search:
         """Contains one page of Netflix's movie and TV search results."""
         return self._file(Search, query, cursor or "")
 
+    # TODO: Validate
     def _title_video(self, show_key: str) -> netflix_models.Video1:
         parsed = self.title_file(show_key).parsed()
         video = next(
@@ -69,15 +78,18 @@ class FileMixin(TMDBMixin, register=False):
             raise ValueError(msg)
         return video
 
+    # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return self._title_video(show_key).field__typename == "Movie"
 
+    # TODO: Validate
     def _ordered_seasons(self, show_key: str) -> list[netflix_models.Node7]:
         seasons = self._title_video(show_key).seasons
         if seasons is None:
             return []
         return [edge.node for edge in seasons.edges]
 
+    # TODO: Validate
     def _season_episodes(
         self,
         show_key: str,
@@ -88,6 +100,7 @@ class FileMixin(TMDBMixin, register=False):
                 return [edge.node for edge in season.episodes.edges]
         return []
 
+    # TODO: Validate
     @staticmethod
     def _season_key(show_key: str, season_id: str | int) -> str:
         """Encode the show key into the season key.
@@ -98,15 +111,18 @@ class FileMixin(TMDBMixin, register=False):
         """
         return f"{show_key}:{season_id}"
 
+    # TODO: Validate
     @staticmethod
     def _split_season_key(season_key: str) -> tuple[str, str]:
         show_key, _, season_id = season_key.partition(":")
         return show_key, season_id
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_show_file([self.title_file(show_key)], show_key)
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_season_file(
@@ -115,6 +131,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -129,6 +146,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
@@ -138,6 +156,7 @@ class FileMixin(TMDBMixin, register=False):
             for season in self._ordered_seasons(show_key)
         ]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

@@ -48,6 +48,7 @@ type _Candidate = tuple[Episode, Season, Show]
 type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
+# TODO: Validate
 def _order(
     season_number: int | None,
     episode_number: int | None,
@@ -58,6 +59,7 @@ def _order(
     )
 
 
+# TODO: Validate
 def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
     """Count every episode of one title from its first, and return that count by id.
 
@@ -79,12 +81,14 @@ def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
     return numbers
 
 
+# TODO: Validate
 def _plaintext(name: str | None) -> str:
     if not name:
         return ""
     return "".join(character for character in name.casefold() if character.isalnum())
 
 
+# TODO: Validate
 def _similarity(name: str | None, other_name: str | None) -> float:
     plaintext = _plaintext(name)
     other_plaintext = _plaintext(other_name)
@@ -104,6 +108,7 @@ def _similarity(name: str | None, other_name: str | None) -> float:
     return max(ratio, len(shorter) / len(longer))
 
 
+# TODO: Validate
 def _score(
     episode: Episode,
     season: Season,
@@ -119,6 +124,7 @@ def _score(
     return _similarity(episode.name, candidate_episode.name), numbering_matches
 
 
+# TODO: Validate
 def _candidate_absolute_numbers(candidates: list[_Candidate]) -> dict[uuid.UUID, int]:
     return absolute_numbers(
         [
@@ -128,6 +134,7 @@ def _candidate_absolute_numbers(candidates: list[_Candidate]) -> dict[uuid.UUID,
     )
 
 
+# TODO: Validate
 def _choice(
     candidate: _Candidate,
     absolute_numbers: dict[uuid.UUID, int],
@@ -148,6 +155,7 @@ def _choice(
     )
 
 
+# TODO: Validate
 def _best_match(
     episode: Episode,
     season: Season,
@@ -174,6 +182,7 @@ def _best_match(
     return _choice(candidate, absolute_numbers, similarity)
 
 
+# TODO: Validate
 def _unmatched_rows(
     session: Session,
     limit: int,
@@ -206,6 +215,7 @@ def _unmatched_rows(
     return list(session.exec(statement).all())
 
 
+# TODO: Validate
 def _candidates_by_show(
     session: Session,
     show_identifiers: set[str],
@@ -238,6 +248,7 @@ def _candidates_by_show(
     return candidates
 
 
+# TODO: Validate
 def _source_absolute_numbers(
     session: Session,
     show_ids: set[uuid.UUID],
@@ -272,6 +283,7 @@ def _source_absolute_numbers(
     return numbers
 
 
+# TODO: Validate
 def list_unmatched_episodes(
     session: Session,
     limit: int,
@@ -323,6 +335,7 @@ def list_unmatched_episodes(
     ]
 
 
+# TODO: Validate
 def _unlocked_rows(
     session: Session,
     limit: int,
@@ -358,6 +371,7 @@ def _unlocked_rows(
     return list(session.exec(statement).all())
 
 
+# TODO: Validate
 def list_unlocked_episodes(
     session: Session,
     limit: int,
@@ -416,6 +430,7 @@ def list_unlocked_episodes(
     return outputs
 
 
+# TODO: Validate
 def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
     """Return the TMDB identifiers the rest of `episode`'s show already points at.
 
@@ -439,6 +454,7 @@ def _identifiers_used_by_show(session: Session, episode: Episode) -> set[str]:
     return set(session.exec(statement).all())
 
 
+# TODO: Validate
 def _imported_title_identifier(session: Session, tmdb_show_id: int) -> str:
     """Read a TMDB series in and return the identifier its episodes are under.
 
@@ -455,6 +471,7 @@ def _imported_title_identifier(session: Session, tmdb_show_id: int) -> str:
     return tmdb_identifier(MediaType.tv, tmdb_show_id)
 
 
+# TODO: Validate
 def list_tmdb_episode_choices(
     session: Session,
     episode: Episode,
@@ -505,6 +522,7 @@ def list_tmdb_episode_choices(
     )
 
 
+# TODO: Validate
 def _tmdb_episode_identifiers(
     tmdb_episode_id: int,
     media_type: MediaType | None,
@@ -515,6 +533,7 @@ def _tmdb_episode_identifiers(
     return {tmdb_identifier(half, tmdb_episode_id) for half in MediaType}
 
 
+# TODO: Validate
 def _tmdb_episode(
     session: Session,
     tmdb_episode_id: int,
@@ -543,6 +562,7 @@ def _tmdb_episode(
     return session.exec(statement).first()
 
 
+# TODO: Validate
 def link_episode(
     session: Session,
     episode: Episode,
@@ -586,6 +606,7 @@ def link_episode(
     return episode
 
 
+# TODO: Validate
 def _import_named_media(
     session: Session,
     episode: Episode,
@@ -623,6 +644,7 @@ def _import_named_media(
     tmdb.import_title(linked_media_type, linked_tmdb_id)
 
 
+# TODO: Validate
 def _unlink_others_sharing(
     session: Session,
     episode: Episode,
@@ -666,6 +688,7 @@ def _unlink_others_sharing(
         session.add(other)
 
 
+# TODO: Validate
 def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:
     """Hold `episode` at the identifier its own website issued.
 

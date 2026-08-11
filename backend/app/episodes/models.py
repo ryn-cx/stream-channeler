@@ -64,6 +64,7 @@ enough of at the time, so the two are told apart by what was written down.
 """
 
 
+# TODO: Validate
 class BaseEpisode(BaseMediaMixin):
     """Base model for an `Episode`."""
 
@@ -83,6 +84,7 @@ class BaseEpisode(BaseMediaMixin):
     # it was made on and there is nothing else to go on when reading one back.
     episode_identifier_note: str | None = Field(default=None)
 
+    # TODO: Validate
     @computed_field
     @property
     def tmdb_id(self) -> int | None:
@@ -94,6 +96,7 @@ class BaseEpisode(BaseMediaMixin):
         return identifier_tmdb_id(self.episode_identifier)
 
 
+# TODO: Validate
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     """Model representing an episode."""
 
@@ -158,6 +161,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return session.exec(
@@ -169,11 +173,13 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             .where(Season.id == self.season_id),
         ).one()
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Season).join(Show).join(Source).join(Plugin)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -189,16 +195,19 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             )
         )
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> Season:
         return self.season
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Never]:
         return []
 
+    # TODO: Validate
     @override
     def upsert(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
@@ -217,6 +226,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             protected_keys.add("episode_identifier")
         return super().upsert(parent, existing_record, protected_keys)
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Episode`."""
         base_episode = "Episode:"

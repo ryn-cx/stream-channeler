@@ -11,7 +11,9 @@ from app.sources.models import Source
 from plugins.NHKWorld.helpers import HelperMixin
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -46,6 +48,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_season(
         self,
         show: Show,
@@ -72,6 +75,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         self._upsert_episodes(season, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import useAuth from "@/hooks/useAuth"
 
+// TODO: Validate
 export function InfoPage() {
   const { user } = useAuth()
 

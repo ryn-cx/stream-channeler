@@ -14,6 +14,7 @@ from tests.app.users.utils import CreatedUser
 from tests.app.utils.utils import build_random_model
 
 
+# TODO: Validate
 def create_random_episode(
     session: Session,
     parent: Season

@@ -33,20 +33,25 @@ from tests.app.users.utils import authentication_token_from_email, create_random
 from tests.app.utils.route_assertions import assert_forbidden, assert_not_authenticated
 
 
+# TODO: Validate
 class TestChannelEpisodes(BaseChannelSubEndpointTests):
     sub_http_method = "get"
     sub_parameters = None
 
+    # TODO: Validate
     def sub_url(self, channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel_id}/episodes"
 
+    # TODO: Validate
     @pytest.mark.skip(reason="Covered by test_with_episodes and test_no_episodes")
     def test_get_permissions(self) -> None:  # type: ignore[override]
         pass
 
+    # TODO: Validate
     def generic_record_url(self, record_id: uuid.UUID | str) -> str:
         return f"{settings.API_V1_STR}/channels/{record_id}/episodes"
 
+    # TODO: Validate
     @staticmethod
     def create_channel_with_episodes(
         session_scoped_session: Session,
@@ -101,6 +106,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
 
         return channel, expected
 
+    # TODO: Validate
     @staticmethod
     def assert_episodes(
         response_data: ChannelEpisodesOutput,
@@ -116,6 +122,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         assert response_data.channels == expected.channels
         assert response_data == expected
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -189,6 +196,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         assert response.status_code == status.HTTP_200_OK
         self.assert_episodes(response_data, expected)
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -264,6 +272,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
         assert response.status_code == status.HTTP_200_OK
         assert response_data == expected
 
+    # TODO: Validate
     @pytest.mark.parametrize(
         "user_type",
         ["owner", "plugin_owner", "normal_user", "anon"],
@@ -344,6 +353,7 @@ class TestChannelEpisodes(BaseChannelSubEndpointTests):
             assert not data.plugins
             assert not data.channels
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
     def test_public_plugin_visibility(

@@ -11,6 +11,7 @@ from app.media.service import editable_record, existing_record, readable_record
 from app.shows.dependencies import ReadableShow
 
 
+# TODO: Validate
 def _require_owned_channel_readable_show(
     session: SessionDep,
     channel: EditableChannel,

@@ -9,7 +9,9 @@ from app.shows.models import Show
 from plugins.utils.base_plugin.download import DownloadMixin
 
 
+# TODO: Validate
 class CheckMixin(DownloadMixin):
+    # TODO: Validate
     def _show_is_outdated(
         self,
         show: Show | None,
@@ -21,6 +23,7 @@ class CheckMixin(DownloadMixin):
             return True
         return self._record_is_outdated(show, self.show_data_timestamp(show.key))
 
+    # TODO: Validate
     def _season_is_outdated(
         self,
         season: Season | None,
@@ -40,6 +43,7 @@ class CheckMixin(DownloadMixin):
             self.season_data_timestamp(season.key, show_key or season.show.key),
         )
 
+    # TODO: Validate
     def _episode_is_outdated(
         self,
         episode: Episode | None,
@@ -63,6 +67,7 @@ class CheckMixin(DownloadMixin):
             self.episode_data_timestamp(episode.key, season_key, show_key),
         )
 
+    # TODO: Validate
     @staticmethod
     def _record_is_outdated(
         record: BaseMediaMixin,

@@ -9,7 +9,9 @@ from app.shows.models import Show
 from plugins.Hulu.files import FileMixin
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _set_media_type_from_show(self, show: Show) -> None:
         if not show.media_type:
@@ -17,13 +19,16 @@ class HelperMixin(FileMixin, register=False):
             raise AttributeError(msg)
         self._media_type_value = "movie" if show.media_type == "Movie" else "series"
 
+    # TODO: Validate
     def _movie_model(self, movie_id: str) -> MoviesModel:
         return self.movie_file(movie_id).parsed()
 
+    # TODO: Validate
     def _season_name(self, series_id: str, season_number: int) -> str:
         parsed = self.season_file(series_id, season_number).parsed()
         return parsed.series_grouping_metadata.grouping_name
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -40,11 +45,13 @@ class HelperMixin(FileMixin, register=False):
         entity = self._series_model(show_key).details.entity
         return self._tmdb_search_media(entity.name)
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_number = self._split_season_key(season_key)
         return season_number
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -58,18 +65,22 @@ class HelperMixin(FileMixin, register=False):
                 return int(item.number)
         return None
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie() else MediaType.tv
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str, media_type: str) -> str:
         return cls.build_url(f"{media_type}/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         return cls.build_url(f"watch/{episode_key}")
 
+    # TODO: Validate
     @staticmethod
     def _image_url(path: str) -> str:
         operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")

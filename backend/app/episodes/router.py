@@ -77,11 +77,13 @@ EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
 }
 
 
+# TODO: Validate
 def _episode_output(session: SessionDep, episode: Episode) -> EpisodeOutput:
     """Return an `Episode` as TMDB has it, falling back on what its website said."""
     return fill_episodes(session, [EpisodeOutput.model_validate(episode)])[0]
 
 
+# TODO: Validate
 @season_episodes_router.post("/episodes")
 def create_episode(
     session: SessionDep,
@@ -101,6 +103,7 @@ def create_episode(
     return _episode_output(session, episode_input.create(session, Episode, season))
 
 
+# TODO: Validate
 @episodes_router.get("")
 def get_episodes(
     session: SessionDep,
@@ -121,6 +124,7 @@ def get_episodes(
     return episodes
 
 
+# TODO: Validate
 @season_episodes_router.get("/episodes")
 def get_season_episodes(
     session: SessionDep,
@@ -142,6 +146,7 @@ def get_season_episodes(
     return episodes
 
 
+# TODO: Validate
 @plugin_episodes_router.get("/episodes")
 def get_plugin_episodes(
     session: SessionDep,
@@ -163,6 +168,7 @@ def get_plugin_episodes(
     return episodes
 
 
+# TODO: Validate
 @source_episodes_router.get("/episodes")
 def get_source_episodes(
     session: SessionDep,
@@ -184,6 +190,7 @@ def get_source_episodes(
     return episodes
 
 
+# TODO: Validate
 @show_episodes_router.get("/episodes")
 def get_show_episodes(
     session: SessionDep,
@@ -205,6 +212,7 @@ def get_show_episodes(
     return episodes
 
 
+# TODO: Validate
 @episodes_router.get(
     "/tmdb-matches",
     dependencies=[Depends(get_current_active_superuser)],
@@ -217,6 +225,7 @@ def admin_get_unmatched_episodes(
     return list_unmatched_episodes(session, limit)
 
 
+# TODO: Validate
 @episodes_router.get(
     "/unlocked",
     dependencies=[Depends(get_current_active_superuser)],
@@ -229,6 +238,7 @@ def admin_get_unlocked_episodes(
     return list_unlocked_episodes(session, limit)
 
 
+# TODO: Validate
 @episodes_router.get(
     "/{episode_id}/tmdb-choices",  # noqa: FAST003 - Used by ExistingEpisode.
     dependencies=[Depends(get_current_active_superuser)],
@@ -246,6 +256,7 @@ def admin_get_tmdb_episode_choices(
     return list_tmdb_episode_choices(session, episode, tmdb_show_id)
 
 
+# TODO: Validate
 @episodes_router.put(
     "/{episode_id}/tmdb-link",  # noqa: FAST003 - Used by ExistingEpisode.
     dependencies=[Depends(get_current_active_superuser)],
@@ -266,6 +277,7 @@ def admin_link_episode_to_tmdb(
     return _episode_output(session, linked)
 
 
+# TODO: Validate
 @episodes_router.put(
     "/{episode_id}/tmdb-no-match",  # noqa: FAST003 - Used by ExistingEpisode.
     dependencies=[Depends(get_current_active_superuser)],
@@ -278,6 +290,7 @@ def admin_mark_episode_no_tmdb_match(
     return _episode_output(session, confirm_no_tmdb_match(session, episode))
 
 
+# TODO: Validate
 def _information_side(
     label: str,
     episode: Episode,
@@ -309,6 +322,7 @@ def _information_side(
     )
 
 
+# TODO: Validate
 @episodes_router.get("/{episode_id}/information")  # noqa: FAST003 - Used by ReadableEpisode.
 def get_episode_information(
     session: SessionDep,
@@ -357,6 +371,7 @@ def get_episode_information(
     )
 
 
+# TODO: Validate
 @episodes_router.patch("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.
 def update_episode(
     session: SessionDep,
@@ -381,6 +396,7 @@ def update_episode(
     return _episode_output(session, episode_input.update(session, episode))
 
 
+# TODO: Validate
 @episodes_router.delete("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.
 def delete_episode(session: SessionDep, episode: EditableEpisode) -> Message:
     """Delete an `Episode` if it's editable by the `User`."""

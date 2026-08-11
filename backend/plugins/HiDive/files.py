@@ -26,11 +26,13 @@ from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def diving_board() -> DivingBoard:
     return DivingBoard(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class Season(PartialGAPIJSON[season_models.SeasonModel]):
     """Season file."""
 
@@ -38,12 +40,14 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().season
 
+    # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> season_models.SeasonModel:
         return diving_board().season.download_and_parse(int(self.unique_identifier))
 
 
+# TODO: Validate
 class Vod(PartialGAPIJSON[vod_models.VodModel]):
     """Vod file."""
 
@@ -51,12 +55,14 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().vod
 
+    # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> vod_models.VodModel:
         return diving_board().vod.download_and_parse(int(self.unique_identifier))
 
 
+# TODO: Validate
 class Series(PartialGAPIJSON[series_models.SeriesModel]):
     """Series file."""
 
@@ -64,17 +70,20 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
     ACCEPTABLE_ERROR = "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().series
 
+    # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
     def _get(self) -> series_models.SeriesModel:
         return diving_board().series.download_and_parse(int(self.unique_identifier))
 
 
+# TODO: Validate
 class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
     """Schedule file."""
 
     API_ENDPOINT = diving_board().schedule
 
+    # TODO: Validate
     @override
     def _get(self) -> list[schedule_models.ScheduleModel]:
         # Start at the first of the month because it matches the normal API calls.
@@ -91,13 +100,16 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
         )
 
 
+# TODO: Validate
 class Search(GAPIJSON[search_models.SearchModel]):
     """Search file."""
 
     API_ENDPOINT = diving_board().search
 
 
+# TODO: Validate
 class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
+    # TODO: Validate
     def _is_movie(self) -> bool:
         if self._media_type_value not in ("Movie", "Series"):
             msg = f"Invalid media type: {self._media_type_value}"
@@ -105,21 +117,25 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
 
         return self._media_type_value == "Movie"
 
+    # TODO: Validate
     def season_file(self, season_key: str | int) -> Season:
         """Return a cached Season for the given season key."""
         key = str(season_key)
         return self._file(Season, key)
 
+    # TODO: Validate
     def vod_file(self, vod_key: str | int) -> Vod:
         """Return a cached Vod for the given vod key."""
         key = str(vod_key)
         return self._file(Vod, key)
 
+    # TODO: Validate
     def series_file(self, series_key: str | int) -> Series:
         """Return a cached Series for the given series key."""
         key = str(series_key)
         return self._file(Series, key)
 
+    # TODO: Validate
     def schedule_file(self, input_date: datetime | File) -> Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
         if isinstance(input_date, File):
@@ -128,22 +144,26 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
             identifier = input_date.isoformat()
         return self._file(Schedule, identifier)
 
+    # TODO: Validate
     def search_file(self, query: str) -> Search:
         """Return a cached Search for the given query."""
         return self._file(Search, query)
 
+    # TODO: Validate
     def get_latest_schedule_file(self) -> Schedule | None:
         """Return the latest schedule file, or None if none exists."""
         if file := self.preload_latest_file(Schedule):
             return self.schedule_file(file)
         return None
 
+    # TODO: Validate
     @override
     def _source_files(self) -> Sequence[Schedule]:
         if file := self.get_latest_schedule_file():
             return [file]
         return []
 
+    # TODO: Validate
     @staticmethod
     def _series_season_items(
         series_data: series_models.SeriesModel,
@@ -155,6 +175,7 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
         msg = "No seasons element found in series file."
         raise ValueError(msg)
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         base_files: list[BaseFile[Any]]
@@ -164,6 +185,7 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
             base_files = [self.series_file(show_key)]
         return self._append_tmdb_show_file(base_files, show_key)
 
+    # TODO: Validate
     @override
     def _season_files(
         self,
@@ -178,6 +200,7 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
             base_files = [self.season_file(season_key)]
         return self._append_tmdb_season_file(base_files, season_key, show_key)
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -198,6 +221,7 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         if self._is_movie():
@@ -205,6 +229,7 @@ class HiDiveFiles(MediaTypeMixin, TMDBMixin, register=False):
         series_data = self.series_file(show_key).parsed()
         return [str(item.id) for item in self._series_season_items(series_data)]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

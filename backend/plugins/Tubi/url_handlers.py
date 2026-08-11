@@ -15,16 +15,20 @@ _CONTENT_ID_REGEX = r"\d+"
 _SLUG_REGEX = r"(?:\/[^\/?#]*)?"
 
 
+# TODO: Validate
 class TubiURLHandler(URLHandler["Tubi"]):
+    # TODO: Validate
     def __init__(self, plugin: Tubi, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -33,22 +37,26 @@ class TubiURLHandler(URLHandler["Tubi"]):
         )
 
 
+# TODO: Validate
 class MovieURLHandler(TubiURLHandler):
     # https://tubitv.com/movies/100029837/megamind
     _URL_REGEX = rf"\/movies\/(?P<movie_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
 
 
+# TODO: Validate
 class SeriesURLHandler(TubiURLHandler):
     # https://tubitv.com/series/300006854/scooby-doo-where-are-you
     _URL_REGEX = rf"\/series\/(?P<series_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
 
 
+# TODO: Validate
 class EpisodeURLHandler(TubiURLHandler):
     # https://tubitv.com/tv-shows/595036/s01-e01-what-a-night-for-a-knight
     _URL_REGEX = (
         rf"\/tv-shows\/(?P<episode_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
     )
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
@@ -58,6 +66,7 @@ class EpisodeURLHandler(TubiURLHandler):
             raise InvalidURLError(msg)
         return series_id
 
+    # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         for season in show.seasons:

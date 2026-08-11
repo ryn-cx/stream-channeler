@@ -15,11 +15,13 @@ interface DeleteUserProps {
   id: string
 }
 
+// TODO: Validate
 const DeleteUser = ({ id }: DeleteUserProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
+  // TODO: Validate
   const deleteUser = async (id: string) => {
     await UsersService.deleteUser({ userId: id })
   }

@@ -17,10 +17,12 @@ from app.schemas import (
 from app.seasons.models import Season
 
 
+# TODO: Validate
 class EpisodeCreate(BaseCreateWithParentAndKey[Episode, Season], BaseEpisode):
     """Schema for creating an `Episode`."""
 
 
+# TODO: Validate
 class EpisodeUpdate(
     make_model_with_all_fields_optional(BaseEpisode),
     BaseUpdateWithKey[Episode],
@@ -28,6 +30,7 @@ class EpisodeUpdate(
     """Schema for updating an `Episode`."""
 
 
+# TODO: Validate
 class EpisodeOutput(BaseEpisode):
     """Schema for returning an `Episode`."""
 
@@ -36,6 +39,7 @@ class EpisodeOutput(BaseEpisode):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class EpisodeListOutput(EpisodeOutput):
     """Schema for returning a list of `Episode`s, with parent information."""
 
@@ -70,6 +74,7 @@ class EpisodeListOutput(EpisodeOutput):
     )
 
 
+# TODO: Validate
 class EpisodeInformationSide(BaseModel):
     """One record's own account of an episode, as the website that holds it has it."""
 
@@ -95,6 +100,7 @@ class EpisodeInformationSide(BaseModel):
     modified_at: datetime | None
 
 
+# TODO: Validate
 class EpisodeInformationOutput(BaseModel):
     """What the website and TMDB each say about an episode, side by side.
 
@@ -112,6 +118,7 @@ class EpisodeInformationOutput(BaseModel):
     tmdb: EpisodeInformationSide | None
 
 
+# TODO: Validate
 class TmdbEpisodeChoice(BaseModel):
     """A TMDB episode of a title, as one of the episodes an `Episode` can be linked to.
 
@@ -141,6 +148,7 @@ class TmdbEpisodeChoice(BaseModel):
     """
 
 
+# TODO: Validate
 class UnmatchedEpisodeOutput(BaseModel):
     """An episode no TMDB record was found for, beside the closest TMDB episode."""
 
@@ -161,6 +169,7 @@ class UnmatchedEpisodeOutput(BaseModel):
     best_match: TmdbEpisodeChoice | None
 
 
+# TODO: Validate
 class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
     """An episode whose TMDB link no `User` has settled, matched or not.
 
@@ -178,6 +187,7 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
     """
 
 
+# TODO: Validate
 class EpisodeTmdbLinkInput(BaseModel):
     """The TMDB episode a `User` is pointing an `Episode` at by hand."""
 
@@ -203,6 +213,7 @@ class EpisodeTmdbLinkInput(BaseModel):
     """
 
 
+# TODO: Validate
 class EpisodesPublic(BaseModel):
     """Schema for returning a list of `Episode`s."""
 

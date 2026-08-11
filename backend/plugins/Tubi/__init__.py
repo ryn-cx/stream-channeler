@@ -17,6 +17,7 @@ from plugins.Tubi.url_handlers import (
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class Tubi(
     SourceMixin,
     UpsertMixin,
@@ -36,6 +37,7 @@ class Tubi(
     TMDB_PROVIDER_NAMES = ("Tubi TV", "Tubi")
     FAVICON_URL = "https://tubitv.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:

@@ -38,6 +38,7 @@ interface LuckyOutcome {
 // on. Falls back to the first searchable plugin when TMDB is not available.
 const DEFAULT_PLUGIN_KEY = "TMDB"
 
+// TODO: Validate
 function parseTitles(text: string): string[] {
   return text
     .split("\n")
@@ -45,6 +46,7 @@ function parseTitles(text: string): string[] {
     .filter(Boolean)
 }
 
+// TODO: Validate
 /**
  * Search for several titles at once and queue the ones that were matched right.
  *
@@ -120,6 +122,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
       ),
   })
 
+  // TODO: Validate
   const setApproval = (title: string, isApproved: boolean) => {
     setOutcomes((current) =>
       current.map((outcome) =>
@@ -130,12 +133,14 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     )
   }
 
+  // TODO: Validate
   const setEveryApproval = (isApproved: boolean) => {
     setOutcomes((current) =>
       current.map((outcome) => ({ ...outcome, approved: isApproved })),
     )
   }
 
+  // TODO: Validate
   const run = async () => {
     setIsRunning(true)
     setOutcomes([])
@@ -163,6 +168,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     }
   }
 
+  // TODO: Validate
   const save = async () => {
     const urls = approved
       .map((outcome) => outcome.result?.url)

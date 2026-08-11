@@ -22,12 +22,14 @@ if TYPE_CHECKING:
     from app.shows.models import Show
 
 
+# TODO: Validate
 class BaseSource(BaseMediaMixin):
     name: str | None = Field(default=None)
     favicon_url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
 
 
+# TODO: Validate
 class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
@@ -46,15 +48,18 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     plugin: Plugin = Relationship(back_populates="sources")
     shows: list[Show] = Relationship(back_populates="source", cascade_delete=True)
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self.plugin
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Plugin)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -66,16 +71,19 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
             )
         )
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> Plugin:
         return self.plugin
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Show]:
         return self.shows
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the Source."""
         base_source = "Source:"

@@ -5,10 +5,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
 }
 
+// TODO: Validate
 function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   return (
     <ol
@@ -22,6 +24,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   )
 }
 
+// TODO: Validate
 function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
@@ -32,6 +35,7 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
   )
 }
 
+// TODO: Validate
 function BreadcrumbLink({
   asChild,
   className,
@@ -50,6 +54,7 @@ function BreadcrumbLink({
   )
 }
 
+// TODO: Validate
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -63,6 +68,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
   )
 }
 
+// TODO: Validate
 function BreadcrumbSeparator({
   children,
   className,
@@ -81,6 +87,7 @@ function BreadcrumbSeparator({
   )
 }
 
+// TODO: Validate
 function BreadcrumbEllipsis({
   className,
   ...props

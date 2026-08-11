@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_layout/admin/users")({
   }),
 })
 
+// TODO: Validate
 function getUsersQueryOptions() {
   return {
     queryFn: () => UsersService.readUsers(),
@@ -36,6 +37,7 @@ function getUsersQueryOptions() {
   }
 }
 
+// TODO: Validate
 function UsersTableContent() {
   const { user: currentUser } = useAuth()
   const { data: users, isPlaceholderData } = useQuery(getUsersQueryOptions())
@@ -87,6 +89,7 @@ function UsersTableContent() {
   )
 }
 
+// TODO: Validate
 function AdminUsers() {
   return (
     <div className="flex flex-col gap-6">

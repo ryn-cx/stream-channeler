@@ -12,15 +12,19 @@ from plugins.Tubi.files import FileMixin
 _EPISODE_TITLE_PREFIX_REGEX = re.compile(r"^S\d+:E\d+ - ")
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @staticmethod
     def _episode_name(title: str) -> str:
         return _EPISODE_TITLE_PREFIX_REGEX.sub("", title)
 
+    # TODO: Validate
     @staticmethod
     def _first_image(images: list[str]) -> str | None:
         return images[0] if images else None
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -37,15 +41,18 @@ class HelperMixin(FileMixin, register=False):
             media_type = MediaType.tv
         return self._tmdb_search_media(self._content(show_key).title, media_type)
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_id = self._split_season_key(season_key)
         return int(season_id)
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -59,18 +66,22 @@ class HelperMixin(FileMixin, register=False):
                 return int(episode.episode_number)
         return None
 
+    # TODO: Validate
     @classmethod
     def _series_url(cls, show_key: str) -> str:
         return cls.build_url(f"series/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _movie_url(cls, show_key: str) -> str:
         return cls.build_url(f"movies/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         return cls.build_url(f"tv-shows/{episode_key}")
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:

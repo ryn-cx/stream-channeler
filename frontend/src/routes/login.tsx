@@ -51,6 +51,7 @@ export const Route = createFileRoute("/login")({
   }),
 })
 
+// TODO: Validate
 function Login() {
   const { loginMutation } = useAuth()
   const form = useForm<FormData>({
@@ -63,6 +64,7 @@ function Login() {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     if (loginMutation.isPending) return
     loginMutation.mutate(data)

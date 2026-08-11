@@ -16,6 +16,7 @@ from plugins.HBOMax.url_handlers import (
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
+# TODO: Validate
 class HBOMax(
     SourceMixin,
     UpsertMixin,
@@ -31,11 +32,13 @@ class HBOMax(
     TMDB_PROVIDER_NAMES = ("HBO Max", "Max")
     FAVICON_URL = "https://www.hbomax.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def domains(cls) -> list[str]:
         return ["play.hbomax.com", "hbomax.com"]
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

@@ -6,6 +6,7 @@ import type { ChannelListOutput } from "@/client"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
 import { Button } from "@/components/ui/button"
 
+// TODO: Validate
 export function ChannelActions({ channel }: { channel: ChannelListOutput }) {
   const [isEditing, setIsEditing] = useState(false)
 

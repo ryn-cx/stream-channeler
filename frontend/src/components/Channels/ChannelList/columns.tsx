@@ -14,7 +14,9 @@ import { FavoriteChannel } from "./FavoriteChannel"
 export type ChannelTableData = ChannelOutput & { pending?: boolean }
 
 // Score is admin-only and only present on rows fetched from the admin endpoint.
+// TODO: Validate
 export function channelScoreColumn<T extends object>(): ColumnDef<T> {
+  // TODO: Validate
   const score = (row: T) => ("score" in row ? (row.score as number) : null)
   return {
     id: "score",
@@ -27,6 +29,7 @@ export function channelScoreColumn<T extends object>(): ColumnDef<T> {
   }
 }
 
+// TODO: Validate
 export function ChannelDescriptionCell({
   description,
 }: {
@@ -45,6 +48,7 @@ export function ChannelDescriptionCell({
   )
 }
 
+// TODO: Validate
 export function ownedChannelColumns(isAdmin: boolean): ColumnDef<ChannelRow>[] {
   const cols = [...columns] as ColumnDef<ChannelRow>[]
   if (isAdmin) {

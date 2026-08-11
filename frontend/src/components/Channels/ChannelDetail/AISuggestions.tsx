@@ -23,6 +23,7 @@ interface AISuggestionsProps {
   onRequestSearch?: (title: string) => void
 }
 
+// TODO: Validate
 function isYouTubeUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
@@ -33,6 +34,7 @@ function isYouTubeUrl(url: string): boolean {
   }
 }
 
+// TODO: Validate
 function isWikipediaUrl(url: string): boolean {
   try {
     return new URL(url).hostname.endsWith("wikipedia.org")
@@ -41,6 +43,7 @@ function isWikipediaUrl(url: string): boolean {
   }
 }
 
+// TODO: Validate
 async function fetchWikipediaThumbnail(
   title: string,
 ): Promise<string | undefined> {
@@ -57,6 +60,7 @@ async function fetchWikipediaThumbnail(
   }
 }
 
+// TODO: Validate
 async function findMissingImages(
   suggestions: Suggestion[],
 ): Promise<Suggestion[]> {
@@ -81,6 +85,7 @@ async function findMissingImages(
   return results
 }
 
+// TODO: Validate
 function buildGroupedSections(
   showsByType: Record<string, ShowPublic[]>,
 ): string {
@@ -102,6 +107,7 @@ function buildGroupedSections(
     .join("\n\n")
 }
 
+// TODO: Validate
 function buildPrompt(
   showsByType: Record<string, ShowPublic[]>,
   alreadySuggested: Suggestion[] = [],
@@ -162,6 +168,7 @@ ${groupedSections}
 `
 }
 
+// TODO: Validate
 function groupShows(shows: ShowPublic[]): Record<string, ShowPublic[]> {
   const groups: Record<string, ShowPublic[]> = {}
   for (const show of shows) {
@@ -172,12 +179,14 @@ function groupShows(shows: ShowPublic[]): Record<string, ShowPublic[]> {
   return groups
 }
 
+// TODO: Validate
 function parseSuggestions(raw: string): Suggestion[] {
   const parsed = JSON.parse(raw.trim())
   if (!Array.isArray(parsed)) throw new Error("Response was not an array")
   return parsed as Suggestion[]
 }
 
+// TODO: Validate
 export function AISuggestions({
   channelId,
   onRequestSearch,
@@ -195,6 +204,7 @@ export function AISuggestions({
     }
   })
 
+  // TODO: Validate
   const setSuggestions = (
     updater:
       | Suggestion[]
@@ -226,6 +236,7 @@ export function AISuggestions({
   const grouped = shows.length > 0 ? groupShows(shows) : null
   const prompt = grouped ? buildPrompt(grouped) : ""
 
+  // TODO: Validate
   const onReadFromClipboard = async (text: string) => {
     if (!text.trim()) return
     try {
@@ -238,6 +249,7 @@ export function AISuggestions({
     }
   }
 
+  // TODO: Validate
   const onCopyMorePrompt = async () => {
     if (!grouped) return
     try {
@@ -251,6 +263,7 @@ export function AISuggestions({
     }
   }
 
+  // TODO: Validate
   const onCopyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(prompt)
@@ -262,6 +275,7 @@ export function AISuggestions({
     }
   }
 
+  // TODO: Validate
   const addUrlToChannel = async (url: string, label: string) => {
     setAddingTitle(label)
     try {
@@ -281,6 +295,7 @@ export function AISuggestions({
     }
   }
 
+  // TODO: Validate
   const onSuggestionClick = async (suggestion: Suggestion) => {
     if (suggestion.url && isYouTubeUrl(suggestion.url)) {
       await addUrlToChannel(suggestion.url, suggestion.title)

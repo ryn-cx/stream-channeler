@@ -16,6 +16,7 @@ interface UseEditTableRowOptions<TVariables> {
   extraInvalidateKeys?: readonly unknown[][]
 }
 
+// TODO: Validate
 export function useEditTableRow<TVariables extends object>({
   mutationFn,
   rowId,

@@ -26,6 +26,7 @@ const PLACEHOLDER = `{
   ]
 }`
 
+// TODO: Validate
 export function BulkImport() {
   const [isOpen, setIsOpen] = useState(false)
   const [jsonInput, setJsonInput] = useState("")
@@ -46,6 +47,7 @@ export function BulkImport() {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const handleSubmit = () => {
     try {
       const parsed = JSON.parse(jsonInput)

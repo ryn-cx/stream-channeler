@@ -28,6 +28,7 @@ interface DetailBreadcrumbProps {
   current?: EntityKey
 }
 
+// TODO: Validate
 export function DetailBreadcrumb({
   plugin,
   source,

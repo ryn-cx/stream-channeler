@@ -9,6 +9,7 @@ import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 
+// TODO: Validate
 function PreferencesTab() {
   return (
     <div className="flex flex-col gap-8">
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_layout/settings")({
   }),
 })
 
+// TODO: Validate
 function UserSettings() {
   const { user: currentUser } = useAuth()
   const finalTabs = tabsConfig

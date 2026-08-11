@@ -13,6 +13,7 @@ interface DeleteSeasonProps {
   season: SeasonTableData
 }
 
+// TODO: Validate
 const DeleteSeason = ({ season }: DeleteSeasonProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

@@ -30,6 +30,7 @@ export interface Source {
 
 const OTHER_SOURCE_KEY = "Other"
 
+// TODO: Validate
 /** The source's favicon, naming the source when it is hovered. */
 function SourceFavicon({
   source,
@@ -57,6 +58,7 @@ function SourceFavicon({
   )
 }
 
+// TODO: Validate
 /**
  * Rank a source by the user's source preferences, lowest first.
  *
@@ -81,6 +83,7 @@ function useSourceRank(): (source: Source | undefined) => number {
   return (source) => (source && ranks.get(source.key)) ?? otherRank
 }
 
+// TODO: Validate
 /**
  * Whether the user has turned a source off.
  *
@@ -103,6 +106,7 @@ function useSourceDisabled(): (source: Source | undefined) => boolean {
   return (source) => Boolean(source && disabledKeys.has(source.key))
 }
 
+// TODO: Validate
 /**
  * Group shows that are the same title, keeping the order they arrived in.
  *
@@ -125,6 +129,7 @@ export function groupShows(shows: Show[]): Show[][] {
   return [...groups.values()]
 }
 
+// TODO: Validate
 /**
  * The show groups a view renders, each ordered by the user's source preferences.
  *
@@ -134,6 +139,7 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
   const sourceRank = useSourceRank()
   const sourceDisabled = useSourceDisabled()
 
+  // TODO: Validate
   const bySourceRank = (first: Show, second: Show) =>
     sourceRank(sources[first.source_id]) - sourceRank(sources[second.source_id])
 
@@ -143,6 +149,7 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
   }
 }
 
+// TODO: Validate
 /**
  * What is known about a title from the channel's own listing of it.
  *
@@ -188,6 +195,7 @@ function showFacts(
   return facts
 }
 
+// TODO: Validate
 /**
  * Shows laid out as cards with their artwork, the same show on several services
  * collapsed into one card.

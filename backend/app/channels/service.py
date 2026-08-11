@@ -39,6 +39,7 @@ from app.sources.models import Source
 from app.users.models import User
 
 
+# TODO: Validate
 def shows_by_identifier(
     session: Session,
     identifiers: Collection[str],
@@ -69,6 +70,7 @@ def shows_by_identifier(
     return grouped
 
 
+# TODO: Validate
 def tmdb_shows_by_identifier(
     session: Session,
     identifiers: Iterable[str],
@@ -99,6 +101,7 @@ def tmdb_shows_by_identifier(
     return grouped
 
 
+# TODO: Validate
 def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[Show]:
     """Return every website's copy of the title `channel_show` is about."""
     return shows_by_identifier(session, [channel_show.show_identifier])[
@@ -106,6 +109,7 @@ def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[
     ]
 
 
+# TODO: Validate
 def tmdb_shows_for_channel_show(
     session: Session,
     channel_show: ChannelShow,
@@ -129,11 +133,13 @@ def tmdb_shows_for_channel_show(
     )
 
 
+# TODO: Validate
 def viewer_is_privileged(channel: Channel, viewer: User | None) -> bool:
     """Return whether `viewer` may see `channel`'s owner and `score`."""
     return bool(viewer and (viewer.is_superuser or viewer.id == channel.user_id))
 
 
+# TODO: Validate
 def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
     output = ChannelOutput.model_validate(channel)
     output.username = channel.user.username
@@ -146,6 +152,7 @@ def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
     return output
 
 
+# TODO: Validate
 def scoped_channel_list_output(
     session: Session,
     viewer: User | None,
@@ -187,6 +194,7 @@ def scoped_channel_list_output(
     return response
 
 
+# TODO: Validate
 def public_channel_output(
     channel: Channel,
     username: str | None,
@@ -206,6 +214,7 @@ def public_channel_output(
     )
 
 
+# TODO: Validate
 def add_urls_to_channel_import_queue(
     session: Session,
     channel: Channel,
@@ -247,6 +256,7 @@ def add_urls_to_channel_import_queue(
     return output
 
 
+# TODO: Validate
 def update_whitelist(
     session: Session,
     channel_show: ChannelShow,
@@ -293,6 +303,7 @@ def update_whitelist(
     session.commit()
 
 
+# TODO: Validate
 def _season_identifier(session: Session, season_id: UUID) -> str:
     """Return the identifier of the season `season_id`, whose key is not its id."""
     return session.exec(
@@ -300,6 +311,7 @@ def _season_identifier(session: Session, season_id: UUID) -> str:
     ).one()
 
 
+# TODO: Validate
 def _episode_identifier(session: Session, episode_id: UUID) -> str:
     """Return the identifier of the episode `episode_id`, whose key is not its id."""
     return session.exec(
@@ -307,6 +319,7 @@ def _episode_identifier(session: Session, episode_id: UUID) -> str:
     ).one()
 
 
+# TODO: Validate
 def toggle_source_whitelist(
     session: Session,
     channel_show: ChannelShow,
@@ -329,6 +342,7 @@ def toggle_source_whitelist(
             session.delete(existing_source)
 
 
+# TODO: Validate
 def toggle_season_whitelist(
     session: Session,
     channel_show: ChannelShow,
@@ -354,6 +368,7 @@ def toggle_season_whitelist(
             session.delete(existing_season)
 
 
+# TODO: Validate
 def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist plus expiry
     session: Session,
     channel_show: ChannelShow,
@@ -390,6 +405,7 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
             session.delete(existing_episode)
 
 
+# TODO: Validate
 def blacklist_episode_on_channel(
     session: Session,
     channel: Channel,
@@ -437,6 +453,7 @@ def blacklist_episode_on_channel(
     return channel_show
 
 
+# TODO: Validate
 def set_channel_order(
     session: Session,
     channel: Channel,
@@ -459,6 +476,7 @@ def set_channel_order(
     session.commit()
 
 
+# TODO: Validate
 def set_channel_combined_channels(
     session: Session,
     channel: Channel,
@@ -480,6 +498,7 @@ def set_channel_combined_channels(
     session.commit()
 
 
+# TODO: Validate
 def _sort_option_label(model_name: str, field_name: str) -> str:
     """Name a sortable field as it reads in the sort picker."""
     base_field = field_name.removesuffix(ZERO_LAST_SUFFIX)
@@ -487,6 +506,7 @@ def _sort_option_label(model_name: str, field_name: str) -> str:
     return f"{model_name} - {base_field.replace('_', ' ').title()}{variant}"
 
 
+# TODO: Validate
 @cache
 def get_sort_options() -> list[SortOptionOutput]:
     """Build and cache the list of all possible sorting options."""

@@ -13,6 +13,7 @@ const FAVORITE_IDS_KEY = ["channel-orders", "favorite-ids"]
 
 // The ids are fetched once and shared by every star on the page, so toggling one
 // order updates the rest without a refetch per row.
+// TODO: Validate
 export function useFavoriteChannelOrderIds() {
   const query = useQuery({
     queryKey: FAVORITE_IDS_KEY,
@@ -23,6 +24,7 @@ export function useFavoriteChannelOrderIds() {
   return new Set(query.data ?? [])
 }
 
+// TODO: Validate
 export function FavoriteChannelOrder({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient()
   const favoriteIds = useFavoriteChannelOrderIds()

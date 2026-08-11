@@ -11,13 +11,16 @@ from plugins.DisneyPlus.files import FileMixin
 _SEASON_NUMBER_REGEX = re.compile(r"\d+")
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @staticmethod
     def _season_number_from_name(name: str, fallback: int) -> int:
         if number := _SEASON_NUMBER_REGEX.search(name):
             return int(number.group())
         return fallback
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -34,10 +37,12 @@ class HelperMixin(FileMixin, register=False):
             media_type = MediaType.tv
         return self._tmdb_search_media(self._media_details(show_key).title, media_type)
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_id = self._split_season_key(season_key)
@@ -46,6 +51,7 @@ class HelperMixin(FileMixin, register=False):
                 return self._season_number_from_name(season.name, index + 1)
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -59,14 +65,17 @@ class HelperMixin(FileMixin, register=False):
                 return index + 1
         return None
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, entity_id: str) -> str:
         return cls.build_url(f"browse/entity-{entity_id}")
 
+    # TODO: Validate
     @classmethod
     def _video_url(cls, episode_id: str) -> str:
         return cls.build_url(f"play/{episode_id}")
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:

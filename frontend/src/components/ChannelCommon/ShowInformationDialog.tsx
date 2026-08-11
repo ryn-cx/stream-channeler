@@ -35,6 +35,7 @@ interface ShowInformationDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 function sideRows(side: ShowInformationSide): InformationRows {
   return {
     Name: side.name,
@@ -50,6 +51,7 @@ function sideRows(side: ShowInformationSide): InformationRows {
 
 const ROW_LABELS = ["Name", "Media type", "Description", "Link", "Image", "Key"]
 
+// TODO: Validate
 function heroFacts(data: ShowInformationOutput) {
   const facts = [data.tmdb?.media_type ?? data.source.media_type]
   facts.push(data.tmdb ? "Linked to TMDB" : "Not linked to TMDB")
@@ -57,6 +59,7 @@ function heroFacts(data: ShowInformationOutput) {
   return facts.filter((fact): fact is string => !!fact)
 }
 
+// TODO: Validate
 function heroLinks(data: ShowInformationOutput) {
   const links = []
   if (data.source.url) {
@@ -75,6 +78,7 @@ interface ShowIdentifierEditorProps {
   informationQueryKey: string[]
 }
 
+// TODO: Validate
 function ShowIdentifierEditor({
   showId,
   showIdentifier,
@@ -152,6 +156,7 @@ interface ShowInformationPanelProps {
   enabled?: boolean
 }
 
+// TODO: Validate
 /**
  * The title's own account of itself beside TMDB's, without a dialog around it,
  * so it can be read inside whatever is already open.
@@ -236,6 +241,7 @@ export function ShowInformationPanel({
   )
 }
 
+// TODO: Validate
 export function ShowInformationDialog({
   showId,
   open,

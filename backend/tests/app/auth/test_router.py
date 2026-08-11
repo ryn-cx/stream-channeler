@@ -16,6 +16,7 @@ from tests.app.users.utils import user_authentication_headers
 from tests.app.utils.utils import random_email, random_lower_string
 
 
+# TODO: Validate
 def test_get_access_token(session_scoped_client: TestClient) -> None:
     login_data = {
         "username": settings.FIRST_SUPERUSER,
@@ -31,6 +32,7 @@ def test_get_access_token(session_scoped_client: TestClient) -> None:
     assert tokens["access_token"]
 
 
+# TODO: Validate
 def test_get_access_token_incorrect_password(session_scoped_client: TestClient) -> None:
     login_data = {
         "username": settings.FIRST_SUPERUSER,
@@ -43,6 +45,7 @@ def test_get_access_token_incorrect_password(session_scoped_client: TestClient) 
     assert r.status_code == status.HTTP_400_BAD_REQUEST
 
 
+# TODO: Validate
 def test_use_access_token(
     session_scoped_client: TestClient,
     superuser_token_headers: dict[str, str],
@@ -56,6 +59,7 @@ def test_use_access_token(
     assert "email" in result
 
 
+# TODO: Validate
 def test_recovery_password(
     session_scoped_client: TestClient,
     normal_user_token_headers: dict[str, str],
@@ -75,6 +79,7 @@ def test_recovery_password(
         }
 
 
+# TODO: Validate
 def test_recovery_password_user_not_exits(
     session_scoped_client: TestClient,
     normal_user_token_headers: dict[str, str],
@@ -91,6 +96,7 @@ def test_recovery_password_user_not_exits(
     }
 
 
+# TODO: Validate
 def test_reset_password(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -132,6 +138,7 @@ def test_reset_password(
     assert verified
 
 
+# TODO: Validate
 def test_reset_password_invalid_token(
     session_scoped_client: TestClient,
     superuser_token_headers: dict[str, str],
@@ -149,6 +156,7 @@ def test_reset_password_invalid_token(
     assert response["detail"] == "Invalid token"
 
 
+# TODO: Validate
 def test_login_with_bcrypt_password_upgrades_to_argon2(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -194,6 +202,7 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
     assert updated_hash is None
 
 
+# TODO: Validate
 def test_login_with_argon2_password_keeps_hash(
     session_scoped_client: TestClient,
     session_scoped_session: Session,

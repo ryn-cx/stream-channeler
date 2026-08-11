@@ -16,14 +16,17 @@ from plugins.utils.base_plugin.files import BaseFile
 _UNRESOLVED = Sentinel("TMDB_ID")
 
 
+# TODO: Validate
 def highest_episode_number(numbers: Iterable[int | None]) -> int | None:
     """Return the last episode number a season runs to, ignoring unnumbered ones."""
     return max((number for number in numbers if number is not None), default=None)
 
 
+# TODO: Validate
 class TMDBMixin(BasePlugin, register=False):
     """Wraps TMDB files so they files are downloaded for the TMDB plugin."""
 
+    # TODO: Validate
     @property
     def tmdb(self) -> TMDB:
         """Return the TMDB plugin instance."""
@@ -31,6 +34,7 @@ class TMDBMixin(BasePlugin, register=False):
             self._tmdb_plugin = TMDB(self.session)
         return self._tmdb_plugin
 
+    # TODO: Validate
     def _tmdb_search_media(
         self,
         title: str,
@@ -50,6 +54,7 @@ class TMDBMixin(BasePlugin, register=False):
         )
         return results[0].id if results else None
 
+    # TODO: Validate
     def _fetch_tmdb_id(
         self,
         show_key: str,
@@ -57,6 +62,7 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> int | None:
         raise NotImplementedError
 
+    # TODO: Validate
     def _fallback_show_identifier(self, show_key: str) -> str:
         """Return the identifier a `Show` carries while it names no TMDB title.
 
@@ -66,14 +72,17 @@ class TMDBMixin(BasePlugin, register=False):
         """
         return f"{self.plugin_key()} {show_key}"
 
+    # TODO: Validate
     def _fallback_season_identifier(self, season_key: str) -> str:
         """Return the identifier a `Season` carries while it names no TMDB season."""
         return f"{self.plugin_key()} {season_key}"
 
+    # TODO: Validate
     def _fallback_episode_identifier(self, episode_key: str) -> str:
         """Return the identifier an `Episode` carries while it names no TMDB episode."""
         return f"{self.plugin_key()} {episode_key}"
 
+    # TODO: Validate
     def _merge_and_upsert_show(
         self,
         show: Show,
@@ -96,6 +105,7 @@ class TMDBMixin(BasePlugin, register=False):
         show_files = self._show_files(show_key)
         return show.upsert_and_set_update_at(source, existing_show, show_files)
 
+    # TODO: Validate
     def _merge_and_upsert_season(
         self,
         season: Season,
@@ -114,6 +124,7 @@ class TMDBMixin(BasePlugin, register=False):
         season_files = self._season_files(season.key, show_key)
         return season.upsert_and_set_update_at(show, existing_season, season_files)
 
+    # TODO: Validate
     def _merge_and_upsert_episode(  # noqa: PLR0913 - Passed straight to `tmdb_link_episode`.
         self,
         episode: Episode,
@@ -135,9 +146,11 @@ class TMDBMixin(BasePlugin, register=False):
         episode_files = self._episode_files(episode.key, season.key, show_key)
         return episode.upsert_and_set_update_at(season, existing_episode, episode_files)
 
+    # TODO: Validate
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         raise NotImplementedError
 
+    # TODO: Validate
     def _get_episode_number(
         self,
         episode_key: str,
@@ -146,11 +159,13 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> int | None:
         raise NotImplementedError
 
+    # TODO: Validate
     def tmdb_media_type(self, show_key: str) -> MediaType:  # noqa: ARG002
         return MediaType.tv
 
     _tmdb_id: int | None | Sentinel = _UNRESOLVED
 
+    # TODO: Validate
     def _existing_show(self, show_key: str) -> Show | None:
         """Return a stored `Show` for `show_key`, preferring one with a `tmdb_id`.
 
@@ -163,6 +178,7 @@ class TMDBMixin(BasePlugin, register=False):
             return None
         return next((show for show in shows if show.tmdb_id), shows[0])
 
+    # TODO: Validate
     @override
     def _use_tmdb_id(self, tmdb_id: int | None) -> None:
         """Take a caller's `tmdb_id` as the answer `_cached_tmdb_id` would look up.
@@ -174,6 +190,7 @@ class TMDBMixin(BasePlugin, register=False):
         if tmdb_id is not None:
             self._tmdb_id = tmdb_id
 
+    # TODO: Validate
     def _cached_tmdb_id(self, show_key: str) -> int | None:
         """Resolve the TMDB id once for the show the instance is working on.
 
@@ -189,6 +206,7 @@ class TMDBMixin(BasePlugin, register=False):
             )
         return self._tmdb_id
 
+    # TODO: Validate
     def _tmdb_show_file(self, show_key: str) -> ShowDetail | MovieDetails | None:
         tmdb_id = self._cached_tmdb_id(show_key)
         if tmdb_id is None:
@@ -197,6 +215,7 @@ class TMDBMixin(BasePlugin, register=False):
             return self.tmdb.movie_detail_file(tmdb_id)
         return self.tmdb.show_detail_file(tmdb_id)
 
+    # TODO: Validate
     def _tmdb_season_file(
         self,
         season_key: str,
@@ -214,6 +233,7 @@ class TMDBMixin(BasePlugin, register=False):
             return None
         return self.tmdb.season_detail_file(tmdb_id, season_number)
 
+    # TODO: Validate
     def _tmdb_episode_file(
         self,
         episode_key: str,
@@ -233,6 +253,7 @@ class TMDBMixin(BasePlugin, register=False):
             return None
         return self.tmdb.episode_detail_file(tmdb_id, season_number, episode_number)
 
+    # TODO: Validate
     def _download_files_the_tmdb_lookup_reads(
         self,
         files: Sequence[BaseFile[Any]],
@@ -247,6 +268,7 @@ class TMDBMixin(BasePlugin, register=False):
         """
         self._download_outdated_files(files)
 
+    # TODO: Validate
     def _append_tmdb_show_file(
         self,
         files: Sequence[BaseFile[Any]],
@@ -256,6 +278,7 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_file = self._tmdb_show_file(show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 
+    # TODO: Validate
     def _append_tmdb_season_file(
         self,
         files: Sequence[BaseFile[Any]],
@@ -266,6 +289,7 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_file = self._tmdb_season_file(season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 
+    # TODO: Validate
     def _append_tmdb_episode_file(
         self,
         files: Sequence[BaseFile[Any]],
@@ -277,14 +301,17 @@ class TMDBMixin(BasePlugin, register=False):
         tmdb_file = self._tmdb_episode_file(episode_key, season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_show_file([], show_key)
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_season_file([], season_key, show_key)
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,

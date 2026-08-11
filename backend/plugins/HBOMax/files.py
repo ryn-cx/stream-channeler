@@ -18,22 +18,26 @@ from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def minbo() -> MinBO:
     return MinBO(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class ShowFile(GAPIJSON[ShowModel]):
     """Show file."""
 
     API_ENDPOINT = minbo().show
 
 
+# TODO: Validate
 class SeasonFile(PartialGAPIJSON[ShowModel]):
     """Season file."""
 
     API_ENDPOINT = minbo().show
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -45,6 +49,7 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
         self.season_number = season_number
         super().__init__(session, plugin, f"{show_id}/{season_number}")
 
+    # TODO: Validate
     @override
     def _get(self) -> ShowModel:
         return self.API_ENDPOINT.download_and_parse(
@@ -53,25 +58,31 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
         )
 
 
+# TODO: Validate
 class MovieFile(GAPIJSON[MoviesModel]):
     """Movie file."""
 
     API_ENDPOINT = minbo().movie
 
 
+# TODO: Validate
 class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
+    # TODO: Validate
     def show_file(self, show_id: str) -> ShowFile:
         """Returns ShowFile file."""
         return self._file(ShowFile, show_id)
 
+    # TODO: Validate
     def season_file(self, show_id: str, season_number: int) -> SeasonFile:
         """Returns SeasonFile file."""
         return self._file(SeasonFile, show_id, season_number)
 
+    # TODO: Validate
     def movie_file(self, movie_id: str) -> MovieFile:
         """Returns MovieFile file."""
         return self._file(MovieFile, movie_id)
 
+    # TODO: Validate
     def _is_movie(self) -> bool:
         if self._media_type_value not in ("movie", "series"):
             msg = f"Invalid media type: {self._media_type_value}"
@@ -79,34 +90,42 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
 
         return self._media_type_value == "movie"
 
+    # TODO: Validate
     @staticmethod
     def _season_key(show_key: str, season_number: int) -> str:
         return f"{show_key}:{season_number}"
 
+    # TODO: Validate
     @staticmethod
     def _split_season_key(season_key: str) -> tuple[str, int]:
         show_key, _, season_number = season_key.rpartition(":")
         return show_key, int(season_number)
 
+    # TODO: Validate
     @staticmethod
     def _episode_key(season_key: str, episode_number: int) -> str:
         return f"{season_key}:{episode_number}"
 
+    # TODO: Validate
     @staticmethod
     def _split_episode_key(episode_key: str) -> tuple[str, int]:
         season_key, _, episode_number = episode_key.rpartition(":")
         return season_key, int(episode_number)
 
+    # TODO: Validate
     @staticmethod
     def _content(model: ShowModel) -> ShowContent:
         return model.props.page_props.mapped_data.idref14
 
+    # TODO: Validate
     def _show_content(self, show_id: str) -> ShowContent:
         return self._content(self.show_file(show_id).parsed())
 
+    # TODO: Validate
     def _season_numbers(self, show_id: str) -> list[int]:
         return [season.season_number for season in self._show_content(show_id).seasons]
 
+    # TODO: Validate
     def _season_entry(self, show_id: str, season_number: int) -> ShowSeason:
         for season in self._show_content(show_id).seasons:
             if season.season_number == season_number:
@@ -114,6 +133,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
 
+    # TODO: Validate
     def _season_episodes(self, show_id: str, season_number: int) -> list[ShowEpisode]:
         content = self._content(self.season_file(show_id, season_number).parsed())
         for season in content.seasons:
@@ -122,6 +142,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         base_files: list[BaseFile[Any]]
@@ -131,6 +152,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
             base_files = [self.show_file(show_key)]
         return self._append_tmdb_show_file(base_files, show_key)
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         base_files: list[BaseFile[Any]]
@@ -141,6 +163,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
             base_files = [self.season_file(show_key, season_number)]
         return self._append_tmdb_season_file(base_files, season_key, show_key)
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -161,6 +184,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         if self._is_movie():
@@ -170,6 +194,7 @@ class FileMixin(MediaTypeMixin, TMDBMixin, register=False):
             for season_number in self._season_numbers(show_key)
         ]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

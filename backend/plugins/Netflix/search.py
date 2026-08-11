@@ -15,6 +15,7 @@ from plugins.utils.abstract_plugin import (
 _SEARCH_MAX_AGE = timedelta(days=30)
 
 
+# TODO: Validate
 class SearchMixin(HelperMixin, register=False):
     # Netflix tags each search result with the media type of its title.
     _SEARCH_MEDIA_TYPES: ClassVar[dict[str, str]] = {
@@ -22,11 +23,13 @@ class SearchMixin(HelperMixin, register=False):
         "Movie": "Movie",
     }
 
+    # TODO: Validate
     @classmethod
     @override
     def search_url(cls, query: str) -> str:
         return f"https://www.netflix.com/search?q={quote_plus(query)}"
 
+    # TODO: Validate
     @override
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         """Search Netflix's movies and TV shows.

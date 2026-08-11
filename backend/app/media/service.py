@@ -21,12 +21,14 @@ from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 
 
+# TODO: Validate
 def readable_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
 ) -> Callable[..., T]:
     """Build a FastAPI dependency that returns the record if readable by the user."""
 
+    # TODO: Validate
     def dependency(
         session: SessionDep,
         optional_user: OptionalUser,
@@ -49,12 +51,14 @@ def readable_record[T: USER_OWNED_MODELS](
     return dependency
 
 
+# TODO: Validate
 def editable_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
 ) -> Callable[..., T]:
     """Build a FastAPI dependency that returns the record if owned by the user."""
 
+    # TODO: Validate
     def dependency(
         session: SessionDep,
         current_user: CurrentUser,
@@ -73,6 +77,7 @@ def editable_record[T: USER_OWNED_MODELS](
     return dependency
 
 
+# TODO: Validate
 def existing_record[T: USER_OWNED_MODELS](
     model: type[T],
     path_name: str,
@@ -83,6 +88,7 @@ def existing_record[T: USER_OWNED_MODELS](
     routes using it must guard access separately (e.g. `get_current_active_superuser`).
     """
 
+    # TODO: Validate
     def dependency(
         session: SessionDep,
         record_id: Annotated[uuid.UUID, Path(alias=path_name)],
@@ -94,6 +100,7 @@ def existing_record[T: USER_OWNED_MODELS](
     return dependency
 
 
+# TODO: Validate
 def delete_record(
     session: Session,
     existing_record: USER_OWNED_MODELS,
@@ -104,6 +111,7 @@ def delete_record(
     return Message(message=f"{type(existing_record).__name__} deleted successfully")
 
 
+# TODO: Validate
 def media_scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,

@@ -14,6 +14,7 @@ interface DeleteChannelProps {
   onExternalClose?: () => void
 }
 
+// TODO: Validate
 const DeleteChannel = ({
   id,
   onSuccess = () => {},
@@ -22,6 +23,7 @@ const DeleteChannel = ({
 }: DeleteChannelProps) => {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = externalOpen ?? internalOpen
+  // TODO: Validate
   const setIsOpen = (open: boolean) => {
     if (externalOpen !== undefined) {
       if (!open) onExternalClose?.()

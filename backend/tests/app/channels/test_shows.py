@@ -29,11 +29,14 @@ from tests.app.utils.route_assertions import (
 from tests.app.utils.utils import random_lower_string
 
 
+# TODO: Validate
 class TestListChannelShows:
+    # TODO: Validate
     @staticmethod
     def url(channel: Channel | ChannelOutput) -> str:
         return f"{settings.API_V1_STR}/channels/{channel.id}/shows"
 
+    # TODO: Validate
     @staticmethod
     def build_expected(session: Session, channel: Channel) -> ChannelShowsOutput:
         expected = ChannelShowsOutput()
@@ -45,6 +48,7 @@ class TestListChannelShows:
                 expected.sources[source.id] = SourcePublic.model_validate(source)
         return expected
 
+    # TODO: Validate
     @pytest.mark.parametrize("show_count", [0, 1, 2])
     def test_list_shows_data(
         self,
@@ -73,6 +77,7 @@ class TestListChannelShows:
         assert result.shows == expected.shows
         assert result.sources == expected.sources
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_type", ["owner", "normal_user", "anonymous"])
     def test_list_shows_permissions(
@@ -144,6 +149,7 @@ class TestListChannelShows:
             headers=headers,
         )
 
+    # TODO: Validate
     def test_list_shows_not_found(
         self,
         session_scoped_client: TestClient,
@@ -164,11 +170,14 @@ class TestListChannelShows:
         )
 
 
+# TODO: Validate
 class TestDeleteChannelShow:
+    # TODO: Validate
     @staticmethod
     def url(channel: Channel | ChannelOutput, show_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel.id}/remove-show/{show_id}"
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -230,6 +239,7 @@ class TestDeleteChannelShow:
             headers=other_headers,
         )
 
+    # TODO: Validate
     def test_remove_show_not_found(
         self,
         session_scoped_client: TestClient,
@@ -251,6 +261,7 @@ class TestDeleteChannelShow:
             headers=user_headers,
         )
 
+    # TODO: Validate
     def test_remove_show_not_in_channel(
         self,
         session_scoped_client: TestClient,
@@ -285,6 +296,7 @@ class TestDeleteChannelShow:
             headers=user_headers,
         )
 
+    # TODO: Validate
     def test_remove_show_channel_not_found(
         self,
         session_scoped_client: TestClient,

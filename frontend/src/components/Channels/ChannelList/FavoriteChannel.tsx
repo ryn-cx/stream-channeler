@@ -13,6 +13,7 @@ const FAVORITE_IDS_KEY = ["channels", "favorite-ids"]
 
 // The ids are fetched once and shared by every star on the page, so toggling one
 // channel updates the rest without a refetch per row.
+// TODO: Validate
 export function useFavoriteChannelIds() {
   const loggedIn = isLoggedIn()
   const query = useQuery({
@@ -24,6 +25,7 @@ export function useFavoriteChannelIds() {
   return new Set(query.data ?? [])
 }
 
+// TODO: Validate
 export function FavoriteChannel({ channelId }: { channelId: string }) {
   const queryClient = useQueryClient()
   const favoriteIds = useFavoriteChannelIds()

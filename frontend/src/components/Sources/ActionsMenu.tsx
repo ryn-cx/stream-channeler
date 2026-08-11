@@ -8,6 +8,7 @@ interface SourceActionsMenuProps {
   source: SourceTableData
 }
 
+// TODO: Validate
 export const SourceActionsMenu = ({ source }: SourceActionsMenuProps) => {
   return (
     <ActionsMenu>

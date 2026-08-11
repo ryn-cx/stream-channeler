@@ -7,6 +7,7 @@ export const VISIBILITY_OPTIONS: readonly Visibility[] = [
   "private",
 ]
 
+// TODO: Validate
 export function visibilityLabel(
   visibility: Visibility | null | undefined,
 ): string {
@@ -22,6 +23,7 @@ export function visibilityLabel(
   }
 }
 
+// TODO: Validate
 export function visibilityDescription(
   visibility: Visibility | null | undefined,
 ): string {
@@ -35,6 +37,7 @@ export function visibilityDescription(
   }
 }
 
+// TODO: Validate
 export function visibilityDotClass(
   visibility: Visibility | null | undefined,
 ): string {

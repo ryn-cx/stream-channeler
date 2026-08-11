@@ -16,10 +16,12 @@ from app.schemas import (
 )
 
 
+# TODO: Validate
 class FileCreate(BaseCreateWithParentAndKey[File, Plugin], BaseFile):
     """Schema for creating a `File`."""
 
 
+# TODO: Validate
 class FileUpdate(
     make_model_with_all_fields_optional(BaseFile),
     BaseUpdateWithKey[File],
@@ -27,6 +29,7 @@ class FileUpdate(
     """Schema for updating a `File`."""
 
 
+# TODO: Validate
 class FilePublic(BaseFile):
     """Schema for returning a `File`."""
 
@@ -35,6 +38,7 @@ class FilePublic(BaseFile):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class FileListPublic(BaseMediaMixin):
     """Schema for returning a list of `File`s, excluding `content`.
 
@@ -53,6 +57,7 @@ class FileListPublic(BaseMediaMixin):
     )
 
 
+# TODO: Validate
 class FilesPublic(BaseModel):
     """Schema for returning a paginated list of `File`s."""
 

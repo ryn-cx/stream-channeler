@@ -14,6 +14,7 @@ import { UNLOCKED_EPISODES_QUERY_KEY } from "./unlockedEpisodesQuery"
 
 const STORAGE_KEY = "admin-unlocked-episodes"
 
+// TODO: Validate
 export function UnlockedEpisodesAdminTable() {
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>(`${STORAGE_KEY}-visibility`, {})

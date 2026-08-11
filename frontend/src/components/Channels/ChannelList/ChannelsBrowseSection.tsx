@@ -13,6 +13,7 @@ import { BrowsePagination } from "@/components/Common/BrowsePagination"
 import { Input } from "@/components/ui/input"
 
 // Favorites carry the viewer's private name, which is what they see and search on.
+// TODO: Validate
 function channelSearchName(channel: BrowseChannel): string {
   return (channel as ChannelListOutput).custom_name ?? channel.name ?? ""
 }
@@ -34,6 +35,7 @@ interface ChannelsBrowseSectionProps {
 // channel rows, and pagination. Sort, search, and paging run client-side, so the
 // name filter and the channel-number sort are only applied when the whole list is
 // loaded (not server-paginated).
+// TODO: Validate
 export function ChannelsBrowseSection({
   rows,
   isServer,
@@ -64,6 +66,7 @@ export function ChannelsBrowseSection({
     : visibleRows.slice(pageStart, pageStart + pagination.pageSize)
   const rowCount = isServer ? serverRowCount : visibleRows.length
 
+  // TODO: Validate
   const changeSearch = (value: string) => {
     setSearch(value)
     onPaginationChange({ ...pagination, pageIndex: 0 })

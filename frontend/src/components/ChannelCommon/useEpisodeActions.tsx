@@ -29,6 +29,7 @@ interface UseEpisodeActionsOptions {
   watchFilters?: WatchFilters
 }
 
+// TODO: Validate
 /**
  * Build the shared episode action menu (mark watched, next, blacklist, …) and
  * the dialogs those actions open. Used by both the episode cards and the hero
@@ -109,6 +110,7 @@ export function useEpisodeActions({
       const previousEntries = queryClient.getQueriesData({
         queryKey: ["episodes", channelId],
       })
+      // TODO: Validate
       const clearWatch = (
         oldData: ChannelEpisodesOutput | undefined,
       ): ChannelEpisodesOutput | undefined => {

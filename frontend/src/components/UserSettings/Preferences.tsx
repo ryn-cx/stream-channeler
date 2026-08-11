@@ -35,6 +35,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const Preferences = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -60,6 +61,7 @@ const Preferences = () => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     mutation.mutate({ server_side_threshold: data.server_side_threshold })
   }

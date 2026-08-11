@@ -1,4 +1,5 @@
 ﻿// TODO: Validate
+﻿// TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ChevronDown,
@@ -18,6 +19,7 @@ import { handleError } from "@/utils"
 
 const OTHER_SOURCE_KEY = "Other"
 
+// TODO: Validate
 function sourceLabel(preference: SourcePreferenceOutput): string {
   if (preference.source_key === OTHER_SOURCE_KEY) {
     return "Other (custom media)"
@@ -25,6 +27,7 @@ function sourceLabel(preference: SourcePreferenceOutput): string {
   return preference.name ?? preference.source_key
 }
 
+// TODO: Validate
 const SourcePreferences = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -62,6 +65,7 @@ const SourcePreferences = () => {
     (preference) => preference.episode_count > 0,
   )
 
+  // TODO: Validate
   const moveTo = (sourceKey: string, targetIndex: number) => {
     const next = [...preferences]
     const from = next.findIndex(
@@ -72,6 +76,7 @@ const SourcePreferences = () => {
     setPreferences(next)
   }
 
+  // TODO: Validate
   const move = (visibleIndex: number, direction: -1 | 1) => {
     const neighbor = visible[visibleIndex + direction]
     if (!neighbor) {
@@ -83,6 +88,7 @@ const SourcePreferences = () => {
     moveTo(visible[visibleIndex].source_key, neighborIndex)
   }
 
+  // TODO: Validate
   const toggle = (sourceKey: string) => {
     setPreferences(
       preferences.map((preference) =>

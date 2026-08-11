@@ -35,6 +35,7 @@ SOURCE_KEY_A = "DedupTestSourceA"
 SOURCE_KEY_B = "DedupTestSourceB"
 
 
+# TODO: Validate
 def _build_duplicated_channel(
     session: Session,
     user: User,
@@ -65,6 +66,7 @@ def _build_duplicated_channel(
     return channel, shows
 
 
+# TODO: Validate
 def _set_preferences(
     session: Session,
     user: User,
@@ -82,6 +84,7 @@ def _set_preferences(
     session.flush()
 
 
+# TODO: Validate
 def _selected_show_ids(
     session: Session,
     channel: Channel,
@@ -97,6 +100,7 @@ def _selected_show_ids(
     return [result.episode.season.show.id for result in builder.get_episodes()]
 
 
+# TODO: Validate
 def test_duplicate_episode_collapses_to_priority_source(
     session_scoped_session: Session,
 ) -> None:
@@ -118,6 +122,7 @@ def test_duplicate_episode_collapses_to_priority_source(
     assert show_ids == [shows[SOURCE_KEY_B].id]
 
 
+# TODO: Validate
 def test_disabled_source_is_hidden_globally(
     session_scoped_session: Session,
 ) -> None:
@@ -140,6 +145,7 @@ def test_disabled_source_is_hidden_globally(
     assert show_ids == [shows[SOURCE_KEY_A].id]
 
 
+# TODO: Validate
 def test_channel_source_filter_stacks_on_top_of_preferences(
     session_scoped_session: Session,
 ) -> None:

@@ -28,10 +28,12 @@ from app.users.models import User
 type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | ShowIssueReport
 
 
+# TODO: Validate
 def _output(report: AnyIssueReport) -> IssueReportOutput:
     return IssueReportOutput.model_validate(report, from_attributes=True)
 
 
+# TODO: Validate
 def list_episode_issue_reports(
     session: Session,
     episode_id: uuid.UUID,
@@ -46,6 +48,7 @@ def list_episode_issue_reports(
     return [_output(report) for report in session.exec(statement).all()]
 
 
+# TODO: Validate
 def list_season_issue_reports(
     session: Session,
     season_id: uuid.UUID,
@@ -60,6 +63,7 @@ def list_season_issue_reports(
     return [_output(report) for report in session.exec(statement).all()]
 
 
+# TODO: Validate
 def list_show_issue_reports(
     session: Session,
     show_id: uuid.UUID,
@@ -74,6 +78,7 @@ def list_show_issue_reports(
     return [_output(report) for report in session.exec(statement).all()]
 
 
+# TODO: Validate
 def create_issue_report(
     session: Session,
     report: AnyIssueReport,
@@ -85,6 +90,7 @@ def create_issue_report(
     return _output(report)
 
 
+# TODO: Validate
 def episode_issue_report(
     user: User | None,
     report_input: IssueReportCreate,
@@ -98,6 +104,7 @@ def episode_issue_report(
     )
 
 
+# TODO: Validate
 def season_issue_report(
     user: User | None,
     report_input: IssueReportCreate,
@@ -111,6 +118,7 @@ def season_issue_report(
     )
 
 
+# TODO: Validate
 def show_issue_report(
     user: User | None,
     report_input: IssueReportCreate,
@@ -124,6 +132,7 @@ def show_issue_report(
     )
 
 
+# TODO: Validate
 def update_issue_report_record(
     session: Session,
     report: AnyIssueReport,
@@ -137,6 +146,7 @@ def update_issue_report_record(
     return _output(report)
 
 
+# TODO: Validate
 def delete_issue_report_record(session: Session, report: AnyIssueReport) -> Message:
     """Drop a report."""
     session.delete(report)
@@ -144,6 +154,7 @@ def delete_issue_report_record(session: Session, report: AnyIssueReport) -> Mess
     return Message(message="Issue report deleted successfully")
 
 
+# TODO: Validate
 def _episode_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
         select(EpisodeIssueReport, Episode, Season, Show, Source)
@@ -170,6 +181,7 @@ def _episode_reports(session: Session) -> list[IssueReportListOutput]:
     ]
 
 
+# TODO: Validate
 def _season_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
         select(SeasonIssueReport, Season, Show, Source)
@@ -195,6 +207,7 @@ def _season_reports(session: Session) -> list[IssueReportListOutput]:
     ]
 
 
+# TODO: Validate
 def _show_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
         select(ShowIssueReport, Show, Source)
@@ -219,6 +232,7 @@ def _show_reports(session: Session) -> list[IssueReportListOutput]:
     ]
 
 
+# TODO: Validate
 def list_all_issue_reports(
     session: Session,
     media_type: IssueReportMediaType | None = None,

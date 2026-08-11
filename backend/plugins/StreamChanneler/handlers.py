@@ -20,17 +20,22 @@ if TYPE_CHECKING:
     from plugins.StreamChanneler import StreamChanneler
 
 
+# TODO: Validate
 class StreamChannelerURLHandler(ABC):
+    # TODO: Validate
     def __init__(self, plugin: StreamChanneler, url: str, media_id: uuid.UUID) -> None:
         self.plugin = plugin
         self.url = url
         self.media_id = media_id
 
+    # TODO: Validate
     @abstractmethod
     def import_results(self) -> list[URLImportResult]: ...
 
 
+# TODO: Validate
 class PluginURLHandler(StreamChannelerURLHandler):
+    # TODO: Validate
     @override
     def import_results(self) -> list[URLImportResult]:
         plugin_entity = self.plugin.session.exec(
@@ -48,7 +53,9 @@ class PluginURLHandler(StreamChannelerURLHandler):
         ]
 
 
+# TODO: Validate
 class SourceURLHandler(StreamChannelerURLHandler):
+    # TODO: Validate
     @override
     def import_results(self) -> list[URLImportResult]:
         source = self.plugin.session.exec(
@@ -62,7 +69,9 @@ class SourceURLHandler(StreamChannelerURLHandler):
         return [URLImportResult.for_show(show) for show in source.shows]
 
 
+# TODO: Validate
 class ShowURLHandler(StreamChannelerURLHandler):
+    # TODO: Validate
     @override
     def import_results(self) -> list[URLImportResult]:
         show = (
@@ -76,7 +85,9 @@ class ShowURLHandler(StreamChannelerURLHandler):
         return [URLImportResult.for_show(show)]
 
 
+# TODO: Validate
 class SeasonURLHandler(StreamChannelerURLHandler):
+    # TODO: Validate
     @override
     def import_results(self) -> list[URLImportResult]:
         season = self.plugin.session.exec(
@@ -92,7 +103,9 @@ class SeasonURLHandler(StreamChannelerURLHandler):
         ]
 
 
+# TODO: Validate
 class EpisodeURLHandler(StreamChannelerURLHandler):
+    # TODO: Validate
     @override
     def import_results(self) -> list[URLImportResult]:
         episode = self.plugin.session.exec(

@@ -20,6 +20,7 @@ interface InformationHeroProps {
   links?: InformationHeroLink[]
 }
 
+// TODO: Validate
 /**
  * The record as it reads at a glance, ahead of the field-by-field comparison.
  *

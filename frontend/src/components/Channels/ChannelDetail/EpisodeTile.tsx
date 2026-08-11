@@ -54,6 +54,7 @@ for (const path in allModules) {
   }
 }
 
+// TODO: Validate
 function TileOverlay({ episode }: { episode: EpisodeWithDetails }) {
   const mediaType = episode.show.media_type || ""
   const pluginKey = episode.plugin.key
@@ -85,6 +86,7 @@ interface EpisodeTileProps {
   onNextEpisode: (currentEpisodeId: string) => void
 }
 
+// TODO: Validate
 export function EpisodeTile({
   episode,
   channelId,
@@ -138,6 +140,7 @@ export function EpisodeTile({
     },
   })
 
+  // TODO: Validate
   const handlePlay = () => {
     watchedMutation.mutate(episode.id)
     if (episode.url) {

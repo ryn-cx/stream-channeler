@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_layout/onboarding/$channelId/sort")({
   }),
 })
 
+// TODO: Validate
 function RouteComponent() {
   const { channelId } = Route.useParams()
   return <OnboardingSort channelId={channelId} />

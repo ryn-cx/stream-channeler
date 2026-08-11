@@ -6,6 +6,7 @@ interface SourceOptionLabelProps {
   faviconUrl?: string | null
 }
 
+// TODO: Validate
 export function SourceOptionLabel({
   name,
   faviconUrl,

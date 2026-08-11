@@ -28,7 +28,9 @@ from tests.app.utils.route_assertions import (
 from tests.app.utils.utils import build_random_model, dump_random_model, request_payload
 
 
+# TODO: Validate
 class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
+    # TODO: Validate
     def assert_database_modified_at_updated(
         self,
         session_scoped_session: Session,
@@ -38,6 +40,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
         database_record = self.get_record_from_db(session_scoped_session, record_id)
         assert database_record.modified_at >= original_modified_at
 
+    # TODO: Validate
     def assert_database_matches_expected(
         self,
         session_scoped_session: Session,
@@ -61,6 +64,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         assert database_dump == expected_dump
 
+    # TODO: Validate
     def assert_database_updated(
         self,
         session_scoped_session: Session,
@@ -87,6 +91,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             original_records,
         )
 
+    # TODO: Validate
     def assert_api_update_success(
         self,
         session_scoped_session: Session,
@@ -140,6 +145,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
 
         return [result]
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -186,6 +192,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters_model=patch_input,
             )
 
+    # TODO: Validate
     @pytest.mark.parametrize("update_mode", ["full", "minimal"])
     @pytest.mark.parametrize("create_mode", ["full", "minimal"])
     def test_update_data(
@@ -219,6 +226,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             update_model,
         )
 
+    # TODO: Validate
     def test_update_not_found(
         self,
         session_scoped_client: TestClient,
@@ -244,6 +252,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters=parameters,
             )
 
+    # TODO: Validate
     def test_update_shared_key(
         self,
         session_scoped_client: TestClient,
@@ -274,6 +283,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
             update_model,
         )
 
+    # TODO: Validate
     def test_update_duplicate_key(
         self,
         session_scoped_client: TestClient,
@@ -309,6 +319,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters=parameters,
             )
 
+    # TODO: Validate
     def test_update_rejects_empty_key(
         self,
         session_scoped_client: TestClient,
@@ -341,6 +352,7 @@ class BaseUpdateTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 parameters=parameters,
             )
 
+    # TODO: Validate
     def test_update_resists_injecting_id(
         self,
         session_scoped_client: TestClient,

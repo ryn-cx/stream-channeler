@@ -16,6 +16,7 @@ from plugins.ParamountPlus.url_handlers import (
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
+# TODO: Validate
 class ParamountPlus(
     SourceMixin,
     UpsertMixin,
@@ -34,11 +35,13 @@ class ParamountPlus(
     TMDB_PROVIDER_NAMES = ("Paramount Plus", "Paramount+", "Paramount+ Amazon Channel")
     FAVICON_URL = "https://www.paramountplus.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "paramountplus.com"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

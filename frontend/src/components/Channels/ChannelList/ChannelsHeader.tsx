@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 
 // Title + scope switcher + view switcher on the left, page actions on the right,
 // matching the orders page header.
+// TODO: Validate
 export function ChannelsHeader({
   scopeTabs,
   viewTabs,

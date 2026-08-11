@@ -27,33 +27,40 @@ _MAX_READING_COMBINATIONS = 32
 _GENERIC_EPISODE_NAME = re.compile(r"episode\s*\d+")
 
 
+# TODO: Validate
 class _Named(Protocol):
     name: str
 
 
+# TODO: Validate
 def _plaintext(name: str) -> str:
     return "".join(character for character in name.casefold() if character.isalnum())
 
 
+# TODO: Validate
 @cache
 def _converter() -> kakasi:
     return kakasi()
 
 
+# TODO: Validate
 @cache
 def _kanwa() -> Kanwa:
     return Kanwa()
 
 
+# TODO: Validate
 def _hepburn(text: str) -> str:
     return "".join(part["hepburn"] for part in _converter().convert(text))
 
 
+# TODO: Validate
 def _readings(segment: str) -> frozenset[str]:
     table = _kanwa().load(segment[0]) or {}
     return frozenset(reading for reading, _context in table.get(segment, []))
 
 
+# TODO: Validate
 @cache
 def _romanizations(name: str) -> frozenset[str]:
     readings_per_segment = [
@@ -70,6 +77,7 @@ def _romanizations(name: str) -> frozenset[str]:
     )
 
 
+# TODO: Validate
 def _unmarked(plaintext_name: str) -> str:
     return "".join(
         character
@@ -78,6 +86,7 @@ def _unmarked(plaintext_name: str) -> str:
     )
 
 
+# TODO: Validate
 def _folded(plaintext_name: str) -> str:
     without_long_vowels = re.sub(
         r"([aeiou])\1+",
@@ -87,6 +96,7 @@ def _folded(plaintext_name: str) -> str:
     return re.sub(r"m(?=[bmp])", "n", without_long_vowels)
 
 
+# TODO: Validate
 def _plaintext_forms(name: str) -> frozenset[str]:
     plaintext = _plaintext(name)
     forms = {plaintext, _folded(plaintext)}
@@ -99,6 +109,7 @@ def _plaintext_forms(name: str) -> frozenset[str]:
     return frozenset(form for form in forms if form)
 
 
+# TODO: Validate
 def _is_generically_named(name: str) -> bool:
     return bool(_GENERIC_EPISODE_NAME.fullmatch(name.strip().casefold()))
 
@@ -123,6 +134,7 @@ _CLOSEST_NAME_AND_NUMBER_NOTE = (
 )
 
 
+# TODO: Validate
 class _EpisodeMatch(NamedTuple):
     """The TMDB episode a website's episode is, and what it was recognised by."""
 
@@ -130,10 +142,12 @@ class _EpisodeMatch(NamedTuple):
     note: str
 
 
+# TODO: Validate
 def _matches_exactly(candidate_forms: frozenset[str], targets: frozenset[str]) -> bool:
     return bool(candidate_forms & targets)
 
 
+# TODO: Validate
 def _contains_either_way(
     candidate_forms: frozenset[str],
     targets: frozenset[str],
@@ -144,6 +158,7 @@ def _contains_either_way(
     )
 
 
+# TODO: Validate
 def _similarity(name: str | None, other_name: str | None) -> float:
     """Return how much of two names is the same, from nothing to all of it."""
     if not name or not other_name:
@@ -166,6 +181,7 @@ def _similarity(name: str | None, other_name: str | None) -> float:
     return max(ratio, len(shorter) / len(longer))
 
 
+# TODO: Validate
 def _absolute_numbers(episodes: Sequence[TvSeasonEpisode]) -> dict[int, int]:
     """Count a title's episodes from its first, and return that count by TMDB id.
 
@@ -181,6 +197,7 @@ def _absolute_numbers(episodes: Sequence[TvSeasonEpisode]) -> dict[int, int]:
     return {episode.id: number for number, episode in enumerate(ordered, start=1)}
 
 
+# TODO: Validate
 def _find_by_name[NamedType: _Named](
     candidates: Sequence[NamedType],
     name: str | None,
@@ -198,6 +215,7 @@ def _find_by_name[NamedType: _Named](
     return matches[0] if len(matches) == 1 else None
 
 
+# TODO: Validate
 class _Match:
     """Every way an episode is recognised, in one place and in no order.
 
@@ -206,6 +224,7 @@ class _Match:
     is `_episode_detail`'s to say rather than anything here.
     """
 
+    # TODO: Validate
     @staticmethod
     def name_and_number(
         episodes: Sequence[TvSeasonEpisode],
@@ -231,6 +250,7 @@ class _Match:
             return None
         return numbered
 
+    # TODO: Validate
     @staticmethod
     def number(
         episodes: Sequence[TvSeasonEpisode],
@@ -250,6 +270,7 @@ class _Match:
             None,
         )
 
+    # TODO: Validate
     @staticmethod
     def name(
         episodes: Sequence[TvSeasonEpisode],
@@ -258,6 +279,7 @@ class _Match:
         """Return the one episode named exactly as the website names it."""
         return _find_by_name(episodes, episode_name, _matches_exactly)
 
+    # TODO: Validate
     @staticmethod
     def partial_name(
         episodes: Sequence[TvSeasonEpisode],
@@ -266,6 +288,7 @@ class _Match:
         """Return the one episode whose name contains the website's, or is inside it."""
         return _find_by_name(episodes, episode_name, _contains_either_way)
 
+    # TODO: Validate
     @staticmethod
     def translated_name(
         episodes: Sequence[TvSeasonEpisode],
@@ -289,6 +312,7 @@ class _Match:
         ]
         return matches[0] if len(matches) == 1 else None
 
+    # TODO: Validate
     @staticmethod
     def partial_translated_name(
         episodes: Sequence[TvSeasonEpisode],
@@ -303,6 +327,7 @@ class _Match:
             _contains_either_way,
         )
 
+    # TODO: Validate
     @staticmethod
     def description(
         episodes: Sequence[TvSeasonEpisode],
@@ -329,6 +354,7 @@ class _Match:
         ]
         return matches[0] if len(matches) == 1 else None
 
+    # TODO: Validate
     @staticmethod
     def same_length_season_and_episode_number(
         episodes: Sequence[TvSeasonEpisode],
@@ -353,6 +379,7 @@ class _Match:
             return None
         return _Match.number(episodes, season_number, episode_number)
 
+    # TODO: Validate
     @staticmethod
     def closest_name_and_number(
         episodes: Sequence[TvSeasonEpisode],
@@ -390,6 +417,7 @@ class _Match:
         return None
 
 
+# TODO: Validate
 class LinkMixin(LookupMixin, register=False):
     """Points a plugin's own media at the TMDB media standing in for it.
 
@@ -398,6 +426,7 @@ class LinkMixin(LookupMixin, register=False):
     it follows TMDB without the stored record having to be rewritten.
     """
 
+    # TODO: Validate
     def tmdb_link_show(
         self,
         show: Show,
@@ -416,6 +445,7 @@ class LinkMixin(LookupMixin, register=False):
             show.show_identifier = tmdb_identifier(media_type, linked_id)
         return show
 
+    # TODO: Validate
     def tmdb_link_season(
         self,
         season: Season,
@@ -453,6 +483,7 @@ class LinkMixin(LookupMixin, register=False):
             season.season_identifier = tmdb_identifier(MediaType.tv, season_detail.id)
         return season
 
+    # TODO: Validate
     def tmdb_link_episode(  # noqa: PLR0913 - Every part of what names a TMDB episode.
         self,
         episode: Episode,
@@ -512,6 +543,7 @@ class LinkMixin(LookupMixin, register=False):
             episode.episode_identifier_locked = settled is not None
         return episode
 
+    # TODO: Validate
     def _lock_reason(
         self,
         tmdb_id: int,
@@ -545,6 +577,7 @@ class LinkMixin(LookupMixin, register=False):
             return DESCRIPTION_NOTE
         return None
 
+    # TODO: Validate
     @staticmethod
     def _agrees_on_name_and_number(
         episode: Episode,
@@ -573,6 +606,7 @@ class LinkMixin(LookupMixin, register=False):
         )
 
     # PLR0911 - One return per way of naming an episode, tried in order of trust.
+    # TODO: Validate
     def _episode_detail(  # noqa: PLR0911, PLR0913 - Every part of what names one.
         self,
         tmdb_id: int,
@@ -643,6 +677,7 @@ class LinkMixin(LookupMixin, register=False):
 
         return None
 
+    # TODO: Validate
     def _translated_names(
         self,
         tmdb_id: int,
@@ -660,6 +695,7 @@ class LinkMixin(LookupMixin, register=False):
 
     _all_episodes_cache: list[TvSeasonEpisode] | None = None
 
+    # TODO: Validate
     def _all_episodes(self, tmdb_id: int) -> list[TvSeasonEpisode]:
         """Return every episode of the show the instance is working on.
 

@@ -32,11 +32,13 @@ from tests.app.seasons.utils import create_random_season
 from tests.app.users.utils import authentication_token_from_email, create_random_user
 
 
+# TODO: Validate
 @pytest.fixture
 def user(session_scoped_session: Session) -> User:
     return create_random_user(session_scoped_session)
 
 
+# TODO: Validate
 @pytest.fixture
 def plugin(session_scoped_session: Session, user: User) -> Plugin:
     return create_random_plugin(
@@ -46,6 +48,7 @@ def plugin(session_scoped_session: Session, user: User) -> Plugin:
     )
 
 
+# TODO: Validate
 def _combine(
     session: Session,
     channel: Channel,
@@ -68,6 +71,7 @@ def _combine(
     session.refresh(channel)
 
 
+# TODO: Validate
 def _channel_with_episodes(
     session: Session,
     user: User,
@@ -96,11 +100,14 @@ def _channel_with_episodes(
     return channel, episodes
 
 
+# TODO: Validate
 class TestCombinedChannelsEndpoint:
+    # TODO: Validate
     @staticmethod
     def url(channel_id: uuid.UUID) -> str:
         return f"{settings.API_V1_STR}/channels/{channel_id}/combined-channels"
 
+    # TODO: Validate
     def test_saving_and_reading_back_a_channel_s_combined_channels(
         self,
         session_scoped_client: TestClient,
@@ -133,7 +140,9 @@ class TestCombinedChannelsEndpoint:
         }
 
 
+# TODO: Validate
 class TestChannelAttribution:
+    # TODO: Validate
     def test_channel_reads_as_itself(
         self,
         session_scoped_session: Session,
@@ -144,6 +153,7 @@ class TestChannelAttribution:
             channel.id: channel.id,
         }
 
+    # TODO: Validate
     def test_grandchild_reads_as_the_channel_it_was_added_through(
         self,
         session_scoped_session: Session,
@@ -166,6 +176,7 @@ class TestChannelAttribution:
         assert attribution[channel_c.id] == channel_b.id
         assert attribution[channel_d.id] == channel_b.id
 
+    # TODO: Validate
     def test_a_channel_reached_twice_belongs_to_the_first_that_reaches_it(
         self,
         session_scoped_session: Session,
@@ -185,7 +196,9 @@ class TestChannelAttribution:
         assert attribution[shared.id] == first.id
 
 
+# TODO: Validate
 class TestSortByChannel:
+    # TODO: Validate
     def test_episodes_group_by_the_channel_they_were_added_through(
         self,
         session_scoped_session: Session,
@@ -250,6 +263,7 @@ class TestSortByChannel:
 
         position = {result.episode.id: index for index, result in enumerate(results)}
 
+        # TODO: Validate
         def occupies_one_run(episodes: list[Episode]) -> bool:
             """Whether `episodes` were read together rather than scattered."""
             positions = [position[episode.id] for episode in episodes]
@@ -261,6 +275,7 @@ class TestSortByChannel:
         assert occupies_one_run(episodes_a)
         assert occupies_one_run(episodes_d)
 
+    # TODO: Validate
     def test_sorting_by_channel_is_offered(self) -> None:
         from app.channels.service import get_sort_options
 

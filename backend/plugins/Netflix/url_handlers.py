@@ -9,21 +9,26 @@ if TYPE_CHECKING:
     from plugins.Netflix import Netflix
 
 
+# TODO: Validate
 class NetflixURLHandler(URLHandler["Netflix"]):
+    # TODO: Validate
     def __init__(self, plugin: Netflix, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
 
+# TODO: Validate
 class TitleURLHandler(NetflixURLHandler):
     # https://www.netflix.com/title/80240027
     _URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(

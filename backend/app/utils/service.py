@@ -1,3 +1,4 @@
+# TODO: Validate
 import logging
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# TODO: Validate
 def render_email_template(*, template_name: str, context: dict[str, Any]) -> str:
     template_str = (
         Path(__file__).parent.parent / "email-templates" / "build" / template_name
@@ -19,6 +21,7 @@ def render_email_template(*, template_name: str, context: dict[str, Any]) -> str
     return Template(template_str).render(context)
 
 
+# TODO: Validate
 def send_email(
     *,
     email_to: str,
@@ -47,6 +50,7 @@ def send_email(
     logger.info("send email result: %s", response)
 
 
+# TODO: Validate
 def generate_test_email(email_to: str) -> EmailData:
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - Test email"
@@ -57,6 +61,7 @@ def generate_test_email(email_to: str) -> EmailData:
     return EmailData(html_content=html_content, subject=subject)
 
 
+# TODO: Validate
 def generate_reset_password_email(email_to: str, email: str, token: str) -> EmailData:
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - Password recovery for user {email}"
@@ -74,6 +79,7 @@ def generate_reset_password_email(email_to: str, email: str, token: str) -> Emai
     return EmailData(html_content=html_content, subject=subject)
 
 
+# TODO: Validate
 def generate_new_account_email(
     email_to: str,
     username: str,

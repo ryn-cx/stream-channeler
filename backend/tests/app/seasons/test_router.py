@@ -21,6 +21,7 @@ from tests.app.utils.base_update import BaseUpdateTests
 from tests.app.utils.route_assertions import assert_success
 
 
+# TODO: Validate
 class SeasonTestMixin(BaseTests[Season]):
     database_model = Season
     create_schema = SeasonCreate
@@ -31,23 +32,29 @@ class SeasonTestMixin(BaseTests[Season]):
     create_record_function = staticmethod(create_random_season)
 
 
+# TODO: Validate
 class TestCreateSeason(SeasonTestMixin, BaseCreateTests[Season]):
     pass
 
 
+# TODO: Validate
 class TestGetSeason(SeasonTestMixin, BaseGetTests[Season]):
     pass
 
 
+# TODO: Validate
 class TestUpdateSeason(SeasonTestMixin, BaseUpdateTests[Season]):
     pass
 
 
+# TODO: Validate
 class TestDeleteSeason(SeasonTestMixin, BaseDeleteTests[Season]):
     pass
 
 
+# TODO: Validate
 class TestUpdateSeasonRemerge(SeasonTestMixin):
+    # TODO: Validate
     def patch_tmdb_id(
         self,
         session: Session,
@@ -83,6 +90,7 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
             )
         return relink.call_count
 
+    # TODO: Validate
     def test_changed_tmdb_id_relinks_episodes(
         self,
         session_scoped_client: TestClient,
@@ -97,6 +105,7 @@ class TestUpdateSeasonRemerge(SeasonTestMixin):
         )
         assert call_count == 1
 
+    # TODO: Validate
     def test_unchanged_tmdb_id_does_not_relink_episodes(
         self,
         session_scoped_client: TestClient,

@@ -15,6 +15,7 @@ interface ModalFooterProps {
   className?: string
 }
 
+// TODO: Validate
 /**
  * Shared modal footer: an outline Cancel button that closes the dialog and a
  * submit button that drives the surrounding form. Keeps the Cancel/Save layout

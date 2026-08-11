@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/Common/PageHeader"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import { channelColumns } from "./channelColumns"
 
+// TODO: Validate
 export function ChannelsAdminTable() {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,

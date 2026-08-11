@@ -13,7 +13,9 @@ from tests.app.utils.route_assertions import assert_success_list
 SORT_OPTIONS_URL = f"{settings.API_V1_STR}/channels/sort-options"
 
 
+# TODO: Validate
 class TestSortOptions:
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     def test_sort_options(
         self,

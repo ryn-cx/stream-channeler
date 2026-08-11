@@ -44,6 +44,7 @@ const adminItems: Item[] = [
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 
+// TODO: Validate
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
   const { toggleSidebar } = useSidebar()

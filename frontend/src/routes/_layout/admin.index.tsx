@@ -30,6 +30,7 @@ export const Route = createFileRoute("/_layout/admin/")({
   }),
 })
 
+// TODO: Validate
 function AdminIndex() {
   return (
     <div className="flex flex-col gap-6">

@@ -37,6 +37,7 @@ load_models()
 MediaClass = type[MediaMixin[Any, Any]]
 
 
+# TODO: Validate
 def _channel_inclusion_clause() -> ColumnElement[bool]:
     return col(ChannelShow.is_blacklist_only).is_(False) & or_(
         col(ChannelShow.is_whitelist).is_(True)
@@ -46,6 +47,7 @@ def _channel_inclusion_clause() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def _season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Season to be included in some channel."""
     # A channel holds a title rather than one website's copy of it, so the show the
@@ -74,6 +76,7 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Show to have a Season included in a channel."""
     channel_show_of = aliased(Show)
@@ -101,6 +104,7 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Source to have a Season included in a channel."""
     return (
@@ -126,6 +130,7 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Plugin to have a Season included in a channel."""
     return (
@@ -165,6 +170,7 @@ MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
 )
 
 
+# TODO: Validate
 def _restrict_to_plugin_user[ResultT](
     statement: SelectOfScalar[ResultT],
 ) -> SelectOfScalar[ResultT]:
@@ -173,6 +179,7 @@ def _restrict_to_plugin_user[ResultT](
     )
 
 
+# TODO: Validate
 def _restrict_to_media_in_channel[ResultT](
     statement: SelectOfScalar[ResultT],
     media_class: MediaClass,
@@ -190,6 +197,7 @@ def _restrict_to_media_in_channel[ResultT](
     return statement
 
 
+# TODO: Validate
 def _process_outdated_items(
     session: Session,
     media_class: MediaClass,
@@ -259,6 +267,7 @@ def _process_outdated_items(
     )
 
 
+# TODO: Validate
 def _update_plugin(
     plugin_key: str,
     plugin_class: type[AbstractPlugin],
@@ -280,6 +289,7 @@ def _update_plugin(
     logger.info(f"[{plugin_key}] Finished update run")
 
 
+# TODO: Validate
 def _plugin_user_plugin_keys() -> list[str]:
     """Return the keys of every `Plugin` owned by the plugin user, from the database."""
     with Session(engine) as session:
@@ -292,6 +302,7 @@ def _plugin_user_plugin_keys() -> list[str]:
         )
 
 
+# TODO: Validate
 def _next_update_at(session: Session) -> datetime | None:
     """Return the soonest future `update_at` across the plugin user's media, if any.
 
@@ -331,6 +342,7 @@ def _next_update_at(session: Session) -> datetime | None:
 MAX_SLEEP_SECONDS = 60.0 * 60.0 * 24.0
 
 
+# TODO: Validate
 def _seconds_until_next_update() -> float:
     with Session(engine) as session:
         next_update_at = _next_update_at(session)
@@ -340,6 +352,7 @@ def _seconds_until_next_update() -> float:
     return max(0.0, min(seconds_until_due, MAX_SLEEP_SECONDS))
 
 
+# TODO: Validate
 def _update_outdated(stop_event: threading.Event) -> None:
     # The work is grouped by the `Plugin` rows in the database (not the installed plugin
     # files); the installed plugin class is only used to execute the updates. Plugins run
@@ -363,6 +376,7 @@ def _update_outdated(stop_event: threading.Event) -> None:
             logger.exception(f"[{plugin_key}] Plugin update run crashed")
 
 
+# TODO: Validate
 def run_forever(stop_event: threading.Event) -> None:  # noqa: D103
     while not stop_event.is_set():
         _update_outdated(stop_event)

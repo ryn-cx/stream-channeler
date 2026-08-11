@@ -9,6 +9,7 @@ MOVIE_SEASON_NUMBER = 0
 MOVIE_EPISODE_NUMBER = 0
 
 
+# TODO: Validate
 class ShowKey(NamedTuple):
     """The parts of a TMDB `Show` key."""
 
@@ -16,6 +17,7 @@ class ShowKey(NamedTuple):
     tmdb_id: int
 
 
+# TODO: Validate
 class SeasonKey(NamedTuple):
     """The parts of a TMDB `Season` key."""
 
@@ -24,6 +26,7 @@ class SeasonKey(NamedTuple):
     season_number: int
 
 
+# TODO: Validate
 class EpisodeKey(NamedTuple):
     """The parts of a TMDB `Episode` key."""
 
@@ -33,16 +36,19 @@ class EpisodeKey(NamedTuple):
     episode_number: int
 
 
+# TODO: Validate
 def show_key(media_type: MediaType, tmdb_id: int) -> str:
     """Return the `Show` key for a title."""
     return f"{media_type}/{tmdb_id}"
 
 
+# TODO: Validate
 def season_key(media_type: MediaType, tmdb_id: int, season_number: int) -> str:
     """Return the `Season` key for a season of a title."""
     return f"{media_type}/{tmdb_id}/{season_number}"
 
 
+# TODO: Validate
 def episode_key(
     media_type: MediaType,
     tmdb_id: int,
@@ -53,12 +59,14 @@ def episode_key(
     return f"{media_type}/{tmdb_id}/{season_number}/{episode_number}"
 
 
+# TODO: Validate
 def parse_show_key(key: str) -> ShowKey:
     """Return the media type and TMDB id a `Show` key is built from."""
     media_type, tmdb_id = key.split("/")
     return ShowKey(MediaType(media_type), int(tmdb_id))
 
 
+# TODO: Validate
 def parse_season_key(key: str) -> SeasonKey:
     """Return the parts a `Season` key is built from.
 
@@ -69,6 +77,7 @@ def parse_season_key(key: str) -> SeasonKey:
     return SeasonKey(MediaType(media_type), int(tmdb_id), int(season_number))
 
 
+# TODO: Validate
 def parse_episode_key(key: str) -> EpisodeKey:
     """Return the parts an `Episode` key is built from."""
     media_type, tmdb_id, season_number, episode_number = key.split("/")

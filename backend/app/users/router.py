@@ -49,6 +49,7 @@ admin_router = APIRouter(
 )
 
 
+# TODO: Validate
 @admin_router.get("")
 def read_users(
     session: SessionDep,
@@ -68,6 +69,7 @@ def read_users(
     return UsersPublic(data=users_public, count=count)
 
 
+# TODO: Validate
 @admin_router.post("", response_model=UserPublic)
 def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
     """Create new user."""
@@ -100,6 +102,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
     return user
 
 
+# TODO: Validate
 @users_router.patch("/me", response_model=UserPublic)
 def update_user_me(
     *,
@@ -136,6 +139,7 @@ def update_user_me(
     return current_user
 
 
+# TODO: Validate
 @users_router.patch("/me/password")
 def update_password_me(
     *,
@@ -162,6 +166,7 @@ def update_password_me(
     return Message(message="Password updated successfully")
 
 
+# TODO: Validate
 def _source_preference_outputs(
     session: SessionDep,
     preferences: list[SourcePreference],
@@ -192,6 +197,7 @@ def _source_preference_outputs(
     return outputs
 
 
+# TODO: Validate
 @users_router.get("/me/source-preferences")
 def read_source_preferences(
     session: SessionDep,
@@ -210,6 +216,7 @@ def read_source_preferences(
     )
 
 
+# TODO: Validate
 @users_router.put("/me/source-preferences")
 def update_source_preferences(
     *,
@@ -256,12 +263,14 @@ def update_source_preferences(
     )
 
 
+# TODO: Validate
 @users_router.get("/me", response_model=UserPublic)
 def read_user_me(current_user: CurrentUser) -> CurrentUser:
     """Get current user."""
     return current_user
 
 
+# TODO: Validate
 @users_router.delete("/me")
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     """Delete own user."""
@@ -275,6 +284,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     return Message(message="User deleted successfully")
 
 
+# TODO: Validate
 @users_router.post("/signup", response_model=UserPublic)
 def register_user(session: SessionDep, user_in: UserRegister) -> User:
     """Create new user without the need to be logged in."""
@@ -294,6 +304,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> User:
     return user_service.create_user(session=session, user_create=user_create)
 
 
+# TODO: Validate
 @users_router.get("/{user_id}", response_model=UserPublic)
 def read_user_by_id(
     user_id: uuid.UUID,
@@ -317,6 +328,7 @@ def read_user_by_id(
     return user
 
 
+# TODO: Validate
 @users_router.get("/{user_id}/channels")
 def get_user_public_channels(
     session: SessionDep,
@@ -339,6 +351,7 @@ def get_user_public_channels(
     return ChannelPublicListOutput(data=data, count=len(data))
 
 
+# TODO: Validate
 @admin_router.get("/{user_id}/channels")
 def admin_list_user_channels(
     session: SessionDep,
@@ -356,6 +369,7 @@ def admin_list_user_channels(
     ]
 
 
+# TODO: Validate
 @admin_router.patch(
     "/{user_id}",  # noqa: FAST003 - Used by ExistingUser.
     response_model=UserPublic,
@@ -396,6 +410,7 @@ def update_user(
     )
 
 
+# TODO: Validate
 @admin_router.delete("/{user_id}")  # noqa: FAST003 - Used by ExistingUser.
 def delete_user(
     session: SessionDep,

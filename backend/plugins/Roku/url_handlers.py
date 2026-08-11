@@ -14,11 +14,14 @@ _CONTENT_ID_REGEX = r"[0-9a-f]{32}(?:-\d+)?"
 _SLUG_REGEX = r"[^\/?#]+"
 
 
+# TODO: Validate
 class RokuURLHandler(URLHandler["Roku"]):
+    # TODO: Validate
     def __init__(self, plugin: Roku, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
@@ -27,6 +30,7 @@ class RokuURLHandler(URLHandler["Roku"]):
             return content_id(series.meta.id)
         return self._key
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -35,6 +39,7 @@ class RokuURLHandler(URLHandler["Roku"]):
         )
 
 
+# TODO: Validate
 class DetailsURLHandler(RokuURLHandler):
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae/fawlty-towers
@@ -44,6 +49,7 @@ class DetailsURLHandler(RokuURLHandler):
     )
 
 
+# TODO: Validate
 class WatchURLHandler(RokuURLHandler):
     # https://therokuchannel.roku.com/watch/db1607f1cff2522bb795382bb4b5bcae
     _URL_REGEX = rf"\/watch\/(?P<watch_content_id>{_CONTENT_ID_REGEX})(?:\/|$)"

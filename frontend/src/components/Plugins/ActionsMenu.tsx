@@ -8,6 +8,7 @@ interface PluginActionsMenuProps {
   plugin: PluginTableData
 }
 
+// TODO: Validate
 export const PluginActionsMenu = ({ plugin }: PluginActionsMenuProps) => {
   return (
     <ActionsMenu>

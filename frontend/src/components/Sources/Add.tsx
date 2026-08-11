@@ -30,6 +30,7 @@ interface AddSourceProps {
   pluginId: string
 }
 
+// TODO: Validate
 const AddSource = ({ pluginId }: AddSourceProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -66,6 +67,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

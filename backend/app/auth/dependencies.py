@@ -20,6 +20,7 @@ reusable_oauth2 = OAuth2PasswordBearer(
 )
 
 
+# TODO: Validate
 def get_db() -> Generator[Session]:
     with Session(engine) as session:
         yield session
@@ -29,6 +30,7 @@ SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
+# TODO: Validate
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
@@ -56,6 +58,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 # TODO: Copy this updated function to the template.
+# TODO: Validate
 def get_current_active_superuser(current_user: CurrentUser) -> User:
     if not current_user.is_superuser:
         raise HTTPException(

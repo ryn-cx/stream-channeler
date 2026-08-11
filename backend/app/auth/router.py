@@ -1,3 +1,4 @@
+# TODO: Validate
 from datetime import timedelta
 from typing import Annotated
 
@@ -18,6 +19,7 @@ from app.utils import service as email_service
 router = APIRouter(tags=["login"])
 
 
+# TODO: Validate
 @router.post("/login/access-token")
 def login_access_token(
     session: SessionDep,
@@ -45,12 +47,14 @@ def login_access_token(
     )
 
 
+# TODO: Validate
 @router.post("/login/test-token", response_model=UserPublic)
 def test_token(current_user: CurrentUser) -> CurrentUser:
     """Test access token"""
     return current_user
 
 
+# TODO: Validate
 @router.post("/password-recovery/{email}")
 def recover_password(email: str, session: SessionDep) -> Message:
     """Password Recovery"""
@@ -75,6 +79,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
     )
 
 
+# TODO: Validate
 @router.post("/reset-password/")
 def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """Reset password"""
@@ -105,6 +110,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     return Message(message="Password updated successfully")
 
 
+# TODO: Validate
 @router.post(
     "/password-recovery-html-content/{email}",
     dependencies=[Depends(get_current_active_superuser)],

@@ -27,6 +27,7 @@ episode_watches_router = APIRouter(prefix="/episodes/{episode_id}", tags=["watch
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
 
+# TODO: Validate
 @episode_watches_router.post("/watches")
 def create_watch(
     session: SessionDep,
@@ -38,6 +39,7 @@ def create_watch(
     return create_watches(session, current_user.id, episode, watch_input)
 
 
+# TODO: Validate
 @watches_router.get("")
 def get_watches(
     session: SessionDep,
@@ -48,6 +50,7 @@ def get_watches(
     return get_watched_episodes(session, current_user, read_options)
 
 
+# TODO: Validate
 @watches_router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
 def update_watch(
     session: SessionDep,
@@ -58,6 +61,7 @@ def update_watch(
     return update_watches(session, watch, watch_input)
 
 
+# TODO: Validate
 @watches_router.delete("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
 def delete_watch(session: SessionDep, watch: EditableWatch) -> Message:
     """Delete a watch and all sibling watches by its id."""
@@ -67,6 +71,7 @@ def delete_watch(session: SessionDep, watch: EditableWatch) -> Message:
 # TODO: Add tests
 # THis is under /watches and not /plugins because it does not use the plugin id for
 # identification because it relies on the plugin itself and not it's database entry.
+# TODO: Validate
 @watches_router.post("/import")
 def import_watch_history(
     file: UploadFile,

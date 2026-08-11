@@ -4,11 +4,13 @@ from enum import StrEnum
 from app.schemas import ReadOptions
 
 
+# TODO: Validate
 class MediaOwner(StrEnum):
     official = "official"
     others = "others"
 
 
+# TODO: Validate
 class MediaScope(StrEnum):
     """Which media a list endpoint returns.
 
@@ -24,10 +26,12 @@ class MediaScope(StrEnum):
     others = "others"
 
 
+# TODO: Validate
 class AdminReadOptions(ReadOptions):
     owner: MediaOwner
 
 
+# TODO: Validate
 class MediaReadOptions(ReadOptions):
     """Read options for the media lists.
 

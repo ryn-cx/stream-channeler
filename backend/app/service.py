@@ -35,6 +35,7 @@ from app.schemas import (
 from app.users.models import User
 
 
+# TODO: Validate
 def _get_column(
     columns: dict[str, InstrumentedAttribute[Any]],
     name: str,
@@ -48,6 +49,7 @@ def _get_column(
     )
 
 
+# TODO: Validate
 def _date_str_to_datetime(date_string: str) -> datetime:
     try:
         return datetime.fromisoformat(date_string)
@@ -58,6 +60,7 @@ def _date_str_to_datetime(date_string: str) -> datetime:
         ) from error
 
 
+# TODO: Validate
 def _str_to_number(number_string: str) -> float:
     try:
         return float(number_string)
@@ -68,6 +71,7 @@ def _str_to_number(number_string: str) -> float:
         ) from error
 
 
+# TODO: Validate
 def _range_bounds(value: str | list[str], label: str) -> tuple[str, str]:
     if not isinstance(value, list):
         raise HTTPException(
@@ -79,6 +83,7 @@ def _range_bounds(value: str | list[str], label: str) -> tuple[str, str]:
     return minimum, maximum
 
 
+# TODO: Validate
 def _apply_datetime_filter[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
@@ -92,6 +97,7 @@ def _apply_datetime_filter[T](
     return statement
 
 
+# TODO: Validate
 def _apply_number_filter[T](
     statement: SelectOfScalar[T],
     column: InstrumentedAttribute[Any],
@@ -105,6 +111,7 @@ def _apply_number_filter[T](
     return statement
 
 
+# TODO: Validate
 def _apply_filter_options[T](
     statement: SelectOfScalar[T],
     filter_options: list[FilterOption],
@@ -124,6 +131,7 @@ def _apply_filter_options[T](
     return statement
 
 
+# TODO: Validate
 def _apply_sort_options[T](  # noqa: PLR0913
     statement: SelectOfScalar[T],
     sort_options: list[SortOption],
@@ -152,6 +160,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
     return statement.order_by(*order_by)
 
 
+# TODO: Validate
 def get_read_results[T](  # noqa: PLR0913
     session: Session,
     base: SelectOfScalar[T],
@@ -208,6 +217,7 @@ def get_read_results[T](  # noqa: PLR0913
     return session.exec(page).all(), total_count, filtered_count, True
 
 
+# TODO: Validate
 def _owning_plugin(record: Any) -> Plugin:  # noqa: ANN401 - Any media record.
     """Return the `Plugin` that owns `record`.
 
@@ -220,6 +230,7 @@ def _owning_plugin(record: Any) -> Plugin:  # noqa: ANN401 - Any media record.
     return current
 
 
+# TODO: Validate
 def media_row_output[SchemaT: SQLModel](
     record: Any,  # noqa: ANN401 - Any media record.
     viewer: User | None,
@@ -241,6 +252,7 @@ def media_row_output[SchemaT: SQLModel](
     return row
 
 
+# TODO: Validate
 def list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,
@@ -276,6 +288,7 @@ def list_response[ResponseT: BaseModel](  # noqa: PLR0913
     )
 
 
+# TODO: Validate
 def scoped_row_output[SchemaT: SQLModel](
     record: Any,  # noqa: ANN401 - Any user-owned model carrying the scoping fields.
     username: str | None,
@@ -295,6 +308,7 @@ def scoped_row_output[SchemaT: SQLModel](
     )
 
 
+# TODO: Validate
 def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,

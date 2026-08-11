@@ -1,3 +1,4 @@
+// TODO: Validate
 import {
   MutationCache,
   QueryCache,
@@ -18,6 +19,7 @@ OpenAPI.TOKEN = async () => {
   return localStorage.getItem("access_token") || ""
 }
 
+// TODO: Validate
 const handleApiError = (error: Error) => {
   if (error instanceof ApiError && [401, 403].includes(error.status)) {
     localStorage.removeItem("access_token")

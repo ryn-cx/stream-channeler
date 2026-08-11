@@ -13,17 +13,20 @@ export interface NumberingAgreement {
   absolute: boolean
 }
 
+// TODO: Validate
 /** "S2E5", or as much of it as the record was numbered with. */
 export function seasonAndEpisodeText(record: Numbered): string {
   if (record.season_number === null && record.episode_number === null) return ""
   return `S${record.season_number ?? "?"}E${record.episode_number ?? "?"}`
 }
 
+// TODO: Validate
 /** Whether two numbers are the same one, a record with none agreeing with nothing. */
 function sameNumber(own: number | null, other: number | null): boolean {
   return own !== null && own === other
 }
 
+// TODO: Validate
 function sameSeasonAndEpisode(own: Numbered, other: Numbered): boolean {
   return (
     own.season_number !== null &&
@@ -33,6 +36,7 @@ function sameSeasonAndEpisode(own: Numbered, other: Numbered): boolean {
   )
 }
 
+// TODO: Validate
 /**
  * Which of `own`'s numbers the other record puts the episode at too.
  *
@@ -57,6 +61,7 @@ export function numberingAgreement(
   }
 }
 
+// TODO: Validate
 /** Whether the two records put the episode in the same place by any of its numbers. */
 export function isNumberedTheSame(own: Numbered, other: Numbered): boolean {
   const agreement = numberingAgreement(own, other)

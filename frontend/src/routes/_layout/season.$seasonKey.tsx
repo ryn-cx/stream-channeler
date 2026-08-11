@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_layout/season/$seasonKey")({
   }),
 })
 
+// TODO: Validate
 function SeasonDetailPage() {
   const { seasonKey } = Route.useParams()
   const { data: season } = useSeason(seasonKey)

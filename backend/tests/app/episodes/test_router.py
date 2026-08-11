@@ -30,6 +30,7 @@ from tests.app.users.utils import (
 from tests.app.utils.utils import build_random_model, request_payload
 
 
+# TODO: Validate
 @dataclasses.dataclass
 class EpisodeSetup:
     episode: Episode
@@ -37,14 +38,17 @@ class EpisodeSetup:
     headers: dict[str, str]
 
 
+# TODO: Validate
 def episode_url(episode_id: uuid.UUID | str) -> str:
     return f"{settings.API_V1_STR}/episodes/{episode_id}"
 
 
+# TODO: Validate
 def season_episodes_url(season_id: uuid.UUID | str) -> str:
     return f"{settings.API_V1_STR}/seasons/{season_id}/episodes"
 
 
+# TODO: Validate
 def set_up_episode(  # noqa: PLR0913 - the permission axes are the point of the setup
     client: TestClient,
     session: Session,
@@ -85,14 +89,17 @@ def set_up_episode(  # noqa: PLR0913 - the permission axes are the point of the 
     return EpisodeSetup(episode=episode, user=user, headers=headers)
 
 
+# TODO: Validate
 def all_episodes(session: Session) -> Sequence[Episode]:
     return session.exec(select(Episode)).all()
 
 
+# TODO: Validate
 def episode_from_database(session: Session, episode_id: uuid.UUID) -> Episode:
     return session.exec(select(Episode).where(Episode.id == episode_id)).one()
 
 
+# TODO: Validate
 def assert_denied(
     response: Response,
     *,
@@ -108,12 +115,15 @@ def assert_denied(
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+# TODO: Validate
 def assert_saved_to_database(session: Session, episode: EpisodeOutput) -> None:
     record = episode_from_database(session, episode.id)
     assert EpisodeOutput.model_validate(record).model_dump() == episode.model_dump()
 
 
+# TODO: Validate
 class TestCreateEpisode:
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
     @pytest.mark.parametrize("user_is_owner", [True, False])
@@ -162,6 +172,7 @@ class TestCreateEpisode:
             )
             assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     @pytest.mark.parametrize("mode", ["full", "minimal"])
     def test_create_data(
         self,
@@ -195,6 +206,7 @@ class TestCreateEpisode:
         )
         assert_saved_to_database(session_scoped_session, created)
 
+    # TODO: Validate
     @pytest.mark.parametrize("existing_episode_count", [1, 2])
     def test_create_with_existing_episodes(
         self,
@@ -227,6 +239,7 @@ class TestCreateEpisode:
         ).all()
         assert len(siblings) == existing_episode_count + 1
 
+    # TODO: Validate
     def test_create_shared_key(
         self,
         session_scoped_client: TestClient,
@@ -255,6 +268,7 @@ class TestCreateEpisode:
         assert created.key == other_episode.key
         assert_saved_to_database(session_scoped_session, created)
 
+    # TODO: Validate
     def test_create_duplicate_key(
         self,
         session_scoped_client: TestClient,
@@ -281,6 +295,7 @@ class TestCreateEpisode:
         assert response.json()["detail"] == "Episode with this key already exists"
         assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     def test_create_season_not_found(
         self,
         session_scoped_client: TestClient,
@@ -306,7 +321,9 @@ class TestCreateEpisode:
         assert all_episodes(session_scoped_session) == episodes_before
 
 
+# TODO: Validate
 class TestGetEpisodes:
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -350,6 +367,7 @@ class TestGetEpisodes:
                 model_name="Season",
             )
 
+    # TODO: Validate
     @pytest.mark.parametrize("episode_count", [0, 1, 2])
     def test_list_data(
         self,
@@ -389,7 +407,9 @@ class TestGetEpisodes:
             assert expected.items() <= returned_by_id[record.id].model_dump().items()
 
 
+# TODO: Validate
 class TestUpdateEpisode:
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -434,6 +454,7 @@ class TestUpdateEpisode:
             )
             assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     @pytest.mark.parametrize("update_mode", ["full", "minimal"])
     @pytest.mark.parametrize("create_mode", ["full", "minimal"])
     def test_update_data(
@@ -472,6 +493,7 @@ class TestUpdateEpisode:
         assert EpisodeOutput.model_validate(record).model_dump() == expected
         assert record.modified_at >= original_modified_at
 
+    # TODO: Validate
     def test_update_not_found(
         self,
         session_scoped_client: TestClient,
@@ -496,6 +518,7 @@ class TestUpdateEpisode:
         assert response.json()["detail"] == "Episode not found"
         assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     def test_update_shared_key(
         self,
         session_scoped_client: TestClient,
@@ -527,6 +550,7 @@ class TestUpdateEpisode:
             EpisodeOutput.model_validate(response.json()),
         )
 
+    # TODO: Validate
     def test_update_duplicate_key(
         self,
         session_scoped_client: TestClient,
@@ -552,6 +576,7 @@ class TestUpdateEpisode:
         assert response.json()["detail"] == "Episode with this key already exists"
         assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     def test_update_rejects_empty_key(
         self,
         session_scoped_client: TestClient,
@@ -577,6 +602,7 @@ class TestUpdateEpisode:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     def test_update_resists_injecting_id(
         self,
         session_scoped_client: TestClient,
@@ -603,7 +629,9 @@ class TestUpdateEpisode:
         assert all_episodes(session_scoped_session) == episodes_before
 
 
+# TODO: Validate
 class TestDeleteEpisode:
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -648,6 +676,7 @@ class TestDeleteEpisode:
             )
             assert all_episodes(session_scoped_session) == episodes_before
 
+    # TODO: Validate
     def test_delete_not_found(
         self,
         session_scoped_client: TestClient,

@@ -13,6 +13,7 @@ from app.comments.models import BaseComment, Comment
 from app.schemas import BaseInput, BaseUpdateWithoutKey
 
 
+# TODO: Validate
 class CommentScope(StrEnum):
     """Which comments a listing returns."""
 
@@ -20,18 +21,21 @@ class CommentScope(StrEnum):
     all = "all"
 
 
+# TODO: Validate
 class CommentCreate(BaseInput, BaseComment):
     """Schema for creating a `Comment`."""
 
     parent_comment_id: uuid.UUID | None = None
 
 
+# TODO: Validate
 class CommentUpdate(BaseUpdateWithoutKey[Comment]):
     """Schema for updating a `Comment`."""
 
     body: str | None = None
 
 
+# TODO: Validate
 class CommentOutput(BaseComment):
     """Schema for returning a `Comment`.
 
@@ -51,6 +55,7 @@ class CommentOutput(BaseComment):
     replies: list[CommentOutput] = Field(default_factory=list)
 
 
+# TODO: Validate
 class ChannelCommentOutput(CommentOutput):
     """Schema for a `Comment` shown outside of its own channel's page."""
 
@@ -58,6 +63,7 @@ class ChannelCommentOutput(CommentOutput):
     is_read: bool
 
 
+# TODO: Validate
 class CommentsListOutput(SQLModel):
     """Schema for returning one page of `Comment`s."""
 
@@ -65,6 +71,7 @@ class CommentsListOutput(SQLModel):
     total_count: int = Field(default=0)
 
 
+# TODO: Validate
 class ChannelCommentsListOutput(SQLModel):
     """Schema for returning every `Comment` left on a `User`'s `Channel`s."""
 

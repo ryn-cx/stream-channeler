@@ -5,12 +5,14 @@ import { ChevronDownIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Accordion({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Root>) {
   return <AccordionPrimitive.Root data-slot="accordion" {...props} />
 }
 
+// TODO: Validate
 function AccordionItem({
   className,
   ...props
@@ -24,6 +26,7 @@ function AccordionItem({
   )
 }
 
+// TODO: Validate
 function AccordionTrigger({
   className,
   children,
@@ -46,6 +49,7 @@ function AccordionTrigger({
   )
 }
 
+// TODO: Validate
 function AccordionContent({
   className,
   children,

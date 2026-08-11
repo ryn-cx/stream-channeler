@@ -1,8 +1,10 @@
+// TODO: Validate
 import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -16,6 +18,7 @@ function TooltipProvider({
   )
 }
 
+// TODO: Validate
 function Tooltip({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
@@ -26,12 +29,14 @@ function Tooltip({
   )
 }
 
+// TODO: Validate
 function TooltipTrigger({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
 }
 
+// TODO: Validate
 function TooltipContent({
   className,
   sideOffset = 0,

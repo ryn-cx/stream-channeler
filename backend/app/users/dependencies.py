@@ -15,6 +15,7 @@ optional_oauth2 = OAuth2PasswordBearer(
 )
 
 
+# TODO: Validate
 def get_optional_user(
     session: SessionDep,
     token: str | None = Depends(optional_oauth2),
@@ -30,6 +31,7 @@ def get_optional_user(
 OptionalUser = Annotated[User | None, Depends(get_optional_user)]
 
 
+# TODO: Validate
 def get_existing_user(
     session: SessionDep,
     user_id: Annotated[uuid.UUID, Path()],

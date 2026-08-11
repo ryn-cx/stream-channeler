@@ -8,6 +8,7 @@ export const Route = createFileRoute("/_layout/credits")({
   }),
 })
 
+// TODO: Validate
 function Credits() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-16">

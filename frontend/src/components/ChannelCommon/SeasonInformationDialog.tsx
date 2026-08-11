@@ -31,6 +31,7 @@ interface SeasonInformationDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 function sideRows(side: SeasonInformationSide): InformationRows {
   return {
     Name: side.name,
@@ -55,6 +56,7 @@ const ROW_LABELS = [
   "Key",
 ]
 
+// TODO: Validate
 function SeasonInformation({
   seasonId,
   enabled,
@@ -120,6 +122,7 @@ interface SeasonInformationPanelProps {
   enabled?: boolean
 }
 
+// TODO: Validate
 /**
  * Each stored season the row stands for, without a dialog around it, so they can
  * be read inside whatever is already open.
@@ -141,6 +144,7 @@ export function SeasonInformationPanel({
   )
 }
 
+// TODO: Validate
 export function SeasonInformationDialog({
   seasonIds,
   open,

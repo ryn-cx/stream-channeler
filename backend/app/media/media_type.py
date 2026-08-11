@@ -11,6 +11,7 @@ dependencies so either side can import it.
 from enum import StrEnum
 
 
+# TODO: Validate
 class MediaType(StrEnum):
     """One of the two halves of the TMDB catalogue."""
 

@@ -13,6 +13,7 @@ interface DeleteShowProps {
   show: ShowTableData
 }
 
+// TODO: Validate
 const DeleteShow = ({ show }: DeleteShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
 

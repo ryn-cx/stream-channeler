@@ -13,6 +13,7 @@ from tests.app.users.utils import create_random_user
 from tests.app.watches.utils import create_random_watch
 
 
+# TODO: Validate
 def test_watch_follows_episode_through_identifier_change(
     function_scoped_session: Session,
 ) -> None:
@@ -36,6 +37,7 @@ def test_watch_follows_episode_through_identifier_change(
     ]
 
 
+# TODO: Validate
 def test_watch_is_not_taken_over_by_another_episode(
     function_scoped_session: Session,
 ) -> None:
@@ -57,6 +59,7 @@ def test_watch_is_not_taken_over_by_another_episode(
     assert stored_watch.episode_id == episode.id
 
 
+# TODO: Validate
 def test_watch_counts_for_every_episode_sharing_an_identifier(
     function_scoped_session: Session,
 ) -> None:
@@ -87,6 +90,7 @@ def test_watch_counts_for_every_episode_sharing_an_identifier(
     assert conflict.value.status_code == status.HTTP_409_CONFLICT
 
 
+# TODO: Validate
 def test_deleting_the_episode_removes_its_watches(
     function_scoped_session: Session,
 ) -> None:

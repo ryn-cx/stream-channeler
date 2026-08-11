@@ -1,3 +1,4 @@
+# TODO: Validate
 from unittest.mock import MagicMock, patch
 
 from sqlmodel import select
@@ -5,6 +6,7 @@ from sqlmodel import select
 from app.backend_pre_start import init, logger
 
 
+# TODO: Validate
 def test_init_successful_connection() -> None:
     engine_mock = MagicMock()
 

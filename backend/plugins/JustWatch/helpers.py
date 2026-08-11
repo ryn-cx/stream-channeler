@@ -19,12 +19,15 @@ from plugins.utils.manage_plugins import sorted_plugins
 _REDIRECT_PARAMETERS = ("u", "r")
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "justwatch.com"
 
+    # TODO: Validate
     @classmethod
     def _plugin_for_url(cls, url: str) -> type[AbstractPlugin] | None:
         """Return the plugin that imports `url` itself, if there is one."""
@@ -37,6 +40,7 @@ class HelperMixin(FileMixin, register=False):
                 return plugin_class
         return None
 
+    # TODO: Validate
     def _plugin_for_source(
         self,
         show_key: str,
@@ -49,6 +53,7 @@ class HelperMixin(FileMixin, register=False):
                 return self._plugin_for_url(offer_url)
         return None
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -66,12 +71,14 @@ class HelperMixin(FileMixin, register=False):
             content.original_release_year,
         )
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return (
             MediaType.movie if self._media_type(show_key) == "Movie" else MediaType.tv
         )
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         seasons = (
@@ -84,6 +91,7 @@ class HelperMixin(FileMixin, register=False):
                 return season.content.season_number
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -97,11 +105,13 @@ class HelperMixin(FileMixin, register=False):
                 return episode.content.episode_number
         return None
 
+    # TODO: Validate
     @property
     def _images_base_url(self) -> str:
         """Return the base URL for images."""
         return f"https://images.{self._domain()}"
 
+    # TODO: Validate
     def _format_image_url(
         self,
         url: str | None,
@@ -116,12 +126,14 @@ class HelperMixin(FileMixin, register=False):
             f"s{profile}",
         ).replace("{format}", image_format)
 
+    # TODO: Validate
     def _favicon_url(self, provider: dict[str, str]) -> str | None:
         icon_url = self._format_image_url(provider["icon_url"], profile=100)
         if icon_url is None:
             return None
         return f"{icon_url}/{provider['technical_name']}.avif"
 
+    # TODO: Validate
     @staticmethod
     def _clean_external_url(url: str) -> str:
         """Return the URL a JustWatch offer actually points at.
@@ -139,12 +151,14 @@ class HelperMixin(FileMixin, register=False):
                     return value
         return url
 
+    # TODO: Validate
     @staticmethod
     def _date_to_datetime(value: date | None) -> datetime | None:
         if value is None:
             return None
         return tz_datetime.combine(value, datetime.min.time())
 
+    # TODO: Validate
     @staticmethod
     def _find_matching_episode(
         source_key: str,

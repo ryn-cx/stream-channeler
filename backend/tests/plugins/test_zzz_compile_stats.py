@@ -11,6 +11,7 @@ from app.utils import tz_datetime
 STAT_KEYS = ["sql_statements", "execution_time", "peak_memory_bytes"]
 
 
+# TODO: Validate
 def compile_stats() -> list[dict[str, str]]:
     """Collect all stats from test folders into a list of dictionaries."""
     rows: list[dict[str, str]] = []
@@ -51,6 +52,7 @@ def compile_stats() -> list[dict[str, str]]:
     return rows
 
 
+# TODO: Validate
 def write_csv(rows: list[dict[str, str]], output_path: Path) -> None:
     """Write the collected stats to a CSV file."""
     headers = ["plugin", "test_class", "label", *STAT_KEYS]
@@ -61,6 +63,7 @@ def write_csv(rows: list[dict[str, str]], output_path: Path) -> None:
         writer.writerows(rows)
 
 
+# TODO: Validate
 def test_compile_stats() -> None:
     """Compile stats from test runs into a CSV file."""
     rows = compile_stats()

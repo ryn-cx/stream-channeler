@@ -32,6 +32,7 @@ from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     """Base class for testing plugins."""
 
@@ -41,21 +42,25 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     invalid_url = False
     search_query: str | None = None
 
+    # TODO: Validate
     def pytest_generate_tests(self, metafunc: pytest.Metafunc) -> None:
         """Run a test once per URL the test class declares."""
         if "url_variant" in metafunc.fixturenames:
             metafunc.parametrize("url_variant", self._url_variants())
 
+    # TODO: Validate
     @pytest.fixture
     def url_variant(self) -> str:
         pytest.skip("No URL variants defined")
 
+    # TODO: Validate
     def get_detached_plugin(self, session: Session) -> Plugin:
         """Return a detached copy of the plugin to use with validation."""
         plugin = self.select_plugin_with_children(session)
         dumped = self._dump_model(plugin)
         return self._load_model(Plugin, dumped)
 
+    # TODO: Validate
     def import_url_validator(self) -> Validator:
         return (
             Validator()
@@ -70,9 +75,11 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             .changed(Episode, "season_id")
         )
 
+    # TODO: Validate
     def existing_url_validator(self) -> Validator:
         return Validator()
 
+    # TODO: Validate
     def generic_update_validator(
         self,
         entity: Plugin | Source | Show | Season | Episode,
@@ -82,21 +89,27 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             validator.apply_shared_file_rules(entity, self.imported_plugin)
         return validator
 
+    # TODO: Validate
     def update_plugin_validator(self, session: Session, plugin: Plugin) -> Validator:  # noqa: ARG002
         return self.generic_update_validator(plugin)
 
+    # TODO: Validate
     def update_source_validator(self, source: Source) -> Validator:
         return self.generic_update_validator(source)
 
+    # TODO: Validate
     def update_show_validator(self, show: Show) -> Validator:
         return self.generic_update_validator(show)
 
+    # TODO: Validate
     def update_season_validator(self, season: Season) -> Validator:
         return self.generic_update_validator(season)
 
+    # TODO: Validate
     def update_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_update_validator(episode)
 
+    # TODO: Validate
     def generic_deleted_validator(
         self,
         entity: Source | Show | Season | Episode,
@@ -107,12 +120,15 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             .incremented(entity.id, "modified_at")
         )
 
+    # TODO: Validate
     def deleted_season_validator(self, season: Season) -> Validator:
         return self.generic_deleted_validator(season)
 
+    # TODO: Validate
     def deleted_episode_validator(self, episode: Episode) -> Validator:
         return self.generic_deleted_validator(episode)
 
+    # TODO: Validate
     def imported_shows(
         self,
         session: Session,
@@ -143,6 +159,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             raise ValueError(msg)
         return list(shows)
 
+    # TODO: Validate
     def get_random_source(
         self,
         session: Session,
@@ -151,6 +168,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         sources = [show.source for show in self.imported_shows(session, results)]
         return random.choice(sources)  # noqa: S311
 
+    # TODO: Validate
     def get_random_show(
         self,
         session: Session,
@@ -158,6 +176,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     ) -> Show:
         return random.choice(self.imported_shows(session, results))  # noqa: S311
 
+    # TODO: Validate
     def get_random_season(
         self,
         session: Session,
@@ -170,6 +189,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         ]
         return random.choice(seasons)  # noqa: S311
 
+    # TODO: Validate
     def get_random_episode(
         self,
         session: Session,
@@ -183,6 +203,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         ]
         return random.choice(episodes)  # noqa: S311
 
+    # TODO: Validate
     def _get_update_function(
         self,
         session: Session,
@@ -207,6 +228,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
                     episode,
                 )
 
+    # TODO: Validate
     def _get_validator(
         self,
         session: Session,
@@ -225,6 +247,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             case Episode() as episode:
                 return self.update_episode_validator(episode)
 
+    # TODO: Validate
     @staticmethod
     def _newest_descendant_timestamp(entity: Show | Season | Episode) -> datetime:
         newest = entity.data_timestamp
@@ -237,6 +260,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             descendants.extend(node.children)
         return newest
 
+    # TODO: Validate
     def _update_and_validate(
         self,
         session: Session,
@@ -280,6 +304,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         except AssertionError as error:
             raise AssertionError(msg) from error
 
+    # TODO: Validate
     def _initialize_import_data(self, session: Session) -> None:
         """Import URL data, saving the expected result the other tests check against."""
         if self.invalid_url:
@@ -291,6 +316,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         self._export_import_url_results_file(results)
         self._export_database_dump_file(session)
 
+    # TODO: Validate
     @pytest.mark.enable_socket
     @pytest.mark.skipif(
         "GITHUB_ACTIONS" in os.environ,
@@ -318,9 +344,11 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             self._export_files_manifest(session_with_files)
 
 
+# TODO: Validate
 class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that every domain/path variant imports to the recorded result."""
 
+    # TODO: Validate
     def test_import_url_variants(
         self,
         session_with_files: Session,
@@ -333,9 +361,11 @@ class ImportURLVariantTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         assert self._simplify_import_url_results(results) == expected_results
 
 
+# TODO: Validate
 class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that importing a URL produces the expected plugin state."""
 
+    # TODO: Validate
     def test_import_url(self, session_with_files: Session) -> None:
         if not self.url or self.invalid_url:
             pytest.skip()
@@ -354,9 +384,11 @@ class ImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         assert self._simplify_import_url_results(results) == expected_results
 
 
+# TODO: Validate
 class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that importing an invalid URL raises InvalidURLError."""
 
+    # TODO: Validate
     def test_import_url(self, session_with_files: Session) -> None:
         if not self.url:
             pytest.skip()
@@ -365,9 +397,11 @@ class InvalidImportURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
             self.plugin_class(session_with_files).import_url(self.url)
 
 
+# TODO: Validate
 class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that re-importing an existing URL doesn't change the data."""
 
+    # TODO: Validate
     def test_import_existing_url(self, session_with_files: Session) -> None:
         if not self.url or self.invalid_url:
             pytest.skip()
@@ -384,9 +418,11 @@ class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         )
 
 
+# TODO: Validate
 class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a show restores randomized data."""
 
+    # TODO: Validate
     def test_update_show(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
@@ -394,9 +430,11 @@ class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
+# TODO: Validate
 class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a season restores randomized data."""
 
+    # TODO: Validate
     def test_update_season(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
@@ -404,9 +442,11 @@ class UpdateSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
+# TODO: Validate
 class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating an episode restores randomized data."""
 
+    # TODO: Validate
     def test_update_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         original_plugin = self.get_detached_plugin(session_with_files)
@@ -414,9 +454,11 @@ class UpdateEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         self._update_and_validate(session_with_files, original_plugin, entity)
 
 
+# TODO: Validate
 class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a source propagates upstream changes."""
 
+    # TODO: Validate
     def _create_source_update_entry(
         self,
         plugin_instance: PluginT,
@@ -430,6 +472,7 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         """
         raise NotImplementedError
 
+    # TODO: Validate
     def test_update_source(self, session_with_files: Session) -> None:
         """Update a random source and validate the data."""
         if self.invalid_url or not self.url:
@@ -454,9 +497,11 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         self._update_and_validate(session_with_files, original_plugin, source)
 
 
+# TODO: Validate
 class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake episode gets soft-deleted during update_season."""
 
+    # TODO: Validate
     def test_deleted_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         season = self.get_random_season(session_with_files, results)
@@ -488,9 +533,11 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         )
 
 
+# TODO: Validate
 class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake season gets soft-deleted during update_show."""
 
+    # TODO: Validate
     def test_deleted_season(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         show = self.get_random_show(session_with_files, results)
@@ -522,9 +569,11 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         )
 
 
+# TODO: Validate
 class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake episode in an existing season is soft-deleted by update_show."""
 
+    # TODO: Validate
     def test_deleted_episode_update_show(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         season = self.get_random_season(session_with_files, results)
@@ -557,9 +606,11 @@ class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT
         )
 
 
+# TODO: Validate
 class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that a fake season and its fake episode are soft-deleted by update_show."""
 
+    # TODO: Validate
     def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
         results = self._import_url(session_with_files)
         show = self.get_random_show(session_with_files, results)
@@ -599,9 +650,11 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
         )
 
 
+# TODO: Validate
 class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that searching returns results."""
 
+    # TODO: Validate
     def test_search(self, session_with_files: Session) -> None:
         if not self.search_query:
             pytest.skip()
@@ -628,9 +681,11 @@ class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         )
 
 
+# TODO: Validate
 class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity individually."""
 
+    # TODO: Validate
     @pytest.mark.skip(reason="Exhaustive test - run manually")
     def test_all_updates(self, session_with_files: Session) -> None:
         self._import_url(session_with_files)
@@ -658,6 +713,7 @@ class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                         session_with_files.rollback()
 
 
+# TODO: Validate
 class URLTests[PluginT: BasePlugin](
     ImportURLVariantTests[PluginT],
     ImportURLTests[PluginT],
@@ -666,6 +722,7 @@ class URLTests[PluginT: BasePlugin](
     """All URL-related tests: importing and re-importing."""
 
 
+# TODO: Validate
 class UpdateTests[PluginT: BasePlugin](
     UpdateShowTests[PluginT],
     UpdateSeasonTests[PluginT],
@@ -674,6 +731,7 @@ class UpdateTests[PluginT: BasePlugin](
     """All entity update tests."""
 
 
+# TODO: Validate
 class DeletionTests[PluginT: BasePlugin](
     DeletedEpisodeTests[PluginT],
     DeletedSeasonTests[PluginT],
@@ -683,6 +741,7 @@ class DeletionTests[PluginT: BasePlugin](
     """All soft-deletion tests."""
 
 
+# TODO: Validate
 class StandardTests[PluginT: BasePlugin](
     URLTests[PluginT],
     UpdateTests[PluginT],
@@ -693,6 +752,7 @@ class StandardTests[PluginT: BasePlugin](
     """The standard set of tests for a plugin with URL import support."""
 
 
+# TODO: Validate
 class InvalidURLValidator[PluginT: BasePlugin](
     InvalidImportURLTests[PluginT],
     PluginValidator[PluginT],

@@ -10,6 +10,7 @@ from plugins.Netflix.url_handlers import NetflixURLHandler, TitleURLHandler
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class Netflix(
     SourceMixin,
     UpsertMixin,
@@ -24,6 +25,7 @@ class Netflix(
 
     _URL_HANDLERS: ClassVar[tuple[type[NetflixURLHandler], ...]] = (TitleURLHandler,)
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:

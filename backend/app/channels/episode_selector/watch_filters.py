@@ -44,6 +44,7 @@ LAST_WATCHED_COLUMNS = {
 }
 
 
+# TODO: Validate
 def verified_watch_identifiers(user: User) -> SelectOfScalar[str]:
     """Episode identifiers the `User` has a verified watch of."""
     return (
@@ -58,6 +59,7 @@ def verified_watch_identifiers(user: User) -> SelectOfScalar[str]:
     )
 
 
+# TODO: Validate
 def any_watch_identifiers(user: User) -> SelectOfScalar[str]:
     """Episode identifiers with any watch (verified or not) for the user."""
     return (
@@ -67,6 +69,7 @@ def any_watch_identifiers(user: User) -> SelectOfScalar[str]:
     )
 
 
+# TODO: Validate
 def hide_watched_condition(
     user: User,
     maximum_watch_date: datetime | None,
@@ -83,6 +86,7 @@ def hide_watched_condition(
     return col(Episode.episode_identifier).not_in(watched)
 
 
+# TODO: Validate
 def hide_unwatched_condition(user: User) -> ColumnElement[bool]:
     """Keep only episodes the `User` has some watch of.
 
@@ -92,6 +96,7 @@ def hide_unwatched_condition(user: User) -> ColumnElement[bool]:
     return col(Episode.episode_identifier).in_(any_watch_identifiers(user))
 
 
+# TODO: Validate
 def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
     """Drop episodes the `User` started and never finished.
 
@@ -104,6 +109,7 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
 def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     """The ids of every `Show` the `User` has watched anything of."""
     return (
@@ -115,6 +121,7 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     )
 
 
+# TODO: Validate
 def join_last_watched(
     query: Select[tuple[Episode, UUID]],
     user: User,
@@ -147,6 +154,7 @@ def join_last_watched(
     )
 
 
+# TODO: Validate
 def latest_watch_by_identifier(
     session: Session,
     user: User,

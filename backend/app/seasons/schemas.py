@@ -15,10 +15,12 @@ from app.seasons.models import BaseSeason, Season
 from app.shows.models import Show
 
 
+# TODO: Validate
 class SeasonCreate(BaseCreateWithParentAndKey[Season, Show], BaseSeason):
     """Schema for creating a `Season`."""
 
 
+# TODO: Validate
 class SeasonUpdate(
     make_model_with_all_fields_optional(BaseSeason),
     BaseUpdateWithKey[Season],
@@ -26,6 +28,7 @@ class SeasonUpdate(
     """Schema for updating a `Season`."""
 
 
+# TODO: Validate
 class SeasonOutput(BaseSeason):
     """Schema for returning a `Season`."""
 
@@ -34,6 +37,7 @@ class SeasonOutput(BaseSeason):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class SeasonListOutput(SeasonOutput):
     """Schema for returning a list of `Season`s, with parent information."""
 
@@ -55,6 +59,7 @@ class SeasonListOutput(SeasonOutput):
     )
 
 
+# TODO: Validate
 class SeasonInformationSide(BaseModel):
     """One record's own account of a season, as the website that holds it has it."""
 
@@ -68,6 +73,7 @@ class SeasonInformationSide(BaseModel):
     key: str
 
 
+# TODO: Validate
 class SeasonInformationOutput(BaseModel):
     """What the website and TMDB each say about a season, side by side.
 
@@ -83,6 +89,7 @@ class SeasonInformationOutput(BaseModel):
     tmdb: SeasonInformationSide | None
 
 
+# TODO: Validate
 class SeasonsPublic(BaseModel):
     """Schema for returning a list of `Season`s."""
 

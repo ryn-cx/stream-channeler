@@ -9,6 +9,7 @@ interface ChannelActionsMenuProps {
   channel: ChannelTableData
 }
 
+// TODO: Validate
 export const ChannelActionsMenu = ({ channel }: ChannelActionsMenuProps) => {
   return (
     <ActionsMenu>

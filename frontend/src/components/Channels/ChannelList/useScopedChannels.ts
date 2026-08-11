@@ -32,6 +32,7 @@ export interface ScopedChannelsParams {
 // `isAdmin` no longer picks the endpoint, but it stays in the query key because the
 // same scope returns different rows per privilege — `score` and the owner of an
 // anonymous channel are only populated for an owner or an admin.
+// TODO: Validate
 export function useScopedChannels<TData extends ChannelRow = ChannelRow>(
   scope: RecordScope,
   isAdmin: boolean,

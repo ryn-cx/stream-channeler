@@ -23,6 +23,7 @@ interface DataTableSkeletonProps<TData> {
   rows?: number
 }
 
+// TODO: Validate
 /**
  * Loading skeleton for a `DataTable`. It is driven by the same table instance,
  * so its header row mirrors the real columns — including which ones are hidden

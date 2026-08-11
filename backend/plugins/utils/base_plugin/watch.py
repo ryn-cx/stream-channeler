@@ -14,10 +14,12 @@ from app.users.models import User
 from app.watches.models import Watch
 
 
+# TODO: Validate
 class WatchMixin(ABC):
     session: Session
     plugin: Plugin
 
+    # TODO: Validate
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:
         """Load this plugin's `Episode` for each key.
 
@@ -37,6 +39,7 @@ class WatchMixin(ABC):
         )
         return {episode.key: episode for episode in self.session.exec(statement)}
 
+    # TODO: Validate
     def _get_watched_identifier_dates(
         self,
         user: User,

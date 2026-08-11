@@ -4,11 +4,13 @@ import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeC
 /** Props shared by all card overlay components. */
 export type CardOverlayProps = { episode: BaseEpisodeWithDetails }
 
+// TODO: Validate
 /** Wrapper that adds negative top margin to tighten the gap between the image and the text. */
 export function CardTextArea({ children }: { children: React.ReactNode }) {
   return <div className="-mt-6">{children}</div>
 }
 
+// TODO: Validate
 /**
  * Displays the favicon + show name on the left and a list of detail strings on the right.
  * Null values in `details` are filtered out.
@@ -64,6 +66,7 @@ type CardMetaLine = {
   valueClassName?: string
 }
 
+// TODO: Validate
 /**
  * Displays one or more lines of secondary metadata (season/episode labels, playlist names, etc.).
  * Text truncates on small cards and expands on hover.

@@ -41,6 +41,7 @@ interface SaveChannelOrderDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 export function SaveChannelOrderDialog({
   config,
   open,

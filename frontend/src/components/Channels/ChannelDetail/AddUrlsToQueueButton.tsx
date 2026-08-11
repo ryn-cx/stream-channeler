@@ -24,6 +24,7 @@ interface ManageShowsButtonProps {
   }
 }
 
+// TODO: Validate
 export function ManageShowsButton({
   channelId,
   variant = "button",

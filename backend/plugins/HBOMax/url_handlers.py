@@ -15,17 +15,21 @@ _SEASON_REGEX = r"(?:s\d+\/)?"
 _MEDIA_TYPE_REGEX = r"[a-z-]+"
 
 
+# TODO: Validate
 class HBOMaxURLHandler(MediaTypeURLHandler["HBOMax"]):
+    # TODO: Validate
     def __init__(self, plugin: HBOMax, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
 
+# TODO: Validate
 class ShowURLHandler(HBOMaxURLHandler):
     media_type = "series"
     # Any non-movie media-type prefix maps to a series.
@@ -34,6 +38,7 @@ class ShowURLHandler(HBOMaxURLHandler):
     # https://www.hbomax.com/shows/rick-and-morty/s2/ab553cdc-e15d-4597-b65f-bec9201fd2dd
     _URL_REGEX = rf"\/{_MEDIA_TYPE_REGEX}\/{_SLUG_REGEX}{_SEASON_REGEX}(?P<show_id>{_UUID_REGEX})"
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -42,12 +47,14 @@ class ShowURLHandler(HBOMaxURLHandler):
         )
 
 
+# TODO: Validate
 class MovieURLHandler(HBOMaxURLHandler):
     media_type = "movie"
     # https://play.hbomax.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981
     # https://www.hbomax.com/movies/the-batman/4ee4f57e-19bd-493f-96f9-ad3e753af981
     _URL_REGEX = rf"\/movies?\/{_SLUG_REGEX}(?P<movie_id>{_UUID_REGEX})"
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(

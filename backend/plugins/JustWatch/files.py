@@ -41,6 +41,7 @@ _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 # The worker is shared by every plugin and JustWatch is what leans on it hardest,
 # so its requests go through a proxy of our own whenever one is configured and
 # fall back to the worker when it is not.
+# TODO: Validate
 @cache
 def _just_watch_client() -> GetAround:
     if settings.PROXY:
@@ -48,6 +49,7 @@ def _just_watch_client() -> GetAround:
     return get_around_client()
 
 
+# TODO: Validate
 @cache
 def just_scrape() -> JustScrape:
     # Nothing but this shares the proxy, so there is nothing to pace it against.
@@ -61,14 +63,17 @@ def just_scrape() -> JustScrape:
 # The throttle above paces the bulk downloads that run in the background, where
 # waiting costs nothing. A search happens while a user is watching the screen,
 # so it gets a client that returns as soon as the response arrives.
+# TODO: Validate
 @cache
 def unthrottled_just_scrape() -> JustScrape:
     return JustScrape(get_around_client=_just_watch_client())
 
 
+# TODO: Validate
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
     API_ENDPOINT = just_scrape().new_titles
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -80,6 +85,7 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
         self.date = new_titles_date
         super().__init__(session, plugin, f"{source_key}/{new_titles_date}")
 
+    # TODO: Validate
     @override
     def _get(self) -> list[new_titles_models.NewTitlesResponse]:
         return just_scrape().new_titles.download_and_parse_for_date(
@@ -88,13 +94,16 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
             date=self.date,
         )
 
+    # TODO: Validate
     def parsed_edges(self) -> list[new_titles_models.Edge]:
         return just_scrape().new_titles.extract_edges(self.parsed())
 
 
+# TODO: Validate
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     API_ENDPOINT = just_scrape().new_title_buckets
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -104,20 +113,25 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
         self.end_datetime = end_datetime
         super().__init__(session, plugin, str(end_datetime))
 
+    # TODO: Validate
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
         end_date = self.end_datetime.date()
         return just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
 
+    # TODO: Validate
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
         return just_scrape().new_title_buckets.extract_edges(self.parsed())
 
 
+# TODO: Validate
 class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
+    # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, locale: str) -> None:
         self.unique_identifier = locale
         super().__init__(session, plugin)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -127,35 +141,42 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
             self.write(response.json())
 
     # TODO: Add this to Just Scrape so it has full type support.
+    # TODO: Validate
     @override
     def _parse(self, raw: Any) -> list[dict[str, Any]]:
         return cast("list[dict[str, Any]]", raw)
 
 
+# TODO: Validate
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
     API_ENDPOINT = just_scrape().url_title_details
 
     # Occurs when a user puts in an invalid URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, GraphQLError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid full_path {self.unique_identifier}"
 
 
+# TODO: Validate
 class SeasonEpisodes(
     GAPIListJSON[season_episodes_models.SeasonEpisodesResponse],
 ):
     API_ENDPOINT = just_scrape().season_episodes
 
+    # TODO: Validate
     @override
     def _get(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
         return just_scrape().season_episodes.download_and_parse_all(
             self.unique_identifier,
         )
 
+    # TODO: Validate
     def parsed_episodes(self) -> list[season_episodes_models.Episode]:
         """Return every episode across the file's pages.
 
@@ -170,15 +191,18 @@ class SeasonEpisodes(
         ]
 
 
+# TODO: Validate
 class BuyBoxOffers(
     GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse],
 ):
     API_ENDPOINT = just_scrape().buy_box_offers
 
 
+# TODO: Validate
 class SearchTitles(GAPIJSON[search_models.SearchResponse]):
     API_ENDPOINT = unthrottled_just_scrape().search
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -192,6 +216,7 @@ class SearchTitles(GAPIJSON[search_models.SearchResponse]):
 
     # Every argument but the cursor keeps its default so a page request looks
     # exactly like the one the website makes.
+    # TODO: Validate
     @override
     def _get(self) -> search_models.SearchResponse:
         return unthrottled_just_scrape().search.download_and_parse(
@@ -200,6 +225,7 @@ class SearchTitles(GAPIJSON[search_models.SearchResponse]):
         )
 
 
+# TODO: Validate
 class FileMixin(TMDBMixin, register=False):
     _cached_media_type: str | None = None
 
@@ -207,24 +233,29 @@ class FileMixin(TMDBMixin, register=False):
     # sources, so every show reads the same ones.
     _PLUGIN_WIDE_FILES = (ProvidersLocale, NewTitleBucket, NewTitles)
 
+    # TODO: Validate
     def buy_box_offers_file(self, episode_key: str) -> BuyBoxOffers:
         """Contains every offer JustWatch has for a single episode."""
         return self._file(BuyBoxOffers, episode_key)
 
+    # TODO: Validate
     def url_title_details_file(self, show_key: str) -> UrlTitleDetails:
         """Contains a title's metadata, its seasons, and its offers."""
         return self._file(UrlTitleDetails, show_key)
 
+    # TODO: Validate
     def new_titles_file(self, source_key: str, new_date: datetime | date) -> NewTitles:
         """Contains the titles a single source added on a single date."""
         if isinstance(new_date, datetime):
             new_date = new_date.date()
         return self._file(NewTitles, source_key, new_date)
 
+    # TODO: Validate
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
         """Contains every episode of a single season."""
         return self._file(SeasonEpisodes, season_key)
 
+    # TODO: Validate
     def episode_has_offers(self, episode_key: str, season_key: str) -> bool:
         """Report whether JustWatch has anywhere to watch an episode.
 
@@ -240,6 +271,7 @@ class FileMixin(TMDBMixin, register=False):
             if episode.id == episode_key
         )
 
+    # TODO: Validate
     def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
         """Contains which sources added new titles on which dates."""
         if isinstance(end_datetime, File):
@@ -247,14 +279,17 @@ class FileMixin(TMDBMixin, register=False):
             end_datetime = datetime.fromisoformat(key)
         return self._file(NewTitleBucket, end_datetime)
 
+    # TODO: Validate
     def providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
         """Contains every provider JustWatch tracks for a locale."""
         return self._file(ProvidersLocale, locale)
 
+    # TODO: Validate
     def search_titles_file(self, query: str, cursor: str | None) -> SearchTitles:
         """Contains one page of search results for a single query."""
         return self._file(SearchTitles, query, cursor or "")
 
+    # TODO: Validate
     @override
     def _plugin_files(self) -> Sequence[ProvidersLocale | NewTitleBucket]:
         # Doesn't actually return all of the files, only the latest versions,
@@ -263,6 +298,7 @@ class FileMixin(TMDBMixin, register=False):
             self.new_titles_bucket_file(self._get_latest_new_titles_bucket().one()),
         ]
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Movies - Required to detect changes to the show (there are no new seasons).
@@ -270,6 +306,7 @@ class FileMixin(TMDBMixin, register=False):
         base_files = [self.url_title_details_file(show_key)]
         return self._append_tmdb_show_file(base_files, show_key)
 
+    # TODO: Validate
     @override
     def _season_files(
         self,
@@ -289,6 +326,7 @@ class FileMixin(TMDBMixin, register=False):
             ]
         return self._append_tmdb_season_file(base_files, season_key, show_key)
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -317,6 +355,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _download_season_files_and_children(
         self,
@@ -340,6 +379,7 @@ class FileMixin(TMDBMixin, register=False):
                 self.buy_box_offers_file(episode.id).download_if_outdated(update_at)
         return files
 
+    # TODO: Validate
     def _download_new_titles_files(
         self,
         new_titles_files: list[NewTitles],
@@ -350,8 +390,10 @@ class FileMixin(TMDBMixin, register=False):
             if minimum_timestamp <= tz_datetime.now():
                 new_titles_file.download_if_outdated(minimum_timestamp)
 
+    # TODO: Validate
     def _pending_new_titles_files(self, source: Source) -> list[NewTitles]:
         # Files not yet marked "Completed" in File.extra are still pending.
+        # TODO: Validate
         def factory(file: File) -> NewTitles:
             unique_identifier = NewTitles.file_key_to_unique_identifier(file.key)
             new_titles_date = date.fromisoformat(unique_identifier.rsplit("/", 1)[-1])
@@ -363,11 +405,13 @@ class FileMixin(TMDBMixin, register=False):
             key_prefix=f"{source.key}/",
         )
 
+    # TODO: Validate
     def _download_new_titles_bucket_if_missing(self) -> None:
         if not self._get_latest_new_titles_bucket().first():
             bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
             bucket.download_if_outdated()
 
+    # TODO: Validate
     def _download_new_titles(self) -> None:
         """Download every new titles file the stored buckets list.
 
@@ -392,6 +436,7 @@ class FileMixin(TMDBMixin, register=False):
         for new_titles in new_titles_files:
             new_titles.download_if_outdated()
 
+    # TODO: Validate
     def provider(self, source_key: str) -> dict[str, Any]:
         """Return the providers file's entry for `source_key`."""
         providers = self._providers_by_key()
@@ -401,12 +446,14 @@ class FileMixin(TMDBMixin, register=False):
             providers = self._providers_by_key()
         return providers[source_key]
 
+    # TODO: Validate
     def _providers_by_key(self) -> dict[str, dict[str, Any]]:
         return {
             provider["short_name"]: provider
             for provider in self.providers_locale_file().parsed()
         }
 
+    # TODO: Validate
     def _download_latest_new_titles_bucket(self) -> None:
         latest_bucket = self._get_latest_new_titles_bucket().one()
         # If the bucket was last updated within a day nothing needs to be done.
@@ -418,6 +465,7 @@ class FileMixin(TMDBMixin, register=False):
         bucket = self.new_titles_bucket_file(end_datetime)
         bucket.download_if_outdated()
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         url_title_details = self.url_title_details_file(show_key).parsed()
@@ -428,6 +476,7 @@ class FileMixin(TMDBMixin, register=False):
         # virtual season whose key is the movie's node id.
         return [node.id]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,
@@ -444,6 +493,7 @@ class FileMixin(TMDBMixin, register=False):
             for episode in self.season_episodes_file(season_key).parsed_episodes()
         ]
 
+    # TODO: Validate
     def _media_type(self, show_key: str) -> str:
         if not self._cached_media_type:
             url_title_details = self.url_title_details_file(show_key).parsed()
@@ -451,6 +501,7 @@ class FileMixin(TMDBMixin, register=False):
             self._cached_media_type = _MEDIA_TYPE_MAP[raw_media_type]
         return self._cached_media_type
 
+    # TODO: Validate
     def _sources_with_offers(
         self,
         show_key: str,
@@ -464,6 +515,7 @@ class FileMixin(TMDBMixin, register=False):
             seen.setdefault(offer.package.short_name, offer)
         return list(seen.items())
 
+    # TODO: Validate
     def _new_titles_buckets_statement(self) -> SelectOfScalar[File]:
         return (
             select(File)
@@ -474,12 +526,15 @@ class FileMixin(TMDBMixin, register=False):
             .order_by(col(File.data_timestamp).desc())
         )
 
+    # TODO: Validate
     def _get_new_titles_buckets(self) -> ScalarResult[File]:
         return self.session.exec(self._new_titles_buckets_statement())
 
+    # TODO: Validate
     def _get_latest_new_titles_bucket(self) -> ScalarResult[File]:
         return self.session.exec(self._new_titles_buckets_statement().limit(1))
 
+    # TODO: Validate
     def minimum_new_titles_timestamp(self, file: NewTitles) -> datetime:
         # The data for a specific source changes throughout the day as new entries are
         # appended to existing ones as can be seen here.

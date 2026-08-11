@@ -24,6 +24,7 @@ export const BROWSE_PAGE_SIZES = [10, 25, 50, 100]
 export const MAX_BROWSE_PAGE_SIZE = 100
 export const DEFAULT_BROWSE_PAGE_SIZE = 10
 
+// TODO: Validate
 function readStoredBrowsePageSize(storageKey: string): number {
   const stored = localStorage.getItem(storageKey)
   if (stored !== null) {
@@ -38,6 +39,7 @@ function readStoredBrowsePageSize(storageKey: string): number {
 // Persists the browse page size to localStorage so "per page" survives reloads
 // and navigation, mirroring how the table view persists its own page size. The
 // page index stays ephemeral so a fresh visit always starts on the first page.
+// TODO: Validate
 export function useBrowsePagination(
   storageKey: string,
 ): [PaginationState, Dispatch<SetStateAction<PaginationState>>] {
@@ -53,6 +55,7 @@ export function useBrowsePagination(
   return [pagination, setPagination]
 }
 
+// TODO: Validate
 export function BrowsePagination({
   pagination,
   onPaginationChange,
@@ -68,6 +71,7 @@ export function BrowsePagination({
   const canPreviousPage = pagination.pageIndex > 0
   const canNextPage = pagination.pageIndex < pageCount - 1
 
+  // TODO: Validate
   const setPageIndex = (pageIndex: number) =>
     onPaginationChange({ ...pagination, pageIndex })
 

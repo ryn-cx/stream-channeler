@@ -15,7 +15,9 @@ from tests.app.utils.route_assertions import (
 )
 
 
+# TODO: Validate
 class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
+    # TODO: Validate
     def _can_delete_record(
         self,
         *,
@@ -31,6 +33,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             return True
         return user_is_superuser
 
+    # TODO: Validate
     def assert_delete_success(
         self,
         client: TestClient,
@@ -48,6 +51,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
             select(self.database_model).where(self.database_model.id == record.id),
         ).first()
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -94,6 +98,7 @@ class BaseDeleteTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 headers=initial_test_data.headers,
             )
 
+    # TODO: Validate
     def test_delete_not_found(
         self,
         session_scoped_client: TestClient,

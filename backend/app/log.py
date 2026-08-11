@@ -12,7 +12,9 @@ _STDOUT_FORMAT = (
 )
 
 
+# TODO: Validate
 class InterceptHandler(logging.Handler):  # noqa: D101
+    # TODO: Validate
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D102
         try:
             level = logger.level(record.levelname).name
@@ -30,6 +32,7 @@ class InterceptHandler(logging.Handler):  # noqa: D101
         ).log(level, record.getMessage())
 
 
+# TODO: Validate
 def configure_logging() -> None:  # noqa: D103
     logger.remove()
     logger.configure(extra={"source": "app"})

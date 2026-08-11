@@ -43,6 +43,7 @@ PLUGIN_EXTRA_COLUMNS: dict[str, Any] = {"username": User.username}
 
 # A `Plugin`'s parent is the `User` that owns it rather than another media record, so
 # the create route resolves the requester instead of a record they can edit.
+# TODO: Validate
 @plugins_router.post("", response_model=PluginOutput)
 def create_plugin(
     session: SessionDep,
@@ -53,6 +54,7 @@ def create_plugin(
     return plugin_input.create(session, Plugin, current_user)
 
 
+# TODO: Validate
 @plugins_router.get("")
 def get_plugins(
     session: SessionDep,
@@ -71,6 +73,7 @@ def get_plugins(
     )
 
 
+# TODO: Validate
 @plugins_router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by EditablePlugin.
 def update_plugin(
     session: SessionDep,
@@ -81,12 +84,14 @@ def update_plugin(
     return plugin_input.update(session, plugin)
 
 
+# TODO: Validate
 @plugins_router.delete("/{plugin_id}")  # noqa: FAST003 - Used by EditablePlugin.
 def delete_plugin(session: SessionDep, plugin: EditablePlugin) -> Message:
     """Delete a `Plugin` if it's editable by the `User`."""
     return delete_record(session, plugin)
 
 
+# TODO: Validate
 @plugins_router.get("/import-watch-history-information")
 def import_watch_history_information(
     _current_user: CurrentUser,
@@ -103,6 +108,7 @@ def import_watch_history_information(
     ]
 
 
+# TODO: Validate
 @plugins_router.get("/import-url-information")
 def import_url_information(
     _current_user: CurrentUser,
@@ -124,6 +130,7 @@ def import_url_information(
     ]
 
 
+# TODO: Validate
 @plugins_router.get("/match-url")
 def match_url(
     url: str,
@@ -136,6 +143,7 @@ def match_url(
     return PluginURLMatch(matched=False)
 
 
+# TODO: Validate
 @plugins_router.get("/search-information")
 def search_information(
     _current_user: CurrentUser,
@@ -162,6 +170,7 @@ def search_information(
     return in_app_search + manual_search
 
 
+# TODO: Validate
 @plugins_router.get("/search-url")
 def search_url(
     plugin_key: str,
@@ -175,6 +184,7 @@ def search_url(
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
+# TODO: Validate
 @plugins_router.get("/search")
 def search_plugin(
     plugin_key: str,
@@ -199,6 +209,7 @@ def search_plugin(
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
+# TODO: Validate
 @plugins_router.get("/tmdb/match")
 def tmdb_match(
     title: str,
@@ -211,6 +222,7 @@ def tmdb_match(
     return service.tmdb_match(session, title, media_type, year)
 
 
+# TODO: Validate
 @plugins_router.get("/tmdb/media-info")
 def tmdb_media_info(
     media_type: MediaType,
@@ -223,6 +235,7 @@ def tmdb_media_info(
 
 
 # Registered after the literal paths above so that they are matched first.
+# TODO: Validate
 @plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin.
 def get_plugin(plugin: ReadablePlugin) -> Plugin:
     """Get a `Plugin` if it's readable by the `User`."""

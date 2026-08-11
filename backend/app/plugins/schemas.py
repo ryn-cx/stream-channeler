@@ -15,10 +15,12 @@ from app.schemas import (
 from app.users.models import User
 
 
+# TODO: Validate
 class PluginCreate(BaseCreateWithParentAndKey[Plugin, User], BasePlugin):
     """Schema for creating a `Plugin`."""
 
 
+# TODO: Validate
 class PluginUpdate(
     make_model_with_all_fields_optional(BasePlugin),
     BaseUpdateWithKey[Plugin],
@@ -26,6 +28,7 @@ class PluginUpdate(
     """Schema for updating a `Plugin`."""
 
 
+# TODO: Validate
 class PluginOutput(BasePlugin):
     """Schema for returning a `Plugin`."""
 
@@ -33,6 +36,7 @@ class PluginOutput(BasePlugin):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class PluginListOutput(PluginOutput):
     """Schema for returning a list of `Plugin`s, with owner information."""
 
@@ -41,6 +45,7 @@ class PluginListOutput(PluginOutput):
     username: str | None = Field(validation_alias=AliasPath("user", "username"))
 
 
+# TODO: Validate
 class PluginsPublic(BaseModel):
     """Schema for returning a list of `Plugin`s."""
 
@@ -50,18 +55,21 @@ class PluginsPublic(BaseModel):
     is_server_side: bool
 
 
+# TODO: Validate
 class PluginImportWatchHistoryInformation(BaseModel):
     plugin_key: str
     file_extension: str
     instructions: str
 
 
+# TODO: Validate
 class PluginImportURLInformation(BaseModel):
     name: str
     instructions: str
     favicon_url: str | None = None
 
 
+# TODO: Validate
 class PluginSearchInformation(BaseModel):
     plugin_key: str
     name: str
@@ -69,15 +77,18 @@ class PluginSearchInformation(BaseModel):
     favicon_url: str | None = None
 
 
+# TODO: Validate
 class PluginURLMatch(BaseModel):
     matched: bool
     plugin_key: str | None = None
 
 
+# TODO: Validate
 class PluginSearchUrl(BaseModel):
     url: str | None = None
 
 
+# TODO: Validate
 class TMDBMatch(BaseModel):
     """The TMDB title that best matches a plugin's search result."""
 
@@ -85,6 +96,7 @@ class TMDBMatch(BaseModel):
     media_type: MediaType
 
 
+# TODO: Validate
 class TMDBWatchProviderItem(BaseModel):
     """A place to watch a title, marked with the plugin that supports it."""
 
@@ -94,6 +106,7 @@ class TMDBWatchProviderItem(BaseModel):
     search_url: str | None = None
 
 
+# TODO: Validate
 class TMDBMediaInfo(BaseModel):
     """Rich detail for a single movie or TV show plus its US watch providers."""
 

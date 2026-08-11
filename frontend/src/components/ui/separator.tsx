@@ -1,8 +1,10 @@
+// TODO: Validate
 import * as React from "react"
 import * as SeparatorPrimitive from "@radix-ui/react-separator"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Separator({
   className,
   orientation = "horizontal",

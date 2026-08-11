@@ -4,6 +4,7 @@ import type { Row } from "@tanstack/react-table"
 // Convert a naive date string ("YYYY-MM-DD" or "YYYY-MM-DDTHH:mm") into an ISO string. A
 // bare date is expanded to the start of the day for a minimum bound and the end of the
 // day for a maximum bound so the whole day is covered.
+// TODO: Validate
 export function datetimeStringToIsoString(
   datetimeString: string,
   kind: "minimum" | "maximum",
@@ -16,6 +17,7 @@ export function datetimeStringToIsoString(
   return Number.isNaN(date.getTime()) ? "" : date.toISOString()
 }
 
+// TODO: Validate
 export function dateRangeFilter<TData>(
   row: Row<TData>,
   columnId: string,
@@ -36,6 +38,7 @@ export function dateRangeFilter<TData>(
   return true
 }
 
+// TODO: Validate
 export function numberRangeFilter<TData>(
   row: Row<TData>,
   columnId: string,

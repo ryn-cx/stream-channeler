@@ -15,10 +15,12 @@ from tests.plugins.crunchyroll.validators import (
 )
 
 
+# TODO: Validate
 class CrunchyrollVideoValidator(CrunchyrollValidator):
     urls = crunchyroll_urls("series/{parse_url_response}", "{show_slug}")
 
 
+# TODO: Validate
 class CrunchyrollVideoStandardTests(
     CrunchyrollStandardTests,
     CrunchyrollVideoValidator,
@@ -26,10 +28,12 @@ class CrunchyrollVideoStandardTests(
     pass
 
 
+# TODO: Validate
 class CrunchyrollVideoUpdateSourceTest(
     CrunchyrollUpdateSourceTests,
     CrunchyrollVideoValidator,
 ):
+    # TODO: Validate
     def export_browse_file(
         self,
         plugin_instance: Crunchyroll,
@@ -41,6 +45,7 @@ class CrunchyrollVideoUpdateSourceTest(
         new_browse.write(dumped)
         new_browse.database_record.data_timestamp = timestamp
 
+    # TODO: Validate
     @override
     def _create_source_update_entry(
         self,
@@ -59,6 +64,7 @@ class CrunchyrollVideoUpdateSourceTest(
 # https://www.crunchyroll.com/series/GT00371926/please-excuse-my-younger-brothers
 
 
+# TODO: Validate
 class TestAiringSingleSeasonShow(
     CrunchyrollVideoStandardTests,
     CrunchyrollVideoUpdateSourceTest,

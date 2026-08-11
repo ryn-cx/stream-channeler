@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -10,6 +11,7 @@ interface TooltipIconButtonProps extends React.ComponentProps<typeof Button> {
   icon: React.ReactNode
 }
 
+// TODO: Validate
 export function TooltipIconButton({
   label,
   icon,

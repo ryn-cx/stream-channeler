@@ -7,6 +7,7 @@ import {
   CardTextArea,
 } from "../components"
 
+// TODO: Validate
 function nameMatchesNumber(
   label: string,
   number: number,
@@ -16,6 +17,7 @@ function nameMatchesNumber(
   return normalized === `${label.toLowerCase()} ${number}`
 }
 
+// TODO: Validate
 function formatNumberedLine(
   label: string,
   number: number | null | undefined,
@@ -28,6 +30,7 @@ function formatNumberedLine(
   return { label, value: `${number} ∙ ${name}` }
 }
 
+// TODO: Validate
 export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
   const releaseDate = episode.air_date || episode.release_date
 

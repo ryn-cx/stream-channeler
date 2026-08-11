@@ -39,6 +39,7 @@ SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
 }
 
 
+# TODO: Validate
 @plugin_sources_router.post("/sources", response_model=SourcePublic)
 def create_source(
     session: SessionDep,
@@ -49,6 +50,7 @@ def create_source(
     return source_input.create(session, Source, plugin)
 
 
+# TODO: Validate
 @sources_router.get("")
 def get_sources(
     session: SessionDep,
@@ -67,6 +69,7 @@ def get_sources(
     )
 
 
+# TODO: Validate
 @plugin_sources_router.get("/sources")
 def get_plugin_sources(
     session: SessionDep,
@@ -86,12 +89,14 @@ def get_plugin_sources(
     )
 
 
+# TODO: Validate
 @sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource.
 def get_source(source: ReadableSource) -> Source:
     """Get a `Source` if it's readable by the `User`."""
     return source
 
 
+# TODO: Validate
 @sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by EditableSource.
 def update_source(
     session: SessionDep,
@@ -102,6 +107,7 @@ def update_source(
     return source_input.update(session, source)
 
 
+# TODO: Validate
 @sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by EditableSource.
 def delete_source(session: SessionDep, source: EditableSource) -> Message:
     """Delete a `Source` if it's editable by the `User`."""

@@ -6,6 +6,7 @@ import {
 } from "@/client"
 import type { CancelablePromise } from "@/client/core/CancelablePromise"
 
+// TODO: Validate
 export function getChannelEpisodes(
   data: ChannelsGetChannelEpisodesData,
 ): CancelablePromise<ChannelsGetChannelEpisodesResponse> {

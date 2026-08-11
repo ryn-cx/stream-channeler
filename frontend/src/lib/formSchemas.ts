@@ -39,6 +39,7 @@ export const requiredIdentifier = z.string().min(1, "Identifier is required")
 /** Visibility selector shared by plugin and channel forms. */
 export const visibilityEnum = z.enum(["public", "unlisted", "private"])
 
+// TODO: Validate
 export function nullifyBlanks<T extends object>(data: T): T {
   return Object.fromEntries(
     Object.entries(data).map(([key, value]) => [

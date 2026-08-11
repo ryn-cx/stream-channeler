@@ -8,6 +8,7 @@ import pytest
 from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 @pytest.fixture(autouse=True)
 def _block_file_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stop routes that merge TMDB data from downloading files.
@@ -16,6 +17,7 @@ def _block_file_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
     call that `pytest-socket` turns into a failure.
     """
 
+    # TODO: Validate
     def _no_download(*_args: Any, **_kwargs: Any) -> None:  # noqa: ANN401
         return
 

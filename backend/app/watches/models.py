@@ -19,6 +19,7 @@ from app.users.models import User
 from app.utils import tz_datetime
 
 
+# TODO: Validate
 class BaseWatch(SQLModel):
     # call-overload - See TimestampAndIdMixin for an explanation.
     watch_date: datetime = Field(
@@ -29,6 +30,7 @@ class BaseWatch(SQLModel):
     verified: bool = Field(default=False)
 
 
+# TODO: Validate
 class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
         # Keyed on the identifier rather than the episode so a watch keeps its
@@ -73,8 +75,10 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     )
     episode: Episode | None = Relationship(back_populates="watches")
 
+    # TODO: Validate
     def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
 
+    # TODO: Validate
     def is_publically_readable(self, _session: Session) -> bool:
         return False

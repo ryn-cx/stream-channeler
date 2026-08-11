@@ -31,6 +31,7 @@ from app.watches.models import Watch
 ZERO_LAST_VALUE = 2**31 - 1
 
 
+# TODO: Validate
 def zero_last(number: ColumnElement[Any]) -> ColumnElement[Any]:
     """Return `number` with 0 ordered past every other number rather than ahead.
 
@@ -41,9 +42,11 @@ def zero_last(number: ColumnElement[Any]) -> ColumnElement[Any]:
     return case((number == 0, ZERO_LAST_VALUE), else_=number)
 
 
+# TODO: Validate
 class SortExpressionBuilder:
     """Builds the SQL expression behind each of a channel's sort keys."""
 
+    # TODO: Validate
     def __init__(
         self,
         random_seed: int,
@@ -57,6 +60,7 @@ class SortExpressionBuilder:
         self._fallbacks = fallbacks
         self._channel_attribution = channel_attribution or {}
 
+    # TODO: Validate
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         """Return the value `sort_key` orders episodes by."""
         if sort_key.field == "saved_order":
@@ -65,6 +69,7 @@ class SortExpressionBuilder:
             return self._aggregate_episode_expr(sort_key)
         return self._value_expr(sort_key)
 
+    # TODO: Validate
     @staticmethod
     def apply_direction(
         expr: ColumnElement[Any],
@@ -78,6 +83,7 @@ class SortExpressionBuilder:
             return directed.nulls_first()
         return directed.nulls_last()
 
+    # TODO: Validate
     def random_hash(self, expr: ColumnElement[Any]) -> ColumnElement[Any]:
         """Shuffle `expr` into an order that holds for this channel's seed."""
         return func.hashtext(
@@ -87,6 +93,7 @@ class SortExpressionBuilder:
             ),
         )
 
+    # TODO: Validate
     def _channel_expr(self) -> ColumnElement[Any]:
         """Return the channel an episode reads as coming from.
 
@@ -105,6 +112,7 @@ class SortExpressionBuilder:
             else_=func.cast(source_channel, String),
         )
 
+    # TODO: Validate
     def _value_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:  # noqa: PLR0911
         field = sort_key.field
 
@@ -140,6 +148,7 @@ class SortExpressionBuilder:
 
         return self._stored_column(sort_key.model, field, sort_key.model_class)
 
+    # TODO: Validate
     def _stored_column(
         self,
         model: str,
@@ -153,6 +162,7 @@ class SortExpressionBuilder:
             return column
         return zero_last(column)
 
+    # TODO: Validate
     def _aggregate_episode_expr(
         self,
         sort_key: SortKeyInput,
@@ -182,6 +192,7 @@ class SortExpressionBuilder:
             raise ValueError(msg)
         return agg_func(episode_field).over(partition_by=col(Show.id))
 
+    # TODO: Validate
     def _sequential_rank(
         self,
         model: str,
@@ -213,6 +224,7 @@ class SortExpressionBuilder:
         of the run rather than ahead of it, which is where the specials belong.
         """
 
+        # TODO: Validate
         def numbered(number: ColumnElement[Any]) -> ColumnElement[Any]:
             return zero_last(number) if zero_last_numbers else number
 
@@ -252,6 +264,7 @@ class SortExpressionBuilder:
         msg = f"sequential is not supported for model '{model}'"
         raise ValueError(msg)
 
+    # TODO: Validate
     def _recently_aired_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
         cutoff = sort_key.recently_aired_date or (
             tz_datetime.now() - timedelta(days=sort_key.days or 7)
@@ -262,6 +275,7 @@ class SortExpressionBuilder:
             else_=0,
         )
 
+    # TODO: Validate
     def _started_show_expr(self) -> ColumnElement[Any]:
         if not self._user:
             return literal_column("0")

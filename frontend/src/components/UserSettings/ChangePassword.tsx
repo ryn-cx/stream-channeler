@@ -39,6 +39,7 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const ChangePassword = () => {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const form = useForm<FormData>({
@@ -62,6 +63,7 @@ const ChangePassword = () => {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const onSubmit = async (data: FormData) => {
     mutation.mutate(data)
   }

@@ -29,6 +29,7 @@ interface EpisodeExpiryDialogProps {
 
 // The same "ask for an optional expiry date" popup used when blacklisting an episode
 // from an episode card, reused for the manage-whitelist menu.
+// TODO: Validate
 export function EpisodeExpiryDialog({
   open,
   title,

@@ -41,6 +41,7 @@ interface ChannelRowProps {
   personalizable?: boolean
 }
 
+// TODO: Validate
 function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
   const [open, setOpen] = useState(false)
   const { data: fullChannel } = useQuery({
@@ -67,6 +68,7 @@ function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
   )
 }
 
+// TODO: Validate
 function ChannelRow({
   channel,
   onDelete,
@@ -136,6 +138,7 @@ function ChannelRow({
     ? fallbackQuery.isError
     : orderedQuery.isError
 
+  // TODO: Validate
   const updateArrows = () => {
     const container = scrollRef.current
     if (!container) return
@@ -145,6 +148,7 @@ function ChannelRow({
     )
   }
 
+  // TODO: Validate
   const scroll = (direction: "left" | "right") => {
     const container = scrollRef.current
     if (!container) return
@@ -318,9 +322,11 @@ interface ChannelsBrowseProps {
 // Default channel-list order: by channel number ascending. Favorites prefer the
 // viewer's own `custom_channel_number`, and a channel with no number is treated as
 // 999 so it sorts after the numbered ones.
+// TODO: Validate
 export function sortChannelsByNumber<T extends BrowseChannel>(
   channels: T[],
 ): T[] {
+  // TODO: Validate
   const effectiveNumber = (channel: T): number => {
     const listChannel = channel as ChannelListOutput
     return listChannel.custom_channel_number ?? channel.channel_number ?? 999
@@ -333,6 +339,7 @@ export function sortChannelsByNumber<T extends BrowseChannel>(
   })
 }
 
+// TODO: Validate
 export function ChannelsBrowse({
   channels,
   readOnly = false,

@@ -28,6 +28,7 @@ interface EditFavoriteChannelDialogProps {
 // Lets a viewer set their own name/number for a channel they favorited, without
 // changing the shared channel that its owner controls. Empty fields fall back to
 // the channel's own values wherever the customization is displayed.
+// TODO: Validate
 export function EditFavoriteChannelDialog({
   channel,
   open,

@@ -16,6 +16,7 @@ from tests.app.users.utils import CreatedUser
 type Method = Literal["get", "post", "put", "patch", "delete"]
 
 
+# TODO: Validate
 def make_request(
     client: TestClient,
     method: Method,
@@ -31,6 +32,7 @@ def make_request(
     return getattr(client, method)(url, **kwargs)
 
 
+# TODO: Validate
 def assert_not_authenticated(
     client: TestClient,
     method: Method,
@@ -41,6 +43,7 @@ def assert_not_authenticated(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+# TODO: Validate
 def assert_not_enough_permission(
     client: TestClient,
     method: Method,
@@ -52,6 +55,7 @@ def assert_not_enough_permission(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+# TODO: Validate
 def assert_not_found(  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -65,6 +69,7 @@ def assert_not_found(  # noqa: PLR0913
     assert response.json()["detail"] == detail
 
 
+# TODO: Validate
 def assert_forbidden(  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -78,6 +83,7 @@ def assert_forbidden(  # noqa: PLR0913
     assert response.json()["detail"] == detail
 
 
+# TODO: Validate
 def assert_conflict(  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -91,6 +97,7 @@ def assert_conflict(  # noqa: PLR0913
     assert response.json()["detail"] == detail
 
 
+# TODO: Validate
 def assert_delete(
     client: TestClient,
     url: str,
@@ -102,6 +109,7 @@ def assert_delete(
     assert response.json()["message"] == message
 
 
+# TODO: Validate
 def assert_unprocessable(
     client: TestClient,
     method: Method,
@@ -113,6 +121,7 @@ def assert_unprocessable(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+# TODO: Validate
 def assert_success[T: BaseModel](  # noqa: PLR0913
     client: TestClient,
     method: Method,
@@ -128,6 +137,7 @@ def assert_success[T: BaseModel](  # noqa: PLR0913
     return output_schema.model_validate(response_json)
 
 
+# TODO: Validate
 def assert_success_list[T: BaseModel](  # noqa: PLR0913
     client: TestClient,
     method: Method,

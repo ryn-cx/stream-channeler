@@ -21,36 +21,45 @@ _SERIES_TYPE = "s"
 _MOVIE_SEASON_ID = "0"
 
 
+# TODO: Validate
 @cache
 def plugi() -> Plugi:
     return Plugi(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class ContentFile(GAPIJSON[ContentModel]):
     """Content file."""
 
     API_ENDPOINT = plugi().content
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ContentNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid content_id {self.unique_identifier}"
 
 
+# TODO: Validate
 class FileMixin(TMDBMixin, register=False):
+    # TODO: Validate
     def content_file(self, content_id: str) -> ContentFile:
         """Contains all of a Tubi title's data (title, seasons, episodes)."""
         return self._file(ContentFile, content_id)
 
+    # TODO: Validate
     def _content(self, content_id: str) -> ContentModel:
         return self.content_file(content_id).parsed()
 
+    # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return self._content(show_key).type != _SERIES_TYPE
 
+    # TODO: Validate
     def _seasons(self, show_key: str) -> list[ContentSeason]:
         children = self._content(show_key).children
         if children is None:
@@ -58,12 +67,14 @@ class FileMixin(TMDBMixin, register=False):
         # Tubi returns the seasons in an arbitrary order.
         return sorted(children, key=lambda season: int(season.id))
 
+    # TODO: Validate
     def _season_episodes(self, show_key: str, season_id: str) -> list[ContentEpisode]:
         for season in self._seasons(show_key):
             if season.id == season_id:
                 return season.children
         return []
 
+    # TODO: Validate
     @staticmethod
     def _season_key(show_key: str, season_id: str) -> str:
         """Encode the show key into the season key.
@@ -74,19 +85,23 @@ class FileMixin(TMDBMixin, register=False):
         """
         return f"{show_key}:{season_id}"
 
+    # TODO: Validate
     @classmethod
     def _movie_season_key(cls, show_key: str) -> str:
         return cls._season_key(show_key, _MOVIE_SEASON_ID)
 
+    # TODO: Validate
     @staticmethod
     def _split_season_key(season_key: str) -> tuple[str, str]:
         show_key, _, season_id = season_key.partition(":")
         return show_key, season_id
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_show_file([self.content_file(show_key)], show_key)
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return self._append_tmdb_season_file(
@@ -95,6 +110,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -109,6 +125,7 @@ class FileMixin(TMDBMixin, register=False):
             show_key,
         )
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
@@ -117,6 +134,7 @@ class FileMixin(TMDBMixin, register=False):
             self._season_key(show_key, season.id) for season in self._seasons(show_key)
         ]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,

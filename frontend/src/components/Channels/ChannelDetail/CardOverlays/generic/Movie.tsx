@@ -7,6 +7,7 @@ import {
   CardTextArea,
 } from "../components"
 
+// TODO: Validate
 export default function MovieCardOverlay({ episode }: CardOverlayProps) {
   const releaseDate = episode.air_date || episode.release_date
 

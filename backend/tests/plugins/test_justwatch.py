@@ -24,6 +24,7 @@ from tests.plugins.plugin_validator.context_managers import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class JustWatchValidator(PluginValidator[JustWatch]):
     """Validate JustWatch.
 
@@ -37,15 +38,18 @@ class JustWatchValidator(PluginValidator[JustWatch]):
     plugin_class = JustWatch
 
 
+# TODO: Validate
 class JustWatchStandardTests(StandardTests[JustWatch], JustWatchValidator):
     pass
 
 
+# TODO: Validate
 class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator):
     """Update source tests for JustWatch's own sources and the delegated ones."""
 
     slug: str
 
+    # TODO: Validate
     @override
     def update_source_validator(self, source: Source) -> Validator:
         validator = super().update_source_validator(source)
@@ -60,6 +64,7 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
         validator = validator.incremented(Show, "modified_at")
         return validator.decremented(Show, "update_at")
 
+    # TODO: Validate
     @override
     def _create_source_update_entry(
         self,
@@ -75,6 +80,7 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
             timestamp,
         )
 
+    # TODO: Validate
     @staticmethod
     def _fake_new_titles_file(
         plugin_instance: JustWatch,
@@ -107,6 +113,7 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
         new_titles.write(just_scrape().new_titles.model_dump([page]))
         new_titles.database_record.data_timestamp = timestamp
 
+    # TODO: Validate
     def test_update_source_marks_external_show(
         self,
         session_with_files: Session,
@@ -185,6 +192,7 @@ class JustWatchUpdateSourceTest(UpdateSourceTests[JustWatch], JustWatchValidator
                 )
 
 
+# TODO: Validate
 class MovieURLs:
     urls: tuple[str, ...] = (
         "/us/movie/{slug}",
@@ -192,6 +200,7 @@ class MovieURLs:
     )
 
 
+# TODO: Validate
 class ShowURLs:
     urls: tuple[str, ...] = (
         "/us/tv-show/{slug}",
@@ -209,6 +218,7 @@ class ShowURLs:
 #     slug = "strip-law"
 
 
+# TODO: Validate
 class TestEpisodesWithoutOffers(ShowURLs, JustWatchStandardTests):
     """Tests a title no service carries.
 
@@ -219,6 +229,7 @@ class TestEpisodesWithoutOffers(ShowURLs, JustWatchStandardTests):
 
     slug = "encouragement-of-climb"
 
+    # TODO: Validate
     def test_no_buy_box_offers_for_episodes_without_offers(
         self,
         session_with_files: Session,
@@ -265,25 +276,30 @@ class TestEpisodesWithoutOffers(ShowURLs, JustWatchStandardTests):
         )
 
 
+# TODO: Validate
 class TestHuluShow(ShowURLs, JustWatchStandardTests, JustWatchUpdateSourceTest):
     "Tests Hulu source."
 
     slug = "the-bear"
 
 
+# TODO: Validate
 class TestNetflixShow(ShowURLs, JustWatchStandardTests, JustWatchUpdateSourceTest):
     "Tests Netflix source."
 
     slug = "basic-versus-baller-travel-at-any-cost"
 
 
+# TODO: Validate
 class InvalidJustWatchValidator(InvalidURLValidator[JustWatch]):
     plugin_class = JustWatch
 
 
+# TODO: Validate
 class TestInvalidMovie(MovieURLs, InvalidJustWatchValidator):
     slug = "invalid-movie-that-does-not-exist"
 
 
+# TODO: Validate
 class TestInvalidShow(ShowURLs, InvalidJustWatchValidator):
     slug = "invalid-show-that-does-not-exist"

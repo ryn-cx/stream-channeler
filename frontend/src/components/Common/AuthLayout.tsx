@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Appearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
 import { Footer } from "./Footer"
@@ -6,6 +7,7 @@ interface AuthLayoutProps {
   children: React.ReactNode
 }
 
+// TODO: Validate
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">

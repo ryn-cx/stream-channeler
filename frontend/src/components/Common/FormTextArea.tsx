@@ -22,6 +22,7 @@ interface FormTextAreaProps<TFieldValues extends FieldValues>
   required?: boolean
 }
 
+// TODO: Validate
 export function FormTextArea<TFieldValues extends FieldValues>({
   control,
   name,

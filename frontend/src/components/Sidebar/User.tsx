@@ -25,6 +25,7 @@ interface UserInfoProps {
   email?: string
 }
 
+// TODO: Validate
 function UserInfo({ username, email }: UserInfoProps) {
   return (
     <div className="flex items-center gap-2.5 w-full min-w-0">
@@ -41,17 +42,20 @@ function UserInfo({ username, email }: UserInfoProps) {
   )
 }
 
+// TODO: Validate
 export function User({ user }: { user: any }) {
   const { logout } = useAuth()
   const { isMobile, setOpenMobile } = useSidebar()
 
   if (!user) return null
 
+  // TODO: Validate
   const handleMenuClick = () => {
     if (isMobile) {
       setOpenMobile(false)
     }
   }
+  // TODO: Validate
   const handleLogout = async () => {
     logout()
   }

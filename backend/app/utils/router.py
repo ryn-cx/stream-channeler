@@ -14,6 +14,7 @@ admin_router = APIRouter(
 )
 
 
+# TODO: Validate
 @admin_router.post("/test-email/", status_code=status.HTTP_201_CREATED)
 def test_email(email_to: EmailStr) -> Message:
     """Test emails."""
@@ -26,6 +27,7 @@ def test_email(email_to: EmailStr) -> Message:
     return Message(message="Test email sent")
 
 
+# TODO: Validate
 @utils_router.get("/health-check/")
 async def health_check() -> bool:
     return True

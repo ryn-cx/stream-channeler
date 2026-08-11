@@ -17,11 +17,14 @@ from tests.app.utils.route_assertions import (
 )
 
 
+# TODO: Validate
 class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
+    # TODO: Validate
     def get_record_list_url(self, parent_id: uuid.UUID | str) -> str:
         """Get the URL for the parent endpoint."""
         return f"{settings.API_V1_STR}/{self.parent_endpoint_name}/{parent_id}/{self.endpoint_name}"
 
+    # TODO: Validate
     def can_get_record(
         self,
         *,
@@ -39,6 +42,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             return True
         return user_is_superuser
 
+    # TODO: Validate
     def assert_api_get_list_success(
         self,
         client: TestClient,
@@ -66,6 +70,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             response_dump = response_by_id[record.id].model_dump()
             assert self.stored_fields(expected_dump).items() <= response_dump.items()
 
+    # TODO: Validate
     def assert_api_get_success(
         self,
         client: TestClient,
@@ -88,6 +93,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             <= response.model_dump().items()
         )
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -129,6 +135,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 headers=initial_test_data.headers,
             )
 
+    # TODO: Validate
     def test_get_not_found(
         self,
         session_scoped_client: TestClient,
@@ -150,6 +157,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
             headers=initial_test_data.headers,
         )
 
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -198,6 +206,7 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
                 headers=initial_test_data.headers,
             )
 
+    # TODO: Validate
     @pytest.mark.parametrize("record_count", [0, 1, 2])
     def test_list_data(
         self,
@@ -236,14 +245,17 @@ class BaseGetTests[T: SUPPORTED_MODELS](BaseTests[T]):
         )
 
 
+# TODO: Validate
 class UserOwnedGetMixin[T: SUPPORTED_MODELS](BaseGetTests[T]):
     """Mixin for models where the parent is the authenticated user (channels, plugins)."""
 
+    # TODO: Validate
     def get_record_list_url(self, parent_id: uuid.UUID | str) -> str:  # noqa: ARG002
         return f"{settings.API_V1_STR}/{self.endpoint_name}"
 
     # The list endpoint is /{endpoint} (no parent path). Only the cases that
     # match "the authenticated user listing their own records" are expressible.
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])

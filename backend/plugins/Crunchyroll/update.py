@@ -21,7 +21,9 @@ from plugins.Crunchyroll.upsert import UpsertMixin
 MUSIC_CHANNEL_DESCRIPTION_PATH = Path(__file__).parent / "music_channel_description.md"
 
 
+# TODO: Validate
 class UpdateMixin(UpsertMixin, register=False):
+    # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
         if source.key == MUSIC_SOURCE:
@@ -29,6 +31,7 @@ class UpdateMixin(UpsertMixin, register=False):
         elif source.key == VIDEO_SOURCE:
             self._update_video_source(source)
 
+    # TODO: Validate
     def _update_video_source(self, source: Source) -> None:
         """Look for new series, which the video `Source` is scheduled for daily."""
         logger.info("Checking Crunchyroll for new releases")
@@ -39,6 +42,7 @@ class UpdateMixin(UpsertMixin, register=False):
         self._process_new_browse_files(source)
         self._upsert_anime_source()
 
+    # TODO: Validate
     def _update_music_source(self, source: Source) -> None:
         """Look for new music, which the music `Source` is scheduled for monthly."""
         logger.info("Checking Crunchyroll music for new releases")
@@ -46,6 +50,7 @@ class UpdateMixin(UpsertMixin, register=False):
         self._process_new_music_browse_files(source)
         self._upsert_music_source()
 
+    # TODO: Validate
     def _process_new_browse_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
 
@@ -69,6 +74,7 @@ class UpdateMixin(UpsertMixin, register=False):
 
             browse_json.database_record.extra = "Completed"
 
+    # TODO: Validate
     def _process_new_music_browse_files(self, source: Source) -> None:
         for browse_json in self.get_incomplete_files(
             BrowseMusic,
@@ -109,6 +115,7 @@ class UpdateMixin(UpsertMixin, register=False):
 
             browse_json.database_record.extra = "Completed"
 
+    # TODO: Validate
     def _music_channel(self) -> Channel:
         """Returns the plugin owned channel every Crunchyroll artist is queued into.
 

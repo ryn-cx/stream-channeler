@@ -25,6 +25,7 @@ interface ChannelDescriptionProps {
 
 const INTERNAL_HOSTS = ["streamchanneler.com"]
 
+// TODO: Validate
 function isInternalHref(href: string | undefined): boolean {
   if (!href) return false
   try {
@@ -89,6 +90,7 @@ const markdownComponents: Components = {
 const markdownStyles =
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs"
 
+// TODO: Validate
 export function ChannelDescription({
   channel,
   className,

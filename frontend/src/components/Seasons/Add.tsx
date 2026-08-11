@@ -38,6 +38,7 @@ interface AddSeasonProps {
   showKey: string
 }
 
+// TODO: Validate
 const AddSeason = ({ showKey }: AddSeasonProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -76,6 +77,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

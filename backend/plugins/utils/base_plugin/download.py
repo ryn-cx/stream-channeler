@@ -13,14 +13,17 @@ from app.shows.models import Show
 from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class DownloadMixin(ABC):
     session: Session
 
+    # TODO: Validate
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the show."""
         msg = "This plugin does not have show specific files."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def _season_files(
         self,
         season_key: str,
@@ -30,6 +33,7 @@ class DownloadMixin(ABC):
         msg = "This plugin does not have season specific files."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def _episode_files(
         self,
         episode_key: str,
@@ -40,37 +44,45 @@ class DownloadMixin(ABC):
         msg = "This plugin does not have episode specific files."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the plugin."""
         msg = "This plugin does not have plugin specific files."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def _source_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files associated with the source."""
         msg = "This plugin does not have source specific files."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     @staticmethod
     def _file_timestamp(files: Sequence[BaseFile[Any]]) -> datetime:
         """Get the timestamp of the first file in the sequence."""
         return files[0].data_timestamp
 
+    # TODO: Validate
     def plugin_data_timestamp(self) -> datetime:
         """Return the data timestamp for the plugin's files."""
         return self._file_timestamp(self._plugin_files())
 
+    # TODO: Validate
     def source_data_timestamp(self) -> datetime:
         """Return the data timestamp for the source's files."""
         return self._file_timestamp(self._source_files())
 
+    # TODO: Validate
     def show_data_timestamp(self, show_key: str) -> datetime:
         """Return the data timestamp for the show's files."""
         return self._file_timestamp(self._show_files(show_key))
 
+    # TODO: Validate
     def season_data_timestamp(self, season_key: str, show_key: str) -> datetime:
         """Return the data timestamp for the season's files."""
         return self._file_timestamp(self._season_files(season_key, show_key))
 
+    # TODO: Validate
     def episode_data_timestamp(
         self,
         episode_key: str,
@@ -82,6 +94,7 @@ class DownloadMixin(ABC):
             self._episode_files(episode_key, season_key, show_key),
         )
 
+    # TODO: Validate
     @staticmethod
     def _download_outdated_files(
         files: Sequence[BaseFile[Any]],
@@ -91,11 +104,13 @@ class DownloadMixin(ABC):
             file.download_if_outdated(update_at)
         return [file.database_record for file in files]
 
+    # TODO: Validate
     @staticmethod
     def _get_key(record: str | Show | Season | Episode) -> str:
         """Return the record's key, accepting either the key or the record itself."""
         return record if isinstance(record, str) else record.key
 
+    # TODO: Validate
     def _get_show_key(self, season: str | Season, show: str | Show | None) -> str:
         """Return the show key, deriving it from a `Season` when `show` is omitted."""
         if show is not None:
@@ -105,6 +120,7 @@ class DownloadMixin(ABC):
         msg = "show is required when season is passed as a key."
         raise TypeError(msg)
 
+    # TODO: Validate
     def _download_show_files_and_children(
         self,
         show: str | Show,
@@ -117,6 +133,7 @@ class DownloadMixin(ABC):
         all_files.extend(self._download_all_season_files(show_key))
         return all_files
 
+    # TODO: Validate
     @overload
     def _download_season_files_and_children(
         self,
@@ -125,6 +142,7 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     @overload
     def _download_season_files_and_children(
         self,
@@ -133,6 +151,7 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     def _download_season_files_and_children(
         self,
         season: str | Season,
@@ -147,6 +166,7 @@ class DownloadMixin(ABC):
         all_files.extend(self._download_all_episode_files(season_key, show_key))
         return all_files
 
+    # TODO: Validate
     @overload
     def _download_episode_files(
         self,
@@ -156,6 +176,7 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     @overload
     def _download_episode_files(
         self,
@@ -165,6 +186,7 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     @overload
     def _download_episode_files(
         self,
@@ -174,6 +196,7 @@ class DownloadMixin(ABC):
         update_at: datetime | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     def _download_episode_files(
         self,
         episode: str | Episode,
@@ -202,6 +225,7 @@ class DownloadMixin(ABC):
         episode_files = self._episode_files(episode_key, season_key, show_key)
         return self._download_outdated_files(episode_files, update_at)
 
+    # TODO: Validate
     def _download_all_season_files(
         self,
         show: str | Show,
@@ -224,6 +248,7 @@ class DownloadMixin(ABC):
             )
         return all_files
 
+    # TODO: Validate
     @overload
     def _download_all_episode_files(
         self,
@@ -232,6 +257,7 @@ class DownloadMixin(ABC):
         preloaded_files: Sequence[File] | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     @overload
     def _download_all_episode_files(
         self,
@@ -240,6 +266,7 @@ class DownloadMixin(ABC):
         preloaded_files: Sequence[File] | None = None,
     ) -> list[File]: ...
 
+    # TODO: Validate
     def _download_all_episode_files(
         self,
         season: str | Season,
@@ -261,12 +288,14 @@ class DownloadMixin(ABC):
             all_files.extend(self._download_outdated_files(episode_files))
         return all_files
 
+    # TODO: Validate
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:
         if not file_keys:
             return []
         statement = select(File).where(col(File.key).in_(file_keys))
         return self.session.exec(statement).all()
 
+    # TODO: Validate
     def _preload_show_files(
         self,
         show_key: str,
@@ -277,6 +306,7 @@ class DownloadMixin(ABC):
         file_keys = [file.file_key() for file in self._show_files(show_key)]
         return self._get_files_by_keys(file_keys)
 
+    # TODO: Validate
     def _preload_season_files(
         self,
         season_keys: list[str],
@@ -292,6 +322,7 @@ class DownloadMixin(ABC):
         ]
         return self._get_files_by_keys(file_keys)
 
+    # TODO: Validate
     def _preload_all_episode_files(
         self,
         season_keys: list[str],
@@ -308,6 +339,7 @@ class DownloadMixin(ABC):
         ]
         return self._get_files_by_keys(file_keys)
 
+    # TODO: Validate
     def _preload_episode_files(
         self,
         episode_keys: list[str],
@@ -324,10 +356,12 @@ class DownloadMixin(ABC):
         ]
         return self._get_files_by_keys(file_keys)
 
+    # TODO: Validate
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         msg = "This plugin does not have season keys from file."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def _episode_keys_from_file(
         self,
         season_keys: str | list[str],

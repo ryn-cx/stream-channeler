@@ -15,10 +15,13 @@ from plugins.YouTube.files import (
 )
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._importing_album_playlist_key = playlist_key
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -38,16 +41,19 @@ class HelperMixin(FileMixin, register=False):
 
         return None
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if is_video_key(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         if is_show_season_key(season_key):
             return int(split_show_season_key(season_key)[1])
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -62,11 +68,13 @@ class HelperMixin(FileMixin, register=False):
             return None
         return episode_keys.index(episode_key) + 1
 
+    # TODO: Validate
     def _highest_episode_number(self, season_key: str) -> int | None:
         if not is_show_season_key(season_key):
             return None
         return len(self._season_episode_keys(season_key)) or None
 
+    # TODO: Validate
     def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:
         """Return the `Source` for videos that are imported one video at a time.
 
@@ -87,6 +95,7 @@ class HelperMixin(FileMixin, register=False):
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 
+    # TODO: Validate
     def _channel_has_only_uploads(self, show_key: str) -> bool:
         channel_playlists_file = self.channel_playlists_file(show_key)
         if not channel_playlists_file.database_record.content:
@@ -96,11 +105,13 @@ class HelperMixin(FileMixin, register=False):
             for item in channel_playlists_file.parsed().items
         )
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:
         return cls.build_url(f"results?search_query={quote(query)}")
 
+    # TODO: Validate
     @staticmethod
     def _best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
         # It sounds wrong but standard is a higher resolution than high.

@@ -52,6 +52,7 @@ interface EditPluginProps {
   plugin: PluginTableData
 }
 
+// TODO: Validate
 const EditPlugin = ({ plugin }: EditPluginProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -77,6 +78,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
     successMessage: "Plugin updated successfully",
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     mutation.mutate(nullifyBlanks(data))

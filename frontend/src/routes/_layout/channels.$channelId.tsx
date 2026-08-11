@@ -46,6 +46,7 @@ import { usePersistedState } from "@/hooks/usePersistedState"
 import { parseOrderConfig } from "@/lib/channelOrder"
 import type { WatchFilters } from "@/lib/watchFilters"
 
+// TODO: Validate
 function getChannelQueryOptions(channelId: string) {
   return {
     queryFn: () => ChannelsService.getChannel({ channelId }),
@@ -124,6 +125,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
   }),
 })
 
+// TODO: Validate
 function getEpisodesQueryOptions(
   channelId: string,
   searchParams: ChannelSearchParams,
@@ -142,6 +144,7 @@ function getEpisodesQueryOptions(
 
 type ViewMode = "table" | "cards"
 
+// TODO: Validate
 /** Wraps the billboard so the episode action hook only runs when there is a
  * hero episode to act on. */
 function HeroWithActions({
@@ -180,6 +183,7 @@ function HeroWithActions({
   )
 }
 
+// TODO: Validate
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
   const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
@@ -232,6 +236,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     "off",
   )
   const editOrder = editOrderFlag === "on"
+  // TODO: Validate
   const setEditOrder = (next: boolean) => setEditOrderFlag(next ? "on" : "off")
 
   const episodesWithDetails: EpisodeWithDetails[] = (
@@ -484,6 +489,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   )
 }
 
+// TODO: Validate
 function ChannelDetail() {
   const { channelId } = Route.useParams()
 

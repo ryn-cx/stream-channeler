@@ -42,6 +42,7 @@ interface EditWatchProps {
   watch: WatchItem
 }
 
+// TODO: Validate
 const EditWatch = ({ watch }: EditWatchProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -107,6 +108,7 @@ const EditWatch = ({ watch }: EditWatchProps) => {
       context.client.invalidateQueries({ queryKey: ["watches"] }),
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     setIsOpen(false)
     const payload: WatchUpdate = {

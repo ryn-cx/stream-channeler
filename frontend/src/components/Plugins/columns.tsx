@@ -13,6 +13,7 @@ import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
+// TODO: Validate
 export function pluginColumns(
   _scope: OwnerView,
   isAdmin = false,

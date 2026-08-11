@@ -14,7 +14,9 @@ from plugins.utils.abstract_plugin import (
 )
 
 
+# TODO: Validate
 class SearchMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def search(self, query: str) -> PluginSearchResults:
         search_file = self.search_file(query)
@@ -27,6 +29,7 @@ class SearchMixin(HelperMixin, register=False):
         ]
         return PluginSearchResults(results=results)
 
+    # TODO: Validate
     def _search_result(self, result: Result) -> PluginSearchResult:
         metrics = result.metrics_info
         content_type = metrics.target_type

@@ -6,7 +6,9 @@ from app.shows.models import Show
 from plugins.Netflix.files import FileMixin
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -23,10 +25,12 @@ class HelperMixin(FileMixin, register=False):
             media_type = MediaType.tv
         return self._tmdb_search_media(self._title_video(show_key).title, media_type)
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         _, season_id = self._split_season_key(season_key)
@@ -35,6 +39,7 @@ class HelperMixin(FileMixin, register=False):
                 return index + 1
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -48,10 +53,12 @@ class HelperMixin(FileMixin, register=False):
                 return episode.number
         return None
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str) -> str:
         return cls.build_url(f"title/{show_key}")
 
+    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         return cls.build_url(f"watch/{episode_key}")

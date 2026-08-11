@@ -42,6 +42,7 @@ export const Route = createFileRoute("/recover-password")({
   }),
 })
 
+// TODO: Validate
 function RecoverPassword() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -51,6 +52,7 @@ function RecoverPassword() {
   })
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
+  // TODO: Validate
   const recoverPassword = async (data: FormData) => {
     await LoginService.recoverPassword({
       email: data.email,
@@ -66,6 +68,7 @@ function RecoverPassword() {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const onSubmit = async (data: FormData) => {
     if (mutation.isPending) return
     mutation.mutate(data)

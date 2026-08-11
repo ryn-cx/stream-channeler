@@ -46,6 +46,7 @@ _ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
 }
 
 
+# TODO: Validate
 def _numberings(show: Show) -> list[tuple[uuid.UUID, int | None, int | None]]:
     """Return how a title numbers each of its episodes, for counting them through."""
     return [
@@ -55,6 +56,7 @@ def _numberings(show: Show) -> list[tuple[uuid.UUID, int | None, int | None]]:
     ]
 
 
+# TODO: Validate
 def _is_settled_by_hand(episode: Episode) -> bool:
     """Report whether a `User` settled the episode's identifier themselves."""
     return (
@@ -63,6 +65,7 @@ def _is_settled_by_hand(episode: Episode) -> bool:
     )
 
 
+# TODO: Validate
 def _tracks_show(
     entry_point: Callable[..., Any],
     argument: str,
@@ -70,6 +73,7 @@ def _tracks_show(
 ) -> Callable[..., Any]:
     """Return `entry_point` wrapped so it records the show it was called for."""
 
+    # TODO: Validate
     @wraps(entry_point)
     def tracked(self: BasePlugin, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 - Forwarded verbatim.
         entity = args[0] if args else kwargs[argument]
@@ -79,6 +83,7 @@ def _tracks_show(
     return tracked
 
 
+# TODO: Validate
 class BasePlugin(
     PreloadMixin,
     CheckMixin,
@@ -116,12 +121,14 @@ class BasePlugin(
     survives a change of show by being named here.
     """
 
+    # TODO: Validate
     @override
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Wrap the entry points a subclass declares so they record the show."""
         super().__init_subclass__(**kwargs)
         cls._track_show_on_entry_points()
 
+    # TODO: Validate
     @classmethod
     def _track_show_on_entry_points(cls) -> None:
         """Wrap the entry points this class declares so they record the show.
@@ -136,6 +143,7 @@ class BasePlugin(
                 continue
             setattr(cls, name, _tracks_show(entry_point, argument, show_of))
 
+    # TODO: Validate
     def _set_current_show(self, show: str) -> None:
         """Record which show the instance is working on, dropping the last one's.
 
@@ -156,6 +164,7 @@ class BasePlugin(
             self._reset_show_state()
         self._current_show = show
 
+    # TODO: Validate
     def _use_tmdb_id(self, tmdb_id: int | None) -> None:
         """Take `tmdb_id` as the TMDB title of the show being imported.
 
@@ -165,6 +174,7 @@ class BasePlugin(
         overrides this to hold on to it.
         """
 
+    # TODO: Validate
     def _reset_show_state(self) -> None:
         """Drop everything cached for the show the instance has moved off.
 
@@ -179,6 +189,7 @@ class BasePlugin(
                 delattr(self, name)
         self._file_cache = {}
 
+    # TODO: Validate
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -189,6 +200,7 @@ class BasePlugin(
         self.initialize_database()
         self._validate_plugin_version()
 
+    # TODO: Validate
     @property
     def source(self) -> Source:
         """Return the plugin's `Source` record or raise if not initialized."""
@@ -197,15 +209,18 @@ class BasePlugin(
             raise AttributeError(msg)
         return self._source
 
+    # TODO: Validate
     @source.setter
     def source(self, value: Source) -> None:
         self._source = value
 
+    # TODO: Validate
     @property
     def has_source(self) -> bool:
         """Return True if the plugin has a `Source` record."""
         return self._source is not None
 
+    # TODO: Validate
     def initialize_database(self) -> None:
         """Create the `Plugin` and its `Source` record(s) and set instance attributes.
 
@@ -215,6 +230,7 @@ class BasePlugin(
         self.initialize_plugin()
         self.initialize_sources()
 
+    # TODO: Validate
     def initialize_plugin(self) -> None:
         """Create the `Plugin` record(s) and set `self.plugin`."""
         if hasattr(self, "plugin") and self.plugin:
@@ -225,6 +241,7 @@ class BasePlugin(
         else:
             self.plugin = self._upsert_plugin(plugin_user, existing_plugin)
 
+    # TODO: Validate
     def initialize_sources(self) -> None:
         """Create the `Source` record(s) and set `self.source`."""
         if hasattr(self, "source") and self.source:
@@ -235,6 +252,7 @@ class BasePlugin(
         else:
             self.source = self._upsert_source()
 
+    # TODO: Validate
     def _upsert_plugin(
         self,
         plugin_user: User,
@@ -250,6 +268,7 @@ class BasePlugin(
             user_id=plugin_user.id,
         ).upsert_and_set_update_at(plugin_user, existing_plugin)
 
+    # TODO: Validate
     @staticmethod
     def _existing_data_timestamp_or_now(record: BaseMediaMixin | None) -> datetime:
         """Return the record's data timestamp, or the current time if it has none."""
@@ -257,6 +276,7 @@ class BasePlugin(
             return record.data_timestamp
         return tz_datetime.now()
 
+    # TODO: Validate
     @staticmethod
     def _set_weekly_updates_from_episodes(
         show: Show,
@@ -278,6 +298,7 @@ class BasePlugin(
                     if update_show:
                         show.set_update_at(update_at)
 
+    # TODO: Validate
     def _validate_plugin_version(self) -> None:
         if self.plugin.version != self._VERSION:
             msg = (
@@ -287,6 +308,7 @@ class BasePlugin(
             )
             raise RuntimeError(msg)
 
+    # TODO: Validate
     def _preload_and_upsert_show(
         self,
         show: Show,
@@ -299,6 +321,7 @@ class BasePlugin(
         upserted = self.upsert_show(show.source, show.key, force=force)
         self._unshare_episode_identifiers(upserted)
 
+    # TODO: Validate
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         logger.info("Updating show: {}", show.key)
@@ -308,6 +331,7 @@ class BasePlugin(
         ).one()
         self._preload_and_upsert_show(show, show.update_at, force=force)
 
+    # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
@@ -318,6 +342,7 @@ class BasePlugin(
         self._download_season_files_and_children(season, update_at=season.update_at)
         self._preload_and_upsert_show(season.show)
 
+    # TODO: Validate
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
@@ -325,26 +350,32 @@ class BasePlugin(
         self._download_episode_files(episode, update_at=episode.update_at)
         self._preload_and_upsert_show(episode.season.show)
 
+    # TODO: Validate
     @override
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:
         plugin.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_source_failure(self, source: Source, error: Exception) -> None:
         source.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
         show.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
         season.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
         episode.update_at = tz_datetime.max()
 
+    # TODO: Validate
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():
             return show
@@ -354,6 +385,7 @@ class BasePlugin(
         self._unshare_episode_identifiers(show)
         return show
 
+    # TODO: Validate
     def _unshare_episode_identifiers(self, show: Show) -> None:
         """Unlink the episodes of `show` that ended up naming the same record.
 
@@ -404,6 +436,7 @@ class BasePlugin(
                 episode.episode_identifier = f"{self.plugin_key()} {episode.key}"
                 episode.episode_identifier_locked = False
 
+    # TODO: Validate
     def _kept_from_clash(
         self,
         identifier: str,
@@ -444,6 +477,7 @@ class BasePlugin(
         ]
         return numbered[0] if len(numbered) == 1 else None
 
+    # TODO: Validate
     @abstractmethod
     def upsert_show(
         self,
@@ -453,11 +487,13 @@ class BasePlugin(
         force: bool = False,
     ) -> Show: ...
 
+    # TODO: Validate
     def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
         """Create or update the plugin's `Source` record(s)."""
         msg = f"{self.plugin_key()} does not implement _upsert_source."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     def soft_delete_missing_seasons(self, show_key: str) -> None:
         """Soft-delete seasons whose keys are not in the show's season file."""
         season_keys = self._season_keys_from_file(show_key)
@@ -470,6 +506,7 @@ class BasePlugin(
             ):
                 obj.soft_delete_missing_children(season_keys)
 
+    # TODO: Validate
     def soft_delete_missing_episodes(self, season_key: str, show_key: str) -> None:
         """Soft-delete episodes whose keys are not in the season's episode file."""
         episode_keys = self._episode_keys_from_file(season_key, show_key)
@@ -487,21 +524,25 @@ class BasePlugin(
             ):
                 obj.soft_delete_missing_children(episode_keys)
 
+    # TODO: Validate
     def _soft_delete_missing(self, show_key: str) -> None:
         self.soft_delete_missing_seasons(show_key)
         for season_key in self._season_keys_from_file(show_key):
             self.soft_delete_missing_episodes(season_key, show_key)
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_key(cls) -> str:
         return cls.__name__
 
+    # TODO: Validate
     @classmethod
     def plugin_name(cls) -> str:
         """Return the name of the plugin."""
         return cls.__name__
 
+    # TODO: Validate
     def _file[FileT: BaseFile[Any]](
         self,
         file_type: Callable[..., FileT],
@@ -520,6 +561,7 @@ class BasePlugin(
         cache[cache_key] = file
         return file
 
+    # TODO: Validate
     def _initial_file[FileT: BaseFile[Any]](
         self,
         file_type: Callable[..., FileT],
@@ -527,6 +569,7 @@ class BasePlugin(
         """Return the `file_type` instance a timestamped series of files starts at."""
         return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
+    # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
         if not file.database_record.content:
@@ -534,9 +577,11 @@ class BasePlugin(
             raise InvalidURLError(msg)
 
 
+# TODO: Validate
 class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=False):
     _URL_HANDLERS: ClassVar[tuple[type[URLHandler[Any]], ...]]
 
+    # TODO: Validate
     def get_url_handler(self, url: str) -> HandlerT:
         domain_regex = self._domain_regex()
         for handler_class in self._URL_HANDLERS:
@@ -546,6 +591,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @classmethod
     @override
     def url_regex(cls) -> str:
@@ -556,6 +602,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         )
         return f"(?:{alternatives})"
 
+    # TODO: Validate
     @override
     def import_url(
         self,

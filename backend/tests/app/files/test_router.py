@@ -25,6 +25,7 @@ from tests.app.utils.route_assertions import Method, assert_not_found, make_requ
 from tests.app.utils.utils import build_random_model
 
 
+# TODO: Validate
 class FileTestMixin(BaseTests[File]):
     """Shared setup for the superuser-gated `File` endpoints.
 
@@ -44,17 +45,21 @@ class FileTestMixin(BaseTests[File]):
     create_parent_function = staticmethod(create_random_plugin)
     create_record_function = staticmethod(create_random_file)
 
+    # TODO: Validate
     @property
     def endpoint_name(self) -> str:
         # `File` endpoints live under the admin-only `/admin/files` router.
         return "admin/files"
 
+    # TODO: Validate
     def get_record_list_url(self, parent_id: uuid.UUID | str) -> str:
         return f"{settings.API_V1_STR}/admin/plugins/{parent_id}/files"
 
+    # TODO: Validate
     def create_record_url(self, parent_id: uuid.UUID | str | None = None) -> str:
         return f"{settings.API_V1_STR}/admin/plugins/{parent_id}/files"
 
+    # TODO: Validate
     def create_test_data(  # noqa: PLR0913 - mirrors the base signature
         self,
         client: TestClient,
@@ -74,6 +79,7 @@ class FileTestMixin(BaseTests[File]):
             user_is_superuser=user_is_superuser,
         )
 
+    # TODO: Validate
     def assert_cannot_access(  # noqa: PLR0913
         self,
         session: Session,
@@ -107,7 +113,9 @@ class FileTestMixin(BaseTests[File]):
             assert response.status_code == expected_status
 
 
+# TODO: Validate
 class TestGetFile(FileTestMixin, BaseGetTests[File]):
+    # TODO: Validate
     def can_get_record(
         self,
         *,
@@ -129,6 +137,7 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
             )
         )
 
+    # TODO: Validate
     def test_admin_list_requires_superuser(
         self,
         session_scoped_client: TestClient,
@@ -173,7 +182,9 @@ class TestGetFile(FileTestMixin, BaseGetTests[File]):
         assert allowed.status_code == status.HTTP_200_OK
 
 
+# TODO: Validate
 class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
+    # TODO: Validate
     def can_create_record(
         self,
         *,
@@ -192,7 +203,9 @@ class TestCreateFile(FileTestMixin, BaseCreateTests[File]):
         )
 
 
+# TODO: Validate
 class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
+    # TODO: Validate
     @pytest.mark.parametrize("user_is_superuser", [True, False])
     @pytest.mark.parametrize("record_is_public", [True, False])
     @pytest.mark.parametrize("user_is_authenticated", [True, False])
@@ -240,7 +253,9 @@ class TestUpdateFile(FileTestMixin, BaseUpdateTests[File]):
             )
 
 
+# TODO: Validate
 class TestDeleteFile(FileTestMixin, BaseDeleteTests[File]):
+    # TODO: Validate
     def _can_delete_record(
         self,
         *,
@@ -257,6 +272,7 @@ class TestDeleteFile(FileTestMixin, BaseDeleteTests[File]):
             user_is_superuser=user_is_superuser,
         )
 
+    # TODO: Validate
     def test_delete_not_found(
         self,
         session_scoped_client: TestClient,

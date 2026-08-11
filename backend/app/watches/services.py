@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 WatchedEpisode = aliased(Episode)
 
 
+# TODO: Validate
 def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
     return or_(
         col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
@@ -50,6 +51,7 @@ def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
     )
 
 
+# TODO: Validate
 def _watched_identifiers_subquery(user_id: uuid.UUID):  # noqa: ANN202
     return (
         select(col(WatchedEpisode.episode_identifier))
@@ -58,6 +60,7 @@ def _watched_identifiers_subquery(user_id: uuid.UUID):  # noqa: ANN202
     )
 
 
+# TODO: Validate
 def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: ANN001, ANN202
     """One representative visible episode per `episode_identifier`.
 
@@ -90,6 +93,7 @@ def _representative_episode_subquery(user_id: uuid.UUID, identifiers):  # noqa: 
     )
 
 
+# TODO: Validate
 def _own_visible_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
     """The episode a watch was recorded against, when it is one the `User` can see.
 
@@ -112,6 +116,7 @@ def _own_visible_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
     )
 
 
+# TODO: Validate
 def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     representative = _representative_episode_subquery(
         user_id,
@@ -141,6 +146,7 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     )
 
 
+# TODO: Validate
 def get_watched_episodes(
     session: Session,
     user: User,
@@ -169,6 +175,7 @@ def get_watched_episodes(
     return output
 
 
+# TODO: Validate
 def _representative_episodes_by_identifier(
     session: Session,
     user_id: uuid.UUID,
@@ -187,6 +194,7 @@ def _representative_episodes_by_identifier(
     return {episode.episode_identifier: episode for episode in episodes}
 
 
+# TODO: Validate
 def _format_watched_episodes_data(
     session: Session,
     user_id: uuid.UUID,
@@ -247,6 +255,7 @@ def _format_watched_episodes_data(
     )
 
 
+# TODO: Validate
 def create_watches(
     session: Session,
     user_id: uuid.UUID,
@@ -286,6 +295,7 @@ def create_watches(
     return [WatchOutput.model_validate(watch)]
 
 
+# TODO: Validate
 def update_watches(
     session: Session,
     input_watch: Watch,
@@ -296,12 +306,14 @@ def update_watches(
     return [WatchOutput.model_validate(input_watch)]
 
 
+# TODO: Validate
 def delete_watches(session: Session, input_watch: Watch) -> Message:
     """Delete a watch."""
     delete_record(session, input_watch)
     return Message(message="Watch deleted successfully")
 
 
+# TODO: Validate
 def get_plugins_with_import_watch_history(
     session: Session,
 ) -> list[type[AbstractPlugin]]:
@@ -320,6 +332,7 @@ def get_plugins_with_import_watch_history(
     ]
 
 
+# TODO: Validate
 def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
     """Find an importable plugin class by its plugin_key."""
     import_plugins()

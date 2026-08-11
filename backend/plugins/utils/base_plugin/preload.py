@@ -18,10 +18,12 @@ from app.sources.models import Source
 from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class PreloadMixin(ABC):
     session: Session
     plugin: Plugin
 
+    # TODO: Validate
     def _preload_sources(
         self,
         source_key: str | list[str] | None = None,
@@ -50,6 +52,7 @@ class PreloadMixin(ABC):
             statement = statement.where(Source.key == source_key)
         return self.session.exec(statement.options(*options)).unique()
 
+    # TODO: Validate
     def _preload_show(
         self,
         show: str | uuid.UUID,
@@ -78,6 +81,7 @@ class PreloadMixin(ABC):
                 statement = statement.where(Source.key == source_key)
         return self.session.exec(statement.options(*options)).unique()
 
+    # TODO: Validate
     def _preload_season(
         self,
         season_id: uuid.UUID,
@@ -97,6 +101,7 @@ class PreloadMixin(ABC):
             select(Season).where(Season.id == season_id).options(*options),
         )
 
+    # TODO: Validate
     def _preload_episode(
         self,
         episode_id: uuid.UUID,
@@ -122,6 +127,7 @@ class PreloadMixin(ABC):
             select(Episode).where(Episode.id == episode_id).options(*options),
         )
 
+    # TODO: Validate
     def get_new_files[T: BaseFile[Any]](
         self,
         data_timestamp: datetime | None,
@@ -148,6 +154,7 @@ class PreloadMixin(ABC):
         )
         return [factory(file) for file in self.session.exec(statement).all()]
 
+    # TODO: Validate
     def preload_latest_file(
         self,
         file_class: type[BaseFile[Any]],
@@ -167,6 +174,7 @@ class PreloadMixin(ABC):
             statement = statement.where(col(File.extra) == extra)
         return self.session.exec(statement).first()
 
+    # TODO: Validate
     def get_incomplete_files[T: BaseFile[Any]](
         self,
         file_class: type[T],

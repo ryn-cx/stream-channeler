@@ -15,6 +15,7 @@ the show's to say, and is passed alongside it rather than repeated inside it.
 from enum import StrEnum
 
 
+# TODO: Validate
 class MusicCategory(StrEnum):
     """One of the two listings an artist's releases are split into."""
 
@@ -43,26 +44,31 @@ MUSIC_CATEGORY_TO_NAME = {
 }
 
 
+# TODO: Validate
 def is_music_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to an artist rather than a series."""
     return show_key.startswith(ARTIST_ID_PREFIX)
 
 
+# TODO: Validate
 def is_anime_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to a series rather than an artist."""
     return show_key.startswith(SERIES_ID_PREFIX)
 
 
+# TODO: Validate
 def is_music_season_key(season_key: str) -> bool:
     """Report whether a `Season` key belongs to an artist rather than a series."""
     return season_key in set(MusicCategory)
 
 
+# TODO: Validate
 def is_music_episode_key(episode_key: str) -> bool:
     """Report whether an `Episode` key belongs to a music video or a concert."""
     return episode_key.startswith(tuple(CATEGORY_ID_PREFIXES))
 
 
+# TODO: Validate
 def music_episode_category(episode_key: str) -> MusicCategory:
     """Return the listing an episode is a video or a concert of."""
     return CATEGORY_ID_PREFIXES[episode_key[:CATEGORY_ID_PREFIX_LENGTH]]

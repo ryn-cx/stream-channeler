@@ -23,6 +23,7 @@ import { isNumberedTheSame } from "./tmdbNumbering"
 type ChoiceOrder = "episode" | "similarity"
 type ChoiceScope = "unused" | "all"
 
+// TODO: Validate
 /** "S1E1", or as much of it as TMDB numbered the episode with. */
 function numbering(
   seasonNumber: number | null,
@@ -34,6 +35,7 @@ function numbering(
 /** The id in a TMDB address, so a page can be pasted in rather than read off. */
 const TMDB_URL_ID = /themoviedb\.org\/(?:tv|movie)\/(\d+)/
 
+// TODO: Validate
 /** Return the TMDB id a URL or a bare number names, or null where it names none. */
 function parseTmdbId(value: string): number | null {
   const trimmed = value.trim()
@@ -42,6 +44,7 @@ function parseTmdbId(value: string): number | null {
   return /^\d+$/.test(digits) ? Number(digits) : null
 }
 
+// TODO: Validate
 /** Order two numbers, putting the one nothing numbered last. */
 function compareNumbers(left: number | null, right: number | null): number {
   if (left === right) return 0
@@ -50,6 +53,7 @@ function compareNumbers(left: number | null, right: number | null): number {
   return left - right
 }
 
+// TODO: Validate
 /**
  * Every TMDB episode of a title, in the order the title runs, to pick one from.
  *

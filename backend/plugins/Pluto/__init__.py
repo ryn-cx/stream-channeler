@@ -16,6 +16,7 @@ from plugins.Pluto.url_handlers import (
 from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
+# TODO: Validate
 class Pluto(
     SourceMixin,
     UpsertMixin,
@@ -34,11 +35,13 @@ class Pluto(
     TMDB_PROVIDER_NAMES = ("Pluto TV",)
     FAVICON_URL = "https://pluto.tv/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "pluto.tv"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

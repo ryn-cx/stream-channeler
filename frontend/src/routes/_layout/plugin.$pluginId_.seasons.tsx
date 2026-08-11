@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_layout/plugin/$pluginId_/seasons")({
   }),
 })
 
+// TODO: Validate
 function PluginSeasonsPage() {
   const { pluginId } = Route.useParams()
   const { data: plugin } = usePlugin(pluginId)

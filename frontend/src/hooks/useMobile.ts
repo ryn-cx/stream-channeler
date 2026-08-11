@@ -3,6 +3,7 @@ import * as React from "react"
 
 const NARROW_VIEWPORT_BREAKPOINT = 768
 
+// TODO: Validate
 /**
  * Returns true when the viewport is narrower than the mobile breakpoint.
  * Use this for layout decisions that should adapt to the available width —
@@ -15,6 +16,7 @@ export function useIsNarrowViewport() {
     const mql = window.matchMedia(
       `(max-width: ${NARROW_VIEWPORT_BREAKPOINT - 1}px)`,
     )
+    // TODO: Validate
     const onChange = () => {
       setIsNarrow(window.innerWidth < NARROW_VIEWPORT_BREAKPOINT)
     }
@@ -26,6 +28,7 @@ export function useIsNarrowViewport() {
   return !!isNarrow
 }
 
+// TODO: Validate
 /**
  * Returns true when the primary input is a touch / coarse pointer (phones,
  * tablets), regardless of viewport width. Use this when behavior should
@@ -37,6 +40,7 @@ export function useIsTouchDevice() {
 
   React.useEffect(() => {
     const mql = window.matchMedia("(pointer: coarse)")
+    // TODO: Validate
     const onChange = () => setIsTouch(mql.matches)
     mql.addEventListener("change", onChange)
     setIsTouch(mql.matches)

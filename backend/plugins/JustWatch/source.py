@@ -20,7 +20,9 @@ from plugins.JustWatch.upsert import UpsertMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 
+# TODO: Validate
 class SourceMixin(UpsertMixin, register=False):
+    # TODO: Validate
     @override
     def initialize_sources(self) -> None:
         if self.plugin.sources:
@@ -39,6 +41,7 @@ class SourceMixin(UpsertMixin, register=False):
         self.plugin.data_timestamp = self.plugin_data_timestamp()
         self.plugin.set_update_at(self.plugin.data_timestamp + timedelta(days=1))
 
+    # TODO: Validate
     @override
     def update_plugin(self, plugin: Plugin) -> None:
 
@@ -58,6 +61,7 @@ class SourceMixin(UpsertMixin, register=False):
         plugin.data_timestamp = latest_bucket.data_timestamp
         plugin.set_update_at(latest_bucket.data_timestamp + timedelta(days=1))
 
+    # TODO: Validate
     def _process_new_titles_buckets(self) -> None:
         source_key = func.split_part(col(File.key), "/", 2)
         _cache = self.session.exec(
@@ -106,6 +110,7 @@ class SourceMixin(UpsertMixin, register=False):
 
             bucket.database_record.extra = "Completed"
 
+    # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
         new_titles_files = self._pending_new_titles_files(source)
@@ -136,6 +141,7 @@ class SourceMixin(UpsertMixin, register=False):
         else:
             source.update_at = None
 
+    # TODO: Validate
     def _title_is_tracked(self, show_key: str) -> bool:
         """Report whether the title's details are stored.
 
@@ -148,6 +154,7 @@ class SourceMixin(UpsertMixin, register=False):
         )
         return self.session.exec(statement).first() is not None
 
+    # TODO: Validate
     def _update_tracked_title(
         self,
         show_key: str,
@@ -167,11 +174,13 @@ class SourceMixin(UpsertMixin, register=False):
         elif title_is_stored:
             self._import_show_for_source(show_key, source_key)
 
+    # TODO: Validate
     def _import_show_for_source(self, show_key: str, source_key: str) -> None:
         logger.info("Importing {} for new source: {}", show_key, source_key)
         _cache = self._preload_sources([source_key], preload_episodes=True).all()
         self._upsert_shows(show_key, [source_key])
 
+    # TODO: Validate
     def _mark_external_show(
         self,
         show_key: str,
@@ -211,6 +220,7 @@ class SourceMixin(UpsertMixin, register=False):
             for season in external_show.active_children:
                 season.set_update_at(timestamp)
 
+    # TODO: Validate
     def _process_new_titles_files(
         self,
         source: Source,

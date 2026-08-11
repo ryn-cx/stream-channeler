@@ -18,10 +18,12 @@ from app.sources.schemas import SourcePublic
 from app.watches.models import BaseWatch, Watch
 
 
+# TODO: Validate
 class WatchCreate(BaseInput, BaseWatch):
     """Schema for creating a `Watch`."""
 
 
+# TODO: Validate
 class WatchUpdate(
     make_model_with_all_fields_optional(BaseWatch),
     BaseUpdateWithoutKey[Watch],
@@ -30,6 +32,7 @@ class WatchUpdate(
 
 
 # TODO: This class may be redundant
+# TODO: Validate
 class WatchOutput(BaseWatch):
     """Schema for returning a `Watch`."""
 
@@ -43,11 +46,13 @@ class WatchOutput(BaseWatch):
     verified: bool  # pyright: ignore[reportGeneralTypeIssues]
 
 
+# TODO: Validate
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
     episode_identifier: str
 
+    # TODO: Validate
     def __hash__(self) -> int:
         return hash(self.id)
 
@@ -58,6 +63,7 @@ class WatchItem(BaseWatch):
 
 
 # TODO: This includes a lot of unused data.
+# TODO: Validate
 class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
     episodes: dict[str, EpisodeOutput] = Field()
@@ -70,6 +76,7 @@ class WatchesListOutput(SQLModel):
     is_server_side: bool = Field(default=False)
 
 
+# TODO: Validate
 class WatchImportResult(BaseModel):
     show: str
     show_url: str
@@ -77,12 +84,14 @@ class WatchImportResult(BaseModel):
     episode_url: str
 
 
+# TODO: Validate
 class WatchImportResults(BaseModel):
     added: list[WatchImportResult]
     existing: list[WatchImportResult]
     skipped: list[WatchImportResult]
 
 
+# TODO: Validate
 class WatchImportInput(BaseInput):
     plugin_key: str
     new_only: bool

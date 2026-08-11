@@ -17,11 +17,13 @@ from app.models import Visibility
 from app.users.models import User
 
 
+# TODO: Validate
 def child_channel_ids(channel: Channel) -> list[UUID]:
     """Return the additional channel ids combined into a channel, in order."""
     return [combined.combined_channel_id for combined in channel.combined_channels]
 
 
+# TODO: Validate
 def readable_channels(
     session: SessionDep,
     user: User | None,
@@ -40,6 +42,7 @@ def readable_channels(
     return session.exec(query).all()
 
 
+# TODO: Validate
 def channel_attribution(
     session: SessionDep,
     user: User | None,
@@ -74,6 +77,7 @@ def channel_attribution(
     return attribution
 
 
+# TODO: Validate
 def resolve_channel_ids(
     session: SessionDep,
     user: User | None,

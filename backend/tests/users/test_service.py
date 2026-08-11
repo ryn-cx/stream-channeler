@@ -11,6 +11,7 @@ from app.users.schemas import UserCreate, UserUpdate
 from tests.utils.utils import random_email, random_lower_string
 
 
+# TODO: Validate
 def test_create_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -20,6 +21,7 @@ def test_create_user(db: Session) -> None:
     assert hasattr(user, "hashed_password")
 
 
+# TODO: Validate
 def test_authenticate_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -34,6 +36,7 @@ def test_authenticate_user(db: Session) -> None:
     assert user.email == authenticated_user.email
 
 
+# TODO: Validate
 def test_not_authenticate_user(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -41,6 +44,7 @@ def test_not_authenticate_user(db: Session) -> None:
     assert user is None
 
 
+# TODO: Validate
 def test_check_if_user_is_active(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -49,6 +53,7 @@ def test_check_if_user_is_active(db: Session) -> None:
     assert user.is_active is True
 
 
+# TODO: Validate
 def test_check_if_user_is_active_inactive(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -57,6 +62,7 @@ def test_check_if_user_is_active_inactive(db: Session) -> None:
     assert user.is_active is False
 
 
+# TODO: Validate
 def test_check_if_user_is_superuser(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -65,6 +71,7 @@ def test_check_if_user_is_superuser(db: Session) -> None:
     assert user.is_superuser is True
 
 
+# TODO: Validate
 def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     username = random_email()
     password = random_lower_string()
@@ -73,6 +80,7 @@ def test_check_if_user_is_superuser_normal_user(db: Session) -> None:
     assert user.is_superuser is False
 
 
+# TODO: Validate
 def test_get_user(db: Session) -> None:
     password = random_lower_string()
     username = random_email()
@@ -84,6 +92,7 @@ def test_get_user(db: Session) -> None:
     assert jsonable_encoder(user) == jsonable_encoder(user_2)
 
 
+# TODO: Validate
 def test_get_user_by_email_case_insensitive(db: Session) -> None:
     email = random_email()
     password = random_lower_string()
@@ -94,6 +103,7 @@ def test_get_user_by_email_case_insensitive(db: Session) -> None:
     assert found_user.id == user.id
 
 
+# TODO: Validate
 def test_update_user(db: Session) -> None:
     password = random_lower_string()
     email = random_email()
@@ -110,6 +120,7 @@ def test_update_user(db: Session) -> None:
     assert verified
 
 
+# TODO: Validate
 def test_authenticate_user_with_bcrypt_upgrades_to_argon2(db: Session) -> None:
     """Test that a user with bcrypt password hash gets upgraded to argon2 on login."""
     email = random_email()

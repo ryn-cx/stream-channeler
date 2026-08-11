@@ -1,3 +1,4 @@
+// TODO: Validate
 import type { UserPublic } from "@/client"
 
 export type UserPublicWithPending = UserPublic & { pending?: boolean }

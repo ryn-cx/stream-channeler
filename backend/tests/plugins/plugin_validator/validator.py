@@ -32,6 +32,7 @@ ChangedToValue = datetime | int | str
 _ALL_MODELS = (Plugin, Source, Show, Season, Episode)
 
 
+# TODO: Validate
 class Validator:
     """Stores validation rules for plugin field validation.
 
@@ -41,6 +42,7 @@ class Validator:
     - Strings - applies to specific instance by key
     """
 
+    # TODO: Validate
     def __init__(self) -> None:
         """Initialize Validator."""
         self._rules: dict[ValidatorKey, dict[ValidatorRuleType, list[str]]] = (
@@ -50,26 +52,31 @@ class Validator:
             defaultdict(dict)
         )
 
+    # TODO: Validate
     def incremented(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must have increased in value."""
         self._rules[key]["Incremented"].extend(field_names)
         return self
 
+    # TODO: Validate
     def decremented(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must have decreased in value."""
         self._rules[key]["Decremented"].extend(field_names)
         return self
 
+    # TODO: Validate
     def static(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must remain the same value."""
         self._rules[key]["Static"].extend(field_names)
         return self
 
+    # TODO: Validate
     def changed(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must have changed to a different value."""
         self._rules[key]["Changed"].extend(field_names)
         return self
 
+    # TODO: Validate
     def changed_to(
         self,
         key: ValidatorKey,
@@ -81,16 +88,19 @@ class Validator:
         self._changed_to_values[key][field_name] = value
         return self
 
+    # TODO: Validate
     def populated(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must go from None to a non-None value."""
         self._rules[key]["Populated"].extend(field_names)
         return self
 
+    # TODO: Validate
     def populated_or_decremented(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields that must be populated if None, or decremented otherwise."""
         self._rules[key]["PopulatedOrDecremented"].extend(field_names)
         return self
 
+    # TODO: Validate
     def ignored(self, key: ValidatorKey, *field_names: str) -> Self:
         """Mark fields whose value is not validated at all.
 
@@ -101,36 +111,42 @@ class Validator:
         self._rules[key]["Ignored"].extend(field_names)
         return self
 
+    # TODO: Validate
     def static_all(self, *field_names: str) -> Self:
         """Mark fields that must remain the same for all model types."""
         for model in _ALL_MODELS:
             self.static(model, *field_names)
         return self
 
+    # TODO: Validate
     def incremented_all(self, *field_names: str) -> Self:
         """Mark fields that must have increased for all model types."""
         for model in _ALL_MODELS:
             self.incremented(model, *field_names)
         return self
 
+    # TODO: Validate
     def decremented_all(self, *field_names: str) -> Self:
         """Mark fields that must have decreased for all model types."""
         for model in _ALL_MODELS:
             self.decremented(model, *field_names)
         return self
 
+    # TODO: Validate
     def changed_all(self, *field_names: str) -> Self:
         """Mark fields that must have changed for all model types."""
         for model in _ALL_MODELS:
             self.changed(model, *field_names)
         return self
 
+    # TODO: Validate
     def populated_all(self, *field_names: str) -> Self:
         """Mark fields that must go from None to a non-None value for all model types."""
         for model in _ALL_MODELS:
             self.populated(model, *field_names)
         return self
 
+    # TODO: Validate
     def remove(self, key: ValidatorKey, *field_names: str) -> Self:
         """Remove validation rules for specific fields."""
         if key not in self._rules:
@@ -143,12 +159,14 @@ class Validator:
             self._changed_to_values[key].pop(field_name, None)
         return self
 
+    # TODO: Validate
     def remove_all(self, *field_names: str) -> Self:
         """Remove validation rules for specific fields across all model types."""
         for model in _ALL_MODELS:
             self.remove(model, *field_names)
         return self
 
+    # TODO: Validate
     def _get_files(
         self,
         plugin: BasePlugin,
@@ -167,6 +185,7 @@ class Validator:
                     show.key,
                 )
 
+    # TODO: Validate
     def apply_shared_file_rules(
         self,
         entity: Show | Season | Episode,
@@ -181,6 +200,7 @@ class Validator:
             case Episode():
                 self._apply_episode_share_rules(entity, plugin, updated_files)
 
+    # TODO: Validate
     def _apply_show_share_rules(
         self,
         show: Show,
@@ -194,6 +214,7 @@ class Validator:
                 if self._get_files(plugin, episode)[0] in updated_files:
                     self.incremented(episode.id, "modified_at", "data_timestamp")
 
+    # TODO: Validate
     def _apply_season_share_rules(
         self,
         season: Season,
@@ -206,6 +227,7 @@ class Validator:
             if self._get_files(plugin, episode)[0] in updated_files:
                 self.incremented(episode.id, "modified_at", "data_timestamp")
 
+    # TODO: Validate
     def _apply_episode_share_rules(
         self,
         episode: Episode,
@@ -221,6 +243,7 @@ class Validator:
             if self._get_files(plugin, sibling)[0] in updated_files:
                 self.incremented(sibling.id, "modified_at", "data_timestamp")
 
+    # TODO: Validate
     def get_rule(
         self,
         obj: Plugin | Source | Show | Season | Episode | File,
@@ -237,6 +260,7 @@ class Validator:
                     return rule_type
         return None
 
+    # TODO: Validate
     def _get_changed_to_value(
         self,
         obj: Plugin | Source | Show | Season | Episode | File,
@@ -249,6 +273,7 @@ class Validator:
         message = f"No changed_to value configured for {field_name}"
         raise KeyError(message)
 
+    # TODO: Validate
     def validate[T: Plugin | Source | Show | Season | Episode](
         self,
         original: T,
@@ -262,6 +287,7 @@ class Validator:
         if errors := self._validate_fields(original, actual):
             raise AssertionError("\n\n".join(errors))
 
+    # TODO: Validate
     def _validate_fields[T: Plugin | Source | Show | Season | Episode](
         self,
         original: T,
@@ -324,6 +350,7 @@ class Validator:
 
     # PLR0911/C901 - Reducing the number of returns or match cases just makes the code
     # more complex and much harder to comprehend.
+    # TODO: Validate
     def _validate_field[T: str | int | datetime](  # noqa: PLR0911, PLR0912, C901
         self,
         original_obj: Plugin | Source | Show | Season | Episode | File,

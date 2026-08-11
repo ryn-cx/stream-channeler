@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -21,6 +22,7 @@ const buttonGroupVariants = cva(
   }
 )
 
+// TODO: Validate
 function ButtonGroup({
   className,
   orientation,
@@ -37,6 +39,7 @@ function ButtonGroup({
   )
 }
 
+// TODO: Validate
 function ButtonGroupText({
   className,
   asChild = false,
@@ -57,6 +60,7 @@ function ButtonGroupText({
   )
 }
 
+// TODO: Validate
 function ButtonGroupSeparator({
   className,
   orientation = "vertical",

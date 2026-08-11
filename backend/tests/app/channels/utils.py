@@ -16,6 +16,7 @@ from tests.app.users.utils import CreatedUser, create_random_user
 from tests.app.utils.utils import build_random_model
 
 
+# TODO: Validate
 def create_random_channel(
     session: Session,
     user: User | CreatedUser | uuid.UUID | None = None,
@@ -39,6 +40,7 @@ def create_random_channel(
     return channel
 
 
+# TODO: Validate
 def create_random_channel_show(
     session: Session,
     channel: Channel | ChannelOutput,
@@ -59,6 +61,7 @@ def create_random_channel_show(
     return channel_show
 
 
+# TODO: Validate
 def channel_show_show(session: Session, channel_show: ChannelShow) -> Show:
     """Return the `Show` the `ChannelShow` stands for.
 
@@ -68,6 +71,7 @@ def channel_show_show(session: Session, channel_show: ChannelShow) -> Show:
     return shows_for_channel_show(session, channel_show)[0]
 
 
+# TODO: Validate
 def create_random_channel_queue(
     session: Session,
     channel: Channel,

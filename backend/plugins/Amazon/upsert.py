@@ -13,6 +13,7 @@ from app.utils import tz_datetime
 from plugins.Amazon.helpers import HelperMixin
 
 
+# TODO: Validate
 def _parse_date(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -24,7 +25,9 @@ def _parse_date(value: str | None) -> datetime | None:
     return tz_datetime.combine(parsed, datetime.min.time())
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -35,6 +38,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         return self._upsert_shows(source, show_key, force=force)[0]
 
+    # TODO: Validate
     def _upsert_shows(
         self,
         source: Source,
@@ -56,6 +60,7 @@ class UpsertMixin(HelperMixin, register=False):
             self._set_weekly_updates_from_episodes(show, update_show=False)
         return shows
 
+    # TODO: Validate
     def _upsert_title(
         self,
         source: Source,
@@ -67,6 +72,7 @@ class UpsertMixin(HelperMixin, register=False):
             return self._upsert_movie(source, show_key, force=force)
         return self._upsert_series_show(source, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_series_show(
         self,
         source: Source,
@@ -101,6 +107,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_tv_seasons(
         self,
         show: Show,
@@ -130,6 +137,7 @@ class UpsertMixin(HelperMixin, register=False):
 
             self._upsert_tv_episodes(season, season_key, show.key, force=force)
 
+    # TODO: Validate
     def _upsert_tv_episodes(
         self,
         season: Season,
@@ -169,6 +177,7 @@ class UpsertMixin(HelperMixin, register=False):
                 MediaType.tv,
             )
 
+    # TODO: Validate
     def _upsert_movie(
         self,
         source: Source,
@@ -203,6 +212,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,
@@ -229,6 +239,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         self._upsert_movie_episode(season, show.key, force=force)
 
+    # TODO: Validate
     def _upsert_movie_episode(
         self,
         season: Season,

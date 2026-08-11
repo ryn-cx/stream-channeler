@@ -1,3 +1,4 @@
+# TODO: Validate
 import logging
 
 from sqlalchemy import Engine
@@ -13,6 +14,7 @@ max_tries = 60 * 5  # 5 minutes
 wait_seconds = 1
 
 
+# TODO: Validate
 @retry(
     stop=stop_after_attempt(max_tries),
     wait=wait_fixed(wait_seconds),
@@ -29,6 +31,7 @@ def init(db_engine: Engine) -> None:
         raise
 
 
+# TODO: Validate
 def main() -> None:
     logger.info("Initializing service")
     init(engine)

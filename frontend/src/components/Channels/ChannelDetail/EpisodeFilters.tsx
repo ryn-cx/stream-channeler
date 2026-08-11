@@ -158,6 +158,7 @@ type SortEntry = {
 }
 
 // Oringally copied from: https://ui.shadcn.com/docs/components/combobox
+// TODO: Validate
 function SortOptionsList({
   setOpen,
   sortOptions,
@@ -205,6 +206,7 @@ function SortOptionsList({
   )
 }
 
+// TODO: Validate
 function cleanFormData(data: FormValues): FormValues {
   const cleaned: FormValues = {}
   Object.entries(data).forEach(([key, value]) => {
@@ -264,6 +266,7 @@ interface EpisodeFiltersProps {
   onOpenChange?: (open: boolean) => void
 }
 
+// TODO: Validate
 export function EpisodeFilters({
   filterParams,
   routeFullPath,
@@ -330,6 +333,7 @@ export function EpisodeFilters({
   } as Record<string, "absolute" | "relative">)
 
   // Toggle between absolute and relative date input modes
+  // TODO: Validate
   const toggleDateMode = (category: string) => {
     setDateInputModes((prev) => ({
       ...prev,
@@ -339,6 +343,7 @@ export function EpisodeFilters({
 
   // Helper component local to EpisodeFilters so it can access toggleDateMode
   // and dateInputModes without requiring callers to pass an onLabelClick.
+  // TODO: Validate
   function RenderFormFieldInput<T extends keyof FormValues>(props: {
     keyProp?: string
     control: any
@@ -411,6 +416,7 @@ export function EpisodeFilters({
     )
   }
 
+  // TODO: Validate
   const parseSortEntries = (
     sortBy: SortKeyInput[] | undefined,
   ): SortEntry[] => {
@@ -575,9 +581,11 @@ export function EpisodeFilters({
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const isRecentlyAiredEntry = (entry: SortEntry) =>
     entry.model === "episode" && entry.field === "recently_aired"
 
+  // TODO: Validate
   const buildSortByEntries = () =>
     sortEntries.map((entry) => ({
       model: entry.model,
@@ -596,12 +604,14 @@ export function EpisodeFilters({
       fuzziness: entry.fuzziness > 0 ? entry.fuzziness : undefined,
     }))
 
+  // TODO: Validate
   const currentRandomSeed = () => {
     const parsedSeed =
       seedInputValue !== "" ? parseInt(seedInputValue, 10) : undefined
     return !Number.isNaN(parsedSeed as number) ? parsedSeed : randomSeed
   }
 
+  // TODO: Validate
   const buildSearchParams = (
     data: FormValues,
     orderPresetId?: string,
@@ -645,6 +655,7 @@ export function EpisodeFilters({
     }
   }
 
+  // TODO: Validate
   const buildOrderConfig = (data: FormValues): string => {
     // An order stores filters and sorting, but never a reference to another
     // preset nor source selection (sources are channel-specific).
@@ -657,6 +668,7 @@ export function EpisodeFilters({
     return JSON.stringify(config)
   }
 
+  // TODO: Validate
   const onSubmit = (data: FormValues, orderPresetId?: string) => {
     if (isOrderMode) {
       orderSaveMutation.mutate(buildOrderConfig(data))
@@ -672,15 +684,18 @@ export function EpisodeFilters({
     setSaveConfirmOpen(true)
   })
 
+  // TODO: Validate
   const applyOrder = (orderId: string) =>
     form.handleSubmit((data) => onSubmit(data, orderId))()
 
+  // TODO: Validate
   const updateEntry = (index: number, updates: Partial<SortEntry>) => {
     setSortEntries((prev) =>
       prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)),
     )
   }
 
+  // TODO: Validate
   const moveSortOption = (index: number, direction: "up" | "down") => {
     setSortEntries((prev) => {
       const entries = [...prev]
@@ -693,6 +708,7 @@ export function EpisodeFilters({
     })
   }
 
+  // TODO: Validate
   const removeSortOption = (index: number) => {
     setSortEntries((prev) => prev.filter((_, i) => i !== index))
   }
@@ -1263,6 +1279,7 @@ export function EpisodeFilters({
                         allIds.every((id) => selected.has(id))
                       const isBlacklist = !!form.watch("sourceIdsIsBlacklist")
 
+                      // TODO: Validate
                       const toggle = (id: string) => {
                         const next = new Set(selected)
                         if (next.has(id)) {

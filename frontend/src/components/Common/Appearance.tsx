@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Monitor, Moon, Sun } from "lucide-react"
 
 import { type Theme, useTheme } from "@/components/theme-provider"
@@ -22,6 +23,7 @@ const ICON_MAP: Record<Theme, LucideIcon> = {
   dark: Moon,
 }
 
+// TODO: Validate
 export const SidebarAppearance = () => {
   const { isMobile } = useSidebar()
   const { setTheme, theme } = useTheme()
@@ -66,6 +68,7 @@ export const SidebarAppearance = () => {
   )
 }
 
+// TODO: Validate
 export const Appearance = () => {
   const { setTheme } = useTheme()
 

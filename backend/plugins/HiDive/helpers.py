@@ -12,7 +12,9 @@ from app.shows.models import Show
 from plugins.HiDive.files import HiDiveFiles, diving_board
 
 
+# TODO: Validate
 class HelperMixin(HiDiveFiles, register=False):
+    # TODO: Validate
     @override
     def _set_media_type_from_show(self, show: Show) -> None:
         if not show.media_type:
@@ -20,6 +22,7 @@ class HelperMixin(HiDiveFiles, register=False):
             raise AttributeError(msg)
         self._media_type_value = show.media_type
 
+    # TODO: Validate
     @staticmethod
     def _series_image_url(series_data: series_models.SeriesModel) -> str:
         """Return the hero image URL from a parsed series file."""
@@ -29,6 +32,7 @@ class HelperMixin(HiDiveFiles, register=False):
         msg = "No image element found in series file."
         raise ValueError(msg)
 
+    # TODO: Validate
     @staticmethod
     def _movie_title(hero: VodHeroModel) -> str:
         """Return the movie's title from the VOD's own hero action."""
@@ -39,6 +43,7 @@ class HelperMixin(HiDiveFiles, register=False):
         msg = "No VOD action found in movie hero."
         raise ValueError(msg)
 
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -59,6 +64,7 @@ class HelperMixin(HiDiveFiles, register=False):
             media_type = MediaType.tv
         return self._tmdb_search_media(name, media_type)
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         if self._is_movie():
@@ -70,6 +76,7 @@ class HelperMixin(HiDiveFiles, register=False):
                 return season_info.season_number
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -88,20 +95,24 @@ class HelperMixin(HiDiveFiles, register=False):
                 return int(match.group(1)) if match else None
         return None
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie() else MediaType.tv
 
+    # TODO: Validate
     @classmethod
     def _show_url(cls, key: str | int, media_type: str = "Series") -> str:
         if media_type == "Movie":
             return cls.build_url(f"video/{key}")
         return cls.build_url(f"series/{key}")
 
+    # TODO: Validate
     @classmethod
     def _season_url(cls, season_key: str | int) -> str:
         return cls.build_url(f"season/{season_key}")
 
+    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str | int) -> str:
         return cls.build_url(f"video/{episode_key}")

@@ -47,6 +47,7 @@ FILE_PARENT_COLUMNS: dict[str, Any] = {
 }
 
 
+# TODO: Validate
 @plugin_files_router.post("/files", response_model=FilePublic)
 def create_file(
     session: SessionDep,
@@ -57,6 +58,7 @@ def create_file(
     return file_input.create(session, File, plugin)
 
 
+# TODO: Validate
 @files_router.get("")
 def get_files(
     session: SessionDep,
@@ -75,6 +77,7 @@ def get_files(
     )
 
 
+# TODO: Validate
 @plugin_files_router.get("/files")
 def get_plugin_files(
     plugin: ReadablePlugin,
@@ -95,12 +98,14 @@ def get_plugin_files(
     )
 
 
+# TODO: Validate
 @files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile.
 def get_file(file: ReadableFile) -> File:
     """Get a `File` if it's readable by the `User`."""
     return file
 
 
+# TODO: Validate
 @files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile.
 def update_file(
     session: SessionDep,
@@ -111,6 +116,7 @@ def update_file(
     return file_input.update(session, file)
 
 
+# TODO: Validate
 @files_router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile.
 def delete_file(session: SessionDep, file: EditableFile) -> Message:
     """Delete a `File` if it's editable by the `User`."""

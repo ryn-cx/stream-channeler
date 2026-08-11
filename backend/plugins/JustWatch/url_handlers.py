@@ -17,26 +17,32 @@ if TYPE_CHECKING:
 _SEASON_NUMBER_REGEX = r"\/season-(\d+)"
 
 
+# TODO: Validate
 class JustWatchURLHandler(URLHandler["JustWatch"]):
+    # TODO: Validate
     def __init__(self, plugin: JustWatch, url: str, show_key: str) -> None:
         self._show_key = show_key
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @property
     def show_key(self) -> str:
         """Return the path that identifies the title, e.g. `/us/movie/megamind`."""
         return self._show_key
 
+    # TODO: Validate
     @property
     def season_number(self) -> int | None:
         """Return the season number of the URL, if it is a season URL."""
         match = re.search(_SEASON_NUMBER_REGEX, self.url)
         return int(match.group(1)) if match else None
 
+    # TODO: Validate
     def raise_if_invalid(self) -> None:
         details_file = self.plugin.url_title_details_file(self.show_key)
         self.plugin.raise_if_invalid_file(details_file, self.url)
 
+    # TODO: Validate
     def import_results_for_shows(
         self,
         shows: Sequence[Show],
@@ -44,6 +50,7 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
         """Return the import results for every show the URL maps to."""
         return [result for show in shows for result in self._results_for_show(show)]
 
+    # TODO: Validate
     def narrow_to_season(
         self,
         results: Sequence[URLImportResult],
@@ -69,6 +76,7 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
             for narrowed in self._results_for_show(show)
         ]
 
+    # TODO: Validate
     def _results_for_show(self, show: Show) -> list[URLImportResult]:
         # If no season was specified the whole show should be imported.
         season_number = self.season_number
@@ -86,6 +94,7 @@ class JustWatchURLHandler(URLHandler["JustWatch"]):
         ]
 
 
+# TODO: Validate
 class TitleURLHandler(JustWatchURLHandler):
     # https://www.justwatch.com/us/tv-show/kaiju-no-8
     # https://www.justwatch.com/us/tv-show/kaiju-no-8/season-1

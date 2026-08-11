@@ -16,21 +16,25 @@ from tests.plugins.plugin_validator import (
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class NetflixValidator(PluginValidator[Netflix]):
     plugin_class = Netflix
 
+    # TODO: Validate
     @override
     def import_url_validator(self) -> Validator:
         output = super().import_url_validator()
         output.incremented(Source, "data_timestamp")
         return output
 
+    # TODO: Validate
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
         output.incremented(show.id, "update_at")
         return output
 
+    # TODO: Validate
     @override
     def update_season_validator(self, season: Season) -> Validator:
         output = super().update_season_validator(season)
@@ -40,6 +44,7 @@ class NetflixValidator(PluginValidator[Netflix]):
         output.incremented(season.id, "update_at")
         return output
 
+    # TODO: Validate
     @override
     def update_episode_validator(self, episode: Episode) -> Validator:
         output = super().update_episode_validator(episode)
@@ -50,6 +55,7 @@ class NetflixValidator(PluginValidator[Netflix]):
         return output
 
 
+# TODO: Validate
 class NetflixStandardTests(StandardTests[Netflix], NetflixValidator):
     pass
 
@@ -63,6 +69,7 @@ class NetflixStandardTests(StandardTests[Netflix], NetflixValidator):
 #     )
 
 
+# TODO: Validate
 class TestAiringShow(NetflixStandardTests):
     # Chainsmoker Cat — currently airing; it advertises an upcoming episode via a
     # tagline message, so the show refreshes weekly instead of monthly.
@@ -72,6 +79,7 @@ class TestAiringShow(NetflixStandardTests):
         "/title/{parse_url_response}/",
     )
 
+    # TODO: Validate
     def test_upcoming_update_schedule(self, session_with_files: Session) -> None:
         """An airing title refreshes on the upcoming episode's scheduled day."""
         results = self._import_url(session_with_files)

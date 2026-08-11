@@ -60,6 +60,7 @@ export const Route = createFileRoute("/_layout/channels/")({
   }),
 })
 
+// TODO: Validate
 function MyChannels({
   scopeTabs,
   viewMode,
@@ -83,6 +84,7 @@ function MyChannels({
 
   // The table view lets the page size grow past what browse offers, so clamp it
   // back down to browse's maximum on the way in.
+  // TODO: Validate
   const changeViewMode = (mode: ViewMode) => {
     if (mode === "browse") {
       setPagination((current) => ({
@@ -194,6 +196,7 @@ function MyChannels({
 
 // When no scope is pinned in the URL, land on the most relevant populated tab:
 // favorites if the user has any, otherwise owned, otherwise public.
+// TODO: Validate
 function useDefaultScope(enabled: boolean): {
   scope: Scope
   isPending: boolean
@@ -225,6 +228,7 @@ function useDefaultScope(enabled: boolean): {
   return { scope: "public", isPending }
 }
 
+// TODO: Validate
 function Channels() {
   const search = Route.useSearch()
   const navigate = useNavigate()
@@ -242,6 +246,7 @@ function Channels() {
   // scope must be written explicitly — its default is resolved from channel counts,
   // so an absent view would send the user back to that resolved tab rather than the
   // one they clicked. The browse view stays a droppable default to keep the URL clean.
+  // TODO: Validate
   const buildSearch = (
     nextScope: Scope,
     nextMode: ViewMode,
@@ -250,6 +255,7 @@ function Channels() {
     mode: nextMode === "browse" ? undefined : nextMode,
   })
 
+  // TODO: Validate
   const setScope = (next: Scope) => {
     navigate({
       to: "/channels",
@@ -258,6 +264,7 @@ function Channels() {
     })
   }
 
+  // TODO: Validate
   const setViewMode = (mode: ViewMode) => {
     navigate({
       to: "/channels",

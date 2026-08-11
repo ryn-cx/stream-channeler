@@ -17,6 +17,7 @@ from app.issue_reports.models import (
 type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | ShowIssueReport
 
 
+# TODO: Validate
 def editable_issue_report[ReportT: AnyIssueReport](
     model: type[ReportT],
 ) -> Callable[..., ReportT]:
@@ -26,6 +27,7 @@ def editable_issue_report[ReportT: AnyIssueReport](
     a superuser can edit or delete one.
     """
 
+    # TODO: Validate
     def dependency(
         session: SessionDep,
         current_user: CurrentUser,

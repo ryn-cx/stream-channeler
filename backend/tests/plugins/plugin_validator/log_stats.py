@@ -28,12 +28,14 @@ _SLOW_RATIOS = {
 }
 
 
+# TODO: Validate
 def _load_metrics(file_path: Path) -> dict[str, dict[str, Any]]:
     if not file_path.exists():
         return {}
     return json.loads(file_path.read_text(encoding="utf-8"))
 
 
+# TODO: Validate
 def _write_metrics(file_path: Path, all_values: dict[str, dict[str, Any]]) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_text(
@@ -42,6 +44,7 @@ def _write_metrics(file_path: Path, all_values: dict[str, dict[str, Any]]) -> No
     )
 
 
+# TODO: Validate
 def _slower_metrics(
     best_values: dict[str, float],
     current_values: dict[str, float],
@@ -64,6 +67,7 @@ def _slower_metrics(
     return slower
 
 
+# TODO: Validate
 def _record_slow_metrics(
     file_path: Path,
     label: str,
@@ -86,6 +90,7 @@ def _record_slow_metrics(
         file_path.unlink(missing_ok=True)
 
 
+# TODO: Validate
 def _record_best_metrics(
     file_path: Path,
     label: str,
@@ -111,6 +116,7 @@ def _record_best_metrics(
     return best_values
 
 
+# TODO: Validate
 @contextmanager
 def _log_sql_statement_count(
     label: str,
@@ -121,11 +127,13 @@ def _log_sql_statement_count(
     stats["sql_statements"] = 0
     stack_traces: list[str] = []
 
+    # TODO: Validate
     def count_queries(*_args: object, **_kwargs: object) -> None:
         stats["sql_statements"] += 1
 
     ignored_path_fragments = (".venv", "AppData", ".vscode")
 
+    # TODO: Validate
     def log_queries(*_args: object, **_kwargs: object) -> None:
         stack: list[traceback.FrameSummary] = traceback.extract_stack()
         callers: list[str] = [
@@ -157,6 +165,7 @@ def _log_sql_statement_count(
         )
 
 
+# TODO: Validate
 @contextmanager
 def _log_execution_time(label: str, stats: dict[str, Any]) -> Generator[None]:
     """Log the execution time within the context."""
@@ -167,6 +176,7 @@ def _log_execution_time(label: str, stats: dict[str, Any]) -> Generator[None]:
     logger.info(f"Execution time: {elapsed_time:.4f}s [{label}]")
 
 
+# TODO: Validate
 @contextmanager
 def _log_memory(stats: dict[str, Any]) -> Generator[None]:
     """Log the memory usage within the context."""
@@ -177,6 +187,7 @@ def _log_memory(stats: dict[str, Any]) -> Generator[None]:
     stats["peak_memory_bytes"] = peak_memory
 
 
+# TODO: Validate
 @contextmanager
 def _log_flamegraph(stats_directory: Path) -> Generator[None]:
     """Generate an HTML flamegraph for the code executed within the context."""
@@ -190,6 +201,7 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
         flamegraph_path.write_text(profiler.output_html())
 
 
+# TODO: Validate
 @contextmanager
 def log_stats(plugin_validator: PluginValidator[Any]) -> Generator[None]:
     """Combined context manager for all stats logging."""

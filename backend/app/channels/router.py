@@ -97,6 +97,7 @@ admin_router = APIRouter(
 )
 
 
+# TODO: Validate
 @channels_router.post("", response_model=ChannelOutput)
 def create_channel(
     session: SessionDep,
@@ -110,6 +111,7 @@ def create_channel(
     return channel
 
 
+# TODO: Validate
 @channels_router.get("")
 def get_channels(
     session: SessionDep,
@@ -120,6 +122,7 @@ def get_channels(
     return service.scoped_channel_list_output(session, current_user, read_options)
 
 
+# TODO: Validate
 @channels_router.patch("/{channel_id}", response_model=ChannelOutput)  # noqa: FAST003 - Used by EditableChannel
 def update_channel(
     session: SessionDep,
@@ -130,18 +133,21 @@ def update_channel(
     return channel_in.update(session, channel)
 
 
+# TODO: Validate
 @channels_router.delete("/{channel_id}")  # noqa: FAST003 - Used by EditableChannel
 def delete_channel(session: SessionDep, channel: EditableChannel) -> Message:
     """Delete a `Channel` if it's editable by the `User`."""
     return delete_record(session, channel)
 
 
+# TODO: Validate
 @channels_router.get("/sort-options")
 def get_sort_options() -> list[SortOptionOutput]:
     """Get a list of all possible sorting options."""
     return service.get_sort_options()
 
 
+# TODO: Validate
 @channels_router.post("/bulk-import-queue")
 def bulk_import_queue_urls(
     session: SessionDep,
@@ -174,6 +180,7 @@ def bulk_import_queue_urls(
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
 
 
+# TODO: Validate
 @channels_router.get("/favorite-ids")
 def get_favorite_channel_ids(
     session: SessionDep,
@@ -193,6 +200,7 @@ def get_favorite_channel_ids(
     )
 
 
+# TODO: Validate
 @channels_router.post("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
 def favorite_channel(
     session: SessionDep,
@@ -207,6 +215,7 @@ def favorite_channel(
     return Message(message="Channel favorited successfully")
 
 
+# TODO: Validate
 @channels_router.patch("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
 def update_favorite_channel(
     session: SessionDep,
@@ -229,6 +238,7 @@ def update_favorite_channel(
     return Message(message="Favorite updated successfully")
 
 
+# TODO: Validate
 @channels_router.delete("/{channel_id}/favorite")  # noqa: FAST003 - Used by ReadableChannel.
 def unfavorite_channel(
     session: SessionDep,
@@ -243,6 +253,7 @@ def unfavorite_channel(
     return Message(message="Channel unfavorited successfully")
 
 
+# TODO: Validate
 @admin_router.patch(
     "/{channel_id}",  # noqa: FAST003 - Used by ExistingChannel.
 )
@@ -259,6 +270,7 @@ def admin_update_channel(
     return ChannelListOutput.model_validate(channel, update={"username": username})
 
 
+# TODO: Validate
 def _channel_queue_admin_output(
     channel: Channel,
     username: str | None,
@@ -275,6 +287,7 @@ def _channel_queue_admin_output(
     )
 
 
+# TODO: Validate
 @admin_router.get("/queue")
 def get_all_channel_queues(
     session: SessionDep,
@@ -305,6 +318,7 @@ def get_all_channel_queues(
     ]
 
 
+# TODO: Validate
 @admin_router.patch("/queue/{queue_id}")
 def admin_update_channel_queue(
     session: SessionDep,
@@ -325,6 +339,7 @@ def admin_update_channel_queue(
     return _channel_queue_admin_output(channel, username, queue_entry)
 
 
+# TODO: Validate
 @admin_router.delete("/queue/{queue_id}")
 def admin_delete_channel_queue(
     session: SessionDep,
@@ -342,6 +357,7 @@ def admin_delete_channel_queue(
     return Message(message=f"{url} removed from import queue successfully")
 
 
+# TODO: Validate
 @channels_router.get(
     "/{channel_id}/combined-channels",  # noqa: FAST003 - Used by ReadableChannel.
 )
@@ -362,6 +378,7 @@ def get_channel_combined_channels(
     return result
 
 
+# TODO: Validate
 @channels_router.put(
     "/{channel_id}/combined-channels",  # noqa: FAST003 - Used by EditableChannel.
 )
@@ -387,6 +404,7 @@ def update_channel_combined_channels(
     return Message(message="Combined channels updated successfully")
 
 
+# TODO: Validate
 @channels_router.get("/{channel_id}/episodes")  # noqa: FAST003 - Used by ReadableChannel.
 def get_channel_episodes(
     channel: ReadableChannel,
@@ -461,6 +479,7 @@ def get_channel_episodes(
 
 
 # FAST003 - Parameter is used by ReadableChannel.
+# TODO: Validate
 @channels_router.get("/{channel_id}/shows")  # noqa: FAST003
 def get_channel_shows(
     channel: ReadableChannel,
@@ -538,6 +557,7 @@ def get_channel_shows(
     ]
 
     # The channel the request was made on comes first; the rest follow by name.
+    # TODO: Validate
     def group_sort_key(group_channel_id: uuid.UUID) -> tuple[bool, str]:
         is_not_primary = group_channel_id != channel.id
         return (is_not_primary, (channel_names.get(group_channel_id) or "").lower())
@@ -572,6 +592,7 @@ def get_channel_shows(
     return output
 
 
+# TODO: Validate
 def _channel_show_stats(
     session: Session,
     show_identifiers: set[str],
@@ -617,6 +638,7 @@ def _channel_show_stats(
 
 
 # FAST003 - Parameter is used by ReadableChannel.
+# TODO: Validate
 @channels_router.get("/{channel_id}/sources")  # noqa: FAST003
 def get_channel_sources(
     channel: ReadableChannel,
@@ -643,6 +665,7 @@ def get_channel_sources(
     return list(sources.values())
 
 
+# TODO: Validate
 def _copies_by_identifier(
     shows: Sequence[Show],
 ) -> tuple[dict[str, list[uuid.UUID]], dict[str, list[uuid.UUID]]]:
@@ -660,6 +683,7 @@ def _copies_by_identifier(
 
 
 # FAST003 - Parameter is used by UserChannelShow.
+# TODO: Validate
 @channels_router.get("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
 def get_channel_whitelist(
     session: SessionDep,
@@ -784,6 +808,7 @@ def get_channel_whitelist(
 
 
 # FAST003 - Parameter is used by UserChannelShow.
+# TODO: Validate
 @channels_router.patch("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
 def update_channel_whitelist(
     session: SessionDep,
@@ -809,6 +834,7 @@ def update_channel_whitelist(
 
 
 # FAST003 - Parameter is used by EditableChannel.
+# TODO: Validate
 @channels_router.post("/{channel_id}/blacklist-episode")  # noqa: FAST003
 def blacklist_channel_episode(
     session: SessionDep,
@@ -839,6 +865,7 @@ def blacklist_channel_episode(
 
 
 # FAST003 - Parameter is used by UserChannel.
+# TODO: Validate
 @channels_router.patch("/{channel_id}/default-order", response_model=ChannelOutput)  # noqa: FAST003
 def update_channel_default_order(
     session: SessionDep,
@@ -861,6 +888,7 @@ def update_channel_default_order(
 
 
 # FAST003 - Parameter is used by EditableChannel.
+# TODO: Validate
 @channels_router.patch("/{channel_id}/order", response_model=ChannelOutput)  # noqa: FAST003
 def update_channel_order(
     session: SessionDep,
@@ -874,6 +902,7 @@ def update_channel_order(
 
 
 # FAST003 - Parameters are used by EditableChannelReadableShow.
+# TODO: Validate
 @channels_router.delete("/{channel_id}/remove-show/{show_id}")  # noqa: FAST003
 def delete_channel_show(
     session: SessionDep,
@@ -890,6 +919,7 @@ def delete_channel_show(
     return Message(message=f"{name} removed from channel successfully")
 
 
+# TODO: Validate
 @channels_router.get(
     "/{channel_id}/import-queue",  # noqa: FAST003 - Used by UserChannel
     response_model=list[ChannelQueueOutput],
@@ -913,6 +943,7 @@ def get_channel_queue(
     return list(channels)
 
 
+# TODO: Validate
 @channels_router.post(
     "/{channel_id}/import-queue",  # noqa: FAST003 - Used by UserChannel
     response_model=list[ChannelQueueOutput],
@@ -930,6 +961,7 @@ def create_channel_queue_urls(
     )
 
 
+# TODO: Validate
 @channels_router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003 - Used by UserChannel.
 def delete_channel_queue_url(
     session: SessionDep,
@@ -950,6 +982,7 @@ def delete_channel_queue_url(
     return Message(message=f"{url} removed from import queue successfully")
 
 
+# TODO: Validate
 @channels_router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003 - Used by UserChannel.
 def clear_channel_completed_queue(
     session: SessionDep,
@@ -964,6 +997,7 @@ def clear_channel_completed_queue(
     return Message(message="Import queue cleared successfully")
 
 
+# TODO: Validate
 @channels_router.get("/{channel_id}")  # noqa: FAST003 - Used by ReadableChannel
 def get_channel(channel: ReadableChannel, user: OptionalUser) -> ChannelOutput:
     """Get a `Channel` if it's readable by the `User`."""

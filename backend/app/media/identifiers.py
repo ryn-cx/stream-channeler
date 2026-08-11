@@ -17,6 +17,7 @@ TMDB_PLUGIN_KEY = "TMDB"
 TMDB_IDENTIFIER_PREFIX = f"{TMDB_PLUGIN_KEY} "
 
 
+# TODO: Validate
 def tmdb_identifier(media_type: MediaType, tmdb_id: int) -> str:
     """Return the identifier naming a TMDB record.
 
@@ -26,6 +27,7 @@ def tmdb_identifier(media_type: MediaType, tmdb_id: int) -> str:
     return f"{TMDB_IDENTIFIER_PREFIX}{media_type} {tmdb_id}"
 
 
+# TODO: Validate
 def parse_tmdb_identifier(identifier: str | None) -> tuple[MediaType, int] | None:
     """Return the media type and id an identifier names, or `None` when it names none.
 
@@ -42,6 +44,7 @@ def parse_tmdb_identifier(identifier: str | None) -> tuple[MediaType, int] | Non
     return MediaType(media_type), int(raw_id)
 
 
+# TODO: Validate
 def identifier_tmdb_id(identifier: str | None) -> int | None:
     """Return the TMDB id an identifier names, or `None` when it names none.
 

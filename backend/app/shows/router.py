@@ -55,11 +55,13 @@ SHOW_EXTRA_COLUMNS: dict[str, Any] = {
 }
 
 
+# TODO: Validate
 def _show_output(session: SessionDep, show: Show) -> ShowPublic:
     """Return a `Show` with whatever its website left out taken from TMDB."""
     return fill_shows(session, [ShowPublic.model_validate(show)])[0]
 
 
+# TODO: Validate
 @source_shows_router.post("/shows")
 def create_show(
     session: SessionDep,
@@ -75,6 +77,7 @@ def create_show(
     return _show_output(session, show_input.create(session, Show, source))
 
 
+# TODO: Validate
 @shows_router.get("")
 def get_shows(
     session: SessionDep,
@@ -95,6 +98,7 @@ def get_shows(
     return shows
 
 
+# TODO: Validate
 @source_shows_router.get("/shows")
 def get_source_shows(
     session: SessionDep,
@@ -116,6 +120,7 @@ def get_source_shows(
     return shows
 
 
+# TODO: Validate
 @plugin_shows_router.get("/shows")
 def get_plugin_shows(
     session: SessionDep,
@@ -137,6 +142,7 @@ def get_plugin_shows(
     return shows
 
 
+# TODO: Validate
 def _information_side(label: str, show: Show, url: str | None) -> ShowInformationSide:
     return ShowInformationSide(
         label=label,
@@ -149,6 +155,7 @@ def _information_side(label: str, show: Show, url: str | None) -> ShowInformatio
     )
 
 
+# TODO: Validate
 @shows_router.get("/{show_id}/information")  # noqa: FAST003 - Used by ReadableShow.
 def get_show_information(
     session: SessionDep,
@@ -191,12 +198,14 @@ def get_show_information(
     )
 
 
+# TODO: Validate
 @shows_router.get("/{show_id}")  # noqa: FAST003 - Used by ReadableShow.
 def get_show(session: SessionDep, show: ReadableShow) -> ShowPublic:
     """Get a `Show` if it's readable by the `User`."""
     return _show_output(session, show)
 
 
+# TODO: Validate
 @shows_router.patch("/{show_id}")  # noqa: FAST003 - Used by EditableShow.
 def update_show(
     session: SessionDep,
@@ -225,6 +234,7 @@ def update_show(
     return _show_output(session, show)
 
 
+# TODO: Validate
 @shows_router.delete("/{show_id}")  # noqa: FAST003 - Used by EditableShow.
 def delete_show(session: SessionDep, show: EditableShow) -> Message:
     """Delete a `Show` if it's editable by the `User`."""

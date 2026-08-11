@@ -12,16 +12,19 @@ from app.users.schemas import UserCreate
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
 
+# TODO: Validate
 def automatically_import_models() -> None:
     for model_file in APP_PATH.glob("*/models.py"):
         import_module(f"app.{model_file.parent.name}.models")
 
 
+# TODO: Validate
 def load_models() -> None:
     automatically_import_models()
 
 
 # TODO: Update this comment upstream.
+# TODO: Validate
 def init_db(session: Session) -> None:
     # make sure all SQLModel models are imported before initializing DB otherwise,
     # SQLModel might fail to initialize relationships properly for more details:

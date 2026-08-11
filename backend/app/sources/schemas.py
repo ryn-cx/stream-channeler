@@ -14,10 +14,12 @@ from app.schemas import (
 from app.sources.models import BaseSource, Source
 
 
+# TODO: Validate
 class SourceCreate(BaseCreateWithParentAndKey[Source, Plugin], BaseSource):
     """Schema for creating a `Source`."""
 
 
+# TODO: Validate
 class SourceUpdate(
     make_model_with_all_fields_optional(BaseSource),
     BaseUpdateWithKey[Source],
@@ -25,6 +27,7 @@ class SourceUpdate(
     """Schema for updating a `Source`."""
 
 
+# TODO: Validate
 class SourcePublic(BaseSource):
     """Schema for returning a `Source`."""
 
@@ -33,6 +36,7 @@ class SourcePublic(BaseSource):
 
 
 # TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
 class SourceListPublic(SourcePublic):
     """Schema for returning a list of `Source`s, with parent information."""
 
@@ -44,6 +48,7 @@ class SourceListPublic(SourcePublic):
     plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
 
 
+# TODO: Validate
 class SourcesPublic(BaseModel):
     """Schema for returning a list of `Source`s."""
 

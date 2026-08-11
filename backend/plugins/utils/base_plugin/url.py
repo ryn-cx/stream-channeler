@@ -7,47 +7,57 @@ from app.shows.models import Show
 from plugins.utils.abstract_plugin import URLImportResult
 
 
+# TODO: Validate
 class URLHandler[PluginT](ABC):
     """Abstract base class for URL handlers."""
 
     _URL_REGEX: ClassVar[str]
     """The URL regex pattern for the handler."""
 
+    # TODO: Validate
     def __init__(self, plugin: PluginT, url: str) -> None:
         """Initialize the URL handler."""
         self.plugin = plugin
         self.url = url
 
+    # TODO: Validate
     @classmethod
     def _url_regex(cls, domain_regex: str) -> str:
         """Returns the full URL regex for the handler."""
         return domain_regex + cls._URL_REGEX
 
+    # TODO: Validate
     @property
     @abstractmethod
     def show_key(self) -> str:
         """Return the show key extracted from the URL."""
 
+    # TODO: Validate
     @abstractmethod
     def raise_if_invalid(self) -> None:
         """Raises an exception if the URL is invalid."""
 
+    # TODO: Validate
     def import_results(self, show: Show) -> list[URLImportResult]:
         """Returns the import results for the URL."""
         return [URLImportResult.for_show(show)]
 
 
+# TODO: Validate
 class URLMixin(ABC):
+    # TODO: Validate
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:
         return re.match(cls.url_regex(), url) is not None
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
 
     # TODO: Replace with get_url_handler style
+    # TODO: Validate
     def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.
 
@@ -60,6 +70,7 @@ class URLMixin(ABC):
         """
         raise NotImplementedError
 
+    # TODO: Validate
     @classmethod
     def domains(cls) -> list[str]:
         """Return a list of the domains the plugin supports.
@@ -74,6 +85,7 @@ class URLMixin(ABC):
         # This is used in tests to make sure the regex supports every domain.
         return [cls._domain()]
 
+    # TODO: Validate
     @classmethod
     def _domain(cls) -> str:
         """Return the single (primary) domain the plugin supports.
@@ -85,6 +97,7 @@ class URLMixin(ABC):
         """
         return cls.domains()[0]
 
+    # TODO: Validate
     @classmethod
     def _base_url(cls) -> str:
         """Return the base URL for the source.
@@ -93,6 +106,7 @@ class URLMixin(ABC):
         """
         return f"https://{cls._domain()}/"
 
+    # TODO: Validate
     @classmethod
     def build_url(cls, path: str) -> str:
         """Build an absolute URL from a path relative to the base URL.
@@ -106,6 +120,7 @@ class URLMixin(ABC):
             path = f"/{path}"
         return f"{base_url}{path}"
 
+    # TODO: Validate
     @classmethod
     def _domain_regex(cls) -> str:
         """Return a regex string that matches all of the source's domains."""
@@ -117,6 +132,7 @@ class URLMixin(ABC):
 
         return cls._regex_escape_domain(cls._domain())
 
+    # TODO: Validate
     @classmethod
     def _regex_escape_domain(cls, domain: str) -> str:
         """Escapes a plain text domain in the format of example.com.

@@ -8,6 +8,7 @@ interface EpisodeActionsMenuProps {
   episode: EpisodeTableData
 }
 
+// TODO: Validate
 export const EpisodeActionsMenu = ({ episode }: EpisodeActionsMenuProps) => {
   return (
     <ActionsMenu>

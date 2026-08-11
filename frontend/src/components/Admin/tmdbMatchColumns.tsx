@@ -13,6 +13,7 @@ import {
   seasonAndEpisodeText,
 } from "./tmdbNumbering"
 
+// TODO: Validate
 /**
  * A cell whose text runs onto another line rather than widening the table.
  *
@@ -34,6 +35,7 @@ function WrappingCell({
   )
 }
 
+// TODO: Validate
 /**
  * Whether the website and TMDB give an episode the very same name.
  *
@@ -52,6 +54,7 @@ const NOTHING_TO_AGREE_WITH: Numbered = {
   absolute_number: null,
 }
 
+// TODO: Validate
 /**
  * How a record is numbered, marked where the other record puts it in the same place.
  *

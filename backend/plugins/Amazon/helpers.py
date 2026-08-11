@@ -11,7 +11,9 @@ from plugins.Amazon.files import FileMixin
 _PURCHASE_SOURCE_SUFFIX = "Purchase"
 
 
+# TODO: Validate
 class HelperMixin(FileMixin, register=False):
+    # TODO: Validate
     @override
     def _fetch_tmdb_id(
         self,
@@ -26,10 +28,12 @@ class HelperMixin(FileMixin, register=False):
             return self._tmdb_search_media(page.title(), MediaType.movie)
         return self._tmdb_search_media(page.series_title())
 
+    # TODO: Validate
     @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
+    # TODO: Validate
     @override
     def _get_season_number(self, season_key: str, show_key: str) -> int | None:
         for season in self._season_entries(show_key):
@@ -37,6 +41,7 @@ class HelperMixin(FileMixin, register=False):
                 return season.season_number
         return None
 
+    # TODO: Validate
     @override
     def _get_episode_number(
         self,
@@ -49,10 +54,12 @@ class HelperMixin(FileMixin, register=False):
                 return episode.episode_number
         return None
 
+    # TODO: Validate
     @classmethod
     def _detail_url(cls, asin: str) -> str:
         return cls.build_url(f"gp/video/detail/{asin}")
 
+    # TODO: Validate
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:
@@ -60,6 +67,7 @@ class HelperMixin(FileMixin, register=False):
             f"s?url=search-alias%3Dinstant-video&field-keywords={quote_plus(query)}",
         )
 
+    # TODO: Validate
     def _title_sources(self, show_key: str, default: Source) -> list[Source]:
         """Return every `Source` a title belongs to, by how it can be watched.
 
@@ -88,6 +96,7 @@ class HelperMixin(FileMixin, register=False):
         # A title with no way to watch it listed still belongs somewhere.
         return sources or [default]
 
+    # TODO: Validate
     def _extra_source(self, source_key: str, name: str) -> Source:
         """Return one of the plugin's `Source`s other than its default one."""
         # Looked up against the database rather than only the session, since a

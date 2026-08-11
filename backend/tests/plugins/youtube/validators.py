@@ -11,6 +11,7 @@ from tests.plugins.plugin_validator import InvalidURLValidator, PluginValidator
 from tests.plugins.plugin_validator.validator import Validator
 
 
+# TODO: Validate
 class YouTubeValidator(PluginValidator[YouTube]):
     """Validate all YouTube content."""
 
@@ -20,6 +21,7 @@ class YouTubeValidator(PluginValidator[YouTube]):
 
     plugin_class = YouTube
 
+    # TODO: Validate
     @override
     def import_url_validator(self) -> Validator:
         output = super().import_url_validator()
@@ -27,6 +29,7 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output.incremented(Source, "data_timestamp")
         return output
 
+    # TODO: Validate
     @override
     def update_show_validator(self, show: Show) -> Validator:
         output = super().update_show_validator(show)
@@ -34,6 +37,7 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output.incremented(show.id, "update_at")
         return output
 
+    # TODO: Validate
     @override
     def update_season_validator(self, season: Season) -> Validator:
         output = super().update_season_validator(season)
@@ -43,6 +47,7 @@ class YouTubeValidator(PluginValidator[YouTube]):
         # output.incremented(season.show.id, "data_timestamp", "modified_at")
         return output
 
+    # TODO: Validate
     @override
     def update_episode_validator(self, episode: Episode) -> Validator:
         output = super().update_episode_validator(episode)
@@ -50,6 +55,7 @@ class YouTubeValidator(PluginValidator[YouTube]):
         output.incremented(episode.key, "modified_at", "data_timestamp")
         return output
 
+    # TODO: Validate
     @override
     def deleted_episode_validator(self, episode: Episode) -> Validator:
         output = super().deleted_episode_validator(episode)
@@ -62,11 +68,14 @@ class YouTubeValidator(PluginValidator[YouTube]):
         return output
 
 
+# TODO: Validate
 class ChannelWithNoUploadsMixin(YouTubeValidator):
+    # TODO: Validate
     @property
     def uploads_key(self) -> str:
         return "UU" + self.channel_key[2:]
 
 
+# TODO: Validate
 class InvalidYouTubeURLValidator(InvalidURLValidator[YouTube]):
     plugin_class = YouTube

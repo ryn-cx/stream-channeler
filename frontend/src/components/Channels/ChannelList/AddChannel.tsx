@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+// TODO: Validate
 const AddChannel = () => {
   return (
     <Button asChild>

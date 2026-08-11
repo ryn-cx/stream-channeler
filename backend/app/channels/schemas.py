@@ -34,10 +34,12 @@ from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 
 
+# TODO: Validate
 class ChannelCreate(BaseInput, BaseChannel):
     """Schema for creating a `Channel`."""
 
 
+# TODO: Validate
 class ChannelUpdate(
     make_model_with_all_fields_optional(BaseChannel),
     BaseUpdateWithoutKey[Channel],
@@ -45,6 +47,7 @@ class ChannelUpdate(
     """Schema for updating a `Channel`."""
 
 
+# TODO: Validate
 class ChannelOutput(BaseChannel):
     """Schema for returning a `Channel`.
 
@@ -58,6 +61,7 @@ class ChannelOutput(BaseChannel):
     score: int
 
 
+# TODO: Validate
 class ChannelListOutput(BaseChannel):
     """Schema for returning a `Channel` alongside its owner.
 
@@ -76,6 +80,7 @@ class ChannelListOutput(BaseChannel):
     custom_channel_number: float | None = None
 
 
+# TODO: Validate
 class ChannelFavoriteUpdate(BaseInput):
     """Schema for a `User`'s private customization of a favorited `Channel`."""
 
@@ -83,6 +88,7 @@ class ChannelFavoriteUpdate(BaseInput):
     channel_number: float | None = Field(default=None)
 
 
+# TODO: Validate
 class ChannelPublicListOutput(BaseModel):
     """Schema for returning a page of publicly listed `Channel`s."""
 
@@ -90,6 +96,7 @@ class ChannelPublicListOutput(BaseModel):
     count: int
 
 
+# TODO: Validate
 class ChannelsPublic(BaseModel):
     """Schema for returning a page of `Channel`s."""
 
@@ -99,6 +106,7 @@ class ChannelsPublic(BaseModel):
     is_server_side: bool
 
 
+# TODO: Validate
 class ChannelReadOptions(ScopedReadOptions):
     """Read options for the `Channel` list.
 
@@ -109,6 +117,7 @@ class ChannelReadOptions(ScopedReadOptions):
     scope: RecordScope = RecordScope.owned
 
 
+# TODO: Validate
 class ChannelAdminUpdate(
     make_model_with_all_fields_optional(BaseChannel),
     BaseInput,
@@ -118,6 +127,7 @@ class ChannelAdminUpdate(
     score: int | None = Field(default=None)
 
 
+# TODO: Validate
 class CombinedChannelOutput(BaseModel):
     """Schema for returning a channel combined into another channel."""
 
@@ -125,17 +135,20 @@ class CombinedChannelOutput(BaseModel):
     name: str | None
 
 
+# TODO: Validate
 class CombinedChannelInput(BaseInput):
     """Schema for combining a channel into another channel."""
 
     id: uuid.UUID
 
 
+# TODO: Validate
 class ChannelQueueOutput(BaseChannelQueue):
     id: uuid.UUID
     channel_id: uuid.UUID
 
 
+# TODO: Validate
 class ChannelQueueAdminOutput(ChannelQueueOutput):
     """Schema for returning a queue entry to an admin, with channel and owner info."""
 
@@ -146,6 +159,7 @@ class ChannelQueueAdminOutput(ChannelQueueOutput):
     username: str | None
 
 
+# TODO: Validate
 class ChannelQueueAdminUpdate(BaseInput):
     """Schema for an admin updating a `Channel`'s queue entry."""
 
@@ -154,12 +168,14 @@ class ChannelQueueAdminUpdate(BaseInput):
     import_at: datetime | None = Field(default=None)
 
 
+# TODO: Validate
 class ChannelOrderInput(BaseInput):
     """Schema for setting the custom episode order of a `Channel`."""
 
     episode_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
+# TODO: Validate
 class EpisodeWithDetails(EpisodeOutput):
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
@@ -177,6 +193,7 @@ class EpisodeWithDetails(EpisodeOutput):
     tmdb_episode_number: int | None = Field(default=None)
 
 
+# TODO: Validate
 class ChannelEpisodesOutput(BaseModel):
     episodes: list[EpisodeWithDetails]
     seasons: dict[uuid.UUID, SeasonOutput]
@@ -186,6 +203,7 @@ class ChannelEpisodesOutput(BaseModel):
     channels: dict[uuid.UUID, ChannelOutput]
 
 
+# TODO: Validate
 class ChannelShowGroup(BaseModel):
     """The regular shows contributed by one channel within a combined channel."""
 
@@ -194,6 +212,7 @@ class ChannelShowGroup(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
 
 
+# TODO: Validate
 class ChannelShowStats(BaseModel):
     """What a channel's copies of one title add up to.
 
@@ -208,6 +227,7 @@ class ChannelShowStats(BaseModel):
     first_release_date: datetime | None = Field(default=None)
 
 
+# TODO: Validate
 class ChannelShowsOutput(BaseModel):
     shows: list[ShowPublic] = Field(default_factory=list)
     # Shows that don't belong to the channel but carry blacklist/whitelist entries for
@@ -222,6 +242,7 @@ class ChannelShowsOutput(BaseModel):
     stats: dict[str, ChannelShowStats] = Field(default_factory=dict)
 
 
+# TODO: Validate
 class WhitelistEntryInput(BaseInput):
     id: uuid.UUID
     marked: bool
@@ -229,12 +250,14 @@ class WhitelistEntryInput(BaseInput):
     expires_at: datetime | None = Field(default=None)
 
 
+# TODO: Validate
 class BlacklistEpisodeInput(BaseInput):
     show_id: uuid.UUID
     episode_id: uuid.UUID
     expires_at: datetime | None = Field(default=None)
 
 
+# TODO: Validate
 class WhitelistShowInput(BaseInput):
     is_whitelist: bool | None = Field(default=None)
     # Each entry's `id` is the `Show` id of one website's copy of the title.
@@ -243,6 +266,7 @@ class WhitelistShowInput(BaseInput):
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
 
 
+# TODO: Validate
 class WhitelistSourceOutput(BaseModel):
     """One website's copy of the title, and whether it is filtered."""
 
@@ -257,6 +281,7 @@ class WhitelistSourceOutput(BaseModel):
     is_tmdb: bool = Field(default=False)
 
 
+# TODO: Validate
 class WhitelistSeasonOutput(SeasonOutput):
     filtered: bool
     # The `Show` ids of the websites' copies that carry this season.
@@ -266,6 +291,7 @@ class WhitelistSeasonOutput(SeasonOutput):
     tmdb_season_number: int | None = Field(default=None)
 
 
+# TODO: Validate
 class WhitelistEpisodeOutput(EpisodeOutput):
     filtered: bool
     expires_at: datetime | None = Field(default=None)
@@ -278,6 +304,7 @@ class WhitelistEpisodeOutput(EpisodeOutput):
     tmdb_episode_number: int | None = Field(default=None)
 
 
+# TODO: Validate
 class WhitelistShowOutput(ShowPublic):
     is_whitelist: bool
     sources: list[WhitelistSourceOutput]
@@ -285,12 +312,14 @@ class WhitelistShowOutput(ShowPublic):
     episodes: list[WhitelistEpisodeOutput]
 
 
+# TODO: Validate
 class SortOptionOutput(BaseModel):
     label: str
     model: Literal["episode", "season", "show", "source", "plugin", "channel"]
     field: str
 
 
+# TODO: Validate
 class SortKeyInput(BaseInput):
     model_config = ConfigDict(
         validate_by_name=True,
@@ -320,10 +349,12 @@ class SortKeyInput(BaseInput):
     recently_aired_date: datetime | None = Field(default=None)
     fuzziness: int | None = Field(default=None, ge=0)
 
+    # TODO: Validate
     @property
     def model_class(self) -> type[Episode | Season | Show | Source | Plugin | Channel]:
         return self._MODEL_MAP[self.model]
 
+    # TODO: Validate
     @model_validator(mode="after")
     def validate_and_resolve(self) -> SortKeyInput:
         if self.field == "random" or self.field in self.model_class.SORTABLE_FIELDS:
@@ -333,6 +364,7 @@ class SortKeyInput(BaseInput):
         raise ValueError(msg)
 
 
+# TODO: Validate
 class ChannelOptions(BaseInput):
     model_config = ConfigDict(
         validate_by_name=True,
@@ -342,6 +374,7 @@ class ChannelOptions(BaseInput):
 
     sort_by: list[SortKeyInput] = Field(default_factory=list)
 
+    # TODO: Validate
     @field_validator("sort_by", mode="before")
     @classmethod
     def _load_sort_keys(cls, value: object) -> object:

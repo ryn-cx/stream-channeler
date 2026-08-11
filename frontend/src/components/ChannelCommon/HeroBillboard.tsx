@@ -24,6 +24,7 @@ interface HeroBillboardProps {
   topLeftBadge?: React.ReactNode
 }
 
+// TODO: Validate
 export function HeroBillboard({
   episode,
   onPlay,

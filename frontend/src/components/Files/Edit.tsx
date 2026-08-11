@@ -32,6 +32,7 @@ interface EditFileProps {
   file: FileTableData
 }
 
+// TODO: Validate
 const EditFile = ({ file }: EditFileProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [showContent, setShowContent] = useState(false)
@@ -71,6 +72,7 @@ const EditFile = ({ file }: EditFileProps) => {
     extraInvalidateKeys: [["files", file.id]],
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     // Clear blanked fields (send null, not omit) so the PATCH actually clears

@@ -10,6 +10,7 @@ from tests.app.episodes.utils import create_random_episode
 from tests.app.seasons.utils import create_random_season
 
 
+# TODO: Validate
 def test_relink_season_children_links_every_episode(
     session_scoped_session: Session,
 ) -> None:
@@ -36,6 +37,7 @@ def test_relink_season_children_links_every_episode(
     assert episode.tmdb_id is None
 
 
+# TODO: Validate
 def test_relink_season_children_keeps_locked_episode_identifier(
     session_scoped_session: Session,
 ) -> None:
@@ -48,6 +50,7 @@ def test_relink_season_children_keeps_locked_episode_identifier(
         episode_identifier_locked=True,
     )
 
+    # TODO: Validate
     def link(linked_episode: Episode, *_args: Any) -> None:  # noqa: ANN401
         linked_episode.episode_identifier = "TMDB 200"
 
@@ -58,6 +61,7 @@ def test_relink_season_children_keeps_locked_episode_identifier(
     assert episode.episode_identifier == "Locked"
 
 
+# TODO: Validate
 def test_relink_season_children_replaces_unlocked_episode_identifier(
     session_scoped_session: Session,
 ) -> None:
@@ -70,6 +74,7 @@ def test_relink_season_children_replaces_unlocked_episode_identifier(
         episode_identifier_locked=False,
     )
 
+    # TODO: Validate
     def link(linked_episode: Episode, *_args: Any) -> None:  # noqa: ANN401
         linked_episode.episode_identifier = "TMDB 200"
 

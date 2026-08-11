@@ -3,6 +3,7 @@ import { expect, type Page } from "@playwright/test"
 import { showAllResults } from "./dataTable"
 import { randomUsername } from "./random"
 
+// TODO: Validate
 /**
  * Helpers that build the parent chain through the UI. Sources live under a
  * plugin, shows under a source, seasons under a show and episodes under a
@@ -36,6 +37,7 @@ async function createAndOpen(
   ).toBeVisible()
 }
 
+// TODO: Validate
 /** Create a plugin and open its Sources page. */
 export async function openPluginSources(page: Page) {
   await page.goto("/plugins")
@@ -47,6 +49,7 @@ export async function openPluginSources(page: Page) {
   })
 }
 
+// TODO: Validate
 /** Create a plugin and source, then open the source's Shows page. */
 export async function openSourceShows(page: Page) {
   await openPluginSources(page)
@@ -58,6 +61,7 @@ export async function openSourceShows(page: Page) {
   })
 }
 
+// TODO: Validate
 /** Create the plugin/source/show chain, then open the show's Seasons page. */
 export async function openShowSeasons(page: Page) {
   await openSourceShows(page)
@@ -69,6 +73,7 @@ export async function openShowSeasons(page: Page) {
   })
 }
 
+// TODO: Validate
 /** Create the full chain down to a season, then open its Episodes page. */
 export async function openSeasonEpisodes(page: Page) {
   await openShowSeasons(page)

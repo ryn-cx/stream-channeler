@@ -12,22 +12,27 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 from plugins.utils.base_plugin.url import URLHandler
 
 
+# TODO: Validate
 class MediaTypeURLHandler[PluginT](URLHandler[PluginT]):
     media_type: ClassVar[str]
 
 
+# TODO: Validate
 class MediaTypeMixin:
     _media_type_value: str | None = None
 
+    # TODO: Validate
     @abstractmethod
     def _set_media_type_from_show(self, show: Show) -> None: ...
 
 
+# TODO: Validate
 class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
     MediaTypeMixin,
     URLHandlerPlugin[HandlerT],
     register=False,
 ):
+    # TODO: Validate
     @override
     def import_url(
         self,
@@ -41,16 +46,19 @@ class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
         show = self._import_show(handler.show_key)
         return handler.import_results(show)
 
+    # TODO: Validate
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         self._set_media_type_from_show(show)
         super().update_show(show, force=force)
 
+    # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         self._set_media_type_from_show(season.show)
         super().update_season(season)
 
+    # TODO: Validate
     @override
     def update_episode(self, episode: Episode) -> None:
         self._set_media_type_from_show(episode.season.show)

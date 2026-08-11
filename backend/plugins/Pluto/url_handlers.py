@@ -17,17 +17,21 @@ _DETAILS_REGEX = r"(?:\/details)?"
 _SEASON_REGEX = rf"(?:\/season\/\d+(?:\/episode\/{_ITEM_ID_REGEX})?)?"
 
 
+# TODO: Validate
 class PlutoURLHandler(MediaTypeURLHandler["Pluto"]):
+    # TODO: Validate
     def __init__(self, plugin: Pluto, url: str, key: str) -> None:
         self._key = key
         super().__init__(plugin, url)
 
+    # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
         return self._key
 
 
+# TODO: Validate
 class MovieURLHandler(PlutoURLHandler):
     media_type = "movie"
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
@@ -37,6 +41,7 @@ class MovieURLHandler(PlutoURLHandler):
         rf"{_DETAILS_REGEX}(?:\/|$)"
     )
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
@@ -45,6 +50,7 @@ class MovieURLHandler(PlutoURLHandler):
         )
 
 
+# TODO: Validate
 class SeriesURLHandler(PlutoURLHandler):
     media_type = "series"
     # https://pluto.tv/en/on-demand/series/5ef05c6acdce3c001a779a79/details
@@ -55,6 +61,7 @@ class SeriesURLHandler(PlutoURLHandler):
         rf"{_SEASON_REGEX}{_DETAILS_REGEX}(?:\/|$)"
     )
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(

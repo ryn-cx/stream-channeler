@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
 
+# TODO: Validate
 def try_to_import_plugin(plugin_import_path: str) -> None:
     try:
         importlib.import_module(plugin_import_path)
@@ -20,6 +21,7 @@ def try_to_import_plugin(plugin_import_path: str) -> None:
 _plugins_loaded = False
 
 
+# TODO: Validate
 def import_plugins() -> None:
     """Import and register all plugins in the plugins folder.
 
@@ -54,11 +56,13 @@ plugins: set[type[AbstractPlugin]] = set()
 """Track all of the plugins that have been registered."""
 
 
+# TODO: Validate
 def register_plugins(plugin: type[AbstractPlugin]) -> None:
     """Register all plugins in the plugins folder."""
     plugins.add(plugin)
 
 
+# TODO: Validate
 def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()

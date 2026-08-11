@@ -55,6 +55,7 @@ export const Route = createFileRoute("/_layout/watches_/import")({
   }),
 })
 
+// TODO: Validate
 function groupByShow(entries: Array<WatchImportResult>) {
   const groups = new Map<
     string,
@@ -71,6 +72,7 @@ function groupByShow(entries: Array<WatchImportResult>) {
   return groups
 }
 
+// TODO: Validate
 function EntryList({ entries }: { entries: Array<WatchImportResult> }) {
   if (entries.length === 0) return null
 
@@ -124,6 +126,7 @@ function EntryList({ entries }: { entries: Array<WatchImportResult> }) {
   )
 }
 
+// TODO: Validate
 function ImportResults({ result }: { result: WatchImportResults }) {
   const categories = [
     { title: "Added", entries: result.added },
@@ -164,6 +167,7 @@ function ImportResults({ result }: { result: WatchImportResults }) {
   )
 }
 
+// TODO: Validate
 function ImportWatchHistory() {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [selectedPlugin, setSelectedPlugin] = useState<string>("")

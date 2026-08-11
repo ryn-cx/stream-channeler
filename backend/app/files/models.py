@@ -14,6 +14,7 @@ from app.plugins.models import Plugin
 from app.users.models import User
 
 
+# TODO: Validate
 class BaseFile(BaseMediaMixin):
     """Base model for a `File`."""
 
@@ -22,6 +23,7 @@ class BaseFile(BaseMediaMixin):
     content: str | None = Field(default=None)
 
 
+# TODO: Validate
 class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Model representing a `File`."""
 
@@ -30,25 +32,30 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="files")
 
+    # TODO: Validate
     @property
     @override
     def parent(self) -> Plugin:
         return self.plugin
 
+    # TODO: Validate
     @property
     @override
     def children(self) -> list[Never]:
         return []
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> Plugin:
         return self.plugin
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return select(cls).join(Plugin)
 
+    # TODO: Validate
     @classmethod
     @override
     def select_with_user_eager(cls) -> SelectOfScalar[Self]:
@@ -60,6 +67,7 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
             )
         )
 
+    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `File`."""
         base_file = "File:"

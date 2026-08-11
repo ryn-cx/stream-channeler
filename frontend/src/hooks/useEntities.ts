@@ -8,6 +8,7 @@ import {
   SourcesService,
 } from "@/client"
 
+// TODO: Validate
 export function usePlugin(pluginId: string | undefined) {
   return useQuery({
     queryKey: ["plugins", pluginId],
@@ -16,6 +17,7 @@ export function usePlugin(pluginId: string | undefined) {
   })
 }
 
+// TODO: Validate
 export function useSource(sourceId: string | undefined) {
   return useQuery({
     queryKey: ["sources", sourceId],
@@ -24,6 +26,7 @@ export function useSource(sourceId: string | undefined) {
   })
 }
 
+// TODO: Validate
 export function useShow(showId: string | undefined) {
   return useQuery({
     queryKey: ["shows", showId],
@@ -32,6 +35,7 @@ export function useShow(showId: string | undefined) {
   })
 }
 
+// TODO: Validate
 export function useSeason(seasonId: string | undefined) {
   return useQuery({
     queryKey: ["seasons", seasonId],
@@ -40,6 +44,7 @@ export function useSeason(seasonId: string | undefined) {
   })
 }
 
+// TODO: Validate
 export function useSearchablePlugins() {
   return useQuery({
     queryKey: ["searchable-plugins"],

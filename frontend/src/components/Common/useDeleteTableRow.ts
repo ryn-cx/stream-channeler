@@ -8,11 +8,13 @@ import { handleError } from "@/utils"
 type TableRow = { id: string; pending?: boolean }
 type TableResult = MediaTableResult<TableRow>
 
+// TODO: Validate
 const isTableResult = (data: unknown): data is TableResult =>
   typeof data === "object" &&
   data !== null &&
   Array.isArray((data as TableResult).data)
 
+// TODO: Validate
 export const queryHasRow =
   (rowId: string) =>
   (query: Query): boolean =>
@@ -25,6 +27,7 @@ interface UseDeleteTableRowOptions {
   successMessage: string
 }
 
+// TODO: Validate
 export function useDeleteTableRow({
   mutationFn,
   rowId,

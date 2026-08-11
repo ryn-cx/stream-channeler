@@ -9,6 +9,7 @@ from app.watches.schemas import WatchImportResult, WatchImportResults
 from plugins.utils.base_plugin.watch import WatchMixin
 
 
+# TODO: Validate
 @dataclass
 class ParsedWatchEntry:
     """A single parsed entry from a plugin's watch history export."""
@@ -18,6 +19,7 @@ class ParsedWatchEntry:
     import_result: WatchImportResult
 
 
+# TODO: Validate
 class WatchHistoryMixin(WatchMixin):
     """Base mixin providing the shared `import_watch_history` workflow.
 
@@ -27,10 +29,12 @@ class WatchHistoryMixin(WatchMixin):
     filtering, and result aggregation.
     """
 
+    # TODO: Validate
     @abstractmethod
     def _parse_watch_history(self, content: str) -> list[ParsedWatchEntry]:
         """Parse raw watch history content into entries ready for import."""
 
+    # TODO: Validate
     def import_watch_history(
         self,
         content: str,

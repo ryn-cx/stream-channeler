@@ -1,3 +1,4 @@
+# TODO: Validate
 """Crunchyroll plugin.
 
 Detects new media much faster than JustWatch and supports music.
@@ -26,6 +27,7 @@ from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class Crunchyroll(
     WatchHistoryMixin,
     UpdateMixin,
@@ -56,11 +58,13 @@ class Crunchyroll(
         "music_source",
     }
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "crunchyroll.com"
 
+    # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
         if not hasattr(self, "video_source"):
@@ -75,6 +79,7 @@ class Crunchyroll(
                 or self._upsert_music_source()
             )
 
+    # TODO: Validate
     @override  # Determines which source to use based on the show key.
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():

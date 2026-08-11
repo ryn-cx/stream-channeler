@@ -19,6 +19,7 @@ export interface GroupedIssueReport {
   latest_report_at: string
 }
 
+// TODO: Validate
 export function groupIssueReports(
   reports: IssueReportListOutput[],
 ): GroupedIssueReport[] {

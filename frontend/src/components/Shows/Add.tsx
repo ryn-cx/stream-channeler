@@ -37,6 +37,7 @@ interface AddShowProps {
   sourceKey: string
 }
 
+// TODO: Validate
 const AddShow = ({ sourceKey }: AddShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -75,6 +76,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()

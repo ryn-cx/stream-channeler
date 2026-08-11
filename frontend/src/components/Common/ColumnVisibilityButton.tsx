@@ -18,6 +18,7 @@ interface ColumnVisibilityButtonProps<TData> {
   variant?: "button" | "menu"
 }
 
+// TODO: Validate
 export function ColumnVisibilityButton<TData>({
   table,
   variant = "button",

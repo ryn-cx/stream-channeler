@@ -18,6 +18,7 @@ import { handleError } from "@/utils"
 // One row shape now serves every scope and viewer.
 export type OrderRow = ChannelOrderListOutput
 
+// TODO: Validate
 export function OrderRowActions({
   order,
   isOwn,
@@ -71,11 +72,13 @@ export function OrderRowActions({
   )
 }
 
+// TODO: Validate
 function ownerLabel(order: OrderRow): string {
   const username = "username" in order ? order.username : null
   return order.anonymous ? "Anonymous" : (username ?? "N/A")
 }
 
+// TODO: Validate
 function scoreColumn(): ColumnDef<OrderRow> {
   return {
     id: "score",
@@ -90,6 +93,7 @@ function scoreColumn(): ColumnDef<OrderRow> {
   }
 }
 
+// TODO: Validate
 function baseOrderColumns(
   includeOwner: boolean,
   includeScore = false,
@@ -153,6 +157,7 @@ function baseOrderColumns(
   return cols
 }
 
+// TODO: Validate
 export function orderColumns({
   isOwn,
   isAdmin = false,
@@ -182,6 +187,7 @@ export function orderColumns({
   return cols
 }
 
+// TODO: Validate
 export function publicOrderPickerColumns(
   onUse: (order: ChannelOrderListOutput) => void,
 ): ColumnDef<OrderRow>[] {

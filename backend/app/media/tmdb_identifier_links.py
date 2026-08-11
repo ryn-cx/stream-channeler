@@ -17,6 +17,7 @@ from app.media.media_type import MediaType
 from plugins.TMDB import TMDB
 
 
+# TODO: Validate
 def check_show_identifier(session: Session, show_identifier: str) -> None:
     """Import the TMDB title a `show_identifier` names, refusing one TMDB has not."""
     parsed = parse_tmdb_identifier(show_identifier)
@@ -27,6 +28,7 @@ def check_show_identifier(session: Session, show_identifier: str) -> None:
     _import_title(session, media_type, tmdb_id)
 
 
+# TODO: Validate
 def check_season_identifier(
     session: Session,
     season_identifier: str,
@@ -51,6 +53,7 @@ def check_season_identifier(
         )
 
 
+# TODO: Validate
 def check_episode_identifier(
     session: Session,
     episode_identifier: str,
@@ -75,6 +78,7 @@ def check_episode_identifier(
         )
 
 
+# TODO: Validate
 def _title_of(show_identifier: str, identifier: str) -> tuple[MediaType, int]:
     """Return the TMDB title a season or episode identifier is checked against.
 
@@ -94,6 +98,7 @@ def _title_of(show_identifier: str, identifier: str) -> tuple[MediaType, int]:
     return parsed
 
 
+# TODO: Validate
 def _import_title(session: Session, media_type: MediaType, tmdb_id: int) -> None:
     """Import a whole TMDB title, refusing an id TMDB has no title for.
 

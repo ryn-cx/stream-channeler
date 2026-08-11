@@ -14,7 +14,9 @@ from app.sources.models import Source
 from plugins.HBOMax.helpers import HelperMixin
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -31,6 +33,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._set_weekly_updates_from_episodes(show, update_show=False)
         return show
 
+    # TODO: Validate
     def _upsert_series_show(
         self,
         source: Source,
@@ -65,6 +68,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_movie(
         self,
         source: Source,
@@ -99,6 +103,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_tv_seasons(
         self,
         show: Show,
@@ -129,6 +134,7 @@ class UpsertMixin(HelperMixin, register=False):
 
             self._upsert_tv_episodes(season, show.key, season_number, force=force)
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,
@@ -157,6 +163,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         self._upsert_movie_episode(season, show.key, content, force=force)
 
+    # TODO: Validate
     def _upsert_tv_episodes(
         self,
         season: Season,
@@ -196,6 +203,7 @@ class UpsertMixin(HelperMixin, register=False):
                 MediaType.tv,
             )
 
+    # TODO: Validate
     def _upsert_movie_episode(
         self,
         season: Season,

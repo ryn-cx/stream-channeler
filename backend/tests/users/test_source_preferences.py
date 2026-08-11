@@ -23,6 +23,7 @@ from tests.app.utils.utils import build_random_model
 SOURCE_PREFERENCES_URL = f"{settings.API_V1_STR}/users/me/source-preferences"
 
 
+# TODO: Validate
 def _auth_headers(client: TestClient, session: Session) -> dict[str, str]:
     user = create_random_user(session)
     return authentication_token_from_email(
@@ -32,10 +33,12 @@ def _auth_headers(client: TestClient, session: Session) -> dict[str, str]:
     )
 
 
+# TODO: Validate
 def _episode(identifier: str) -> Episode:
     return build_random_model(Episode, episode_identifier=identifier, deleted_at=None)
 
 
+# TODO: Validate
 def _installed_source_keys(session: Session, count: int) -> list[str]:
     """Create `count` sources owned by the plugin user and return their keys."""
     plugin_user = user_service.get_or_create_plugin_user(session=session)
@@ -50,6 +53,7 @@ def _installed_source_keys(session: Session, count: int) -> list[str]:
     return keys
 
 
+# TODO: Validate
 def _private_source_key(session: Session, user: User) -> str:
     plugin = create_random_plugin(session, user, visibility=Visibility.public)
     return create_random_source(session, plugin).key
@@ -58,6 +62,7 @@ def _private_source_key(session: Session, user: User) -> str:
 # --- source_keys ----------------------------------------------------------
 
 
+# TODO: Validate
 def test_source_keys_come_from_the_database(session_scoped_session: Session) -> None:
     created = _installed_source_keys(session_scoped_session, 2)
     keys = source_keys(session_scoped_session)
@@ -67,6 +72,7 @@ def test_source_keys_come_from_the_database(session_scoped_session: Session) -> 
     assert OTHER_SOURCE_KEY not in keys
 
 
+# TODO: Validate
 def test_source_keys_exclude_user_owned_plugins(
     session_scoped_session: Session,
 ) -> None:
@@ -76,6 +82,7 @@ def test_source_keys_exclude_user_owned_plugins(
     assert private_key not in source_keys(session_scoped_session)
 
 
+# TODO: Validate
 def test_source_keys_exclude_deleted_sources(
     session_scoped_session: Session,
 ) -> None:
@@ -98,6 +105,7 @@ def test_source_keys_exclude_deleted_sources(
 # --- effective_source_preferences -----------------------------------------
 
 
+# TODO: Validate
 def test_effective_defaults_include_every_source_enabled(
     session_scoped_session: Session,
 ) -> None:
@@ -110,6 +118,7 @@ def test_effective_defaults_include_every_source_enabled(
     assert keys[-1] == OTHER_SOURCE_KEY
 
 
+# TODO: Validate
 def test_effective_respects_stored_order_and_enabled(
     session_scoped_session: Session,
 ) -> None:
@@ -131,6 +140,7 @@ def test_effective_respects_stored_order_and_enabled(
     assert by_key[OTHER_SOURCE_KEY] is False
 
 
+# TODO: Validate
 def test_effective_drops_unknown_keys_and_appends_missing(
     session_scoped_session: Session,
 ) -> None:
@@ -152,6 +162,7 @@ def test_effective_drops_unknown_keys_and_appends_missing(
     assert preferences[0].enabled is False
 
 
+# TODO: Validate
 def test_effective_new_source_appears_appended_and_enabled(
     session_scoped_session: Session,
 ) -> None:
@@ -180,6 +191,7 @@ def test_effective_new_source_appears_appended_and_enabled(
 # --- source_dedup_config --------------------------------------------------
 
 
+# TODO: Validate
 def test_dedup_config_priority_and_enabled_sets(
     session_scoped_session: Session,
 ) -> None:
@@ -206,6 +218,7 @@ def test_dedup_config_priority_and_enabled_sets(
 # --- deduplicate_episodes -------------------------------------------------
 
 
+# TODO: Validate
 def test_deduplicate_keeps_higher_priority_source(
     session_scoped_session: Session,
 ) -> None:
@@ -229,6 +242,7 @@ def test_deduplicate_keeps_higher_priority_source(
     assert result[0].id == higher_episode.id
 
 
+# TODO: Validate
 def test_deduplicate_preserves_order_and_removes_duplicates(
     session_scoped_session: Session,
 ) -> None:
@@ -252,6 +266,7 @@ def test_deduplicate_preserves_order_and_removes_duplicates(
     assert [episode.episode_identifier for episode in result] == ["TMDB 1", "TMDB 2"]
 
 
+# TODO: Validate
 def test_deduplicate_distinct_identifiers_all_kept(
     session_scoped_session: Session,
 ) -> None:
@@ -267,6 +282,7 @@ def test_deduplicate_distinct_identifiers_all_kept(
 # --- API endpoints --------------------------------------------------------
 
 
+# TODO: Validate
 def test_read_source_preferences_returns_defaults(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -280,6 +296,7 @@ def test_read_source_preferences_returns_defaults(
     assert all(item["enabled"] for item in response.json())
 
 
+# TODO: Validate
 def test_update_source_preferences_round_trips(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -313,6 +330,7 @@ def test_update_source_preferences_round_trips(
     assert keys[1] == installed[0]
 
 
+# TODO: Validate
 def test_update_source_preferences_rejects_unknown_key(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -326,6 +344,7 @@ def test_update_source_preferences_rejects_unknown_key(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+# TODO: Validate
 def test_update_source_preferences_rejects_duplicate_key(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
@@ -342,6 +361,7 @@ def test_update_source_preferences_rejects_duplicate_key(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+# TODO: Validate
 def test_source_preferences_require_authentication(
     session_scoped_client: TestClient,
 ) -> None:

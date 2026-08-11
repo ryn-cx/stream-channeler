@@ -28,6 +28,7 @@ interface EpisodeInformationDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 function formatDuration(value: number | null) {
   if (value == null) return null
   const minutes = Math.floor(value / 60)
@@ -35,6 +36,7 @@ function formatDuration(value: number | null) {
   return `${value}s (${minutes}m ${seconds}s)`
 }
 
+// TODO: Validate
 function sideRows(side: EpisodeInformationSide): InformationRows {
   return {
     Name: side.name,
@@ -83,6 +85,7 @@ const ROW_LABELS = [
   "Modified at",
 ]
 
+// TODO: Validate
 function heroSubtitle(data: EpisodeInformationOutput) {
   const side = data.tmdb ?? data.source
   const seasonNumber = side.season_number ?? data.source.season_number
@@ -94,6 +97,7 @@ function heroSubtitle(data: EpisodeInformationOutput) {
   return [side.show_name, ...placement].filter(Boolean).join(" · ")
 }
 
+// TODO: Validate
 function heroFacts(data: EpisodeInformationOutput) {
   const side = data.tmdb ?? data.source
   const facts = [
@@ -105,6 +109,7 @@ function heroFacts(data: EpisodeInformationOutput) {
   return facts.filter((fact): fact is string => !!fact)
 }
 
+// TODO: Validate
 function heroLinks(data: EpisodeInformationOutput) {
   const links = []
   if (data.source.url) {
@@ -122,6 +127,7 @@ interface EpisodeInformationPanelProps {
   enabled?: boolean
 }
 
+// TODO: Validate
 /**
  * The episode's own account of itself beside TMDB's, without a dialog around it,
  * so it can be read inside whatever is already open.
@@ -186,6 +192,7 @@ export function EpisodeInformationPanel({
   )
 }
 
+// TODO: Validate
 export function EpisodeInformationDialog({
   episodeId,
   open,

@@ -30,6 +30,7 @@ MINIMUM_DURATION = 300
 MAXIMUM_DURATION = 3600
 
 
+# TODO: Validate
 def _build_channel(session: Session, user: User) -> tuple[Channel, list[Episode]]:
     plugin = create_random_plugin(session, user, visibility=Visibility.public)
     source = create_random_source(session, plugin)
@@ -65,6 +66,7 @@ def _build_channel(session: Session, user: User) -> tuple[Channel, list[Episode]
     return channel, episodes
 
 
+# TODO: Validate
 def _add_watches(session: Session, user: User, episodes: list[Episode]) -> None:
     watched = random.sample(episodes, WATCH_COUNT)
     session.add_all(
@@ -81,6 +83,7 @@ def _add_watches(session: Session, user: User, episodes: list[Episode]) -> None:
     session.flush()
 
 
+# TODO: Validate
 def _complex_options() -> ChannelOptions:
     return ChannelOptions(
         sort_by=[
@@ -123,7 +126,9 @@ def _complex_options() -> ChannelOptions:
     )
 
 
+# TODO: Validate
 class TestChannelReadBenchmark:
+    # TODO: Validate
     def test_complex_read_of_ten_thousand_episodes(
         self,
         session_scoped_session: Session,

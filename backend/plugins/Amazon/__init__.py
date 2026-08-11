@@ -14,6 +14,7 @@ from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
+# TODO: Validate
 class Amazon(
     SourceMixin,
     UpsertMixin,
@@ -29,6 +30,7 @@ class Amazon(
     TMDB_PROVIDER_NAMES = ("Amazon Prime Video", "Amazon Video", "Prime Video")
     FAVICON_URL = "https://www.amazon.com/favicon.ico"
 
+    # TODO: Validate
     @override
     def import_url(
         self,
@@ -44,6 +46,7 @@ class Amazon(
             for result in handler.import_results(show)
         ]
 
+    # TODO: Validate
     def _import_shows(self, show_key: str) -> list[Show]:
         """Return the title's show for every source it belongs to.
 
@@ -56,11 +59,13 @@ class Amazon(
         _cache = self._download_show_files_and_children(show_key)
         return self._upsert_shows(self.source, show_key)
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "amazon.com"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:

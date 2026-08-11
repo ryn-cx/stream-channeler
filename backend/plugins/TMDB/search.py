@@ -17,6 +17,7 @@ from plugins.utils.abstract_plugin import (
 _SEARCH_MAX_AGE = timedelta(days=7)
 
 
+# TODO: Validate
 class SearchMixin(LookupMixin, register=False):
     # A multi search also returns people, who cannot be added to a channel.
     _SEARCH_MEDIA_TYPES: ClassVar[dict[str, str]] = {
@@ -24,6 +25,7 @@ class SearchMixin(LookupMixin, register=False):
         "tv": "TV Show",
     }
 
+    # TODO: Validate
     @override
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         """Search every title TMDB knows about, whatever it streams on.
@@ -46,6 +48,7 @@ class SearchMixin(LookupMixin, register=False):
             next_cursor=str(page + 1) if page < parsed.total_pages else None,
         )
 
+    # TODO: Validate
     def _search_result(self, result: Result) -> PluginSearchResult:
         # A movie carries its title and release date, a show its name and first
         # air date, and a multi search returns the two mixed together.

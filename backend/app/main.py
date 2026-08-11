@@ -27,6 +27,7 @@ load_models()
 
 
 # TODO: Make this a private function upstream.
+# TODO: Validate
 def _custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
@@ -41,6 +42,7 @@ app = FastAPI(
 )
 
 
+# TODO: Validate
 @app.middleware("http")
 async def _log_requests(
     request: Request,
@@ -68,6 +70,7 @@ app.add_middleware(GZipMiddleware)
 
 
 # TODO: Implement this improved function upstream.
+# TODO: Validate
 def automatically_import_routers() -> APIRouter:
     """Automatically import `router` from app/*/router.py."""
     api_router = APIRouter()

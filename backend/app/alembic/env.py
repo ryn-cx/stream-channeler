@@ -1,3 +1,4 @@
+# TODO: Validate
 import os
 from logging.config import fileConfig
 
@@ -33,10 +34,12 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 
+# TODO: Validate
 def get_url():
     return str(settings.SQLALCHEMY_DATABASE_URI)
 
 
+# TODO: Validate
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -58,6 +61,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
+# TODO: Validate
 def run_migrations_online():
     """Run migrations in 'online' mode.
 

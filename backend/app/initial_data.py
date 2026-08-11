@@ -1,3 +1,4 @@
+# TODO: Validate
 import logging
 
 from sqlmodel import Session
@@ -8,11 +9,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# TODO: Validate
 def init() -> None:
     with Session(engine) as session:
         init_db(session)
 
 
+# TODO: Validate
 def main() -> None:
     logger.info("Creating initial data")
     init()

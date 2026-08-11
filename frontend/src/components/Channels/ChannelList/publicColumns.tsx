@@ -10,6 +10,7 @@ import { ChannelDescriptionCell, channelScoreColumn } from "./columns"
 // pushed for admins alone. Sorting and filtering stay off for everyone else purely
 // to keep this tab's presentation unchanged — the endpoint now serves them to any
 // viewer, so this gate can be lifted whenever that is wanted.
+// TODO: Validate
 export function publicChannelColumns(
   isAdmin: boolean,
 ): ColumnDef<ChannelRow>[] {

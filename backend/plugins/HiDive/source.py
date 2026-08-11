@@ -16,7 +16,9 @@ from plugins.HiDive.helpers import HelperMixin
 # TODO: Add support for individual episodes of a series.
 
 
+# TODO: Validate
 class SourceMixin(HelperMixin, register=False):
+    # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
         if source.data_timestamp is None:
@@ -27,6 +29,7 @@ class SourceMixin(HelperMixin, register=False):
         self._process_new_schedule_files(source)
         self._upsert_source()
 
+    # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
         _cache = self._preload_sources(preload_seasons=True).all()
         # TODO: Is there a better way to lookup shows?
@@ -55,6 +58,7 @@ class SourceMixin(HelperMixin, register=False):
 
             schedule_file.database_record.extra = "Completed"
 
+    # TODO: Validate
     def _upsert_source(self) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
             latest_schedule_file = self._initial_file(Schedule)

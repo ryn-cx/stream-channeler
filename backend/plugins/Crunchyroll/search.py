@@ -16,9 +16,11 @@ from plugins.utils.abstract_plugin import (
 )
 
 
+# TODO: Validate
 class SearchMixin(HelperMixin, register=False):
     # Crunchyroll answers a search with every match at once, so pages are cut out
     # of that one download rather than requested one at a time.
+    # TODO: Validate
     @override
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         search_file = self.search_file(query)
@@ -48,6 +50,7 @@ class SearchMixin(HelperMixin, register=False):
         ]
         return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
 
+    # TODO: Validate
     @staticmethod
     def _search_image_url(images: search_models.Images) -> str | None:
         for group in (

@@ -15,13 +15,16 @@ if TYPE_CHECKING:
     from just_scrape.url_title_details import models as url_title_details_models
 
 
+# TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
+    # TODO: Validate
     def _upsert_sources(self) -> None:
         """Create or update a `Source` for every provider JustWatch tracks."""
         _cache = self._preload_sources().all()
         for source_key in self._providers_by_key():
             self._upsert_source(source_key)
 
+    # TODO: Validate
     @override
     def _upsert_source(self, source_key: str) -> Source:
         """Create or update the `Source` for a single provider."""
@@ -46,6 +49,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return source
 
+    # TODO: Validate
     def _upsert_shows(
         self,
         show_key: str,
@@ -61,6 +65,7 @@ class UpsertMixin(HelperMixin, register=False):
             shows.append(self.upsert_show(source, show_key, force=force))
         return shows
 
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -118,6 +123,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         return show
 
+    # TODO: Validate
     def _upsert_seasons(
         self,
         show: Show,
@@ -130,6 +136,7 @@ class UpsertMixin(HelperMixin, register=False):
         else:
             self._upsert_movie_season(show, show_key, force=force)
 
+    # TODO: Validate
     def _upsert_show_seasons(
         self,
         show: Show,
@@ -173,6 +180,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
             self.soft_delete_missing_episodes(season.key, show_key)
 
+    # TODO: Validate
     def _upsert_movie_season(
         self,
         show: Show,
@@ -202,6 +210,7 @@ class UpsertMixin(HelperMixin, register=False):
         expected_keys = [upserted_key] if upserted_key else []
         season.soft_delete_missing_children(expected_keys)
 
+    # TODO: Validate
     def _upsert_season_episodes(
         self,
         show: Show,
@@ -278,6 +287,7 @@ class UpsertMixin(HelperMixin, register=False):
                 last_number,
             )
 
+    # TODO: Validate
     def _upsert_movie_episode(
         self,
         show: Show,

@@ -9,6 +9,7 @@ interface EditChannelProps {
   channel: ChannelOutput
 }
 
+// TODO: Validate
 const EditChannel = ({ channel }: EditChannelProps) => {
   const [open, setOpen] = useState(false)
 

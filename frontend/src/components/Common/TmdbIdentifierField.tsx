@@ -15,6 +15,7 @@ export type TmdbMediaType = "tv" | "movie"
 
 const TMDB_IDENTIFIER_PATTERN = /^TMDB (tv|movie) (\d+)$/
 
+// TODO: Validate
 export const parseTmdbIdentifier = (identifier: string) => {
   const match = TMDB_IDENTIFIER_PATTERN.exec(identifier)
   if (!match) {
@@ -23,6 +24,7 @@ export const parseTmdbIdentifier = (identifier: string) => {
   return { mediaType: match[1] as TmdbMediaType, tmdbId: match[2] }
 }
 
+// TODO: Validate
 export const buildTmdbIdentifier = (mediaType: TmdbMediaType, tmdbId: string) =>
   `TMDB ${mediaType} ${tmdbId}`
 
@@ -31,6 +33,7 @@ interface TmdbIdentifierFieldProps {
   onChange: (identifier: string) => void
 }
 
+// TODO: Validate
 export const TmdbIdentifierField = ({
   identifier,
   onChange,
@@ -51,6 +54,7 @@ export const TmdbIdentifierField = ({
     }
   }, [identifier])
 
+  // TODO: Validate
   const apply = (nextMediaType: TmdbMediaType, nextTmdbId: string) => {
     if (nextTmdbId) {
       onChange(buildTmdbIdentifier(nextMediaType, nextTmdbId))

@@ -21,9 +21,11 @@ from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class StreamChanneler(BasePlugin, register=True):
     _VERSION = "0.0.1"
 
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:
@@ -31,18 +33,22 @@ class StreamChanneler(BasePlugin, register=True):
 
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 
+    # TODO: Validate
     @override
     def initialize_sources(self) -> None:
         return
 
+    # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -52,10 +58,12 @@ class StreamChanneler(BasePlugin, register=True):
     ) -> Sequence[BaseFile[Any]]:
         return []
 
+    # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         return []
 
+    # TODO: Validate
     @override
     def _episode_keys_from_file(
         self,
@@ -64,6 +72,7 @@ class StreamChanneler(BasePlugin, register=True):
     ) -> list[str]:
         return []
 
+    # TODO: Validate
     @override
     def upsert_show(
         self,
@@ -75,12 +84,14 @@ class StreamChanneler(BasePlugin, register=True):
         msg = "StreamChanneler does not support upserting shows"
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     @classmethod
     @override
     def domains(cls) -> list[str]:
         # localhost is added for developement purposes.
         return ["streamchanneler.com", "localhost"]
 
+    # TODO: Validate
     @classmethod
     @override
     def url_regex(cls) -> str:
@@ -92,6 +103,7 @@ class StreamChanneler(BasePlugin, register=True):
             + rf"\/(?P<media_id>{uuid_pattern})(?:\/|$)"
         )
 
+    # TODO: Validate
     @override
     def import_url(
         self,
@@ -100,6 +112,7 @@ class StreamChanneler(BasePlugin, register=True):
     ) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()
 
+    # TODO: Validate
     def get_url_handler(self, url: str) -> StreamChannelerURLHandler:
         match = re.match(self.url_regex(), url)
         if not match:

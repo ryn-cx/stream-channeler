@@ -34,6 +34,7 @@ interface AdditionalChannelsPanelProps {
   onSaved?: () => void
 }
 
+// TODO: Validate
 export function AdditionalChannelsPanel({
   channelId,
   isLoggedIn = false,
@@ -95,17 +96,20 @@ export function AdditionalChannelsPanel({
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const addChannel = (channel: CombinedChannelOutput) => {
     if (channel.id === channelId || localIds.has(channel.id)) return
     setLocalChannels([...localChannels, channel])
   }
 
+  // TODO: Validate
   const handleAddFromInput = () => {
     if (!manualChannelId) return
     addChannel({ id: manualChannelId, name: null })
     setManualChannelId("")
   }
 
+  // TODO: Validate
   const handleRemove = (idToRemove: string) => {
     setLocalChannels(
       localChannels.filter((channel) => channel.id !== idToRemove),

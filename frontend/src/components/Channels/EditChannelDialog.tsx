@@ -45,6 +45,7 @@ interface EditChannelDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// TODO: Validate
 export function EditChannelDialog({
   channel,
   open,

@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 load_models()
 
 
+# TODO: Validate
 def _detached_watches(session: Session) -> list[Watch]:
     """Return every watch left without an episode."""
     return list(
@@ -39,6 +40,7 @@ def _detached_watches(session: Session) -> list[Watch]:
     )
 
 
+# TODO: Validate
 def _candidates_by_identifier(
     session: Session,
     identifiers: set[str],
@@ -64,6 +66,7 @@ def _candidates_by_identifier(
     return candidates
 
 
+# TODO: Validate
 def _preferred_episode(
     candidates: list[tuple[Episode, str]],
     config: SourceDedupConfig,
@@ -80,6 +83,7 @@ def _preferred_episode(
     return episode
 
 
+# TODO: Validate
 def _config_for_user(
     session: Session,
     user_id: UUID,
@@ -93,6 +97,7 @@ def _config_for_user(
     return cache[user_id]
 
 
+# TODO: Validate
 def _report_unresolvable(session: Session, identifiers: set[str]) -> None:
     """Log why the watches on `identifiers` have nothing to be pointed at.
 
@@ -124,6 +129,7 @@ def _report_unresolvable(session: Session, identifiers: set[str]) -> None:
         )
 
 
+# TODO: Validate
 def relink_watches(session: Session) -> int:
     """Attach every detached watch that has an episode to point at again."""
     detached = _detached_watches(session)

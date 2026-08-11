@@ -14,6 +14,7 @@ from tests.app.utils.base_get import BaseGetTests
 from tests.app.utils.base_update import BaseUpdateTests
 
 
+# TODO: Validate
 class ShowTestMixin(BaseTests[Show]):
     database_model = Show
     create_schema = ShowCreate
@@ -23,17 +24,21 @@ class ShowTestMixin(BaseTests[Show]):
     create_record_function = staticmethod(create_random_show)
 
 
+# TODO: Validate
 class TestCreateShow(ShowTestMixin, BaseCreateTests[Show]):
     pass
 
 
+# TODO: Validate
 class TestGetShow(ShowTestMixin, BaseGetTests[Show]):
     pass
 
 
+# TODO: Validate
 class TestUpdateShow(ShowTestMixin, BaseUpdateTests[Show]):
     pass
 
 
+# TODO: Validate
 class TestDeleteShow(ShowTestMixin, BaseDeleteTests[Show]):
     pass

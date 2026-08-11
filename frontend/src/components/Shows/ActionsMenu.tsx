@@ -8,6 +8,7 @@ interface ShowActionsMenuProps {
   show: ShowTableData
 }
 
+// TODO: Validate
 export const ShowActionsMenu = ({ show }: ShowActionsMenuProps) => {
   return (
     <ActionsMenu>

@@ -21,6 +21,7 @@ from app.models import (
 from app.users.models import User
 
 
+# TODO: Validate
 class BaseChannelOrder(SQLModel):
     """Base model representing a channel order."""
 
@@ -32,6 +33,7 @@ class BaseChannelOrder(SQLModel):
     icon: str | None = Field(default=None, max_length=32)
 
 
+# TODO: Validate
 class ChannelOrder(
     BaseChannelOrder,
     TimestampIdAndHashMixin,
@@ -55,16 +57,19 @@ class ChannelOrder(
         cascade_delete=True,
     )
 
+    # TODO: Validate
     @property
     def parent(self) -> User:
         """Return the `User` that owns this `ChannelOrder`."""
         return self.user
 
+    # TODO: Validate
     @override
     def _root_record(self, session: Session) -> ChannelOrder:
         return self
 
 
+# TODO: Validate
 class ChannelOrderFavorite(TimestampIdAndHashMixin, table=True):
     """Model representing a `ChannelOrder` a `User` has favorited."""
 
@@ -84,13 +89,16 @@ class ChannelOrderFavorite(TimestampIdAndHashMixin, table=True):
     )
     channel_order: ChannelOrder = Relationship(back_populates="favorites")
 
+    # TODO: Validate
     @property
     def parent(self) -> ChannelOrder:
         """Return the `ChannelOrder` that was favorited."""
         return self.channel_order
 
+    # TODO: Validate
     def owner_id(self, _session: Session) -> uuid.UUID:
         return self.user_id
 
+    # TODO: Validate
     def is_publically_readable(self, _session: Session) -> Literal[False]:
         return False

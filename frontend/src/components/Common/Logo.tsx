@@ -14,6 +14,7 @@ interface LogoProps {
   asLink?: boolean
 }
 
+// TODO: Validate
 export function Logo({
   variant = "full",
   className,

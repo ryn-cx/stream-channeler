@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_layout/onboarding/$channelId/done")({
   }),
 })
 
+// TODO: Validate
 function RouteComponent() {
   const { channelId } = Route.useParams()
   const { orderPresetId } = Route.useSearch()

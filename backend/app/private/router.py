@@ -10,6 +10,7 @@ from app.users.schemas import UserPublic
 router = APIRouter(tags=["private"], prefix="/private")
 
 
+# TODO: Validate
 class PrivateUserCreate(BaseModel):
     email: str
     password: str
@@ -17,6 +18,7 @@ class PrivateUserCreate(BaseModel):
     is_verified: bool = False
 
 
+# TODO: Validate
 @router.post("/users/", response_model=UserPublic)
 def create_user(user_in: PrivateUserCreate, session: SessionDep) -> User:
     """Create a new user."""
