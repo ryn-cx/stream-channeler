@@ -7,7 +7,7 @@ import type {
 } from "@tanstack/react-table"
 import { useState } from "react"
 
-import { ChannelOrdersService } from "@/client"
+import { type ChannelOrderListOutput, ChannelOrdersService } from "@/client"
 import { publicOrderPickerColumns } from "@/components/ChannelOrders/orderColumns"
 import { DataTable, serializeTableQuery } from "@/components/Common/DataTable"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ export function PublicOrderPickerDialog({
   onUse,
   disabled = false,
 }: {
-  onUse: (orderId: string) => void
+  onUse: (order: ChannelOrderListOutput) => void
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -76,7 +76,7 @@ export function PublicOrderPickerDialog({
         <DialogHeader>
           <DialogTitle>Search public orders</DialogTitle>
           <DialogDescription>
-            Pick a public order to apply to this channel.
+            Pick a public order to load into this channel's options.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -95,7 +95,7 @@ export function PublicOrderPickerDialog({
               <DataTable
                 columns={publicOrderPickerColumns((order) => {
                   setOpen(false)
-                  onUse(order.id)
+                  onUse(order)
                 })}
                 data={ordersQuery.data.data}
                 serverSide={{

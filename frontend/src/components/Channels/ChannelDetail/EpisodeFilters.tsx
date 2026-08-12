@@ -449,6 +449,7 @@ export function EpisodeFilters({
     parseSortEntries(filterParams.sortBy),
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("filtering")
   const [seedInputValue, setSeedInputValue] = useState(
     randomSeed !== undefined ? String(randomSeed) : "",
   )
@@ -669,12 +670,12 @@ export function EpisodeFilters({
   }
 
   // TODO: Validate
-  const onSubmit = (data: FormValues, orderPresetId?: string) => {
+  const onSubmit = (data: FormValues) => {
     if (isOrderMode) {
       orderSaveMutation.mutate(buildOrderConfig(data))
       return
     }
-    mutation.mutate(buildSearchParams(data, orderPresetId))
+    mutation.mutate(buildSearchParams(data))
   }
 
   // A channel using a preset stores the reference, not the options the preset expands
@@ -684,9 +685,65 @@ export function EpisodeFilters({
     setSaveConfirmOpen(true)
   })
 
+  // Loading an order fills the dialog in instead of applying it, so its values can be
+  // reviewed and tweaked before being applied. The channel therefore stores the
+  // resulting options rather than a reference to the order.
   // TODO: Validate
-  const applyOrder = (orderId: string) =>
-    form.handleSubmit((data) => onSubmit(data, orderId))()
+  const loadOrderConfig = (config: string) => {
+    const parsedConfig = JSON.parse(config)
+
+    form.reset({
+      hideWatched: parsedConfig.hideWatched === true,
+      hideUnwatched: parsedConfig.hideUnwatched === true,
+      hidePartiallyWatched: parsedConfig.hidePartiallyWatched === true,
+      sortBy: parsedConfig.sortBy ?? [],
+      maximumWatchDateAbsolute: parsedConfig.maximumWatchDateAbsolute ?? "",
+      maximumWatchDateRelative: parsedConfig.maximumWatchDateRelative ?? "",
+      totalShowsCount: parsedConfig.totalShowsCount ?? "",
+      startedShowsCount: parsedConfig.startedShowsCount ?? "",
+      newShowsCount: parsedConfig.newShowsCount ?? "",
+      minimumAirDateAbsolute: parsedConfig.minimumAirDateAbsolute ?? "",
+      minimumAirDateRelative: parsedConfig.minimumAirDateRelative ?? "",
+      maximumAirDateAbsolute: parsedConfig.maximumAirDateAbsolute ?? "",
+      maximumAirDateRelative: parsedConfig.maximumAirDateRelative ?? "",
+      minimumReleaseDateAbsolute: parsedConfig.minimumReleaseDateAbsolute ?? "",
+      minimumReleaseDateRelative: parsedConfig.minimumReleaseDateRelative ?? "",
+      maximumReleaseDateAbsolute: parsedConfig.maximumReleaseDateAbsolute ?? "",
+      maximumReleaseDateRelative: parsedConfig.maximumReleaseDateRelative ?? "",
+      minimumDuration: parsedConfig.minimumDuration ?? "",
+      maximumDuration: parsedConfig.maximumDuration ?? "",
+      limit: parsedConfig.limit ?? "",
+      // Sources are channel-specific, so an order never carries them.
+      sourceIds: form.getValues("sourceIds"),
+      sourceIdsIsBlacklist: form.getValues("sourceIdsIsBlacklist"),
+    } as any)
+
+    setSortEntries(parseSortEntries(parsedConfig.sortBy))
+    setDateInputModes({
+      watchDate:
+        parsedConfig.maximumWatchDateRelative !== undefined
+          ? "relative"
+          : "absolute",
+      airDate:
+        parsedConfig.minimumAirDateRelative !== undefined ||
+        parsedConfig.maximumAirDateRelative !== undefined
+          ? "relative"
+          : "absolute",
+      releaseDate:
+        parsedConfig.minimumReleaseDateRelative !== undefined ||
+        parsedConfig.maximumReleaseDateRelative !== undefined
+          ? "relative"
+          : "absolute",
+    })
+    setSeedInputValue(
+      parsedConfig.randomSeed !== undefined
+        ? String(parsedConfig.randomSeed)
+        : "",
+    )
+
+    setActiveTab("filtering")
+    showSuccessToast("Order loaded")
+  }
 
   // TODO: Validate
   const updateEntry = (index: number, updates: Partial<SortEntry>) => {
@@ -744,7 +801,11 @@ export function EpisodeFilters({
             onSubmit={form.handleSubmit((data) => onSubmit(data))}
             className="flex flex-col gap-4 py-4 flex-1 min-h-0"
           >
-            <Tabs defaultValue="filtering" className="flex-1 min-h-0 gap-4">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex-1 min-h-0 gap-4"
+            >
               <TabsList className="w-full">
                 <TabsTrigger value="filtering">Filtering</TabsTrigger>
                 <TabsTrigger value="sorting">Sorting</TabsTrigger>
@@ -1397,7 +1458,8 @@ export function EpisodeFilters({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
-                      Apply a saved order, or save the current sorting.
+                      Load a saved order into these options, or save the current
+                      sorting.
                     </p>
                     <Button
                       type="button"
@@ -1435,10 +1497,16 @@ export function EpisodeFilters({
                         </Select>
                         <Button
                           type="button"
-                          onClick={() => applyOrder(selectedSavedOrderId)}
+                          onClick={() => {
+                            const selectedOrder = savedOrders.find(
+                              (order) => order.id === selectedSavedOrderId,
+                            )
+                            if (selectedOrder)
+                              loadOrderConfig(selectedOrder.config)
+                          }}
                           disabled={selectedSavedOrderId === ""}
                         >
-                          Apply
+                          Load
                         </Button>
                       </div>
                     )}
@@ -1447,7 +1515,9 @@ export function EpisodeFilters({
                     <Label className="text-xs text-muted-foreground">
                       Public orders
                     </Label>
-                    <PublicOrderPickerDialog onUse={applyOrder} />
+                    <PublicOrderPickerDialog
+                      onUse={(order) => loadOrderConfig(order.config)}
+                    />
                   </div>
                 </TabsContent>
               )}
