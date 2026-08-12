@@ -17,6 +17,10 @@ from app.config import settings
 from app.constants import APP_PATH
 from app.database import load_models
 from app.log import configure_logging
+from app.watches.exceptions import (
+    WatchAlreadyExistsError,
+    handle_watch_already_exists,
+)
 
 configure_logging()
 
@@ -40,6 +44,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=_custom_generate_unique_id,
 )
+
+app.add_exception_handler(WatchAlreadyExistsError, handle_watch_already_exists)
 
 
 # TODO: Validate

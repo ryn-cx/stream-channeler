@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from fastapi import HTTPException
+from sqlalchemy import ColumnElement, ScalarSelect, Subquery
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -26,6 +26,7 @@ from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
+from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
@@ -46,7 +47,7 @@ WatchedEpisode = aliased(Episode)
 
 
 # TODO: Validate
-def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
+def _visible_plugin_condition(user_id: uuid.UUID) -> ColumnElement[bool]:
     return or_(
         col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
         col(Plugin.user_id) == user_id,
@@ -54,7 +55,7 @@ def _visible_plugin_condition(user_id: uuid.UUID):  # noqa: ANN202
 
 
 # TODO: Validate
-def _watched_canonical_subquery(user_id: uuid.UUID):  # noqa: ANN202
+def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """The canonical episodes the `User` has watched anything of."""
     return (
         select(col(CanonicalEpisode.id))
@@ -67,7 +68,10 @@ def _watched_canonical_subquery(user_id: uuid.UUID):  # noqa: ANN202
 
 
 # TODO: Validate
-def _representative_episode_subquery(user_id: uuid.UUID, canonical_ids):  # noqa: ANN001, ANN202
+def _representative_episode_subquery(
+    user_id: uuid.UUID,
+    canonical_ids: SelectOfScalar[uuid.UUID],
+) -> Subquery:
     """One representative visible copy per canonical episode.
 
     A watch names the episode itself, which every website carrying it has a copy
@@ -100,7 +104,7 @@ def _representative_episode_subquery(user_id: uuid.UUID, canonical_ids):  # noqa
 
 
 # TODO: Validate
-def _own_visible_episode_subquery(user_id: uuid.UUID):  # noqa: ANN202
+def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]:
     """The episode a watch was recorded against, when it is one the `User` can see.
 
     A watch is made against one website's copy of an episode, which is the copy
@@ -276,59 +280,50 @@ def _format_watched_episodes_data(
     )
 
 
-# TODO: Validate
-def create_watches(
+def create_watch(
     session: Session,
     user_id: uuid.UUID,
     episode: Episode,
     watch_input: WatchCreate,
-) -> list[WatchOutput]:
-    """Create a watch of the episode `episode` is a copy of.
+) -> Watch:
+    """Create a `Watch`.
 
-    Raises 409 Conflict if that episode already has an unverified watch.
+    Raises:
+        WatchAlreadyExistsError: If the `Episode` already has an unverified watch.
     """
-    canonical_key = episode.canonical_episode.key
-    existing_unverified = session.exec(
-        select(Watch).where(
-            Watch.user_id == user_id,
-            col(Watch.canonical_episode_key) == canonical_key,
-            col(Watch.verified) == False,  # noqa: E712 - TODO: SQLAlchemy comparison requires == False
-        ),
-    ).first()
-    if existing_unverified:
-        raise HTTPException(
-            status_code=409,
-            detail="Episode already has an unverified watch. Verify or delete it first.",
-        )
+    unverified_watch_query = select(Watch).where(
+        Watch.user_id == user_id,
+        col(Watch.canonical_episode_key) == episode.canonical_episode.key,
+        col(Watch.verified) == False,  # noqa: E712 - SQLAlchemy syntax
+    )
+    if session.exec(unverified_watch_query).first():
+        message = "Episode already has an unverified watch. Verify or delete it first."
+        raise WatchAlreadyExistsError(message)
 
     watch = Watch.model_validate(
         watch_input,
         update={
             "episode_id": episode.id,
-            "canonical_episode_key": canonical_key,
+            "canonical_episode_key": episode.canonical_episode.key,
             "user_id": user_id,
         },
     )
     session.add(watch)
     session.commit()
-    session.refresh(watch)
-    return [WatchOutput.model_validate(watch)]
+    return watch
 
 
-# TODO: Validate
-def update_watches(
+def update_watch(
     session: Session,
     input_watch: Watch,
     watch_input: WatchUpdate,
-) -> list[WatchOutput]:
-    """Update a watch."""
-    watch_input.update(session, input_watch)
-    return [WatchOutput.model_validate(input_watch)]
+) -> Watch:
+    """Update a `Watch`."""
+    return watch_input.update(session, input_watch)
 
 
-# TODO: Validate
 def delete_watches(session: Session, input_watch: Watch) -> Message:
-    """Delete a watch."""
+    """Delete a `Watch`."""
     delete_record(session, input_watch)
     return Message(message="Watch deleted successfully")
 

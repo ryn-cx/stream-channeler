@@ -1,13 +1,13 @@
 # TODO: Validate
 # TODO: This is completely AI generated.
 import pytest
-from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from app.schemas import ReadOptions
+from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.models import Watch
 from app.watches.schemas import WatchCreate
-from app.watches.services import create_watches, get_watched_episodes
+from app.watches.services import create_watch, get_watched_episodes
 from tests.old_mess.app.episodes.utils import create_random_episode
 from tests.old_mess.app.users.utils import create_random_user
 from tests.old_mess.app.watches.utils import create_random_watch
@@ -80,14 +80,13 @@ def test_watch_counts_for_every_episode_sharing_an_identifier(
 
     # The same media from another source shares the identifier, so the existing
     # unverified watch still counts for it.
-    with pytest.raises(HTTPException) as conflict:
-        create_watches(
+    with pytest.raises(WatchAlreadyExistsError):
+        create_watch(
             function_scoped_session,
             user.id,
             other_source_episode,
             WatchCreate(),
         )
-    assert conflict.value.status_code == status.HTTP_409_CONFLICT
 
 
 # TODO: Validate

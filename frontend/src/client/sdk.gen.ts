@@ -3562,7 +3562,7 @@ export class WatchesService {
     
     /**
      * Update Watch
-     * Update a watch and all matching sibling watches.
+     * Update a watch.
      * @param data The data for the request.
      * @param data.watchId
      * @param data.requestBody

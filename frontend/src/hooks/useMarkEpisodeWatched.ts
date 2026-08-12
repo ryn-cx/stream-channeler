@@ -90,23 +90,20 @@ export function useMarkWatched(
       return { previousEntries }
     },
     // Replace the optimistic value with the server's response on success
-    onSuccess: (watchResults, episodeId) => {
-      const watchData = watchResults[0]
-      if (watchData) {
-        const patch = {
-          watch_date: watchData.watch_date,
-          verified: watchData.verified,
-          episode_watch_id: watchData.id,
-        }
-        queryClient.setQueriesData(
-          { queryKey: ["episodes", channelId] },
-          (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
-        )
-        queryClient.setQueriesData(
-          { queryKey: ["episodes-preview", channelId] },
-          (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
-        )
+    onSuccess: (watchData, episodeId) => {
+      const patch = {
+        watch_date: watchData.watch_date,
+        verified: watchData.verified,
+        episode_watch_id: watchData.id,
       }
+      queryClient.setQueriesData(
+        { queryKey: ["episodes", channelId] },
+        (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
+      )
+      queryClient.setQueriesData(
+        { queryKey: ["episodes-preview", channelId] },
+        (oldData: any) => updateEpisodeInData(oldData, episodeId, patch),
+      )
       showSuccessToast("Episode marked as watched successfully")
     },
     // If the mutation fails,

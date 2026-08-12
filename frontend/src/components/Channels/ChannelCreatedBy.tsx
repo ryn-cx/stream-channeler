@@ -31,9 +31,15 @@ export function ChannelCreatedBy({
 
   const paragraphClass = cn("text-sm text-muted-foreground", className)
   const prefix = `${VISIBILITY_LABELS[channel.visibility]} channel`
+  const isOwner = Boolean(channel.user_id) && channel.user_id === user?.id
+  const ownerSuffix = isOwner ? " (You)" : ""
 
   if (channel.anonymous) {
-    return <p className={paragraphClass}>{prefix} by Anonymous</p>
+    return (
+      <p className={paragraphClass}>
+        {prefix} by Anonymous{ownerSuffix}
+      </p>
+    )
   }
 
   // The API withholds the username of a channel the viewer owns, so their own
@@ -56,6 +62,7 @@ export function ChannelCreatedBy({
       >
         {username}
       </Link>
+      {ownerSuffix}
     </p>
   )
 }

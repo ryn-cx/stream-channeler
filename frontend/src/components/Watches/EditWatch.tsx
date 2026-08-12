@@ -9,7 +9,6 @@ import {
   type WatchesListOutput,
   WatchesService,
   type WatchItem,
-  type WatchOutput,
   type WatchUpdate,
 } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
@@ -90,12 +89,8 @@ const EditWatch = ({ watch }: EditWatchProps) => {
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: (result: WatchOutput[]) => {
-      const message =
-        result.length > 1
-          ? `${result.length} watches updated successfully`
-          : "Watch updated successfully"
-      showSuccessToast(message)
+    onSuccess: () => {
+      showSuccessToast("Watch updated successfully")
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back

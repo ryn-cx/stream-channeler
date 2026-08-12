@@ -196,7 +196,6 @@ class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
 
         existing_record.sqlmodel_update(self.model_dump(exclude_unset=True))
         session.commit()
-        session.refresh(existing_record)
         return existing_record
 
 
@@ -209,5 +208,4 @@ class BaseUpdateWithoutKey[ModelT: Channel | Watch | ChannelOrder | Comment](Bas
         """Update the `existing_record` and return it."""
         existing_record.sqlmodel_update(self.model_dump(exclude_unset=True))
         session.commit()
-        session.refresh(existing_record)
         return existing_record

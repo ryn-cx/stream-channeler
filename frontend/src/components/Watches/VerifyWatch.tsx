@@ -2,11 +2,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { Check } from "lucide-react"
 
-import {
-  type WatchesListOutput,
-  WatchesService,
-  type WatchOutput,
-} from "@/client"
+import { type WatchesListOutput, WatchesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -56,12 +52,8 @@ export default function VerifyWatch({ id, verified }: VerifyWatchProps) {
       // Return a result with the snapshotted value
       return { previousWatches }
     },
-    onSuccess: (result: WatchOutput[]) => {
-      const message =
-        result.length > 1
-          ? `${result.length} watches verified successfully`
-          : "Watch verified successfully"
-      showSuccessToast(message)
+    onSuccess: () => {
+      showSuccessToast("Watch verified successfully")
     },
     // If the mutation fails,
     // use the result returned from onMutate to roll back

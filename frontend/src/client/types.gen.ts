@@ -2826,7 +2826,7 @@ export type WatchesUpdateWatchData = {
     watchId: string;
 };
 
-export type WatchesUpdateWatchResponse = (Array<WatchOutput>);
+export type WatchesUpdateWatchResponse = (WatchOutput);
 
 export type WatchesDeleteWatchData = {
     watchId: string;
@@ -2848,4 +2848,4 @@ export type WatchesCreateWatchData = {
     requestBody: WatchCreate;
 };
 
-export type WatchesCreateWatchResponse = (Array<WatchOutput>);
+export type WatchesCreateWatchResponse = (WatchOutput);

@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.episodes.dependencies import ReadableEpisode
 from app.schemas import Message, ReadOptions
+from app.watches import services
 from app.watches.dependencies import EditableWatch
+from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
     WatchesListOutput,
@@ -16,27 +18,24 @@ from app.watches.schemas import (
     WatchUpdate,
 )
 from app.watches.services import (
-    create_watches,
     delete_watches,
     get_installed_plugin,
     get_watched_episodes,
-    update_watches,
 )
 
 episode_watches_router = APIRouter(prefix="/episodes/{episode_id}", tags=["watches"])
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
 
-# TODO: Validate
-@episode_watches_router.post("/watches")
+@episode_watches_router.post("/watches", response_model=WatchOutput)
 def create_watch(
     session: SessionDep,
     current_user: CurrentUser,
     episode: ReadableEpisode,
     watch_input: WatchCreate,
-) -> list[WatchOutput]:
+) -> Watch:
     """Create a `Watch` if the `Episode` is readable by the `User`."""
-    return create_watches(session, current_user.id, episode, watch_input)
+    return services.create_watch(session, current_user.id, episode, watch_input)
 
 
 # TODO: Validate
@@ -51,14 +50,17 @@ def get_watches(
 
 
 # TODO: Validate
-@watches_router.patch("/{watch_id}")  # noqa: FAST003 - Used by UserWatch.
+@watches_router.patch(
+    "/{watch_id}",  # noqa: FAST003 - Used by UserWatch.
+    response_model=WatchOutput,
+)
 def update_watch(
     session: SessionDep,
     watch: EditableWatch,
     watch_input: WatchUpdate,
-) -> list[WatchOutput]:
-    """Update a watch and all matching sibling watches."""
-    return update_watches(session, watch, watch_input)
+) -> Watch:
+    """Update a watch."""
+    return services.update_watch(session, watch, watch_input)
 
 
 # TODO: Validate
