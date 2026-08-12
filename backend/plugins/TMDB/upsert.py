@@ -70,6 +70,12 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @override
+    def initialize_sources(self) -> None:
+        """Skip source creation, because TMDB has no `Source` of its own."""
+        return
+
+    # TODO: Validate
+    @override
     def _upsert_source(self) -> Source:
         """Raise, because TMDB is nowhere anything can be watched.
 
