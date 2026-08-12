@@ -16,6 +16,7 @@ from app.canonical_media.service import (
     canonical_episode_for,
     canonical_season_for,
     canonical_show_for,
+    link_canonical_show,
 )
 from app.episodes.models import (
     DESCRIPTION_NOTE,
@@ -446,7 +447,10 @@ class LinkMixin(LookupMixin, register=False):
         """Point a `Show` at the title TMDB holds for it.
 
         A title already linked keeps the id it has, so a fresh guess never
-        displaces one.
+        displaces one. An id the caller names that the copy is not already linked
+        to is added to the titles it is a copy of rather than dropped: a website
+        that files two titles under one listing is a copy of both, and being told
+        about the second is the only way that is ever learnt.
         """
         linked_id = show.tmdb_id or tmdb_id
         if linked_id:
@@ -457,27 +461,45 @@ class LinkMixin(LookupMixin, register=False):
                 media_type,
                 linked_id,
             )
+            link_canonical_show(self.session, show, show.canonical_show)
+        if tmdb_id and tmdb_id != linked_id:
+            link_canonical_show(
+                self.session,
+                show,
+                canonical_show_for(self.session, media_type, tmdb_id),
+            )
         return show
 
     # TODO: Validate
     def tmdb_link_season(
         self,
         season: Season,
-        tmdb_id: int | None,
+        show: Show,
         season_number: int | None,
         media_type: MediaType,
+        tmdb_id: int | None = None,
     ) -> Season:
         """Point a `Season` at the season TMDB holds for it.
 
         TMDB numbers films and seasons separately, so the media type is part of
         what names the season, to keep two that share a number apart.
+
+        The `Show` is passed in rather than read off the season, since a season
+        being written for the first time is not attached to its show yet.
+
+        `tmdb_id` is the title the import is working on, which is not always the
+        title the listing is chiefly of: a listing that mixes titles is imported
+        one title at a time, and the season belongs under whichever of them
+        brought it in. Falls back on the listing's own title, which is the answer
+        for every listing that mixes nothing.
         """
+        tmdb_id = tmdb_id or show.tmdb_id
         if not tmdb_id or season.tmdb_id:
             return season
 
-        canonical_show_id = season.show.canonical_show_id
-        if canonical_show_id is None:
-            return season
+        canonical_show = canonical_show_for(self.session, media_type, tmdb_id)
+        link_canonical_show(self.session, show, canonical_show)
+        canonical_show_id = canonical_show.id
 
         if media_type == MediaType.movie:
             if movie := self._movie_detail(tmdb_id):
@@ -510,29 +532,39 @@ class LinkMixin(LookupMixin, register=False):
         return season
 
     # TODO: Validate
-    def tmdb_link_episode(  # noqa: PLR0913 - Every part of what names a TMDB episode.
+    def tmdb_link_episode(  # noqa: PLR0913 - Every part of what names one.
         self,
         episode: Episode,
-        tmdb_id: int | None,
-        season_number: int | None,
+        season: Season,
         episode_number: int | None,
         media_type: MediaType = MediaType.tv,
         highest_episode_number: int | None = None,
+        tmdb_id: int | None = None,
     ) -> Episode:
         """Point an `Episode` at the episode TMDB holds for it.
 
         TMDB numbers films and episodes separately, so the media type is part of
         what names the episode, to keep two that share a number apart.
 
+        The `Season` is passed in rather than read off the episode, since an
+        episode being written for the first time is not attached to its season
+        yet.
+
         `highest_episode_number` is the last episode number the website gives
         the season. A season the website and TMDB both end on the same number is
         one neither has split or merged, so its numbering can be trusted, and it
         is what an episode whose name matched nothing falls back on.
+
+        `tmdb_id` is the title the import is working on, for a listing that mixes
+        titles; without one the listing's own title is what the episode is looked
+        for in.
         """
+        tmdb_id = tmdb_id or season.show.tmdb_id
         if not tmdb_id:
             return episode
 
-        canonical_season_id = episode.season.canonical_season_id
+        season_number = season.season_number
+        canonical_season_id = season.canonical_season_id
         if canonical_season_id is None:
             return episode
 

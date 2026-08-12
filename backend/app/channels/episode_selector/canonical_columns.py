@@ -8,8 +8,10 @@ left that value out. The canonical row is the one answer for all of them, so
 each level is joined through the pointer the copy already carries and read
 straight off, with no stand-in to fall back to.
 
-A level is only joined when something asks for one of its columns, and asking
-for a level joins the ones above it, since that is the path to reach it.
+The episode's own canonical row and the season above it are already joined by
+`EpisodeQueryBuilder`, which reaches them to work out which title an episode
+belongs to, so they are read from there rather than joined again. The title is
+only joined when something asks for one of its columns.
 """
 
 from typing import Any, ClassVar, cast
@@ -17,7 +19,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import col, func
+from sqlmodel import col
 from sqlmodel.sql.expression import Select
 
 from app.canonical_episodes.models import CanonicalEpisode
@@ -25,10 +27,10 @@ from app.canonical_seasons.models import CanonicalSeason
 from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 
-# Aliased so that a query which already reaches the canonical tables for its own
-# reasons is never confused with the levels joined here.
-_CanonicalEpisode = aliased(CanonicalEpisode)
-_CanonicalSeason = aliased(CanonicalSeason)
+# The title is aliased so that a query which already reaches `CanonicalShow` for
+# its own reasons is never confused with the one joined here. The episode and the
+# season are the very rows the query is built around, so they are read as they
+# are.
 _CanonicalShow = aliased(CanonicalShow)
 
 
@@ -37,8 +39,8 @@ class CanonicalColumns:
     """The canonical row of each media level, joined in so SQL can read it."""
 
     _MODELS: ClassVar[dict[str, Any]] = {
-        "episode": _CanonicalEpisode,
-        "season": _CanonicalSeason,
+        "episode": CanonicalEpisode,
+        "season": CanonicalSeason,
         "show": _CanonicalShow,
     }
 
@@ -68,18 +70,14 @@ class CanonicalColumns:
 
     # TODO: Validate
     def __init__(self) -> None:
-        """Start with nothing joined; each column asked for adds its level."""
-        self._levels: set[str] = set()
+        """Start with the title unjoined; asking for one of its columns joins it."""
+        self._joins_title = False
 
     # TODO: Validate
     def _require(self, model: str) -> Any:  # noqa: ANN401 - The canonical model of whichever level was asked for.
-        """Mark `model` and everything above it as needing to be joined."""
+        """Mark the title as needing to be joined, when that is what was asked for."""
         if model == "show":
-            self._levels.update({"episode", "season", "show"})
-        elif model == "season":
-            self._levels.update({"episode", "season"})
-        else:
-            self._levels.add("episode")
+            self._joins_title = True
         return self._MODELS[model]
 
     # TODO: Validate
@@ -89,14 +87,18 @@ class CanonicalColumns:
         field: str,
         model_class: type[Any],
     ) -> ColumnElement[Any]:
-        """Return `field` as the canonical row has it, or the copy's own."""
-        own = cast("ColumnElement[Any]", getattr(model_class, field))
+        """Return `field` as the canonical row has it.
+
+        Read off the canonical row alone rather than falling back on the copy: the
+        canonical row is what every copy resolves to and it is never absent, so a
+        fallback could only ever put one website's answer in place of the one
+        answer for all of them. A field no canonical row holds - a source's name,
+        a plugin's - is the copy's own and is read from where it is stored.
+        """
         if field not in self._FIELDS.get(model, frozenset()):
-            return own
+            return cast("ColumnElement[Any]", getattr(model_class, field))
         canonical = self._require(model)
-        # Coalesced against the copy so a row whose pointer has not been filled
-        # in yet still reads as what it stores rather than as nothing.
-        return func.coalesce(getattr(canonical, field), own)
+        return cast("ColumnElement[Any]", getattr(canonical, field))
 
     # TODO: Validate
     def number(self, model: str) -> ColumnElement[Any]:
@@ -132,24 +134,15 @@ class CanonicalColumns:
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        """Join in every level whose columns were asked for.
+        """Join in the title, when one of its columns was asked for.
 
-        Outer joins throughout: a copy whose pointer is not filled in yet still
-        belongs in the results, reading as whatever it stores itself.
+        The episode and the season it is in are what the query is built around
+        and are already there. The title is one join further out and nothing but
+        its own columns needs it, so it is only reached for when asked for.
         """
-        if "episode" in self._levels:
-            query = query.outerjoin(
-                _CanonicalEpisode,
-                col(Episode.canonical_episode_id) == col(_CanonicalEpisode.id),
-            )
-        if "season" in self._levels:
-            query = query.outerjoin(
-                _CanonicalSeason,
-                col(_CanonicalEpisode.canonical_season_id) == col(_CanonicalSeason.id),
-            )
-        if "show" in self._levels:
-            query = query.outerjoin(
+        if self._joins_title:
+            query = query.join(
                 _CanonicalShow,
-                col(_CanonicalSeason.canonical_show_id) == col(_CanonicalShow.id),
+                col(CanonicalSeason.canonical_show_id) == col(_CanonicalShow.id),
             )
         return query

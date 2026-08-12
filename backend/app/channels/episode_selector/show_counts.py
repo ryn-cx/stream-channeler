@@ -4,16 +4,21 @@
 A channel that asks for a number of shows keeps every episode of the shows that
 come first in the order already chosen and drops the rest, so the counts thin the
 line-up without disturbing how it is sorted.
+
+A show here is the title rather than one website's listing of it, so a title two
+websites carry counts once, and a listing that mixes titles counts as each of the
+titles its episodes belong to.
 """
 
 from uuid import UUID
 
 from sqlmodel import Session, col, select
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
-from app.seasons.models import Season
 from app.users.models import User
 
 
@@ -39,18 +44,13 @@ def limit_shows(
     if not user or not episodes:
         return episodes
 
-    season_ids = {episode.season_id for episode in episodes}
-    season_to_show: dict[UUID, UUID] = dict(
-        session.exec(
-            select(Season.id, Season.show_id).where(col(Season.id).in_(season_ids)),
-        ).all(),
-    )
+    episode_to_show = _titles_by_canonical_episode(session, episodes)
     started: set[UUID] = set(session.exec(started_show_ids(user)).all())
 
     show_order: list[tuple[UUID, bool]] = []
     seen: set[UUID] = set()
     for episode in episodes:
-        show_id = season_to_show[episode.season_id]
+        show_id = episode_to_show[episode.canonical_episode_id]
         if show_id in seen:
             continue
         seen.add(show_id)
@@ -63,8 +63,33 @@ def limit_shows(
         new_count=new_count,
     )
     return [
-        episode for episode in episodes if season_to_show[episode.season_id] in selected
+        episode
+        for episode in episodes
+        if episode_to_show[episode.canonical_episode_id] in selected
     ]
+
+
+# TODO: Validate
+def _titles_by_canonical_episode(
+    session: Session,
+    episodes: list[Episode],
+) -> dict[UUID, UUID]:
+    """Map each episode in `episodes` to the title it belongs to.
+
+    Read off the episode's own canonical row rather than off the listing holding
+    it, since a listing that mixes titles holds episodes of each of them.
+    """
+    canonical_episode_ids = {episode.canonical_episode_id for episode in episodes}
+    return dict(
+        session.exec(
+            select(CanonicalEpisode.id, CanonicalSeason.canonical_show_id)
+            .join(
+                CanonicalSeason,
+                col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+            )
+            .where(col(CanonicalEpisode.id).in_(canonical_episode_ids)),
+        ).all(),
+    )
 
 
 # TODO: Validate

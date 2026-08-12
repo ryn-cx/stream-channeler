@@ -2,6 +2,7 @@
 
 import threading
 import traceback
+from collections.abc import Collection
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -9,7 +10,11 @@ from loguru import logger
 from sqlmodel import Session, col, or_, select
 
 from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_media.service import canonical_ids_by_key
+from app.canonical_media.service import (
+    canonical_ids_by_key,
+    canonical_show_ids_by_key,
+)
+from app.canonical_seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
@@ -22,7 +27,6 @@ from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -145,36 +149,90 @@ def add_results_to_channel(
     A channel holds the media itself, so each key is resolved to the row that
     record is a copy of first, and a result naming a record that reached no
     canonical row is left for a later run.
+
+    A listing that mixes titles is a copy of each of them, so it goes on the
+    channel as every title it brought in, each holding only the seasons and
+    episodes that belong to it. A title the result names nothing of is left off
+    when the result is a whitelist, since a whitelist naming none of a title's
+    episodes is a title with nothing to offer.
     """
     canonical = _canonical_ids_for_results(session, results)
     existing_channel_shows = {show.canonical_show_id: show for show in channel.shows}
     for result in results:
-        canonical_show_id = canonical.shows.get(result.show_key)
-        if canonical_show_id is None:
+        canonical_show_ids = canonical.shows.get(result.show_key, set())
+        if not canonical_show_ids:
             logger.warning(
                 "No canonical title for {}, leaving it off the channel",
                 result.show_key,
             )
             continue
-        if existing_channel_show := existing_channel_shows.get(canonical_show_id):
-            _update_channel_show(session, existing_channel_show, result, canonical)
-        else:
-            existing_channel_shows[canonical_show_id] = _create_channel_show(
-                channel,
-                result,
-                canonical_show_id,
-                canonical,
-            )
+        for canonical_show_id in canonical_show_ids:
+            seasons = canonical.seasons_under(result.season_keys, canonical_show_id)
+            episodes = canonical.episodes_under(result.episode_keys, canonical_show_id)
+            if result.is_whitelist and not seasons and not episodes:
+                continue
+            if existing_channel_show := existing_channel_shows.get(canonical_show_id):
+                _update_channel_show(
+                    session,
+                    existing_channel_show,
+                    result,
+                    seasons,
+                    episodes,
+                )
+            else:
+                existing_channel_shows[canonical_show_id] = _create_channel_show(
+                    channel,
+                    result,
+                    canonical_show_id,
+                    seasons,
+                    episodes,
+                )
 
 
 # TODO: Validate
 @dataclass
 class _CanonicalIds:
-    """What each record key in a batch of results resolves to, at every level."""
+    """What each record key in a batch of results resolves to, at every level.
 
-    shows: dict[str, UUID]
+    A show key resolves to every title that listing is a copy of, since a listing
+    that mixes titles is a copy of each of them. A season or an episode key
+    resolves to the one row it is, along with the title that row is under, which
+    is what says which of a mixed listing's titles it belongs to.
+    """
+
+    shows: dict[str, set[UUID]]
     seasons: dict[str, UUID]
     episodes: dict[str, UUID]
+    title_by_season: dict[UUID, UUID]
+    title_by_episode: dict[UUID, UUID]
+
+    # TODO: Validate
+    def seasons_under(
+        self,
+        season_keys: Collection[str],
+        canonical_show_id: UUID,
+    ) -> set[UUID]:
+        """The seasons `season_keys` name that belong to `canonical_show_id`."""
+        return {
+            canonical_id
+            for key in season_keys
+            if (canonical_id := self.seasons.get(key)) is not None
+            and self.title_by_season.get(canonical_id) == canonical_show_id
+        }
+
+    # TODO: Validate
+    def episodes_under(
+        self,
+        episode_keys: Collection[str],
+        canonical_show_id: UUID,
+    ) -> set[UUID]:
+        """The episodes `episode_keys` name that belong to `canonical_show_id`."""
+        return {
+            canonical_id
+            for key in episode_keys
+            if (canonical_id := self.episodes.get(key)) is not None
+            and self.title_by_episode.get(canonical_id) == canonical_show_id
+        }
 
 
 # TODO: Validate
@@ -183,23 +241,65 @@ def _canonical_ids_for_results(
     results: list[URLImportResult],
 ) -> _CanonicalIds:
     """Resolve every record key the results name, in one query per level."""
+    seasons = canonical_ids_by_key(
+        session,
+        {key for result in results for key in result.season_keys},
+        Season,
+    )
+    episodes = canonical_ids_by_key(
+        session,
+        {key for result in results for key in result.episode_keys},
+        Episode,
+    )
     return _CanonicalIds(
-        shows=canonical_ids_by_key(
+        shows=canonical_show_ids_by_key(
             session,
             {result.show_key for result in results},
-            Show,
         ),
-        seasons=canonical_ids_by_key(
-            session,
-            {key for result in results for key in result.season_keys},
-            Season,
-        ),
-        episodes=canonical_ids_by_key(
-            session,
-            {key for result in results for key in result.episode_keys},
-            Episode,
-        ),
+        seasons=seasons,
+        episodes=episodes,
+        title_by_season=_titles_by_season(session, set(seasons.values())),
+        title_by_episode=_titles_by_episode(session, set(episodes.values())),
     )
+
+
+# TODO: Validate
+def _titles_by_season(
+    session: Session,
+    canonical_season_ids: set[UUID],
+) -> dict[UUID, UUID]:
+    """Map each canonical season to the title holding it."""
+    if not canonical_season_ids:
+        return {}
+    rows = session.exec(
+        select(  # type: ignore[call-overload]
+            CanonicalSeason.id,
+            CanonicalSeason.canonical_show_id,
+        ).where(col(CanonicalSeason.id).in_(canonical_season_ids)),
+    ).all()
+    return dict(rows)
+
+
+# TODO: Validate
+def _titles_by_episode(
+    session: Session,
+    canonical_episode_ids: set[UUID],
+) -> dict[UUID, UUID]:
+    """Map each canonical episode to the title holding it."""
+    if not canonical_episode_ids:
+        return {}
+    rows = session.exec(
+        select(  # type: ignore[call-overload]
+            CanonicalEpisode.id,
+            CanonicalSeason.canonical_show_id,
+        )
+        .join(
+            CanonicalSeason,
+            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+        )
+        .where(col(CanonicalEpisode.id).in_(canonical_episode_ids)),
+    ).all()
+    return dict(rows)
 
 
 # TODO: Validate
@@ -207,7 +307,8 @@ def _create_channel_show(
     channel: Channel,
     result: URLImportResult,
     canonical_show_id: UUID,
-    canonical: _CanonicalIds,
+    canonical_season_ids: set[UUID],
+    canonical_episode_ids: set[UUID],
 ) -> ChannelShow:
     """Put the title on the channel, with the filters the result asked for."""
     channel_show = ChannelShow(
@@ -217,18 +318,8 @@ def _create_channel_show(
         is_blacklist_only=False,
     )
     channel.shows.append(channel_show)
-    _merge_filters(
-        channel_show,
-        _resolved(result.season_keys, canonical.seasons),
-        _resolved(result.episode_keys, canonical.episodes),
-    )
+    _merge_filters(channel_show, canonical_season_ids, canonical_episode_ids)
     return channel_show
-
-
-# TODO: Validate
-def _resolved(keys, mapping: dict[str, UUID]) -> set[UUID]:  # noqa: ANN001
-    """The canonical rows `keys` name, skipping the ones that name none."""
-    return {mapping[key] for key in keys if key in mapping}
 
 
 # TODO: Validate
@@ -236,7 +327,8 @@ def _update_channel_show(
     session: Session,
     existing_channel_show: ChannelShow,
     result: URLImportResult,
-    canonical: _CanonicalIds,
+    result_seasons: set[UUID],
+    result_episodes: set[UUID],
 ) -> None:
     """Fold what the result asks for into the filters the title already carries."""
     existing_channel_show.is_blacklist_only = False
@@ -251,9 +343,6 @@ def _update_channel_show(
         for episode_filter in existing_channel_show.episode_filters
     }
     blacklisted_episodes: set[UUID] = set() if was_whitelist else existing_episodes
-
-    result_seasons = _resolved(result.season_keys, canonical.seasons)
-    result_episodes = _resolved(result.episode_keys, canonical.episodes)
 
     if result.is_whitelist:
         seasons = (existing_seasons if was_whitelist else set[UUID]()) | result_seasons

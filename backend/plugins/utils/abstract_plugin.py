@@ -25,6 +25,7 @@ from plugins.utils.manage_plugins import register_plugins
 if TYPE_CHECKING:
     from sqlmodel import Session
 
+    from app.canonical_shows.models import CanonicalShow
     from app.users.models import User
 
 
@@ -97,7 +98,7 @@ class AbstractPlugin(ABC):
     def import_url(
         self,
         url: str,
-        tmdb_id: int | None = None,
+        canonical_show: CanonicalShow | None = None,
     ) -> list[URLImportResult]:
         """Import `url` into the database.
 
@@ -105,11 +106,14 @@ class AbstractPlugin(ABC):
 
         Args:
             url: The URL to import.
-            tmdb_id: The TMDB title `url` is known to be, when the caller already
-                knows it. A plugin otherwise has to find the title on TMDB by
-                searching its name, which is a guess; being told is not. Passed
-                down whenever one import hands off to another, so the whole chain
-                works from the one title the import started at.
+            canonical_show: The title `url` is known to be a copy of, when the
+                caller already knows it. A plugin otherwise has to find the title
+                by searching its name, which is a guess; being told is not.
+                Passed down whenever one import hands off to another, so the
+                whole chain works from the one title the import started at, and
+                added to what the listing is a copy of whether or not the listing
+                is chiefly of it - a series listing that also carries the film of
+                it is a copy of both.
 
         Returns:
             A list of `URLImportResult`.

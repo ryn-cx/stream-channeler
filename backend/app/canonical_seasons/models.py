@@ -32,12 +32,13 @@ class BaseCanonicalSeason(SQLModel):
 
     # What makes two copies of this season one season rather than two, and the
     # whole of what says which TMDB record a season is. Namespaced by whoever
-    # issued it — "TMDB tv season 3624" for a record TMDB holds, "YouTube
+    # issued it — "TMDB season 3624" for a record TMDB holds, "YouTube
     # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
     # collide on it. Unique within one title rather than across all of them,
     # since a plugin only promises a key means one thing under the title holding
-    # it. `None` while nothing has claimed the season.
-    key: str | None = Field(default=None)
+    # it. Every row has one from the moment it is made: a season nothing can
+    # name is a season nothing can converge on.
+    key: str = Field()
 
     name: str | None = Field(default=None)
     # The season's own page, as against a copy's `url`, which is where that

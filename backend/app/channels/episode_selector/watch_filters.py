@@ -22,9 +22,8 @@ from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.episodes.models import Episode
-from app.seasons.models import Season
-from app.shows.models import Show
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -112,12 +111,20 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
 
 # TODO: Validate
 def started_show_ids(user: User) -> SelectOfScalar[UUID]:
-    """The ids of every `Show` the `User` has watched anything of."""
+    """The titles the `User` has watched anything of.
+
+    The titles themselves rather than the websites' listings of them, since a
+    watch is of the episode rather than of the copy that played it and a title
+    started on one website is started wherever else it is carried.
+    """
     return (
-        select(Show.id)
-        .join(Season, col(Show.id) == Season.show_id)
-        .join(Episode, col(Season.id) == Episode.season_id)
-        .join(Episode.watches.and_(Watch.user_id == user.id))  # type: ignore[attr-defined]
+        select(CanonicalSeason.canonical_show_id)
+        .join(
+            CanonicalEpisode,
+            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+        )
+        .join(Watch, col(Watch.canonical_episode_key) == col(CanonicalEpisode.key))
+        .where(Watch.user_id == user.id)
         .distinct()
     )
 

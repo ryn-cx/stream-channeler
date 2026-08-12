@@ -2,6 +2,8 @@
 from collections.abc import Iterable, Sequence
 from typing import Any, override
 
+from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
 from app.seasons.models import Season
@@ -94,11 +96,15 @@ class TMDBMixin(BasePlugin, register=False):
         show_key: str,
         tmdb_media_type: MediaType,
     ) -> Season:
+        # The title this import is working on rather than the one the listing is
+        # chiefly of, so a season brought in under a second title is filed under
+        # that title instead of under the first.
         season = self.tmdb.tmdb_link_season(
             season,
-            show.tmdb_id,
+            show,
             season.season_number,
             tmdb_media_type,
+            self._cached_tmdb_id(show_key),
         )
         season_files = self._season_files(season.key, show_key)
         return season.upsert_and_set_update_at(show, existing_season, season_files)
@@ -115,11 +121,11 @@ class TMDBMixin(BasePlugin, register=False):
     ) -> Episode:
         episode = self.tmdb.tmdb_link_episode(
             episode,
-            season.show.tmdb_id,
-            season.season_number,
+            season,
             episode.episode_number,
             tmdb_media_type,
             last_episode_number,
+            self._cached_tmdb_id(show_key),
         )
         episode_files = self._episode_files(episode.key, season.key, show_key)
         return episode.upsert_and_set_update_at(season, existing_episode, episode_files)
@@ -157,18 +163,6 @@ class TMDBMixin(BasePlugin, register=False):
         return next((show for show in shows if show.tmdb_id), shows[0])
 
     # TODO: Validate
-    @override
-    def _use_tmdb_id(self, tmdb_id: int | None) -> None:
-        """Take a caller's `tmdb_id` as the answer `_cached_tmdb_id` would look up.
-
-        An import that already knows which TMDB title it is working on says so,
-        which is what keeps a title off the name search `_fetch_tmdb_id` falls
-        back on. Being told nothing leaves the lookup as it was.
-        """
-        if tmdb_id is not None:
-            self._tmdb_id = tmdb_id
-
-    # TODO: Validate
     def _cached_tmdb_id(self, show_key: str) -> int | None:
         """Resolve the TMDB id once for the show the instance is working on.
 
@@ -178,11 +172,50 @@ class TMDBMixin(BasePlugin, register=False):
         held for one show rather than kept per show key.
         """
         if isinstance(self._tmdb_id, Sentinel):
-            self._tmdb_id = self._fetch_tmdb_id(
-                show_key,
-                self._existing_show(show_key),
+            supplied = self._supplied_tmdb_id_for(show_key)
+            self._tmdb_id = (
+                supplied
+                if supplied is not None
+                else self._fetch_tmdb_id(show_key, self._existing_show(show_key))
             )
         return self._tmdb_id
+
+    # TODO: Validate
+    def _supplied_tmdb_id_for(self, show_key: str) -> int | None:
+        """Return the title a caller named, when it is the one this listing is.
+
+        A caller naming a title from the other half of TMDB's catalogue is
+        naming something else the listing is also a copy of - the film a series
+        listing carries alongside its seasons - so the listing still has to find
+        its own title for itself. Only what the listing is chiefly of is
+        answered here; the title itself is linked either way.
+        """
+        supplied = self._supplied_canonical_show
+        if supplied is None:
+            return None
+        parsed = parse_tmdb_key(supplied.key, SHOW_LEVEL)
+        if parsed is None:
+            return None
+        media_type, tmdb_id = parsed
+        if media_type != self.tmdb_media_type(show_key):
+            return None
+        return tmdb_id
+
+    # TODO: Validate
+    def _canonical_show_to_hand_off(self, show_key: str) -> CanonicalShow | None:
+        """Return the title to tell another plugin about when handing an import on.
+
+        The title the import started at when there is one, since that is the one
+        the whole chain is working from and the one a listing further down may
+        turn out to carry alongside its own. Otherwise this listing's own title,
+        read in so that there is a row to name rather than only an id.
+        """
+        if self._supplied_canonical_show is not None:
+            return self._supplied_canonical_show
+        tmdb_id = self._cached_tmdb_id(show_key)
+        if tmdb_id is None:
+            return None
+        return self.tmdb.import_title(self.tmdb_media_type(show_key), tmdb_id)
 
     # TODO: Validate
     def _tmdb_show_file(self, show_key: str) -> ShowDetail | MovieDetails | None:

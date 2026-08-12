@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException
 
 from app.auth.dependencies import SessionDep
 from app.channels.models import Channel, ChannelShow
+from app.channels.service import channel_show_for_show
 from app.media.service import editable_record, existing_record, readable_record
 from app.shows.dependencies import ReadableShow
 
@@ -17,7 +18,7 @@ def _require_owned_channel_readable_show(
     channel: EditableChannel,
     show: ReadableShow,
 ) -> ChannelShow:
-    if channel_show := ChannelShow.get(session, channel, show):
+    if channel_show := channel_show_for_show(session, channel, show):
         return channel_show
     raise HTTPException(status_code=404, detail="Show was not found on channel")
 

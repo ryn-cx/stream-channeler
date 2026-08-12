@@ -23,7 +23,7 @@ export type Body_watches_import_watch_history = {
  * Schema for returning a list of `CanonicalEpisode`s, with what holds them.
  */
 export type CanonicalEpisodeListOutput = {
-    key?: (string | null);
+    key: string;
     name?: (string | null);
     url?: (string | null);
     description?: (string | null);
@@ -48,7 +48,7 @@ export type CanonicalEpisodeListOutput = {
  * Schema for returning a `CanonicalEpisode`.
  */
 export type CanonicalEpisodeOutput = {
-    key?: (string | null);
+    key: string;
     name?: (string | null);
     url?: (string | null);
     description?: (string | null);
@@ -79,7 +79,7 @@ export type CanonicalEpisodesPublic = {
  * Schema for returning a list of `CanonicalSeason`s, with the title above.
  */
 export type CanonicalSeasonListOutput = {
-    key?: (string | null);
+    key: string;
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -98,7 +98,7 @@ export type CanonicalSeasonListOutput = {
  * Schema for returning a `CanonicalSeason`.
  */
 export type CanonicalSeasonOutput = {
-    key?: (string | null);
+    key: string;
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -130,7 +130,7 @@ export type CanonicalSeasonsPublic = {
  * database does not hold a column for.
  */
 export type CanonicalShowOutput = {
-    key?: (string | null);
+    key: string;
     name?: (string | null);
     url?: (string | null);
     media_type?: (string | null);

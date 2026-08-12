@@ -28,6 +28,7 @@ from app.utils import tz_datetime
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
+    INITIAL_FILE_IDENTIFIER,
     BaseFile,
     GAPIListJSON,
     JSONFile,
@@ -103,19 +104,14 @@ class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsRespon
     API_ENDPOINT = just_scrape().new_title_buckets
 
     # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        end_datetime: datetime,
-    ) -> None:
-        self.end_datetime = end_datetime
-        super().__init__(session, plugin, str(end_datetime))
-
-    # TODO: Validate
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
-        end_date = self.end_datetime.date()
+        end_date = self.identifier_datetime().date()
+        # A bucket names the day it catches up from, and the first one has no
+        # earlier bucket to catch up to, so it reaches a day back to cover what
+        # was added before it was created.
+        if self.unique_identifier == INITIAL_FILE_IDENTIFIER:
+            end_date -= timedelta(days=1)
         return just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
 
     # TODO: Validate
@@ -273,10 +269,12 @@ class FileMixin(TMDBMixin, register=False):
     # TODO: Validate
     def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
         """Contains which sources added new titles on which dates."""
+        identifier: str
         if isinstance(end_datetime, File):
-            key = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
-            end_datetime = datetime.fromisoformat(key)
-        return self._file(NewTitleBucket, end_datetime)
+            identifier = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
+        else:
+            identifier = end_datetime.isoformat()
+        return self._file(NewTitleBucket, identifier)
 
     # TODO: Validate
     def providers_locale_file(self, locale: str = "en_US") -> ProvidersLocale:
@@ -403,12 +401,6 @@ class FileMixin(TMDBMixin, register=False):
             factory,
             key_prefix=f"{source.key}/",
         )
-
-    # TODO: Validate
-    def _download_new_titles_bucket_if_missing(self) -> None:
-        if not self._get_latest_new_titles_bucket().first():
-            bucket = self.new_titles_bucket_file(tz_datetime.now() - timedelta(days=1))
-            bucket.download_if_outdated()
 
     # TODO: Validate
     def _download_new_titles(self) -> None:

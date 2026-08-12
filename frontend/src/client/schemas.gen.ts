@@ -104,14 +104,7 @@ export const Body_watches_import_watch_historySchema = {
 export const CanonicalEpisodeListOutputSchema = {
     properties: {
         key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Key'
         },
         name: {
@@ -287,7 +280,7 @@ export const CanonicalEpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['canonical_season_id', 'id', 'created_at', 'modified_at', 'canonical_season_name', 'canonical_show_id', 'canonical_show_name', 'canonical_show_key'],
+    required: ['key', 'canonical_season_id', 'id', 'created_at', 'modified_at', 'canonical_season_name', 'canonical_show_id', 'canonical_show_name', 'canonical_show_key'],
     title: 'CanonicalEpisodeListOutput',
     description: 'Schema for returning a list of `CanonicalEpisode`s, with what holds them.'
 } as const;
@@ -295,14 +288,7 @@ export const CanonicalEpisodeListOutputSchema = {
 export const CanonicalEpisodeOutputSchema = {
     properties: {
         key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Key'
         },
         name: {
@@ -440,7 +426,7 @@ export const CanonicalEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['canonical_season_id', 'id', 'created_at', 'modified_at'],
+    required: ['key', 'canonical_season_id', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalEpisodeOutput',
     description: 'Schema for returning a `CanonicalEpisode`.'
 } as const;
@@ -476,14 +462,7 @@ export const CanonicalEpisodesPublicSchema = {
 export const CanonicalSeasonListOutputSchema = {
     properties: {
         key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Key'
         },
         name: {
@@ -596,7 +575,7 @@ export const CanonicalSeasonListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['canonical_show_id', 'id', 'created_at', 'modified_at', 'canonical_show_name', 'canonical_show_key'],
+    required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at', 'canonical_show_name', 'canonical_show_key'],
     title: 'CanonicalSeasonListOutput',
     description: 'Schema for returning a list of `CanonicalSeason`s, with the title above.'
 } as const;
@@ -604,14 +583,7 @@ export const CanonicalSeasonListOutputSchema = {
 export const CanonicalSeasonOutputSchema = {
     properties: {
         key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Key'
         },
         name: {
@@ -702,7 +674,7 @@ export const CanonicalSeasonOutputSchema = {
         }
     },
     type: 'object',
-    required: ['canonical_show_id', 'id', 'created_at', 'modified_at'],
+    required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalSeasonOutput',
     description: 'Schema for returning a `CanonicalSeason`.'
 } as const;
@@ -738,14 +710,7 @@ export const CanonicalSeasonsPublicSchema = {
 export const CanonicalShowOutputSchema = {
     properties: {
         key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Key'
         },
         name: {
@@ -854,7 +819,7 @@ export const CanonicalShowOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'created_at', 'modified_at'],
+    required: ['key', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalShowOutput',
     description: `Schema for returning a \`CanonicalShow\`.
 

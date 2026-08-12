@@ -4,6 +4,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, ClassVar, override
 
+from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -37,9 +38,9 @@ class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
     def import_url(
         self,
         url: str,
-        tmdb_id: int | None = None,
+        canonical_show: CanonicalShow | None = None,
     ) -> list[URLImportResult]:
-        self._use_tmdb_id(tmdb_id)
+        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         self._media_type_value = handler.media_type

@@ -7,6 +7,8 @@ from typing import ClassVar, override
 
 from loguru import logger
 
+from app.canonical_media.service import reconcile_show
+from app.canonical_shows.models import CanonicalShow
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -118,9 +120,9 @@ class YouTube(
     def import_url(
         self,
         url: str,
-        tmdb_id: int | None = None,
+        canonical_show: CanonicalShow | None = None,
     ) -> list[URLImportResult]:
-        self._use_tmdb_id(tmdb_id)
+        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key, handler.playlist_key)
@@ -172,7 +174,7 @@ class YouTube(
         """
         show = self.upsert_show(self.source, show_key)
         self._unshare_canonical_episodes(show)
-        self._reconcile_canonical_media(show)
+        reconcile_show(self.session, show, self.plugin_key())
         return show
 
     # TODO: Validate

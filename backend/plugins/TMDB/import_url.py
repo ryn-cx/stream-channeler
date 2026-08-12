@@ -5,6 +5,7 @@ from typing import override
 
 from bs4 import Tag
 
+from app.canonical_shows.models import CanonicalShow
 from plugins.TMDB.files import TMDB_DOMAIN, TitlePage
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
@@ -26,26 +27,19 @@ class ImportURLMixin(
 
     # TODO: Validate
     @override
-    def import_url(self, url: str, tmdb_id: int | None = None) -> list[URLImportResult]:
-        """Import the title the URL names from wherever it can be watched.
-
-        TMDB streams nothing itself, so the page is read for the JustWatch link
-        it lists and the import is handed off to the service the title is on.
-
-        What comes back from that hand-off can be nothing: a title JustWatch
-        knows about but that no service carries has no offer to import through,
-        and a title TMDB lists no JustWatch link for never had one to begin
-        with. Either way the title is still a title somebody asked for, so this
-        plugin's own copy of it is imported instead of the URL adding nothing.
-        """
-        self._use_tmdb_id(tmdb_id)
+    def import_url(
+        self,
+        url: str,
+        canonical_show: CanonicalShow | None = None,
+    ) -> list[URLImportResult]:
+        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
         # The title itself is read into the canonical tables, which is all TMDB
         # has to contribute; where it can be watched is JustWatch's to say, and
         # its results are what the channel takes on.
-        self.import_title(handler.media_type, handler.tmdb_id)
+        title = self.import_title(handler.media_type, handler.tmdb_id)
 
         justwatch_url = self._justwatch_url(handler.title_page_file())
         if justwatch_url is None:
@@ -55,7 +49,9 @@ class ImportURLMixin(
         # TMDB ids, so importing it up here would be circular.
         from plugins.JustWatch import JustWatch  # noqa: PLC0415
 
-        return JustWatch(self.session).import_url(justwatch_url, handler.tmdb_id)
+        # The row rather than the id, since the URL names the title outright and
+        # a listing further down can be a copy of it without being chiefly of it.
+        return JustWatch(self.session).import_url(justwatch_url, title)
 
     # TODO: Validate
     @staticmethod

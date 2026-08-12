@@ -24,20 +24,20 @@ from app.watches.schemas import (
     WatchOutput,
     WatchUpdate,
 )
-from tests.app.episodes.utils import create_random_episode
-from tests.app.users.utils import create_random_user
-from tests.app.utils.base import BaseTests
-from tests.app.utils.base_create import BaseCreateTests
-from tests.app.utils.base_delete import BaseDeleteTests
-from tests.app.utils.base_get import UserOwnedGetMixin
-from tests.app.utils.base_update import BaseUpdateTests
-from tests.app.utils.route_assertions import (
+from tests.old_mess.app.episodes.utils import create_random_episode
+from tests.old_mess.app.users.utils import create_random_user
+from tests.old_mess.app.utils.base import BaseTests
+from tests.old_mess.app.utils.base_create import BaseCreateTests
+from tests.old_mess.app.utils.base_delete import BaseDeleteTests
+from tests.old_mess.app.utils.base_get import UserOwnedGetMixin
+from tests.old_mess.app.utils.base_update import BaseUpdateTests
+from tests.old_mess.app.utils.route_assertions import (
     assert_conflict,
     assert_success,
     assert_success_list,
 )
-from tests.app.utils.utils import dump_random_model
-from tests.app.watches.utils import create_random_watch
+from tests.old_mess.app.utils.utils import dump_random_model
+from tests.old_mess.app.watches.utils import create_random_watch
 
 
 # TODO: Validate

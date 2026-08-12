@@ -13,7 +13,7 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.service import reconcile_show
+from app.canonical_media.service import link_canonical_show, reconcile_show
 from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import MANUAL_NOTES, Episode
 from app.episodes.tmdb_matches import absolute_numbers
@@ -116,6 +116,14 @@ class BasePlugin(
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
 
+    _supplied_canonical_show: CanonicalShow | None = None
+    """The title a caller named the listing being imported as a copy of.
+
+    Set at the top of `import_url`, after the wrapper has recorded the show, so
+    it survives for the rest of the import. Left as `None` by an import nobody
+    named a title for, which leaves the import to work the title out for itself.
+    """
+
     _file_cache: dict[object, Any]
     _reusable_file_cache: dict[object, Any]
 
@@ -181,16 +189,6 @@ class BasePlugin(
         if self._current_show is not None:
             self._reset_show_state()
         self._current_show = show
-
-    # TODO: Validate
-    def _use_tmdb_id(self, tmdb_id: int | None) -> None:
-        """Take `tmdb_id` as the TMDB title of the show being imported.
-
-        Called at the top of `import_url`, after the wrapper has recorded the
-        show, so the value survives for the rest of the import. A plugin that
-        does not link its media to TMDB has nothing to take; `TMDBMixin` is what
-        overrides this to hold on to it.
-        """
 
     # TODO: Validate
     def _reset_show_state(self) -> None:
@@ -349,7 +347,7 @@ class BasePlugin(
         self._preload_show(show.id, preload_episodes=True).one()
         upserted = self.upsert_show(show.source, show.key, force=force)
         self._unshare_canonical_episodes(upserted)
-        self._reconcile_canonical_media(upserted)
+        reconcile_show(self.session, upserted, self.plugin_key())
 
     # TODO: Validate
     @override
@@ -380,27 +378,22 @@ class BasePlugin(
         self._download_episode_files(episode, update_at=episode.update_at)
         self._preload_and_upsert_show(episode.season.show)
 
-    # TODO: Validate
     @override
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:
         plugin.update_at = tz_datetime.max()
 
-    # TODO: Validate
     @override
     def on_update_source_failure(self, source: Source, error: Exception) -> None:
         source.update_at = tz_datetime.max()
 
-    # TODO: Validate
     @override
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
         show.update_at = tz_datetime.max()
 
-    # TODO: Validate
     @override
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
         season.update_at = tz_datetime.max()
 
-    # TODO: Validate
     @override
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
         episode.update_at = tz_datetime.max()
@@ -408,22 +401,31 @@ class BasePlugin(
     # TODO: Validate
     def _import_show(self, show_key: str) -> Show:
         if show := self._preload_show(show_key).one_or_none():
+            self._link_supplied_canonical_show(show)
             return show
 
         _cache = self._download_show_files_and_children(show_key)
         show = self.upsert_show(self.source, show_key)
         self._unshare_canonical_episodes(show)
-        self._reconcile_canonical_media(show)
+        reconcile_show(self.session, show, self.plugin_key())
+        # After the reconcile rather than before it, since a title nothing under
+        # the listing points at yet is one the reconcile would take straight back
+        # off again.
+        self._link_supplied_canonical_show(show)
         return show
 
     # TODO: Validate
-    def _reconcile_canonical_media(self, show: Show) -> None:
-        """Point the show and everything under it at the media it is a copy of.
+    def _link_supplied_canonical_show(self, show: Show) -> None:
+        """Record the title a caller named as one this listing is a copy of.
 
-        Run after `_unshare_canonical_episodes`, which is the last thing that
-        can still change which record an episode says it is of.
+        This is where a listing that mixes titles learns about the second of
+        them. A listing is only ever chiefly of one title, and which one is
+        settled by what its own seasons turn out to be under, so a title the
+        caller names is added to what the listing stands for rather than taken
+        as what it is.
         """
-        reconcile_show(self.session, show, self.plugin_key())
+        if self._supplied_canonical_show:
+            link_canonical_show(self.session, show, self._supplied_canonical_show)
 
     # TODO: Validate
     def _unshare_canonical_episodes(self, show: Show) -> None:
@@ -655,9 +657,9 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def import_url(
         self,
         url: str,
-        tmdb_id: int | None = None,
+        canonical_show: CanonicalShow | None = None,
     ) -> list[URLImportResult]:
-        self._use_tmdb_id(tmdb_id)
+        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         show = self._import_show(handler.show_key)

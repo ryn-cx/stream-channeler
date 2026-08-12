@@ -34,10 +34,11 @@ class BaseCanonicalShow(SQLModel):
 
     # What makes two copies of this title one title rather than two, and the
     # whole of what says which TMDB record a title is. Namespaced by whoever
-    # issued it — "TMDB tv show 1399" for a record TMDB holds, "YouTube
+    # issued it — "TMDB tv 1399" for a record TMDB holds, "YouTube
     # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
-    # collide on it. `None` while nothing has claimed the title.
-    key: str | None = Field(default=None)
+    # collide on it. Every row has one from the moment it is made: a title
+    # nothing can name is a title nothing can converge on.
+    key: str = Field()
 
     name: str | None = Field(default=None)
     # The title's own page, as against a copy's `url`, which is where that

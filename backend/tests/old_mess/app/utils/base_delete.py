@@ -7,9 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from tests.app.users.utils import authentication_token_from_email, create_random_user
-from tests.app.utils.base import SUPPORTED_MODELS, BaseTests
-from tests.app.utils.route_assertions import (
+from tests.old_mess.app.users.utils import authentication_token_from_email, create_random_user
+from tests.old_mess.app.utils.base import SUPPORTED_MODELS, BaseTests
+from tests.old_mess.app.utils.route_assertions import (
     assert_delete,
     assert_not_found,
 )

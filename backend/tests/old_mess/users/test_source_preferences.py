@@ -6,7 +6,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.channels.episode_selector import deduplicate_episodes, source_dedup_config
+from app.channels.episode_selector import source_dedup_config
 from app.config import settings
 from app.episodes.models import Episode
 from app.models import Visibility
@@ -17,7 +17,10 @@ from app.users.schemas import SourcePreference
 from app.users.service import effective_source_preferences
 from tests.old_mess.app.plugins.utils import create_random_plugin
 from tests.old_mess.app.sources.utils import create_random_source
-from tests.old_mess.app.users.utils import authentication_token_from_email, create_random_user
+from tests.old_mess.app.users.utils import (
+    authentication_token_from_email,
+    create_random_user,
+)
 from tests.old_mess.app.utils.utils import build_random_model
 
 SOURCE_PREFERENCES_URL = f"{settings.API_V1_STR}/users/me/source-preferences"
@@ -213,70 +216,6 @@ def test_dedup_config_priority_and_enabled_sets(
     # Unknown keys fall back to Other's priority.
     assert config.priority_for("SomethingCustom") == config.other_priority
     assert config.priority_for(None) == config.other_priority
-
-
-# --- deduplicate_episodes -------------------------------------------------
-
-
-# TODO: Validate
-def test_deduplicate_keeps_higher_priority_source(
-    session_scoped_session: Session,
-) -> None:
-    _installed_source_keys(session_scoped_session, 2)
-    config = source_dedup_config(session_scoped_session, None)
-    installed = source_keys(session_scoped_session)
-    higher, lower = installed[0], installed[1]
-
-    lower_episode = _episode("TMDB shared")
-    higher_episode = _episode("TMDB shared")
-    episode_source_keys = {lower_episode.id: lower, higher_episode.id: higher}
-
-    # Even though the lower-priority source comes first, the higher wins.
-    result = deduplicate_episodes(
-        [lower_episode, higher_episode],
-        episode_source_keys,
-        config,
-    )
-
-    assert len(result) == 1
-    assert result[0].id == higher_episode.id
-
-
-# TODO: Validate
-def test_deduplicate_preserves_order_and_removes_duplicates(
-    session_scoped_session: Session,
-) -> None:
-    installed = _installed_source_keys(session_scoped_session, 1)
-    config = source_dedup_config(session_scoped_session, None)
-    first = _episode("TMDB 1")
-    second = _episode("TMDB 2")
-    duplicate_of_first = _episode("TMDB 1")
-    episode_source_keys = {
-        first.id: installed[0],
-        second.id: installed[0],
-        duplicate_of_first.id: installed[0],
-    }
-
-    result = deduplicate_episodes(
-        [first, second, duplicate_of_first],
-        episode_source_keys,
-        config,
-    )
-
-    assert [episode.episode_identifier for episode in result] == ["TMDB 1", "TMDB 2"]
-
-
-# TODO: Validate
-def test_deduplicate_distinct_identifiers_all_kept(
-    session_scoped_session: Session,
-) -> None:
-    config = source_dedup_config(session_scoped_session, None)
-    episodes = [_episode(f"TMDB {index}") for index in range(3)]
-    episode_source_keys = {episode.id: OTHER_SOURCE_KEY for episode in episodes}
-
-    result = deduplicate_episodes(episodes, episode_source_keys, config)
-
-    assert len(result) == len(episodes)
 
 
 # --- API endpoints --------------------------------------------------------

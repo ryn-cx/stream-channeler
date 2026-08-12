@@ -17,6 +17,7 @@ writes the rest. A website's copy of a title TMDB holds never writes over it.
 """
 
 import uuid
+from collections import defaultdict
 from collections.abc import Collection
 
 from sqlmodel import Session, col, select, update
@@ -24,6 +25,7 @@ from sqlmodel import Session, col, select, update
 from app.canonical_episodes.models import CanonicalEpisode
 from app.canonical_media.keys import (
     is_tmdb_key,
+    record_key,
     tmdb_episode_key,
     tmdb_season_key,
     tmdb_show_key,
@@ -33,7 +35,7 @@ from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.watches.models import Watch
 
 
@@ -49,6 +51,48 @@ def canonical_show_by_key(session: Session, key: str) -> CanonicalShow:
     session.add(canonical)
     session.flush()
     return canonical
+
+
+# TODO: Validate
+def link_canonical_show(
+    session: Session,
+    show: Show,
+    canonical_show: CanonicalShow,
+) -> ShowCanonicalShow:
+    """Record that `show` is a copy of `canonical_show`, if it is not already.
+
+    A source that mixes titles is a copy of each of them, and which ones is only
+    ever learnt one at a time: a URL is imported under a TMDB id, a season turns
+    out to be another title's. So a title is added to what a copy stands for
+    rather than replacing what it stood for before.
+    """
+    for link in show.canonical_show_links:
+        if link.canonical_show is canonical_show or (
+            canonical_show.id is not None
+            and link.canonical_show_id == canonical_show.id
+        ):
+            return link
+    link = ShowCanonicalShow(show=show, canonical_show=canonical_show)
+    session.add(link)
+    return link
+
+
+# TODO: Validate
+def unlink_canonical_shows_except(
+    session: Session,
+    show: Show,
+    canonical_show_ids: Collection[uuid.UUID],
+) -> None:
+    """Drop the titles `show` has turned out not to be a copy of after all.
+
+    A title is only linked because something under the copy pointed at it, so a
+    re-import that points everything elsewhere leaves the link standing for
+    nothing. Kept in step with the copy rather than accumulated, so a title
+    nothing is of any more can be discarded.
+    """
+    for link in list(show.canonical_show_links):
+        if link.canonical_show_id not in canonical_show_ids:
+            session.delete(link)
 
 
 # TODO: Validate
@@ -162,15 +206,37 @@ def canonical_ids_by_key(
 
 
 # TODO: Validate
-def _record_key(plugin_key: str, record: Show | Season | Episode) -> str:
-    """Return the key naming what `record` is a copy of.
+def canonical_show_ids_by_key(
+    session: Session,
+    show_keys: Collection[str],
+) -> dict[str, set[uuid.UUID]]:
+    """Map each show key in `show_keys` to every title those copies are of.
 
-    A plugin's own key for a record already names the thing itself rather than
-    one listing of it — a YouTube episode is keyed by its video id, which is the
-    same id wherever that video turns up — so namespacing it by the plugin is
-    enough to make two copies of one work agree on a single row.
+    Every title rather than the chief one, since a copy that mixes titles is as
+    much a copy of the second as of the first, and a caller holding only a key -
+    an import saying what a URL brought in - has nothing to choose between them
+    with.
     """
-    return f"{plugin_key} {record.key}"
+    if not show_keys:
+        return {}
+    rows = session.exec(
+        select(  # type: ignore[call-overload]
+            Show.key,
+            ShowCanonicalShow.canonical_show_id,
+        )
+        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
+        .where(col(Show.key).in_(show_keys)),
+    ).all()
+    canonical_show_ids: dict[str, set[uuid.UUID]] = defaultdict(set)
+    for show_key, canonical_show_id in rows:
+        canonical_show_ids[show_key].add(canonical_show_id)
+    return canonical_show_ids
+
+
+# TODO: Validate
+def _record_key(plugin_key: str, record: Show | Season | Episode) -> str:
+    """Return the key naming what `record` is a copy of."""
+    return record_key(plugin_key, record.key)
 
 
 # TODO: Validate
@@ -209,30 +275,20 @@ def _copy_episode_metadata(episode: Episode, canonical: CanonicalEpisode) -> Non
 
 
 # TODO: Validate
-def standalone_show(
-    session: Session,
-    show: Show,
-    key: str | None = None,
-) -> CanonicalShow:
+def standalone_show(session: Session, show: Show, key: str) -> CanonicalShow:
     """Return the row the title `show` is a copy of, creating it if needed.
 
     A row the linker already pointed it at is kept, so what is recorded against
-    a title survives it being imported again. Otherwise `key` is what says which
-    title this is, and every copy claiming that key converges on one row.
+    a title survives it being imported again — and so does the TMDB row, which
+    is the point of the linker having pointed at it. Otherwise `key` is what
+    says which title this is, and every copy claiming that key converges on one
+    row.
     """
     if show.canonical_show_id:
         kept = session.get(CanonicalShow, show.canonical_show_id)
-        # A row somebody has claimed — by key, or by being TMDB's — is the
-        # answer. One the flush hook minted to satisfy the pointer has claimed
-        # nothing, so it gives way to the key naming what this really is.
-        if kept and (kept.key or not key):
+        if kept:
             return kept
-    if key:
-        return canonical_show_by_key(session, key)
-    canonical = CanonicalShow()
-    session.add(canonical)
-    session.flush()
-    return canonical
+    return canonical_show_by_key(session, key)
 
 
 # TODO: Validate
@@ -240,21 +296,16 @@ def standalone_season(
     session: Session,
     season: Season,
     canonical_show: CanonicalShow,
-    key: str | None = None,
+    key: str,
 ) -> CanonicalSeason:
     """Return the row the season `season` is a copy of, creating it if needed."""
     if season.canonical_season_id:
         kept = session.get(CanonicalSeason, season.canonical_season_id)
-        if kept and (kept.key or not key):
+        if kept:
             if not is_tmdb_key(kept.key):
                 kept.canonical_show_id = canonical_show.id
             return kept
-    if key:
-        return canonical_season_by_key(session, key, canonical_show.id)
-    canonical = CanonicalSeason(canonical_show_id=canonical_show.id)
-    session.add(canonical)
-    session.flush()
-    return canonical
+    return canonical_season_by_key(session, key, canonical_show.id)
 
 
 # TODO: Validate
@@ -262,7 +313,7 @@ def standalone_episode(
     session: Session,
     episode: Episode,
     canonical_season: CanonicalSeason,
-    key: str | None = None,
+    key: str,
 ) -> CanonicalEpisode:
     """Return the row the episode `episode` is a copy of, creating it if needed.
 
@@ -272,16 +323,11 @@ def standalone_episode(
     """
     if episode.canonical_episode_id:
         kept = session.get(CanonicalEpisode, episode.canonical_episode_id)
-        if kept and (kept.key or not key):
+        if kept:
             if not is_tmdb_key(kept.key):
                 kept.canonical_season_id = canonical_season.id
             return kept
-    if key:
-        return canonical_episode_by_key(session, key, canonical_season.id)
-    canonical = CanonicalEpisode(canonical_season_id=canonical_season.id)
-    session.add(canonical)
-    session.flush()
-    return canonical
+    return canonical_episode_by_key(session, key, canonical_season.id)
 
 
 # TODO: Validate
@@ -296,8 +342,6 @@ def _repoint_watches(
     so settling a match by hand carries the watch history over with it rather
     than leaving it against the row the copy has moved off.
     """
-    if canonical.key is None:
-        return
     session.execute(
         update(Watch)
         .where(
@@ -330,9 +374,8 @@ def _episode_keys_under_season(
 ) -> list[str]:
     return list(
         session.exec(
-            select(CanonicalEpisode.key).where(  # type: ignore[arg-type]
+            select(CanonicalEpisode.key).where(
                 CanonicalEpisode.canonical_season_id == canonical_season_id,
-                col(CanonicalEpisode.key).is_not(None),
             ),
         ).all(),
     )
@@ -345,15 +388,12 @@ def _episode_keys_under_show(
 ) -> list[str]:
     return list(
         session.exec(
-            select(CanonicalEpisode.key)  # type: ignore[arg-type]
+            select(CanonicalEpisode.key)
             .join(
                 CanonicalSeason,
                 col(CanonicalSeason.id) == col(CanonicalEpisode.canonical_season_id),
             )
-            .where(
-                CanonicalSeason.canonical_show_id == canonical_show_id,
-                col(CanonicalEpisode.key).is_not(None),
-            ),
+            .where(CanonicalSeason.canonical_show_id == canonical_show_id),
         ).all(),
     )
 
@@ -375,7 +415,7 @@ def discard_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
     abandoned = session.get(CanonicalEpisode, canonical_id)
     if abandoned is None or is_tmdb_key(abandoned.key):
         return
-    if abandoned.key and _is_watched(session, [abandoned.key]):
+    if _is_watched(session, [abandoned.key]):
         return
     session.delete(abandoned)
 
@@ -384,17 +424,27 @@ def discard_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
 def _discard_show_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
     """Delete a canonical title no copy is of any more, and its seasons with it.
 
-    Only ever an unclaimed row: one the flush hook minted to satisfy a pointer
-    and that the key then moved the copy off. A title anybody claimed is left
-    alone, and so is one whose cascade would take an episode somebody watched.
+    Only ever a row a website issued the key of: one the flush hook made for a
+    copy that the linker then moved onto TMDB's. A row TMDB holds is left alone,
+    since it stands for the title whether or not any copy of it is stored here,
+    and so is one whose cascade would take an episode somebody watched.
     """
     abandoned = session.get(CanonicalShow, canonical_id)
-    if abandoned is None or abandoned.key:
+    if abandoned is None or is_tmdb_key(abandoned.key):
         return
     still_used = session.exec(
         select(Show.id).where(Show.canonical_show_id == canonical_id),
     ).first()
     if still_used is not None:
+        return
+    # A copy that mixes titles stands for this one without it being the title its
+    # own name belongs to, and that is as much a reason to keep the row.
+    still_linked = session.exec(
+        select(ShowCanonicalShow.show_id).where(
+            ShowCanonicalShow.canonical_show_id == canonical_id,
+        ),
+    ).first()
+    if still_linked is not None:
         return
     if _is_watched(session, _episode_keys_under_show(session, canonical_id)):
         return
@@ -403,9 +453,9 @@ def _discard_show_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
 
 # TODO: Validate
 def _discard_season_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
-    """Delete a canonical season no copy is of any more, if nobody claimed it."""
+    """Delete a canonical season no copy is of any more, unless TMDB holds it."""
     abandoned = session.get(CanonicalSeason, canonical_id)
-    if abandoned is None or abandoned.key:
+    if abandoned is None or is_tmdb_key(abandoned.key):
         return
     still_used = session.exec(
         select(Season.id).where(Season.canonical_season_id == canonical_id),
@@ -486,6 +536,11 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
     this is, which is what decides whether it may write the metadata: a row TMDB
     holds is described by TMDB itself, and every other copy of it only points at
     the row.
+
+    Which titles the copy stands for is settled here too, from the titles its
+    seasons turn out to be under. A season the TMDB linker put under another
+    title is what makes a mixed listing a copy of more than one title, and it is
+    the seasons rather than the listing that say so.
     """
     from app.media.identifiers import (
         TMDB_PLUGIN_KEY,
@@ -503,6 +558,7 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
     abandoned_shows = {previous_show_id} if previous_show_id else set()
     abandoned_seasons: set[uuid.UUID] = set()
     abandoned_episodes: set[uuid.UUID] = set()
+    canonical_seasons: list[CanonicalSeason] = []
 
     for season in show.seasons:
         previous_season_id = season.canonical_season_id
@@ -513,6 +569,7 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
             _record_key(plugin_key, season),
         )
         season.canonical_season = canonical_season
+        canonical_seasons.append(canonical_season)
         if not is_tmdb_key(canonical_season.key) or plugin_key == TMDB_PLUGIN_KEY:
             _copy_season_metadata(season, canonical_season)
         if previous_season_id and previous_season_id != canonical_season.id:
@@ -535,6 +592,8 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
                 if previous_id:
                     abandoned_episodes.add(previous_id)
 
+    _relink_titles(session, show, canonical_show, canonical_seasons)
+
     _discard_abandoned(
         session,
         kept_show_id=canonical_show.id,
@@ -542,3 +601,31 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
         seasons=abandoned_seasons,
         episodes=abandoned_episodes,
     )
+
+
+# TODO: Validate
+def _relink_titles(
+    session: Session,
+    show: Show,
+    canonical_show: CanonicalShow,
+    canonical_seasons: Collection[CanonicalSeason],
+) -> None:
+    """Record every title `show` turns out to be a copy of, and only those.
+
+    The chief title is one of them whether or not a season is under it, since it
+    is what the copy's own name and metadata belong to and what a caller with one
+    title to work with means.
+    """
+    session.flush()
+    canonical_show_ids = {canonical_show.id} | {
+        canonical_season.canonical_show_id for canonical_season in canonical_seasons
+    }
+    for canonical_show_id in canonical_show_ids:
+        title = session.get(CanonicalShow, canonical_show_id)
+        if title is not None:
+            link_canonical_show(session, show, title)
+    # Written before the spare ones are weighed, so every link is a stored row
+    # with a title to be read off it rather than one still only in the session.
+    session.flush()
+    unlink_canonical_shows_except(session, show, canonical_show_ids)
+    session.flush()

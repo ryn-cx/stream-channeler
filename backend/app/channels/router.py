@@ -17,6 +17,8 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.canonical_shows.models import CanonicalShow
 from app.channels import service
 from app.channels.channel_scope import (
@@ -78,7 +80,6 @@ from app.media.schemas import MediaOwner
 from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
-from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
@@ -597,14 +598,10 @@ def get_channel_shows(
         ],
     )
 
-    output.stats = _channel_show_stats(
-        session,
-        {
-            show.canonical_show_id
-            for show in [*output.shows, *output.filter_only_shows]
-            if show.canonical_show_id
-        },
-    )
+    # Every title the channel holds rather than the titles its copies are chiefly
+    # of, since a copy that mixes titles is listed under whichever of them the
+    # channel was told to hold.
+    output.stats = _channel_show_stats(session, canonical_show_ids)
 
     return output
 
@@ -618,31 +615,37 @@ def _channel_show_stats(
 
     The same season and episode are carried by every website holding the title,
     so they are counted as the seasons and episodes they are rather than as the
-    records holding them.
+    records holding them. Which title an episode counts towards is the episode's
+    own answer, so a listing that mixes titles counts each of its episodes only
+    towards the title that episode belongs to.
     """
     if not canonical_show_ids:
         return {}
 
     rows = session.exec(
         select(
-            Show.canonical_show_id,
-            func.count(distinct(col(Season.canonical_season_id))),
-            func.count(distinct(col(Episode.canonical_episode_id))),
+            CanonicalSeason.canonical_show_id,
+            func.count(distinct(col(CanonicalSeason.id))),
+            func.count(distinct(col(CanonicalEpisode.id))),
             func.min(
                 case(
                     (col(Episode.release_date) > EPOCH, col(Episode.release_date)),
                 ),
             ),
         )
-        .join(Season, col(Season.show_id) == col(Show.id))
-        .join(Episode, col(Episode.season_id) == col(Season.id))
+        .join(
+            CanonicalEpisode,
+            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+        )
+        .join(
+            Episode,
+            col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+        )
         .where(
-            col(Show.canonical_show_id).in_(canonical_show_ids),
-            col(Show.deleted_at).is_(None),
-            col(Season.deleted_at).is_(None),
+            col(CanonicalSeason.canonical_show_id).in_(canonical_show_ids),
             col(Episode.deleted_at).is_(None),
         )
-        .group_by(col(Show.canonical_show_id)),
+        .group_by(col(CanonicalSeason.canonical_show_id)),
     ).all()
 
     return {

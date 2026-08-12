@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.config import settings
-from tests.app.utils.base import SUPPORTED_MODELS, BaseTests, CreatedTestData
-from tests.app.utils.route_assertions import (
+from tests.old_mess.app.utils.base import SUPPORTED_MODELS, BaseTests, CreatedTestData
+from tests.old_mess.app.utils.route_assertions import (
     assert_not_found,
     assert_success,
     make_request,

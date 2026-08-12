@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import canonical_ids_by_key
+from app.canonical_media.service import canonical_show_ids_by_key
+from app.canonical_shows.models import CanonicalShow
 from app.channels.service import shows_by_canonical_id
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin
@@ -23,7 +24,7 @@ class ImportURLMixin(
     def import_url(
         self,
         url: str,
-        tmdb_id: int | None = None,
+        canonical_show: CanonicalShow | None = None,
     ) -> list[URLImportResult]:
         """Import the title from every source JustWatch has an offer for.
 
@@ -32,10 +33,10 @@ class ImportURLMixin(
         plugin are imported from JustWatch's own data.
 
         Every source's copy of a title is the same title, so a caller that knows
-        which TMDB title this is says so once here and every plugin below works
-        from it instead of searching TMDB for the title by its own name.
+        which title this is says so once here and every plugin below works from it
+        instead of searching TMDB for the title by its own name.
         """
-        self._use_tmdb_id(tmdb_id)
+        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
@@ -58,21 +59,18 @@ class ImportURLMixin(
                 continue
             imported_offer_urls.add(offer_url)
 
-            # The TMDB id is what ties a feed hit back to the copy the other
+            # The title is what ties a feed hit back to the copy the other
             # plugin stores, and a title can be delegated on every service it is
             # on, so it is resolved here rather than when a show is upserted.
-            title_tmdb_id = self._cached_tmdb_id(handler.show_key)
+            title = self._canonical_show_to_hand_off(handler.show_key)
 
-            plugin_results = plugin_class(self.session).import_url(
-                offer_url,
-                title_tmdb_id,
-            )
+            plugin_results = plugin_class(self.session).import_url(offer_url, title)
             results.extend(
                 self._delegated_results(
                     handler,
                     plugin_class,
                     plugin_results,
-                    title_tmdb_id,
+                    title,
                 ),
             )
 
@@ -86,7 +84,7 @@ class ImportURLMixin(
         handler: JustWatchURLHandler,
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
-        tmdb_id: int | None,
+        canonical_show: CanonicalShow | None,
     ) -> list[URLImportResult]:
         """Return what another plugin imported, scoped to this plugin's URL.
 
@@ -99,7 +97,7 @@ class ImportURLMixin(
                 handler,
                 plugin_class,
                 plugin_results,
-                tmdb_id,
+                canonical_show,
             )
         return handler.narrow_to_season(plugin_results)
 
@@ -109,7 +107,7 @@ class ImportURLMixin(
         handler: JustWatchURLHandler,
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
-        tmdb_id: int | None,
+        canonical_show: CanonicalShow | None,
     ) -> list[URLImportResult]:
         """Return the whole title the Crunchyroll offer's episode belongs to.
 
@@ -120,8 +118,8 @@ class ImportURLMixin(
         names the title by identifier, so the stored copy is looked up to read
         that URL off it. The show is already stored by then, so the second import
         reuses it rather than downloading anything again. It is a fresh instance,
-        so it is told the TMDB title again rather than being left to search for
-        it by name.
+        so it is told the title again rather than being left to search for it by
+        name.
         """
         if len(plugin_results) != 1 or not plugin_results[0].episode_keys:
             msg = (
@@ -131,15 +129,15 @@ class ImportURLMixin(
             raise ValueError(msg)
 
         result_show_key = plugin_results[0].show_key
-        canonical_show_id = canonical_ids_by_key(
+        canonical_show_ids = canonical_show_ids_by_key(
             self.session,
             {result_show_key},
-            Show,
-        ).get(result_show_key)
-        copies = shows_by_canonical_id(self.session, {canonical_show_id})
+        ).get(result_show_key, set())
+        copies = shows_by_canonical_id(self.session, canonical_show_ids)
         show = next(
             (
                 copy
+                for canonical_show_id in canonical_show_ids
                 for copy in copies[canonical_show_id]
                 if copy.source.plugin.key == plugin_class.plugin_key() and copy.url
             ),
@@ -150,7 +148,7 @@ class ImportURLMixin(
             raise ValueError(msg)
 
         return handler.narrow_to_season(
-            plugin_class(self.session).import_url(show.url, tmdb_id),
+            plugin_class(self.session).import_url(show.url, canonical_show),
         )
 
     # TODO: Validate

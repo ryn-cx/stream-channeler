@@ -10,21 +10,21 @@ from sqlmodel import Session, select
 
 from app.config import settings
 from app.users.models import User
-from tests.app.users.utils import create_random_user
-from tests.app.utils.base import (
+from tests.old_mess.app.users.utils import create_random_user
+from tests.old_mess.app.utils.base import (
     CREATE_SCHEMAS,
     OUTPUT_SCHEMAS,
     SUPPORTED_MODELS,
     BaseTests,
 )
-from tests.app.utils.route_assertions import (
+from tests.old_mess.app.utils.route_assertions import (
     assert_conflict,
     assert_not_found,
     assert_success,
     assert_success_list,
     assert_unprocessable,
 )
-from tests.app.utils.utils import (
+from tests.old_mess.app.utils.utils import (
     build_random_model,
     dump_random_model,
     random_bool,

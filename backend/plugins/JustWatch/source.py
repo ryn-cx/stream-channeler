@@ -14,7 +14,7 @@ from app.files.models import File
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from plugins.JustWatch.files import NewTitleBucket, NewTitles
 from plugins.JustWatch.upsert import UpsertMixin
@@ -32,10 +32,8 @@ class SourceMixin(UpsertMixin, register=False):
         providers_file = self.providers_locale_file()
         providers_file.download_if_outdated()
 
-        bucket = self.new_titles_bucket_file(providers_file.data_timestamp)
-        bucket.download_if_outdated()
-
-        self._download_new_titles_bucket_if_missing()
+        if not self._get_latest_new_titles_bucket().first():
+            self.new_titles_bucket_file(providers_file.data_timestamp)
         self._download_new_titles()
 
         self._upsert_sources()
@@ -204,7 +202,11 @@ class SourceMixin(UpsertMixin, register=False):
         # have issued the id under are matched.
         statement = (
             select(Show)
-            .join(CanonicalShow, col(Show.canonical_show_id) == CanonicalShow.id)
+            .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
+            .join(
+                CanonicalShow,
+                col(ShowCanonicalShow.canonical_show_id) == CanonicalShow.id,
+            )
             .join(Source)
             .join(Plugin)
             .where(

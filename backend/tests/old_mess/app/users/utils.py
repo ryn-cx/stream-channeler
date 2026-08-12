@@ -9,7 +9,7 @@ from app.config import settings
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate, UserUpdate
-from tests.app.utils.utils import random_email, random_lower_string
+from tests.old_mess.app.utils.utils import random_email, random_lower_string
 
 
 # TODO: Validate

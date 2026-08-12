@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from tests.app.users.utils import CreatedUser
+from tests.old_mess.app.users.utils import CreatedUser
 
 type Method = Literal["get", "post", "put", "patch", "delete"]
 

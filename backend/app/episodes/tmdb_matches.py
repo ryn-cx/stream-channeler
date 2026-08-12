@@ -9,10 +9,11 @@ could not make can be made by hand instead.
 
 import uuid
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from difflib import SequenceMatcher
 
 from fastapi import HTTPException
+from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
 from app.canonical_episodes.models import CanonicalEpisode
@@ -21,6 +22,7 @@ from app.canonical_media.keys import (
     SHOW_LEVEL,
     not_tmdb_key_clause,
     parse_tmdb_key,
+    record_key,
     tmdb_episode_key,
     tmdb_id_of,
     tmdb_key_clause,
@@ -45,7 +47,7 @@ from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 
 # An unnumbered season or episode is ordered after every numbered one.
@@ -197,6 +199,30 @@ def _best_match(
 
 
 # TODO: Validate
+def _has_tmdb_title() -> ColumnElement[bool]:
+    """Whether TMDB holds any of the titles the outer `Show` is a copy of.
+
+    Any of them rather than the one it is chiefly of, since a listing that mixes
+    titles is as much a copy of the second as of the first and an episode of
+    either is one there are TMDB episodes to match it against.
+    """
+    return (
+        select(ShowCanonicalShow.show_id)
+        .select_from(ShowCanonicalShow)
+        .join(
+            CanonicalShow,
+            onclause=col(ShowCanonicalShow.canonical_show_id) == CanonicalShow.id,
+        )
+        .where(
+            col(ShowCanonicalShow.show_id) == col(Show.id),
+            tmdb_key_clause(col(CanonicalShow.key)),
+        )
+        .correlate(Show)
+        .exists()
+    )
+
+
+# TODO: Validate
 def _unmatched_rows(
     session: Session,
     limit: int,
@@ -211,17 +237,13 @@ def _unmatched_rows(
             CanonicalEpisode,
             onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
         )
-        .join(
-            CanonicalShow,
-            onclause=col(Show.canonical_show_id) == CanonicalShow.id,
-        )
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
-            # The episode is a copy of something TMDB has no record of, while
-            # the title above it is one TMDB does hold: that gap is exactly what
-            # is left to match.
+            # The episode is a copy of something TMDB has no record of, while one
+            # of the titles above it is one TMDB does hold: that gap is exactly
+            # what is left to match.
             not_tmdb_key_clause(col(CanonicalEpisode.key)),
-            tmdb_key_clause(col(CanonicalShow.key)),
+            _has_tmdb_title(),
             # A locked link is one a `User` has already settled, whether by
             # pointing the episode at a TMDB record or by saying there is none to
             # point it at, so it is no longer waiting on anybody.
@@ -276,6 +298,40 @@ def _candidates_by_show(
 
 
 # TODO: Validate
+def _candidates_for_shows(
+    session: Session,
+    shows: Collection[Show],
+) -> tuple[dict[uuid.UUID, list[_Candidate]], dict[uuid.UUID, dict[uuid.UUID, int]]]:
+    """Return the TMDB episodes each listing can be matched against, and their count.
+
+    Every title a listing is a copy of contributes its episodes, since a listing
+    that mixes titles has episodes of each of them and nothing but the match says
+    which episode is which. Each title is counted through on its own, so an
+    episode's place in a title is where that title puts it rather than where the
+    two of them run together would.
+    """
+    by_title = _candidates_by_show(
+        session,
+        {
+            canonical_show_id
+            for show in shows
+            for canonical_show_id in show.canonical_show_ids
+        },
+    )
+    candidates: dict[uuid.UUID, list[_Candidate]] = {}
+    numbers: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
+    for show in shows:
+        titles = [by_title.get(title, []) for title in show.canonical_show_ids]
+        candidates[show.id] = [candidate for title in titles for candidate in title]
+        numbers[show.id] = {
+            candidate_id: number
+            for title in titles
+            for candidate_id, number in _candidate_absolute_numbers(title).items()
+        }
+    return candidates, numbers
+
+
+# TODO: Validate
 def _source_absolute_numbers(
     session: Session,
     show_ids: set[uuid.UUID],
@@ -322,18 +378,10 @@ def list_unmatched_episodes(
     choose from.
     """
     rows = _unmatched_rows(session, limit)
-    candidates = _candidates_by_show(
+    candidates, candidate_numbers = _candidates_for_shows(
         session,
-        {
-            show.canonical_show_id
-            for _episode, _season, show, _source in rows
-            if show.canonical_show_id
-        },
+        {show for _episode, _season, show, _source in rows},
     )
-    candidate_numbers = {
-        canonical_show_id: _candidate_absolute_numbers(show_candidates)
-        for canonical_show_id, show_candidates in candidates.items()
-    }
     source_numbers = _source_absolute_numbers(
         session,
         {show.id for _episode, _season, show, _source in rows},
@@ -358,8 +406,8 @@ def list_unmatched_episodes(
             best_match=_best_match(
                 episode,
                 season,
-                candidates.get(show.canonical_show_id, []),
-                candidate_numbers.get(show.canonical_show_id, {}),
+                candidates.get(show.id, []),
+                candidate_numbers.get(show.id, {}),
             ),
         )
         for episode, season, show, source in rows
@@ -387,7 +435,7 @@ def _unlocked_rows(
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
             col(Episode.canonical_episode_locked).is_(False),
-            tmdb_key_clause(col(CanonicalShow.key)),
+            _has_tmdb_title(),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -413,18 +461,10 @@ def list_unlocked_episodes(
     no TMDB counterpart has no episodes to be matched against.
     """
     rows = _unlocked_rows(session, limit)
-    candidates = _candidates_by_show(
+    candidates, candidate_numbers = _candidates_for_shows(
         session,
-        {
-            show.canonical_show_id
-            for _episode, _season, show, _source in rows
-            if show.canonical_show_id
-        },
+        {show for _episode, _season, show, _source in rows},
     )
-    candidate_numbers = {
-        canonical_show_id: _candidate_absolute_numbers(show_candidates)
-        for canonical_show_id, show_candidates in candidates.items()
-    }
     source_numbers = _source_absolute_numbers(
         session,
         {show.id for _episode, _season, show, _source in rows},
@@ -435,8 +475,8 @@ def list_unlocked_episodes(
         best_match = _best_match(
             episode,
             season,
-            candidates.get(show.canonical_show_id, []),
-            candidate_numbers.get(show.canonical_show_id, {}),
+            candidates.get(show.id, []),
+            candidate_numbers.get(show.id, {}),
         )
         outputs.append(
             UnlockedEpisodeOutput(
@@ -528,23 +568,29 @@ def list_tmdb_episode_choices(
     way the website that holds it does. Each carries how much of its name it
     shares with `episode`, which is the other order they are worth reading in.
 
-    The title is the one the episode's show is linked to, unless another is named
-    outright. TMDB files some episodes under a title of their own, so an episode
-    is not always among the episodes of the title its show is, and naming the
-    title it is under is the only way to reach it.
+    The titles are the ones the episode's show is linked to, unless another is
+    named outright. TMDB files some episodes under a title of their own, so an
+    episode is not always among the episodes of the titles its show is, and naming
+    the title it is under is the only way to reach it.
     """
-    canonical_show_id = (
-        episode.season.show.canonical_show_id
+    canonical_show_ids = (
+        episode.season.show.canonical_show_ids
         if tmdb_show_id is None
-        else _imported_title(session, tmdb_show_id)
+        else [_imported_title(session, tmdb_show_id)]
     )
-    if canonical_show_id is None:
+    if not canonical_show_ids:
         return []
-    candidates = _candidates_by_show(session, {canonical_show_id}).get(
-        canonical_show_id,
-        [],
-    )
-    absolute_numbers = _candidate_absolute_numbers(candidates)
+    by_title = _candidates_by_show(session, set(canonical_show_ids))
+    titles = [
+        by_title.get(canonical_show_id, [])
+        for canonical_show_id in canonical_show_ids
+    ]
+    candidates = [candidate for title in titles for candidate in title]
+    absolute_numbers = {
+        candidate_id: number
+        for title in titles
+        for candidate_id, number in _candidate_absolute_numbers(title).items()
+    }
     used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
     choices = [
         choice
@@ -656,10 +702,11 @@ def _import_named_media(
     episode was picked off the list.
 
     A movie is its own record, so an id said to be a movie's is the movie and is
-    read in from that alone, whatever title the show is linked to. A series
+    read in from that alone, whatever titles the show is linked to. A series
     numbers its episodes apart from the series itself, so an episode's id names
-    no title to read in and the title the show is linked to is all there is to
-    go on.
+    no title to read in and the titles the show is linked to are all there is to
+    go on - every one of them, since a listing that mixes titles could have the
+    episode under any of them.
 
     Imported here rather than at the top of the module because the TMDB plugin
     is built on the base every plugin is, which reads this module in turn.
@@ -671,13 +718,12 @@ def _import_named_media(
         tmdb.import_title(MediaType.movie, tmdb_episode_id)
         return
 
-    canonical_show = episode.season.show.canonical_show
-    linked = parse_tmdb_key(canonical_show.key, SHOW_LEVEL) if canonical_show else None
-    if linked is None:
-        return
-
-    linked_media_type, linked_tmdb_id = linked
-    tmdb.import_title(linked_media_type, linked_tmdb_id)
+    for canonical_show in episode.season.show.canonical_shows:
+        linked = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
+        if linked is None:
+            continue
+        linked_media_type, linked_tmdb_id = linked
+        tmdb.import_title(linked_media_type, linked_tmdb_id)
 
 
 # TODO: Validate
@@ -730,7 +776,12 @@ def _unlink_others_sharing(
         point_episode_at(
             session,
             other,
-            standalone_episode(session, other, other.season.canonical_season),
+            standalone_episode(
+                session,
+                other,
+                other.season.canonical_season,
+                record_key(other.season.show.source.plugin.key, other.key),
+            ),
         )
 
 

@@ -30,12 +30,14 @@ class BaseCanonicalEpisode(SQLModel):
 
     # What makes two copies of this episode one episode rather than two, and the
     # whole of what says which TMDB record an episode is. Namespaced by whoever
-    # issued it — "TMDB tv episode 63056" for a record TMDB holds, "YouTube
+    # issued it — "TMDB episode 63056" for a record TMDB holds, "YouTube
     # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
     # collide on it. Unique within one season rather than across all of them,
     # since a plugin only promises a key means one thing under the season
-    # holding it. `None` while nothing has claimed the episode.
-    key: str | None = Field(default=None)
+    # holding it. Every row has one from the moment it is made: an episode
+    # nothing can name is an episode nothing can converge on, and a `Watch`
+    # holds the key rather than the row.
+    key: str = Field()
 
     name: str | None = Field(default=None)
     # The episode's own page, as against a copy's `url`, which is where that

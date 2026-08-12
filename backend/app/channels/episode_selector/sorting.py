@@ -6,9 +6,12 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import String, case, literal, literal_column
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
@@ -20,7 +23,6 @@ from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
@@ -122,10 +124,13 @@ class SortExpressionBuilder:
             # together, which is what a random sort on a channel is asking for.
             return self.random_hash(channel_expr) if field == "random" else channel_expr
         if field == "random":
+            # The media a copy is of rather than the copy, so every website's copy
+            # of one episode is shuffled to the same place and a title stays
+            # together however many websites carry it.
             random_ids: dict[str, Any] = {
-                "episode": Episode.id,
-                "season": Season.id,
-                "show": Show.id,
+                "episode": col(CanonicalEpisode.id),
+                "season": self._fallbacks.episode_season_id(),
+                "show": self._fallbacks.show_id(),
                 "source": Source.id,
                 "plugin": Plugin.id,
             }
@@ -142,7 +147,9 @@ class SortExpressionBuilder:
                 f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
             )
         if field == "episode_count":
-            return func.count(Episode.id).over(partition_by=col(Show.id))  # type: ignore[arg-type]
+            return func.count(col(CanonicalEpisode.id)).over(
+                partition_by=self._fallbacks.show_id(),
+            )
         if field == "started" and sort_key.model == "show":
             return self._started_show_expr()
 
@@ -173,11 +180,13 @@ class SortExpressionBuilder:
             )
 
         if sort_key.field == "random":
-            episode_field: ColumnElement[Any] = self.random_hash(Show.id)  # type: ignore[arg-type]
+            episode_field: ColumnElement[Any] = self.random_hash(
+                self._fallbacks.show_id(),
+            )
         elif sort_key.field == "recently_aired":
             episode_field = self._recently_aired_expr(sort_key)
         elif sort_key.field == "episode_count":
-            episode_field = Episode.id  # type: ignore[assignment]
+            episode_field = col(CanonicalEpisode.id)
         else:
             episode_field = self._stored_column("episode", sort_key.field, Episode)
 
@@ -190,7 +199,9 @@ class SortExpressionBuilder:
         if agg_func is None:
             msg = f"Unsupported aggregation '{sort_key.aggregation}'"
             raise ValueError(msg)
-        return agg_func(episode_field).over(partition_by=col(Show.id))
+        # Aggregated over the title rather than over one website's copy of it, so
+        # a channel carrying a title twice reads one number for it either way.
+        return agg_func(episode_field).over(partition_by=self._fallbacks.show_id())
 
     # TODO: Validate
     def _sequential_rank(
@@ -206,19 +217,19 @@ class SortExpressionBuilder:
         position within the visible set rather than position within the
         full table.
 
-        Two websites number the same media differently, so the order goes by
-        TMDB's numbering alone and the copies TMDB has no number for follow
-        every copy it does, in the order their own website put them. Ranking
-        runs over the whole title rather than one website's copy of it, since a
+        Two websites number the same media differently, so the order goes by the
+        numbering the canonical row carries and by nothing else. Ranking runs
+        over the whole title rather than one website's copy of it, since a
         website that carries only a later season would otherwise have its first
-        season rank alongside another website's first.
+        season rank alongside another website's first. A canonical row with no
+        number of its own follows every row that has one, ordered by where the
+        row itself says it sits.
 
-        Which season an episode belongs to is TMDB's answer as well, taken from
-        the episode's own TMDB counterpart rather than from the season the
+        Which season an episode belongs to is the canonical answer as well, taken
+        from the episode's own canonical row rather than from the season the
         website filed it under. A website that files a special alongside a
-        season's episodes still has it sorted where TMDB keeps it, and a season
-        whose own link is the only one there is stands in for an episode TMDB
-        does not have.
+        season's episodes still has it sorted where the canonical hierarchy keeps
+        it.
 
         `zero_last_numbers` ranks a season or an episode numbered 0 after the rest
         of the run rather than ahead of it, which is where the specials belong.
@@ -231,38 +242,21 @@ class SortExpressionBuilder:
         if model == "episode":
             canonical_number = numbered(self._fallbacks.number("episode"))
             return func.dense_rank().over(
-                partition_by=func.coalesce(
-                    self._fallbacks.episode_season_id(),
-                    col(Season.id),
-                ),
+                partition_by=self._fallbacks.episode_season_id(),
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    case(
-                        (
-                            canonical_number.is_(None),
-                            numbered(col(Episode.episode_number)),
-                        ),
-                    ),
+                    self._fallbacks.column("episode", "sort_order", Episode),
                 ),
             )
         if model == "season":
             canonical_number = numbered(self._fallbacks.number("season"))
             return func.dense_rank().over(
-                partition_by=func.coalesce(
-                    self._fallbacks.show_id(),
-                    col(Show.id),
-                ),
+                partition_by=self._fallbacks.show_id(),
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    case(
-                        (
-                            canonical_number.is_(None),
-                            numbered(col(Season.season_number)),
-                        ),
-                    ),
-                    case((canonical_number.is_(None), col(Season.sort_order))),
+                    self._fallbacks.column("season", "sort_order", Season),
                 ),
             )
         msg = f"sequential is not supported for model '{model}'"
@@ -281,19 +275,33 @@ class SortExpressionBuilder:
 
     # TODO: Validate
     def _started_show_expr(self) -> ColumnElement[Any]:
+        """Whether the `User` has watched anything of the title this episode is of.
+
+        A watch is recorded against the episode itself rather than against the
+        copy that played it, so a title counts as started whichever website it was
+        started on.
+        """
         if not self._user:
             return literal_column("0")
+        watched_episode = aliased(CanonicalEpisode)
+        watched_season = aliased(CanonicalSeason)
         started_query = (
             select(Watch.id)
-            .join(Episode, col(Watch.episode_id) == col(Episode.id))
-            .join(Season, Episode.season_id == Season.id)  # type: ignore[arg-type]
+            .join(
+                watched_episode,
+                col(watched_episode.key) == col(Watch.canonical_episode_key),
+            )
+            .join(
+                watched_season,
+                col(watched_episode.canonical_season_id) == col(watched_season.id),
+            )
             .where(
                 and_(
-                    col(Season.show_id) == col(Show.id),
+                    col(watched_season.canonical_show_id) == self._fallbacks.show_id(),
                     Watch.user_id == self._user.id,
                 ),
             )
-            .correlate(Show)
+            .correlate(CanonicalSeason)
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)

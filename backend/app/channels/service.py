@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlmodel import Session, col, delete, select
 
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
@@ -38,7 +40,7 @@ from app.plugins.models import Plugin
 from app.schemas import RecordScope, ScopedReadOptions
 from app.seasons.models import Season
 from app.service import scoped_list_response
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from app.users.models import User
 
@@ -103,26 +105,30 @@ def shows_by_canonical_id(
     """Return every website's copy of each title in `canonical_show_ids`.
 
     A `ChannelShow` names a title rather than one website's copy of it, so the
-    copies it stands for have to be looked up by the title they are all of.
+    copies it stands for have to be looked up by the title they are all of. A
+    listing that mixes titles is a copy of each of them and stands for the title
+    under every one of them.
     """
     grouped: dict[UUID, list[Show]] = defaultdict(list)
     if not canonical_show_ids:
         return grouped
 
-    shows = session.exec(
-        select(Show)
+    rows = session.exec(
+        select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
+        .select_from(ShowCanonicalShow)
+        .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
         .join(Source)
         .join(Plugin)
         .where(
-            col(Show.canonical_show_id).in_(canonical_show_ids),
+            col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
             col(Show.deleted_at).is_(None),
             # TMDB only supplies the metadata other websites left out, so its copy of
             # a title is never one of the websites the title can be watched on.
             Plugin.key != TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for show in shows:
-        grouped[show.canonical_show_id].append(show)
+    for canonical_show_id, show in rows:
+        grouped[canonical_show_id].append(show)
     return grouped
 
 
@@ -142,19 +148,52 @@ def tmdb_shows_by_canonical_id(
     if not canonical_show_ids:
         return grouped
 
-    shows = session.exec(
-        select(Show)
+    rows = session.exec(
+        select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
+        .select_from(ShowCanonicalShow)
+        .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
         .join(Source)
         .join(Plugin)
         .where(
-            col(Show.canonical_show_id).in_(canonical_show_ids),
+            col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
             col(Show.deleted_at).is_(None),
             Plugin.key == TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for show in shows:
-        grouped[show.canonical_show_id].append(show)
+    for canonical_show_id, show in rows:
+        grouped[canonical_show_id].append(show)
     return grouped
+
+
+# TODO: Validate
+def channel_show_for_show(
+    session: Session,
+    channel: Channel,
+    show: Show,
+) -> ChannelShow | None:
+    """Return the row putting one of the titles `show` is a copy of on `channel`.
+
+    A listing that mixes titles is on a channel under whichever of them was added,
+    which need not be the title the listing is chiefly of, so every title it is a
+    copy of is looked for. The chief title wins where the channel holds more than
+    one of them, since it is the one the listing itself is about.
+    """
+    canonical_show_ids = show.canonical_show_ids
+    if not canonical_show_ids:
+        return None
+    channel_shows = session.exec(
+        select(ChannelShow).where(
+            ChannelShow.channel_id == channel.id,
+            col(ChannelShow.canonical_show_id).in_(canonical_show_ids),
+        ),
+    ).all()
+    by_canonical_show = {
+        channel_show.canonical_show_id: channel_show for channel_show in channel_shows
+    }
+    for canonical_show_id in canonical_show_ids:
+        if channel_show := by_canonical_show.get(canonical_show_id):
+            return channel_show
+    return None
 
 
 # TODO: Validate
@@ -178,10 +217,15 @@ def tmdb_shows_for_channel_show(
     return list(
         session.exec(
             select(Show)
+            .join(
+                ShowCanonicalShow,
+                col(ShowCanonicalShow.show_id) == col(Show.id),
+            )
             .join(Source)
             .join(Plugin)
             .where(
-                col(Show.canonical_show_id) == channel_show.canonical_show_id,
+                col(ShowCanonicalShow.canonical_show_id)
+                == channel_show.canonical_show_id,
                 col(Show.deleted_at).is_(None),
                 Plugin.key == TMDB_PLUGIN_KEY,
             ),
@@ -376,6 +420,24 @@ def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
 
 
 # TODO: Validate
+def _canonical_show_id_of_episode(
+    session: Session,
+    canonical_episode_id: UUID | None,
+) -> UUID | None:
+    """Return the title the episode `canonical_episode_id` names belongs to."""
+    if canonical_episode_id is None:
+        return None
+    return session.exec(
+        select(CanonicalSeason.canonical_show_id)  # type: ignore[call-overload]
+        .join(
+            CanonicalEpisode,
+            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+        )
+        .where(CanonicalEpisode.id == canonical_episode_id),
+    ).one_or_none()
+
+
+# TODO: Validate
 def toggle_source_whitelist(
     session: Session,
     channel_show: ChannelShow,
@@ -477,23 +539,31 @@ def blacklist_episode_on_channel(
 ) -> ChannelShow:
     """Blacklist a single episode for `channel`.
 
-    Gets or creates the `ChannelShow` for the title `show` is a copy of. A newly created
-    `ChannelShow` is a filter-only show (`is_blacklist_only=True`) in blacklist mode, so
-    the title's other episodes are not pulled into the channel. Adds (or updates the
-    expiry of) a `ChannelEpisodeFilter` for the episode, which covers that episode on
-    every website the title is on.
+    Gets or creates the `ChannelShow` for the title the episode belongs to, which
+    is the episode's own answer rather than the listing's: a listing that mixes
+    titles holds episodes of each of them, and hiding one of its episodes is about
+    the title that episode is of. A newly created `ChannelShow` is a filter-only
+    show (`is_blacklist_only=True`) in blacklist mode, so the title's other
+    episodes are not pulled into the channel. Adds (or updates the expiry of) a
+    `ChannelEpisodeFilter` for the episode, which covers that episode on every
+    website the title is on.
     """
-    channel_show = ChannelShow.get(session, channel, show)
+    canonical_episode_id = _canonical_episode_id(session, episode_id)
+    canonical_show_id = (
+        _canonical_show_id_of_episode(session, canonical_episode_id)
+        or show.canonical_show_id
+    )
+
+    channel_show = ChannelShow.get(session, channel, canonical_show_id)
     if channel_show is None:
         channel_show = ChannelShow(
             channel_id=channel.id,
-            canonical_show_id=show.canonical_show_id,
+            canonical_show_id=canonical_show_id,
             is_whitelist=False,
             is_blacklist_only=True,
         )
         session.add(channel_show)
 
-    canonical_episode_id = _canonical_episode_id(session, episode_id)
     existing_filter = ChannelEpisodeFilter.get(
         session,
         channel_show,

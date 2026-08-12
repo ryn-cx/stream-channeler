@@ -13,6 +13,8 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
+from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_seasons.models import CanonicalSeason
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,
@@ -49,7 +51,7 @@ from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.watches.models import Watch
@@ -59,13 +61,8 @@ MAX_EPISODES_RETURNED = 1000
 
 # TODO: Validate
 def _media_id(episode: Episode) -> UUID:
-    """Return the media `episode` is a copy of, for grouping the copies by.
-
-    Falls back on the copy's own id so that a copy whose pointer has not been
-    filled in yet stands for itself, rather than every such copy reading as the
-    same media and all but one of them being dropped.
-    """
-    return episode.canonical_episode_id or episode.id
+    """Return the media `episode` is a copy of, for grouping the copies by."""
+    return episode.canonical_episode_id
 
 
 # TODO: Validate
@@ -165,20 +162,15 @@ class EpisodeQueryBuilder:
             select(
                 func.count(distinct(col(Show.source_id))),
                 func.count(distinct(col(Show.id))),
-                func.count(
-                    distinct(
-                        func.coalesce(
-                            col(Show.canonical_show_id),
-                            col(Show.id),
-                        ),
-                    ),
-                ),
+                func.count(distinct(col(ChannelShow.canonical_show_id))),
             )
             .select_from(ChannelShow)
             .join(
-                Show,
-                col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
+                ShowCanonicalShow,
+                col(ShowCanonicalShow.canonical_show_id)
+                == col(ChannelShow.canonical_show_id),
             )
+            .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
             .where(col(Show.deleted_at).is_(None))
@@ -254,14 +246,28 @@ class EpisodeQueryBuilder:
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
         # A channel holds titles rather than one website's copy of them, so every
         # copy of a title the channel holds is joined to the same `ChannelShow`.
+        #
+        # Which title an episode belongs to is read off the episode rather than
+        # off the listing holding it, because a listing can hold more than one:
+        # a channel that was told to hold one of the titles a listing mixes gets
+        # that title's episodes and not the listing's other ones.
         return (
             select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
             .select_from(Episode)
             .join(Season)
             .join(Show)
             .join(
+                CanonicalEpisode,
+                col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+            )
+            .join(
+                CanonicalSeason,
+                col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+            )
+            .join(
                 ChannelShow,
-                col(ChannelShow.canonical_show_id) == col(Show.canonical_show_id),
+                col(ChannelShow.canonical_show_id)
+                == col(CanonicalSeason.canonical_show_id),
             )
         )
 
@@ -546,13 +552,7 @@ class EpisodeQueryBuilder:
         return (
             func.rank()
             .over(
-                # Falling back on the copy's own id so that a copy whose pointer
-                # has not been filled in yet is ranked against itself alone,
-                # rather than every such copy collapsing into one group.
-                partition_by=func.coalesce(
-                    col(Episode.canonical_episode_id),
-                    col(Episode.id),
-                ),
+                partition_by=col(CanonicalEpisode.id),
                 order_by=[priority, col(Episode.id)],
             )
             .label("source_rank")
@@ -612,7 +612,11 @@ class EpisodeQueryBuilder:
             expressions.expression(sort_key).label(f"sort_value_{index}")
             for index, sort_key in enumerate(self._channel_options.sort_by)
         ]
-        labeled_values.append(col(Season.show_id).label("show_id"))
+        # The title rather than the website's listing of it, so the last tie-break
+        # keeps a title together however many websites and listings carry it.
+        labeled_values.append(
+            col(CanonicalSeason.canonical_show_id).label("show_id"),
+        )
         labeled_values.extend(self._source_rank_columns())
         # Every filter and sort has now asked for its columns, so the levels they
         # borrowed from TMDB are known and can be joined in before the values are

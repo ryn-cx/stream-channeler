@@ -11,6 +11,7 @@ from sqlmodel import (
     PrimaryKeyConstraint,
     Relationship,
     Session,
+    SQLModel,
     UniqueConstraint,
     select,
 )
@@ -21,6 +22,7 @@ from app.canonical_shows.models import CanonicalShow
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
+    TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
@@ -85,13 +87,56 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         Index("Show-canonical_show_id-index", "canonical_show_id"),
     )
 
-    # The title this is a copy of. Never absent: `canonical_media.hooks`
-    # gives a record one at the flush, before it can reach the database.
+    # The title this is chiefly a copy of. Never absent: `canonical_media.hooks`
+    # gives a record one at the flush, before it can reach the database. A source
+    # that mixes several titles into one listing is a copy of more than one, and
+    # the rest are reached through `canonical_show_links`; this one is the title
+    # the copy's own name and metadata belong to.
     canonical_show_id: uuid.UUID = Field(
         foreign_key="canonicalshow.id",
         ondelete="RESTRICT",
     )
     canonical_show: CanonicalShow = Relationship()
+
+    # Every title this is a copy of, `canonical_show_id` among them. A website
+    # that files two titles under one listing - a YouTube channel whose uploads
+    # are two series, a service that sells a sequel as another season - is a copy
+    # of each of them, and nothing about it says which of the two a caller means.
+    canonical_show_links: list[ShowCanonicalShow] = Relationship(
+        back_populates="show",
+        cascade_delete=True,
+    )
+
+    # TODO: Validate
+    @property
+    def canonical_shows(self) -> list[CanonicalShow]:
+        """Every title this is a copy of, the one it is chiefly a copy of first.
+
+        The chief title leads because it is the one a caller with only one title
+        to work with means, and the rest follow in the order they were linked.
+        """
+        linked = [
+            link.canonical_show
+            for link in self.canonical_show_links
+            if link.canonical_show_id != self.canonical_show_id
+        ]
+        return [self.canonical_show, *linked] if self.canonical_show else linked
+
+    # TODO: Validate
+    @property
+    def canonical_show_ids(self) -> list[uuid.UUID]:
+        """The id of every title this is a copy of, the chief one first."""
+        return [canonical_show.id for canonical_show in self.canonical_shows]
+
+    # TODO: Validate
+    @property
+    def tmdb_ids(self) -> list[int]:
+        """The TMDB title behind each title this is a copy of, where there is one."""
+        return [
+            tmdb_id
+            for canonical_show in self.canonical_shows
+            if (tmdb_id := tmdb_id_of(canonical_show.key, SHOW_LEVEL)) is not None
+        ]
 
     # TODO: Validate
     @property
@@ -196,3 +241,38 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         if self.id:
             base_show += f" ({self.id})"
         return f"{self.source}\n{base_show}"
+
+
+# TODO: Validate
+class BaseShowCanonicalShow(SQLModel):
+    """Base model for one of the titles a `Show` is a copy of."""
+
+    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
+    canonical_show_id: uuid.UUID = Field(
+        foreign_key="canonicalshow.id",
+        ondelete="CASCADE",
+    )
+
+
+# TODO: Validate
+class ShowCanonicalShow(BaseShowCanonicalShow, TimestampIdAndHashMixin, table=True):
+    """Model representing one of the titles a `Show` is a copy of.
+
+    A website's listing is a copy of one title in the ordinary case and of
+    several where the website mixes them, and there is nothing on the listing
+    that tells the two apart, so which titles it is of is stored rather than
+    inferred. `Show.canonical_show_id` is among them: the chief title has a row
+    here like any other, so a query asking which copies stand for a title can ask
+    one table and get the same answer either way.
+    """
+
+    __table_args__ = (
+        # Each title is linked to a copy at most once; the leading column also
+        # serves lookups of a copy's titles and cascade deletion with the copy.
+        PrimaryKeyConstraint("show_id", "canonical_show_id"),
+        # Used to find every copy standing for a title.
+        Index("ShowCanonicalShow-canonical_show_id-index", "canonical_show_id"),
+    )
+
+    show: Show = Relationship(back_populates="canonical_show_links")
+    canonical_show: CanonicalShow = Relationship()
