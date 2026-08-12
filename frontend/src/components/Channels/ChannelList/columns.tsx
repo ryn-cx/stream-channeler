@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelOutput } from "@/client"
 import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { CopyId } from "@/components/Common/CopyId"
 import { isLoggedIn } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
@@ -68,9 +69,7 @@ export const columns: ColumnDef<ChannelTableData>[] = [
     accessorKey: "channel_number",
     header: "Ch#",
     cell: ({ row }) => (
-      <span className="text-muted-foreground tabular-nums">
-        {row.original.channel_number ?? "—"}
-      </span>
+      <ChannelNumber channelNumber={row.original.channel_number} />
     ),
   },
   {

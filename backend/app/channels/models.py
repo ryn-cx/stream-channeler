@@ -55,7 +55,15 @@ class BaseChannel(SQLModel):
 
 
 # TODO: Validate
-class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
+class BaseAdminChannel(BaseChannel):
+    """Base model representing a `Channel` as an admin sees it."""
+
+    score: int = Field(default=0)
+    user_id: uuid.UUID
+
+
+# TODO: Validate
+class Channel(BaseAdminChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True):
     """Model representing a Channel."""
 
     # An episode is sorted by the channel it was added through rather than by
@@ -70,7 +78,6 @@ class Channel(BaseChannel, TimestampIdAndHashMixin, RootRecordMixin, table=True)
     )
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="channels")
-    score: int = Field(default=0)
 
     shows: list[ChannelShow] = Relationship(
         back_populates="channel",

@@ -1,24 +1,25 @@
 // TODO: Validate
-import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import type {
+  ColumnDef,
   ColumnFiltersState,
   SortingState,
-  VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Tv } from "lucide-react"
-import { type ReactNode, useState } from "react"
-import { ChannelsService } from "@/client"
+import { Globe, type LucideIcon, Star, Tv } from "lucide-react"
+import { type ComponentProps, type ReactNode, useState } from "react"
+import { channelColumns } from "@/components/Admin/channelColumns"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
-import { AllChannelsView } from "@/components/Channels/ChannelList/AllChannelsView"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
 import { ChannelsBrowseSection } from "@/components/Channels/ChannelList/ChannelsBrowseSection"
 import { ChannelsHeader } from "@/components/Channels/ChannelList/ChannelsHeader"
 import { ownedChannelColumns } from "@/components/Channels/ChannelList/columns"
-import { FavoriteChannelsView } from "@/components/Channels/ChannelList/FavoriteChannelsView"
-import { PublicChannelsView } from "@/components/Channels/ChannelList/PublicChannelsView"
-import { useScopedChannels } from "@/components/Channels/ChannelList/useScopedChannels"
+import { publicChannelColumns } from "@/components/Channels/ChannelList/publicColumns"
+import { useChannelColumnVisibility } from "@/components/Channels/ChannelList/useChannelColumnVisibility"
+import {
+  type ChannelRow,
+  useScopedChannels,
+} from "@/components/Channels/ChannelList/useScopedChannels"
 import {
   MAX_BROWSE_PAGE_SIZE,
   useBrowsePagination,
@@ -26,11 +27,14 @@ import {
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
-import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
+import {
+  type ViewMode,
+  ViewModeToggle,
+} from "@/components/Common/ViewModeToggle"
 import PendingChannelList from "@/components/Pending/PendingChannelList"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import { usePersistedJsonState } from "@/hooks/usePersistedState"
+import { usePersistedState } from "@/hooks/usePersistedState"
 
 type Scope = "owned" | "favorites" | "public" | "all"
 
@@ -60,24 +64,86 @@ export const Route = createFileRoute("/_layout/channels/")({
   }),
 })
 
+// Everything that differs between the four scopes. The rest of the view — query,
+// pagination, table/browse switch, header — is identical for all of them.
+interface ScopeView {
+  columns: (isAdmin: boolean) => ColumnDef<ChannelRow>[]
+  // "all" is an admin-only scope, so it always queries with admin privileges.
+  queryAsAdmin: (isAdmin: boolean) => boolean
+  tableStorageKey: string
+  pageSizeStorageKey: string
+  emptyIcon: LucideIcon
+  emptyTitle: string
+  emptyDescription: string
+  browse: Partial<
+    Pick<
+      ComponentProps<typeof ChannelsBrowseSection>,
+      "sortByNumber" | "readOnly" | "personalizable" | "showChannelNumber"
+    >
+  >
+}
+
+const SCOPE_VIEWS: Record<Scope, ScopeView> = {
+  owned: {
+    columns: (isAdmin) => ownedChannelColumns(isAdmin),
+    queryAsAdmin: (isAdmin) => isAdmin,
+    tableStorageKey: "channels-own",
+    pageSizeStorageKey: "channels-own-browse-page-size",
+    emptyIcon: Tv,
+    emptyTitle: "You don't have any channels yet",
+    emptyDescription: "Create a channel to get started",
+    browse: { sortByNumber: true },
+  },
+  favorites: {
+    columns: (isAdmin) => publicChannelColumns(isAdmin),
+    queryAsAdmin: (isAdmin) => isAdmin,
+    tableStorageKey: "favorite-channels",
+    pageSizeStorageKey: "channels-favorites-browse-page-size",
+    emptyIcon: Star,
+    emptyTitle: "No favorite channels yet",
+    emptyDescription: "Star a channel to keep it here.",
+    browse: { sortByNumber: true, readOnly: true, personalizable: true },
+  },
+  public: {
+    columns: () => publicChannelColumns(false),
+    queryAsAdmin: (isAdmin) => isAdmin,
+    tableStorageKey: "public-channels",
+    pageSizeStorageKey: "channels-public-browse-page-size",
+    emptyIcon: Globe,
+    emptyTitle: "No public channels yet",
+    emptyDescription: "Channels shared publicly by any user will show up here.",
+    browse: { readOnly: true, showChannelNumber: false },
+  },
+  all: {
+    columns: () => channelColumns as ColumnDef<ChannelRow>[],
+    queryAsAdmin: () => true,
+    tableStorageKey: "all-channels",
+    pageSizeStorageKey: "channels-all-browse-page-size",
+    emptyIcon: Tv,
+    emptyTitle: "No channels yet",
+    emptyDescription: "Channels created by any user will show up here.",
+    browse: { readOnly: true },
+  },
+}
+
 // TODO: Validate
-function MyChannels({
+function ChannelsView({
+  scope,
   scopeTabs,
   viewMode,
   onViewModeChange,
 }: {
+  scope: Scope
   scopeTabs: ReactNode
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
 }) {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
-  const [columnVisibility, setColumnVisibility] =
-    usePersistedJsonState<VisibilityState>("channels-column-visibility", {
-      id: false,
-    })
+  const view = SCOPE_VIEWS[scope]
+  const [columnVisibility, setColumnVisibility] = useChannelColumnVisibility()
   const [pagination, setPagination] = useBrowsePagination(
-    "channels-own-browse-page-size",
+    view.pageSizeStorageKey,
   )
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
@@ -95,10 +161,10 @@ function MyChannels({
     onViewModeChange(mode)
   }
 
-  const columns = ownedChannelColumns(isAdmin)
+  const columns = view.columns(isAdmin)
   const query = useScopedChannels(
-    "owned",
-    isAdmin,
+    scope,
+    view.queryAsAdmin(isAdmin),
     {
       offset: pagination.pageIndex * pagination.pageSize,
       limit: pagination.pageSize,
@@ -142,7 +208,7 @@ function MyChannels({
       <ChannelsHeader
         scopeTabs={scopeTabs}
         viewTabs={
-          <ViewModeTabs value={viewMode} onValueChange={changeViewMode} />
+          <ViewModeToggle value={viewMode} onValueChange={changeViewMode} />
         }
       >
         <AddChannel />
@@ -152,16 +218,16 @@ function MyChannels({
 
       {query.data.total_count === 0 ? (
         <EmptyState
-          icon={Tv}
-          title="You don't have any channels yet"
-          description="Create a channel to get started"
+          icon={view.emptyIcon}
+          title={view.emptyTitle}
+          description={view.emptyDescription}
         />
       ) : viewMode === "table" ? (
         <div className="px-[4%]">
           <DataTable
             columns={columns}
             data={tableData}
-            storageKey="channels-own"
+            storageKey={view.tableStorageKey}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             serverSide={
@@ -187,45 +253,23 @@ function MyChannels({
           serverRowCount={rowCount}
           pagination={pagination}
           onPaginationChange={setPagination}
-          sortByNumber
+          {...view.browse}
         />
       )}
     </div>
   )
 }
 
-// When no scope is pinned in the URL, land on the most relevant populated tab:
-// favorites if the user has any, otherwise owned, otherwise public.
+const LAST_SCOPE_KEY = "channels-last-scope"
+
 // TODO: Validate
-function useDefaultScope(enabled: boolean): {
-  scope: Scope
-  isPending: boolean
-} {
-  const favoritesQuery = useQuery({
-    queryKey: ["channels", "favorites", "default-count"],
-    queryFn: () =>
-      ChannelsService.getChannels({ scope: "favorites", offset: 0, limit: 1 }),
-    enabled,
-    refetchOnWindowFocus: false,
-  })
-  const ownedQuery = useQuery({
-    queryKey: ["channels", "owned", "default-count"],
-    queryFn: () =>
-      ChannelsService.getChannels({ scope: "owned", offset: 0, limit: 1 }),
-    enabled,
-    refetchOnWindowFocus: false,
-  })
-
-  if ((favoritesQuery.data?.total_count ?? 0) > 0) {
-    return { scope: "favorites", isPending: false }
-  }
-  if ((ownedQuery.data?.total_count ?? 0) > 0) {
-    return { scope: "owned", isPending: false }
-  }
-
-  const isPending =
-    enabled && (favoritesQuery.isPending || ownedQuery.isPending)
-  return { scope: "public", isPending }
+function isScope(value: string): value is Scope {
+  return (
+    value === "owned" ||
+    value === "favorites" ||
+    value === "public" ||
+    value === "all"
+  )
 }
 
 // TODO: Validate
@@ -236,10 +280,16 @@ function Channels() {
   const { user } = useAuth()
   const isAdmin = user?.is_superuser ?? false
 
-  const needsDefaultScope = loggedIn && search.view === undefined
-  const { scope: defaultScope, isPending: defaultScopePending } =
-    useDefaultScope(needsDefaultScope)
-  const scope: Scope = loggedIn ? (search.view ?? defaultScope) : "public"
+  // With no scope pinned in the URL, return to the tab the user last picked.
+  const [lastScope, setLastScope] = usePersistedState<Scope>(
+    LAST_SCOPE_KEY,
+    "public",
+  )
+  const rememberedScope: Scope =
+    isScope(lastScope) && (lastScope !== "all" || isAdmin)
+      ? lastScope
+      : "public"
+  const scope: Scope = loggedIn ? (search.view ?? rememberedScope) : "public"
   const viewMode: ViewMode = search.mode ?? "browse"
 
   // Both tabs live in the URL, so each write preserves the other's value. The
@@ -257,6 +307,7 @@ function Channels() {
 
   // TODO: Validate
   const setScope = (next: Scope) => {
+    setLastScope(next)
     navigate({
       to: "/channels",
       search: buildSearch(next, viewMode),
@@ -273,6 +324,7 @@ function Channels() {
     })
   }
 
+  // TODO: Validate
   const scopeTabs = loggedIn ? (
     <Tabs value={scope} onValueChange={(value) => setScope(value as Scope)}>
       <TabsList>
@@ -284,44 +336,20 @@ function Channels() {
     </Tabs>
   ) : null
 
-  // Hold on a neutral pending state until the counts decide the tab, so the page
-  // doesn't flash the fallback scope before settling on the resolved one.
-  if (defaultScopePending) {
-    return (
-      <div className="flex flex-col gap-6">
-        <ChannelsHeader scopeTabs={scopeTabs} />
-        <PendingChannelList />
-      </div>
-    )
-  }
+  // The "all" scope is admin-only, so a non-admin holding it in the URL falls
+  // back to public. Keying on the scope remounts the view, dropping the previous
+  // scope's sort and filter state rather than applying it to different columns.
+  const resolvedScope: Scope = scope === "all" && !isAdmin ? "public" : scope
 
   return (
     <div className="flex flex-col gap-6">
-      {scope === "all" && isAdmin ? (
-        <AllChannelsView
-          scopeTabs={scopeTabs}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-      ) : scope === "owned" ? (
-        <MyChannels
-          scopeTabs={scopeTabs}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-      ) : scope === "favorites" ? (
-        <FavoriteChannelsView
-          scopeTabs={scopeTabs}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-      ) : (
-        <PublicChannelsView
-          scopeTabs={scopeTabs}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-      )}
+      <ChannelsView
+        key={resolvedScope}
+        scope={resolvedScope}
+        scopeTabs={scopeTabs}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
     </div>
   )
 }

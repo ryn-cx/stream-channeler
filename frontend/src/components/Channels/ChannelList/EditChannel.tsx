@@ -7,18 +7,20 @@ import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 
 interface EditChannelProps {
   channel: ChannelOutput
+  showLabel?: boolean
 }
 
 // TODO: Validate
-const EditChannel = ({ channel }: EditChannelProps) => {
+const EditChannel = ({ channel, showLabel }: EditChannelProps) => {
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <TooltipIconButton
-        label="Edit Channel"
+        label="Edit channel"
         icon={<Pencil className="size-4" />}
         onClick={() => setOpen(true)}
+        showLabel={showLabel}
       />
       {open && (
         <EditChannelDialog

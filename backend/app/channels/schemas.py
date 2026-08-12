@@ -10,6 +10,7 @@ from pydantic.alias_generators import to_camel
 from sqlmodel import Field
 
 from app.channels.models import (
+    BaseAdminChannel,
     BaseChannel,
     BaseChannelQueue,
     Channel,
@@ -37,6 +38,11 @@ from app.sources.schemas import SourcePublic
 # TODO: Validate
 class ChannelCreate(BaseInput, BaseChannel):
     """Schema for creating a `Channel`."""
+
+
+# TODO: Validate
+class ChannelAdminCreate(BaseInput, BaseAdminChannel):
+    """Schema for creating a `Channel` as an admin."""
 
 
 # TODO: Validate
@@ -119,12 +125,14 @@ class ChannelReadOptions(ScopedReadOptions):
 
 # TODO: Validate
 class ChannelAdminUpdate(
-    make_model_with_all_fields_optional(BaseChannel),
+    make_model_with_all_fields_optional(BaseAdminChannel),
     BaseInput,
 ):
-    """Schema for an admin updating any field on a `Channel`."""
+    """Schema for an admin updating any field on a `Channel`.
 
-    score: int | None = Field(default=None)
+    Every field an admin creates a `Channel` with can be changed afterwards,
+    which includes the `User` it belongs to and its `score`.
+    """
 
 
 # TODO: Validate

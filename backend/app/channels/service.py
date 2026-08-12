@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import cache
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlmodel import Session, col, delete, select
 
 from app.channels.models import (
@@ -20,6 +21,9 @@ from app.channels.models import (
     URLStatus,
 )
 from app.channels.schemas import (
+    ChannelAdminCreate,
+    ChannelAdminUpdate,
+    ChannelCreate,
     ChannelListOutput,
     ChannelOutput,
     ChannelsPublic,
@@ -37,6 +41,58 @@ from app.service import scoped_list_response
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
+
+
+# TODO: Validate
+def create_channel(
+    session: Session,
+    user: User,
+    channel_in: ChannelCreate,
+) -> Channel:
+    """Create a `Channel` owned by `user`."""
+    channel = Channel.model_validate(channel_in, update={"user_id": user.id})
+    session.add(channel)
+    session.commit()
+    return channel
+
+
+# TODO: Validate
+def admin_create_channel(
+    session: Session,
+    channel_in: ChannelAdminCreate,
+) -> Channel:
+    """Create a `Channel` for the `User` the admin named, with its `score`.
+
+    The owner comes from the request rather than from whoever is signed in, which
+    is what lets an admin set a `Channel` up on someone else's behalf.
+    """
+    owner = session.get(User, channel_in.user_id)
+    if owner is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    channel = Channel.model_validate(channel_in)
+    session.add(channel)
+    session.commit()
+    return channel
+
+
+# TODO: Validate
+def admin_update_channel(
+    session: Session,
+    channel: Channel,
+    channel_in: ChannelAdminUpdate,
+) -> Channel:
+    """Update any field on `channel` as an admin, including who owns it."""
+    updates = channel_in.model_dump(exclude_unset=True)
+    # A `Channel` always belongs to someone, so an unset owner leaves the one it
+    # already has rather than clearing it.
+    if updates.get("user_id") is None:
+        updates.pop("user_id", None)
+    elif session.get(User, updates["user_id"]) is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    channel.sqlmodel_update(updates)
+    session.commit()
+    session.refresh(channel)
+    return channel
 
 
 # TODO: Validate

@@ -2,6 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Antenna,
+  Bot,
+  Inbox,
   Info,
   Link2,
   List,
@@ -51,6 +53,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
@@ -361,7 +364,12 @@ export function ManageShowsTabs({
         onValueChange={setActiveTab}
         className="flex-1 min-h-0 flex flex-col"
       >
-        <TabsList className={tabsListClassName}>
+        <TabsList
+          className={cn(
+            "h-auto w-auto self-stretch flex-wrap gap-1",
+            tabsListClassName,
+          )}
+        >
           <TabsTrigger value="search">
             <Search className="h-4 w-4 mr-1" /> Search
           </TabsTrigger>
@@ -376,7 +384,8 @@ export function ManageShowsTabs({
             {showCount > 0 && ` (${showCount})`}
           </TabsTrigger>
           <TabsTrigger value="queue">
-            Queue{pendingQueueCount > 0 && ` (${pendingQueueCount})`}
+            <Inbox className="h-4 w-4 mr-1" /> Queue
+            {pendingQueueCount > 0 && ` (${pendingQueueCount})`}
           </TabsTrigger>
           {combinedChannels && (
             <TabsTrigger value="channels">
@@ -384,7 +393,7 @@ export function ManageShowsTabs({
             </TabsTrigger>
           )}
           <TabsTrigger value="ai">
-            <Sparkles className="h-4 w-4 mr-1" /> AI Suggestions
+            <Bot className="h-4 w-4 mr-1" /> AI Suggestions
           </TabsTrigger>
         </TabsList>
 

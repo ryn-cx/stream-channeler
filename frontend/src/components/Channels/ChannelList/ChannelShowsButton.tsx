@@ -5,6 +5,7 @@ import { List } from "lucide-react"
 import { useState } from "react"
 import { ChannelsService } from "@/client"
 import { ShowCards } from "@/components/Channels/ShowCards"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
   VariantTrigger,
@@ -21,12 +22,14 @@ import {
 interface ChannelShowsButtonProps {
   channelId: string
   variant?: TriggerVariant
+  showLabel?: boolean
 }
 
 // TODO: Validate
 export function ChannelShowsButton({
   channelId,
   variant = "icon",
+  showLabel,
 }: ChannelShowsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -47,12 +50,20 @@ export function ChannelShowsButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <VariantTrigger
-          variant={variant}
-          icon={List}
-          label="Shows"
-          iconTitle="List shows"
-        />
+        {variant === "icon" ? (
+          <TooltipIconButton
+            label="List shows"
+            icon={<List className="size-4" />}
+            showLabel={showLabel}
+          />
+        ) : (
+          <VariantTrigger
+            variant={variant}
+            icon={List}
+            label="Shows"
+            iconTitle="List shows"
+          />
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
         <DialogHeader>

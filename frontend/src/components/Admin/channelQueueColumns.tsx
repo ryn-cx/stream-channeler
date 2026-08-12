@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelQueueAdminOutput } from "@/client"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { DateCell } from "@/components/Common/TableCells"
 import { ChannelQueueActions } from "./ChannelQueueActions"
 
@@ -13,9 +14,7 @@ export const channelQueueColumns: ColumnDef<ChannelQueueAdminOutput>[] = [
     header: "Channel #",
     meta: { filterVariant: "range" },
     cell: ({ row }) => (
-      <span className="tabular-nums text-muted-foreground">
-        {row.original.channel_number ?? "—"}
-      </span>
+      <ChannelNumber channelNumber={row.original.channel_number} />
     ),
   },
   {

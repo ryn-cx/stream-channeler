@@ -892,6 +892,77 @@ export const CanonicalShowsPublicSchema = {
     description: 'Schema for returning a list of `CanonicalShow`s.'
 } as const;
 
+export const ChannelAdminCreateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        visibility: {
+            '$ref': '#/components/schemas/Visibility'
+        },
+        default_order: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Default Order'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score',
+            default: 0
+        },
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['visibility', 'anonymous', 'user_id'],
+    title: 'ChannelAdminCreate',
+    description: 'Schema for creating a `Channel` as an admin.'
+} as const;
+
 export const ChannelAdminUpdateSchema = {
     properties: {
         name: {
@@ -960,21 +1031,30 @@ export const ChannelAdminUpdateSchema = {
             title: 'Anonymous'
         },
         score: {
+            type: 'integer',
+            title: 'Score',
+            default: 0
+        },
+        user_id: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Score'
+            title: 'User Id'
         }
     },
     additionalProperties: false,
     type: 'object',
     title: 'ChannelAdminUpdate',
-    description: 'Schema for an admin updating any field on a `Channel`.'
+    description: `Schema for an admin updating any field on a \`Channel\`.
+
+Every field an admin creates a \`Channel\` with can be changed afterwards,
+which includes the \`User\` it belongs to and its \`score\`.`
 } as const;
 
 export const ChannelCommentOutputSchema = {

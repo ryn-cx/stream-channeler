@@ -29,7 +29,10 @@ import {
   serializeTableQuery,
 } from "@/components/Common/DataTable"
 import { EmptyState } from "@/components/Common/EmptyState"
-import { type ViewMode, ViewModeTabs } from "@/components/Common/ViewModeTabs"
+import {
+  type ViewMode,
+  ViewModeToggle,
+} from "@/components/Common/ViewModeToggle"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
@@ -192,7 +195,7 @@ function OrdersTable({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           {scopeTabs}
-          <ViewModeTabs value={viewMode} onValueChange={setViewMode} />
+          <ViewModeToggle value={viewMode} onValueChange={setViewMode} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button onClick={onCreate}>

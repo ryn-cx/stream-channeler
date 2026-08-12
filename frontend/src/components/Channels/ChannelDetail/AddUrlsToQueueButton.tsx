@@ -1,6 +1,7 @@
 // TODO: Validate
-import { MonitorCog, Plus } from "lucide-react"
+import { MonitorCog } from "lucide-react"
 import { useState } from "react"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +19,7 @@ import { ManageShowsTabs } from "./ManageShowsTabs"
 interface ManageShowsButtonProps {
   channelId: string
   variant?: "button" | "menu" | "icon"
+  showLabel?: boolean
   /** When provided, adds an owner-only "Combined Channels" tab to the modal. */
   combinedChannels?: {
     isLoggedIn?: boolean
@@ -28,23 +30,31 @@ interface ManageShowsButtonProps {
 export function ManageShowsButton({
   channelId,
   variant = "button",
+  showLabel,
   combinedChannels,
 }: ManageShowsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
-  // Editing shows lays a title's whole filter out inline, which needs the page
-  // rather than the width the other tabs read comfortably at.
-  useSearchablePlugins()
+  // Warm the searchable-plugins cache only once the modal is open, so the
+  // channel list doesn't fetch it for every card just by rendering.
+  useSearchablePlugins(isOpen)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <VariantTrigger
-          variant={variant}
-          icon={MonitorCog}
-          iconVariantIcon={Plus}
-          label="Shows"
-          iconTitle="Manage shows"
-        />
+        {variant === "icon" ? (
+          <TooltipIconButton
+            label="Manage shows"
+            icon={<MonitorCog className="size-4" />}
+            showLabel={showLabel}
+          />
+        ) : (
+          <VariantTrigger
+            variant={variant}
+            icon={MonitorCog}
+            label="Manage shows"
+            iconTitle="Manage shows"
+          />
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader className="px-8">

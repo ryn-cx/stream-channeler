@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
@@ -15,6 +15,7 @@ import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
 import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
 import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
+import { ChannelCreatedBy } from "@/components/Channels/ChannelCreatedBy"
 import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { CommentsDialog } from "@/components/Channels/ChannelDetail/CommentsDialog"
@@ -28,6 +29,7 @@ import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderBu
 import { ChannelShowsButton } from "@/components/Channels/ChannelList/ChannelShowsButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
@@ -275,22 +277,16 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
       <div className="flex flex-wrap items-center gap-2 px-[4%] py-4">
         {user && <FavoriteChannel channelId={channel.id} />}
 
+        {isOwner && (
+          <ChannelNumber
+            channelNumber={channel.channel_number}
+            className="text-2xl font-bold tracking-tight"
+          />
+        )}
+
         <div className="mr-2">
           <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
-          {/* The API only sends a username when the owner is public, so an
-              anonymous channel simply has nothing to show here. */}
-          {channel.username && channel.user_id && (
-            <p className="text-xs text-muted-foreground">
-              by{" "}
-              <Link
-                to="/users/$userId/channels"
-                params={{ userId: channel.user_id }}
-                className="underline hover:text-foreground"
-              >
-                {channel.username}
-              </Link>
-            </p>
-          )}
+          <ChannelCreatedBy channel={channel} className="text-xs" />
         </div>
 
         <ChannelDescription channel={channel} />

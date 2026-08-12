@@ -2,7 +2,7 @@
 import { FileText } from "lucide-react"
 import Markdown, { type Components } from "react-markdown"
 
-import { Button } from "@/components/ui/button"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   Dialog,
   DialogBody,
@@ -11,16 +11,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface ChannelDescriptionProps {
   channel: { name?: string | null; description?: string | null }
   className?: string
+  showLabel?: boolean
 }
 
 const INTERNAL_HOSTS = ["streamchanneler.com"]
@@ -91,25 +87,44 @@ const markdownStyles =
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs"
 
 // TODO: Validate
+export function ChannelDescriptionMarkdown({
+  description,
+  className,
+}: {
+  description: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "text-sm text-muted-foreground [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2",
+        markdownStyles,
+        className,
+      )}
+    >
+      <Markdown components={markdownComponents}>{description}</Markdown>
+    </div>
+  )
+}
+
+// TODO: Validate
 export function ChannelDescription({
   channel,
   className,
+  showLabel,
 }: ChannelDescriptionProps) {
   if (!channel.description) return null
 
   return (
     <Dialog>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className={className}>
-              <FileText className="size-4" />
-              <span className="sr-only">Description</span>
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Description</TooltipContent>
-      </Tooltip>
+      <DialogTrigger asChild>
+        <TooltipIconButton
+          label="Description"
+          icon={<FileText className="size-4" />}
+          className={className}
+          showLabel={showLabel}
+        />
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>

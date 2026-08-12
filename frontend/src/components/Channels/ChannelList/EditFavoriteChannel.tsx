@@ -7,18 +7,23 @@ import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 
 interface EditFavoriteChannelProps {
   channel: ChannelListOutput
+  showLabel?: boolean
 }
 
 // TODO: Validate
-const EditFavoriteChannel = ({ channel }: EditFavoriteChannelProps) => {
+const EditFavoriteChannel = ({
+  channel,
+  showLabel,
+}: EditFavoriteChannelProps) => {
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <TooltipIconButton
-        label="Personalize Channel"
+        label="Personalize channel"
         icon={<SlidersHorizontal className="size-4" />}
         onClick={() => setOpen(true)}
+        showLabel={showLabel}
       />
       {open && (
         <EditFavoriteChannelDialog

@@ -1,7 +1,7 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Star, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
@@ -11,7 +11,7 @@ import {
   type ChannelOutput,
   ChannelsService,
 } from "@/client"
-import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
+import { ChannelCreatedBy } from "@/components/Channels/ChannelCreatedBy"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { EpisodeCard } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EditChannelDialog } from "@/components/Channels/EditChannelDialog"
@@ -20,15 +20,20 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
+import { ChannelDetailsButton } from "./ChannelDetailsButton"
 import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 import EditFavoriteChannel from "./EditFavoriteChannel"
-import { FavoriteChannel } from "./FavoriteChannel"
+import { FavoriteChannel, useFavoriteChannelIds } from "./FavoriteChannel"
 
 // Owner channels (full ChannelOutput) render edit controls; public channels
 // (ChannelListOutput) are read-only and only need the display fields both share.
 export type BrowseChannel = ChannelOutput | ChannelListOutput
+
+// Whether every channel-row button spells its label out rather than relying on
+// its tooltip. Flip this one value to switch the whole row either way.
+const SHOW_BUTTON_LABELS = true
 
 interface ChannelRowProps {
   channel: BrowseChannel
@@ -42,7 +47,13 @@ interface ChannelRowProps {
 }
 
 // TODO: Validate
-function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
+function AdminEditChannel({
+  channel,
+  showLabel,
+}: {
+  channel: ChannelListOutput
+  showLabel?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const { data: fullChannel } = useQuery({
     queryKey: ["channels", channel.id, "admin-edit"],
@@ -53,9 +64,10 @@ function AdminEditChannel({ channel }: { channel: ChannelListOutput }) {
   return (
     <>
       <TooltipIconButton
-        label="Edit Channel"
+        label="Edit channel"
         icon={<Pencil className="size-4" />}
         onClick={() => setOpen(true)}
+        showLabel={showLabel}
       />
       {open && fullChannel && (
         <EditChannelDialog
@@ -84,6 +96,7 @@ function ChannelRow({
   const isAdmin = user?.is_superuser ?? false
   const isOwner = user?.id === channel.user_id
   const loggedIn = isLoggedIn()
+  const isFavorite = useFavoriteChannelIds().has(channel.id)
 
   // A favorited channel can carry the viewer's private name/number, which are
   // preferred over the channel's own values. They only arrive in the favorites
@@ -172,76 +185,87 @@ function ChannelRow({
 
   return (
     <div className="group/row relative">
-      <div className="flex items-center gap-3 mb-2 px-[4%]">
-        {showChannelNumber && displayNumber != null && (
-          <span className="text-2xl font-bold text-muted-foreground tabular-nums">
-            {displayNumber}
+      {/* Block flow rather than a flex row, so a title that wraps starts its
+          later lines at the gutter instead of indenting past the star. */}
+      <div className="mb-2 px-[4%] text-2xl font-bold wrap-break-word">
+        {(isFavorite || (showChannelNumber && displayNumber != null)) && (
+          <span className="mr-3 whitespace-nowrap text-muted-foreground tabular-nums">
+            {isFavorite && (
+              <Star className="inline size-6 align-text-bottom fill-yellow-400 text-yellow-400" />
+            )}
+            {isFavorite && showChannelNumber && displayNumber != null && " "}
+            {showChannelNumber && displayNumber != null && `${displayNumber}.`}
           </span>
         )}
         <Link
           to="/channels/$channelId"
           params={{ channelId: channel.id }}
           search={defaultOrder}
-          className="text-2xl font-bold hover:text-primary transition-colors"
+          className="hover:text-primary transition-colors"
         >
           {displayName}
         </Link>
-        <div className="flex">
-          {readOnly ? (
-            <>
-              <ChannelDescription channel={channel} />
-              <ChannelShowsButton channelId={channel.id} />
-              {loggedIn && <FavoriteChannel channelId={channel.id} />}
-              {personalizable && loggedIn && (
-                <EditFavoriteChannel channel={listChannel} />
-              )}
-              {(isAdmin || isOwner) && (
-                <AdminEditChannel channel={channel as ChannelListOutput} />
-              )}
-            </>
-          ) : (
-            <>
-              {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
-              <ChannelDescription channel={channel} />
-              <ManageShowsButton channelId={channel.id} variant="icon" />
-              {loggedIn && <FavoriteChannel channelId={channel.id} />}
-              <EditChannel channel={channel as ChannelOutput} />
-              <TooltipIconButton
-                label="Delete Channel"
-                icon={<Trash2 className="size-4 text-destructive" />}
-                onClick={() => onDelete(channel)}
-              />
-            </>
-          )}
-        </div>
       </div>
 
-      {showCreatedBy &&
-        (readOnly ? (
-          // The API hands the real creator of an anonymous channel to admins and
-          // the owner, but a public listing must still present it anonymously, so
-          // the creator is hidden whenever the channel is anonymous.
-          channel.user_id &&
-          !channel.anonymous && (
-            <p className="px-[4%] mb-2 text-sm text-muted-foreground">
-              Created by{" "}
-              <Link
-                to="/users/$userId/channels"
-                params={{ userId: channel.user_id }}
-                className="underline hover:text-foreground"
-              >
-                {(channel as ChannelListOutput).username}
-              </Link>
-            </p>
-          )
-        ) : // On the owner's own channels, mirror how others will see it: a private
-        // channel isn't visible to anyone else so it shows nothing, and an
-        // anonymous channel hides the creator's name.
-        channel.visibility === "private" ? null : (
-          <p className="px-[4%] mb-2 text-sm text-muted-foreground">
-            Created by {channel.anonymous ? "Anonymous" : user?.username}
-          </p>
-        ))}
+      {showCreatedBy && (
+        <ChannelCreatedBy channel={channel} className="px-[4%] mb-2" />
+      )}
+
+      <div className="flex flex-wrap gap-2 px-[4%] mb-2">
+        {loggedIn && (
+          <FavoriteChannel
+            channelId={channel.id}
+            showLabel={SHOW_BUTTON_LABELS}
+          />
+        )}
+        {readOnly ? (
+          <>
+            <ChannelShowsButton
+              channelId={channel.id}
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+            <ChannelDetailsButton
+              channel={channel}
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+            {personalizable && loggedIn && (
+              <EditFavoriteChannel
+                channel={listChannel}
+                showLabel={SHOW_BUTTON_LABELS}
+              />
+            )}
+            {(isAdmin || isOwner) && (
+              <AdminEditChannel
+                channel={channel as ChannelListOutput}
+                showLabel={SHOW_BUTTON_LABELS}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {/* Reachable only when !readOnly, where channel is the owner's ChannelOutput. */}
+            <ChannelDetailsButton
+              channel={channel}
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+            <ManageShowsButton
+              channelId={channel.id}
+              variant="icon"
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+            <EditChannel
+              channel={channel as ChannelOutput}
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+            <TooltipIconButton
+              label="Delete channel"
+              icon={<Trash2 className="size-4 text-destructive" />}
+              onClick={() => onDelete(channel)}
+              showLabel={SHOW_BUTTON_LABELS}
+            />
+          </>
+        )}
+      </div>
 
       {orderRejected && !loadFailed && (
         <p className="px-[4%] mb-2 text-sm text-destructive">

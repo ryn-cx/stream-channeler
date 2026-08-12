@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelListOutput } from "@/client"
 import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { ChannelDescriptionCell, channelScoreColumn } from "./columns"
 
 // `score` is only populated for a `Channel`'s owner or an admin, so the column is
@@ -32,11 +33,10 @@ const publicColumns: ColumnDef<ChannelListOutput>[] = [
     enableSorting: false,
     enableColumnFilter: false,
     cell: ({ row }) => (
-      <span className="text-muted-foreground tabular-nums">
-        {row.original.custom_channel_number ??
-          row.original.channel_number ??
-          "—"}
-      </span>
+      <ChannelNumber
+        channelNumber={row.original.channel_number}
+        customChannelNumber={row.original.custom_channel_number}
+      />
     ),
   },
   {

@@ -155,7 +155,24 @@ export type CanonicalShowsPublic = {
 };
 
 /**
+ * Schema for creating a `Channel` as an admin.
+ */
+export type ChannelAdminCreate = {
+    name?: (string | null);
+    channel_number?: (number | null);
+    visibility: Visibility;
+    default_order?: (string | null);
+    description?: (string | null);
+    anonymous: boolean;
+    score?: number;
+    user_id: string;
+};
+
+/**
  * Schema for an admin updating any field on a `Channel`.
+ *
+ * Every field an admin creates a `Channel` with can be changed afterwards,
+ * which includes the `User` it belongs to and its `score`.
  */
 export type ChannelAdminUpdate = {
     name?: (string | null);
@@ -164,7 +181,8 @@ export type ChannelAdminUpdate = {
     default_order?: (string | null);
     description?: (string | null);
     anonymous?: (boolean | null);
-    score?: (number | null);
+    score?: number;
+    user_id?: (string | null);
 };
 
 /**
@@ -2101,6 +2119,12 @@ export type ChannelsClearChannelCompletedQueueData = {
 };
 
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
+
+export type ChannelsAdminCreateChannelData = {
+    requestBody: ChannelAdminCreate;
+};
+
+export type ChannelsAdminCreateChannelResponse = (ChannelOutput);
 
 export type ChannelsAdminUpdateChannelData = {
     channelId: string;

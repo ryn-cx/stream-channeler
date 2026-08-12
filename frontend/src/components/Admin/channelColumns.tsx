@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { ChannelListOutput } from "@/client"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import { ChannelActions } from "./ChannelActions"
@@ -14,9 +15,7 @@ export const channelColumns: ColumnDef<ChannelListOutput>[] = [
     header: "Channel #",
     meta: { filterVariant: "range" },
     cell: ({ row }) => (
-      <span className="tabular-nums text-muted-foreground">
-        {row.original.channel_number ?? "—"}
-      </span>
+      <ChannelNumber channelNumber={row.original.channel_number} />
     ),
   },
   {

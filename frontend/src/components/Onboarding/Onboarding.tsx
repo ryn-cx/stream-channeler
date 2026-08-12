@@ -5,12 +5,31 @@ import { ArrowLeft, Check, ChevronRight, PartyPopper } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelOutput, Visibility } from "@/client"
-import { ChannelOrdersService, ChannelsService } from "@/client"
+import { ChannelOrdersService, ChannelsService, UsersService } from "@/client"
 import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -39,14 +58,14 @@ function OnboardingShell({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+    <div className="flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-2xl">
         <div className="flex items-center justify-center gap-2 mb-8">
           {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
             <div
               key={index}
               className={`h-2 w-12 rounded-full transition-colors ${
-                currentStep >= index ? "bg-primary" : "bg-muted"
+                currentStep >= index ? "bg-primary" : "bg-foreground/30"
               }`}
             />
           ))}
@@ -58,29 +77,294 @@ function OnboardingShell({
 }
 
 // TODO: Validate
-export function OnboardingCreateName() {
+function useChannelForm() {
   const [channelName, setChannelName] = useState("")
   const [channelNumber, setChannelNumber] = useState<string>("")
   const [visibility, setVisibility] = useState<Visibility>("private")
   const [description, setDescription] = useState("")
   const [anonymous, setAnonymous] = useState(false)
+  const [score, setScore] = useState("0")
+  const [ownerId, setOwnerId] = useState<string | null>(null)
   const { user } = useAuth()
+  const isAdmin = user?.is_superuser === true
+
+  const usersQuery = useQuery({
+    queryKey: ["users"],
+    queryFn: () => UsersService.readUsers(),
+    enabled: isAdmin,
+  })
+  const users = usersQuery.data?.data ?? []
+
+  // The channel belongs to whoever is making it until an admin says otherwise.
+  useEffect(() => {
+    if (user && ownerId === null) {
+      setOwnerId(user.id)
+    }
+  }, [user, ownerId])
+
+  const owner = users.find((candidate) => candidate.id === ownerId)
+
+  return {
+    channelName,
+    setChannelName,
+    channelNumber,
+    setChannelNumber,
+    visibility,
+    setVisibility,
+    description,
+    setDescription,
+    anonymous,
+    setAnonymous,
+    score,
+    setScore,
+    ownerId,
+    setOwnerId,
+    isAdmin,
+    users,
+    owner,
+    ownerName: (isAdmin ? owner?.username : undefined) ?? user?.username,
+    channelInput: {
+      name: channelName.trim(),
+      channel_number:
+        channelNumber === "" ? null : Number.parseFloat(channelNumber),
+      visibility,
+      description: description.trim() === "" ? null : description.trim(),
+      anonymous,
+    },
+    adminInput: {
+      score: score === "" ? 0 : Number.parseInt(score, 10),
+      user_id: ownerId,
+    },
+  }
+}
+
+type ChannelFormState = ReturnType<typeof useChannelForm>
+
+// TODO: Validate
+function isChannelFormValid(
+  form: ChannelFormState,
+  showErrorToast: (message: string) => void,
+) {
+  if (!form.channelName.trim()) {
+    showErrorToast("Please enter a channel name")
+    return false
+  }
+  if (form.isAdmin && !form.ownerId) {
+    showErrorToast("Please pick the user the channel is for")
+    return false
+  }
+  if (
+    form.isAdmin &&
+    form.score !== "" &&
+    !Number.isInteger(Number(form.score))
+  ) {
+    showErrorToast("Score must be a whole number")
+    return false
+  }
+  return true
+}
+
+// TODO: Validate
+function ChannelFormFields({
+  form,
+  onSubmit,
+  isPending,
+  submitLabel,
+  pendingLabel,
+}: {
+  form: ChannelFormState
+  onSubmit: () => void
+  isPending: boolean
+  submitLabel: string
+  pendingLabel: string
+}) {
+  const [ownerPickerOpen, setOwnerPickerOpen] = useState(false)
+
+  return (
+    <div className="max-w-sm mx-auto space-y-4 text-left">
+      <div className="space-y-1.5">
+        <Label htmlFor="channel-name">Name</Label>
+        <Input
+          id="channel-name"
+          value={form.channelName}
+          onChange={(event) => form.setChannelName(event.target.value)}
+          placeholder="My Channel"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onSubmit()
+          }}
+          autoFocus
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="channel-number">Channel Number</Label>
+        <Input
+          id="channel-number"
+          type="number"
+          value={form.channelNumber}
+          onChange={(event) => form.setChannelNumber(event.target.value)}
+          placeholder="Optional"
+        />
+        <p className="text-sm text-muted-foreground">
+          Used to determine the order channels are displayed in. Lower numbers
+          appear first. Leave blank to let it sort by name.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="channel-description">Description</Label>
+        <Textarea
+          id="channel-description"
+          value={form.description}
+          onChange={(event) => form.setDescription(event.target.value)}
+          placeholder="Optional"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="channel-visibility">Visibility</Label>
+        <Select
+          value={form.visibility}
+          onValueChange={(value) => form.setVisibility(value as Visibility)}
+        >
+          <SelectTrigger id="channel-visibility">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {VISIBILITY_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {visibilityLabel(option)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          {visibilityDescription(form.visibility)}
+        </p>
+      </div>
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id="channel-anonymous"
+          checked={form.anonymous}
+          onCheckedChange={(checked) => form.setAnonymous(checked === true)}
+        />
+        <div className="space-y-1 leading-none">
+          <Label htmlFor="channel-anonymous">Publish anonymously</Label>
+          <p className="text-sm text-muted-foreground">
+            The creator of the channel will be listed as{" "}
+            {form.anonymous ? "anonymous" : form.ownerName}.
+          </p>
+        </div>
+      </div>
+      {form.isAdmin && (
+        <Accordion
+          type="single"
+          collapsible
+          className="rounded-md border border-dashed border-destructive/40 bg-destructive/10 px-4 dark:bg-destructive/25"
+        >
+          <AccordionItem value="admin-options" className="border-b-0">
+            <AccordionTrigger className="text-sm font-medium text-destructive [&>svg]:text-destructive/70">
+              Admin options
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="channel-owner">Owner</Label>
+                <Popover
+                  open={ownerPickerOpen}
+                  onOpenChange={setOwnerPickerOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="channel-owner"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={ownerPickerOpen}
+                      className="w-full justify-start font-normal"
+                    >
+                      {form.owner?.username ?? "Select a user..."}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Filter users..." />
+                      <CommandList>
+                        <CommandEmpty>No users found.</CommandEmpty>
+                        <CommandGroup>
+                          {form.users.map((candidate) => (
+                            <CommandItem
+                              key={candidate.id}
+                              value={candidate.username}
+                              keywords={[candidate.email, candidate.id]}
+                              onSelect={() => {
+                                form.setOwnerId(candidate.id)
+                                setOwnerPickerOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={`h-4 w-4 mr-2 ${
+                                  candidate.id === form.ownerId
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                }`}
+                              />
+                              <span>{candidate.username}</span>
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {candidate.email}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-sm text-muted-foreground">
+                  The user the channel belongs to.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="channel-score">Score</Label>
+                <Input
+                  id="channel-score"
+                  type="number"
+                  value={form.score}
+                  onChange={(event) => form.setScore(event.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Higher scored channels are shown first on the public list.
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
+      <Button onClick={onSubmit} disabled={isPending} className="w-full">
+        {isPending ? pendingLabel : submitLabel}
+        <ChevronRight className="h-4 w-4 ml-1" />
+      </Button>
+    </div>
+  )
+}
+
+// TODO: Validate
+export function OnboardingCreateName() {
+  const form = useChannelForm()
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   const createChannelMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.createChannel({
-        requestBody: {
-          name: channelName.trim(),
-          channel_number:
-            channelNumber === "" ? null : Number.parseFloat(channelNumber),
-          visibility,
-          description: description.trim() === "" ? null : description.trim(),
-          anonymous,
-        },
-      }),
+      form.isAdmin && form.ownerId
+        ? ChannelsService.adminCreateChannel({
+            requestBody: {
+              ...form.channelInput,
+              ...form.adminInput,
+              user_id: form.ownerId,
+            },
+          })
+        : ChannelsService.createChannel({ requestBody: form.channelInput }),
     onSuccess: (channel: ChannelOutput) => {
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       navigate({
@@ -93,8 +377,7 @@ export function OnboardingCreateName() {
 
   // TODO: Validate
   const handleSubmit = () => {
-    if (!channelName.trim()) {
-      showErrorToast("Please enter a channel name")
+    if (!isChannelFormValid(form, showErrorToast)) {
       return
     }
     createChannelMutation.mutate()
@@ -108,87 +391,13 @@ export function OnboardingCreateName() {
           A channel is an automatically updated curated playlist of shows and
           movies that you pick. Give it a name to get started.
         </p>
-        <div className="max-w-sm mx-auto space-y-4 text-left">
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-name">Name</Label>
-            <Input
-              id="channel-name"
-              value={channelName}
-              onChange={(event) => setChannelName(event.target.value)}
-              placeholder="My Channel"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleSubmit()
-              }}
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-number">Channel Number</Label>
-            <Input
-              id="channel-number"
-              type="number"
-              value={channelNumber}
-              onChange={(event) => setChannelNumber(event.target.value)}
-              placeholder="Optional"
-            />
-            <p className="text-sm text-muted-foreground">
-              Used to determine the order channels are displayed in. Lower
-              numbers appear first. Leave blank to let it sort by name.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-description">Description</Label>
-            <Textarea
-              id="channel-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-visibility">Visibility</Label>
-            <Select
-              value={visibility}
-              onValueChange={(value) => setVisibility(value as Visibility)}
-            >
-              <SelectTrigger id="channel-visibility">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VISIBILITY_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {visibilityLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              {visibilityDescription(visibility)}
-            </p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="channel-anonymous"
-              checked={anonymous}
-              onCheckedChange={(checked) => setAnonymous(checked === true)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="channel-anonymous">Publish anonymously</Label>
-              <p className="text-sm text-muted-foreground">
-                The creator of the channel will be listed as{" "}
-                {anonymous ? "anonymous" : user?.username}.
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={createChannelMutation.isPending}
-            className="w-full"
-          >
-            {createChannelMutation.isPending ? "Creating..." : "Create Channel"}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
+        <ChannelFormFields
+          form={form}
+          onSubmit={handleSubmit}
+          isPending={createChannelMutation.isPending}
+          submitLabel="Create Channel"
+          pendingLabel="Creating..."
+        />
       </div>
     </OnboardingShell>
   )
@@ -196,13 +405,8 @@ export function OnboardingCreateName() {
 
 // TODO: Validate
 export function OnboardingEditName({ channelId }: { channelId: string }) {
-  const [channelName, setChannelName] = useState("")
-  const [channelNumber, setChannelNumber] = useState<string>("")
-  const [visibility, setVisibility] = useState<Visibility>("private")
-  const [description, setDescription] = useState("")
-  const [anonymous, setAnonymous] = useState(false)
+  const form = useChannelForm()
   const [initialized, setInitialized] = useState(false)
-  const { user } = useAuth()
   const { showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -212,34 +416,57 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     queryFn: () => ChannelsService.getChannel({ channelId }),
   })
 
+  const channel = channelQuery.data
+  const {
+    setChannelName,
+    setChannelNumber,
+    setVisibility,
+    setDescription,
+    setAnonymous,
+    setScore,
+    setOwnerId,
+  } = form
+
   useEffect(() => {
-    if (channelQuery.data && !initialized) {
-      setChannelName(channelQuery.data.name ?? "")
+    if (channel && !initialized) {
+      setChannelName(channel.name ?? "")
       setChannelNumber(
-        channelQuery.data.channel_number == null
-          ? ""
-          : String(channelQuery.data.channel_number),
+        channel.channel_number == null ? "" : String(channel.channel_number),
       )
-      setVisibility(channelQuery.data.visibility ?? "private")
-      setDescription(channelQuery.data.description ?? "")
-      setAnonymous(channelQuery.data.anonymous ?? false)
+      setVisibility(channel.visibility ?? "private")
+      setDescription(channel.description ?? "")
+      setAnonymous(channel.anonymous ?? false)
+      setScore(String(channel.score ?? 0))
+      // An anonymous channel redacts its owner from everyone but an admin, and
+      // an admin is the only viewer the owner field is shown to anyway.
+      if (channel.user_id) {
+        setOwnerId(channel.user_id)
+      }
       setInitialized(true)
     }
-  }, [channelQuery.data, initialized])
+  }, [
+    channel,
+    initialized,
+    setChannelName,
+    setChannelNumber,
+    setVisibility,
+    setDescription,
+    setAnonymous,
+    setScore,
+    setOwnerId,
+  ])
 
   const updateChannelMutation = useMutation({
     mutationFn: () =>
-      ChannelsService.updateChannel({
-        channelId,
-        requestBody: {
-          name: channelName.trim(),
-          channel_number:
-            channelNumber === "" ? null : Number.parseFloat(channelNumber),
-          visibility,
-          description: description.trim() === "" ? null : description.trim(),
-          anonymous,
-        },
-      }),
+      form.isAdmin
+        ? ChannelsService.adminUpdateChannel({
+            channelId,
+            requestBody: { ...form.channelInput, ...form.adminInput },
+          })
+        : ChannelsService.updateChannel({
+            channelId,
+            requestBody: form.channelInput,
+          }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       navigate({
@@ -252,8 +479,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
 
   // TODO: Validate
   const handleSubmit = () => {
-    if (!channelName.trim()) {
-      showErrorToast("Please enter a channel name")
+    if (!isChannelFormValid(form, showErrorToast)) {
       return
     }
     updateChannelMutation.mutate()
@@ -266,89 +492,13 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
         <p className="text-muted-foreground">
           Adjust your channel settings before continuing.
         </p>
-        <div className="max-w-sm mx-auto space-y-4 text-left">
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-name">Name</Label>
-            <Input
-              id="channel-name"
-              value={channelName}
-              onChange={(event) => setChannelName(event.target.value)}
-              placeholder="My Channel"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleSubmit()
-              }}
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-number">Channel Number</Label>
-            <Input
-              id="channel-number"
-              type="number"
-              value={channelNumber}
-              onChange={(event) => setChannelNumber(event.target.value)}
-              placeholder="Optional"
-            />
-            <p className="text-sm text-muted-foreground">
-              Used to determine the order channels are displayed in. Lower
-              numbers appear first. Leave blank to let it sort by name.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-description">Description</Label>
-            <Textarea
-              id="channel-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="channel-visibility">Visibility</Label>
-            <Select
-              value={visibility}
-              onValueChange={(value) => setVisibility(value as Visibility)}
-            >
-              <SelectTrigger id="channel-visibility">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VISIBILITY_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {visibilityLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              {visibilityDescription(visibility)}
-            </p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="channel-anonymous"
-              checked={anonymous}
-              onCheckedChange={(checked) => setAnonymous(checked === true)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="channel-anonymous">Share Anonymously</Label>
-              <p className="text-sm text-muted-foreground">
-                The creator of the channel will be listed as{" "}
-                {anonymous ? "Anonymous" : user?.username}.
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={handleSubmit}
-            disabled={updateChannelMutation.isPending}
-            className="w-full"
-          >
-            {updateChannelMutation.isPending
-              ? "Updating..."
-              : "Update & Continue"}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
+        <ChannelFormFields
+          form={form}
+          onSubmit={handleSubmit}
+          isPending={updateChannelMutation.isPending}
+          submitLabel="Update & Continue"
+          pendingLabel="Updating..."
+        />
       </div>
     </OnboardingShell>
   )
@@ -370,7 +520,7 @@ export function OnboardingShows({ channelId }: { channelId: string }) {
 
         <ManageShowsTabs channelId={channelId} queueRefetchInterval={5000} />
 
-        <div className="flex justify-between">
+        <div className="flex flex-wrap justify-between gap-3">
           <Button
             variant="outline"
             size="lg"

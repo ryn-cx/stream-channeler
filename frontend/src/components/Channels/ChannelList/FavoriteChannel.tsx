@@ -21,12 +21,21 @@ export function useFavoriteChannelIds() {
     queryFn: () => ChannelsService.getFavoriteChannelIds(),
     enabled: loggedIn,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
   return new Set(query.data ?? [])
 }
 
 // TODO: Validate
-export function FavoriteChannel({ channelId }: { channelId: string }) {
+export function FavoriteChannel({
+  channelId,
+  showLabel,
+  className,
+}: {
+  channelId: string
+  showLabel?: boolean
+  className?: string
+}) {
   const queryClient = useQueryClient()
   const favoriteIds = useFavoriteChannelIds()
   const { showErrorToast } = useCustomToast()
@@ -70,6 +79,8 @@ export function FavoriteChannel({ channelId }: { channelId: string }) {
         />
       }
       onClick={() => mutation.mutate(!isFavorite)}
+      showLabel={showLabel}
+      className={className}
     />
   )
 }

@@ -34,6 +34,7 @@ from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelFavorite, ChannelQueue, ChannelShow
 from app.channels.schemas import (
     BlacklistEpisodeInput,
+    ChannelAdminCreate,
     ChannelAdminUpdate,
     ChannelCreate,
     ChannelEpisodesOutput,
@@ -106,10 +107,17 @@ def create_channel(
     channel_in: ChannelCreate,
 ) -> Channel:
     """Create a `Channel` owned by the `User`."""
-    channel = Channel.model_validate(channel_in, update={"user_id": current_user.id})
-    session.add(channel)
-    session.commit()
-    return channel
+    return service.create_channel(session, current_user, channel_in)
+
+
+# TODO: Validate
+@admin_router.post("", response_model=ChannelOutput)
+def admin_create_channel(
+    session: SessionDep,
+    channel_in: ChannelAdminCreate,
+) -> Channel:
+    """Create a `Channel` owned by any `User`, with its `score`, as an admin."""
+    return service.admin_create_channel(session, channel_in)
 
 
 # TODO: Validate
@@ -264,9 +272,7 @@ def admin_update_channel(
     channel_in: ChannelAdminUpdate,
 ) -> ChannelListOutput:
     """Update any field on any `Channel` as an admin, including `score`."""
-    channel.sqlmodel_update(channel_in.model_dump(exclude_unset=True))
-    session.commit()
-    session.refresh(channel)
+    channel = service.admin_update_channel(session, channel, channel_in)
     username = session.get_one(User, channel.user_id).username
     return ChannelListOutput.model_validate(channel, update={"username": username})
 

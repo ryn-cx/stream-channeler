@@ -71,9 +71,10 @@ export function useSeason(seasonId: string | undefined) {
 }
 
 // TODO: Validate
-export function useSearchablePlugins() {
+export function useSearchablePlugins(enabled = true) {
   return useQuery({
     queryKey: ["searchable-plugins"],
     queryFn: () => PluginsService.searchInformation(),
+    enabled,
   })
 }
