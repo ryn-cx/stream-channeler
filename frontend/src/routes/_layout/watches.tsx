@@ -1,5 +1,5 @@
 // TODO: Validate
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type {
   ColumnFiltersState,
@@ -8,7 +8,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Eye, Upload } from "lucide-react"
+import { Download, Eye, Upload } from "lucide-react"
 import { useState } from "react"
 
 import { WatchesService } from "@/client"
@@ -18,9 +18,12 @@ import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { EmptyState } from "@/components/Common/EmptyState"
 import { PageHeader } from "@/components/Common/PageHeader"
 import { Button } from "@/components/ui/button"
+import { LoadingButton } from "@/components/ui/loading-button"
 import { columns, type WatchWithDetails } from "@/components/Watches/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
+import useCustomToast from "@/hooks/useCustomToast"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
+import { handleError } from "@/utils"
 
 export const Route = createFileRoute("/_layout/watches")({
   component: Watches,
@@ -47,6 +50,42 @@ function ImportWatchesButton() {
         Import
       </Link>
     </Button>
+  )
+}
+
+// The file holds only what re-importing needs, so it is downloaded straight from
+// the response rather than being built from the table's own rows.
+// TODO: Validate
+function ExportWatchesButton() {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const mutation = useMutation({
+    mutationFn: () => WatchesService.exportWatchHistory(),
+    onSuccess: (entries) => {
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(entries, null, 2)], {
+          type: "application/json",
+        }),
+      )
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "stream-channeler-watches.json"
+      link.click()
+      URL.revokeObjectURL(url)
+      showSuccessToast(`Exported ${entries.length} watches`)
+    },
+    onError: handleError.bind(showErrorToast),
+  })
+
+  return (
+    <LoadingButton
+      variant="outline"
+      onClick={() => mutation.mutate()}
+      loading={mutation.isPending}
+    >
+      <Download />
+      Export
+    </LoadingButton>
   )
 }
 
@@ -110,6 +149,7 @@ function WatchesTableContent() {
   return (
     <>
       <PageHeader title="Watches">
+        <ExportWatchesButton />
         <ImportWatchesButton />
         <ColumnVisibilityButton table={table} />
       </PageHeader>

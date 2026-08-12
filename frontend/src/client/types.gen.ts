@@ -1647,6 +1647,18 @@ export type WatchesListOutput = {
     is_server_side?: boolean;
 };
 
+/**
+ * Schema for a single exported `Watch`.
+ *
+ * Holds only what re-importing needs: which episode the watch is of, and when
+ * it happened. Everything else is read back out of the database the file is
+ * imported into.
+ */
+export type WatchExportEntry = {
+    canonical_episode_key: string;
+    watch_date: string;
+};
+
 export type WatchImportResult = {
     show: string;
     show_url: string;
@@ -2842,6 +2854,8 @@ export type WatchesImportWatchHistoryData = {
 };
 
 export type WatchesImportWatchHistoryResponse = (WatchImportResults);
+
+export type WatchesExportWatchHistoryResponse = (Array<WatchExportEntry>);
 
 export type WatchesCreateWatchData = {
     episodeId: string;

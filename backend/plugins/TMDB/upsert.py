@@ -179,8 +179,18 @@ class UpsertMixin(HelperMixin, register=False):
         tmdb_id: int,
         season_number: int,
     ) -> None:
-        """Write a series season and its episodes onto their canonical rows."""
-        detail = self.season_detail_file(tmdb_id, season_number).parsed()
+        """Write a series season and its episodes onto their canonical rows.
+
+        The seasons are read off the title's own file, which says which seasons
+        exist but nothing about what is in them, so each one is downloaded here.
+        A season TMDB lists but has no detail for is stored empty and has no
+        rows to write.
+        """
+        season_file = self.season_detail_file(tmdb_id, season_number)
+        season_file.download_if_outdated()
+        if not season_file.database_record.content:
+            return
+        detail = season_file.parsed()
         canonical_season = canonical_season_for(
             self.session,
             MediaType.tv,

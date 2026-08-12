@@ -16,13 +16,14 @@ from plugins.StreamChanneler.handlers import (
     SourceURLHandler,
     StreamChannelerURLHandler,
 )
+from plugins.StreamChanneler.watch_history import WatchHistoryMixin
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
-class StreamChanneler(BasePlugin, register=True):
+class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
     _VERSION = "0.0.1"
 
     # TODO: Validate

@@ -96,6 +96,19 @@ class WatchImportResults(BaseModel):
 
 
 # TODO: Validate
+class WatchExportEntry(BaseModel):
+    """Schema for a single exported `Watch`.
+
+    Holds only what re-importing needs: which episode the watch is of, and when
+    it happened. Everything else is read back out of the database the file is
+    imported into.
+    """
+
+    canonical_episode_key: str
+    watch_date: datetime
+
+
+# TODO: Validate
 class WatchImportInput(BaseInput):
     plugin_key: str
     new_only: bool

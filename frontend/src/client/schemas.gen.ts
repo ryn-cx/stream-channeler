@@ -8801,6 +8801,28 @@ export const WatchCreateSchema = {
     description: 'Schema for creating a `Watch`.'
 } as const;
 
+export const WatchExportEntrySchema = {
+    properties: {
+        canonical_episode_key: {
+            type: 'string',
+            title: 'Canonical Episode Key'
+        },
+        watch_date: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Watch Date'
+        }
+    },
+    type: 'object',
+    required: ['canonical_episode_key', 'watch_date'],
+    title: 'WatchExportEntry',
+    description: `Schema for a single exported \`Watch\`.
+
+Holds only what re-importing needs: which episode the watch is of, and when
+it happened. Everything else is read back out of the database the file is
+imported into.`
+} as const;
+
 export const WatchImportResultSchema = {
     properties: {
         show: {

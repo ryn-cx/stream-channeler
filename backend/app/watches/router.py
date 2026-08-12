@@ -12,6 +12,7 @@ from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
     WatchesListOutput,
+    WatchExportEntry,
     WatchImportInput,
     WatchImportResults,
     WatchOutput,
@@ -22,6 +23,7 @@ from app.watches.services import (
     get_installed_plugin,
     get_watched_episodes,
 )
+from plugins.StreamChanneler import StreamChanneler
 
 episode_watches_router = APIRouter(prefix="/episodes/{episode_id}", tags=["watches"])
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
@@ -106,6 +108,16 @@ def import_watch_history(
     )
     session.commit()
     return result
+
+
+# TODO: Validate
+@watches_router.get("/export")
+def export_watch_history(
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[WatchExportEntry]:
+    """Export the `User`'s watches as a Stream Channeler watch history."""
+    return StreamChanneler(session=session).export_watch_history(current_user)
 
 
 router = APIRouter()
