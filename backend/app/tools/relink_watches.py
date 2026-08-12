@@ -15,6 +15,7 @@ from uuid import UUID
 from loguru import logger
 from sqlmodel import Session, col, select
 
+from app.canonical_episodes.models import CanonicalEpisode
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -41,28 +42,32 @@ def _detached_watches(session: Session) -> list[Watch]:
 
 
 # TODO: Validate
-def _candidates_by_canonical_id(
+def _candidates_by_canonical_key(
     session: Session,
-    canonical_ids: set[UUID],
-) -> dict[UUID, list[tuple[Episode, str]]]:
-    """Return the live copies of each episode, with their source key."""
-    if not canonical_ids:
+    canonical_keys: set[str],
+) -> dict[str, list[tuple[Episode, str]]]:
+    """Return the live copies of each watched key, with their source key."""
+    if not canonical_keys:
         return {}
 
     rows = session.exec(
-        select(Episode, Source.key)
+        select(CanonicalEpisode.key, Episode, Source.key)  # type: ignore[call-overload]
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
+        .join(
+            CanonicalEpisode,
+            col(CanonicalEpisode.id) == col(Episode.canonical_episode_id),
+        )
         .where(
-            col(Episode.canonical_episode_id).in_(canonical_ids),
+            col(CanonicalEpisode.key).in_(canonical_keys),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
 
-    candidates: dict[UUID, list[tuple[Episode, str]]] = defaultdict(list)
-    for episode, source_key in rows:
-        candidates[episode.canonical_episode_id].append((episode, source_key))
+    candidates: dict[str, list[tuple[Episode, str]]] = defaultdict(list)
+    for canonical_key, episode, source_key in rows:
+        candidates[canonical_key].append((episode, source_key))
     return candidates
 
 
@@ -98,25 +103,28 @@ def _config_for_user(
 
 
 # TODO: Validate
-def _report_unresolvable(session: Session, canonical_ids: set[UUID]) -> None:
-    """Log why the watches on `canonical_ids` have nothing to be pointed at.
+def _report_unresolvable(session: Session, canonical_keys: set[str]) -> None:
+    """Log why the watches on `canonical_keys` have nothing to be pointed at.
 
     A watch outlives the episode it names, so it can name one this database has
     never held, and there is nothing a rerun will do about it until that episode
     is imported. Saying which of the two it is separates a library that has yet
     to catch up from an episode that was deleted and is still there to restore.
     """
-    if not canonical_ids:
+    if not canonical_keys:
         return
 
     soft_deleted = set(
         session.exec(
-            select(Episode.canonical_episode_id).where(
-                col(Episode.canonical_episode_id).in_(canonical_ids),
-            ),
+            select(CanonicalEpisode.key)
+            .join(
+                Episode,
+                col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+            )
+            .where(col(CanonicalEpisode.key).in_(canonical_keys)),
         ).all(),
     )
-    unknown = canonical_ids - soft_deleted
+    unknown = canonical_keys - soft_deleted
     logger.info(
         "{} episodes have only a deleted copy, {} have no copy at all",
         len(soft_deleted),
@@ -125,7 +133,7 @@ def _report_unresolvable(session: Session, canonical_ids: set[UUID]) -> None:
     if unknown:
         logger.info(
             "Episodes with no copy, first few: {}",
-            ", ".join(str(canonical_id) for canonical_id in sorted(unknown)[:5]),
+            ", ".join(sorted(unknown)[:5]),
         )
 
 
@@ -138,14 +146,14 @@ def relink_watches(session: Session) -> int:
         return 0
 
     logger.info("Found {} detached watches", len(detached))
-    canonical_ids = {watch.canonical_episode_id for watch in detached}
-    candidates = _candidates_by_canonical_id(session, canonical_ids)
-    _report_unresolvable(session, canonical_ids - candidates.keys())
+    canonical_keys = {watch.canonical_episode_key for watch in detached}
+    candidates = _candidates_by_canonical_key(session, canonical_keys)
+    _report_unresolvable(session, canonical_keys - candidates.keys())
     configs: dict[UUID, SourceDedupConfig] = {}
 
     relinked = 0
     for watch in detached:
-        matches = candidates.get(watch.canonical_episode_id)
+        matches = candidates.get(watch.canonical_episode_key)
         if not matches:
             continue
 
@@ -157,7 +165,7 @@ def relink_watches(session: Session) -> int:
             "Relinked watch {} to episode {} ({})",
             watch.id,
             episode.key,
-            watch.canonical_episode_id,
+            watch.canonical_episode_key,
         )
 
     session.commit()

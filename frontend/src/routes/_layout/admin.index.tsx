@@ -2,6 +2,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   Clapperboard,
+  Film,
   Flag,
   Layers,
   Link2,
@@ -60,6 +61,47 @@ function AdminIndex() {
               <CardDescription>
                 View and edit every channel's import queue, or filter to a
                 single user's queues.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/canonical-shows" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tv className="size-5" />
+                Canonical Shows
+              </CardTitle>
+              <CardDescription>
+                Every title itself, as against a website's copy of one. Drill
+                into a title for its seasons and episodes.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/canonical-seasons" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="size-5" />
+                Canonical Seasons
+              </CardTitle>
+              <CardDescription>
+                Every season itself, beside the title it belongs to.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/canonical-episodes" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Film className="size-5" />
+                Canonical Episodes
+              </CardTitle>
+              <CardDescription>
+                Every episode itself -- what a channel holds and a watch is
+                recorded against -- beside the season and title above it.
               </CardDescription>
             </CardHeader>
           </Card>

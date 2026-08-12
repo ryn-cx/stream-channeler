@@ -7,7 +7,7 @@ one episode to watch; where it does not, the copy is only ever itself and gets a
 row of its own.
 
 The TMDB plugin's linker is what points a copy at a shared row, and it does so
-by the `(media_type, tmdb_id)` pair TMDB issued. Everything else falls to
+by the key the id TMDB issued spells out. Everything else falls to
 `reconcile_show`, which gives a copy with no row of its own one to stand for it
 and keeps it across re-imports.
 
@@ -22,6 +22,12 @@ from collections.abc import Collection
 from sqlmodel import Session, col, select, update
 
 from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.keys import (
+    is_tmdb_key,
+    tmdb_episode_key,
+    tmdb_season_key,
+    tmdb_show_key,
+)
 from app.canonical_seasons.models import CanonicalSeason
 from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import Episode
@@ -29,16 +35,6 @@ from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.watches.models import Watch
-
-
-# TODO: Validate
-def tmdb_key(media_type: MediaType, tmdb_id: int) -> str:
-    """Return the key naming a TMDB record.
-
-    TMDB numbers films and series separately, so the media type is part of the
-    key to keep a film and a series that share a number apart.
-    """
-    return f"TMDB {media_type} {tmdb_id}"
 
 
 # TODO: Validate
@@ -104,10 +100,7 @@ def canonical_show_for(
     tmdb_id: int,
 ) -> CanonicalShow:
     """Return the title TMDB holds under `tmdb_id`, creating it if needed."""
-    canonical = canonical_show_by_key(session, tmdb_key(media_type, tmdb_id))
-    canonical.tmdb_media_type = media_type
-    canonical.tmdb_id = tmdb_id
-    return canonical
+    return canonical_show_by_key(session, tmdb_show_key(media_type, tmdb_id))
 
 
 # TODO: Validate
@@ -118,14 +111,11 @@ def canonical_season_for(
     canonical_show_id: uuid.UUID,
 ) -> CanonicalSeason:
     """Return the season TMDB holds under `tmdb_id`, creating it if needed."""
-    canonical = canonical_season_by_key(
+    return canonical_season_by_key(
         session,
-        tmdb_key(media_type, tmdb_id),
+        tmdb_season_key(media_type, tmdb_id),
         canonical_show_id,
     )
-    canonical.tmdb_media_type = media_type
-    canonical.tmdb_id = tmdb_id
-    return canonical
 
 
 # TODO: Validate
@@ -136,14 +126,11 @@ def canonical_episode_for(
     canonical_season_id: uuid.UUID,
 ) -> CanonicalEpisode:
     """Return the episode TMDB holds under `tmdb_id`, creating it if needed."""
-    canonical = canonical_episode_by_key(
+    return canonical_episode_by_key(
         session,
-        tmdb_key(media_type, tmdb_id),
+        tmdb_episode_key(media_type, tmdb_id),
         canonical_season_id,
     )
-    canonical.tmdb_media_type = media_type
-    canonical.tmdb_id = tmdb_id
-    return canonical
 
 
 # TODO: Validate
@@ -259,7 +246,7 @@ def standalone_season(
     if season.canonical_season_id:
         kept = session.get(CanonicalSeason, season.canonical_season_id)
         if kept and (kept.key or not key):
-            if kept.tmdb_id is None:
+            if not is_tmdb_key(kept.key):
                 kept.canonical_show_id = canonical_show.id
             return kept
     if key:
@@ -286,7 +273,7 @@ def standalone_episode(
     if episode.canonical_episode_id:
         kept = session.get(CanonicalEpisode, episode.canonical_episode_id)
         if kept and (kept.key or not key):
-            if kept.tmdb_id is None:
+            if not is_tmdb_key(kept.key):
                 kept.canonical_season_id = canonical_season.id
             return kept
     if key:
@@ -301,7 +288,7 @@ def standalone_episode(
 def _repoint_watches(
     session: Session,
     episode: Episode,
-    canonical_id: uuid.UUID,
+    canonical: CanonicalEpisode,
 ) -> None:
     """Move the watches of `episode` onto the canonical episode it is now of.
 
@@ -309,13 +296,65 @@ def _repoint_watches(
     so settling a match by hand carries the watch history over with it rather
     than leaving it against the row the copy has moved off.
     """
+    if canonical.key is None:
+        return
     session.execute(
         update(Watch)
         .where(
             col(Watch.episode_id) == episode.id,
-            col(Watch.canonical_episode_id).is_distinct_from(canonical_id),
+            col(Watch.canonical_episode_key).is_distinct_from(canonical.key),
         )
-        .values(canonical_episode_id=canonical_id),
+        .values(canonical_episode_key=canonical.key),
+    )
+
+
+# TODO: Validate
+def _is_watched(session: Session, canonical_episode_keys: Collection[str]) -> bool:
+    """Whether any watch is recorded against one of these keys."""
+    if not canonical_episode_keys:
+        return False
+    return (
+        session.exec(
+            select(Watch.id).where(
+                col(Watch.canonical_episode_key).in_(canonical_episode_keys),
+            ),
+        ).first()
+        is not None
+    )
+
+
+# TODO: Validate
+def _episode_keys_under_season(
+    session: Session,
+    canonical_season_id: uuid.UUID,
+) -> list[str]:
+    return list(
+        session.exec(
+            select(CanonicalEpisode.key).where(  # type: ignore[arg-type]
+                CanonicalEpisode.canonical_season_id == canonical_season_id,
+                col(CanonicalEpisode.key).is_not(None),
+            ),
+        ).all(),
+    )
+
+
+# TODO: Validate
+def _episode_keys_under_show(
+    session: Session,
+    canonical_show_id: uuid.UUID,
+) -> list[str]:
+    return list(
+        session.exec(
+            select(CanonicalEpisode.key)  # type: ignore[arg-type]
+            .join(
+                CanonicalSeason,
+                col(CanonicalSeason.id) == col(CanonicalEpisode.canonical_season_id),
+            )
+            .where(
+                CanonicalSeason.canonical_show_id == canonical_show_id,
+                col(CanonicalEpisode.key).is_not(None),
+            ),
+        ).all(),
     )
 
 
@@ -326,21 +365,19 @@ def discard_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
     A row left behind by a copy moving to another is one nothing can reach, and
     it is dropped rather than kept as media that exists nowhere. A row that
     still has a copy pointing at it, or a watch recorded against it, is left
-    alone — watch history is the reason a canonical row outlives its copies.
+    alone - watch history is the reason a canonical row outlives its copies.
     """
     still_used = session.exec(
         select(Episode.id).where(Episode.canonical_episode_id == canonical_id),
     ).first()
     if still_used:
         return
-    still_watched = session.exec(
-        select(Watch.id).where(Watch.canonical_episode_id == canonical_id),
-    ).first()
-    if still_watched:
-        return
     abandoned = session.get(CanonicalEpisode, canonical_id)
-    if abandoned and abandoned.tmdb_id is None:
-        session.delete(abandoned)
+    if abandoned is None or is_tmdb_key(abandoned.key):
+        return
+    if abandoned.key and _is_watched(session, [abandoned.key]):
+        return
+    session.delete(abandoned)
 
 
 # TODO: Validate
@@ -349,29 +386,35 @@ def _discard_show_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
 
     Only ever an unclaimed row: one the flush hook minted to satisfy a pointer
     and that the key then moved the copy off. A title anybody claimed is left
-    alone.
+    alone, and so is one whose cascade would take an episode somebody watched.
     """
     abandoned = session.get(CanonicalShow, canonical_id)
-    if abandoned is None or abandoned.key or abandoned.tmdb_id:
+    if abandoned is None or abandoned.key:
         return
     still_used = session.exec(
         select(Show.id).where(Show.canonical_show_id == canonical_id),
     ).first()
-    if still_used is None:
-        session.delete(abandoned)
+    if still_used is not None:
+        return
+    if _is_watched(session, _episode_keys_under_show(session, canonical_id)):
+        return
+    session.delete(abandoned)
 
 
 # TODO: Validate
 def _discard_season_if_unused(session: Session, canonical_id: uuid.UUID) -> None:
     """Delete a canonical season no copy is of any more, if nobody claimed it."""
     abandoned = session.get(CanonicalSeason, canonical_id)
-    if abandoned is None or abandoned.key or abandoned.tmdb_id:
+    if abandoned is None or abandoned.key:
         return
     still_used = session.exec(
         select(Season.id).where(Season.canonical_season_id == canonical_id),
     ).first()
-    if still_used is None:
-        session.delete(abandoned)
+    if still_used is not None:
+        return
+    if _is_watched(session, _episode_keys_under_season(session, canonical_id)):
+        return
+    session.delete(abandoned)
 
 
 # TODO: Validate
@@ -391,12 +434,12 @@ def point_episode_at(
         return
 
     episode.canonical_episode = canonical
-    if canonical.tmdb_id is None:
+    if not is_tmdb_key(canonical.key):
         _copy_episode_metadata(episode, canonical)
     session.add(episode)
     session.flush()
 
-    _repoint_watches(session, episode, canonical.id)
+    _repoint_watches(session, episode, canonical)
     if previous_id:
         discard_if_unused(session, previous_id)
 
@@ -420,19 +463,18 @@ def _discard_abandoned(
         discard_if_unused(session, canonical_id)
     session.flush()
 
-    # A season under a title that is going anyway is taken by the cascade, so
-    # deleting it here as well would issue a statement that matches nothing.
-    doomed_shows = {
-        canonical_id for canonical_id in shows if canonical_id != kept_show_id
-    }
-    for canonical_id in seasons:
-        season_row = session.get(CanonicalSeason, canonical_id)
-        if season_row and season_row.canonical_show_id not in doomed_shows:
-            _discard_season_if_unused(session, canonical_id)
+    # Titles first, so a season the cascade takes is already gone by the time
+    # its own turn comes; a title a watch holds is not, and its seasons are then
+    # weighed one at a time like any other.
+    for canonical_id in shows:
+        if canonical_id != kept_show_id:
+            _discard_show_if_unused(session, canonical_id)
     session.flush()
 
-    for canonical_id in doomed_shows:
-        _discard_show_if_unused(session, canonical_id)
+    for canonical_id in seasons:
+        if session.get(CanonicalSeason, canonical_id) is not None:
+            _discard_season_if_unused(session, canonical_id)
+    session.flush()
 
 
 # TODO: Validate
@@ -452,7 +494,7 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
     previous_show_id = show.canonical_show_id
     canonical_show = standalone_show(session, show, _record_key(plugin_key, show))
     show.canonical_show = canonical_show
-    if canonical_show.tmdb_id is None or plugin_key == TMDB_PLUGIN_KEY:
+    if not is_tmdb_key(canonical_show.key) or plugin_key == TMDB_PLUGIN_KEY:
         _copy_show_metadata(show, canonical_show)
 
     # Gathered rather than dropped as they are found: a row is only spare once
@@ -471,7 +513,7 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
             _record_key(plugin_key, season),
         )
         season.canonical_season = canonical_season
-        if canonical_season.tmdb_id is None or plugin_key == TMDB_PLUGIN_KEY:
+        if not is_tmdb_key(canonical_season.key) or plugin_key == TMDB_PLUGIN_KEY:
             _copy_season_metadata(season, canonical_season)
         if previous_season_id and previous_season_id != canonical_season.id:
             abandoned_seasons.add(previous_season_id)
@@ -485,11 +527,11 @@ def reconcile_show(session: Session, show: Show, plugin_key: str) -> None:
                 _record_key(plugin_key, episode),
             )
             episode.canonical_episode = canonical_episode
-            if canonical_episode.tmdb_id is None or plugin_key == TMDB_PLUGIN_KEY:
+            if not is_tmdb_key(canonical_episode.key) or plugin_key == TMDB_PLUGIN_KEY:
                 _copy_episode_metadata(episode, canonical_episode)
             if previous_id != canonical_episode.id:
                 session.flush()
-                _repoint_watches(session, episode, canonical_episode.id)
+                _repoint_watches(session, episode, canonical_episode)
                 if previous_id:
                     abandoned_episodes.add(previous_id)
 

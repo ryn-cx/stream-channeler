@@ -11,7 +11,6 @@ import uuid
 from datetime import datetime
 from typing import ClassVar
 
-from sqlalchemy import CheckConstraint
 from sqlmodel import (
     Field,
     Index,
@@ -29,19 +28,14 @@ from app.models import DateTimeField, TimestampIdAndHashMixin, sortable_field_in
 class BaseCanonicalEpisode(SQLModel):
     """Base model for a `CanonicalEpisode`."""
 
-    # What makes two copies of this episode one episode rather than two.
-    # Namespaced by whoever issued it — "TMDB tv 1234" for a record TMDB holds,
-    # "YouTube dQw4w9WgXcQ" for one only YouTube knows about — so no two
-    # sources can collide on it. Unique within one season rather than
-    # across all of them, since a plugin only promises a key means one
-    # thing under the season holding it. `None` while nothing has claimed the episode.
+    # What makes two copies of this episode one episode rather than two, and the
+    # whole of what says which TMDB record an episode is. Namespaced by whoever
+    # issued it — "TMDB tv episode 63056" for a record TMDB holds, "YouTube
+    # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
+    # collide on it. Unique within one season rather than across all of them,
+    # since a plugin only promises a key means one thing under the season
+    # holding it. `None` while nothing has claimed the episode.
     key: str | None = Field(default=None)
-
-    # TMDB's own account of the episode, kept as columns rather than read back
-    # out of `key`, so nothing has to parse a string to build a link or match
-    # against it. Written beside the key, never apart from it.
-    tmdb_media_type: str | None = Field(default=None)
-    tmdb_id: int | None = Field(default=None)
 
     name: str | None = Field(default=None)
     # The episode's own page, as against a copy's `url`, which is where that
@@ -77,17 +71,11 @@ class CanonicalEpisode(TimestampIdAndHashMixin, BaseCanonicalEpisode, table=True
             "key",
             name="CanonicalEpisode-canonical_season_id-key-key",
         ),
-        UniqueConstraint(
-            "tmdb_media_type",
-            "tmdb_id",
-            name="CanonicalEpisode-tmdb_media_type-tmdb_id-key",
-        ),
-        CheckConstraint(
-            "(tmdb_media_type IS NULL) = (tmdb_id IS NULL)",
-            name="CanonicalEpisode-tmdb-identity-complete",
-        ),
         *sortable_field_indexes("CanonicalEpisode", DIRECT_SORTABLE_FIELDS),
         Index("CanonicalEpisode-canonical_season_id-index", "canonical_season_id"),
+        # An episode is looked up by key alone where a `User` names a TMDB id
+        # by hand, which is across every season rather than within one.
+        Index("CanonicalEpisode-key-index", "key"),
     )
 
     canonical_season_id: uuid.UUID = Field(

@@ -20,6 +20,141 @@ export type Body_watches_import_watch_history = {
 };
 
 /**
+ * Schema for returning a list of `CanonicalEpisode`s, with what holds them.
+ */
+export type CanonicalEpisodeListOutput = {
+    key?: (string | null);
+    name?: (string | null);
+    url?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    sort_order?: (number | null);
+    canonical_season_id: string;
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    canonical_season_name: (string | null);
+    canonical_show_id: string;
+    canonical_show_name: (string | null);
+    canonical_show_key: (string | null);
+};
+
+/**
+ * Schema for returning a `CanonicalEpisode`.
+ */
+export type CanonicalEpisodeOutput = {
+    key?: (string | null);
+    name?: (string | null);
+    url?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    release_date?: (string | null);
+    air_date?: (string | null);
+    sort_order?: (number | null);
+    canonical_season_id: string;
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+};
+
+/**
+ * Schema for returning a list of `CanonicalEpisode`s.
+ */
+export type CanonicalEpisodesPublic = {
+    data: Array<CanonicalEpisodeListOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
+/**
+ * Schema for returning a list of `CanonicalSeason`s, with the title above.
+ */
+export type CanonicalSeasonListOutput = {
+    key?: (string | null);
+    name?: (string | null);
+    url?: (string | null);
+    season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
+    canonical_show_id: string;
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    canonical_show_name: (string | null);
+    canonical_show_key: (string | null);
+};
+
+/**
+ * Schema for returning a `CanonicalSeason`.
+ */
+export type CanonicalSeasonOutput = {
+    key?: (string | null);
+    name?: (string | null);
+    url?: (string | null);
+    season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
+    canonical_show_id: string;
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+};
+
+/**
+ * Schema for returning a list of `CanonicalSeason`s.
+ */
+export type CanonicalSeasonsPublic = {
+    data: Array<CanonicalSeasonListOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
+/**
+ * Schema for returning a `CanonicalShow`.
+ *
+ * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
+ * the key is the whole of what says which TMDB record a title is. They are
+ * served for reading only: nothing can be sorted or filtered by a value the
+ * database does not hold a column for.
+ */
+export type CanonicalShowOutput = {
+    key?: (string | null);
+    name?: (string | null);
+    url?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    icon?: (string | null);
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    tmdb_url?: (string | null);
+};
+
+/**
+ * Schema for returning a list of `CanonicalShow`s.
+ */
+export type CanonicalShowsPublic = {
+    data: Array<CanonicalShowOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
+/**
  * Schema for an admin updating any field on a `Channel`.
  */
 export type ChannelAdminUpdate = {
@@ -1512,6 +1647,7 @@ export type WatchItem = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
+    canonical_episode_key: string;
     canonical_episode_id: string;
 };
 
@@ -1523,7 +1659,7 @@ export type WatchOutput = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
-    canonical_episode_id: string;
+    canonical_episode_key: string;
     user_id: string;
 };
 
@@ -1635,6 +1771,81 @@ export type WhitelistSourceOutput = {
     filtered: boolean;
     is_tmdb?: boolean;
 };
+
+export type CanonicalEpisodesGetCanonicalEpisodesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalEpisodesGetCanonicalEpisodesResponse = (CanonicalEpisodesPublic);
+
+export type CanonicalEpisodesGetCanonicalEpisodeByIdData = {
+    canonicalEpisodeId: string;
+};
+
+export type CanonicalEpisodesGetCanonicalEpisodeByIdResponse = (CanonicalEpisodeOutput);
+
+export type CanonicalEpisodesGetCanonicalSeasonEpisodesData = {
+    canonicalSeasonId: string;
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalEpisodesGetCanonicalSeasonEpisodesResponse = (CanonicalEpisodesPublic);
+
+export type CanonicalEpisodesGetCanonicalShowEpisodesData = {
+    canonicalShowId: string;
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalEpisodesGetCanonicalShowEpisodesResponse = (CanonicalEpisodesPublic);
+
+export type CanonicalSeasonsGetCanonicalSeasonsData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalSeasonsGetCanonicalSeasonsResponse = (CanonicalSeasonsPublic);
+
+export type CanonicalSeasonsGetCanonicalSeasonByIdData = {
+    canonicalSeasonId: string;
+};
+
+export type CanonicalSeasonsGetCanonicalSeasonByIdResponse = (CanonicalSeasonOutput);
+
+export type CanonicalSeasonsGetCanonicalShowSeasonsData = {
+    canonicalShowId: string;
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalSeasonsGetCanonicalShowSeasonsResponse = (CanonicalSeasonsPublic);
+
+export type CanonicalShowsGetCanonicalShowsData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type CanonicalShowsGetCanonicalShowsResponse = (CanonicalShowsPublic);
+
+export type CanonicalShowsGetCanonicalShowByIdData = {
+    canonicalShowId: string;
+};
+
+export type CanonicalShowsGetCanonicalShowByIdResponse = (CanonicalShowOutput);
 
 export type ChannelOrdersCreateChannelOrderData = {
     requestBody: ChannelOrderCreate;

@@ -19,6 +19,7 @@ from sqlmodel import (
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     DateTimeField,
@@ -142,7 +143,9 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @property
     def tmdb_id(self) -> int | None:
         """The TMDB episode this is a copy of, if TMDB has a record of it."""
-        return self.canonical_episode.tmdb_id if self.canonical_episode else None
+        if self.canonical_episode is None:
+            return None
+        return tmdb_id_of(self.canonical_episode.key, EPISODE_LEVEL)
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")

@@ -204,11 +204,7 @@ def get_season_information(
             TMDB_PLUGIN_KEY,
             canonical_season,
             canonical_show,
-            tmdb_season_url(
-                canonical_show.tmdb_media_type,
-                canonical_show.tmdb_id,
-                canonical_season.season_number,
-            ),
+            tmdb_season_url(canonical_show.key, canonical_season.season_number),
         )
 
     return SeasonInformationOutput(

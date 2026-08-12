@@ -341,8 +341,7 @@ def get_episode_information(
             canonical_season,
             canonical_show,
             tmdb_episode_url(
-                canonical_show.tmdb_media_type,
-                canonical_show.tmdb_id,
+                canonical_show.key,
                 canonical_season.season_number,
                 canonical_episode.episode_number,
             ),

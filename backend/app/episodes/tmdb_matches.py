@@ -16,6 +16,15 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.keys import (
+    EPISODE_LEVEL,
+    SHOW_LEVEL,
+    not_tmdb_key_clause,
+    parse_tmdb_key,
+    tmdb_episode_key,
+    tmdb_id_of,
+    tmdb_key_clause,
+)
 from app.canonical_media.service import point_episode_at, standalone_episode
 from app.canonical_seasons.models import CanonicalSeason
 from app.canonical_shows.models import CanonicalShow
@@ -141,18 +150,18 @@ def _choice(
     similarity: float,
 ) -> TmdbEpisodeChoice | None:
     episode, season, show = candidate
-    if episode.tmdb_id is None:
+    tmdb_episode_id = tmdb_id_of(episode.key, EPISODE_LEVEL)
+    if tmdb_episode_id is None:
         return None
 
     return TmdbEpisodeChoice(
-        tmdb_episode_id=episode.tmdb_id,
+        tmdb_episode_id=tmdb_episode_id,
         name=episode.name,
         season_number=season.season_number,
         episode_number=episode.episode_number,
         absolute_number=absolute_numbers.get(episode.id),
         url=tmdb_episode_url(
-            show.tmdb_media_type,
-            show.tmdb_id,
+            show.key,
             season.season_number,
             episode.episode_number,
         ),
@@ -211,8 +220,8 @@ def _unmatched_rows(
             # The episode is a copy of something TMDB has no record of, while
             # the title above it is one TMDB does hold: that gap is exactly what
             # is left to match.
-            col(CanonicalEpisode.tmdb_id).is_(None),
-            col(CanonicalShow.tmdb_id).is_not(None),
+            not_tmdb_key_clause(col(CanonicalEpisode.key)),
+            tmdb_key_clause(col(CanonicalShow.key)),
             # A locked link is one a `User` has already settled, whether by
             # pointing the episode at a TMDB record or by saying there is none to
             # point it at, so it is no longer waiting on anybody.
@@ -257,7 +266,7 @@ def _candidates_by_show(
         )
         .where(
             col(CanonicalShow.id).in_(canonical_show_ids),
-            col(CanonicalEpisode.tmdb_id).is_not(None),
+            tmdb_key_clause(col(CanonicalEpisode.key)),
         )
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = defaultdict(list)
@@ -378,7 +387,7 @@ def _unlocked_rows(
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
             col(Episode.canonical_episode_locked).is_(False),
-            col(CanonicalShow.tmdb_id).is_not(None),
+            tmdb_key_clause(col(CanonicalShow.key)),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -467,7 +476,7 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
     counted as somebody else's.
     """
     statement = (
-        select(CanonicalEpisode.tmdb_id)
+        select(CanonicalEpisode.key)
         .join(
             Episode,
             onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
@@ -476,12 +485,16 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
         .where(
             Season.show_id == episode.season.show_id,
             col(Episode.id) != episode.id,
-            col(CanonicalEpisode.tmdb_id).is_not(None),
+            tmdb_key_clause(col(CanonicalEpisode.key)),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
         )
     )
-    return {tmdb_id for tmdb_id in session.exec(statement).all() if tmdb_id}
+    return {
+        tmdb_id
+        for key in session.exec(statement).all()
+        if (tmdb_id := tmdb_id_of(key, EPISODE_LEVEL)) is not None
+    }
 
 
 # TODO: Validate
@@ -573,8 +586,12 @@ def _tmdb_episode(
     is what a choice taken off the list is.
     """
     statement = select(CanonicalEpisode).where(
-        CanonicalEpisode.tmdb_id == tmdb_episode_id,
-        col(CanonicalEpisode.tmdb_media_type).in_(_tmdb_halves(media_type)),
+        col(CanonicalEpisode.key).in_(
+            [
+                tmdb_episode_key(half, tmdb_episode_id)
+                for half in _tmdb_halves(media_type)
+            ],
+        ),
     )
     return session.exec(statement).first()
 
@@ -655,11 +672,7 @@ def _import_named_media(
         return
 
     canonical_show = episode.season.show.canonical_show
-    linked = (
-        (MediaType(canonical_show.tmdb_media_type), canonical_show.tmdb_id)
-        if canonical_show and canonical_show.tmdb_id and canonical_show.tmdb_media_type
-        else None
-    )
+    linked = parse_tmdb_key(canonical_show.key, SHOW_LEVEL) if canonical_show else None
     if linked is None:
         return
 

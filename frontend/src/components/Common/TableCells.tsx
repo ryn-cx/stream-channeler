@@ -22,6 +22,16 @@ type ParentLinkCellProps =
       params: { pluginId: string }
       name: string | null
     }
+  | {
+      to: "/admin/canonical-show/$canonicalShowId"
+      params: { canonicalShowId: string }
+      name: string | null
+    }
+  | {
+      to: "/admin/canonical-season/$canonicalSeasonId"
+      params: { canonicalSeasonId: string }
+      name: string | null
+    }
 
 // TODO: Validate
 export function ParentLinkCell({ to, params, name }: ParentLinkCellProps) {

@@ -169,7 +169,7 @@ def get_show_information(
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
             counterpart,
-            tmdb_show_url(counterpart.tmdb_media_type, counterpart.tmdb_id),
+            tmdb_show_url(counterpart.key),
         )
 
     editable = current_user is not None and (

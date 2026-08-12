@@ -2,11 +2,37 @@
 import { useQuery } from "@tanstack/react-query"
 
 import {
+  CanonicalSeasonsService,
+  CanonicalShowsService,
   PluginsService,
   SeasonsService,
   ShowsService,
   SourcesService,
 } from "@/client"
+
+// TODO: Validate
+export function useCanonicalShow(canonicalShowId: string | undefined) {
+  return useQuery({
+    queryKey: ["canonical-shows", canonicalShowId],
+    queryFn: () =>
+      CanonicalShowsService.getCanonicalShowById({
+        canonicalShowId: canonicalShowId!,
+      }),
+    enabled: !!canonicalShowId,
+  })
+}
+
+// TODO: Validate
+export function useCanonicalSeason(canonicalSeasonId: string | undefined) {
+  return useQuery({
+    queryKey: ["canonical-seasons", canonicalSeasonId],
+    queryFn: () =>
+      CanonicalSeasonsService.getCanonicalSeasonById({
+        canonicalSeasonId: canonicalSeasonId!,
+      }),
+    enabled: !!canonicalSeasonId,
+  })
+}
 
 // TODO: Validate
 export function usePlugin(pluginId: string | undefined) {

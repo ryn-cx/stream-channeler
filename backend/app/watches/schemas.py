@@ -38,7 +38,7 @@ class WatchOutput(BaseWatch):
 
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    canonical_episode_id: uuid.UUID
+    canonical_episode_key: str
     user_id: uuid.UUID
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
     # the value will always be present so they need to be overridden.
@@ -50,8 +50,10 @@ class WatchOutput(BaseWatch):
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    # The episode itself, which is what the watch is of and what keys `episodes`
-    # on the list output.
+    # The episode itself, which is what the watch is of. The key is what the
+    # watch holds; the id is the row that key resolved to here, and is what keys
+    # `episodes` on the list output.
+    canonical_episode_key: str
     canonical_episode_id: uuid.UUID
 
     # TODO: Validate

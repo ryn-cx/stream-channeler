@@ -66,13 +66,11 @@ class WatchHistoryMixin(WatchMixin):
             # has a copy of, so a single watch is recorded for all of them. A
             # copy that is not of anything yet is skipped rather than counted as
             # a watch of nothing.
-            if episode.canonical_episode_id is None:
+            canonical_key = episode.canonical_episode.key
+            if canonical_key is None:
                 skipped_watches.append(entry.import_result)
                 continue
-            watched_dates = watched_canonical_dates.setdefault(
-                episode.canonical_episode_id,
-                [],
-            )
+            watched_dates = watched_canonical_dates.setdefault(canonical_key, [])
             if (new_only and watched_dates) or entry.watch_date in watched_dates:
                 existing_watches.append(entry.import_result)
                 continue
@@ -81,7 +79,7 @@ class WatchHistoryMixin(WatchMixin):
                 Watch(
                     user_id=user.id,
                     episode_id=episode.id,
-                    canonical_episode_id=episode.canonical_episode_id,
+                    canonical_episode_key=canonical_key,
                     watch_date=entry.watch_date,
                     verified=verified,
                 ),

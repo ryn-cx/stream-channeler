@@ -24,8 +24,10 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from app.canonical_episodes.models import CanonicalEpisode
+from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
 from app.canonical_seasons.models import CanonicalSeason
 from app.canonical_shows.models import CanonicalShow
+from app.media.media_type import MediaType
 
 # What each level's canonical row answers for. Anything else belongs to the copy
 # alone — `url` above all, which says where rather than what.
@@ -258,8 +260,7 @@ def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
         if show is None:
             continue
         url = tmdb_episode_url(
-            show.tmdb_media_type,
-            show.tmdb_id,
+            show.key,
             season.season_number if season else None,
             canonical.episode_number,
         )
@@ -287,20 +288,23 @@ def _shows_of(
 
 # TODO: Validate
 def tmdb_episode_url(
-    media_type: str | None,
-    tmdb_id: int | None,
+    show_key: str | None,
     season_number: int | None,
     episode_number: int | None,
 ) -> str | None:
     """Return the page for an episode on themoviedb.org, if TMDB has one.
 
-    A film is a single page with nothing below it, so its one episode is that
-    page. Media TMDB has no record of has no page at all.
+    Built from the key of the title the episode is under, which is where the
+    half of the catalogue and the id both come from. A film is a single page
+    with nothing below it, so its one episode is that page. Media TMDB has no
+    record of has no page at all.
     """
-    if not media_type or tmdb_id is None:
+    parsed = parse_tmdb_key(show_key, SHOW_LEVEL)
+    if parsed is None:
         return None
-    if media_type == "movie":
-        return f"{TMDB_PAGE_URL}/movie/{tmdb_id}"
+    media_type, tmdb_id = parsed
+    if media_type is MediaType.movie:
+        return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     if season_number is None or episode_number is None:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     return (
@@ -310,28 +314,28 @@ def tmdb_episode_url(
 
 
 # TODO: Validate
-def tmdb_season_url(
-    media_type: str | None,
-    tmdb_id: int | None,
-    season_number: int | None,
-) -> str | None:
+def tmdb_season_url(show_key: str | None, season_number: int | None) -> str | None:
     """Return the page for a season on themoviedb.org, if TMDB has one.
 
     A film is a single page with nothing below it, so its one season is that
     page, and so is a series season TMDB has no number for.
     """
-    if not media_type or tmdb_id is None:
+    parsed = parse_tmdb_key(show_key, SHOW_LEVEL)
+    if parsed is None:
         return None
-    if media_type == "movie" or season_number is None:
+    media_type, tmdb_id = parsed
+    if media_type is MediaType.movie or season_number is None:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}/season/{season_number}"
 
 
 # TODO: Validate
-def tmdb_show_url(media_type: str | None, tmdb_id: int | None) -> str | None:
+def tmdb_show_url(show_key: str | None) -> str | None:
     """Return the page for a title on themoviedb.org, if TMDB has one."""
-    if not media_type or tmdb_id is None:
+    parsed = parse_tmdb_key(show_key, SHOW_LEVEL)
+    if parsed is None:
         return None
+    media_type, tmdb_id = parsed
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
 
 

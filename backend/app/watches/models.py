@@ -12,7 +12,6 @@ from sqlmodel import (
     SQLModel,
 )
 
-from app.canonical_episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.models import TimestampIdAndHashMixin
 from app.users.models import User
@@ -41,12 +40,12 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
         # Used when an episode is deleted and its watches are detached.
         Index("Watch-episode_id-index", "episode_id"),
         # Used by watch_filters to match watches to canonical episodes.
-        Index("Watch-canonical_episode_id-index", "canonical_episode_id"),
+        Index("Watch-canonical_episode_key-index", "canonical_episode_key"),
         # One watch per `User`, per episode, per moment.
         Index(
-            "Watch-user_id-canonical_episode_id-watch_date-key",
+            "Watch-user_id-canonical_episode_key-watch_date-key",
             "user_id",
-            "canonical_episode_id",
+            "canonical_episode_key",
             "watch_date",
             unique=True,
         ),
@@ -61,13 +60,11 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="watched_episodes")
 
-    # The episode itself, as against the website's copy of it in `episode_id`.
-    # This is what the watch is of, and it outlives every copy being deleted.
-    canonical_episode_id: uuid.UUID = Field(
-        foreign_key="canonicalepisode.id",
-        ondelete="RESTRICT",
-    )
-    canonical_episode: CanonicalEpisode = Relationship()
+    # The key of the episode itself, as against the website's copy of it in
+    # `episode_id`. This is what the watch is of: the key is the whole of what
+    # says which episode that is, so it is what the watch holds, and it goes on
+    # saying so after every row and copy carrying it is gone.
+    canonical_episode_key: str
 
     # The episode the watch was recorded against, or None once that episode has
     # been deleted. Reads join through it, so a detached watch is dormant until

@@ -1,11 +1,11 @@
 # TODO: Validate
-import uuid
 from abc import ABC
 from collections import defaultdict
 from datetime import datetime
 
 from sqlmodel import Session, col, select
 
+from app.canonical_episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -45,8 +45,8 @@ class WatchMixin(ABC):
         self,
         user: User,
         episodes_by_key: dict[str, Episode],
-    ) -> dict[uuid.UUID, list[datetime]]:
-        """Load watched dates grouped by the canonical episode they are of."""
+    ) -> dict[str, list[datetime]]:
+        """Load watched dates grouped by the key of the episode they are of."""
         canonical_ids = {
             episode.canonical_episode_id
             for episode in episodes_by_key.values()
@@ -54,11 +54,19 @@ class WatchMixin(ABC):
         }
         if not canonical_ids:
             return {}
-        statement = select(Watch.canonical_episode_id, Watch.watch_date).where(
+        canonical_keys = self.session.exec(
+            select(CanonicalEpisode.key).where(
+                col(CanonicalEpisode.id).in_(canonical_ids),
+                col(CanonicalEpisode.key).is_not(None),
+            ),
+        ).all()
+        if not canonical_keys:
+            return {}
+        statement = select(Watch.canonical_episode_key, Watch.watch_date).where(
             Watch.user_id == user.id,
-            col(Watch.canonical_episode_id).in_(canonical_ids),
+            col(Watch.canonical_episode_key).in_(canonical_keys),
         )
-        result: dict[uuid.UUID, list[datetime]] = defaultdict(list)
-        for canonical_episode_id, watch_date in self.session.exec(statement):
-            result[canonical_episode_id].append(watch_date)
+        result: dict[str, list[datetime]] = defaultdict(list)
+        for canonical_episode_key, watch_date in self.session.exec(statement):
+            result[canonical_episode_key].append(watch_date)
         return result

@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router"
 import { Fragment, type ReactNode } from "react"
 
 import type {
+  CanonicalSeasonOutput,
+  CanonicalShowOutput,
   PluginOutput,
   SeasonOutput,
   ShowPublic,
@@ -17,13 +19,21 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-type EntityKey = "plugin" | "source" | "show" | "season"
+type EntityKey =
+  | "plugin"
+  | "source"
+  | "show"
+  | "season"
+  | "canonicalShow"
+  | "canonicalSeason"
 
 interface DetailBreadcrumbProps {
   plugin?: PluginOutput
   source?: SourcePublic
   show?: ShowPublic
   season?: SeasonOutput
+  canonicalShow?: CanonicalShowOutput
+  canonicalSeason?: CanonicalSeasonOutput
   trailing: string
   current?: EntityKey
 }
@@ -34,6 +44,8 @@ export function DetailBreadcrumb({
   source,
   show,
   season,
+  canonicalShow,
+  canonicalSeason,
   trailing,
   current,
 }: DetailBreadcrumbProps) {
@@ -78,6 +90,39 @@ export function DetailBreadcrumb({
       link: (
         <Link to="/season/$seasonKey" params={{ seasonKey: season.id }}>
           {season.name || season.key}
+        </Link>
+      ),
+    })
+  }
+  // A canonical row's key is unset until something claims it, so the id is the
+  // last thing left to name it by.
+  if (canonicalShow) {
+    const label = canonicalShow.name || canonicalShow.key || canonicalShow.id
+    crumbs.push({
+      key: "canonicalShow",
+      label,
+      link: (
+        <Link
+          to="/admin/canonical-show/$canonicalShowId"
+          params={{ canonicalShowId: canonicalShow.id }}
+        >
+          {label}
+        </Link>
+      ),
+    })
+  }
+  if (canonicalSeason) {
+    const label =
+      canonicalSeason.name || canonicalSeason.key || canonicalSeason.id
+    crumbs.push({
+      key: "canonicalSeason",
+      label,
+      link: (
+        <Link
+          to="/admin/canonical-season/$canonicalSeasonId"
+          params={{ canonicalSeasonId: canonicalSeason.id }}
+        >
+          {label}
         </Link>
       ),
     })

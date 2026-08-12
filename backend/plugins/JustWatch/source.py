@@ -8,8 +8,10 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import col, select
 
+from app.canonical_media.keys import tmdb_show_key
 from app.canonical_shows.models import CanonicalShow
 from app.files.models import File
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -206,7 +208,9 @@ class SourceMixin(UpsertMixin, register=False):
             .join(Source)
             .join(Plugin)
             .where(
-                CanonicalShow.tmdb_id == tmdb_id,
+                col(CanonicalShow.key).in_(
+                    [tmdb_show_key(half, tmdb_id) for half in MediaType],
+                ),
                 Plugin.key == plugin_class.plugin_key(),
                 col(Show.deleted_at).is_(None),
             )

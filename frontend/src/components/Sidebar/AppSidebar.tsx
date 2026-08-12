@@ -4,6 +4,7 @@ import {
   Eye,
   Home,
   LayoutDashboard,
+  Library,
   LogIn,
   PanelLeftClose,
   Plug,
@@ -41,6 +42,7 @@ const unauthenticatedItems: Item[] = [{ icon: Home, title: "Home", path: "/" }]
 
 const adminItems: Item[] = [
   ...baseItems,
+  { icon: Library, title: "Canonical Media", path: "/admin/canonical-shows" },
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 

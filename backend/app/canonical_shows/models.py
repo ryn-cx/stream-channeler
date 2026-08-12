@@ -5,19 +5,17 @@ A `CanonicalShow` is the title itself, as opposed to a `Show`, which is one
 website's copy of it. Every `Show` points at one, so a title held by three
 websites is three `Show`s and a single `CanonicalShow`.
 
-A TMDB identity is optional. When `tmdb_id` is set the title is one TMDB lists
-and TMDB owns the metadata here; when it is `None` the title is one TMDB has no
-entry for, such as a YouTube channel's uploads, and the metadata is copied from
-the only copy there is. Both kinds are filtered and sorted the same way, because
-both are rows in this table.
+A TMDB identity is optional. When `key` names a TMDB record the title is one
+TMDB lists and TMDB owns the metadata here; when it names anything else the
+title is one TMDB has no entry for, such as a YouTube channel's uploads, and the
+metadata is copied from the only copy there is. Both kinds are filtered and
+sorted the same way, because both are rows in this table.
 """
 
 from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import CheckConstraint
 from sqlmodel import (
     Field,
-    Index,
     PrimaryKeyConstraint,
     Relationship,
     SQLModel,
@@ -34,17 +32,12 @@ if TYPE_CHECKING:
 class BaseCanonicalShow(SQLModel):
     """Base model for a `CanonicalShow`."""
 
-    # What makes two copies of this title one title rather than two.
-    # Namespaced by whoever issued it — "TMDB tv 1234" for a record TMDB holds,
-    # "YouTube dQw4w9WgXcQ" for one only YouTube knows about — so no two
-    # sources can collide on it. `None` while nothing has claimed the title.
+    # What makes two copies of this title one title rather than two, and the
+    # whole of what says which TMDB record a title is. Namespaced by whoever
+    # issued it — "TMDB tv show 1399" for a record TMDB holds, "YouTube
+    # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
+    # collide on it. `None` while nothing has claimed the title.
     key: str | None = Field(default=None)
-
-    # TMDB's own account of the title, kept as columns rather than read back
-    # out of `key`, so nothing has to parse a string to build a link or match
-    # against it. Written beside the key, never apart from it.
-    tmdb_media_type: str | None = Field(default=None)
-    tmdb_id: int | None = Field(default=None)
 
     name: str | None = Field(default=None)
     # The title's own page, as against a copy's `url`, which is where that
@@ -68,22 +61,11 @@ class CanonicalShow(TimestampIdAndHashMixin, BaseCanonicalShow, table=True):
 
     __table_args__ = (
         PrimaryKeyConstraint("id"),
-        # TMDB numbers films and series separately, so the media type is part of
-        # the identity. Postgres counts NULLs as distinct, so this binds every
-        # TMDB title to one row while leaving titles TMDB has never heard of
-        # free to be as many rows as there are of them.
+        # Postgres counts NULLs as distinct, so this binds every claimed title
+        # to one row while leaving titles nothing has claimed free to be as many
+        # rows as there are of them.
         UniqueConstraint("key", name="CanonicalShow-key-key"),
-        UniqueConstraint(
-            "tmdb_media_type",
-            "tmdb_id",
-            name="CanonicalShow-tmdb_media_type-tmdb_id-key",
-        ),
-        CheckConstraint(
-            "(tmdb_media_type IS NULL) = (tmdb_id IS NULL)",
-            name="CanonicalShow-tmdb-identity-complete",
-        ),
         *sortable_field_indexes("CanonicalShow", DIRECT_SORTABLE_FIELDS),
-        Index("CanonicalShow-tmdb_id-index", "tmdb_id"),
     )
 
     canonical_seasons: list[CanonicalSeason] = Relationship(
@@ -97,6 +79,6 @@ class CanonicalShow(TimestampIdAndHashMixin, BaseCanonicalShow, table=True):
         base = "CanonicalShow:"
         if self.name:
             base += f" {self.name}"
-        if self.tmdb_id:
-            base += f" (TMDB {self.tmdb_media_type} {self.tmdb_id})"
+        if self.key:
+            base += f" ({self.key})"
         return f"{base} ({self.id})"

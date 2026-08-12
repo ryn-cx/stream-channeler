@@ -2,14 +2,14 @@
 """Canonical season models.
 
 A `CanonicalSeason` is the season itself, as opposed to a `Season`, which is one
-website's copy of it. TMDB gives its seasons their own ids, so `tmdb_id` stands
-alone here rather than needing the media type its title carries.
+website's copy of it. TMDB gives its seasons their own ids, and a film is filed
+as a season carrying the film's own number, so the key says the level as well as
+the id to keep the two apart.
 """
 
 import uuid
 from typing import TYPE_CHECKING, ClassVar
 
-from sqlalchemy import CheckConstraint
 from sqlmodel import (
     Field,
     Index,
@@ -30,19 +30,14 @@ if TYPE_CHECKING:
 class BaseCanonicalSeason(SQLModel):
     """Base model for a `CanonicalSeason`."""
 
-    # What makes two copies of this season one season rather than two.
-    # Namespaced by whoever issued it — "TMDB tv 1234" for a record TMDB holds,
-    # "YouTube dQw4w9WgXcQ" for one only YouTube knows about — so no two
-    # sources can collide on it. Unique within one title rather than
-    # across all of them, since a plugin only promises a key means one
-    # thing under the title holding it. `None` while nothing has claimed the season.
+    # What makes two copies of this season one season rather than two, and the
+    # whole of what says which TMDB record a season is. Namespaced by whoever
+    # issued it — "TMDB tv season 3624" for a record TMDB holds, "YouTube
+    # dQw4w9WgXcQ" for one only YouTube knows about — so no two sources can
+    # collide on it. Unique within one title rather than across all of them,
+    # since a plugin only promises a key means one thing under the title holding
+    # it. `None` while nothing has claimed the season.
     key: str | None = Field(default=None)
-
-    # TMDB's own account of the season, kept as columns rather than read back
-    # out of `key`, so nothing has to parse a string to build a link or match
-    # against it. Written beside the key, never apart from it.
-    tmdb_media_type: str | None = Field(default=None)
-    tmdb_id: int | None = Field(default=None)
 
     name: str | None = Field(default=None)
     # The season's own page, as against a copy's `url`, which is where that
@@ -70,15 +65,6 @@ class CanonicalSeason(TimestampIdAndHashMixin, BaseCanonicalSeason, table=True):
             "canonical_show_id",
             "key",
             name="CanonicalSeason-canonical_show_id-key-key",
-        ),
-        UniqueConstraint(
-            "tmdb_media_type",
-            "tmdb_id",
-            name="CanonicalSeason-tmdb_media_type-tmdb_id-key",
-        ),
-        CheckConstraint(
-            "(tmdb_media_type IS NULL) = (tmdb_id IS NULL)",
-            name="CanonicalSeason-tmdb-identity-complete",
         ),
         *sortable_field_indexes("CanonicalSeason", DIRECT_SORTABLE_FIELDS),
         Index("CanonicalSeason-canonical_show_id-index", "canonical_show_id"),

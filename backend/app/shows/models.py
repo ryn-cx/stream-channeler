@@ -16,6 +16,7 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.canonical_shows.models import CanonicalShow
 from app.models import (
     BaseMediaMixin,
@@ -97,10 +98,13 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     def tmdb_id(self) -> int | None:
         """The TMDB title this is a copy of, if TMDB has a record of it.
 
-        Read off the canonical row rather than stored beside it, so a copy and
-        the title it is of can never disagree about which TMDB record that is.
+        Read out of the canonical row's key rather than stored beside it, so a
+        copy and the title it is of can never disagree about which TMDB record
+        that is.
         """
-        return self.canonical_show.tmdb_id if self.canonical_show else None
+        if self.canonical_show is None:
+            return None
+        return tmdb_id_of(self.canonical_show.key, SHOW_LEVEL)
 
     source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
     source: Source = Relationship(back_populates="shows")
