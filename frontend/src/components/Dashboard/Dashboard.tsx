@@ -365,10 +365,6 @@ export function Dashboard() {
                     originally aired
                   </li>
                   <li>
-                    <strong>Release Date Range</strong>: filter by streaming
-                    release date
-                  </li>
-                  <li>
                     <strong>Duration Range</strong>: filter by episode length
                   </li>
                 </ul>

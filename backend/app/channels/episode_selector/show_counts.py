@@ -14,8 +14,8 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
 from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode

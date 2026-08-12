@@ -12,9 +12,10 @@ from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.constants import TEST_FILES_FOLDER
+from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -84,11 +85,15 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     # TODO: Validate
     def _url_variants(self) -> list[str]:
-        class_attrs = {
-            key: value
-            for key, value in vars(type(self)).items()
-            if isinstance(value, str)
-        }
+        class_attrs: dict[str, str] = {}
+        for klass in reversed(type(self).__mro__):
+            class_attrs.update(
+                {
+                    key: value
+                    for key, value in vars(klass).items()
+                    if isinstance(value, str)
+                },
+            )
         variants: list[str] = []
         for url in self.urls:
             formatted = url.format(**class_attrs)
@@ -200,6 +205,41 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         return [
             (plugin_key, key, path) for plugin_key, key, path in files if path.is_file()
         ]
+
+    # TODO: Validate
+    @staticmethod
+    def _owning_plugin_key(entity: Plugin | Source | Show | Season | Episode) -> str:
+        """Return the key of the plugin whose records `entity` is one of."""
+        match entity:
+            case Plugin() as plugin:
+                return plugin.key
+            case Source() as source:
+                return source.plugin.key
+            case Show() as show:
+                return show.source.plugin.key
+            case Season() as season:
+                return season.show.source.plugin.key
+            case Episode() as episode:
+                return episode.season.show.source.plugin.key
+
+    # TODO: Validate
+    def owning_plugin(
+        self,
+        session: Session,
+        entity: Plugin | Source | Show | Season | Episode,
+    ) -> BasePlugin:
+        """Return the plugin that reads and writes `entity`.
+
+        An import can store a record under another plugin - TMDB keeps a title
+        as canonical media and hands the listing on to the service that streams
+        it - and only the plugin a record belongs to knows how to read it. So
+        what updates a record is looked up from the record rather than taken to
+        be the plugin under test.
+        """
+        plugin_key = self._owning_plugin_key(entity)
+        if plugin_key == self.plugin_class.plugin_key():
+            return self.imported_plugin
+        return _plugin_class(plugin_key)(session)
 
     # TODO: Validate
     def select_plugin_with_children(self, session: Session) -> Plugin:

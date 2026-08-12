@@ -3,12 +3,11 @@ import time
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from sqlalchemy import case, distinct, func
+from sqlalchemy import distinct, func
 from sqlmodel import Session, col, select
 
 from app.auth.dependencies import (
@@ -17,9 +16,9 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.channels import service
 from app.channels.channel_scope import (
     child_channel_ids,
@@ -87,10 +86,6 @@ from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
-
-# Some websites report an episode with no release date as the epoch, which would
-# otherwise read as the title's own release.
-EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 channels_router = APIRouter(prefix="/channels", tags=["channels"])
 admin_router = APIRouter(
@@ -627,11 +622,6 @@ def _channel_show_stats(
             CanonicalSeason.canonical_show_id,
             func.count(distinct(col(CanonicalSeason.id))),
             func.count(distinct(col(CanonicalEpisode.id))),
-            func.min(
-                case(
-                    (col(Episode.release_date) > EPOCH, col(Episode.release_date)),
-                ),
-            ),
         )
         .join(
             CanonicalEpisode,
@@ -652,9 +642,8 @@ def _channel_show_stats(
         canonical_show_id: ChannelShowStats(
             season_count=season_count,
             episode_count=episode_count,
-            first_release_date=first_release_date,
         )
-        for canonical_show_id, season_count, episode_count, first_release_date in rows
+        for canonical_show_id, season_count, episode_count in rows
     }
 
 

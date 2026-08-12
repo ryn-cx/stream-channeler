@@ -5,7 +5,7 @@ from typing import override
 
 from bs4 import Tag
 
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from plugins.TMDB.files import TMDB_DOMAIN, TitlePage
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler

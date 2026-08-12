@@ -9,12 +9,12 @@ from uuid import UUID
 from loguru import logger
 from sqlmodel import Session, col, or_, select
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.canonical_media.service import (
     canonical_ids_by_key,
     canonical_show_ids_by_key,
 )
-from app.canonical_seasons.models import CanonicalSeason
+from app.seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,

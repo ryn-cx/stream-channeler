@@ -20,19 +20,29 @@ class UpsertMixin(HelperMixin, register=False):
     # TODO: Validate
     def _upsert_sources(self) -> None:
         """Create or update a `Source` for every provider JustWatch tracks."""
-        _cache = self._preload_sources().all()
+        existing_sources = {source.key: source for source in self._preload_sources()}
         for source_key in self._providers_by_key():
-            self._upsert_source(source_key)
+            self._upsert_source(source_key, existing_sources)
 
     # TODO: Validate
     @override
-    def _upsert_source(self, source_key: str) -> Source:
+    def _upsert_source(
+        self,
+        source_key: str,
+        existing_sources: dict[str, Source] | None = None,
+    ) -> Source:
         """Create or update the `Source` for a single provider."""
         provider = self.provider(source_key)
         # Every provider gets a source but most are never read again, so they
         # fall out of the session's weak identity map and have to be looked up
-        # in the database rather than in memory.
-        existing_source = Source.get(self.session, self.plugin, source_key)
+        # in the database rather than in memory. Most providers have no source at
+        # all, and a lookup for one of those is a query that answers nothing, so a
+        # caller upserting every provider reads them all once and hands them over.
+        existing_source: Source | None
+        if existing_sources is None:
+            existing_source = Source.get(self.session, self.plugin, source_key)
+        else:
+            existing_source = existing_sources.get(source_key)
 
         source = Source(
             key=source_key,
@@ -332,7 +342,6 @@ class UpsertMixin(HelperMixin, register=False):
                 season.key,
                 show_key,
             ),
-            release_date=self._date_to_datetime(node.content.original_release_date),
             air_date=self._date_to_datetime(node.content.original_release_date),
             season_id=season.id,
         )

@@ -26,7 +26,6 @@ const formSchema = z.object({
   url: optionalString,
   description: optionalString,
   image_url: optionalString,
-  release_date: optionalString,
   air_date: optionalString,
   duration: optionalNonNegativeInt,
   sort_order: optionalInt,
@@ -56,7 +55,6 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       url: episode.url ?? "",
       description: episode.description ?? "",
       image_url: episode.image_url ?? "",
-      release_date: episode.release_date ?? "",
       air_date: episode.air_date ?? "",
       duration: episode.duration ?? "",
       sort_order: episode.sort_order ?? "",
@@ -119,11 +117,6 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
           control={form.control}
           label="Sort Order"
           type="number"
-        />
-        <FormTextField
-          control={form.control}
-          label="Release Date"
-          type="date"
         />
         <FormTextField control={form.control} label="Air Date" type="date" />
         <FormTextField

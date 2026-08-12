@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, ClassVar, override
 
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show

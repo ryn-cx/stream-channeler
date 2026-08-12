@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import override
 
 from app.canonical_media.service import canonical_show_ids_by_key
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.channels.service import shows_by_canonical_id
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin

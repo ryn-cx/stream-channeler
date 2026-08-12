@@ -67,5 +67,3 @@ def source_dedup_config(
         enabled_keys=enabled_keys,
         other_enabled=other_enabled,
     )
-
-

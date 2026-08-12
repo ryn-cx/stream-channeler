@@ -137,7 +137,7 @@ class UpsertMixin(HelperMixin, register=False):
                 duration=(
                     series_episode.original_content_duration // _MILLISECONDS_PER_SECOND
                 ),
-                release_date=series_episode.clip.original_release_date,
+                air_date=series_episode.clip.original_release_date,
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,

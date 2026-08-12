@@ -106,10 +106,6 @@ const formSchema = z.object({
   minimumAirDateRelative: z.coerce.number().optional(),
   maximumAirDateAbsolute: z.string().optional(),
   maximumAirDateRelative: z.coerce.number().optional(),
-  minimumReleaseDateAbsolute: z.string().optional(),
-  minimumReleaseDateRelative: z.coerce.number().optional(),
-  maximumReleaseDateAbsolute: z.string().optional(),
-  maximumReleaseDateRelative: z.coerce.number().optional(),
   minimumDuration: z.coerce.number().optional(),
   maximumDuration: z.coerce.number().optional(),
   limit: z.preprocess(
@@ -325,11 +321,6 @@ export function EpisodeFilters({
       filterParams.maximumAirDateRelative !== undefined
         ? "relative"
         : "absolute",
-    releaseDate:
-      filterParams.minimumReleaseDateRelative !== undefined ||
-      filterParams.maximumReleaseDateRelative !== undefined
-        ? "relative"
-        : "absolute",
   } as Record<string, "absolute" | "relative">)
 
   // Toggle between absolute and relative date input modes
@@ -492,10 +483,6 @@ export function EpisodeFilters({
       minimumAirDateRelative: filterParams.minimumAirDateRelative,
       maximumAirDateAbsolute: filterParams.maximumAirDateAbsolute,
       maximumAirDateRelative: filterParams.maximumAirDateRelative,
-      minimumReleaseDateAbsolute: filterParams.minimumReleaseDateAbsolute,
-      minimumReleaseDateRelative: filterParams.minimumReleaseDateRelative,
-      maximumReleaseDateAbsolute: filterParams.maximumReleaseDateAbsolute,
-      maximumReleaseDateRelative: filterParams.maximumReleaseDateRelative,
       minimumDuration: filterParams.minimumDuration,
       maximumDuration: filterParams.maximumDuration,
       limit: filterParams.limit,
@@ -633,14 +620,6 @@ export function EpisodeFilters({
       delete filteredData.maximumAirDateAbsolute
     }
 
-    if (dateInputModes.releaseDate === "absolute") {
-      delete filteredData.minimumReleaseDateRelative
-      delete filteredData.maximumReleaseDateRelative
-    } else {
-      delete filteredData.minimumReleaseDateAbsolute
-      delete filteredData.maximumReleaseDateAbsolute
-    }
-
     // Applying a preset replaces the channel's options outright rather than layering
     // the preset over whatever the form currently holds. Anything left behind would
     // still be applied by the backend while the dialog showed the preset's values, so
@@ -706,10 +685,6 @@ export function EpisodeFilters({
       minimumAirDateRelative: parsedConfig.minimumAirDateRelative ?? "",
       maximumAirDateAbsolute: parsedConfig.maximumAirDateAbsolute ?? "",
       maximumAirDateRelative: parsedConfig.maximumAirDateRelative ?? "",
-      minimumReleaseDateAbsolute: parsedConfig.minimumReleaseDateAbsolute ?? "",
-      minimumReleaseDateRelative: parsedConfig.minimumReleaseDateRelative ?? "",
-      maximumReleaseDateAbsolute: parsedConfig.maximumReleaseDateAbsolute ?? "",
-      maximumReleaseDateRelative: parsedConfig.maximumReleaseDateRelative ?? "",
       minimumDuration: parsedConfig.minimumDuration ?? "",
       maximumDuration: parsedConfig.maximumDuration ?? "",
       limit: parsedConfig.limit ?? "",
@@ -727,11 +702,6 @@ export function EpisodeFilters({
       airDate:
         parsedConfig.minimumAirDateRelative !== undefined ||
         parsedConfig.maximumAirDateRelative !== undefined
-          ? "relative"
-          : "absolute",
-      releaseDate:
-        parsedConfig.minimumReleaseDateRelative !== undefined ||
-        parsedConfig.maximumReleaseDateRelative !== undefined
           ? "relative"
           : "absolute",
     })
@@ -969,27 +939,6 @@ export function EpisodeFilters({
                     <RenderFormFieldInput
                       baseName="maximumAirDate"
                       dateModeCategory="airDate"
-                      control={form.control}
-                    />
-                  </div>
-
-                  {/* grid-cols-[80px_1fr_1fr] - Set the width of the first grid to be 80 pixels and the other 2 are dynamic */}
-                  <div className="grid grid-cols-[80px_1fr_1fr] gap-4">
-                    <FormLabel
-                      onClick={() => toggleDateMode("releaseDate")}
-                      className="text-sm font-medium cursor-pointer hover:text-primary underline decoration-dotted"
-                    >
-                      Release Date
-                    </FormLabel>
-
-                    <RenderFormFieldInput
-                      baseName="minimumReleaseDate"
-                      dateModeCategory="releaseDate"
-                      control={form.control}
-                    />
-                    <RenderFormFieldInput
-                      baseName="maximumReleaseDate"
-                      dateModeCategory="releaseDate"
                       control={form.control}
                     />
                   </div>

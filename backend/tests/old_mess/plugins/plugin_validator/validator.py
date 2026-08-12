@@ -7,9 +7,9 @@ from typing import Any, Literal, Self, get_args
 
 from pydantic import BaseModel
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin

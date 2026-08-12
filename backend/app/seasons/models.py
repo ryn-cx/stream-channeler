@@ -17,43 +17,55 @@ from sqlmodel import (
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.keys import SEASON_LEVEL, tmdb_id_of
-from app.canonical_seasons.models import CanonicalSeason
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
+    TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
-from app.shows.models import Show
+from app.shows.models import CanonicalShow, Show
 from app.sources.models import Source
 from app.users.models import User
 
 if TYPE_CHECKING:
-    from app.episodes.models import Episode
+    from app.episodes.models import CanonicalEpisode, Episode
     from app.issue_reports.models import SeasonIssueReport
 
+# The canonical row is the one a channel sorts on, so these name its columns and
+# no copy's. A copy's own columns are only ever ordered by the admin tables, which
+# order by any column they show and so are no reason to index these three.
+CANONICAL_SORTABLE_FIELDS = [
+    "name",
+    "season_number",
+    "sort_order",
+]
+
 
 # TODO: Validate
-class BaseSeason(BaseMediaMixin):
-    """Base model for an `Season`."""
+class BaseCanonicalSeason(BaseMediaMixin):
+    """Base model for `CanonicalSeason` and `Season` models."""
 
-    sort_order: int | None = Field(default=None)
     name: str | None = Field(default=None)
+    # The season's own page, as against a copy's `url`, which is where that
+    # one website streams it. TMDB's row points at themoviedb.org; a row only
+    # one website knows about points wherever that website put it.
     url: str | None = Field(default=None)
-    image_url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
+    image_url: str | None = Field(default=None)
+    sort_order: int | None = Field(default=None)
 
 
 # TODO: Validate
-# TODO: Validate
-class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
-    """Model representing a `Season`."""
+class CanonicalSeason(TimestampIdAndHashMixin, BaseCanonicalSeason, table=True):
+    """Model representing a season, separate from where it can be watched.
 
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "name",
-        "season_number",
-        "sort_order",
-    ]
+    A `CanonicalSeason` is the season itself, as opposed to a `Season`, which is
+    one website's copy of it. TMDB gives its seasons their own ids, and a film is
+    filed as a season carrying the film's own number, so the key says the level
+    as well as the id to keep the two apart.
+    """
+
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "random",
         "season_number_zero_last",
@@ -61,16 +73,50 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        UniqueConstraint(
+            "canonical_show_id",
+            "key",
+            name="CanonicalSeason-canonical_show_id-key-key",
+        ),
+        *sortable_field_indexes("CanonicalSeason", CANONICAL_SORTABLE_FIELDS),
+        Index("CanonicalSeason-canonical_show_id-index", "canonical_show_id"),
+    )
+
+    canonical_show_id: uuid.UUID = Field(
+        foreign_key="canonicalshow.id",
+        ondelete="CASCADE",
+    )
+    canonical_show: CanonicalShow = Relationship(back_populates="canonical_seasons")
+
+    canonical_episodes: list[CanonicalEpisode] = Relationship(
+        back_populates="canonical_season",
+        cascade_delete=True,
+    )
+
+    # TODO: Validate
+    def __str__(self) -> str:
+        """Return a string representation of the `CanonicalSeason`."""
+        return stringify_season(self, self.canonical_show)
+
+
+# TODO: Validate
+class BaseSeason(BaseCanonicalSeason):
+    """Base model for an `Season`."""
+
+
+# TODO: Validate
+# TODO: Validate
+class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
+    """Model representing a `Season`."""
 
     __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes(
-            "Season",
-            DIRECT_SORTABLE_FIELDS,
-        ),
         Index("Season-deleted_at-index", "deleted_at"),
         Index("Season-canonical_season_id-index", "canonical_season_id"),
     )
@@ -148,13 +194,22 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Season`."""
-        base_season = "Season:"
-        if self.season_number:
-            base_season += f" {self.season_number} - "
-        if self.name:
-            base_season += f" {self.name}"
-        if self.key:
-            base_season += f" ({self.key})"
-        if self.id:
-            base_season += f" ({self.id})"
-        return f"{self.show}\n{base_season}"
+        return stringify_season(self, self.show)
+
+
+# TODO: Validate
+def stringify_season(
+    season: Season | CanonicalSeason,
+    parent: Show | CanonicalShow,
+) -> str:
+    """Return a string representation."""
+    base_season = f"{type(season).__name__}:"
+    if season.season_number is not None:
+        base_season += f" {season.season_number} - "
+    if season.name:
+        base_season += f" {season.name}"
+    if season.key:
+        base_season += f" ({season.key})"
+    if season.id:
+        base_season += f" ({season.id})"
+    return f"{parent}\n{base_season}"

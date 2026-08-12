@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, override
 
 from sqlmodel import col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult

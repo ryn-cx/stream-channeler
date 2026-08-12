@@ -162,11 +162,6 @@ function showFacts(
 ): string[] {
   const [firstShow] = group
   const facts = [firstShow.media_type ?? "Not linked to TMDB"]
-  if (stats?.first_release_date) {
-    // Read off the stored date rather than the reader's own clock, which would
-    // move a release just after midnight into the year before it.
-    facts.push(stats.first_release_date.slice(0, 4))
-  }
   // A movie is one episode of one season by construction, so counting them says
   // nothing the "Movie" note has not already said.
   const countsAreImplied =

@@ -105,9 +105,46 @@ export const CanonicalEpisodeListOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
-        name: {
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
             anyOf: [
                 {
                     type: 'string'
@@ -116,7 +153,7 @@ export const CanonicalEpisodeListOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Name'
+            title: 'Extra'
         },
         url: {
             anyOf: [
@@ -128,6 +165,17 @@ export const CanonicalEpisodeListOutputSchema = {
                 }
             ],
             title: 'Url'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -151,6 +199,18 @@ export const CanonicalEpisodeListOutputSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -173,30 +233,6 @@ export const CanonicalEpisodeListOutputSchema = {
                 }
             ],
             title: 'Duration'
-        },
-        release_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
         },
         sort_order: {
             anyOf: [
@@ -289,9 +325,46 @@ export const CanonicalEpisodeOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
-        name: {
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
             anyOf: [
                 {
                     type: 'string'
@@ -300,7 +373,7 @@ export const CanonicalEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Name'
+            title: 'Extra'
         },
         url: {
             anyOf: [
@@ -312,6 +385,17 @@ export const CanonicalEpisodeOutputSchema = {
                 }
             ],
             title: 'Url'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -335,6 +419,18 @@ export const CanonicalEpisodeOutputSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -357,30 +453,6 @@ export const CanonicalEpisodeOutputSchema = {
                 }
             ],
             title: 'Duration'
-        },
-        release_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
         },
         sort_order: {
             anyOf: [
@@ -463,7 +535,55 @@ export const CanonicalSeasonListOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
         },
         name: {
             anyOf: [
@@ -584,7 +704,55 @@ export const CanonicalSeasonOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
         },
         name: {
             anyOf: [
@@ -711,7 +879,55 @@ export const CanonicalShowOutputSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
         },
         name: {
             anyOf: [
@@ -723,17 +939,6 @@ export const CanonicalShowOutputSchema = {
                 }
             ],
             title: 'Name'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
         },
         media_type: {
             anyOf: [
@@ -757,6 +962,17 @@ export const CanonicalShowOutputSchema = {
             ],
             title: 'Description'
         },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
         image_url: {
             anyOf: [
                 {
@@ -767,18 +983,6 @@ export const CanonicalShowOutputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
         },
         id: {
             type: 'string',
@@ -1493,30 +1697,6 @@ export const ChannelOptionsSchema = {
             ],
             title: 'Maximumairdateabsolute'
         },
-        minimumReleaseDateAbsolute: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Minimumreleasedateabsolute'
-        },
-        maximumReleaseDateAbsolute: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Maximumreleasedateabsolute'
-        },
         maximumWatchDateRelative: {
             anyOf: [
                 {
@@ -1549,28 +1729,6 @@ export const ChannelOptionsSchema = {
                 }
             ],
             title: 'Maximumairdaterelative'
-        },
-        minimumReleaseDateRelative: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Minimumreleasedaterelative'
-        },
-        maximumReleaseDateRelative: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Maximumreleasedaterelative'
         },
         totalShowsCount: {
             anyOf: [
@@ -2437,18 +2595,6 @@ export const ChannelShowStatsSchema = {
         episode_count: {
             type: 'integer',
             title: 'Episode Count'
-        },
-        first_release_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'First Release Date'
         }
     },
     type: 'object',
@@ -2859,16 +3005,16 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -2892,6 +3038,18 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -2902,17 +3060,6 @@ export const EpisodeCreateSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -2926,29 +3073,16 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -3076,18 +3210,6 @@ export const EpisodeInformationSideSchema = {
                 }
             ],
             title: 'Duration'
-        },
-        release_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Release Date'
         },
         air_date: {
             anyOf: [
@@ -3224,7 +3346,7 @@ export const EpisodeInformationSideSchema = {
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'release_date', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -3294,16 +3416,16 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -3327,6 +3449,18 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -3337,17 +3471,6 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -3361,29 +3484,16 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -3580,16 +3690,16 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -3613,6 +3723,18 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -3623,17 +3745,6 @@ export const EpisodeOutputSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -3647,29 +3758,16 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -3831,16 +3929,16 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -3864,6 +3962,18 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -3874,17 +3984,6 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -3898,29 +3997,16 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -4010,16 +4096,16 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -4043,6 +4129,18 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -4053,17 +4151,6 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -4077,29 +4164,16 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -5622,17 +5696,6 @@ export const SeasonCreateSchema = {
             ],
             title: 'Extra'
         },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
         name: {
             anyOf: [
                 {
@@ -5655,6 +5718,17 @@ export const SeasonCreateSchema = {
             ],
             title: 'Url'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         image_url: {
             anyOf: [
                 {
@@ -5666,7 +5740,7 @@ export const SeasonCreateSchema = {
             ],
             title: 'Image Url'
         },
-        season_number: {
+        sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -5675,7 +5749,7 @@ export const SeasonCreateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Season Number'
+            title: 'Sort Order'
         }
     },
     additionalProperties: false,
@@ -5860,17 +5934,6 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Extra'
         },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
         name: {
             anyOf: [
                 {
@@ -5893,6 +5956,17 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Url'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         image_url: {
             anyOf: [
                 {
@@ -5904,7 +5978,7 @@ export const SeasonListOutputSchema = {
             ],
             title: 'Image Url'
         },
-        season_number: {
+        sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -5913,7 +5987,7 @@ export const SeasonListOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Season Number'
+            title: 'Sort Order'
         },
         show_id: {
             type: 'string',
@@ -6067,17 +6141,6 @@ export const SeasonOutputSchema = {
             ],
             title: 'Extra'
         },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
         name: {
             anyOf: [
                 {
@@ -6100,6 +6163,17 @@ export const SeasonOutputSchema = {
             ],
             title: 'Url'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         image_url: {
             anyOf: [
                 {
@@ -6111,7 +6185,7 @@ export const SeasonOutputSchema = {
             ],
             title: 'Image Url'
         },
-        season_number: {
+        sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -6120,7 +6194,7 @@ export const SeasonOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Season Number'
+            title: 'Sort Order'
         },
         show_id: {
             type: 'string',
@@ -6227,17 +6301,6 @@ export const SeasonUpdateSchema = {
             ],
             title: 'Extra'
         },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
         name: {
             anyOf: [
                 {
@@ -6260,6 +6323,17 @@ export const SeasonUpdateSchema = {
             ],
             title: 'Url'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         image_url: {
             anyOf: [
                 {
@@ -6271,7 +6345,7 @@ export const SeasonUpdateSchema = {
             ],
             title: 'Image Url'
         },
-        season_number: {
+        sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -6280,7 +6354,7 @@ export const SeasonUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Season Number'
+            title: 'Sort Order'
         }
     },
     additionalProperties: false,
@@ -6424,18 +6498,6 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
         },
         canonical_show_locked: {
             type: 'boolean',
@@ -6688,18 +6750,6 @@ export const ShowListPublicSchema = {
             ],
             title: 'Image Url'
         },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
-        },
         canonical_show_locked: {
             type: 'boolean',
             title: 'Canonical Show Locked',
@@ -6907,18 +6957,6 @@ export const ShowPublicSchema = {
             ],
             title: 'Image Url'
         },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
-        },
         canonical_show_locked: {
             type: 'boolean',
             title: 'Canonical Show Locked',
@@ -7094,18 +7132,6 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
         },
         canonical_show_locked: {
             type: 'boolean',
@@ -9122,16 +9148,16 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Url'
         },
-        sort_order: {
+        name: {
             anyOf: [
                 {
-                    type: 'integer'
+                    type: 'string'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
+            title: 'Name'
         },
         description: {
             anyOf: [
@@ -9155,6 +9181,18 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Image Url'
         },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         episode_number: {
             anyOf: [
                 {
@@ -9165,17 +9203,6 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Episode Number'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         duration: {
             anyOf: [
@@ -9189,29 +9216,16 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Duration'
         },
-        release_date: {
+        sort_order: {
             anyOf: [
                 {
-                    type: 'string',
-                    format: 'date-time'
+                    type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Release Date'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
+            title: 'Sort Order'
         },
         canonical_episode_locked: {
             type: 'boolean',
@@ -9383,17 +9397,6 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Extra'
         },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
         name: {
             anyOf: [
                 {
@@ -9416,6 +9419,17 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Url'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         image_url: {
             anyOf: [
                 {
@@ -9427,7 +9441,7 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Image Url'
         },
-        season_number: {
+        sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -9436,7 +9450,7 @@ export const WhitelistSeasonOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Season Number'
+            title: 'Sort Order'
         },
         show_id: {
             type: 'string',
@@ -9652,18 +9666,6 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Image Url'
-        },
-        icon: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 32
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon'
         },
         canonical_show_locked: {
             type: 'boolean',

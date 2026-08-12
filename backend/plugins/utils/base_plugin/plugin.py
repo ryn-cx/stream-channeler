@@ -14,7 +14,7 @@ from loguru import logger
 from sqlmodel import Session
 
 from app.canonical_media.service import link_canonical_show, reconcile_show
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.episodes.models import MANUAL_NOTES, Episode
 from app.episodes.tmdb_matches import absolute_numbers
 from app.media.canonical_metadata import canonical_episode_of
@@ -134,13 +134,15 @@ class BasePlugin(
     re-reading a provider list or a feed for every show would be wasted work.
     """
 
-    SHOW_INDEPENDENT_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset({
-        "session",
-        "plugin",
-        "_source",
-        "_current_show",
-        "_reusable_file_cache",
-    })
+    SHOW_INDEPENDENT_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "session",
+            "plugin",
+            "_source",
+            "_current_show",
+            "_reusable_file_cache",
+        }
+    )
     """The instance attributes that describe the plugin rather than a show.
 
     Everything else is dropped by `_reset_show_state`, so an attribute only
@@ -311,15 +313,15 @@ class BasePlugin(
         update_show: bool = True,
         update_seasons: bool = True,
     ) -> None:
-        """Set update_at on the `Show`/`Season` based on `Episode.release_date`.
+        """Set update_at on the `Show`/`Season` based on `Episode.air_date`.
 
-        `update_at` will be set to be a week after the latest `Episode.release_date` if
+        `update_at` will be set to be a week after the latest `Episode.air_date` if
         that is a better `update_at` value than the current `update_at` value.
         """
         for season in show.active_children:
             for episode in season.active_children:
-                if episode.release_date:
-                    update_at = episode.release_date + timedelta(days=7)
+                if episode.air_date:
+                    update_at = episode.air_date + timedelta(days=7)
                     if update_seasons:
                         season.set_update_at(update_at)
                     if update_show:
@@ -454,9 +456,7 @@ class BasePlugin(
             if episode.canonical_episode_id is not None
         ]
         counts = Counter(episode.canonical_episode_id for episode in episodes)
-        shared = {
-            canonical_id for canonical_id, count in counts.items() if count > 1
-        }
+        shared = {canonical_id for canonical_id, count in counts.items() if count > 1}
         if not shared:
             return
 
@@ -471,9 +471,7 @@ class BasePlugin(
                 if episode is keeper or _is_settled_by_hand(episode):
                     continue
                 logger.info(f"Unsharing {canonical_id} from episode {episode.key}")
-                removed = (
-                    f"Removed {canonical_id}, which another episode was given too"
-                )
+                removed = f"Removed {canonical_id}, which another episode was given too"
                 # What the episode was matched on is kept behind the removal
                 # rather than written over it, since how it came to be linked is
                 # most of what says whether it should have kept the link.

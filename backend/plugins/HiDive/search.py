@@ -18,7 +18,7 @@ from plugins.utils.abstract_plugin import (
 
 # TODO: Validate
 class SearchMixin(HelperMixin, register=False):
-    CONVER_SEARCH_TYPE: ClassVar[dict[str, str]] = {
+    CONVER_SEARCH_TYPE: ClassVar = {
         "SERIES": "Series",
         "VOD": "Movie",
     }

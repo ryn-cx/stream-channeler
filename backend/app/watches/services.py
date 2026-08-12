@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.identifiers import TMDB_PLUGIN_KEY

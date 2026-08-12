@@ -12,15 +12,20 @@ every download here reads through.
 
 from __future__ import annotations
 
-from typing import override
+from collections.abc import Sequence
+from datetime import datetime, timedelta
+from typing import Any, override
 
-from app.canonical_episodes.models import CanonicalEpisode
+from sqlmodel import col, select
+
+from app.episodes.models import CanonicalEpisode
+from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key, tmdb_key_clause
 from app.canonical_media.service import (
     canonical_episode_for,
     canonical_season_for,
     canonical_show_for,
 )
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.media.media_type import MediaType
 from app.models import Visibility
 from app.plugins.models import Plugin
@@ -41,6 +46,10 @@ from plugins.TMDB.keys import (
     MOVIE_SEASON_NUMBER,
     show_key,
 )
+from plugins.utils.base_plugin.files import BaseFile
+
+# How long a title's canonical rows stand for before TMDB is read again.
+_REFRESH_INTERVAL = timedelta(days=1)
 
 
 # TODO: Validate
@@ -103,10 +112,56 @@ class UpsertMixin(HelperMixin, register=False):
         raise NotImplementedError(message)
 
     # TODO: Validate
+    @override
+    def update_plugin(self, plugin: Plugin) -> None:
+        """Read every title TMDB holds again, so its canonical rows stay current.
+
+        TMDB has no `Source` and no `Show`, so the updater has nothing below the
+        `Plugin` row to walk. The titles are the rows themselves, and the plugin
+        row is the only thing that can carry when they are next due, so the
+        whole catalogue this instance has imported is refreshed in one pass.
+        """
+        # Held before the first title is read, because reading one moves the
+        # plugin's own `update_at` on to when the next run is due, and every
+        # title after it would then be asked for against a time nothing can be
+        # older than yet and be left as it was.
+        outdated_before = plugin.update_at
+
+        read_a_title = False
+        for canonical_show in self._imported_titles():
+            parsed = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
+            if parsed is None:
+                continue
+            media_type, tmdb_id = parsed
+            if self.import_title(media_type, tmdb_id, outdated_before) is not None:
+                read_a_title = True
+
+        # Reading a title is what says when the next run is due, so a run with
+        # no title to read has to answer the request itself rather than leave it
+        # to be asked again on every pass.
+        if not read_a_title:
+            plugin.update_at = None
+
+    # TODO: Validate
+    def _imported_titles(self) -> Sequence[CanonicalShow]:
+        """Return every canonical title TMDB is the record behind.
+
+        A title only one website knows about is keyed by that website rather
+        than by TMDB, and TMDB has nothing to say about it, so the rows it can
+        refresh are the ones its own key names.
+        """
+        return self.session.exec(
+            select(CanonicalShow)
+            .where(tmdb_key_clause(col(CanonicalShow.key)))
+            .order_by(col(CanonicalShow.key)),
+        ).all()
+
+    # TODO: Validate
     def import_title(
         self,
         media_type: MediaType,
         tmdb_id: int,
+        update_at: datetime | None = None,
     ) -> CanonicalShow | None:
         """Store a title and everything under it as canonical media.
 
@@ -114,23 +169,58 @@ class UpsertMixin(HelperMixin, register=False):
         site does not carry, so a title is imported as soon as one of them
         resolves it rather than only when a `User` asks for it.
 
+        `update_at` is the point the stored responses have to be newer than, so
+        a refresh reads TMDB again where an import is content with what is
+        already stored.
+
         Returns None when TMDB has no title for the id, which is stored as an
         empty file rather than raised, so a caller working from an id a website
         guessed at is not stopped by one that turned out to be wrong.
         """
         key = show_key(media_type, tmdb_id)
         detail_file = self._show_files(key)[0]
-        detail_file.download_if_outdated()
+        detail_file.download_if_outdated(update_at)
         if not detail_file.database_record.content:
             return None
 
+        read_files: list[BaseFile[Any]] = [detail_file]
         canonical_show = self._upsert_canonical_show(media_type, tmdb_id)
         if media_type == MediaType.movie:
             self._upsert_movie(canonical_show, tmdb_id)
         else:
-            for season_number in self._season_numbers(key):
-                self._upsert_series_season(canonical_show, tmdb_id, season_number)
+            season_numbers = self._season_numbers(key)
+            # Every season's row is read in one go. They are worked through one
+            # at a time below, and a row read on its own is a query of its own.
+            _cache = self._get_files_by_keys(
+                [
+                    self.season_detail_file(tmdb_id, season_number).file_key()
+                    for season_number in season_numbers
+                ],
+            )
+            read_files += [
+                self._upsert_series_season(
+                    canonical_show,
+                    tmdb_id,
+                    season_number,
+                    update_at,
+                )
+                for season_number in season_numbers
+            ]
+        self._schedule_next_refresh(read_files)
         return canonical_show
+
+    # TODO: Validate
+    def _schedule_next_refresh(self, read_files: Sequence[BaseFile[Any]]) -> None:
+        """Record how current the catalogue is and when it is next due.
+
+        The plugin row stands for every title TMDB holds, so the newest response
+        read is what says how current the catalogue is; a title read a moment ago
+        does not make one read last week any staler than it was.
+        """
+        newest = max(read_file.data_timestamp for read_file in read_files)
+        if self.plugin.data_timestamp is None or newest > self.plugin.data_timestamp:
+            self.plugin.data_timestamp = newest
+        self.plugin.set_update_at(self.plugin.data_timestamp + _REFRESH_INTERVAL)
 
     # TODO: Validate
     def _upsert_canonical_show(
@@ -158,9 +248,7 @@ class UpsertMixin(HelperMixin, register=False):
         canonical.url = title_page_url(media_type, tmdb_id)
         canonical.name = name
         canonical.description = description
-        canonical.media_type = (
-            "Movie" if media_type == MediaType.movie else "TV Show"
-        )
+        canonical.media_type = "Movie" if media_type == MediaType.movie else "TV Show"
         canonical.image_url = image_url
         return canonical
 
@@ -178,18 +266,22 @@ class UpsertMixin(HelperMixin, register=False):
         canonical_show: CanonicalShow,
         tmdb_id: int,
         season_number: int,
-    ) -> None:
+        update_at: datetime | None = None,
+    ) -> BaseFile[Any]:
         """Write a series season and its episodes onto their canonical rows.
 
         The seasons are read off the title's own file, which says which seasons
         exist but nothing about what is in them, so each one is downloaded here.
         A season TMDB lists but has no detail for is stored empty and has no
         rows to write.
+
+        Returns the season's file either way, since a season stored empty was
+        still read and still says how current the catalogue is.
         """
         season_file = self.season_detail_file(tmdb_id, season_number)
-        season_file.download_if_outdated()
+        season_file.download_if_outdated(update_at)
         if not season_file.database_record.content:
-            return
+            return season_file
         detail = season_file.parsed()
         canonical_season = canonical_season_for(
             self.session,
@@ -222,6 +314,7 @@ class UpsertMixin(HelperMixin, register=False):
                 episode_number=episode.episode_number,
                 sort_order=sort_order,
             )
+        return season_file
 
     # TODO: Validate
     def _upsert_movie(self, canonical_show: CanonicalShow, tmdb_id: int) -> None:
@@ -278,7 +371,6 @@ class UpsertMixin(HelperMixin, register=False):
         canonical_episode.description = description
         canonical_episode.image_url = image_url
         canonical_episode.duration = duration
-        canonical_episode.release_date = air
         canonical_episode.air_date = air
         canonical_episode.episode_number = episode_number
         canonical_episode.sort_order = sort_order

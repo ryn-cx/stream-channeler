@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, ClassVar, Protocol, final, overload, override
+from typing import Any, ClassVar, Final, Protocol, final, overload, override
 from xml.etree.ElementTree import Element, fromstring
 
 from bs4 import BeautifulSoup
@@ -22,7 +22,7 @@ from app.utils.sentinels import Sentinel
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
 
-INITIAL_FILE_IDENTIFIER = "Initial"
+INITIAL_FILE_IDENTIFIER: Final = "Initial"
 """What a file keyed by a timestamp is identified by before there is one.
 
 The first of a series of timestamped files has no earlier file to catch up to,

@@ -21,6 +21,8 @@ from app.users.models import User
 if TYPE_CHECKING:
     from app.shows.models import Show
 
+DIRECT_SORTABLE_FIELDS = ["id", "name"]
+
 
 # TODO: Validate
 class BaseSource(BaseMediaMixin):
@@ -31,7 +33,6 @@ class BaseSource(BaseMediaMixin):
 
 # TODO: Validate
 class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name"]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS

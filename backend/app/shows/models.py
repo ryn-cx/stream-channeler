@@ -18,7 +18,6 @@ from sqlmodel import (
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
-from app.canonical_shows.models import CanonicalShow
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
@@ -29,60 +28,76 @@ from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.users.models import User
 
+if TYPE_CHECKING:
+    from app.channels.models import ChannelSourceFilter
+    from app.issue_reports.models import ShowIssueReport
+    from app.seasons.models import CanonicalSeason, Season
+
+# The canonical row is the one a channel sorts on, so these name its columns and
+# no copy's. A copy's own columns are only ever ordered by the admin tables, which
+# order by any column they show and so are no reason to index these two.
+CANONICAL_SORTABLE_FIELDS = ["media_type", "name"]
+
 
 # TODO: Validate
-class BaseShow(BaseMediaMixin):
-    """Base model for a `Show`."""
+class BaseCanonicalShow(BaseMediaMixin):
+    """Base model for `CanonicalShow` and `Show` models."""
 
     name: str | None = Field(default=None)
     media_type: str | None = Field(default=None)
     description: str | None = Field(default=None)
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
-    icon: str | None = Field(default=None, max_length=32)
-    # Whether a `User` settled which title this is a copy of. A plugin normally
-    # finds the title by searching TMDB for its name, which can land on the
-    # wrong one; a lock says the answer was chosen by hand and no import may
-    # replace it.
+
+
+# TODO: Validate
+class BaseShow(BaseCanonicalShow):
+    """Base model for a `Show`."""
+
     canonical_show_locked: bool = Field(default=False)
-    # How the link was arrived at, in words.
     canonical_show_note: str | None = Field(default=None)
 
 
-if TYPE_CHECKING:
-    from app.channels.models import ChannelSourceFilter
-    from app.issue_reports.models import ShowIssueReport
-    from app.seasons.models import Season
-
-
-# The name "Show" was used instead of "Series" because it has a distinct singular and
-# plural form and some people may use "Series" to refer to a "Season" so the word "Show"
-# is less ambiguous and more flexible.
 # TODO: Validate
-# TODO: Validate
-class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
-    """Model representing a `Show`."""
+class CanonicalShow(TimestampIdAndHashMixin, BaseCanonicalShow, table=True):
+    """Model representing a canonical show."""
 
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "media_type",
-        "name",
-    ]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_count",
         "random",
         "started",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        # Postgres counts NULLs as distinct, so this binds every claimed title
+        # to one row while leaving titles nothing has claimed free to be as many
+        # rows as there are of them.
+        UniqueConstraint("key", name="CanonicalShow-key-key"),
+        *sortable_field_indexes("CanonicalShow", CANONICAL_SORTABLE_FIELDS),
+    )
+
+    canonical_seasons: list[CanonicalSeason] = Relationship(
+        back_populates="canonical_show",
+        cascade_delete=True,
+    )
+
+    # TODO: Validate
+    def __str__(self) -> str:
+        """Return a string representation of the `CanonicalShow`."""
+        return stringify_show(self, None)
+
+
+# TODO: Validate
+class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
+    """Model representing a `Show`."""
 
     __table_args__ = (
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes(
-            "Show",
-            DIRECT_SORTABLE_FIELDS,
-        ),
         Index("Show-deleted_at-index", "deleted_at"),
         Index("Show-canonical_show_id-index", "canonical_show_id"),
     )
@@ -233,14 +248,22 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Show`."""
-        base_show = "Show:"
-        if self.name:
-            base_show += f" {self.name}"
-        if self.key:
-            base_show += f" ({self.key})"
-        if self.id:
-            base_show += f" ({self.id})"
-        return f"{self.source}\n{base_show}"
+        return stringify_show(self, self.source)
+
+
+# TODO: Validate
+def stringify_show(show: Show | CanonicalShow, parent: Source | None) -> str:
+    """Return a string representation."""
+    base_show = f"{type(show).__name__}:"
+    if show.name:
+        base_show += f" {show.name}"
+    if show.key:
+        base_show += f" ({show.key})"
+    if show.id:
+        base_show += f" ({show.id})"
+    if parent is None:
+        return base_show
+    return f"{parent}\n{base_show}"
 
 
 # TODO: Validate

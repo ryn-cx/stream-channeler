@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlmodel import col, select
 
 from app.canonical_media.keys import tmdb_show_key
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.files.models import File
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
@@ -19,6 +19,7 @@ from app.sources.models import Source
 from plugins.JustWatch.files import NewTitleBucket, NewTitles
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
 
 # TODO: Validate
@@ -29,11 +30,11 @@ class SourceMixin(UpsertMixin, register=False):
         if self.plugin.sources:
             return
 
-        providers_file = self.providers_locale_file()
-        providers_file.download_if_outdated()
+        self.providers_locale_file().download_if_outdated()
 
         if not self._get_latest_new_titles_bucket().first():
-            self.new_titles_bucket_file(providers_file.data_timestamp)
+            bucket = self.new_titles_bucket_file(INITIAL_FILE_IDENTIFIER)
+            bucket.download_if_outdated()
         self._download_new_titles()
 
         self._upsert_sources()
@@ -43,11 +44,7 @@ class SourceMixin(UpsertMixin, register=False):
     # TODO: Validate
     @override
     def update_plugin(self, plugin: Plugin) -> None:
-
-        if not (providers_locale_file := self.providers_locale_file()):
-            msg = f"Plugin {plugin.key} has no providers locale file."
-            raise ValueError(msg)
-
+        providers_locale_file = self.providers_locale_file()
         timestamp = providers_locale_file.data_timestamp + timedelta(days=1)
         providers_locale_file.download_if_outdated(timestamp)
         self._upsert_sources()

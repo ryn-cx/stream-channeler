@@ -4,11 +4,15 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
+from sqlmodel import select
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    SuperUser,
 )
+from app.canonical_media.dependencies import AdminCanonicalShow
+from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_show_issue_reports
 from app.media.canonical_metadata import (
     canonical_show_of,
@@ -26,8 +30,10 @@ from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
 from app.shows.dependencies import EditableShow, ReadableShow
-from app.shows.models import Show
+from app.shows.models import CanonicalShow, Show
 from app.shows.schemas import (
+    CanonicalShowOutput,
+    CanonicalShowsPublic,
     ShowCreate,
     ShowInformationOutput,
     ShowInformationSide,
@@ -44,6 +50,10 @@ from app.users.models import User
 plugin_shows_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["shows"])
 source_shows_router = APIRouter(prefix="/sources/{source_id}", tags=["shows"])
 shows_router = APIRouter(prefix="/shows", tags=["shows"])
+canonical_shows_router = APIRouter(
+    prefix="/shows/canonical",
+    tags=["canonical-shows"],
+)
 
 SHOW_EXTRA_COLUMNS: dict[str, Any] = {
     "username": User.username,
@@ -220,7 +230,41 @@ def delete_show(session: SessionDep, show: EditableShow) -> Message:
     return delete_record(session, show)
 
 
+# The admin-only mirror of the show endpoints. A `Show` is one website's copy of
+# a title and is served to whoever may see that website's media; a
+# `CanonicalShow` is the title itself, which every copy of it resolves to, and is
+# served to admins alone.
+# TODO: Validate
+@canonical_shows_router.get("")
+def get_canonical_shows(
+    session: SessionDep,
+    current_user: SuperUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> CanonicalShowsPublic:
+    """Get every `CanonicalShow`."""
+    return canonical_list_response(
+        session=session,
+        base=select(CanonicalShow),
+        response_model=CanonicalShowsPublic,
+        schema=CanonicalShowOutput,
+        read_options=read_options,
+        current_user=current_user,
+    )
+
+
+# TODO: Validate
+@canonical_shows_router.get("/{canonical_show_id}")  # noqa: FAST003 - Used by AdminCanonicalShow.
+def get_canonical_show_by_id(
+    canonical_show: AdminCanonicalShow,
+) -> CanonicalShowOutput:
+    """Get a `CanonicalShow`."""
+    return CanonicalShowOutput.model_validate(canonical_show)
+
+
 router = APIRouter()
+# Registered ahead of `shows_router` so "/shows/canonical" is read as the
+# canonical listing rather than as a `Show` id that happens to be misspelt.
+router.include_router(canonical_shows_router)
 router.include_router(shows_router)
 router.include_router(source_shows_router)
 router.include_router(plugin_shows_router)

@@ -32,7 +32,7 @@ def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
 
 
 # TODO: Validate
-class _CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
+class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
     # TODO: Validate
     @override
     def __init__(self, plugin: Crunchyroll, url: str, key: str) -> None:
@@ -41,7 +41,7 @@ class _CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
 
 
 # TODO: Validate
-class CrunchyrollSeriesURLHandler(_CrunchyrollURLHandler):
+class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
     """Crunchyroll series URL handler.
 
     Example URL https://www.crunchyroll.com/series/GEXH3W29Z
@@ -63,7 +63,7 @@ class CrunchyrollSeriesURLHandler(_CrunchyrollURLHandler):
 
 
 # TODO: Validate
-class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
+class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
     """Crunchyroll episode URL handler.
 
     Example URL https://www.crunchyroll.com/watch/GVWU8XW1Z
@@ -115,7 +115,7 @@ class CrunchyrollEpisodeURLHandler(_CrunchyrollURLHandler):
 
 
 # TODO: Validate
-class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
+class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
     """Crunchyroll artist URL handler.
 
     Example URL https://www.crunchyroll.com/artist/MA899F54A4
@@ -137,7 +137,7 @@ class CrunchyrollArtistURLHandler(_CrunchyrollURLHandler):
 
 
 # TODO: Validate
-class _CrunchyrollMusicURLHandler(_CrunchyrollURLHandler):
+class _CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
     # TODO: Validate
     @property
     @override

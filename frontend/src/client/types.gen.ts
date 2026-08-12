@@ -24,14 +24,17 @@ export type Body_watches_import_watch_history = {
  */
 export type CanonicalEpisodeListOutput = {
     key: string;
-    name?: (string | null);
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
     url?: (string | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
-    release_date?: (string | null);
-    air_date?: (string | null);
     sort_order?: (number | null);
     canonical_season_id: string;
     id: string;
@@ -49,14 +52,17 @@ export type CanonicalEpisodeListOutput = {
  */
 export type CanonicalEpisodeOutput = {
     key: string;
-    name?: (string | null);
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
     url?: (string | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
-    release_date?: (string | null);
-    air_date?: (string | null);
     sort_order?: (number | null);
     canonical_season_id: string;
     id: string;
@@ -80,6 +86,10 @@ export type CanonicalEpisodesPublic = {
  */
 export type CanonicalSeasonListOutput = {
     key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -99,6 +109,10 @@ export type CanonicalSeasonListOutput = {
  */
 export type CanonicalSeasonOutput = {
     key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -131,12 +145,15 @@ export type CanonicalSeasonsPublic = {
  */
 export type CanonicalShowOutput = {
     key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: (string | null);
     name?: (string | null);
-    url?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
+    url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     id: string;
     created_at: string;
     modified_at: string;
@@ -285,13 +302,9 @@ export type ChannelOptions = {
     maximumWatchDateAbsolute?: (string | null);
     minimumAirDateAbsolute?: (string | null);
     maximumAirDateAbsolute?: (string | null);
-    minimumReleaseDateAbsolute?: (string | null);
-    maximumReleaseDateAbsolute?: (string | null);
     maximumWatchDateRelative?: (number | null);
     minimumAirDateRelative?: (number | null);
     maximumAirDateRelative?: (number | null);
-    minimumReleaseDateRelative?: (number | null);
-    maximumReleaseDateRelative?: (number | null);
     totalShowsCount?: (number | null);
     startedShowsCount?: (number | null);
     newShowsCount?: (number | null);
@@ -487,7 +500,6 @@ export type ChannelShowsOutput = {
 export type ChannelShowStats = {
     season_count: number;
     episode_count: number;
-    first_release_date?: (string | null);
 };
 
 /**
@@ -585,14 +597,13 @@ export type EpisodeCreate = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
 };
@@ -622,7 +633,6 @@ export type EpisodeInformationSide = {
     description: (string | null);
     image_url: (string | null);
     duration: (number | null);
-    release_date: (string | null);
     air_date: (string | null);
     episode_number: (number | null);
     sort_order: (number | null);
@@ -648,14 +658,13 @@ export type EpisodeListOutput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
     id: string;
@@ -683,14 +692,13 @@ export type EpisodeOutput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
     id: string;
@@ -729,14 +737,13 @@ export type EpisodeUpdate = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
 };
@@ -748,14 +755,13 @@ export type EpisodeWithDetails = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
     id: string;
@@ -1079,11 +1085,11 @@ export type SeasonCreate = {
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
-    image_url?: (string | null);
     season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
 };
 
 /**
@@ -1123,11 +1129,11 @@ export type SeasonListOutput = {
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
-    image_url?: (string | null);
     season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
     show_id: string;
     id: string;
     canonical_season_id: string;
@@ -1150,11 +1156,11 @@ export type SeasonOutput = {
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
-    image_url?: (string | null);
     season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
     show_id: string;
     id: string;
     canonical_season_id: string;
@@ -1181,11 +1187,11 @@ export type SeasonUpdate = {
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
-    image_url?: (string | null);
     season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
 };
 
 /**
@@ -1202,7 +1208,6 @@ export type ShowCreate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
 };
@@ -1250,7 +1255,6 @@ export type ShowListPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;
@@ -1278,7 +1282,6 @@ export type ShowPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;
@@ -1312,7 +1315,6 @@ export type ShowUpdate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
 };
@@ -1714,14 +1716,13 @@ export type WhitelistEpisodeOutput = {
     deleted_at?: (string | null);
     extra?: (string | null);
     url?: (string | null);
-    sort_order?: (number | null);
+    name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
-    episode_number?: (number | null);
-    name?: (string | null);
-    duration?: (number | null);
-    release_date?: (string | null);
     air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
     canonical_episode_locked?: boolean;
     canonical_episode_note?: (string | null);
     id: string;
@@ -1743,11 +1744,11 @@ export type WhitelistSeasonOutput = {
     update_at?: (string | null);
     deleted_at?: (string | null);
     extra?: (string | null);
-    sort_order?: (number | null);
     name?: (string | null);
     url?: (string | null);
-    image_url?: (string | null);
     season_number?: (number | null);
+    image_url?: (string | null);
+    sort_order?: (number | null);
     show_id: string;
     id: string;
     canonical_season_id: string;
@@ -1776,7 +1777,6 @@ export type WhitelistShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
-    icon?: (string | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;
@@ -2030,15 +2030,11 @@ export type ChannelsGetChannelEpisodesData = {
     maximumAirDateAbsolute?: (string | null);
     maximumAirDateRelative?: (number | null);
     maximumDuration?: (number | null);
-    maximumReleaseDateAbsolute?: (string | null);
-    maximumReleaseDateRelative?: (number | null);
     maximumWatchDateAbsolute?: (string | null);
     maximumWatchDateRelative?: (number | null);
     minimumAirDateAbsolute?: (string | null);
     minimumAirDateRelative?: (number | null);
     minimumDuration?: (number | null);
-    minimumReleaseDateAbsolute?: (string | null);
-    minimumReleaseDateRelative?: (number | null);
     newShowsCount?: (number | null);
     orderPresetId?: (string | null);
     randomSeed?: number;

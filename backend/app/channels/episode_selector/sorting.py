@@ -10,8 +10,6 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
@@ -19,10 +17,10 @@ from app.channels.episode_selector.watch_filters import (
 )
 from app.channels.models import ChannelSavedEpisodeOrder, ChannelShow
 from app.channels.schemas import SortKeyInput
-from app.episodes.models import Episode
+from app.episodes.models import CanonicalEpisode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
-from app.seasons.models import Season
+from app.seasons.models import CanonicalSeason
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
@@ -188,7 +186,11 @@ class SortExpressionBuilder:
         elif sort_key.field == "episode_count":
             episode_field = col(CanonicalEpisode.id)
         else:
-            episode_field = self._stored_column("episode", sort_key.field, Episode)
+            episode_field = self._stored_column(
+                "episode",
+                sort_key.field,
+                CanonicalEpisode,
+            )
 
         agg_funcs: dict[str, Any] = {
             "max": func.max,
@@ -246,7 +248,7 @@ class SortExpressionBuilder:
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    self._fallbacks.column("episode", "sort_order", Episode),
+                    self._fallbacks.column("episode", "sort_order", CanonicalEpisode),
                 ),
             )
         if model == "season":
@@ -256,7 +258,7 @@ class SortExpressionBuilder:
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    self._fallbacks.column("season", "sort_order", Season),
+                    self._fallbacks.column("season", "sort_order", CanonicalSeason),
                 ),
             )
         msg = f"sequential is not supported for model '{model}'"
@@ -267,7 +269,7 @@ class SortExpressionBuilder:
         cutoff = sort_key.recently_aired_date or (
             tz_datetime.now() - timedelta(days=sort_key.days or 7)
         )
-        air_date = self._fallbacks.column("episode", "air_date", Episode)
+        air_date = self._fallbacks.column("episode", "air_date", CanonicalEpisode)
         return case(
             (and_(air_date.is_not(None), air_date >= cutoff), 1),
             else_=0,

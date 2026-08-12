@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_seasons.models import CanonicalSeason
+from app.seasons.models import CanonicalSeason
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
@@ -176,6 +176,28 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
     )
 
 
+# TODO: Validate
+def _plugin_holds_no_media_exists() -> ColumnElement[bool]:
+    """EXISTS clause matching a Plugin with no Source of its own.
+
+    Every other clause here asks whether anything below a row is in a channel,
+    which a plugin holding no media of its own can never answer: what it holds
+    is the canonical rows themselves, and those hang off no `Source`.
+    """
+    return ~(select(Source.id).where(col(Source.plugin_id) == col(Plugin.id)).exists())
+
+
+# TODO: Validate
+def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring some channel to hold some title.
+
+    The stand-in, for a plugin holding no media of its own, for the question the
+    other clauses ask. Its rows are what every channel reads a title out of, so
+    a channel holding anything at all is a channel its rows are behind.
+    """
+    return select(ChannelShow.id).exists()
+
+
 # Media classes are updated in this order per plugin because updating a plugin (e.g.
 # JustWatch) can mark its own sources outdated, which the Source pass then picks up in
 # the same run; the same cascade applies down the Source -> Show -> Season -> Episode
@@ -206,7 +228,10 @@ def _restrict_to_media_in_channel[ResultT](
     # Skip items that have no Season included in any channel anywhere below them
     # in the Plugin -> Source -> Show -> Season tree, so unused media is not updated.
     if media_class is Plugin:
-        return statement.where(_plugin_has_season_in_channel_exists())
+        return statement.where(
+            _plugin_has_season_in_channel_exists()
+            | (_plugin_holds_no_media_exists() & _any_channel_holds_a_title_exists()),
+        )
     if media_class is Source:
         return statement.where(_source_has_season_in_channel_exists())
     if media_class is Show:

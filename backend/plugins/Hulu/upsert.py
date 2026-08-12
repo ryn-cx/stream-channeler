@@ -190,7 +190,7 @@ class UpsertMixin(HelperMixin, register=False):
                 description=item.description,
                 image_url=self._image_url(item.artwork.video_horizontal_hero.path),
                 duration=item.duration,
-                release_date=item.premiere_date,
+                air_date=item.premiere_date,
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,

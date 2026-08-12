@@ -13,9 +13,9 @@ import uuid
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
 from app.models import Visibility

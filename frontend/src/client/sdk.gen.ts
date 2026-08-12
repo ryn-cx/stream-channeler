@@ -20,7 +20,7 @@ export class CanonicalEpisodesService {
     public static getCanonicalEpisodes(data: CanonicalEpisodesGetCanonicalEpisodesData = {}): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-episodes',
+            url: '/api/v1/episodes/canonical',
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
@@ -44,7 +44,7 @@ export class CanonicalEpisodesService {
     public static getCanonicalEpisodeById(data: CanonicalEpisodesGetCanonicalEpisodeByIdData): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodeByIdResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-episodes/{canonical_episode_id}',
+            url: '/api/v1/episodes/canonical/{canonical_episode_id}',
             path: {
                 canonical_episode_id: data.canonicalEpisodeId
             },
@@ -69,7 +69,7 @@ export class CanonicalEpisodesService {
     public static getCanonicalSeasonEpisodes(data: CanonicalEpisodesGetCanonicalSeasonEpisodesData): CancelablePromise<CanonicalEpisodesGetCanonicalSeasonEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-seasons/{canonical_season_id}/canonical-episodes',
+            url: '/api/v1/seasons/canonical/{canonical_season_id}/episodes',
             path: {
                 canonical_season_id: data.canonicalSeasonId
             },
@@ -100,7 +100,7 @@ export class CanonicalEpisodesService {
     public static getCanonicalShowEpisodes(data: CanonicalEpisodesGetCanonicalShowEpisodesData): CancelablePromise<CanonicalEpisodesGetCanonicalShowEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-shows/{canonical_show_id}/canonical-episodes',
+            url: '/api/v1/shows/canonical/{canonical_show_id}/episodes',
             path: {
                 canonical_show_id: data.canonicalShowId
             },
@@ -132,7 +132,7 @@ export class CanonicalSeasonsService {
     public static getCanonicalSeasons(data: CanonicalSeasonsGetCanonicalSeasonsData = {}): CancelablePromise<CanonicalSeasonsGetCanonicalSeasonsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-seasons',
+            url: '/api/v1/seasons/canonical',
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
@@ -156,7 +156,7 @@ export class CanonicalSeasonsService {
     public static getCanonicalSeasonById(data: CanonicalSeasonsGetCanonicalSeasonByIdData): CancelablePromise<CanonicalSeasonsGetCanonicalSeasonByIdResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-seasons/{canonical_season_id}',
+            url: '/api/v1/seasons/canonical/{canonical_season_id}',
             path: {
                 canonical_season_id: data.canonicalSeasonId
             },
@@ -181,7 +181,7 @@ export class CanonicalSeasonsService {
     public static getCanonicalShowSeasons(data: CanonicalSeasonsGetCanonicalShowSeasonsData): CancelablePromise<CanonicalSeasonsGetCanonicalShowSeasonsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-shows/{canonical_show_id}/canonical-seasons',
+            url: '/api/v1/shows/canonical/{canonical_show_id}/seasons',
             path: {
                 canonical_show_id: data.canonicalShowId
             },
@@ -213,7 +213,7 @@ export class CanonicalShowsService {
     public static getCanonicalShows(data: CanonicalShowsGetCanonicalShowsData = {}): CancelablePromise<CanonicalShowsGetCanonicalShowsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-shows',
+            url: '/api/v1/shows/canonical',
             query: {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
@@ -237,7 +237,7 @@ export class CanonicalShowsService {
     public static getCanonicalShowById(data: CanonicalShowsGetCanonicalShowByIdData): CancelablePromise<CanonicalShowsGetCanonicalShowByIdResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/canonical-shows/{canonical_show_id}',
+            url: '/api/v1/shows/canonical/{canonical_show_id}',
             path: {
                 canonical_show_id: data.canonicalShowId
             },
@@ -779,13 +779,9 @@ export class ChannelsService {
      * @param data.maximumWatchDateAbsolute
      * @param data.minimumAirDateAbsolute
      * @param data.maximumAirDateAbsolute
-     * @param data.minimumReleaseDateAbsolute
-     * @param data.maximumReleaseDateAbsolute
      * @param data.maximumWatchDateRelative
      * @param data.minimumAirDateRelative
      * @param data.maximumAirDateRelative
-     * @param data.minimumReleaseDateRelative
-     * @param data.maximumReleaseDateRelative
      * @param data.totalShowsCount
      * @param data.startedShowsCount
      * @param data.newShowsCount
@@ -814,13 +810,9 @@ export class ChannelsService {
                 maximumWatchDateAbsolute: data.maximumWatchDateAbsolute,
                 minimumAirDateAbsolute: data.minimumAirDateAbsolute,
                 maximumAirDateAbsolute: data.maximumAirDateAbsolute,
-                minimumReleaseDateAbsolute: data.minimumReleaseDateAbsolute,
-                maximumReleaseDateAbsolute: data.maximumReleaseDateAbsolute,
                 maximumWatchDateRelative: data.maximumWatchDateRelative,
                 minimumAirDateRelative: data.minimumAirDateRelative,
                 maximumAirDateRelative: data.maximumAirDateRelative,
-                minimumReleaseDateRelative: data.minimumReleaseDateRelative,
-                maximumReleaseDateRelative: data.maximumReleaseDateRelative,
                 totalShowsCount: data.totalShowsCount,
                 startedShowsCount: data.startedShowsCount,
                 newShowsCount: data.newShowsCount,

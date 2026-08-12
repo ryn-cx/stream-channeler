@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
 from plugins.NHKWorld.helpers import HelperMixin
 from plugins.NHKWorld.search import SearchMixin
@@ -23,7 +23,7 @@ class NHKWorld(
     _VERSION = "0.0.1"
 
     # TODO: Add support for single episodes
-    _URL_HANDLERS: ClassVar[tuple[type[NHKWorldURLHandler], ...]] = (ShowURLHandler,)
+    _URL_HANDLERS = (ShowURLHandler,)
     # TODO: Don't hardcode the favicon URL
     FAVICON_URL = "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
 

@@ -233,7 +233,7 @@ class UpsertMixin(HelperMixin, register=False):
                 MediaType.movie,
             )
 
-    _WEEKDAYS: ClassVar[dict[str, int]] = {
+    _WEEKDAYS: ClassVar = {
         "Monday": 0,
         "Tuesday": 1,
         "Wednesday": 2,

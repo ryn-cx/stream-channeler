@@ -1,8 +1,6 @@
 # TODO: Validate
 """TMDB Plugin."""
 
-from typing import ClassVar
-
 from plugins.TMDB.files import FileMixin
 from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.import_url import ImportURLMixin
@@ -28,7 +26,7 @@ class TMDB(
 ):
     _VERSION = "0.0.1"
     FAVICON_URL = "https://www.themoviedb.org/favicon.ico"
-    _URL_HANDLERS: ClassVar[tuple[type[TMDBURLHandler], ...]] = (
+    _URL_HANDLERS = (
         MovieURLHandler,
         TvURLHandler,
     )

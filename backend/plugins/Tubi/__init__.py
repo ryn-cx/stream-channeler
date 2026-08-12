@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
 from plugins.Tubi.helpers import HelperMixin
 from plugins.Tubi.source import SourceMixin
@@ -29,7 +29,7 @@ class Tubi(
     """Tubi plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[TubiURLHandler], ...]] = (
+    _URL_HANDLERS = (
         MovieURLHandler,
         SeriesURLHandler,
         EpisodeURLHandler,

@@ -21,8 +21,8 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
 from app.episodes.models import Episode
 from app.users.models import User
 from app.watches.models import Watch

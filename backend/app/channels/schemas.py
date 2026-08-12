@@ -16,7 +16,7 @@ from app.channels.models import (
     Channel,
     URLStatus,
 )
-from app.episodes.models import Episode
+from app.episodes.models import CanonicalEpisode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
@@ -27,9 +27,9 @@ from app.schemas import (
     ScopedReadOptions,
     make_model_with_all_fields_optional,
 )
-from app.seasons.models import Season
+from app.seasons.models import CanonicalSeason
 from app.seasons.schemas import SeasonOutput
-from app.shows.models import Show
+from app.shows.models import CanonicalShow
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
@@ -230,9 +230,6 @@ class ChannelShowStats(BaseModel):
 
     season_count: int
     episode_count: int
-    # The earliest release date of any of its episodes, which is as close to the
-    # title's own release as the episodes can say.
-    first_release_date: datetime | None = Field(default=None)
 
 
 # TODO: Validate
@@ -335,12 +332,22 @@ class SortKeyInput(BaseInput):
         alias_generator=to_camel,
     )  # type: ignore[reportAssignmentType]
 
-    _MODEL_MAP: ClassVar[
-        dict[str, type[Episode | Season | Show | Source | Plugin | Channel]]
+    MODEL_MAP: ClassVar[
+        dict[
+            str,
+            type[
+                CanonicalEpisode
+                | CanonicalSeason
+                | CanonicalShow
+                | Source
+                | Plugin
+                | Channel
+            ],
+        ]
     ] = {
-        "episode": Episode,
-        "season": Season,
-        "show": Show,
+        "episode": CanonicalEpisode,
+        "season": CanonicalSeason,
+        "show": CanonicalShow,
         "source": Source,
         "plugin": Plugin,
         # An episode reads as coming from the channel it was added through, which
@@ -359,8 +366,12 @@ class SortKeyInput(BaseInput):
 
     # TODO: Validate
     @property
-    def model_class(self) -> type[Episode | Season | Show | Source | Plugin | Channel]:
-        return self._MODEL_MAP[self.model]
+    def model_class(
+        self,
+    ) -> type[
+        CanonicalEpisode | CanonicalSeason | CanonicalShow | Source | Plugin | Channel
+    ]:
+        return self.MODEL_MAP[self.model]
 
     # TODO: Validate
     @model_validator(mode="after")
@@ -403,13 +414,9 @@ class ChannelOptions(BaseInput):
     maximum_watch_date_absolute: datetime | None = Field(default=None)
     minimum_air_date_absolute: datetime | None = Field(default=None)
     maximum_air_date_absolute: datetime | None = Field(default=None)
-    minimum_release_date_absolute: datetime | None = Field(default=None)
-    maximum_release_date_absolute: datetime | None = Field(default=None)
     maximum_watch_date_relative: int | None = Field(default=None)
     minimum_air_date_relative: int | None = Field(default=None)
     maximum_air_date_relative: int | None = Field(default=None)
-    minimum_release_date_relative: int | None = Field(default=None)
-    maximum_release_date_relative: int | None = Field(default=None)
     total_shows_count: int | None = Field(default=None, ge=0)
     started_shows_count: int | None = Field(default=None, ge=0)
     new_shows_count: int | None = Field(default=None, ge=0)

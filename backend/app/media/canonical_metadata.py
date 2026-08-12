@@ -23,10 +23,10 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.media.media_type import MediaType
 
 # What each level's canonical row answers for. Anything else belongs to the copy
@@ -38,7 +38,6 @@ EPISODE_FIELDS = (
     "description",
     "image_url",
     "duration",
-    "release_date",
     "air_date",
 )
 

@@ -18,7 +18,7 @@ _SEARCH_MAX_AGE = timedelta(days=30)
 # TODO: Validate
 class SearchMixin(HelperMixin, register=False):
     # Netflix tags each search result with the media type of its title.
-    _SEARCH_MEDIA_TYPES: ClassVar[dict[str, str]] = {
+    _SEARCH_MEDIA_TYPES: ClassVar = {
         "Show": "TV Show",
         "Movie": "Movie",
     }

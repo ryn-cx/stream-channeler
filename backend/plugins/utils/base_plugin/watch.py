@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season

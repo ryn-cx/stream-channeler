@@ -159,7 +159,6 @@ class UpsertMixin(HelperMixin, register=False):
                 description=item.synopsis,
                 image_url=item.image_url,
                 duration=item.duration,
-                release_date=_parse_date(item.release_date),
                 air_date=_parse_date(item.release_date),
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
@@ -258,7 +257,7 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=page.image_url(),
                 episode_number=0,
                 sort_order=0,
-                release_date=_parse_date(page.release_date()),
+                air_date=_parse_date(page.release_date()),
                 data_timestamp=self.episode_data_timestamp(
                     show_key,
                     season.key,

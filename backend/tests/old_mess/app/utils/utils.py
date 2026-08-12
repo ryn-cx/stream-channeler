@@ -97,7 +97,7 @@ def random_optional_future_timestamp() -> datetime | None:
 
 # TODO: Validate
 def _random_sort_key_input() -> SortKeyInput:
-    model_map = SortKeyInput._MODEL_MAP  # noqa: SLF001
+    model_map = SortKeyInput.MODEL_MAP
     model_name: str = random.choice(list(model_map))  # noqa: S311
     model_class = model_map[model_name]
     return SortKeyInput(

@@ -64,13 +64,6 @@ export const canonicalShowColumns: ColumnDef<CanonicalShowTableData>[] = [
     header: "Image URL",
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
-  {
-    accessorKey: "icon",
-    header: "Icon",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.icon ?? "-"}</span>
-    ),
-  },
   // Read out of the key rather than stored, so there is no column to sort or
   // filter by. The key itself is there for both.
   {

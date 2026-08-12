@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 from plugins.JustWatch.helpers import HelperMixin
 from plugins.JustWatch.import_url import ImportURLMixin
 from plugins.JustWatch.source import SourceMixin
@@ -28,4 +26,4 @@ class JustWatch(
     # A title is reached through its TMDB page now, which resolves the JustWatch
     # title behind it. A JustWatch URL still imports if one is pasted.
     LISTED_FOR_IMPORT_URL = False
-    _URL_HANDLERS: ClassVar[tuple[type[JustWatchURLHandler], ...]] = (TitleURLHandler,)
+    _URL_HANDLERS = (TitleURLHandler,)

@@ -186,7 +186,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=item.episode_url,
                 description=item.summary.full,
                 image_url=item.images.default,
-                release_date=item.offering_dates.start_date,
+                air_date=item.offering_dates.start_date,
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,

@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from app.files.models import File
     from app.sources.models import Source
 
+DIRECT_SORTABLE_FIELDS = ["id", "name", "visibility"]
+
 
 # TODO: Validate
 class BasePlugin(BaseMediaMixin):
@@ -43,7 +45,6 @@ class BasePlugin(BaseMediaMixin):
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     """Model representing a `Plugin`."""
 
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = ["id", "name", "visibility"]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS

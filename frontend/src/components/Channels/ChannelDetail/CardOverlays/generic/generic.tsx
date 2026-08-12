@@ -32,14 +32,14 @@ function formatNumberedLine(
 
 // TODO: Validate
 export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
-  const releaseDate = episode.air_date || episode.release_date
+  const airDate = episode.air_date
 
   return (
     <CardTextArea>
       <CardSourceRow
         episode={episode}
         details={[
-          releaseDate ? new Date(releaseDate).toLocaleDateString() : null,
+          airDate ? new Date(airDate).toLocaleDateString() : null,
           formatDuration(episode.duration),
         ]}
       />

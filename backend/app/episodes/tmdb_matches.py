@@ -16,7 +16,6 @@ from fastapi import HTTPException
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
     SHOW_LEVEL,
@@ -28,13 +27,12 @@ from app.canonical_media.keys import (
     tmdb_key_clause,
 )
 from app.canonical_media.service import point_episode_at, standalone_episode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
 from app.episodes.models import (
     MANUAL_NOTES,
     MANUALLY_CONFIRMED_NOTE,
     MANUALLY_SELECTED_NOTE,
     NO_MATCH_NOTE,
+    CanonicalEpisode,
     Episode,
 )
 from app.episodes.schemas import (
@@ -46,8 +44,8 @@ from app.media.canonical_metadata import tmdb_episode_url
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
-from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.seasons.models import CanonicalSeason, Season
+from app.shows.models import CanonicalShow, Show, ShowCanonicalShow
 from app.sources.models import Source
 
 # An unnumbered season or episode is ordered after every numbered one.
@@ -582,8 +580,7 @@ def list_tmdb_episode_choices(
         return []
     by_title = _candidates_by_show(session, set(canonical_show_ids))
     titles = [
-        by_title.get(canonical_show_id, [])
-        for canonical_show_id in canonical_show_ids
+        by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
     ]
     candidates = [candidate for title in titles for candidate in title]
     absolute_numbers = {
@@ -764,9 +761,7 @@ def _unlink_others_sharing(
             "episode by hand"
         )
         previous = other.canonical_episode_note
-        other.canonical_episode_note = (
-            f"{removed}. {previous}" if previous else removed
-        )
+        other.canonical_episode_note = f"{removed}. {previous}" if previous else removed
         other.canonical_episode_id = None
         other.canonical_episode_locked = False
         session.add(other)

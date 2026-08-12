@@ -1,9 +1,9 @@
 # TODO: Validate
 from typing import Any
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season

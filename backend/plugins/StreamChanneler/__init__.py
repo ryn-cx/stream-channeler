@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any, override
 
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.StreamChanneler.handlers import (

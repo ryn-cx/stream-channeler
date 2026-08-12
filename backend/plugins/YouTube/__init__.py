@@ -3,12 +3,12 @@
 
 import re
 from datetime import timedelta
-from typing import ClassVar, override
+from typing import override
 
 from loguru import logger
 
 from app.canonical_media.service import reconcile_show
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -59,7 +59,7 @@ class YouTube(
 
     # _playlist_video before _video, and _username and _show before _handle, due to
     # regex overlap.
-    _URL_HANDLERS: ClassVar[tuple[type[YouTubeURLHandler], ...]] = (
+    _URL_HANDLERS = (
         PlaylistVideoURLHandler,
         PlaylistURLHandler,
         VideoURLHandler,

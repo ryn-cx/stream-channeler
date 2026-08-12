@@ -70,8 +70,6 @@ type ChannelSearchParams = {
   newShowsCount?: number
   minimumAirDate?: string
   maximumAirDate?: string
-  minimumReleaseDate?: string
-  maximumReleaseDate?: string
   minimumDuration?: number
   maximumDuration?: number
   limit?: number
@@ -108,8 +106,6 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       newShowsCount: search.newShowsCount as number | undefined,
       minimumAirDate: search.minimumAirDate as string | undefined,
       maximumAirDate: search.maximumAirDate as string | undefined,
-      minimumReleaseDate: search.minimumReleaseDate as string | undefined,
-      maximumReleaseDate: search.maximumReleaseDate as string | undefined,
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
       limit: search.limit as number | undefined,

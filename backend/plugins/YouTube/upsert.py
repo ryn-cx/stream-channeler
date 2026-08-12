@@ -397,7 +397,6 @@ class UpsertMixin(HelperMixin, register=False):
             # A YouTube video with a null character in the description caused
             # importing to hang so it needs to be stripped out.
             description=video_snippet.description.replace("\x00", ""),
-            release_date=video_snippet.published_at,
             air_date=video_snippet.published_at,
             duration=duration,
             image_url=self._best_thumbnail_url(video_snippet.thumbnails),

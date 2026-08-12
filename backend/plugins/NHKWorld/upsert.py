@@ -99,7 +99,6 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(item.url),
                 description=item.description,
                 image_url=self._get_image_url(item.images),
-                release_date=video.published_at,
                 air_date=item.first_broadcasted_at,
                 duration=video.duration,
                 sort_order=sort_order,

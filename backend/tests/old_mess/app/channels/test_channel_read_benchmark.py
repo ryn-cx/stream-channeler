@@ -57,7 +57,6 @@ def _build_channel(session: Session, user: User) -> tuple[Channel, list[Episode]
                     episode_number=episode_number,
                     duration=random.randint(MINIMUM_DURATION, MAXIMUM_DURATION),  # noqa: S311
                     air_date=random_past_timestamp(),
-                    release_date=random_past_timestamp(),
                 )
                 for episode_number in range(1, EPISODES_PER_SEASON + 1)
             )

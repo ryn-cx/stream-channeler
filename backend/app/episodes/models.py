@@ -18,16 +18,16 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_episodes.models import CanonicalEpisode
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     DateTimeField,
     MediaMixin,
+    TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
-from app.seasons.models import Season
+from app.seasons.models import CanonicalSeason, Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from app.issue_reports.models import EpisodeIssueReport
     from app.watches.models import Watch
 
-
+# TODO: Validate Constants
 # The notes that stand for a settled link rather than a guess at one. A
 # note is free text so that a new way of recognising an episode needs nothing
 # but its own wording; the rest are written where the matching is done.
@@ -63,39 +63,44 @@ enough of at the time, so the two are told apart by what was written down.
 """
 
 
+# The canonical row is the one a channel sorts on, so these name its columns and
+# no copy's. A copy's own columns are only ever ordered by the admin tables, which
+# order by any column they show and so are no reason to index these five.
+CANONICAL_SORTABLE_FIELDS = [
+    "air_date",
+    "duration",
+    "episode_number",
+    "name",
+    "sort_order",
+]
+
+
 # TODO: Validate
-class BaseEpisode(BaseMediaMixin):
-    """Base model for an `Episode`."""
+class BaseCanonicalEpisode(BaseMediaMixin):
+    """Base model for `CanonicalEpisode` and `BaseEpisode` models."""
 
     url: str | None = Field(default=None)
-    sort_order: int | None = Field(default=None)
+    name: str | None = Field(default=None)
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
-    episode_number: int | None = Field(default=None)
-    name: str | None = Field(default=None)
-    duration: int | None = Field(ge=0, default=None)
-    release_date: datetime | None = DateTimeField(default=None)
     air_date: datetime | None = DateTimeField(default=None)
+    episode_number: int | None = Field(default=None)
+    duration: int | None = Field(ge=0, default=None)
+    sort_order: int | None = Field(default=None)
+
+
+# TODO: Validate
+class BaseEpisode(BaseCanonicalEpisode):
+    """Base model for an `Episode`."""
+
     canonical_episode_locked: bool = Field(default=False)
-    # How the link was arrived at, in words. Written for every match, not only
-    # the ones sure enough to lock, since a guess is worth as much as what it
-    # was made on and there is nothing else to go on when reading one back.
     canonical_episode_note: str | None = Field(default=None)
 
 
 # TODO: Validate
-# TODO: Validate
-class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
-    """Model representing an episode."""
+class CanonicalEpisode(TimestampIdAndHashMixin, BaseCanonicalEpisode, table=True):
+    """Model representing a canonical episode."""
 
-    DIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
-        "air_date",
-        "duration",
-        "episode_number",
-        "name",
-        "release_date",
-        "sort_order",
-    ]
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_number_zero_last",
         "last_watched_completed",
@@ -107,16 +112,44 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        UniqueConstraint(
+            "canonical_season_id",
+            "key",
+            name="CanonicalEpisode-canonical_season_id-key-key",
+        ),
+        *sortable_field_indexes("CanonicalEpisode", CANONICAL_SORTABLE_FIELDS),
+        Index("CanonicalEpisode-canonical_season_id-index", "canonical_season_id"),
+        # An episode is looked up by key alone where a `User` names a TMDB id
+        # by hand, which is across every season rather than within one.
+        Index("CanonicalEpisode-key-index", "key"),
+    )
+
+    canonical_season_id: uuid.UUID = Field(
+        foreign_key="canonicalseason.id",
+        ondelete="CASCADE",
+    )
+    canonical_season: CanonicalSeason = Relationship(
+        back_populates="canonical_episodes",
+    )
+
+    # TODO: Validate
+    def __str__(self) -> str:
+        """Return a string representation of the `CanonicalEpisode`."""
+        return stringify_episode(self, self.canonical_season)
+
+
+# TODO: Validate
+class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
+    """Model representing an episode."""
 
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes(
-            "Episode",
-            DIRECT_SORTABLE_FIELDS,
-        ),
         Index("Episode-deleted_at-index", "deleted_at"),
         Index("Episode-canonical_episode_id-index", "canonical_episode_id"),
         # A copy names one episode at most, within the season holding it. The
@@ -143,8 +176,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @property
     def tmdb_id(self) -> int | None:
         """The TMDB episode this is a copy of, if TMDB has a record of it."""
-        if self.canonical_episode is None:
-            return None
         return tmdb_id_of(self.canonical_episode.key, EPISODE_LEVEL)
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
@@ -231,13 +262,22 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Episode`."""
-        base_episode = "Episode:"
-        if self.episode_number:
-            base_episode += f" {self.episode_number} - "
-        if self.name:
-            base_episode += f" {self.name}"
-        if self.key:
-            base_episode += f" ({self.key})"
-        if self.id:
-            base_episode += f" ({self.id})"
-        return f"{self.season}\n{base_episode}"
+        return stringify_episode(self, self.season)
+
+
+# TODO: Validate
+def stringify_episode(
+    episode: Episode | CanonicalEpisode,
+    parent: Season | CanonicalSeason,
+) -> str:
+    """Return a string representation."""
+    base_episode = f"{type(episode).__name__}:"
+    if episode.episode_number:
+        base_episode += f" {episode.episode_number} - "
+    if episode.name:
+        base_episode += f" {episode.name}"
+    if episode.key:
+        base_episode += f" ({episode.key})"
+    if episode.id:
+        base_episode += f" ({episode.id})"
+    return f"{parent}\n{base_episode}"

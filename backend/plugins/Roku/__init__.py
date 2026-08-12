@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
 from plugins.Roku.helpers import HelperMixin
 from plugins.Roku.source import SourceMixin
@@ -28,7 +28,7 @@ class Roku(
     """The Roku Channel plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[RokuURLHandler], ...]] = (
+    _URL_HANDLERS = (
         DetailsURLHandler,
         WatchURLHandler,
     )

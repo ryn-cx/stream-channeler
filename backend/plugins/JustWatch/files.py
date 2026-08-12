@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from functools import cache
-from typing import Any, cast, override
+from typing import Any, Literal, cast, override
 
 import httpx
 from get_around import GetAround
@@ -28,7 +28,6 @@ from app.utils import tz_datetime
 from plugins.TMDB.mixin import TMDBMixin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
-    INITIAL_FILE_IDENTIFIER,
     BaseFile,
     GAPIListJSON,
     JSONFile,
@@ -102,16 +101,13 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 # TODO: Validate
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
     API_ENDPOINT = just_scrape().new_title_buckets
+    # NewTitleBucket is named after a specific datetime so there is no reasonable situation where it would
+    IMMUTABLE = True
 
     # TODO: Validate
     @override
     def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
         end_date = self.identifier_datetime().date()
-        # A bucket names the day it catches up from, and the first one has no
-        # earlier bucket to catch up to, so it reaches a day back to cover what
-        # was added before it was created.
-        if self.unique_identifier == INITIAL_FILE_IDENTIFIER:
-            end_date -= timedelta(days=1)
         return just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
 
     # TODO: Validate
@@ -267,13 +263,18 @@ class FileMixin(TMDBMixin, register=False):
         )
 
     # TODO: Validate
-    def new_titles_bucket_file(self, end_datetime: datetime | File) -> NewTitleBucket:
+    def new_titles_bucket_file(
+        self,
+        end_datetime: datetime | File | Literal["Initial"],
+    ) -> NewTitleBucket:
         """Contains which sources added new titles on which dates."""
         identifier: str
         if isinstance(end_datetime, File):
             identifier = NewTitleBucket.file_key_to_unique_identifier(end_datetime.key)
-        else:
+        elif isinstance(end_datetime, datetime):
             identifier = end_datetime.isoformat()
+        else:
+            identifier = end_datetime
         return self._file(NewTitleBucket, identifier)
 
     # TODO: Validate

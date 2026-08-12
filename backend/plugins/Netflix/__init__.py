@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
 from plugins.Netflix.helpers import HelperMixin
 from plugins.Netflix.source import SourceMixin
@@ -23,7 +23,7 @@ class Netflix(
     TMDB_PROVIDER_NAMES = ("Netflix", "Netflix Standard with Ads")
     FAVICON_URL = "https://www.netflix.com/favicon.ico"
 
-    _URL_HANDLERS: ClassVar[tuple[type[NetflixURLHandler], ...]] = (TitleURLHandler,)
+    _URL_HANDLERS = (TitleURLHandler,)
 
     # TODO: Validate
     @classmethod

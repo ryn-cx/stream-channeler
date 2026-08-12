@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from datetime import timedelta
-from typing import override
+from datetime import datetime, timedelta
+from typing import Literal, override
 
 from chirashi.artist import models as artist_models
 from chirashi.artist_concerts import models as artist_concerts_models
@@ -12,6 +12,7 @@ from chirashi.concert import models as concert_models
 from chirashi.music_video import models as music_video_models
 
 from app.episodes.models import Episode
+from app.files.models import File
 from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -27,6 +28,7 @@ from plugins.Crunchyroll.music_keys import (
     is_music_show_key,
 )
 from plugins.TMDB.mixin import highest_episode_number
+from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
 
 # TODO: Validate
@@ -38,7 +40,7 @@ class UpsertMixin(HelperMixin, register=False):
         return self._upsert_source(
             VIDEO_SOURCE,
             self.find_newest_browse_file(),
-            BrowseSeries,
+            self.browse_series_file,
             timedelta(days=1),  # Check daily for new videos.
         )
 
@@ -47,7 +49,7 @@ class UpsertMixin(HelperMixin, register=False):
         return self._upsert_source(
             MUSIC_SOURCE,
             self.find_newest_music_browse_file(),
-            BrowseMusic,
+            self.browse_music_file,
             timedelta(days=7),  # Check weekly for new music.
         )
 
@@ -57,13 +59,16 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         source_key: str,
         latest_browse_file: BrowseSeries | BrowseMusic | None,
-        initial_file_type: Callable[..., BrowseSeries | BrowseMusic],
+        browse_file: Callable[
+            [datetime | File | Literal["Initial"]],
+            BrowseSeries | BrowseMusic,
+        ],
         update_interval: timedelta,
     ) -> Source:
         # If this is the first time the source is upserted an initial browse file needs
         # to be downloaded.
         if not latest_browse_file:
-            latest_browse_file = self._initial_file(initial_file_type)
+            latest_browse_file = browse_file(INITIAL_FILE_IDENTIFIER)
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
@@ -254,7 +259,6 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=episode_data.images.thumbnail[0][-1].source,
                 duration=episode_data.duration_ms // 1000,
                 sort_order=index,
-                release_date=episode_data.premium_available_date,
                 air_date=episode_data.episode_air_date,
                 data_timestamp=self.episode_data_timestamp(
                     episode_data.id,
@@ -311,7 +315,6 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=self._largest_image(details.images.thumbnail),
                 duration=details.duration_ms // 1000,
                 sort_order=sort_order,
-                release_date=details.availability.start_date,
                 air_date=details.original_release,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,

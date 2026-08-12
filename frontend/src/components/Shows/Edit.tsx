@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { ShowsService, type ShowUpdate } from "@/client"
-import { FormEmojiField } from "@/components/Common/FormEmojiField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -22,7 +21,6 @@ const formSchema = z.object({
   description: optionalString,
   url: optionalString,
   image_url: optionalString,
-  icon: optionalString,
   data_timestamp: optionalString,
   update_at: optionalString,
 })
@@ -49,7 +47,6 @@ const EditShow = ({ show }: EditShowProps) => {
       description: show.description ?? "",
       url: show.url ?? "",
       image_url: show.image_url ?? "",
-      icon: show.icon ?? "",
       data_timestamp: show.data_timestamp?.slice(0, 16) ?? "",
       update_at: show.update_at?.slice(0, 16) ?? "",
     },
@@ -115,7 +112,6 @@ const EditShow = ({ show }: EditShowProps) => {
         placeholder="https://..."
         type="url"
       />
-      <FormEmojiField control={form.control} name="icon" label="Icon" />
       <FormTextField
         control={form.control}
         label="TMDB ID"

@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.shows.models import Show
 from plugins.Amazon.handlers import AmazonURLHandler, DetailURLHandler
 from plugins.Amazon.helpers import HelperMixin
@@ -27,7 +27,7 @@ class Amazon(
     """Amazon Prime Video plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[AmazonURLHandler], ...]] = (DetailURLHandler,)
+    _URL_HANDLERS = (DetailURLHandler,)
     TMDB_PROVIDER_NAMES = ("Amazon Prime Video", "Amazon Video", "Prime Video")
     FAVICON_URL = "https://www.amazon.com/favicon.ico"
 

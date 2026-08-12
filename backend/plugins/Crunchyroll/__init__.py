@@ -11,7 +11,11 @@ from typing import override
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
+from plugins.Crunchyroll.music_keys import (
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
+    is_music_show_key,
+)
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
@@ -21,7 +25,7 @@ from plugins.Crunchyroll.url_handlers import (
     CrunchyrollEpisodeURLHandler,
     CrunchyrollMusicVideoURLHandler,
     CrunchyrollSeriesURLHandler,
-    _CrunchyrollURLHandler,
+    CrunchyrollURLHandler,
 )
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -34,7 +38,7 @@ class Crunchyroll(
     UpsertMixin,
     SearchMixin,
     HelperMixin,
-    URLHandlerPlugin[_CrunchyrollURLHandler],
+    URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,
 ):
     """Crunchyroll plugin."""
@@ -58,13 +62,11 @@ class Crunchyroll(
         "music_source",
     }
 
-    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "crunchyroll.com"
 
-    # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
         if not hasattr(self, "video_source"):
@@ -82,8 +84,12 @@ class Crunchyroll(
     # TODO: Validate
     @override  # Determines which source to use based on the show key.
     def _import_show(self, show_key: str) -> Show:
+        self.source = self._source_from_show_key(show_key)
+        if not is_music_show_key(show_key):
+            return super()._import_show(show_key)
+
         if show := self._preload_show(show_key).one_or_none():
             return show
 
         _cache = self._download_show_files_and_children(show_key)
-        return self.upsert_show(self._source_from_show_key(show_key), show_key)
+        return self.upsert_show(self.source, show_key)

@@ -13,8 +13,8 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,
@@ -467,17 +467,6 @@ class EpisodeQueryBuilder:
             self._parse_date_filter(
                 self._channel_options.maximum_air_date_absolute,
                 self._channel_options.maximum_air_date_relative,
-            ),
-        )
-        add_range(
-            self._canonical_columns.column("episode", "release_date", Episode),
-            self._parse_date_filter(
-                self._channel_options.minimum_release_date_absolute,
-                self._channel_options.minimum_release_date_relative,
-            ),
-            self._parse_date_filter(
-                self._channel_options.maximum_release_date_absolute,
-                self._channel_options.maximum_release_date_relative,
             ),
         )
         add_range(

@@ -20,9 +20,9 @@ import uuid
 from collections import defaultdict
 from collections.abc import Collection
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select, update
 
-from app.canonical_episodes.models import CanonicalEpisode
 from app.canonical_media.keys import (
     is_tmdb_key,
     record_key,
@@ -30,26 +30,117 @@ from app.canonical_media.keys import (
     tmdb_season_key,
     tmdb_show_key,
 )
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
-from app.episodes.models import Episode
+from app.episodes.models import CanonicalEpisode, Episode
 from app.media.media_type import MediaType
-from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.seasons.models import CanonicalSeason, Season
+from app.shows.models import CanonicalShow, Show, ShowCanonicalShow
 from app.watches.models import Watch
 
 
 # TODO: Validate
+def _cache[CanonicalT: CanonicalShow | CanonicalSeason | CanonicalEpisode](
+    session: Session,
+    model: type[CanonicalT],
+) -> dict[tuple[str, ...], CanonicalT]:
+    """Return what the session has already answered asks for `model` with.
+
+    The rows themselves are held rather than their ids, since the session holds
+    its own weakly and an id would be a query again.
+    """
+    cache: dict[tuple[str, ...], CanonicalT] = session.info.setdefault(
+        model.__name__,
+        {},
+    )
+    return cache
+
+
+# TODO: Validate
+def _loaded_parents(session: Session) -> set[uuid.UUID]:
+    """Return the rows whose children are all in the cache already.
+
+    A parent that was read whole has nothing left in the database to find, so an
+    ask for a child it does not have is answered by making one rather than by a
+    query that can only come back empty.
+    """
+    loaded: set[uuid.UUID] = session.info.setdefault("canonical_loaded_parents", set())
+    return loaded
+
+
+# TODO: Validate
+def _remembered[CanonicalT: CanonicalShow | CanonicalSeason | CanonicalEpisode](
+    session: Session,
+    model: type[CanonicalT],
+    cache_key: tuple[str, ...],
+) -> CanonicalT | None:
+    """Return the row the session already answered `cache_key` with.
+
+    A rollback throws out what it never wrote, which is what the session is
+    asked about here, so nothing is carried over from a session's earlier life.
+    """
+    remembered = _cache(session, model).get(cache_key)
+    if remembered is None or remembered not in session:
+        return None
+    return remembered
+
+
+# TODO: Validate
+def _remember(
+    session: Session,
+    canonical: CanonicalShow | CanonicalSeason | CanonicalEpisode,
+    cache_key: tuple[str, ...],
+) -> None:
+    """Record which row answered `cache_key`."""
+    _cache(session, type(canonical))[cache_key] = canonical
+
+
+# TODO: Validate
+def _remember_title(session: Session, canonical_show: CanonicalShow) -> None:
+    """Remember a title and everything under it, and that it was read whole."""
+    _remember(session, canonical_show, (canonical_show.key,))
+    loaded = _loaded_parents(session)
+    loaded.add(canonical_show.id)
+    for canonical_season in canonical_show.canonical_seasons:
+        _remember(
+            session,
+            canonical_season,
+            (str(canonical_show.id), canonical_season.key),
+        )
+        loaded.add(canonical_season.id)
+        for canonical_episode in canonical_season.canonical_episodes:
+            _remember(
+                session,
+                canonical_episode,
+                (str(canonical_season.id), canonical_episode.key),
+            )
+
+
+# TODO: Validate
 def canonical_show_by_key(session: Session, key: str) -> CanonicalShow:
-    """Return the title `key` names, creating it if nothing claims it yet."""
+    """Return the title `key` names, creating it if nothing claims it yet.
+
+    The whole title comes back with it. Its seasons and their episodes are what
+    the caller asks for next, one at a time, and each of those asks on its own
+    is a query, so they are all read here in the one the title costs anyway.
+    """
+    cache_key = (key,)
+    if remembered := _remembered(session, CanonicalShow, cache_key):
+        return remembered
+
     existing = session.exec(
-        select(CanonicalShow).where(CanonicalShow.key == key),
+        select(CanonicalShow)
+        .where(CanonicalShow.key == key)
+        .options(
+            selectinload(CanonicalShow.canonical_seasons).selectinload(  # type: ignore[arg-type]
+                CanonicalSeason.canonical_episodes,  # type: ignore[arg-type]
+            ),
+        ),
     ).first()
     if existing:
+        _remember_title(session, existing)
         return existing
     canonical = CanonicalShow(key=key)
     session.add(canonical)
-    session.flush()
+    _remember_title(session, canonical)
     return canonical
 
 
@@ -102,17 +193,27 @@ def canonical_season_by_key(
     canonical_show_id: uuid.UUID,
 ) -> CanonicalSeason:
     """Return the season `key` names, creating it if nothing claims it yet."""
-    existing = session.exec(
-        select(CanonicalSeason).where(
-            CanonicalSeason.canonical_show_id == canonical_show_id,
-            CanonicalSeason.key == key,
-        ),
-    ).first()
-    if existing:
-        return existing
+    cache_key = (str(canonical_show_id), key)
+    if remembered := _remembered(session, CanonicalSeason, cache_key):
+        return remembered
+
+    if canonical_show_id not in _loaded_parents(session):
+        existing = session.exec(
+            select(CanonicalSeason).where(
+                CanonicalSeason.canonical_show_id == canonical_show_id,
+                CanonicalSeason.key == key,
+            ),
+        ).first()
+        if existing:
+            _remember(session, existing, cache_key)
+            return existing
+
     canonical = CanonicalSeason(key=key, canonical_show_id=canonical_show_id)
     session.add(canonical)
-    session.flush()
+    _remember(session, canonical, cache_key)
+    # A season made here is a season the database has nothing under, so an ask
+    # for one of its episodes has nothing to look for either.
+    _loaded_parents(session).add(canonical.id)
     return canonical
 
 
@@ -123,17 +224,24 @@ def canonical_episode_by_key(
     canonical_season_id: uuid.UUID,
 ) -> CanonicalEpisode:
     """Return the episode `key` names, creating it if nothing claims it yet."""
-    existing = session.exec(
-        select(CanonicalEpisode).where(
-            CanonicalEpisode.canonical_season_id == canonical_season_id,
-            CanonicalEpisode.key == key,
-        ),
-    ).first()
-    if existing:
-        return existing
+    cache_key = (str(canonical_season_id), key)
+    if remembered := _remembered(session, CanonicalEpisode, cache_key):
+        return remembered
+
+    if canonical_season_id not in _loaded_parents(session):
+        existing = session.exec(
+            select(CanonicalEpisode).where(
+                CanonicalEpisode.canonical_season_id == canonical_season_id,
+                CanonicalEpisode.key == key,
+            ),
+        ).first()
+        if existing:
+            _remember(session, existing, cache_key)
+            return existing
+
     canonical = CanonicalEpisode(key=key, canonical_season_id=canonical_season_id)
     session.add(canonical)
-    session.flush()
+    _remember(session, canonical, cache_key)
     return canonical
 
 
@@ -246,7 +354,6 @@ def _copy_show_metadata(show: Show, canonical: CanonicalShow) -> None:
     canonical.media_type = show.media_type
     canonical.description = show.description
     canonical.image_url = show.image_url
-    canonical.icon = show.icon
 
 
 # TODO: Validate
@@ -269,7 +376,6 @@ def _copy_episode_metadata(episode: Episode, canonical: CanonicalEpisode) -> Non
     canonical.image_url = episode.image_url
     canonical.episode_number = episode.episode_number
     canonical.duration = episode.duration
-    canonical.release_date = episode.release_date
     canonical.air_date = episode.air_date
     canonical.sort_order = episode.sort_order
 

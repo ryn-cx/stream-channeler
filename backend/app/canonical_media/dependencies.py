@@ -12,9 +12,9 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 
 from app.auth.dependencies import SessionDep, SuperUser
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 
 
 # TODO: Validate

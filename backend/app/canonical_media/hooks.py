@@ -21,15 +21,12 @@ import uuid
 
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session as SQLAlchemySession
-from sqlmodel import select
+from sqlmodel import col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
 from app.canonical_media.keys import record_key
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
-from app.episodes.models import Episode
-from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.episodes.models import CanonicalEpisode, Episode
+from app.seasons.models import CanonicalSeason, Season
+from app.shows.models import CanonicalShow, Show, ShowCanonicalShow
 
 
 # TODO: Validate
@@ -54,70 +51,57 @@ def _plugin_key(show: Show) -> str | None:
 
 
 # TODO: Validate
-def _pending_show(
-    session: SQLAlchemySession,
-    key: str,
-) -> CanonicalShow | None:
-    """Return the title `key` names, from the session or the database."""
-    for pending in session.new:
-        if isinstance(pending, CanonicalShow) and pending.key == key:
-            return pending
-    return session.scalars(
-        select(CanonicalShow).where(CanonicalShow.key == key),
-    ).first()
+def _pending_shows(session: SQLAlchemySession) -> dict[str, CanonicalShow]:
+    """Return every title the session is about to write, by its key."""
+    return {
+        pending.key: pending
+        for pending in session.new
+        if isinstance(pending, CanonicalShow)
+    }
 
 
 # TODO: Validate
-def _pending_season(
+def _pending_seasons(
     session: SQLAlchemySession,
-    key: str,
-    canonical_show: CanonicalShow,
-) -> CanonicalSeason | None:
-    """Return the season `key` names under `canonical_show`."""
+) -> dict[tuple[uuid.UUID, str], CanonicalSeason]:
+    """Return every season the session is about to write, by title and key.
+
+    The title is read off the row a pending season was handed rather than its
+    id, since the id is only written on it by the flush this runs ahead of.
+    """
+    pending_seasons: dict[tuple[uuid.UUID, str], CanonicalSeason] = {}
     for pending in session.new:
-        if (
-            isinstance(pending, CanonicalSeason)
-            and pending.key == key
-            and pending.canonical_show is canonical_show
-        ):
-            return pending
-    if canonical_show.id is None:
-        return None
-    return session.scalars(
-        select(CanonicalSeason).where(
-            CanonicalSeason.canonical_show_id == canonical_show.id,
-            CanonicalSeason.key == key,
-        ),
-    ).first()
+        if not isinstance(pending, CanonicalSeason):
+            continue
+        canonical_show = pending.canonical_show
+        parent_id = canonical_show.id if canonical_show else pending.canonical_show_id
+        if parent_id is not None:
+            pending_seasons[(parent_id, pending.key)] = pending
+    return pending_seasons
 
 
 # TODO: Validate
-def _pending_episode(
+def _pending_episodes(
     session: SQLAlchemySession,
-    key: str,
-    canonical_season: CanonicalSeason,
-) -> CanonicalEpisode | None:
-    """Return the episode `key` names under `canonical_season`."""
+) -> dict[tuple[uuid.UUID, str], CanonicalEpisode]:
+    """Return every episode the session is about to write, by season and key."""
+    pending_episodes: dict[tuple[uuid.UUID, str], CanonicalEpisode] = {}
     for pending in session.new:
-        if (
-            isinstance(pending, CanonicalEpisode)
-            and pending.key == key
-            and pending.canonical_season is canonical_season
-        ):
-            return pending
-    if canonical_season.id is None:
-        return None
-    return session.scalars(
-        select(CanonicalEpisode).where(
-            CanonicalEpisode.canonical_season_id == canonical_season.id,
-            CanonicalEpisode.key == key,
-        ),
-    ).first()
+        if not isinstance(pending, CanonicalEpisode):
+            continue
+        canonical_season = pending.canonical_season
+        parent_id = (
+            canonical_season.id if canonical_season else pending.canonical_season_id
+        )
+        if parent_id is not None:
+            pending_episodes[(parent_id, pending.key)] = pending
+    return pending_episodes
 
 
 # TODO: Validate
 def _fill_shows(session: SQLAlchemySession) -> None:
     """Give every new title in the session the canonical row it is a copy of."""
+    wanted: list[tuple[Show, str]] = []
     for show in session.new:
         if not isinstance(show, Show) or _already_pointed(
             show.canonical_show,
@@ -127,8 +111,23 @@ def _fill_shows(session: SQLAlchemySession) -> None:
         plugin_key = _plugin_key(show)
         if plugin_key is None:
             continue
-        key = record_key(plugin_key, show.key)
-        canonical = _pending_show(session, key)
+        wanted.append((show, record_key(plugin_key, show.key)))
+
+    if not wanted:
+        return
+
+    # Every key is asked for at once. A flush carries a whole import's worth of
+    # copies, and a lookup per copy is a query per copy, every flush.
+    by_key = _pending_shows(session)
+    missing_keys = {key for _show, key in wanted} - set(by_key)
+    if missing_keys:
+        stored = session.scalars(
+            select(CanonicalShow).where(col(CanonicalShow.key).in_(missing_keys)),
+        ).all()
+        by_key.update({canonical.key: canonical for canonical in stored})
+
+    for show, key in wanted:
+        canonical = by_key.get(key)
         if canonical is None:
             canonical = CanonicalShow(
                 key=key,
@@ -136,9 +135,9 @@ def _fill_shows(session: SQLAlchemySession) -> None:
                 media_type=show.media_type,
                 description=show.description,
                 image_url=show.image_url,
-                icon=show.icon,
             )
             session.add(canonical)
+            by_key[key] = canonical
         show.canonical_show = canonical
 
 
@@ -185,6 +184,7 @@ def _fill_show_links(session: SQLAlchemySession) -> None:
 # TODO: Validate
 def _fill_seasons(session: SQLAlchemySession) -> None:
     """Give every new season in the session the canonical row it is a copy of."""
+    wanted: list[tuple[Season, str, CanonicalShow]] = []
     for season in session.new:
         if not isinstance(season, Season) or _already_pointed(
             season.canonical_season,
@@ -195,8 +195,36 @@ def _fill_seasons(session: SQLAlchemySession) -> None:
         plugin_key = _plugin_key(season.show) if season.show else None
         if parent is None or plugin_key is None:
             continue
-        key = record_key(plugin_key, season.key)
-        canonical = _pending_season(session, key, parent)
+        wanted.append((season, record_key(plugin_key, season.key), parent))
+
+    if not wanted:
+        return
+
+    by_key = _pending_seasons(session)
+    missing = [
+        (parent.id, key)
+        for _season, key, parent in wanted
+        if (parent.id, key) not in by_key
+    ]
+    if missing:
+        # Both halves of the key are matched loosely and the pair is picked out
+        # of what comes back, so the whole flush costs one query.
+        stored = session.scalars(
+            select(CanonicalSeason).where(
+                col(CanonicalSeason.canonical_show_id).in_(
+                    {parent_id for parent_id, _key in missing},
+                ),
+                col(CanonicalSeason.key).in_({key for _parent_id, key in missing}),
+            ),
+        ).all()
+        for stored_canonical in stored:
+            by_key.setdefault(
+                (stored_canonical.canonical_show_id, stored_canonical.key),
+                stored_canonical,
+            )
+
+    for season, key, parent in wanted:
+        canonical: CanonicalSeason | None = by_key.get((parent.id, key))
         if canonical is None:
             canonical = CanonicalSeason(
                 key=key,
@@ -207,12 +235,14 @@ def _fill_seasons(session: SQLAlchemySession) -> None:
                 sort_order=season.sort_order,
             )
             session.add(canonical)
+            by_key[(parent.id, key)] = canonical
         season.canonical_season = canonical
 
 
 # TODO: Validate
 def _fill_episodes(session: SQLAlchemySession) -> None:
     """Give every new episode in the session the canonical row it is a copy of."""
+    wanted: list[tuple[Episode, str, CanonicalSeason]] = []
     for episode in session.new:
         if not isinstance(episode, Episode) or _already_pointed(
             episode.canonical_episode,
@@ -224,8 +254,34 @@ def _fill_episodes(session: SQLAlchemySession) -> None:
         plugin_key = _plugin_key(season.show) if season and season.show else None
         if parent is None or plugin_key is None:
             continue
-        key = record_key(plugin_key, episode.key)
-        canonical = _pending_episode(session, key, parent)
+        wanted.append((episode, record_key(plugin_key, episode.key), parent))
+
+    if not wanted:
+        return
+
+    by_key = _pending_episodes(session)
+    missing = [
+        (parent.id, key)
+        for _episode, key, parent in wanted
+        if (parent.id, key) not in by_key
+    ]
+    if missing:
+        stored = session.scalars(
+            select(CanonicalEpisode).where(
+                col(CanonicalEpisode.canonical_season_id).in_(
+                    {parent_id for parent_id, _key in missing},
+                ),
+                col(CanonicalEpisode.key).in_({key for _parent_id, key in missing}),
+            ),
+        ).all()
+        for stored_canonical in stored:
+            by_key.setdefault(
+                (stored_canonical.canonical_season_id, stored_canonical.key),
+                stored_canonical,
+            )
+
+    for episode, key, parent in wanted:
+        canonical: CanonicalEpisode | None = by_key.get((parent.id, key))
         if canonical is None:
             canonical = CanonicalEpisode(
                 key=key,
@@ -235,11 +291,11 @@ def _fill_episodes(session: SQLAlchemySession) -> None:
                 image_url=episode.image_url,
                 episode_number=episode.episode_number,
                 duration=episode.duration,
-                release_date=episode.release_date,
                 air_date=episode.air_date,
                 sort_order=episode.sort_order,
             )
             session.add(canonical)
+            by_key[(parent.id, key)] = canonical
         episode.canonical_episode = canonical
 
 

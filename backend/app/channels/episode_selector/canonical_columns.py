@@ -22,9 +22,9 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import col
 from sqlmodel.sql.expression import Select
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 
 # The title is aliased so that a query which already reaches `CanonicalShow` for
@@ -38,7 +38,7 @@ _CanonicalShow = aliased(CanonicalShow)
 class CanonicalColumns:
     """The canonical row of each media level, joined in so SQL can read it."""
 
-    _MODELS: ClassVar[dict[str, Any]] = {
+    _MODELS: ClassVar = {
         "episode": CanonicalEpisode,
         "season": CanonicalSeason,
         "show": _CanonicalShow,
@@ -46,7 +46,7 @@ class CanonicalColumns:
 
     # What the canonical row of each level holds. Anything else is the copy's
     # own and is read from the copy.
-    _FIELDS: ClassVar[dict[str, frozenset[str]]] = {
+    _FIELDS: ClassVar = {
         "episode": frozenset(
             {
                 "name",
@@ -54,16 +54,15 @@ class CanonicalColumns:
                 "image_url",
                 "episode_number",
                 "duration",
-                "release_date",
                 "air_date",
                 "sort_order",
             },
         ),
         "season": frozenset({"name", "season_number", "image_url", "sort_order"}),
-        "show": frozenset({"name", "media_type", "description", "image_url", "icon"}),
+        "show": frozenset({"name", "media_type", "description", "image_url"}),
     }
 
-    _NUMBER_FIELDS: ClassVar[dict[str, str]] = {
+    _NUMBER_FIELDS: ClassVar = {
         "episode": "episode_number",
         "season": "season_number",
     }

@@ -83,16 +83,6 @@ export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
-    accessorKey: "release_date",
-    header: "Release Date",
-    meta: { filterVariant: "dateRange" },
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.release_date ?? "-"}
-      </span>
-    ),
-  },
-  {
     accessorKey: "air_date",
     header: "Air Date",
     meta: { filterVariant: "dateRange" },

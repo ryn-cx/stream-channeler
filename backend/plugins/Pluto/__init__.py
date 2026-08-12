@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import override
 
 from plugins.Pluto.helpers import HelperMixin
 from plugins.Pluto.source import SourceMixin
@@ -28,7 +28,7 @@ class Pluto(
     """Pluto TV plugin."""
 
     _VERSION = "0.0.1"
-    _URL_HANDLERS: ClassVar[tuple[type[PlutoURLHandler], ...]] = (
+    _URL_HANDLERS = (
         MovieURLHandler,
         SeriesURLHandler,
     )

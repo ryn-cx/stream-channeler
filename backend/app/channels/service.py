@@ -8,8 +8,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlmodel import Session, col, delete, select
 
-from app.canonical_episodes.models import CanonicalEpisode
-from app.canonical_seasons.models import CanonicalSeason
+from app.episodes.models import CanonicalEpisode
+from app.seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
@@ -30,6 +30,7 @@ from app.channels.schemas import (
     ChannelOutput,
     ChannelsPublic,
     CombinedChannelInput,
+    SortKeyInput,
     SortOptionOutput,
     WhitelistShowInput,
 )
@@ -658,12 +659,12 @@ def get_sort_options() -> list[SortOptionOutput]:
     """Build and cache the list of all possible sorting options."""
     options: list[SortOptionOutput] = [
         SortOptionOutput(
-            label=_sort_option_label(model.__name__, field_name),
+            label=_sort_option_label(model_name.title(), field_name),
             # If this value does not match it should raise an error.
-            model=model.__name__.lower(),  # type: ignore[arg-type]
+            model=model_name,  # type: ignore[arg-type]
             field=field_name,
         )
-        for model in (Episode, Season, Show, Source, Plugin, Channel)
+        for model_name, model in SortKeyInput.MODEL_MAP.items()
         for field_name in model.SORTABLE_FIELDS
     ]
     options.sort(key=lambda option: option.label)

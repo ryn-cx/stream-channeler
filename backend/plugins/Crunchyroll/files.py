@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, override
+from typing import Any, Literal, override
 
 from chirashi import Chirashi
 from chirashi.artist import models as artist_models
@@ -227,9 +227,11 @@ class FileMixin(TMDBMixin, register=False):
         """Returns SeasonEpisodes file."""
         return self._file(SeasonEpisodes, season_key)
 
-    # TODO: This function has weird type hints.
     # TODO: Validate
-    def browse_series_file(self, browse: str | datetime | File) -> BrowseSeries:
+    def browse_series_file(
+        self,
+        browse: datetime | File | Literal["Initial"],
+    ) -> BrowseSeries:
         """Returns BrowseSeries file."""
         if isinstance(browse, File):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
@@ -293,9 +295,11 @@ class FileMixin(TMDBMixin, register=False):
             return self.concert_file(episode_key)
         return self.music_video_file(episode_key)
 
-    # TODO: This function has weird type hints.
     # TODO: Validate
-    def browse_music_file(self, browse: str | datetime | File) -> BrowseMusic:
+    def browse_music_file(
+        self,
+        browse: datetime | File | Literal["Initial"],
+    ) -> BrowseMusic:
         """Returns BrowseMusic file."""
         if isinstance(browse, File):
             browse = BrowseMusic.file_key_to_unique_identifier(browse.key)

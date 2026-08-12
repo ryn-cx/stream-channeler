@@ -20,7 +20,7 @@ _SEARCH_MAX_AGE = timedelta(days=7)
 # TODO: Validate
 class SearchMixin(LookupMixin, register=False):
     # A multi search also returns people, who cannot be added to a channel.
-    _SEARCH_MEDIA_TYPES: ClassVar[dict[str, str]] = {
+    _SEARCH_MEDIA_TYPES: ClassVar = {
         "movie": "Movie",
         "tv": "TV Show",
     }

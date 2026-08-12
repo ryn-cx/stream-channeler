@@ -25,7 +25,7 @@ from plugins.utils.manage_plugins import register_plugins
 if TYPE_CHECKING:
     from sqlmodel import Session
 
-    from app.canonical_shows.models import CanonicalShow
+    from app.shows.models import CanonicalShow
     from app.users.models import User
 
 

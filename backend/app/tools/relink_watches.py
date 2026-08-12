@@ -15,7 +15,7 @@ from uuid import UUID
 from loguru import logger
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season

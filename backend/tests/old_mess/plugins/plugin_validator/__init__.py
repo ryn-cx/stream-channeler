@@ -11,10 +11,10 @@ from freezegun import freeze_time
 from sqlalchemy import inspect as sa_inspect
 from sqlmodel import Session, col, select
 
-from app.canonical_episodes.models import CanonicalEpisode
+from app.episodes.models import CanonicalEpisode
 from app.canonical_media.service import reconcile_show
-from app.canonical_seasons.models import CanonicalSeason
-from app.canonical_shows.models import CanonicalShow
+from app.seasons.models import CanonicalSeason
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -139,7 +139,14 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     ) -> Validator:
         validator = Validator().incremented(entity.id, "modified_at", "data_timestamp")
         if not isinstance(entity, Plugin | Source):
-            validator.apply_shared_file_rules(entity, self.imported_plugin)
+            # Which files a record is built from is known only to the plugin the
+            # record belongs to, which is not always the one under test.
+            session = sa_inspect(entity).session
+            assert session
+            validator.apply_shared_file_rules(
+                entity,
+                self.owning_plugin(session, entity),
+            )
         return validator
 
     # TODO: Validate
@@ -197,27 +204,36 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         session: Session,
         results: list[URLImportResult],
     ) -> list[Show]:
-        """Return the plugin's own `Show`s behind `results`.
+        """Return the `Show`s behind `results`.
 
         A result names a title by the key of the record the plugin just wrote,
         so the records are looked up here. A title can be stored under several
-        plugins - JustWatch imports through every service that has an offer -
-        so only the copies belonging to the plugin under test are returned,
-        which are the only ones that plugin can update.
+        plugins - JustWatch imports through every service that has an offer - so
+        the copies belonging to the plugin under test are the ones returned,
+        those being the ones it holds itself.
+
+        A plugin that stores no copy of its own has every copy the import
+        produced returned instead. TMDB is one: it keeps a title as canonical
+        media and hands the listing on, so what its import produced is stored
+        under the plugins of the services the title streams on, and each is
+        updated through the plugin it belongs to.
         """
         show_keys = {result.show_key for result in results}
-        shows = session.exec(
+        statement = (
             select(Show)
             .join(Source)
             .join(Plugin)
             .where(
                 col(Show.key).in_(show_keys),
                 col(Show.deleted_at).is_(None),
-                Plugin.key == self.plugin_class.plugin_key(),
-            ),
+            )
+        )
+        own_shows = session.exec(
+            statement.where(Plugin.key == self.plugin_class.plugin_key()),
         ).all()
+        shows = own_shows or session.exec(statement).all()
         if not shows:
-            msg = f"No {self.plugin_class.plugin_key()} shows for {show_keys}"
+            msg = f"No shows for {show_keys}"
             raise ValueError(msg)
         return list(shows)
 
@@ -272,23 +288,18 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         entity: Plugin | Source | Show | Season | Episode,
     ) -> Callable[[], None]:
         """Return the appropriate plugin update function for the entity type."""
+        owner = self.owning_plugin(session, entity)
         match entity:
             case Plugin() as plugin:
-                return lambda: self.plugin_class(session).update_plugin(plugin=plugin)
+                return lambda: owner.update_plugin(plugin=plugin)
             case Source() as source:
-                return lambda: self.plugin_class(session).update_source(
-                    source=source,
-                )
+                return lambda: owner.update_source(source=source)
             case Show() as show:
-                return lambda: self.plugin_class(session).update_show(show=show)
+                return lambda: owner.update_show(show=show)
             case Season() as season:
-                return lambda: self.plugin_class(session).update_season(
-                    season,
-                )
+                return lambda: owner.update_season(season)
             case Episode() as episode:
-                return lambda: self.plugin_class(session).update_episode(
-                    episode,
-                )
+                return lambda: owner.update_episode(episode)
 
     # TODO: Validate
     def _get_validator(
@@ -491,6 +502,23 @@ class ImportExistingURLTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 
 
 # TODO: Validate
+class UpdatePluginTests[PluginT: BasePlugin](PluginValidator[PluginT]):
+    """Tests that updating the plugin refreshes what the plugin itself holds.
+
+    Kept out of `UpdateTests` because most plugins hold their media under a
+    `Source` and have nothing of their own for this to reach. It is for a plugin
+    whose records hang off the plugin row rather than off a source.
+    """
+
+    # TODO: Validate
+    def test_update_plugin(self, session_with_files: Session) -> None:
+        self._import_url(session_with_files)
+        original = self.detached_state(session_with_files)
+        entity = self.select_plugin_with_children(session_with_files)
+        self._update_and_validate(session_with_files, original, entity)
+
+
+# TODO: Validate
 class UpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Tests that updating a show restores randomized data."""
 
@@ -557,7 +585,7 @@ class UpdateSourceTests[PluginT: BasePlugin](PluginValidator[PluginT]):
         timestamp = tz_datetime.now() + timedelta(minutes=1)
         self._create_source_update_entry(plugin_instance, source, timestamp)
 
-        # Seed update_at later than the pending release_date so set_update_at
+        # Seed update_at later than the pending air_date so set_update_at
         # overwrites it with the earlier value — gives the validator a
         # decrementing write to assert.
         source.shows[0].update_at = timestamp + timedelta(minutes=1)

@@ -1,9 +1,10 @@
 # TODO: Validate
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from typing import Any, override
 
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
-from app.canonical_shows.models import CanonicalShow
+from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
 from app.seasons.models import Season
@@ -27,6 +28,8 @@ def highest_episode_number(numbers: Iterable[int | None]) -> int | None:
 # TODO: Validate
 class TMDBMixin(BasePlugin, register=False):
     """Wraps TMDB files so they files are downloaded for the TMDB plugin."""
+
+    _listing_files_only = False
 
     # TODO: Validate
     @property
@@ -265,6 +268,17 @@ class TMDBMixin(BasePlugin, register=False):
         return self.tmdb.episode_detail_file(tmdb_id, season_number, episode_number)
 
     # TODO: Validate
+    @override
+    @contextmanager
+    def _listing_files(self) -> Iterator[None]:
+        listing = self._listing_files_only
+        self._listing_files_only = True
+        try:
+            yield
+        finally:
+            self._listing_files_only = listing
+
+    # TODO: Validate
     def _download_files_the_tmdb_lookup_reads(
         self,
         files: Sequence[BaseFile[Any]],
@@ -285,6 +299,8 @@ class TMDBMixin(BasePlugin, register=False):
         files: Sequence[BaseFile[Any]],
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        if self._listing_files_only:
+            return list(files)
         self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_show_file(show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
@@ -296,6 +312,8 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        if self._listing_files_only:
+            return list(files)
         self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_season_file(season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]
@@ -308,6 +326,8 @@ class TMDBMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> list[BaseFile[Any]]:
+        if self._listing_files_only:
+            return list(files)
         self._download_files_the_tmdb_lookup_reads(files)
         tmdb_file = self._tmdb_episode_file(episode_key, season_key, show_key)
         return [*files, *([tmdb_file] if tmdb_file else [])]

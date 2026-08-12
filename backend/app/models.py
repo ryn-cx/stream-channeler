@@ -52,7 +52,6 @@ class SupportsDataTimestamp(Protocol):
 ZERO_LAST_SUFFIX = "_zero_last"
 
 
-
 # TODO: Validate
 def sortable_field_indexes(
     model_name: str,
