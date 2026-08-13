@@ -1,39 +1,33 @@
 // TODO: Validate
-import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import type { CanonicalSeasonListOutput } from "@/client"
-import {
-  DateCell,
-  ParentLinkCell,
-  TruncatedCell,
-} from "@/components/Common/TableCells"
+import type { CanonicalEpisodeListOutput } from "@/client"
+import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 
-export type CanonicalSeasonTableData = CanonicalSeasonListOutput
+export type CanonicalEpisodeTableData = CanonicalEpisodeListOutput
 
-export const canonicalSeasonColumns: ColumnDef<CanonicalSeasonTableData>[] = [
+// TODO: Validate
+export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
   {
     accessorKey: "canonical_show_name",
     header: "Show",
     cell: ({ row }) => (
-      <ParentLinkCell
-        to="/admin/canonical-show/$canonicalShowId"
-        params={{ canonicalShowId: row.original.canonical_show_id }}
-        name={row.original.canonical_show_name}
-      />
+      <TruncatedCell value={row.original.canonical_show_name} />
+    ),
+  },
+  {
+    accessorKey: "canonical_season_name",
+    header: "Season",
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_season_name} />
     ),
   },
   {
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <Link
-        to="/admin/canonical-season/$canonicalSeasonId"
-        params={{ canonicalSeasonId: row.original.id }}
-        className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
-      >
-        {row.original.name ||
-          `No Name (${row.original.key ?? row.original.id})`}
-      </Link>
+      <span className="font-medium block max-w-48 whitespace-normal wrap-break-word">
+        {row.original.name || `No Name (${row.original.key ?? row.original.id})`}
+      </span>
     ),
   },
   {
@@ -42,12 +36,12 @@ export const canonicalSeasonColumns: ColumnDef<CanonicalSeasonTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
-    accessorKey: "season_number",
-    header: "Season #",
+    accessorKey: "episode_number",
+    header: "Episode #",
     meta: { filterVariant: "range" },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.season_number ?? "-"}
+        {row.original.episode_number ?? "-"}
       </span>
     ),
   },
@@ -67,9 +61,34 @@ export const canonicalSeasonColumns: ColumnDef<CanonicalSeasonTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.url} />,
   },
   {
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => <TruncatedCell value={row.original.description} />,
+  },
+  {
     accessorKey: "image_url",
     header: "Image URL",
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
+  },
+  {
+    accessorKey: "air_date",
+    header: "Air Date",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm">
+        {row.original.air_date ?? "-"}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "duration",
+    header: "Duration",
+    meta: { filterVariant: "range" },
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.duration ?? "-"}
+      </span>
+    ),
   },
   // Read out of the key rather than stored, so there is no column to sort or
   // filter by. The key itself is there for both.

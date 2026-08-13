@@ -6,7 +6,6 @@ import type { ReactNode } from "react"
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { cn } from "@/lib/utils"
-import { TmdbMatchApproval } from "./TmdbMatchApproval"
 import {
   type Numbered,
   numberingAgreement,
@@ -225,12 +224,5 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         {row.original.canonical_episode_note ?? ""}
       </WrappingCell>
     ),
-  },
-  {
-    id: "approve",
-    header: "Approve",
-    enableSorting: false,
-    enableColumnFilter: false,
-    cell: ({ row }) => <TmdbMatchApproval episode={row.original} />,
   },
 ]

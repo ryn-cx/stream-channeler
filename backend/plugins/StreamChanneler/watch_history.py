@@ -147,7 +147,6 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
             )
             .where(
                 is_canonical(Episode),
-                is_canonical(Season),
                 is_canonical(Show),
                 col(Episode.key).in_(episode_keys),
             )

@@ -49,9 +49,6 @@ import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.r
 import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
 import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
-import { Route as LayoutAdminCanonicalShowsRouteImport } from './routes/_layout/admin.canonical-shows'
-import { Route as LayoutAdminCanonicalSeasonsRouteImport } from './routes/_layout/admin.canonical-seasons'
-import { Route as LayoutAdminCanonicalEpisodesRouteImport } from './routes/_layout/admin.canonical-episodes'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutSourceSourceKeySeasonsRouteImport } from './routes/_layout/source.$sourceKey_.seasons'
 import { Route as LayoutSourceSourceKeyEpisodesRouteImport } from './routes/_layout/source.$sourceKey_.episodes'
@@ -64,9 +61,6 @@ import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_lay
 import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
 import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
 import { Route as LayoutOnboardingChannelIdDoneRouteImport } from './routes/_layout/onboarding.$channelId.done'
-import { Route as LayoutAdminCanonicalShowCanonicalShowIdRouteImport } from './routes/_layout/admin.canonical-show.$canonicalShowId'
-import { Route as LayoutAdminCanonicalSeasonCanonicalSeasonIdRouteImport } from './routes/_layout/admin.canonical-season.$canonicalSeasonId'
-import { Route as LayoutAdminCanonicalShowCanonicalShowIdEpisodesRouteImport } from './routes/_layout/admin.canonical-show.$canonicalShowId_.episodes'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -271,24 +265,6 @@ const LayoutAdminChannelQueuesRoute =
     path: '/channel-queues',
     getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutAdminCanonicalShowsRoute =
-  LayoutAdminCanonicalShowsRouteImport.update({
-    id: '/canonical-shows',
-    path: '/canonical-shows',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminCanonicalSeasonsRoute =
-  LayoutAdminCanonicalSeasonsRouteImport.update({
-    id: '/canonical-seasons',
-    path: '/canonical-seasons',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminCanonicalEpisodesRoute =
-  LayoutAdminCanonicalEpisodesRouteImport.update({
-    id: '/canonical-episodes',
-    path: '/canonical-episodes',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
 const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
     id: '/users/$userId/channels',
@@ -361,24 +337,6 @@ const LayoutOnboardingChannelIdDoneRoute =
     path: '/$channelId/done',
     getParentRoute: () => LayoutOnboardingRoute,
   } as any)
-const LayoutAdminCanonicalShowCanonicalShowIdRoute =
-  LayoutAdminCanonicalShowCanonicalShowIdRouteImport.update({
-    id: '/canonical-show/$canonicalShowId',
-    path: '/canonical-show/$canonicalShowId',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute =
-  LayoutAdminCanonicalSeasonCanonicalSeasonIdRouteImport.update({
-    id: '/canonical-season/$canonicalSeasonId',
-    path: '/canonical-season/$canonicalSeasonId',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute =
-  LayoutAdminCanonicalShowCanonicalShowIdEpisodesRouteImport.update({
-    id: '/canonical-show/$canonicalShowId_/episodes',
-    path: '/canonical-show/$canonicalShowId/episodes',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -401,9 +359,6 @@ export interface FileRoutesByFullPath {
   '/shows': typeof LayoutShowsRoute
   '/sources': typeof LayoutSourcesRoute
   '/watches': typeof LayoutWatchesRoute
-  '/admin/canonical-episodes': typeof LayoutAdminCanonicalEpisodesRoute
-  '/admin/canonical-seasons': typeof LayoutAdminCanonicalSeasonsRoute
-  '/admin/canonical-shows': typeof LayoutAdminCanonicalShowsRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
@@ -423,8 +378,6 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
-  '/admin/canonical-season/$canonicalSeasonId': typeof LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute
-  '/admin/canonical-show/$canonicalShowId': typeof LayoutAdminCanonicalShowCanonicalShowIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
@@ -437,7 +390,6 @@ export interface FileRoutesByFullPath {
   '/source/$sourceKey/episodes': typeof LayoutSourceSourceKeyEpisodesRoute
   '/source/$sourceKey/seasons': typeof LayoutSourceSourceKeySeasonsRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/admin/canonical-show/$canonicalShowId/episodes': typeof LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -458,9 +410,6 @@ export interface FileRoutesByTo {
   '/sources': typeof LayoutSourcesRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
-  '/admin/canonical-episodes': typeof LayoutAdminCanonicalEpisodesRoute
-  '/admin/canonical-seasons': typeof LayoutAdminCanonicalSeasonsRoute
-  '/admin/canonical-shows': typeof LayoutAdminCanonicalShowsRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
@@ -480,8 +429,6 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
-  '/admin/canonical-season/$canonicalSeasonId': typeof LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute
-  '/admin/canonical-show/$canonicalShowId': typeof LayoutAdminCanonicalShowCanonicalShowIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
@@ -494,7 +441,6 @@ export interface FileRoutesByTo {
   '/source/$sourceKey/episodes': typeof LayoutSourceSourceKeyEpisodesRoute
   '/source/$sourceKey/seasons': typeof LayoutSourceSourceKeySeasonsRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/admin/canonical-show/$canonicalShowId/episodes': typeof LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -519,9 +465,6 @@ export interface FileRoutesById {
   '/_layout/sources': typeof LayoutSourcesRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/_layout/admin/canonical-episodes': typeof LayoutAdminCanonicalEpisodesRoute
-  '/_layout/admin/canonical-seasons': typeof LayoutAdminCanonicalSeasonsRoute
-  '/_layout/admin/canonical-shows': typeof LayoutAdminCanonicalShowsRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
   '/_layout/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
@@ -541,8 +484,6 @@ export interface FileRoutesById {
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
-  '/_layout/admin/canonical-season/$canonicalSeasonId': typeof LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute
-  '/_layout/admin/canonical-show/$canonicalShowId': typeof LayoutAdminCanonicalShowCanonicalShowIdRoute
   '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/_layout/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
@@ -555,7 +496,6 @@ export interface FileRoutesById {
   '/_layout/source/$sourceKey_/episodes': typeof LayoutSourceSourceKeyEpisodesRoute
   '/_layout/source/$sourceKey_/seasons': typeof LayoutSourceSourceKeySeasonsRoute
   '/_layout/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
-  '/_layout/admin/canonical-show/$canonicalShowId_/episodes': typeof LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -580,9 +520,6 @@ export interface FileRouteTypes {
     | '/shows'
     | '/sources'
     | '/watches'
-    | '/admin/canonical-episodes'
-    | '/admin/canonical-seasons'
-    | '/admin/canonical-shows'
     | '/admin/channel-queues'
     | '/admin/channels'
     | '/admin/episode-reports'
@@ -602,8 +539,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
-    | '/admin/canonical-season/$canonicalSeasonId'
-    | '/admin/canonical-show/$canonicalShowId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
@@ -616,7 +551,6 @@ export interface FileRouteTypes {
     | '/source/$sourceKey/episodes'
     | '/source/$sourceKey/seasons'
     | '/users/$userId/channels'
-    | '/admin/canonical-show/$canonicalShowId/episodes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -637,9 +571,6 @@ export interface FileRouteTypes {
     | '/sources'
     | '/watches'
     | '/'
-    | '/admin/canonical-episodes'
-    | '/admin/canonical-seasons'
-    | '/admin/canonical-shows'
     | '/admin/channel-queues'
     | '/admin/channels'
     | '/admin/episode-reports'
@@ -659,8 +590,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/channels'
     | '/onboarding'
-    | '/admin/canonical-season/$canonicalSeasonId'
-    | '/admin/canonical-show/$canonicalShowId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/shows'
@@ -673,7 +602,6 @@ export interface FileRouteTypes {
     | '/source/$sourceKey/episodes'
     | '/source/$sourceKey/seasons'
     | '/users/$userId/channels'
-    | '/admin/canonical-show/$canonicalShowId/episodes'
   id:
     | '__root__'
     | '/_layout'
@@ -697,9 +625,6 @@ export interface FileRouteTypes {
     | '/_layout/sources'
     | '/_layout/watches'
     | '/_layout/'
-    | '/_layout/admin/canonical-episodes'
-    | '/_layout/admin/canonical-seasons'
-    | '/_layout/admin/canonical-shows'
     | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
     | '/_layout/admin/episode-reports'
@@ -719,8 +644,6 @@ export interface FileRouteTypes {
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
-    | '/_layout/admin/canonical-season/$canonicalSeasonId'
-    | '/_layout/admin/canonical-show/$canonicalShowId'
     | '/_layout/onboarding/$channelId/done'
     | '/_layout/onboarding/$channelId/name'
     | '/_layout/onboarding/$channelId/shows'
@@ -733,7 +656,6 @@ export interface FileRouteTypes {
     | '/_layout/source/$sourceKey_/episodes'
     | '/_layout/source/$sourceKey_/seasons'
     | '/_layout/users/$userId/channels'
-    | '/_layout/admin/canonical-show/$canonicalShowId_/episodes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1026,27 +948,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminChannelQueuesRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
-    '/_layout/admin/canonical-shows': {
-      id: '/_layout/admin/canonical-shows'
-      path: '/canonical-shows'
-      fullPath: '/admin/canonical-shows'
-      preLoaderRoute: typeof LayoutAdminCanonicalShowsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/canonical-seasons': {
-      id: '/_layout/admin/canonical-seasons'
-      path: '/canonical-seasons'
-      fullPath: '/admin/canonical-seasons'
-      preLoaderRoute: typeof LayoutAdminCanonicalSeasonsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/canonical-episodes': {
-      id: '/_layout/admin/canonical-episodes'
-      path: '/canonical-episodes'
-      fullPath: '/admin/canonical-episodes'
-      preLoaderRoute: typeof LayoutAdminCanonicalEpisodesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
     '/_layout/users/$userId/channels': {
       id: '/_layout/users/$userId/channels'
       path: '/users/$userId/channels'
@@ -1131,34 +1032,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutOnboardingChannelIdDoneRouteImport
       parentRoute: typeof LayoutOnboardingRoute
     }
-    '/_layout/admin/canonical-show/$canonicalShowId': {
-      id: '/_layout/admin/canonical-show/$canonicalShowId'
-      path: '/canonical-show/$canonicalShowId'
-      fullPath: '/admin/canonical-show/$canonicalShowId'
-      preLoaderRoute: typeof LayoutAdminCanonicalShowCanonicalShowIdRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/canonical-season/$canonicalSeasonId': {
-      id: '/_layout/admin/canonical-season/$canonicalSeasonId'
-      path: '/canonical-season/$canonicalSeasonId'
-      fullPath: '/admin/canonical-season/$canonicalSeasonId'
-      preLoaderRoute: typeof LayoutAdminCanonicalSeasonCanonicalSeasonIdRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/canonical-show/$canonicalShowId_/episodes': {
-      id: '/_layout/admin/canonical-show/$canonicalShowId_/episodes'
-      path: '/canonical-show/$canonicalShowId/episodes'
-      fullPath: '/admin/canonical-show/$canonicalShowId/episodes'
-      preLoaderRoute: typeof LayoutAdminCanonicalShowCanonicalShowIdEpisodesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
   }
 }
 
 interface LayoutAdminRouteChildren {
-  LayoutAdminCanonicalEpisodesRoute: typeof LayoutAdminCanonicalEpisodesRoute
-  LayoutAdminCanonicalSeasonsRoute: typeof LayoutAdminCanonicalSeasonsRoute
-  LayoutAdminCanonicalShowsRoute: typeof LayoutAdminCanonicalShowsRoute
   LayoutAdminChannelQueuesRoute: typeof LayoutAdminChannelQueuesRoute
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
   LayoutAdminEpisodeReportsRoute: typeof LayoutAdminEpisodeReportsRoute
@@ -1169,15 +1046,9 @@ interface LayoutAdminRouteChildren {
   LayoutAdminUnlockedEpisodesRoute: typeof LayoutAdminUnlockedEpisodesRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
-  LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute: typeof LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute
-  LayoutAdminCanonicalShowCanonicalShowIdRoute: typeof LayoutAdminCanonicalShowCanonicalShowIdRoute
-  LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute: typeof LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute
 }
 
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
-  LayoutAdminCanonicalEpisodesRoute: LayoutAdminCanonicalEpisodesRoute,
-  LayoutAdminCanonicalSeasonsRoute: LayoutAdminCanonicalSeasonsRoute,
-  LayoutAdminCanonicalShowsRoute: LayoutAdminCanonicalShowsRoute,
   LayoutAdminChannelQueuesRoute: LayoutAdminChannelQueuesRoute,
   LayoutAdminChannelsRoute: LayoutAdminChannelsRoute,
   LayoutAdminEpisodeReportsRoute: LayoutAdminEpisodeReportsRoute,
@@ -1188,12 +1059,6 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminUnlockedEpisodesRoute: LayoutAdminUnlockedEpisodesRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,
-  LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute:
-    LayoutAdminCanonicalSeasonCanonicalSeasonIdRoute,
-  LayoutAdminCanonicalShowCanonicalShowIdRoute:
-    LayoutAdminCanonicalShowCanonicalShowIdRoute,
-  LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute:
-    LayoutAdminCanonicalShowCanonicalShowIdEpisodesRoute,
 }
 
 const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(

@@ -3,7 +3,6 @@ import { Link, useRouterState } from "@tanstack/react-router"
 import {
   Eye,
   LayoutDashboard,
-  Library,
   ListOrdered,
   LogIn,
   LogOut,
@@ -56,7 +55,6 @@ const baseItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   ...baseItems,
-  { icon: Library, title: "Canonical Media", path: "/admin/canonical-shows" },
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 

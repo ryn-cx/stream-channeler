@@ -86,64 +86,6 @@ export type CanonicalEpisodesPublic = {
 };
 
 /**
- * Schema for returning a list of `Season`s, with the title above.
- */
-export type CanonicalSeasonListOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: (string | null);
-    name?: (string | null);
-    url?: (string | null);
-    season_number?: (number | null);
-    image_url?: (string | null);
-    sort_order?: (number | null);
-    canonical_show_id: string;
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
-    canonical_show_name: (string | null);
-    canonical_show_key: (string | null);
-};
-
-/**
- * Schema for returning a `Season`.
- *
- * A season hangs off its title by the same column a copy hangs off the
- * listing by, so what is served as the canonical title is read off `show_id`.
- * The name it is served under does not change.
- */
-export type CanonicalSeasonOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: (string | null);
-    name?: (string | null);
-    url?: (string | null);
-    season_number?: (number | null);
-    image_url?: (string | null);
-    sort_order?: (number | null);
-    canonical_show_id: string;
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
-};
-
-/**
- * Schema for returning a list of `Season`s.
- */
-export type CanonicalSeasonsPublic = {
-    data: Array<CanonicalSeasonListOutput>;
-    total_count: number;
-    filtered_count: number;
-    is_server_side: boolean;
-};
-
-/**
  * Schema for returning a `Show`.
  *
  * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
@@ -728,15 +670,6 @@ export type EpisodesPublic = {
 };
 
 /**
- * The TMDB episode a `User` is pointing an `Episode` at by hand.
- */
-export type EpisodeTmdbLinkInput = {
-    tmdb_episode_id: number;
-    media_type?: (MediaType | null);
-    selected?: boolean;
-};
-
-/**
  * Schema for updating an `Episode`.
  */
 export type EpisodeUpdate = {
@@ -1145,9 +1078,6 @@ export type SeasonListOutput = {
     sort_order?: (number | null);
     show_id: string;
     id: string;
-    canonical_season_id: string;
-    tmdb_id?: (number | null);
-    canonical_key?: (string | null);
     username: (string | null);
     show_name: (string | null);
     source_id: string;
@@ -1172,9 +1102,6 @@ export type SeasonOutput = {
     sort_order?: (number | null);
     show_id: string;
     id: string;
-    canonical_season_id: string;
-    tmdb_id?: (number | null);
-    canonical_key?: (string | null);
 };
 
 /**
@@ -1764,12 +1691,8 @@ export type WhitelistSeasonOutput = {
     sort_order?: (number | null);
     show_id: string;
     id: string;
-    canonical_season_id: string;
-    tmdb_id?: (number | null);
-    canonical_key?: (string | null);
     filtered: boolean;
     show_ids: Array<(string)>;
-    tmdb_season_number?: (number | null);
 };
 
 export type WhitelistShowInput = {
@@ -1831,16 +1754,6 @@ export type CanonicalEpisodesGetCanonicalEpisodeByIdData = {
 
 export type CanonicalEpisodesGetCanonicalEpisodeByIdResponse = (CanonicalEpisodeOutput);
 
-export type CanonicalEpisodesGetCanonicalSeasonEpisodesData = {
-    canonicalSeasonId: string;
-    filterOptions?: string;
-    limit?: number;
-    offset?: number;
-    sortOptions?: string;
-};
-
-export type CanonicalEpisodesGetCanonicalSeasonEpisodesResponse = (CanonicalEpisodesPublic);
-
 export type CanonicalEpisodesGetCanonicalShowEpisodesData = {
     canonicalShowId: string;
     filterOptions?: string;
@@ -1850,31 +1763,6 @@ export type CanonicalEpisodesGetCanonicalShowEpisodesData = {
 };
 
 export type CanonicalEpisodesGetCanonicalShowEpisodesResponse = (CanonicalEpisodesPublic);
-
-export type CanonicalSeasonsGetCanonicalSeasonsData = {
-    filterOptions?: string;
-    limit?: number;
-    offset?: number;
-    sortOptions?: string;
-};
-
-export type CanonicalSeasonsGetCanonicalSeasonsResponse = (CanonicalSeasonsPublic);
-
-export type CanonicalSeasonsGetCanonicalSeasonByIdData = {
-    canonicalSeasonId: string;
-};
-
-export type CanonicalSeasonsGetCanonicalSeasonByIdResponse = (CanonicalSeasonOutput);
-
-export type CanonicalSeasonsGetCanonicalShowSeasonsData = {
-    canonicalShowId: string;
-    filterOptions?: string;
-    limit?: number;
-    offset?: number;
-    sortOptions?: string;
-};
-
-export type CanonicalSeasonsGetCanonicalShowSeasonsResponse = (CanonicalSeasonsPublic);
 
 export type CanonicalShowsGetCanonicalShowsData = {
     filterOptions?: string;
@@ -2253,19 +2141,6 @@ export type EpisodesAdminGetTmdbEpisodeChoicesData = {
 };
 
 export type EpisodesAdminGetTmdbEpisodeChoicesResponse = (Array<TmdbEpisodeChoice>);
-
-export type EpisodesAdminLinkEpisodeToTmdbData = {
-    episodeId: string;
-    requestBody: EpisodeTmdbLinkInput;
-};
-
-export type EpisodesAdminLinkEpisodeToTmdbResponse = (EpisodeOutput);
-
-export type EpisodesAdminMarkEpisodeNoTmdbMatchData = {
-    episodeId: string;
-};
-
-export type EpisodesAdminMarkEpisodeNoTmdbMatchResponse = (EpisodeOutput);
 
 export type EpisodesGetEpisodeInformationData = {
     episodeId: string;

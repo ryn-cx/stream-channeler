@@ -8,33 +8,32 @@ left that value out. The canonical row is the one answer for all of them, so
 each level is joined through the pointer the copy already carries and read
 straight off, with no stand-in to fall back to.
 
-The episode's own canonical row and the season above it are already joined by
-`EpisodeQueryBuilder`, which reaches them to work out which title an episode
-belongs to, so they are read from there rather than joined again. The title is
-only joined when something asks for one of its columns.
+Every level is already joined by `EpisodeQueryBuilder`, which reaches all three
+to work out which title an episode belongs to and whether the title holds it, so
+they are read from there rather than joined again.
 """
 
 from typing import Any, ClassVar, cast
-from uuid import UUID
 
+from sqlalchemy import case
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import and_, col
-from sqlmodel.sql.expression import Select
+from sqlmodel import col
 
-from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_SEASON,
     CANONICAL_SHOW,
+    season_id,
 )
 from app.episodes.models import Episode
+from app.seasons.models import Season
 
 
 # TODO: Validate
 class CanonicalColumns:
     """The canonical row of each media level, joined in so SQL can read it."""
 
-    _MODELS: ClassVar = {
+    _MODELS: ClassVar[dict[str, Any]] = {
         "episode": CANONICAL_EPISODE,
         "season": CANONICAL_SEASON,
         "show": CANONICAL_SHOW,
@@ -63,17 +62,12 @@ class CanonicalColumns:
         "season": "season_number",
     }
 
-    # TODO: Validate
-    def __init__(self) -> None:
-        """Start with the title unjoined; asking for one of its columns joins it."""
-        self._joins_title = False
-
-    # TODO: Validate
-    def _require(self, model: str) -> Any:  # noqa: ANN401 - The canonical model of whichever level was asked for.
-        """Mark the title as needing to be joined, when that is what was asked for."""
-        if model == "show":
-            self._joins_title = True
-        return self._MODELS[model]
+    # The copy standing in for a level whose canonical row is absent. A title is
+    # always reached, so only the two levels below it have one.
+    _COPIES: ClassVar[dict[str, Any]] = {
+        "episode": Episode,
+        "season": Season,
+    }
 
     # TODO: Validate
     def column(
@@ -82,29 +76,50 @@ class CanonicalColumns:
         field: str,
         model_class: type[Any],
     ) -> ColumnElement[Any]:
-        """Return `field` as the canonical row has it.
+        """Return `field` as the canonical row has it, or as the copy does.
 
-        Read off the canonical row alone rather than falling back on the copy: the
-        canonical row is what every copy resolves to and it is never absent, so a
-        fallback could only ever put one website's answer in place of the one
-        answer for all of them. A field no canonical row holds - a source's name,
-        a plugin's - is the copy's own and is read from where it is stored.
+        The canonical row is what every copy resolves to and is the one answer for
+        all of them, so it is read first. An episode nothing was minted for it to
+        be a copy of has no canonical row at all, and there the copy's own answer
+        is the only one there is rather than one website's among several. A field
+        no canonical row holds - a source's name, a plugin's - is the copy's own
+        and is read from where it is stored.
         """
         if field not in self._FIELDS.get(model, frozenset()):
             return cast("ColumnElement[Any]", getattr(model_class, field))
-        canonical = self._require(model)
-        return cast("ColumnElement[Any]", getattr(canonical, field))
+        return self._preferring_canonical(model, field)
+
+    # TODO: Validate
+    def _preferring_canonical(self, model: str, field: str) -> ColumnElement[Any]:
+        """Return the canonical row's `field`, standing the copy in where it has none.
+
+        Asked of the row rather than of the value: a canonical row that holds
+        nothing under `field` still answers for every copy of it, and only a level
+        with no canonical row at all is one the copy has to answer for.
+        """
+        canonical_entity = self._MODELS[model]
+        canonical = getattr(canonical_entity, field)
+        copy = self._COPIES.get(model)
+        if copy is None:
+            return cast("ColumnElement[Any]", canonical)
+        return cast(
+            "ColumnElement[Any]",
+            case(
+                (col(canonical_entity.id).is_(None), getattr(copy, field)),
+                else_=canonical,
+            ),
+        )
 
     # TODO: Validate
     def number(self, model: str) -> ColumnElement[Any]:
-        """Return the number the canonical row gives, or `NULL` when it has none.
+        """Return the number the media is given, or `NULL` where it has none.
 
-        Read on its own rather than coalesced, since an order that goes by the
-        canonical numbering has to be able to tell a record with no number from
-        one that has one.
+        The canonical row's number where there is one, since an order that goes by
+        the canonical numbering has to be able to tell a record with no number
+        from one that has one, and the copy's own only where nothing was minted
+        for it to be a copy of.
         """
-        canonical = self._require(model)
-        return getattr(canonical, self._NUMBER_FIELDS[model])
+        return self._preferring_canonical(model, self._NUMBER_FIELDS[model])
 
     # TODO: Validate
     def episode_season_id(self) -> ColumnElement[Any]:
@@ -113,34 +128,12 @@ class CanonicalColumns:
         Which season an episode is in is the canonical answer rather than the
         website's, since a website can file an episode under a season the
         canonical hierarchy does not, which is what puts a site's finale in
-        another site's specials.
+        another site's specials. An episode with no canonical row is in the season
+        its own website filed it under, there being no other record of it.
         """
-        canonical = self._require("episode")
-        return col(canonical.season_id)
+        return season_id()
 
     # TODO: Validate
     def show_id(self) -> ColumnElement[Any]:
         """Return the canonical title the episode belongs to."""
-        canonical = self._require("season")
-        return col(canonical.show_id)
-
-    # TODO: Validate
-    def join(
-        self,
-        query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
-        """Join in the title, when one of its columns was asked for.
-
-        The episode and the season it is in are what the query is built around
-        and are already there. The title is one join further out and nothing but
-        its own columns needs it, so it is only reached for when asked for.
-        """
-        if self._joins_title:
-            query = query.join(
-                CANONICAL_SHOW,
-                and_(
-                    col(CANONICAL_SEASON.show_id) == col(CANONICAL_SHOW.id),
-                    is_canonical(CANONICAL_SHOW),
-                ),
-            )
-        return query
+        return cast("ColumnElement[Any]", col(CANONICAL_SHOW.id))

@@ -22,9 +22,15 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.canonical_media.filters import is_canonical
+from app.canonical_media.filters import (
+    canonical_id_column,
+    canonical_id_of,
+    is_canonical,
+)
+from app.channels.episode_selector.canonical_entities import episode_id
 from app.episodes.models import Episode
 from app.seasons.models import Season
+from app.shows.models import Show
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -85,7 +91,7 @@ def hide_watched_condition(
     watched = verified_watch_identifiers(user)
     if maximum_watch_date:
         watched = watched.where(Watch.watch_date > maximum_watch_date)
-    return col(Episode.canonical_episode_id).not_in(watched)
+    return episode_id().not_in(watched)
 
 
 # TODO: Validate
@@ -95,7 +101,7 @@ def hide_unwatched_condition(user: User) -> ColumnElement[bool]:
     Unwatched = no watch at all. Partially watched (unverified) and verified
     episodes are kept.
     """
-    return col(Episode.canonical_episode_id).in_(any_watch_identifiers(user))
+    return episode_id().in_(any_watch_identifiers(user))
 
 
 # TODO: Validate
@@ -106,8 +112,8 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
     episodes are kept.
     """
     return or_(
-        col(Episode.canonical_episode_id).not_in(any_watch_identifiers(user)),
-        col(Episode.canonical_episode_id).in_(verified_watch_identifiers(user)),
+        episode_id().not_in(any_watch_identifiers(user)),
+        episode_id().in_(verified_watch_identifiers(user)),
     )
 
 
@@ -117,20 +123,24 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
 
     The titles themselves rather than the websites' listings of them, since a
     watch is of the episode rather than of the copy that played it and a title
-    started on one website is started wherever else it is carried.
+    started on one website is started wherever else it is carried. An episode
+    nothing was minted for it to be a copy of hangs off a website's own listing,
+    so the title it counts towards is the one that listing is a copy of.
     """
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
+    watched_show = aliased(Show)
     return (
-        select(watched_season.show_id)
+        select(canonical_id_column(watched_show))
+        .select_from(watched_season)
         .join(
             watched_episode,
             col(watched_episode.season_id) == col(watched_season.id),
         )
+        .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
         .join(Watch, col(Watch.canonical_episode_key) == col(watched_episode.key))
         .where(
             is_canonical(watched_episode),
-            is_canonical(watched_season),
             Watch.user_id == user.id,
         )
         .distinct()
@@ -170,7 +180,7 @@ def join_last_watched(
 
     return query.outerjoin(
         last_watched,
-        col(Episode.canonical_episode_id) == last_watched.c.canonical_episode_id,
+        episode_id() == last_watched.c.canonical_episode_id,
     )
 
 
@@ -184,7 +194,7 @@ def latest_watch_by_identifier(
     if not episodes:
         return {}
 
-    identifiers = [episode.canonical_episode_id for episode in episodes]
+    identifiers = [canonical_id_of(episode) for episode in episodes]
     watched_episode = aliased(Episode)
     rows = session.exec(
         select(col(watched_episode.id), Watch)  # type: ignore[call-overload]

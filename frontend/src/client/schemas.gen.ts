@@ -535,354 +535,6 @@ export const CanonicalEpisodesPublicSchema = {
     description: 'Schema for returning a list of `Episode`s.'
 } as const;
 
-export const CanonicalSeasonListOutputSchema = {
-    properties: {
-        key: {
-            type: 'string',
-            minLength: 1,
-            title: 'Key'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
-        },
-        update_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Update At'
-        },
-        deleted_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deleted At'
-        },
-        extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Extra'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        },
-        season_number: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Season Number'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
-        canonical_show_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Show Id'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        canonical_show_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Name'
-        },
-        canonical_show_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Key'
-        }
-    },
-    type: 'object',
-    required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at', 'canonical_show_name', 'canonical_show_key'],
-    title: 'CanonicalSeasonListOutput',
-    description: 'Schema for returning a list of `Season`s, with the title above.'
-} as const;
-
-export const CanonicalSeasonOutputSchema = {
-    properties: {
-        key: {
-            type: 'string',
-            minLength: 1,
-            title: 'Key'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
-        },
-        update_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Update At'
-        },
-        deleted_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deleted At'
-        },
-        extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Extra'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        },
-        season_number: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Season Number'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
-        canonical_show_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Show Id'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        }
-    },
-    type: 'object',
-    required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at'],
-    title: 'CanonicalSeasonOutput',
-    description: `Schema for returning a \`Season\`.
-
-A season hangs off its title by the same column a copy hangs off the
-listing by, so what is served as the canonical title is read off \`show_id\`.
-The name it is served under does not change.`
-} as const;
-
-export const CanonicalSeasonsPublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/CanonicalSeasonListOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        total_count: {
-            type: 'integer',
-            title: 'Total Count'
-        },
-        filtered_count: {
-            type: 'integer',
-            title: 'Filtered Count'
-        },
-        is_server_side: {
-            type: 'boolean',
-            title: 'Is Server Side'
-        }
-    },
-    type: 'object',
-    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
-    title: 'CanonicalSeasonsPublic',
-    description: 'Schema for returning a list of `Season`s.'
-} as const;
-
 export const CanonicalShowOutputSchema = {
     properties: {
         key: {
@@ -3848,34 +3500,6 @@ export const EpisodeOutputSchema = {
     description: 'Schema for returning an `Episode`.'
 } as const;
 
-export const EpisodeTmdbLinkInputSchema = {
-    properties: {
-        tmdb_episode_id: {
-            type: 'integer',
-            title: 'Tmdb Episode Id'
-        },
-        media_type: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/MediaType'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        selected: {
-            type: 'boolean',
-            title: 'Selected',
-            default: false
-        }
-    },
-    type: 'object',
-    required: ['tmdb_episode_id'],
-    title: 'EpisodeTmdbLinkInput',
-    description: 'The TMDB episode a `User` is pointing an `Episode` at by hand.'
-} as const;
-
 export const EpisodeUpdateSchema = {
     properties: {
         key: {
@@ -6018,33 +5642,6 @@ export const SeasonListOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        canonical_season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Season Id'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
-        },
         username: {
             anyOf: [
                 {
@@ -6101,7 +5698,7 @@ export const SeasonListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'canonical_season_id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -6224,37 +5821,10 @@ export const SeasonOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
-        },
-        canonical_season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Season Id'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'canonical_season_id'],
+    required: ['key', 'show_id', 'id'],
     title: 'SeasonOutput',
     description: 'Schema for returning a `Season`.'
 } as const;
@@ -9525,33 +9095,6 @@ export const WhitelistSeasonOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        canonical_season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Season Id'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
-        },
         filtered: {
             type: 'boolean',
             title: 'Filtered'
@@ -9563,21 +9106,10 @@ export const WhitelistSeasonOutputSchema = {
             },
             type: 'array',
             title: 'Show Ids'
-        },
-        tmdb_season_number: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Season Number'
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'canonical_season_id', 'filtered', 'show_ids'],
+    required: ['key', 'show_id', 'id', 'filtered', 'show_ids'],
     title: 'WhitelistSeasonOutput'
 } as const;
 

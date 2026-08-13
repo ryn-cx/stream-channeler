@@ -310,12 +310,12 @@ class ChannelSourceFilter(BaseChannelSourceFilter, TimestampIdAndHashMixin, tabl
 class BaseChannelSeasonFilter(SQLModel):
     """Base model representing the seasons that are filtered for a `ChannelShow`."""
 
-    canonical_season_id: uuid.UUID = Field(
+    season_id: uuid.UUID = Field(
         foreign_key="season.id",
         ondelete="CASCADE",
     )
-    """The season this row is about, rather than one website's copy of it, so the
-    filter covers the same season on every website the title is on."""
+    """The season this row is about, which is the season the episodes under it
+    belong to rather than any one website's copy of it."""
 
 
 # TODO: Validate
@@ -325,9 +325,9 @@ class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, tabl
     __table_args__ = (
         # Used to ensure each season is unique within a ChannelShow.
         # Used to cascade deletions when a channel show is deleted.
-        PrimaryKeyConstraint("channel_show_id", "canonical_season_id"),
+        PrimaryKeyConstraint("channel_show_id", "season_id"),
         # Used to find every channel show filtering a season.
-        Index("ChannelSeasonFilter-canonical_season_id-index", "canonical_season_id"),
+        Index("ChannelSeasonFilter-season_id-index", "season_id"),
     )
 
     channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
@@ -350,19 +350,16 @@ class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, tabl
     ) -> ChannelSeasonFilter | None:
         """Get the `ChannelSeasonFilter` if it exists.
 
-        This is a wrapper around `db.get`. `season` is either a `Season`, whose
-        canonical season is read off it, or that season's id itself.
+        This is a wrapper around `db.get`.
 
         Returns:
             The matching `ChannelSeasonFilter` if found, else `None`.
 
         """
-        canonical_id = (
-            season.canonical_season_id if isinstance(season, Season) else season
-        )
+        season_id = season.id if isinstance(season, Season) else season
         return session.get(
             cls,
-            (channel_show.id, canonical_id),
+            (channel_show.id, season_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,

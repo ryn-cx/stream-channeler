@@ -139,6 +139,8 @@ class YouTube(
         self,
         handler: YouTubeURLHandler,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         playlist_key = handler.playlist_key
@@ -150,16 +152,18 @@ class YouTube(
                     self.source,
                     show_key,
                     canonical_show=canonical_show,
+                    force=force,
                 ),
             )
 
-        if self._playlist_is_missing(show, playlist_key):
+        if force or self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
             return handler.import_results(
                 self.upsert_show(
                     self.source,
                     show_key,
                     canonical_show=canonical_show,
+                    force=force,
                 ),
             )
 

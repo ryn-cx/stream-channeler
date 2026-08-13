@@ -21,6 +21,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
@@ -38,7 +39,6 @@ type MediaModel = type[MediaMixin[Any, Any]]
 # What each level's canonical row answers for. Anything else belongs to the copy
 # alone — `url` above all, which says where rather than what.
 SHOW_FIELDS = ("name", "description", "image_url")
-SEASON_FIELDS = ("name", "image_url")
 EPISODE_FIELDS = (
     "name",
     "description",
@@ -48,7 +48,6 @@ EPISODE_FIELDS = (
 )
 
 SHOW_ID_FIELD = "canonical_show_id"
-SEASON_ID_FIELD = "canonical_season_id"
 EPISODE_ID_FIELD = "canonical_episode_id"
 
 CANONICAL_KEY_FIELD = "canonical_key"
@@ -155,49 +154,15 @@ def fill_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
 
 
 # TODO: Validate
-def fill_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Fill what the website left out of each `Season` row from the season itself."""
-    return _fill(session, rows, SEASON_ID_FIELD, Season, SEASON_FIELDS)
-
-
-# TODO: Validate
 def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each `Show` row as the title is, falling back on the site."""
     return _prefer(session, rows, SHOW_ID_FIELD, Show, SHOW_FIELDS)
 
 
 # TODO: Validate
-def prefer_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Serve each `Season` row as the season is, falling back on the site."""
-    return _prefer(session, rows, SEASON_ID_FIELD, Season, SEASON_FIELDS)
-
-
-# TODO: Validate
 def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each `Episode` row as the episode is, falling back on the site."""
     return _prefer(session, rows, EPISODE_ID_FIELD, Episode, EPISODE_FIELDS)
-
-
-# TODO: Validate
-def prefer_canonical_seasons[RowT](
-    session: Session,
-    rows: Sequence[RowT],
-) -> Sequence[RowT]:
-    """Replace each `Season` row's name and number with the season's own.
-
-    A website names and numbers its own seasons, which is not how the season is
-    named and numbered as a season. A row whose copy is not yet of anything keeps
-    what the website said.
-    """
-    canonical_rows = _canonical_rows(session, rows, SEASON_ID_FIELD, Season)
-    for row in rows:
-        canonical = canonical_rows.get(getattr(row, SEASON_ID_FIELD, None))
-        if canonical is None:
-            continue
-        setattr(row, TMDB_SEASON_NUMBER_FIELD, canonical.season_number)
-        if canonical.name:
-            setattr(row, NAME_FIELD, canonical.name)
-    return rows
 
 
 # TODO: Validate
@@ -241,7 +206,7 @@ def _seasons_of(
     return {
         season.id: season
         for season in session.exec(
-            select(Season).where(is_canonical(Season), col(Season.id).in_(ids)),
+            select(Season).where(col(Season.id).in_(ids)),
         ).all()
     }
 
@@ -371,7 +336,6 @@ def canonical_episode_of(
         )
         .where(
             is_canonical(Episode),
-            is_canonical(Season),
             is_canonical(Show),
             Episode.id == canonical_episode_id,
         ),
@@ -381,21 +345,29 @@ def canonical_episode_of(
 # TODO: Validate
 def canonical_season_of(
     session: Session,
-    canonical_season_id: UUID | None,
+    season_id: UUID,
 ) -> tuple[Season, Show] | None:
-    """Return the season a copy is of, with the title above it."""
-    if canonical_season_id is None:
-        return None
+    """Return the season a copy's episodes are of, with the title above it.
+
+    A season is not a copy of anything itself, so the answer is the season its
+    episodes' canonical episodes are under, which is nothing when none of them
+    is a copy of anything.
+    """
+    copy_episode = aliased(Episode)
+    canonical_episode = aliased(Episode)
     return session.exec(
         select(Season, Show)
+        .select_from(copy_episode)
         .join(
-            Show,
-            onclause=col(Season.show_id) == Show.id,
+            canonical_episode,
+            onclause=col(copy_episode.canonical_episode_id) == canonical_episode.id,
         )
+        .join(Season, onclause=col(canonical_episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
         .where(
-            is_canonical(Season),
             is_canonical(Show),
-            Season.id == canonical_season_id,
+            col(copy_episode.season_id) == season_id,
+            col(copy_episode.deleted_at).is_(None),
         ),
     ).first()
 

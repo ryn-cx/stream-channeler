@@ -2,12 +2,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Clapperboard } from "lucide-react"
 
-import { ShowsService } from "@/client"
+import { CanonicalShowsService, ShowsService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
+import {
+  type CanonicalShowTableData,
+  canonicalShowColumns,
+} from "@/components/Shows/canonicalColumns"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
 import { isLoggedIn } from "@/hooks/useAuth"
 
@@ -27,7 +31,7 @@ export const Route = createFileRoute("/_layout/shows")({
 // TODO: Validate
 function ShowsPage() {
   return (
-    <MediaListPage<ShowTableData>
+    <MediaListPage<ShowTableData, CanonicalShowTableData>
       title="Shows"
       path="/shows"
       columns={showColumns}
@@ -47,6 +51,23 @@ function ShowsPage() {
           filtered_count: result.filtered_count,
           is_server_side: result.is_server_side,
         }
+      }}
+      canonical={{
+        columns: canonicalShowColumns,
+        defaultHidden: { id: false },
+        fetchTable: async (params) => {
+          const result = await CanonicalShowsService.getCanonicalShows({
+            offset: params.offset,
+            limit: params.limit,
+            ...serializeTableQuery(params, canonicalShowColumns),
+          })
+          return {
+            data: result.data,
+            total_count: result.total_count,
+            filtered_count: result.filtered_count,
+            is_server_side: result.is_server_side,
+          }
+        },
       }}
     />
   )

@@ -111,6 +111,8 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
         self,
         url: str,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()
 

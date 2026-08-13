@@ -39,10 +39,13 @@ class ImportURLMixin(
         self,
         handler: URLHandler[Any],
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
-        if show := self._preload_show(show_key).one_or_none():
-            return handler.import_results(show)
+        stored = self._preload_show(show_key).one_or_none()
+        if stored is not None and not force:
+            return handler.import_results(stored)
 
         # This title's own rows are written before anything is handed on. A
         # website's plugin resolves the title it carries by asking TMDB for it,
@@ -50,7 +53,7 @@ class ImportURLMixin(
         # stored yet and would send the import straight back round; made after,
         # that ask is answered by the row written here and the chain ends.
         self._download_title_files(show_key)
-        show = self.upsert_show(self.source, show_key)
+        show = self.upsert_show(self.source, show_key, force=force)
 
         # Where the title can be watched is JustWatch's to say, and only when a
         # caller has not already named the title this is of: one that has is a
@@ -61,7 +64,7 @@ class ImportURLMixin(
             # resolve TMDB ids, so importing it up here would be circular.
             from plugins.JustWatch import JustWatch  # noqa: PLC0415
 
-            JustWatch(self.session).import_url(justwatch_url, show)
+            JustWatch(self.session).import_url(justwatch_url, show, force=force)
 
         return handler.import_results(show)
 
@@ -133,7 +136,9 @@ class ImportURLMixin(
 
         # A search of both halves also returns people, who are no title and are
         # passed over rather than taken as the first result.
-        for result in self.auto_updating_search_media(None, name, year).parsed().results:
+        for result in (
+            self.auto_updating_search_media(None, name, year).parsed().results
+        ):
             half = _SEARCHED_MEDIA_TYPES.get(result.media_type or "")
             if half is not None:
                 return half, result.id

@@ -26,6 +26,8 @@ class ImportURLMixin(
         self,
         handler: JustWatchURLHandler,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         """Import the title from every source JustWatch has an offer for.
 
@@ -59,6 +61,7 @@ class ImportURLMixin(
             plugin_results = plugin_class(self.session).import_url(
                 offer_url,
                 canonical_show,
+                force=force,
             )
             results.extend(
                 self._delegated_results(
@@ -66,6 +69,7 @@ class ImportURLMixin(
                     plugin_class,
                     plugin_results,
                     canonical_show,
+                    force=force,
                 ),
             )
 
@@ -73,6 +77,7 @@ class ImportURLMixin(
             handler.show_key,
             unhandled_source_keys,
             canonical_show,
+            force=force,
         )
         results.extend(handler.import_results_for_shows(shows))
         return results
@@ -84,6 +89,8 @@ class ImportURLMixin(
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
         canonical_show: Show | None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         """Return what another plugin imported, scoped to this plugin's URL.
 
@@ -97,6 +104,7 @@ class ImportURLMixin(
                 plugin_class,
                 plugin_results,
                 canonical_show,
+                force=force,
             )
         return handler.narrow_to_season(plugin_results)
 
@@ -107,6 +115,8 @@ class ImportURLMixin(
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
         canonical_show: Show | None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         """Return the whole title the Crunchyroll offer's episode belongs to.
 
@@ -144,7 +154,11 @@ class ImportURLMixin(
             raise ValueError(msg)
 
         return handler.narrow_to_season(
-            plugin_class(self.session).import_url(show.url, canonical_show),
+            plugin_class(self.session).import_url(
+                show.url,
+                canonical_show,
+                force=force,
+            ),
         )
 
     # TODO: Validate
@@ -153,12 +167,19 @@ class ImportURLMixin(
         show_key: str,
         source_keys: list[str],
         canonical_show: Show | None,
+        *,
+        force: bool = False,
     ) -> list[Show]:
         """Import the title from JustWatch's own data for `source_keys`.
 
         A title picks up and loses offers over time, so a title that is already
         stored for one source still has to be imported for any source it has since
         become available on.
+
+        A title already stored for every source it is offered on has nothing left
+        to write, but it is still told which title it is a copy of: the caller
+        naming one is what a stored copy was missing, and an import that stopped
+        here would leave it a copy of nothing for as long as it stayed stored.
         """
         if not source_keys:
             return []
@@ -167,8 +188,13 @@ class ImportURLMixin(
             show.source.key: show
             for show in self._preload_show(show_key, preload_source=True).all()
         }
-        if all(source_key in existing_shows for source_key in source_keys):
-            return [existing_shows[source_key] for source_key in source_keys]
+        if not force and all(
+            source_key in existing_shows for source_key in source_keys
+        ):
+            stored = [existing_shows[source_key] for source_key in source_keys]
+            with self.session.no_autoflush:
+                self._link_supplied_canonical_shows(stored, canonical_show)
+            return stored
 
         _cache = (
             self._download_show_files_and_children(show_key),
@@ -181,4 +207,4 @@ class ImportURLMixin(
             # than the lazy loads this avoids.
             self._preload_sources(source_keys, preload_episodes=True).all(),
         )
-        return self._upsert_shows(show_key, source_keys, canonical_show)
+        return self._upsert_shows(show_key, source_keys, canonical_show, force=force)

@@ -6,8 +6,10 @@ from functools import cache
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, delete, select
 
+from app.canonical_media.filters import canonical_id_column, is_canonical, is_copy
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
@@ -104,30 +106,102 @@ def shows_by_canonical_id(
     """Return every website's copy of each title in `canonical_show_ids`.
 
     A `ChannelShow` names a title rather than one website's copy of it, so the
-    copies it stands for have to be looked up by the title they are all of. A
-    listing that mixes titles is a copy of each of them and stands for the title
-    under every one of them.
+    copies it stands for have to be looked up by the title they are all of. What
+    makes a copy one of them is carrying one of the title's episodes: a listing
+    that mixes titles is linked to each of them, but it is only a place to watch
+    the ones it has episodes of, so a series page linked to the film it spun off
+    is not somewhere that film can be watched. A copy nobody has imported the
+    episodes of yet has only its own word for the title it is of, so the copies
+    naming the title as the one they are chiefly of are counted as well.
+
+    A copy also carries episodes nothing was minted for them to be copies of,
+    because the title had no record of them to match them against. They are the
+    episodes themselves, and the only word on what title they belong to is the
+    link their listing carries, so a copy is one of the title's places on the
+    strength of those as well.
     """
     grouped: dict[UUID, list[Show]] = defaultdict(list)
     if not canonical_show_ids:
         return grouped
 
-    rows = session.exec(
-        select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
-        .select_from(ShowCanonicalShow)
-        .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
-        .join(Source)
-        .join(Plugin)
+    listed: dict[UUID, set[UUID]] = defaultdict(set)
+
+    # TODO: Validate
+    def add(canonical_show_id: UUID, show: Show) -> None:
+        if show.id in listed[canonical_show_id]:
+            return
+        listed[canonical_show_id].add(show.id)
+        grouped[canonical_show_id].append(show)
+
+    copy_season = aliased(Season)
+    canonical_episode = aliased(Episode)
+    canonical_season = aliased(Season)
+    carried = session.exec(
+        select(canonical_season.show_id, Show)  # type: ignore[call-overload]
+        .select_from(Episode)
+        .join(
+            canonical_episode,
+            col(canonical_episode.id) == col(Episode.canonical_episode_id),
+        )
+        .join(
+            canonical_season,
+            col(canonical_season.id) == col(canonical_episode.season_id),
+        )
+        .join(copy_season, col(copy_season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(copy_season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
-            col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
+            col(canonical_season.show_id).in_(canonical_show_ids),
+            col(Episode.deleted_at).is_(None),
+            col(copy_season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
             # TMDB only supplies the metadata other websites left out, so its copy of
             # a title is never one of the websites the title can be watched on.
             Plugin.key != TMDB_PLUGIN_KEY,
+        )
+        .distinct(),
+    ).all()
+    for canonical_show_id, show in carried:
+        add(canonical_show_id, show)
+
+    linked_season = aliased(Season)
+    linked = session.exec(
+        select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
+        .select_from(Episode)
+        .join(linked_season, col(linked_season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(linked_season.show_id))
+        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(
+            col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
+            is_canonical(Episode),
+            is_copy(Show),
+            col(Episode.deleted_at).is_(None),
+            col(linked_season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+            Plugin.key != TMDB_PLUGIN_KEY,
+        )
+        .distinct(),
+    ).all()
+    for canonical_show_id, show in linked:
+        add(canonical_show_id, show)
+
+    chiefly = session.exec(
+        select(Show.canonical_show_id, Show)  # type: ignore[call-overload]
+        .select_from(Show)
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(
+            col(Show.canonical_show_id).in_(canonical_show_ids),
+            col(Show.deleted_at).is_(None),
+            Plugin.key != TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for canonical_show_id, show in rows:
-        grouped[canonical_show_id].append(show)
+    for canonical_show_id, show in chiefly:
+        add(canonical_show_id, show)
+
     return grouped
 
 
@@ -366,9 +440,7 @@ def update_whitelist(
         channel_show.is_whitelist = config.is_whitelist
 
     existing_sources = {source.show_id for source in channel_show.source_filters}
-    existing_seasons = {
-        season.canonical_season_id for season in channel_show.season_filters
-    }
+    existing_seasons = {season.season_id for season in channel_show.season_filters}
     existing_episodes = {
         episode.canonical_episode_id for episode in channel_show.episode_filters
     }
@@ -385,7 +457,7 @@ def update_whitelist(
         toggle_season_whitelist(
             session,
             channel_show,
-            _canonical_season_id(session, season.id),
+            season.id,
             existing_seasons,
             marked=season.marked,
         )
@@ -403,18 +475,13 @@ def update_whitelist(
 
 
 # TODO: Validate
-def _canonical_season_id(session: Session, season_id: UUID) -> UUID | None:
-    """Return the season the copy `season_id` is of, which is what a filter names."""
-    return session.exec(
-        select(Season.canonical_season_id).where(Season.id == season_id),  # type: ignore[call-overload]
-    ).one()
-
-
-# TODO: Validate
 def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
-    """Return the episode the copy `episode_id` is of, which is what a filter names."""
+    """Return the episode the copy `episode_id` is of, which is what a filter names.
+
+    A copy of nothing is the episode itself, so it names itself.
+    """
     return session.exec(
-        select(Episode.canonical_episode_id).where(Episode.id == episode_id),  # type: ignore[call-overload]
+        select(canonical_id_column(Episode)).where(Episode.id == episode_id),  # type: ignore[call-overload]
     ).one()
 
 
@@ -423,15 +490,18 @@ def _canonical_show_id_of_episode(
     session: Session,
     canonical_episode_id: UUID | None,
 ) -> UUID | None:
-    """Return the title the episode `canonical_episode_id` names belongs to."""
+    """Return the title the episode `canonical_episode_id` names belongs to.
+
+    An episode that is a copy of nothing hangs off a website's own listing rather
+    than off the title, so the title is the one that listing is a copy of.
+    """
     if canonical_episode_id is None:
         return None
     return session.exec(
-        select(Season.show_id)  # type: ignore[call-overload]
-        .join(
-            Episode,
-            col(Episode.season_id) == col(Season.id),
-        )
+        select(canonical_id_column(Show))
+        .select_from(Episode)
+        .join(Season, col(Episode.season_id) == col(Season.id))
+        .join(Show, col(Season.show_id) == col(Show.id))
         .where(Episode.id == canonical_episode_id),
     ).one_or_none()
 
@@ -463,27 +533,21 @@ def toggle_source_whitelist(
 def toggle_season_whitelist(
     session: Session,
     channel_show: ChannelShow,
-    canonical_season_id: UUID | None,
+    season_id: UUID,
     existing: set[UUID],
     *,
     marked: bool,
 ) -> None:
-    """Add or drop the filter naming the season `canonical_season_id`."""
-    if canonical_season_id is None:
-        return
-    if marked and canonical_season_id not in existing:
+    """Add or drop the filter naming the season `season_id`."""
+    if marked and season_id not in existing:
         channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                canonical_season_id=canonical_season_id,
+                season_id=season_id,
             ),
         )
-    elif not marked and canonical_season_id in existing:
-        existing_season = ChannelSeasonFilter.get(
-            session,
-            channel_show,
-            canonical_season_id,
-        )
+    elif not marked and season_id in existing:
+        existing_season = ChannelSeasonFilter.get(session, channel_show, season_id)
         if existing_season:
             session.delete(existing_season)
 

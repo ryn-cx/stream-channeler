@@ -144,9 +144,7 @@ function groupSeasons(
       ),
     )
     if (keys.size > 0) return [...keys]
-    return season.tmdb_season_number != null
-      ? [tmdbGroupKey(season.tmdb_season_number)]
-      : [siteGroupKey(season.id, season.show_ids)]
+    return [siteGroupKey(season.id, season.show_ids)]
   }
 
   // TODO: Validate
@@ -217,9 +215,7 @@ function groupSeasons(
     // Only a season TMDB has a record of can name a row TMDB numbers. A website
     // that split the season carries its own number in the name of its copy, which
     // is the very number the row is there to replace.
-    const name = group.seasons.find(
-      (season) => season.tmdb_season_number != null && season.name,
-    )?.name
+    const name = group.seasons.find((season) => season.name)?.name
     if (name && name !== group.label) {
       group.label = `${group.label} - ${name}`
     }
@@ -520,6 +516,12 @@ export function WhitelistManager({
   // TODO: Validate
   const watchableShowIds = (showIds: string[]) =>
     showIds.filter((showId) => !tmdbShowIds.has(showId))
+  // TMDB leads a row the way it leads a season's, since what a row stands for is
+  // the media rather than any one site's copy of it, and the sites it can be
+  // watched on follow the name rather than lead it.
+  // TODO: Validate
+  const catalogueShowIds = (showIds: string[]) =>
+    showIds.filter((showId) => tmdbShowIds.has(showId))
   const watchableSources = whitelistData.sources.filter(
     (source) => !source.is_tmdb,
   )
@@ -802,12 +804,25 @@ export function WhitelistManager({
                                       enabledEpisodeIdentifiers.has(
                                         episode.canonical_episode_id,
                                       )
+                                    const episodeTmdbShowIds = catalogueShowIds(
+                                      episode.show_ids,
+                                    )
                                     return (
                                       <div key={episode.id}>
                                         <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
+                                          <span className="ml-8 flex items-center">
+                                            {episodeTmdbShowIds.length > 0 && (
+                                              <SourceFavicons
+                                                showIds={episodeTmdbShowIds}
+                                                sourcesByShowId={
+                                                  sourcesByShowId
+                                                }
+                                              />
+                                            )}
+                                          </span>
                                           <button
                                             type="button"
-                                            className="flex-1 text-left text-sm ml-8 hover:underline"
+                                            className="flex-1 text-left text-sm hover:underline"
                                             onClick={() =>
                                               setInformationEpisodeId(
                                                 informationEpisodeId ===

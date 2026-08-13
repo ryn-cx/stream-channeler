@@ -223,7 +223,9 @@ export function ShowCards({
         )
 
         return (
-          <Fragment key={firstShow.id}>
+          // A card is one title, and the same listing can be a card under each of
+          // the titles it mixes, so the title names the card rather than the copy.
+          <Fragment key={firstShow.canonical_show_id ?? firstShow.id}>
             <Card className="relative gap-0 overflow-hidden py-0 hover:border-primary">
               {/* The whole card opens the title, since everything on it is about
                   that one title. */}

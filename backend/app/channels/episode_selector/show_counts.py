@@ -15,11 +15,16 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import is_canonical
+from app.canonical_media.filters import (
+    canonical_id_column,
+    canonical_id_of,
+    is_canonical,
+)
 from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.seasons.models import Season
+from app.shows.models import Show
 from app.users.models import User
 
 
@@ -51,7 +56,7 @@ def limit_shows(
     show_order: list[tuple[UUID, bool]] = []
     seen: set[UUID] = set()
     for episode in episodes:
-        show_id = episode_to_show[episode.canonical_episode_id]
+        show_id = episode_to_show[canonical_id_of(episode)]
         if show_id in seen:
             continue
         seen.add(show_id)
@@ -66,7 +71,7 @@ def limit_shows(
     return [
         episode
         for episode in episodes
-        if episode_to_show[episode.canonical_episode_id] in selected
+        if episode_to_show[canonical_id_of(episode)] in selected
     ]
 
 
@@ -78,21 +83,25 @@ def _titles_by_canonical_episode(
     """Map each episode in `episodes` to the title it belongs to.
 
     Read off the episode's own canonical row rather than off the listing holding
-    it, since a listing that mixes titles holds episodes of each of them.
+    it, since a listing that mixes titles holds episodes of each of them. An
+    episode nothing was minted for it to be a copy of sits under a website's own
+    listing, so there the title is the one that listing is a copy of.
     """
-    canonical_episode_ids = {episode.canonical_episode_id for episode in episodes}
+    canonical_episode_ids = {canonical_id_of(episode) for episode in episodes}
     counted_episode = aliased(Episode)
     counted_season = aliased(Season)
+    counted_show = aliased(Show)
     return dict(
         session.exec(
-            select(counted_episode.id, counted_season.show_id)
+            select(counted_episode.id, canonical_id_column(counted_show))
+            .select_from(counted_episode)
             .join(
                 counted_season,
                 col(counted_episode.season_id) == col(counted_season.id),
             )
+            .join(counted_show, col(counted_season.show_id) == col(counted_show.id))
             .where(
                 is_canonical(counted_episode),
-                is_canonical(counted_season),
                 col(counted_episode.id).in_(canonical_episode_ids),
             ),
         ).all(),

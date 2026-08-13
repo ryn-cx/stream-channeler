@@ -11,7 +11,12 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.service import link_canonical_show
+from app.canonical_media.keys import record_key
+from app.canonical_media.service import (
+    canonical_show_by_key,
+    link_canonical_show,
+    match_canonical_episodes,
+)
 from app.episodes.models import Episode
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
@@ -294,9 +299,18 @@ class BasePlugin(
         *,
         force: bool = False,
     ) -> None:
+        """Read a stored listing again, and settle what its episodes are copies of.
+
+        An update writes the same episodes an import does, so which TMDB episode
+        each of them is is worked out here too. Only the matching, and not the
+        rest of what an import settles: which title a listing is a copy of is
+        read off a website's own account of itself, which an update is not
+        reading, and a canonical row has no title to point at at all.
+        """
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        self.upsert_show(show.source, show.key, force=force)
+        upserted = self.upsert_show(show.source, show.key, force=force)
+        match_canonical_episodes(self.session, upserted)
 
     # TODO: Validate
     @override
@@ -353,11 +367,21 @@ class BasePlugin(
         show: Show,
         canonical_show: Show | None,
     ) -> None:
-        if canonical_show is None:
-            return
-        if not show.canonical_show_id:
-            show.canonical_show = canonical_show
-        link_canonical_show(self.session, show, canonical_show)
+        if canonical_show is not None:
+            if not show.canonical_show_id:
+                show.canonical_show = canonical_show
+            link_canonical_show(self.session, show, canonical_show)
+        elif not show.canonical_show_id:
+            # Every copy points at a title, so that a row pointing at nothing is
+            # only ever a title itself. Two websites carrying one listing agree
+            # on the key, so they converge on the one row.
+            standalone = canonical_show_by_key(
+                self.session,
+                record_key(self.plugin_key(), show.key),
+            )
+            show.canonical_show = standalone
+            link_canonical_show(self.session, show, standalone)
+        match_canonical_episodes(self.session, show)
 
     # TODO: Validate
     def _link_supplied_canonical_shows(
@@ -401,14 +425,7 @@ class BasePlugin(
         existing_season: Season | None,
         show_key: str,
     ) -> Season:
-        """Store the website's own `Season` against the files it was read out of.
-
-        The season the stored record is a copy of is carried over for the same
-        reason the show's title is. No `User` ever settles a season by hand, so
-        a new record naming one always wins.
-        """
-        if existing_season and not season.canonical_season_id:
-            season.canonical_season_id = existing_season.canonical_season_id
+        """Store the website's own `Season` against the files it was read out of."""
         season_files = self._season_files(season.key, show_key)
         return season.upsert_and_set_update_at(show, existing_season, season_files)
 
@@ -567,20 +584,31 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         self,
         handler: HandlerT,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         """Setup then call upsert_show to import a new show.
 
         What a channel takes on from the import is returned rather than the show
         itself, since that is what a caller asking for a URL to be imported is
         asking for, and it is the handler that says what the URL named.
+
+        A title that is already stored is only reconciled against the title it
+        was told it is a copy of, there being nothing else to read. `force` is
+        what says to write it out again anyway.
         """
         show_key = handler.show_key
-        if show := self._preload_show(show_key).one_or_none():
+        if not force and (show := self._preload_show(show_key).one_or_none()):
             self._link_supplied_canonical_show(show, canonical_show)
             return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
-        show = self.upsert_show(self.source, show_key, canonical_show=canonical_show)
+        show = self.upsert_show(
+            self.source,
+            show_key,
+            canonical_show=canonical_show,
+            force=force,
+        )
         # After the reconcile `upsert_show` ends on rather than before it, since a
         # title nothing under the listing points at yet is one the reconcile would
         # take straight back off again.
@@ -593,10 +621,12 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         self,
         url: str,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
-        return self._import_handler(handler, canonical_show)
+        return self._import_handler(handler, canonical_show, force=force)
 
 
 # `__init_subclass__` only runs for subclasses, so the entry points `BasePlugin`

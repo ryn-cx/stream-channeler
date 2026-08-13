@@ -99,6 +99,8 @@ class AbstractPlugin(ABC):
         self,
         url: str,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         """Import `url` into the database.
 
@@ -114,6 +116,12 @@ class AbstractPlugin(ABC):
                 added to what the listing is a copy of whether or not the listing
                 is chiefly of it - a series listing that also carries the film of
                 it is a copy of both.
+            force: Write every record again even where nothing about it has
+                changed, rather than leaving a title that is already stored
+                alone. Passed down to every import the import hands off to, since
+                a chain that stopped forcing partway through would leave the
+                records furthest from the URL - which are most of them - as they
+                were.
 
         Returns:
             A list of `URLImportResult`.

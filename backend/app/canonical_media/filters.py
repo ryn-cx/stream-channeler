@@ -13,8 +13,9 @@ the entity knows which of those the column belongs to.
 """
 
 from typing import Any, cast
+from uuid import UUID
 
-from sqlalchemy import inspect
+from sqlalchemy import func, inspect
 from sqlalchemy.sql.expression import ColumnElement
 
 
@@ -34,3 +35,23 @@ def is_canonical(entity: Any) -> ColumnElement[bool]:  # noqa: ANN401 - A model 
 def is_copy(entity: Any) -> ColumnElement[bool]:  # noqa: ANN401 - A model class or an alias of one.
     """Return the filter matching the copy rows of `entity`."""
     return cast("ColumnElement[bool]", _canonical_id(entity).is_not(None))
+
+
+# TODO: Validate
+def canonical_id_column(entity: Any) -> ColumnElement[UUID]:  # noqa: ANN401 - A model class or an alias of one.
+    """Return the row `entity` is a copy of, or `entity` itself where it is one.
+
+    A row that points at nothing is the canonical row, so the media it stands for
+    is itself. Reading the pointer alone leaves those rows as `NULL` and drops
+    them out of every comparison the pointer is used in.
+    """
+    return cast(
+        "ColumnElement[UUID]",
+        func.coalesce(_canonical_id(entity), entity.id),
+    )
+
+
+# TODO: Validate
+def canonical_id_of(row: Any) -> UUID:  # noqa: ANN401 - A model instance.
+    """Return the media `row` stands for, which is `row` itself where it is canonical."""
+    return getattr(row, row.CANONICAL_ID_FIELD) or row.id

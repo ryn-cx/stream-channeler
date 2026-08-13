@@ -1,38 +1,19 @@
 // TODO: Validate
-import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Film } from "lucide-react"
 import type { CanonicalShowOutput } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
-import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 
 export type CanonicalShowTableData = CanonicalShowOutput
 
+// TODO: Validate
 export const canonicalShowColumns: ColumnDef<CanonicalShowTableData>[] = [
   {
     accessorKey: "name",
     header: "Name",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <Link
-          to="/admin/canonical-show/$canonicalShowId"
-          params={{ canonicalShowId: row.original.id }}
-          className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
-        >
-          {row.original.name ||
-            `No Name (${row.original.key ?? row.original.id})`}
-        </Link>
-        <TooltipIconLink label="Episodes">
-          <Link
-            to="/admin/canonical-show/$canonicalShowId/episodes"
-            params={{ canonicalShowId: row.original.id }}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-            aria-label="Episodes"
-          >
-            <Film className="size-4" />
-          </Link>
-        </TooltipIconLink>
-      </div>
+      <span className="font-medium block max-w-48 whitespace-normal wrap-break-word">
+        {row.original.name || `No Name (${row.original.key ?? row.original.id})`}
+      </span>
     ),
   },
   {

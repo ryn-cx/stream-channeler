@@ -67,12 +67,16 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> list[Show]:
         shows: list[Show] = []
-        for source_key, _ in self._sources_with_offers(show_key):
-            if source_keys is not None and source_key not in source_keys:
-                continue
-            source = self._upsert_source(source_key)
-            shows.append(self.upsert_show(source, show_key, force=force))
-        self._link_supplied_canonical_shows(shows, canonical_show)
+        # A listing carries the same key on every service offering it, and a
+        # copy is only told apart from a title by the title it points at, so
+        # nothing is written until the last of them has been given one.
+        with self.session.no_autoflush:
+            for source_key, _ in self._sources_with_offers(show_key):
+                if source_keys is not None and source_key not in source_keys:
+                    continue
+                source = self._upsert_source(source_key)
+                shows.append(self.upsert_show(source, show_key, force=force))
+            self._link_supplied_canonical_shows(shows, canonical_show)
         return shows
 
     # TODO: Validate

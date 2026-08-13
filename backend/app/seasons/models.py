@@ -4,8 +4,7 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
-from sqlalchemy import text
-from sqlalchemy.orm import contains_eager, relationship
+from sqlalchemy.orm import contains_eager
 from sqlmodel import (
     Field,
     Index,
@@ -18,8 +17,6 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_copy
-from app.canonical_media.keys import SEASON_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
@@ -34,9 +31,6 @@ if TYPE_CHECKING:
     from app.episodes.models import Episode
     from app.issue_reports.models import SeasonIssueReport
 
-# The canonical row is the one a channel sorts on, so these name its columns and
-# no copy's. A copy's own columns are only ever ordered by the admin tables, which
-# order by any column they show and so are no reason to index these three.
 CANONICAL_SORTABLE_FIELDS = [
     "name",
     "season_number",
@@ -45,7 +39,7 @@ CANONICAL_SORTABLE_FIELDS = [
 
 
 # TODO: Validate
-class BaseCanonicalSeason(BaseMediaMixin):
+class BaseSeason(BaseMediaMixin):
     """The columns a season carries, and so a copy of one carries too."""
 
     name: str | None = Field(default=None)
@@ -59,18 +53,8 @@ class BaseCanonicalSeason(BaseMediaMixin):
 
 
 # TODO: Validate
-class BaseSeason(BaseCanonicalSeason):
-    """Base model for an `Season`."""
-
-
-# TODO: Validate
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     """Model representing a season, and a website's copy of one.
-
-    A row is the season itself when it points at no other, and one website's
-    copy of a season when it does. TMDB gives its seasons their own ids, and a
-    film is filed as a season carrying the film's own number, so the key says
-    the level as well as the id to keep the two apart.
 
     The season itself hangs off the title the way a copy hangs off the listing,
     by the same `show_id`, so one primary key covers both: a `show_id` names
@@ -78,7 +62,6 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     """
 
     PARENT_ID_FIELD: ClassVar[str] = "show_id"
-    CANONICAL_ID_FIELD: ClassVar[str] = "canonical_season_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "random",
@@ -94,38 +77,8 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
         Index("Season-deleted_at-index", "deleted_at"),
-        Index("Season-canonical_season_id-index", "canonical_season_id"),
-        *sortable_field_indexes(
-            "Season",
-            CANONICAL_SORTABLE_FIELDS,
-            where=text("canonical_season_id IS NULL"),
-        ),
+        *sortable_field_indexes("Season", CANONICAL_SORTABLE_FIELDS),
     )
-
-    # The season this is a copy of, and nothing when this is the season itself.
-    # Written by whatever imports the copy rather than filled in at the flush.
-    canonical_season_id: uuid.UUID = Field(
-        default=None,
-        nullable=True,
-        foreign_key="season.id",
-    )
-    # `remote_side` is what says which end of the join is the season itself,
-    # since both ends are the same table.
-    canonical_season: Season | None = Relationship(
-        sa_relationship=relationship(
-            "Season",
-            remote_side="Season.id",
-            foreign_keys="Season.canonical_season_id",
-        ),
-    )
-
-    # TODO: Validate
-    @property
-    def tmdb_id(self) -> int | None:
-        """The TMDB season this is a copy of, if TMDB has a record of it."""
-        if self.canonical_season is None:
-            return None
-        return tmdb_id_of(self.canonical_season.key, SEASON_LEVEL)
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     show: Show = Relationship(back_populates="seasons")
@@ -166,7 +119,6 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return (
             select(cls)
-            .where(is_copy(cls))
             .join(Show, col(cls.show_id) == col(Show.id))
             .join(Source)
             .join(Plugin)

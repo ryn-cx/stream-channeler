@@ -291,9 +291,6 @@ class WhitelistSeasonOutput(SeasonOutput):
     filtered: bool
     # The `Show` ids of the websites' copies that carry this season.
     show_ids: list[uuid.UUID]
-    # The number TMDB gives the season, which is not always the one the website
-    # gives it. `None` when the season is not linked to TMDB.
-    tmdb_season_number: int | None = Field(default=None)
 
 
 # TODO: Validate
@@ -335,14 +332,7 @@ class SortKeyInput(BaseInput):
     MODEL_MAP: ClassVar[
         dict[
             str,
-            type[
-                Episode
-                | Season
-                | Show
-                | Source
-                | Plugin
-                | Channel
-            ],
+            type[Episode | Season | Show | Source | Plugin | Channel],
         ]
     ] = {
         "episode": Episode,
@@ -368,9 +358,7 @@ class SortKeyInput(BaseInput):
     @property
     def model_class(
         self,
-    ) -> type[
-        Episode | Season | Show | Source | Plugin | Channel
-    ]:
+    ) -> type[Episode | Season | Show | Source | Plugin | Channel]:
         return self.MODEL_MAP[self.model]
 
     # TODO: Validate

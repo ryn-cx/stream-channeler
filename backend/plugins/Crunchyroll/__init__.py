@@ -88,15 +88,17 @@ class Crunchyroll(
         self,
         handler: CrunchyrollURLHandler,
         canonical_show: Show | None = None,
+        *,
+        force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         self.source = self._source_from_show_key(show_key)
         if not is_music_show_key(show_key):
-            return super()._import_handler(handler, canonical_show)
+            return super()._import_handler(handler, canonical_show, force=force)
 
-        if show := self._preload_show(show_key).one_or_none():
+        if not force and (show := self._preload_show(show_key).one_or_none()):
             return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
-        show = self.upsert_show(self.source, show_key, canonical_show)
+        show = self.upsert_show(self.source, show_key, canonical_show, force=force)
         return handler.import_results(show)

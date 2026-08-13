@@ -4,22 +4,14 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
-from sqlalchemy.orm import contains_eager
-from sqlmodel import col, select
-from sqlmodel.sql.expression import SelectOfScalar
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
-    SuperUser,
 )
-from app.canonical_media.dependencies import AdminCanonicalSeason, AdminCanonicalShow
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_season_issue_reports
 from app.media.canonical_metadata import (
     canonical_season_of,
-    fill_seasons,
     tmdb_season_url,
 )
 from app.media.identifiers import TMDB_PLUGIN_KEY
@@ -34,9 +26,6 @@ from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
 from app.seasons.models import Season
 from app.seasons.schemas import (
-    CanonicalSeasonListOutput,
-    CanonicalSeasonOutput,
-    CanonicalSeasonsPublic,
     SeasonCreate,
     SeasonInformationOutput,
     SeasonInformationSide,
@@ -57,14 +46,6 @@ plugin_seasons_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["seasons"
 source_seasons_router = APIRouter(prefix="/sources/{source_id}", tags=["seasons"])
 show_seasons_router = APIRouter(prefix="/shows/{show_id}", tags=["seasons"])
 seasons_router = APIRouter(prefix="/seasons", tags=["seasons"])
-canonical_show_seasons_router = APIRouter(
-    prefix="/shows/canonical/{canonical_show_id}",
-    tags=["canonical-seasons"],
-)
-canonical_seasons_router = APIRouter(
-    prefix="/seasons/canonical",
-    tags=["canonical-seasons"],
-)
 
 SEASON_EXTRA_COLUMNS: dict[str, Any] = {
     "username": User.username,
@@ -75,21 +56,6 @@ SEASON_EXTRA_COLUMNS: dict[str, Any] = {
     "plugin_name": Plugin.name,
 }
 
-# Every column the canonical list is sorted and filtered by that a `Season` does
-# not answer to under the name it is served as. `canonical_show_id` is among
-# them now that a season hangs off its title by `show_id` like any copy.
-CANONICAL_SEASON_EXTRA_COLUMNS: dict[str, Any] = {
-    "canonical_show_id": Season.show_id,
-    "canonical_show_name": Show.name,
-    "canonical_show_key": Show.key,
-}
-
-
-# TODO: Validate
-def _season_output(session: SessionDep, season: Season) -> SeasonOutput:
-    """Return a `Season` with whatever its website left out taken from TMDB."""
-    return fill_seasons(session, [SeasonOutput.model_validate(season)])[0]
-
 
 # TODO: Validate
 @show_seasons_router.post("/seasons")
@@ -99,7 +65,7 @@ def create_season(
     season_input: SeasonCreate,
 ) -> SeasonOutput:
     """Create a `Season` if the `Show` is editable by the `User`."""
-    return _season_output(session, season_input.create(session, Season, show))
+    return SeasonOutput.model_validate(season_input.create(session, Season, show))
 
 
 # TODO: Validate
@@ -119,7 +85,6 @@ def get_seasons(
         current_user=current_user,
         extra_columns=SEASON_EXTRA_COLUMNS,
     )
-    fill_seasons(session, seasons.data)
     return seasons
 
 
@@ -141,7 +106,6 @@ def get_show_seasons(
         current_user=current_user,
         extra_columns=SEASON_EXTRA_COLUMNS,
     )
-    fill_seasons(session, seasons.data)
     return seasons
 
 
@@ -163,7 +127,6 @@ def get_plugin_seasons(
         current_user=current_user,
         extra_columns=SEASON_EXTRA_COLUMNS,
     )
-    fill_seasons(session, seasons.data)
     return seasons
 
 
@@ -185,7 +148,6 @@ def get_source_seasons(
         current_user=current_user,
         extra_columns=SEASON_EXTRA_COLUMNS,
     )
-    fill_seasons(session, seasons.data)
     return seasons
 
 
@@ -223,7 +185,7 @@ def get_season_information(
     show = season.show
     source = show.source
 
-    counterpart = canonical_season_of(session, season.canonical_season_id)
+    counterpart = canonical_season_of(session, season.id)
     tmdb: SeasonInformationSide | None = None
     if counterpart:
         canonical_season, canonical_show = counterpart
@@ -249,9 +211,9 @@ def get_season_information(
 
 # TODO: Validate
 @seasons_router.get("/{season_id}")  # noqa: FAST003 - Used by ReadableSeason.
-def get_season(session: SessionDep, season: ReadableSeason) -> SeasonOutput:
+def get_season(season: ReadableSeason) -> SeasonOutput:
     """Get a `Season` if it's readable by the `User`."""
-    return _season_output(session, season)
+    return SeasonOutput.model_validate(season)
 
 
 # TODO: Validate
@@ -261,12 +223,8 @@ def update_season(
     season: EditableSeason,
     season_input: SeasonUpdate,
 ) -> SeasonOutput:
-    """Update and return a `Season` if it's editable by the `User`.
-
-    Which season this is a copy of is the linker's to work out during an import,
-    so there is nothing to repoint here.
-    """
-    return _season_output(session, season_input.update(session, season))
+    """Update and return a `Season` if it's editable by the `User`."""
+    return SeasonOutput.model_validate(season_input.update(session, season))
 
 
 # TODO: Validate
@@ -276,80 +234,7 @@ def delete_season(session: SessionDep, season: EditableSeason) -> Message:
     return delete_record(session, season)
 
 
-# The admin-only mirror of the season endpoints.
-# TODO: Validate
-def _select_with_canonical_show() -> SelectOfScalar[Season]:
-    """Select seasons with the title above each one already loaded.
-
-    Joined rather than left to load itself, since the title's name is a column
-    of the list and a row at a time would be a query at a time.
-    """
-    return (
-        select(Season)
-        .join(
-            Show,
-            onclause=col(Season.show_id) == Show.id,
-        )
-        .where(is_canonical(Season), is_canonical(Show))
-        .options(contains_eager(Season.show))  # type: ignore[arg-type]
-    )
-
-
-# TODO: Validate
-@canonical_seasons_router.get("")
-def get_canonical_seasons(
-    session: SessionDep,
-    current_user: SuperUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalSeasonsPublic:
-    """Get every `Season`."""
-    return canonical_list_response(
-        session=session,
-        base=_select_with_canonical_show(),
-        response_model=CanonicalSeasonsPublic,
-        schema=CanonicalSeasonListOutput,
-        read_options=read_options,
-        current_user=current_user,
-        extra_columns=CANONICAL_SEASON_EXTRA_COLUMNS,
-    )
-
-
-# TODO: Validate
-@canonical_show_seasons_router.get("/seasons")
-def get_canonical_show_seasons(
-    session: SessionDep,
-    canonical_show: AdminCanonicalShow,
-    current_user: SuperUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalSeasonsPublic:
-    """Get every `Season` of one `Show`."""
-    return canonical_list_response(
-        session=session,
-        base=_select_with_canonical_show().where(
-            Season.show_id == canonical_show.id,
-        ),
-        response_model=CanonicalSeasonsPublic,
-        schema=CanonicalSeasonListOutput,
-        read_options=read_options,
-        current_user=current_user,
-        extra_columns=CANONICAL_SEASON_EXTRA_COLUMNS,
-    )
-
-
-# TODO: Validate
-@canonical_seasons_router.get("/{canonical_season_id}")  # noqa: FAST003 - Used by AdminCanonicalSeason.
-def get_canonical_season_by_id(
-    canonical_season: AdminCanonicalSeason,
-) -> CanonicalSeasonOutput:
-    """Get a `Season`."""
-    return CanonicalSeasonOutput.model_validate(canonical_season)
-
-
 router = APIRouter()
-# Registered ahead of `seasons_router` so "/seasons/canonical" is read as the
-# canonical listing rather than as a `Season` id that happens to be misspelt.
-router.include_router(canonical_seasons_router)
-router.include_router(canonical_show_seasons_router)
 router.include_router(seasons_router)
 router.include_router(show_seasons_router)
 router.include_router(source_seasons_router)

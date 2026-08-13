@@ -17,7 +17,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import is_canonical, is_copy
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
     not_tmdb_key_clause,
@@ -282,7 +282,6 @@ def _candidates_by_show(
         )
         .where(
             is_canonical(Episode),
-            is_canonical(Season),
             is_canonical(Show),
             col(Show.id).in_(canonical_show_ids),
             tmdb_key_clause(col(Episode.key)),
@@ -523,7 +522,6 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
             is_canonical(canonical_episode),
-            is_copy(Season),
             Season.show_id == episode.season.show_id,
             col(Episode.id) != episode.id,
             tmdb_key_clause(col(canonical_episode.key)),

@@ -21,7 +21,7 @@ Everything that used to read a `tmdb_id` column reads it back out of here, so
 the key is the single thing a row's identity is stored in.
 """
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, func
 
 from app.media.media_type import MediaType
 
@@ -147,3 +147,27 @@ def tmdb_key_clause(key_column: ColumnElement[str | None]) -> ColumnElement[bool
 def not_tmdb_key_clause(key_column: ColumnElement[str]) -> ColumnElement[bool]:
     """Return the filter matching the rows TMDB has no record of."""
     return key_column.not_like(TMDB_KEY_LIKE)
+
+
+# TODO: Validate
+def key_issuer(key_column: ColumnElement[str]) -> ColumnElement[str]:
+    """Return who issued the record `key_column` names."""
+    return func.split_part(key_column, " ", 1)
+
+
+# TODO: Validate
+def same_issuer_clause(
+    first: ColumnElement[str],
+    second: ColumnElement[str],
+) -> ColumnElement[bool]:
+    """Return the filter matching two keys that were issued by the same source.
+
+    A title's own catalogue is the run of records whoever issued the title
+    issued, so a row a website minted under a title TMDB issued is a record of
+    the website's rather than one of the title's own. A website carries an
+    episode the title has no record of - an extra it filed under the season, a
+    film it sells as part of the series - and a canonical row is minted for it
+    so the copy has something to hang off, but the title it was filed under
+    still does not hold it.
+    """
+    return key_issuer(first) == key_issuer(second)

@@ -17,8 +17,13 @@ own scope and aliases its own entities, since sharing these would let the two
 scopes correlate.
 """
 
-from sqlalchemy.orm import aliased
+from uuid import UUID
 
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import ColumnElement
+
+from app.canonical_media.filters import canonical_id_column
+from app.canonical_media.seasons import season_id_column
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -26,3 +31,21 @@ from app.shows.models import Show
 CANONICAL_EPISODE = aliased(Episode)
 CANONICAL_SEASON = aliased(Season)
 CANONICAL_SHOW = aliased(Show)
+
+
+# TODO: Validate
+def episode_id() -> ColumnElement[UUID]:
+    """Return the episode a row stands for, which is the row where it is canonical.
+
+    A website carries episodes the title has no record of, so nothing was ever
+    minted for them to be copies of and they are the episode themselves. They are
+    still episodes of the title the website's listing is linked to, so everything
+    keyed by the canonical episode reads this rather than the pointer.
+    """
+    return canonical_id_column(Episode)
+
+
+# TODO: Validate
+def season_id() -> ColumnElement[UUID]:
+    """Return the season a row belongs to, which is its own where it has no canonical."""
+    return season_id_column(Episode, CANONICAL_EPISODE)

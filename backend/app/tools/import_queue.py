@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from loguru import logger
-from sqlmodel import Session, col, or_, select
+from sqlmodel import Session, col, func, or_, select
 
+from app.canonical_media.seasons import season_ids_by_key
 from app.canonical_media.service import (
     canonical_ids_by_key,
     canonical_show_ids_by_key,
@@ -25,6 +26,7 @@ from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
+from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -239,10 +241,9 @@ def _canonical_ids_for_results(
     results: list[URLImportResult],
 ) -> _CanonicalIds:
     """Resolve every record key the results name, in one query per level."""
-    seasons = canonical_ids_by_key(
+    seasons = season_ids_by_key(
         session,
         {key for result in results for key in result.season_keys},
-        Season,
     )
     episodes = canonical_ids_by_key(
         session,
@@ -264,16 +265,18 @@ def _canonical_ids_for_results(
 # TODO: Validate
 def _titles_by_season(
     session: Session,
-    canonical_season_ids: set[UUID],
+    season_ids: set[UUID],
 ) -> dict[UUID, UUID]:
-    """Map each canonical season to the title holding it."""
-    if not canonical_season_ids:
+    """Map each season to the title holding it."""
+    if not season_ids:
         return {}
     rows = session.exec(
         select(  # type: ignore[call-overload]
             Season.id,
-            Season.show_id,
-        ).where(col(Season.id).in_(canonical_season_ids)),
+            func.coalesce(Show.canonical_show_id, Show.id),
+        )
+        .join(Show, col(Season.show_id) == col(Show.id))
+        .where(col(Season.id).in_(season_ids)),
     ).all()
     return dict(rows)
 
@@ -305,7 +308,7 @@ def _create_channel_show(
     channel: Channel,
     result: URLImportResult,
     canonical_show_id: UUID,
-    canonical_season_ids: set[UUID],
+    season_ids: set[UUID],
     canonical_episode_ids: set[UUID],
 ) -> ChannelShow:
     """Put the title on the channel, with the filters the result asked for."""
@@ -316,7 +319,7 @@ def _create_channel_show(
         is_blacklist_only=False,
     )
     channel.shows.append(channel_show)
-    _merge_filters(channel_show, canonical_season_ids, canonical_episode_ids)
+    _merge_filters(channel_show, season_ids, canonical_episode_ids)
     return channel_show
 
 
@@ -333,7 +336,7 @@ def _update_channel_show(
 
     was_whitelist = existing_channel_show.is_whitelist
     existing_seasons: set[UUID] = {
-        season_filter.canonical_season_id
+        season_filter.season_id
         for season_filter in existing_channel_show.season_filters
     }
     existing_episodes: set[UUID] = {
@@ -353,10 +356,10 @@ def _update_channel_show(
         )
         exclusions = {
             canonical_episode_id
-            for canonical_episode_id, canonical_season_id in (
+            for canonical_episode_id, season_id in (
                 season_by_blacklisted_episode.items()
             )
-            if canonical_season_id in seasons
+            if season_id in seasons
         }
         episodes = whitelisted_episodes | exclusions
     else:
@@ -372,7 +375,7 @@ def _seasons_for_episodes(
     session: Session,
     canonical_episode_ids: set[UUID],
 ) -> dict[UUID, UUID]:
-    """Map each canonical episode to the canonical season holding it."""
+    """Map each canonical episode to the season holding it."""
     if not canonical_episode_ids:
         return {}
     rows = session.exec(
@@ -387,7 +390,7 @@ def _seasons_for_episodes(
 # TODO: Validate
 def _merge_filters(
     channel_show: ChannelShow,
-    canonical_season_ids: set[UUID],
+    season_ids: set[UUID],
     canonical_episode_ids: set[UUID],
 ) -> None:
     """Merge the given season/episode filters into the channel show's existing ones.
@@ -396,18 +399,17 @@ def _merge_filters(
     never drops filters a previous import or the user already set.
     """
     existing_seasons = {
-        season_filter.canonical_season_id
-        for season_filter in channel_show.season_filters
+        season_filter.season_id for season_filter in channel_show.season_filters
     }
     existing_episodes = {
         episode_filter.canonical_episode_id
         for episode_filter in channel_show.episode_filters
     }
-    for canonical_season_id in canonical_season_ids - existing_seasons:
+    for season_id in season_ids - existing_seasons:
         channel_show.season_filters.append(
             ChannelSeasonFilter(
                 channel_show_id=channel_show.id,
-                canonical_season_id=canonical_season_id,
+                season_id=season_id,
             ),
         )
     for canonical_episode_id in canonical_episode_ids - existing_episodes:

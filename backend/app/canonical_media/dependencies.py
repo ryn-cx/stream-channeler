@@ -15,7 +15,6 @@ from sqlmodel import col, select
 from app.auth.dependencies import SessionDep, SuperUser
 from app.canonical_media.filters import is_canonical
 from app.episodes.models import Episode
-from app.seasons.models import Season
 from app.shows.models import Show
 
 
@@ -32,28 +31,6 @@ def get_canonical_show(
     if canonical_show is None:
         raise HTTPException(status_code=404, detail="Canonical show not found")
     return canonical_show
-
-
-# TODO: Validate
-def get_canonical_season(
-    session: SessionDep,
-    _admin: SuperUser,
-    canonical_season_id: uuid.UUID,
-) -> Season:
-    """Return the `Season` an id names.
-
-    Looked up rather than asked of the session, since a season is named by the
-    title above it and its own key and an id on its own is no such name.
-    """
-    canonical_season = session.exec(
-        select(Season).where(
-            is_canonical(Season),
-            col(Season.id) == canonical_season_id,
-        ),
-    ).first()
-    if canonical_season is None:
-        raise HTTPException(status_code=404, detail="Canonical season not found")
-    return canonical_season
 
 
 # TODO: Validate
@@ -79,5 +56,4 @@ def get_canonical_episode(
 
 
 AdminCanonicalShow = Annotated[Show, Depends(get_canonical_show)]
-AdminCanonicalSeason = Annotated[Season, Depends(get_canonical_season)]
 AdminCanonicalEpisode = Annotated[Episode, Depends(get_canonical_episode)]

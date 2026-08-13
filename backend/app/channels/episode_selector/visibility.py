@@ -17,13 +17,13 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import and_, col, or_, select
 
+from app.channels.episode_selector.canonical_entities import episode_id
 from app.channels.models import (
     ChannelEpisodeFilter,
     ChannelSeasonFilter,
     ChannelShow,
     ChannelSourceFilter,
 )
-from app.episodes.models import Episode
 
 
 # TODO: Validate
@@ -67,11 +67,11 @@ def channel_access_condition() -> ColumnElement[bool]:
                 col(ChannelShow.is_whitelist).is_(True),
                 or_(
                     and_(
-                        col(ChannelSeasonFilter.canonical_season_id).is_not(None),
+                        col(ChannelSeasonFilter.season_id).is_not(None),
                         col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonFilter.canonical_season_id).is_(None),
+                        col(ChannelSeasonFilter.season_id).is_(None),
                         col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
                     ),
                 ),
@@ -80,11 +80,11 @@ def channel_access_condition() -> ColumnElement[bool]:
                 col(ChannelShow.is_whitelist).is_(False),
                 or_(
                     and_(
-                        col(ChannelSeasonFilter.canonical_season_id).is_(None),
+                        col(ChannelSeasonFilter.season_id).is_(None),
                         col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
                     ),
                     and_(
-                        col(ChannelSeasonFilter.canonical_season_id).is_not(None),
+                        col(ChannelSeasonFilter.season_id).is_not(None),
                         col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
                     ),
                 ),
@@ -116,8 +116,7 @@ def blacklisted_on_channels_condition(
         .where(
             col(filter_only_show.is_blacklist_only).is_(True),
             col(filter_only_show.channel_id).in_(channel_ids),
-            col(filter_only_filter.canonical_episode_id)
-            == col(Episode.canonical_episode_id),
+            col(filter_only_filter.canonical_episode_id) == episode_id(),
             or_(
                 col(filter_only_filter.expires_at).is_(None),
                 col(filter_only_filter.expires_at) > now,

@@ -2,19 +2,16 @@
 """Season schemas."""
 
 import uuid
-from datetime import datetime
-from typing import Self
 
-from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
-from app.canonical_media.keys import SEASON_LEVEL, tmdb_id_of
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
     make_model_with_all_fields_optional,
 )
-from app.seasons.models import BaseCanonicalSeason, BaseSeason, Season
+from app.seasons.models import BaseSeason, Season
 from app.shows.models import Show
 
 
@@ -37,16 +34,6 @@ class SeasonOutput(BaseSeason):
 
     show_id: uuid.UUID
     id: uuid.UUID
-    # The season this is a copy of, which is what the record is served as and
-    # what a channel's season filter names.
-    canonical_season_id: uuid.UUID
-    # The TMDB season behind that, when TMDB has a record of it.
-    tmdb_id: int | None = None
-    # What the season is, said the same way wherever it turns up. Two rows
-    # sharing it are the same season listed twice -- deliberately, so each
-    # listing can be filtered on its own -- and this is what collapses them
-    # when a normalised view is wanted.
-    canonical_key: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -106,55 +93,6 @@ class SeasonsPublic(BaseModel):
     """Schema for returning a list of `Season`s."""
 
     data: list[SeasonListOutput]
-    total_count: int
-    filtered_count: int
-    is_server_side: bool
-
-
-# TODO: Validate
-class CanonicalSeasonOutput(BaseCanonicalSeason):
-    """Schema for returning a `Season`.
-
-    A season hangs off its title by the same column a copy hangs off the
-    listing by, so what is served as the canonical title is read off `show_id`.
-    The name it is served under does not change.
-    """
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
-
-    canonical_show_id: uuid.UUID = Field(validation_alias=AliasPath("show_id"))
-    id: uuid.UUID
-    created_at: datetime
-    modified_at: datetime
-
-    tmdb_id: int | None = None
-
-    # TODO: Validate
-    @model_validator(mode="after")
-    def _read_key(self) -> Self:
-        self.tmdb_id = tmdb_id_of(self.key, SEASON_LEVEL)
-        return self
-
-
-# TODO: Validate
-class CanonicalSeasonListOutput(CanonicalSeasonOutput):
-    """Schema for returning a list of `Season`s, with the title above."""
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
-
-    canonical_show_name: str | None = Field(
-        validation_alias=AliasPath("show", "name"),
-    )
-    canonical_show_key: str | None = Field(
-        validation_alias=AliasPath("show", "key"),
-    )
-
-
-# TODO: Validate
-class CanonicalSeasonsPublic(BaseModel):
-    """Schema for returning a list of `Season`s."""
-
-    data: list[CanonicalSeasonListOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool

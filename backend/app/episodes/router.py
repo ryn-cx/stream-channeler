@@ -16,7 +16,6 @@ from app.auth.dependencies import (
 )
 from app.canonical_media.dependencies import (
     AdminCanonicalEpisode,
-    AdminCanonicalSeason,
     AdminCanonicalShow,
 )
 from app.canonical_media.filters import is_canonical
@@ -76,10 +75,6 @@ season_episodes_router = APIRouter(prefix="/seasons/{season_id}", tags=["episode
 episodes_router = APIRouter(prefix="/episodes", tags=["episodes"])
 canonical_show_episodes_router = APIRouter(
     prefix="/shows/canonical/{canonical_show_id}",
-    tags=["canonical-episodes"],
-)
-canonical_season_episodes_router = APIRouter(
-    prefix="/seasons/canonical/{canonical_season_id}",
     tags=["canonical-episodes"],
 )
 canonical_episodes_router = APIRouter(
@@ -399,7 +394,7 @@ def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
             Show,
             onclause=col(Season.show_id) == Show.id,
         )
-        .where(is_canonical(Episode), is_canonical(Season), is_canonical(Show))
+        .where(is_canonical(Episode), is_canonical(Show))
         .options(
             contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
                 Season.show,  # type: ignore[arg-type]
@@ -419,28 +414,6 @@ def get_canonical_episodes(
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_season_and_show(),
-        response_model=CanonicalEpisodesPublic,
-        schema=CanonicalEpisodeListOutput,
-        read_options=read_options,
-        current_user=current_user,
-        extra_columns=CANONICAL_EPISODE_EXTRA_COLUMNS,
-    )
-
-
-# TODO: Validate
-@canonical_season_episodes_router.get("/episodes")
-def get_canonical_season_episodes(
-    session: SessionDep,
-    canonical_season: AdminCanonicalSeason,
-    current_user: SuperUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalEpisodesPublic:
-    """Get every `Episode` of one `Season`."""
-    return canonical_list_response(
-        session=session,
-        base=_select_with_canonical_season_and_show().where(
-            Episode.season_id == canonical_season.id,
-        ),
         response_model=CanonicalEpisodesPublic,
         schema=CanonicalEpisodeListOutput,
         read_options=read_options,
@@ -484,7 +457,6 @@ router = APIRouter()
 # Registered ahead of `episodes_router` so "/episodes/canonical" is read as the
 # canonical listing rather than as an `Episode` id that happens to be misspelt.
 router.include_router(canonical_episodes_router)
-router.include_router(canonical_season_episodes_router)
 router.include_router(canonical_show_episodes_router)
 router.include_router(episodes_router)
 router.include_router(season_episodes_router)

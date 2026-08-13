@@ -10,11 +10,13 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.canonical_media.filters import is_canonical
+from app.canonical_media.filters import canonical_id_column, is_canonical
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_SEASON,
+    CANONICAL_SHOW,
+    episode_id,
 )
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
@@ -26,6 +28,7 @@ from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
 from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
@@ -131,7 +134,7 @@ class SortExpressionBuilder:
             # of one episode is shuffled to the same place and a title stays
             # together however many websites carry it.
             random_ids: dict[str, Any] = {
-                "episode": col(CANONICAL_EPISODE.id),
+                "episode": episode_id(),
                 "season": self._fallbacks.episode_season_id(),
                 "show": self._fallbacks.show_id(),
                 "source": Source.id,
@@ -150,7 +153,7 @@ class SortExpressionBuilder:
                 f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
             )
         if field == "episode_count":
-            return func.count(col(CANONICAL_EPISODE.id)).over(
+            return func.count(episode_id()).over(
                 partition_by=self._fallbacks.show_id(),
             )
         if field == "started" and sort_key.model == "show":
@@ -189,7 +192,7 @@ class SortExpressionBuilder:
         elif sort_key.field == "recently_aired":
             episode_field = self._recently_aired_expr(sort_key)
         elif sort_key.field == "episode_count":
-            episode_field = col(CANONICAL_EPISODE.id)
+            episode_field = episode_id()
         else:
             episode_field = self._stored_column(
                 "episode",
@@ -286,12 +289,15 @@ class SortExpressionBuilder:
 
         A watch is recorded against the episode itself rather than against the
         copy that played it, so a title counts as started whichever website it was
-        started on.
+        started on. An episode nothing was minted for it to be a copy of hangs off
+        a website's own listing, so the title it counts towards is the one that
+        listing is a copy of.
         """
         if not self._user:
             return literal_column("0")
         watched_episode = aliased(Episode)
         watched_season = aliased(Season)
+        watched_show = aliased(Show)
         started_query = (
             select(Watch.id)
             .join(
@@ -302,15 +308,15 @@ class SortExpressionBuilder:
                 watched_season,
                 col(watched_episode.season_id) == col(watched_season.id),
             )
+            .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
             .where(
                 and_(
                     is_canonical(watched_episode),
-                    is_canonical(watched_season),
-                    col(watched_season.show_id) == self._fallbacks.show_id(),
+                    canonical_id_column(watched_show) == self._fallbacks.show_id(),
                     Watch.user_id == self._user.id,
                 ),
             )
-            .correlate(CANONICAL_SEASON)
+            .correlate(CANONICAL_SHOW)
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)

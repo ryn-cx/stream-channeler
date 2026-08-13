@@ -2,12 +2,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
-import { EpisodesService } from "@/client"
+import { CanonicalEpisodesService, EpisodesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
+import {
+  type CanonicalEpisodeTableData,
+  canonicalEpisodeColumns,
+} from "@/components/Episodes/canonicalColumns"
 import {
   type EpisodeTableData,
   episodeColumns,
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/_layout/episodes")({
 // TODO: Validate
 function EpisodesPage() {
   return (
-    <MediaListPage<EpisodeTableData>
+    <MediaListPage<EpisodeTableData, CanonicalEpisodeTableData>
       title="Episodes"
       path="/episodes"
       columns={episodeColumns}
@@ -50,6 +54,23 @@ function EpisodesPage() {
           filtered_count: result.filtered_count,
           is_server_side: result.is_server_side,
         }
+      }}
+      canonical={{
+        columns: canonicalEpisodeColumns,
+        defaultHidden: { key: false, id: false },
+        fetchTable: async (params) => {
+          const result = await CanonicalEpisodesService.getCanonicalEpisodes({
+            offset: params.offset,
+            limit: params.limit,
+            ...serializeTableQuery(params, canonicalEpisodeColumns),
+          })
+          return {
+            data: result.data,
+            total_count: result.total_count,
+            filtered_count: result.filtered_count,
+            is_server_side: result.is_server_side,
+          }
+        },
       }}
     />
   )

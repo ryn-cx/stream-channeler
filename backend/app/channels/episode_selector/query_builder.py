@@ -13,7 +13,8 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.canonical_media.filters import is_canonical, is_copy
+from app.canonical_media.filters import canonical_id_of, is_canonical, is_copy
+from app.canonical_media.keys import same_issuer_clause
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,
@@ -24,6 +25,9 @@ from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_SEASON,
+    CANONICAL_SHOW,
+    episode_id,
+    season_id,
 )
 from app.channels.episode_selector.show_counts import limit_shows
 from app.channels.episode_selector.sorting import SortExpressionBuilder
@@ -65,7 +69,7 @@ MAX_EPISODES_RETURNED = 1000
 # TODO: Validate
 def _media_id(episode: Episode) -> UUID:
     """Return the media `episode` is a copy of, for grouping the copies by."""
-    return episode.canonical_episode_id
+    return canonical_id_of(episode)
 
 
 # TODO: Validate
@@ -263,25 +267,63 @@ class EpisodeQueryBuilder:
             .select_from(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
             .join(Show, col(Season.show_id) == col(Show.id))
-            .join(
+            .outerjoin(
                 CANONICAL_EPISODE,
                 and_(
                     col(Episode.canonical_episode_id) == col(CANONICAL_EPISODE.id),
                     is_canonical(CANONICAL_EPISODE),
                 ),
             )
-            .join(
+            .outerjoin(
                 CANONICAL_SEASON,
+                col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
+            )
+            # An episode nothing was minted for it to be a copy of is the episode
+            # itself, so there is no canonical row to read the title off and the
+            # title is the one its website's listing is linked to instead. Joined
+            # only for those episodes, since a listing linked to more than one
+            # title would otherwise put every episode of it under each of them.
+            .outerjoin(
+                ShowCanonicalShow,
                 and_(
-                    col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
-                    is_canonical(CANONICAL_SEASON),
+                    col(ShowCanonicalShow.show_id) == col(Show.id),
+                    is_canonical(Episode),
                 ),
             )
             .join(
                 ChannelShow,
-                col(ChannelShow.canonical_show_id) == col(CANONICAL_SEASON.show_id),
+                col(ChannelShow.canonical_show_id)
+                == func.coalesce(
+                    col(CANONICAL_SEASON.show_id),
+                    col(ShowCanonicalShow.canonical_show_id),
+                ),
             )
-            .where(is_copy(Episode), is_copy(Season), is_copy(Show))
+            .join(
+                CANONICAL_SHOW,
+                and_(
+                    col(CANONICAL_SHOW.id) == col(ChannelShow.canonical_show_id),
+                    is_canonical(CANONICAL_SHOW),
+                ),
+            )
+            .where(is_copy(Show))
+            # A website files under a title seasons the title has no record of -
+            # a film it sells as part of the series, a run of extras - and a
+            # canonical season is minted for each so its episodes have somewhere
+            # to hang. The season is the website's own rather than one of the
+            # title's, so the episodes under it are no part of what the channel
+            # offers. Told apart by who issued the key: a season of the title
+            # carries the issuer the title itself was named by. An episode with no
+            # canonical season has none of this to be told apart by and is taken
+            # on the strength of the link its listing carries.
+            .where(
+                or_(
+                    col(CANONICAL_SEASON.key).is_(None),
+                    same_issuer_clause(
+                        col(CANONICAL_SHOW.key),
+                        col(CANONICAL_SEASON.key),
+                    ),
+                ),
+            )
         )
 
     # TODO: Validate
@@ -301,16 +343,14 @@ class EpisodeQueryBuilder:
                 ChannelSeasonFilter,
                 and_(
                     ChannelSeasonFilter.channel_show_id == ChannelShow.id,
-                    col(ChannelSeasonFilter.canonical_season_id)
-                    == col(Season.canonical_season_id),
+                    col(ChannelSeasonFilter.season_id) == season_id(),
                 ),
             )
             .outerjoin(
                 ChannelEpisodeFilter,
                 and_(
                     ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
-                    col(ChannelEpisodeFilter.canonical_episode_id)
-                    == col(Episode.canonical_episode_id),
+                    col(ChannelEpisodeFilter.canonical_episode_id) == episode_id(),
                     or_(
                         col(ChannelEpisodeFilter.expires_at).is_(None),
                         col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
@@ -333,8 +373,7 @@ class EpisodeQueryBuilder:
             ChannelSavedEpisodeOrder,
             and_(
                 ChannelSavedEpisodeOrder.channel_id == self._channel.id,
-                ChannelSavedEpisodeOrder.canonical_episode_id
-                == Episode.canonical_episode_id,
+                col(ChannelSavedEpisodeOrder.canonical_episode_id) == episode_id(),
             ),
         )
 
@@ -554,7 +593,7 @@ class EpisodeQueryBuilder:
         return (
             func.rank()
             .over(
-                partition_by=col(CANONICAL_EPISODE.id),
+                partition_by=episode_id(),
                 order_by=[priority, col(Episode.id)],
             )
             .label("source_rank")
@@ -566,7 +605,6 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         """Collapse the copies of an episode when nothing has asked for an order."""
-        query = self._canonical_columns.join(query)
         if not self._holds_copied_titles:
             return query
         subquery = query.add_columns(self._source_rank_column()).subquery()
@@ -617,13 +655,9 @@ class EpisodeQueryBuilder:
         # The title rather than the website's listing of it, so the last tie-break
         # keeps a title together however many websites and listings carry it.
         labeled_values.append(
-            col(CANONICAL_SEASON.show_id).label("show_id"),
+            self._canonical_columns.show_id().label("show_id"),
         )
         labeled_values.extend(self._source_rank_columns())
-        # Every filter and sort has now asked for its columns, so the levels they
-        # borrowed from TMDB are known and can be joined in before the values are
-        # frozen into a subquery.
-        query = self._canonical_columns.join(query)
         subquery = query.add_columns(*labeled_values).subquery()
 
         raws = [
