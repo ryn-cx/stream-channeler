@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, ClassVar, cast, override
@@ -93,7 +93,7 @@ class BasePlugin(
             "_source",
             "_current_show",
             "_reusable_file_cache",
-        }
+        },
     )
     """The instance attributes that describe the plugin rather than a show.
 
@@ -348,47 +348,25 @@ class BasePlugin(
         episode.update_at = tz_datetime.max()
 
     # TODO: Validate
-    def _import_show(
-        self,
-        show_key: str,
-        canonical_show: Show | None = None,
-    ) -> Show:
-        """Import a show into the database if it does not exist.
-
-        If it already exists return the existing Show.
-
-        `canonical_show` is the title a caller named the listing as a copy of,
-        carried down from `import_url` rather than held on the instance, so
-        nothing has to survive between calls for it to be read.
-        """
-        if show := self._preload_show(show_key).one_or_none():
-            self._link_supplied_canonical_show(show, canonical_show)
-            return show
-
-        _cache = self._download_show_files_and_children(show_key)
-        show = self.upsert_show(self.source, show_key, canonical_show=canonical_show)
-        # After the reconcile `upsert_show` ends on rather than before it, since a
-        # title nothing under the listing points at yet is one the reconcile would
-        # take straight back off again.
-        self._link_supplied_canonical_show(show, canonical_show)
-        return show
-
-    # TODO: Validate
     def _link_supplied_canonical_show(
         self,
         show: Show,
         canonical_show: Show | None,
     ) -> None:
-        """Record the title a caller named as one this listing is a copy of.
+        if canonical_show is None:
+            return
+        if not show.canonical_show_id:
+            show.canonical_show = canonical_show
+        link_canonical_show(self.session, show, canonical_show)
 
-        This is where a listing that mixes titles learns about the second of
-        them. A listing is only ever chiefly of one title, and which one is
-        settled by what its own seasons turn out to be under, so a title the
-        caller names is added to what the listing stands for rather than taken
-        as what it is.
-        """
-        if canonical_show:
-            link_canonical_show(self.session, show, canonical_show)
+    # TODO: Validate
+    def _link_supplied_canonical_shows(
+        self,
+        shows: Iterable[Show],
+        canonical_show: Show | None,
+    ) -> None:
+        for show in shows:
+            self._link_supplied_canonical_show(show, canonical_show)
 
     # TODO: Validate
     def _upsert_show_object(
@@ -585,6 +563,31 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         return f"(?:{alternatives})"
 
     # TODO: Validate
+    def _import_handler(
+        self,
+        handler: HandlerT,
+        canonical_show: Show | None = None,
+    ) -> list[URLImportResult]:
+        """Setup then call upsert_show to import a new show.
+
+        What a channel takes on from the import is returned rather than the show
+        itself, since that is what a caller asking for a URL to be imported is
+        asking for, and it is the handler that says what the URL named.
+        """
+        show_key = handler.show_key
+        if show := self._preload_show(show_key).one_or_none():
+            self._link_supplied_canonical_show(show, canonical_show)
+            return handler.import_results(show)
+
+        _cache = self._download_show_files_and_children(show_key)
+        show = self.upsert_show(self.source, show_key, canonical_show=canonical_show)
+        # After the reconcile `upsert_show` ends on rather than before it, since a
+        # title nothing under the listing points at yet is one the reconcile would
+        # take straight back off again.
+        self._link_supplied_canonical_show(show, canonical_show)
+        return handler.import_results(show)
+
+    # TODO: Validate
     @override
     def import_url(
         self,
@@ -593,8 +596,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     ) -> list[URLImportResult]:
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
-        show = self._import_show(handler.show_key, canonical_show)
-        return handler.import_results(show)
+        return self._import_handler(handler, canonical_show)
 
 
 # `__init_subclass__` only runs for subclasses, so the entry points `BasePlugin`

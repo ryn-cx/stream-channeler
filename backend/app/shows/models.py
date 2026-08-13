@@ -125,8 +125,8 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     # The title this is chiefly a copy of, and nothing when this is the title
-    # itself. Never absent on a listing: `canonical_media.hooks` gives one at the
-    # flush, before it can reach the database. A source that mixes several titles
+    # itself. Written by whatever imports the listing rather than filled in at
+    # the flush. A source that mixes several titles
     # into one listing is a copy of more than one, and the rest are reached
     # through `canonical_show_links`; this one is the title the copy's own name
     # and metadata belong to.
@@ -272,17 +272,28 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         parent: Source,
         key: str,
     ) -> Self | None:
-        """Return the listing `parent` names under `key`, without a query.
+        """Return the listing `parent` names under `key`.
 
         The identity map answers to `id` now that a title and a listing share a
         table, so the pair is looked for in the session's own index of it
         instead. A row the session has since let go of is not one it holds, and
         is answered for as though it had never been indexed.
+
+        Nothing indexes a row on its own account, so a miss is asked of the
+        database rather than taken as an answer: a listing that is stored and
+        not indexed is still a listing that exists, and writing it again is a
+        second row under a key that allows one.
         """
         show = show_session_index(session).get((parent.id, key))
-        if show is None or show not in session:
-            return None
-        return cast("Self", show)
+        if show is not None and show in session:
+            return cast("Self", show)
+
+        stored = session.exec(
+            select(cls).where(cls.source_id == parent.id, cls.key == key),
+        ).first()
+        if stored is not None:
+            index_show(session, stored)
+        return stored
 
     # TODO: Validate
     @classmethod

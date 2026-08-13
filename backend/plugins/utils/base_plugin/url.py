@@ -39,8 +39,20 @@ class URLHandler[PluginT](ABC):
 
     # TODO: Validate
     def import_results(self, show: Show) -> list[URLImportResult]:
-        """Returns the import results for the URL."""
-        return [URLImportResult.for_show(show)]
+        """Return what importing the URL added: the listing and its titles.
+
+        A listing is one website's copy of a title, and what a channel is being
+        asked for is the title. Both are returned, since a URL naming a listing
+        names the title it is of just as much, and a listing that mixes titles
+        is a copy of every one of them. A record that is the title itself has
+        none to add and stands alone.
+        """
+        results = [URLImportResult.for_show(show)]
+        results += [
+            URLImportResult.for_show(canonical_show)
+            for canonical_show in show.canonical_shows
+        ]
+        return results
 
 
 # TODO: Validate

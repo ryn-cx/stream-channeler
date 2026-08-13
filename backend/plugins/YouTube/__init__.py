@@ -115,22 +115,6 @@ class YouTube(
 
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        canonical_show: Show | None = None,
-    ) -> list[URLImportResult]:
-        handler = self.get_url_handler(url)
-        handler.raise_if_invalid()
-        show = self._import_show(
-            handler.show_key,
-            handler.playlist_key,
-            canonical_show,
-        )
-        return handler.import_results(show)
-
-    # TODO: Validate
-    @override
     def on_import_url_failure(
         self,
         queue_item: ChannelQueue,
@@ -151,30 +135,35 @@ class YouTube(
 
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
-    def _import_show(  # type: ignore[override]
+    def _import_handler(
         self,
-        show_key: str,
-        playlist_key: str,
+        handler: YouTubeURLHandler,
         canonical_show: Show | None = None,
-    ) -> Show:
+    ) -> list[URLImportResult]:
+        show_key = handler.show_key
+        playlist_key = handler.playlist_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
-            return self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
+            return handler.import_results(
+                self.upsert_show(
+                    self.source,
+                    show_key,
+                    canonical_show=canonical_show,
+                ),
             )
 
         if self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            return self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
+            return handler.import_results(
+                self.upsert_show(
+                    self.source,
+                    show_key,
+                    canonical_show=canonical_show,
+                ),
             )
 
-        return show
+        return handler.import_results(show)
 
     # TODO: Validate
     def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:

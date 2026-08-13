@@ -41,9 +41,7 @@ class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
     ) -> list[URLImportResult]:
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
-        self._media_type_value = handler.media_type
-        show = self._import_show(handler.show_key, canonical_show)
-        return handler.import_results(show)
+        return self._import_handler(handler, canonical_show)
 
     # TODO: Validate
     @override

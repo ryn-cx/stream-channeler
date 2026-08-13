@@ -1,6 +1,28 @@
 # TODO: Validate
+"""What TMDB's own records are keyed by.
+
+TMDB's records are the canonical rows themselves rather than copies of them, so
+they carry the canonical key exactly as it is written: `TMDB tv 1399`. That is
+what every other plugin's copy of the title is looked up under, and a copy is
+pointed at the row that key names.
+
+A film is one record at every level, so its title, its season and its episode
+are all keyed `TMDB movie 27205`. A season and an episode of a series are keyed by
+their own ids rather than by their numbering, which is what the canonical rows
+are keyed by; the numbering the API is asked in is read back off the files.
+"""
+
 from typing import NamedTuple
 
+from app.canonical_media.keys import (
+    EPISODE_LEVEL,
+    SEASON_LEVEL,
+    SHOW_LEVEL,
+    parse_tmdb_key,
+    tmdb_episode_key,
+    tmdb_season_key,
+    tmdb_show_key,
+)
 from app.media.media_type import MediaType
 
 # A movie has no seasons or episodes of its own, so it is stored as a single
@@ -8,82 +30,54 @@ from app.media.media_type import MediaType
 MOVIE_SEASON_NUMBER = 0
 MOVIE_EPISODE_NUMBER = 0
 
-
 # TODO: Validate
-class ShowKey(NamedTuple):
-    """The parts of a TMDB `Show` key."""
+class RecordKey(NamedTuple):
+    """The parts of a TMDB record key: which half of the catalogue, and the id."""
 
     media_type: MediaType
     tmdb_id: int
 
 
 # TODO: Validate
-class SeasonKey(NamedTuple):
-    """The parts of a TMDB `Season` key."""
-
-    media_type: MediaType
-    tmdb_id: int
-    season_number: int
-
-
-# TODO: Validate
-class EpisodeKey(NamedTuple):
-    """The parts of a TMDB `Episode` key."""
-
-    media_type: MediaType
-    tmdb_id: int
-    season_number: int
-    episode_number: int
+def _parse(key: str, level: str) -> RecordKey:
+    parsed = parse_tmdb_key(key, level)
+    if parsed is None:
+        message = f"{key!r} does not name a TMDB {level}"
+        raise ValueError(message)
+    return RecordKey(*parsed)
 
 
 # TODO: Validate
 def show_key(media_type: MediaType, tmdb_id: int) -> str:
     """Return the `Show` key for a title."""
-    return f"{media_type}/{tmdb_id}"
+    return tmdb_show_key(media_type, tmdb_id)
 
 
 # TODO: Validate
-def season_key(media_type: MediaType, tmdb_id: int, season_number: int) -> str:
-    """Return the `Season` key for a season of a title."""
-    return f"{media_type}/{tmdb_id}/{season_number}"
+def season_key(media_type: MediaType, tmdb_id: int) -> str:
+    """Return the `Season` key for a season, keyed by the season's own id."""
+    return tmdb_season_key(media_type, tmdb_id)
 
 
 # TODO: Validate
-def episode_key(
-    media_type: MediaType,
-    tmdb_id: int,
-    season_number: int,
-    episode_number: int,
-) -> str:
-    """Return the `Episode` key for an episode of a title."""
-    return f"{media_type}/{tmdb_id}/{season_number}/{episode_number}"
+def episode_key(media_type: MediaType, tmdb_id: int) -> str:
+    """Return the `Episode` key for an episode, keyed by the episode's own id."""
+    return tmdb_episode_key(media_type, tmdb_id)
 
 
 # TODO: Validate
-def parse_show_key(key: str) -> ShowKey:
-    """Return the media type and TMDB id a `Show` key is built from."""
-    media_type, tmdb_id = key.split("/")
-    return ShowKey(MediaType(media_type), int(tmdb_id))
+def parse_show_key(key: str) -> RecordKey:
+    """Return the half of the catalogue and the id a `Show` key names."""
+    return _parse(key, SHOW_LEVEL)
 
 
 # TODO: Validate
-def parse_season_key(key: str) -> SeasonKey:
-    """Return the parts a `Season` key is built from.
-
-    A season is reached from its key alone, without the show's, so the key
-    carries everything the show's does as well.
-    """
-    media_type, tmdb_id, season_number = key.split("/")
-    return SeasonKey(MediaType(media_type), int(tmdb_id), int(season_number))
+def parse_season_key(key: str) -> RecordKey:
+    """Return the half of the catalogue and the id a `Season` key names."""
+    return _parse(key, SEASON_LEVEL)
 
 
 # TODO: Validate
-def parse_episode_key(key: str) -> EpisodeKey:
-    """Return the parts an `Episode` key is built from."""
-    media_type, tmdb_id, season_number, episode_number = key.split("/")
-    return EpisodeKey(
-        MediaType(media_type),
-        int(tmdb_id),
-        int(season_number),
-        int(episode_number),
-    )
+def parse_episode_key(key: str) -> RecordKey:
+    """Return the half of the catalogue and the id an `Episode` key names."""
+    return _parse(key, EPISODE_LEVEL)

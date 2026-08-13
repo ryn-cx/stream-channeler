@@ -3,7 +3,7 @@ import json
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
 import pytest
 from freezegun import freeze_time
@@ -12,8 +12,6 @@ from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
 from app.constants import TEST_FILES_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
@@ -32,10 +30,6 @@ from tests.conftest import (
     init_db,
     savepoint_session,
     test_engine,
-)
-from tests.old_mess.plugins.plugin_validator.canonical_links import (
-    CanonicalLinks,
-    collect_canonical_links,
 )
 from tests.old_mess.plugins.plugin_validator.context_managers import (
     stored_file_record,
@@ -64,24 +58,6 @@ def _plugin_class(plugin_key: str) -> type[BasePlugin]:
             return plugin_class
     msg = f"No plugin found for key {plugin_key!r}"
     raise ValueError(msg)
-
-
-# TODO: Validate
-class DatabaseState(NamedTuple):
-    """Everything a test compares: a plugin's tree and the rows it is a copy of.
-
-    The canonical rows are held beside the plugin rather than under it because a
-    row is not owned by any one plugin - the point of one is that every copy of a
-    title, from whichever website, ends up pointing at the same row.
-
-    Which copy is of which row is held beside both, because the ids that carry
-    that in the records themselves are generated afresh on every run and so say
-    nothing about which row a copy ended up on.
-    """
-
-    plugin: Plugin
-    canonical_shows: list[CanonicalShow]
-    canonical_links: CanonicalLinks
 
 
 # TODO: Validate
@@ -275,28 +251,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         )
 
     # TODO: Validate
-    def select_canonical_shows_with_children(
-        self,
-        session: Session,
-    ) -> list[CanonicalShow]:
-        """Return every canonical title with its seasons and episodes loaded.
-
-        Every row is returned, not only the ones the plugin under test points at,
-        because a row is shared: what a test has to be able to see is that two
-        copies of one episode ended up on one row rather than one each.
-        """
-        statement = (
-            select(CanonicalShow)
-            .options(
-                selectinload(CanonicalShow.canonical_seasons).selectinload(  # type: ignore[arg-type]
-                    CanonicalSeason.canonical_episodes,  # type: ignore[arg-type]
-                ),
-            )
-            .order_by(CanonicalShow.key)
-        )
-        return list(session.exec(statement).all())
-
-    # TODO: Validate
     def _export_database_dump_file(self, session: Session) -> None:
         """Export the database dump file to disk if it does not already exist.
 
@@ -308,11 +262,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         plugins = self.select_plugins_with_children(session)
         dump = {
             "plugins": [self._dump_model(plugin) for plugin in plugins],
-            "canonical_shows": [
-                self._dump_model(canonical_show)
-                for canonical_show in self.select_canonical_shows_with_children(session)
-            ],
-            "canonical_links": collect_canonical_links(plugins),
         }
         self.database_dump_file_path().parent.mkdir(parents=True, exist_ok=True)
         self.database_dump_file_path().write_text(
@@ -322,7 +271,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     # TODO: Validate
     def load_database_dump(self) -> dict[str, Any]:
-        """Load the dumped state of every plugin and canonical row."""
+        """Load the dumped state of every plugin."""
         return json.loads(self.database_dump_file_path().read_text(encoding="utf-8"))
 
     # TODO: Validate
@@ -336,26 +285,9 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         raise ValueError(msg)
 
     # TODO: Validate
-    def load_database_dump_canonical_shows(self) -> list[CanonicalShow]:
-        """Load every canonical title from the database dump file."""
-        return [
-            self._load_model(CanonicalShow, canonical_show_dict)
-            for canonical_show_dict in self.load_database_dump()["canonical_shows"]
-        ]
-
-    # TODO: Validate
-    def load_database_dump_canonical_links(self) -> CanonicalLinks:
-        """Load what each copy was recorded as being a copy of."""
-        return self.load_database_dump()["canonical_links"]
-
-    # TODO: Validate
-    def dumped_state(self) -> DatabaseState:
+    def dumped_state(self) -> Plugin:
         """Return the state the database dump file recorded."""
-        return DatabaseState(
-            self.load_database_dump_plugin(),
-            self.load_database_dump_canonical_shows(),
-            self.load_database_dump_canonical_links(),
-        )
+        return self.load_database_dump_plugin()
 
     # TODO: Validate
     @staticmethod

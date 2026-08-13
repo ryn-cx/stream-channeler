@@ -110,7 +110,7 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,  # noqa: ARG002 - Copies media that already carries its own link.
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()
 

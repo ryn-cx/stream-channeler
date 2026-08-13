@@ -1,9 +1,6 @@
 # TODO: Validate
 from typing import Any
 
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -11,16 +8,13 @@ from app.shows.models import Show
 from app.sources.models import Source
 
 type MediaRecord = Plugin | Source | Show | Season | Episode
-type CanonicalRecord = CanonicalShow | CanonicalSeason | CanonicalEpisode
-type Record = MediaRecord | CanonicalRecord
+type Record = MediaRecord
 
 CHILDREN: dict[type, tuple[str, type]] = {
     Plugin: ("sources", Source),
     Source: ("shows", Show),
     Show: ("seasons", Season),
     Season: ("episodes", Episode),
-    CanonicalShow: ("canonical_seasons", CanonicalSeason),
-    CanonicalSeason: ("canonical_episodes", CanonicalEpisode),
 }
 
 
@@ -30,6 +24,10 @@ def children(record: Record) -> list[Record]:
     if entry is None:
         return []
     child_records: list[Record] = getattr(record, entry[0])
+    # A plugin gives every provider it tracks a source whether or not anything
+    # was imported from it, and an empty one says nothing a test is comparing.
+    if isinstance(record, Plugin):
+        return [source for source in child_records if source.shows]
     return child_records
 
 
@@ -43,10 +41,7 @@ class SerializationMixin:
         if type(model) in CHILDREN:
             key, _ = CHILDREN[type(model)]
             data[key] = sorted(
-                [
-                    SerializationMixin._dump_model(child)
-                    for child in getattr(model, key)
-                ],
+                [SerializationMixin._dump_model(child) for child in children(model)],
                 key=lambda x: x["id"],
             )
         return data
@@ -60,9 +55,6 @@ class SerializationMixin:
             Show,
             Season,
             Episode,
-            CanonicalShow,
-            CanonicalSeason,
-            CanonicalEpisode,
         ),
     ](
         model_class: type[T],

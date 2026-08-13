@@ -21,11 +21,6 @@ def automatically_import_models() -> None:
 # TODO: Validate
 def load_models() -> None:
     automatically_import_models()
-    # Imported here rather than at module scope: the hook names every media
-    # model, so it can only be loaded once the models themselves are.
-    from app.canonical_media.hooks import register_canonical_hooks  # noqa: PLC0415
-
-    register_canonical_hooks()
 
 
 # TODO: Update this comment upstream.

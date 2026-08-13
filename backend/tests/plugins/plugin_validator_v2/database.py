@@ -13,12 +13,13 @@ from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
+from app.canonical_media.filters import is_canonical
 from app.constants import TEST_FILES_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
-from app.seasons.models import CanonicalSeason, Season
-from app.shows.models import CanonicalShow, Show
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
@@ -248,7 +249,7 @@ class DatabaseMixin[PluginT: BasePlugin]:
     def select_canonical_shows_with_children(
         self,
         session: Session,
-    ) -> list[CanonicalShow]:
+    ) -> list[Show]:
         """Return every canonical title with its seasons and episodes loaded.
 
         Every row is returned, not only the ones the plugin under test points at,
@@ -256,13 +257,14 @@ class DatabaseMixin[PluginT: BasePlugin]:
         copies of one episode ended up on one row rather than one each.
         """
         statement = (
-            select(CanonicalShow)
+            select(Show)
+            .where(is_canonical(Show))
             .options(
-                selectinload(CanonicalShow.canonical_seasons).selectinload(  # type: ignore[arg-type]
-                    CanonicalSeason.canonical_episodes,  # type: ignore[arg-type]
+                selectinload(Show.seasons).selectinload(  # type: ignore[arg-type]
+                    Season.episodes,  # type: ignore[arg-type]
                 ),
             )
-            .order_by(CanonicalShow.key)
+            .order_by(Show.key)
         )
         return list(session.exec(statement).all())
 

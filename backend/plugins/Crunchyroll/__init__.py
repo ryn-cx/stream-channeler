@@ -28,6 +28,7 @@ from plugins.Crunchyroll.url_handlers import (
     CrunchyrollURLHandler,
 )
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
+from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
@@ -83,17 +84,19 @@ class Crunchyroll(
 
     # TODO: Validate
     @override  # Determines which source to use based on the show key.
-    def _import_show(
+    def _import_handler(
         self,
-        show_key: str,
+        handler: CrunchyrollURLHandler,
         canonical_show: Show | None = None,
-    ) -> Show:
+    ) -> list[URLImportResult]:
+        show_key = handler.show_key
         self.source = self._source_from_show_key(show_key)
         if not is_music_show_key(show_key):
-            return super()._import_show(show_key, canonical_show)
+            return super()._import_handler(handler, canonical_show)
 
         if show := self._preload_show(show_key).one_or_none():
-            return show
+            return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
-        return self.upsert_show(self.source, show_key, canonical_show)
+        show = self.upsert_show(self.source, show_key, canonical_show)
+        return handler.import_results(show)

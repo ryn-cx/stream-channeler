@@ -1,33 +1,30 @@
 # TODO: Validate
-"""Store what TMDB holds as canonical media rather than as this plugin's own.
+"""Store what TMDB holds the way every other plugin stores what its website holds.
 
-TMDB is not a website anything can be watched on, so it has no `Source`, no
-`Show` and no episodes of its own. What it has is the record of what a title
-*is*, which is exactly what a canonical row holds, so a title is imported
-straight into `Show` / `Season` / `Episode`.
-
-The `Plugin` row survives, because it still owns the `File` response cache that
-every download here reads through.
+TMDB is a plugin like any other: it has a `Source`, and it writes its own `Show`,
+`Season` and `Episode` rows through the same upsert every website's plugin uses.
+What is different is what those rows are. TMDB is the record of what a title is
+rather than a website carrying it, so its rows are the canonical rows themselves
+and point at nothing, which is what every other plugin's copy points at instead.
+Nothing can be watched on TMDB, so its records are left out wherever media is
+being chosen to play.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime, timedelta
-from typing import Any, override
+from datetime import timedelta
+from typing import override
 
-from sqlmodel import col, select
-
-from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key, tmdb_key_clause
 from app.canonical_media.service import (
-    canonical_episode_for,
-    canonical_season_for,
-    canonical_show_for,
+    canonical_episode_by_key,
+    canonical_season_by_key,
+    canonical_show_by_key,
 )
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
 from app.models import Visibility
 from app.plugins.models import Plugin
+from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
@@ -43,17 +40,18 @@ from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.keys import (
     MOVIE_EPISODE_NUMBER,
     MOVIE_SEASON_NUMBER,
-    show_key,
+    episode_key,
+    parse_show_key,
+    season_key,
 )
-from plugins.utils.base_plugin.files import BaseFile
 
-# How long a title's canonical rows stand for before TMDB is read again.
+# How long a record stands for before TMDB is read again.
 _REFRESH_INTERVAL = timedelta(days=1)
 
 
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
-    """Reads TMDB into the canonical tables."""
+    """Reads TMDB into records of TMDB's own."""
 
     # TODO: Validate
     @override
@@ -62,11 +60,6 @@ class UpsertMixin(HelperMixin, register=False):
         plugin_user: User,
         existing_plugin: Plugin | None,
     ) -> Plugin:
-        """Create the `Plugin` record as private.
-
-        Nothing here is streamable, and the plugin no longer holds media of its
-        own; the row exists so the `File` response cache has an owner.
-        """
         return Plugin(
             key=self.plugin_key(),
             name=self.plugin_name(),
@@ -78,21 +71,15 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @override
-    def initialize_sources(self) -> None:
-        """Skip source creation, because TMDB has no `Source` of its own."""
-        return
-
-    # TODO: Validate
-    @override
     def _upsert_source(self) -> Source:
-        """Raise, because TMDB is nowhere anything can be watched.
-
-        Every other plugin's source is a website with media on it. TMDB's media
-        is the canonical record itself, which belongs to no source, so nothing
-        should ever ask this plugin for one.
-        """
-        message = "TMDB holds canonical media and has no source of its own"
-        raise NotImplementedError(message)
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            favicon_url=self.FAVICON_URL,
+            data_timestamp=self._existing_data_timestamp_or_now(source),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
 
     # TODO: Validate
     @override
@@ -104,278 +91,240 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        """Raise, because TMDB stores no `Show`.
-
-        `import_title` is what reads a title in, and it writes canonical rows.
-        """
-        message = "TMDB imports titles as canonical media, not as a Show"
-        raise NotImplementedError(message)
-
-    # TODO: Validate
-    @override
-    def update_plugin(self, plugin: Plugin) -> None:
-        """Read every title TMDB holds again, so its canonical rows stay current.
-
-        TMDB has no `Source` and no `Show`, so the updater has nothing below the
-        `Plugin` row to walk. The titles are the rows themselves, and the plugin
-        row is the only thing that can carry when they are next due, so the
-        whole catalogue this instance has imported is refreshed in one pass.
-        """
-        # Held before the first title is read, because reading one moves the
-        # plugin's own `update_at` on to when the next run is due, and every
-        # title after it would then be asked for against a time nothing can be
-        # older than yet and be left as it was.
-        outdated_before = plugin.update_at
-
-        read_a_title = False
-        for canonical_show in self._imported_titles():
-            parsed = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
-            if parsed is None:
-                continue
-            media_type, tmdb_id = parsed
-            if self.import_title(media_type, tmdb_id, outdated_before) is not None:
-                read_a_title = True
-
-        # Reading a title is what says when the next run is due, so a run with
-        # no title to read has to answer the request itself rather than leave it
-        # to be asked again on every pass.
-        if not read_a_title:
-            plugin.update_at = None
-
-    # TODO: Validate
-    def _imported_titles(self) -> Sequence[Show]:
-        """Return every canonical title TMDB is the record behind.
-
-        A title only one website knows about is keyed by that website rather
-        than by TMDB, and TMDB has nothing to say about it, so the rows it can
-        refresh are the ones its own key names.
-        """
-        return self.session.exec(
-            select(Show)
-            .where(tmdb_key_clause(col(Show.key)))
-            .order_by(col(Show.key)),
-        ).all()
-
-    # TODO: Validate
-    def import_title(
-        self,
-        media_type: MediaType,
-        tmdb_id: int,
-        update_at: datetime | None = None,
-    ) -> Show | None:
-        """Store a title and everything under it as canonical media.
-
-        A copy of the title on any website reads these rows for whatever its own
-        site does not carry, so a title is imported as soon as one of them
-        resolves it rather than only when a `User` asks for it.
-
-        `update_at` is the point the stored responses have to be newer than, so
-        a refresh reads TMDB again where an import is content with what is
-        already stored.
-
-        Returns None when TMDB has no title for the id, which is stored as an
-        empty file rather than raised, so a caller working from an id a website
-        guessed at is not stopped by one that turned out to be wrong.
-        """
-        key = show_key(media_type, tmdb_id)
-        detail_file = self._show_files(key)[0]
-        detail_file.download_if_outdated(update_at)
-        if not detail_file.database_record.content:
-            return None
-
-        read_files: list[BaseFile[Any]] = [detail_file]
-        canonical_show = self._upsert_canonical_show(media_type, tmdb_id)
+        media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
-            self._upsert_movie(canonical_show, tmdb_id)
+            show = self._upsert_movie_show(source, show_key, tmdb_id, force=force)
         else:
-            season_numbers = self._season_numbers(key)
-            # Every season's row is read in one go. They are worked through one
-            # at a time below, and a row read on its own is a query of its own.
-            _cache = self._get_files_by_keys(
-                [
-                    self.season_detail_file(tmdb_id, season_number).file_key()
-                    for season_number in season_numbers
-                ],
-            )
-            read_files += [
-                self._upsert_series_season(
-                    canonical_show,
-                    tmdb_id,
-                    season_number,
-                    update_at,
-                )
-                for season_number in season_numbers
-            ]
-        self._schedule_next_refresh(read_files)
-        return canonical_show
+            show = self._upsert_series_show(source, show_key, tmdb_id, force=force)
+
+        self._soft_delete_missing(show_key)
+        return show
 
     # TODO: Validate
-    def _schedule_next_refresh(self, read_files: Sequence[BaseFile[Any]]) -> None:
-        """Record how current the catalogue is and when it is next due.
+    def _stored_title(self, show_key: str) -> Show:
+        """Return the row standing for this title, whatever wrote it.
 
-        The plugin row stands for every title TMDB holds, so the newest response
-        read is what says how current the catalogue is; a title read a moment ago
-        does not make one read last week any staler than it was.
+        Asked of the canonical service rather than looked up here, because that
+        is what everything else naming a title before it is imported asks too -
+        the linker pointing a listing at one - and both have to come back with
+        the same row. It remembers what it answered with, so a lookup that went
+        around it would be answered again with a row of its own.
         """
-        newest = max(read_file.data_timestamp for read_file in read_files)
-        if self.plugin.data_timestamp is None or newest > self.plugin.data_timestamp:
-            self.plugin.data_timestamp = newest
-        self.plugin.set_update_at(self.plugin.data_timestamp + _REFRESH_INTERVAL)
+        return canonical_show_by_key(self.session, show_key)
 
     # TODO: Validate
-    def _upsert_canonical_show(
+    def _stored_season(self, show: Show, season_key: str) -> Season:
+        """Return the row standing for this season, whatever wrote it."""
+        return canonical_season_by_key(self.session, season_key, show.id)
+
+    # TODO: Validate
+    def _stored_episode(self, season: Season, episode_key: str) -> Episode:
+        """Return the row standing for this episode, whatever wrote it."""
+        return canonical_episode_by_key(self.session, episode_key, season.id)
+
+    # TODO: Validate
+    def _upsert_series_show(
         self,
-        media_type: MediaType,
+        source: Source,
+        show_key: str,
         tmdb_id: int,
+        *,
+        force: bool = False,
     ) -> Show:
-        """Write what TMDB says about a title onto the row standing for it."""
-        if media_type == MediaType.movie:
-            movie = self.movie_detail_file(tmdb_id).parsed()
-            name = movie.title
-            description = movie.overview
-            image_url = backdrop_image_url(movie.backdrop_path) or poster_image_url(
-                movie.poster_path,
-            )
-        else:
+        show = self._stored_title(show_key)
+        if self._show_is_outdated(show, force=force):
             series = self.show_detail_file(tmdb_id).parsed()
-            name = series.name
-            description = series.overview
-            image_url = backdrop_image_url(series.backdrop_path) or poster_image_url(
-                series.poster_path,
-            )
-
-        canonical = canonical_show_for(self.session, media_type, tmdb_id)
-        canonical.url = title_page_url(media_type, tmdb_id)
-        canonical.name = name
-        canonical.description = description
-        canonical.media_type = "Movie" if media_type == MediaType.movie else "TV Show"
-        canonical.image_url = image_url
-        return canonical
-
-    # TODO: Validate
-    def _season_numbers(self, key: str) -> list[int]:
-        """Return the season numbers TMDB gives a series, read off its key file."""
-        return [
-            int(season_key.rsplit("/", 1)[1])
-            for season_key in self._season_keys_from_file(key)
-        ]
-
-    # TODO: Validate
-    def _upsert_series_season(
-        self,
-        canonical_show: Show,
-        tmdb_id: int,
-        season_number: int,
-        update_at: datetime | None = None,
-    ) -> BaseFile[Any]:
-        """Write a series season and its episodes onto their canonical rows.
-
-        The seasons are read off the title's own file, which says which seasons
-        exist but nothing about what is in them, so each one is downloaded here.
-        A season TMDB lists but has no detail for is stored empty and has no
-        rows to write.
-
-        Returns the season's file either way, since a season stored empty was
-        still read and still says how current the catalogue is.
-        """
-        season_file = self.season_detail_file(tmdb_id, season_number)
-        season_file.download_if_outdated(update_at)
-        if not season_file.database_record.content:
-            return season_file
-        detail = season_file.parsed()
-        canonical_season = canonical_season_for(
-            self.session,
-            MediaType.tv,
-            detail.id,
-            canonical_show.id,
-        )
-        canonical_season.url = title_page_url(MediaType.tv, tmdb_id)
-        canonical_season.name = detail.name
-        canonical_season.season_number = season_number
-        canonical_season.sort_order = season_number
-        canonical_season.image_url = poster_image_url(detail.poster_path)
-
-        for sort_order, episode in enumerate(detail.episodes):
-            air = air_datetime(episode.air_date)
-            canonical_episode = canonical_episode_for(
-                self.session,
-                MediaType.tv,
-                episode.id,
-                canonical_season.id,
-            )
-            self._write_episode(
-                canonical_episode,
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
+                key=show_key,
+                name=series.name,
+                description=series.overview,
                 url=title_page_url(MediaType.tv, tmdb_id),
-                name=episode.name,
-                description=episode.overview,
-                image_url=still_image_url(episode.still_path),
-                duration=duration_seconds(episode.runtime),
-                air=air,
-                episode_number=episode.episode_number,
-                sort_order=sort_order,
+                image_url=backdrop_image_url(series.backdrop_path)
+                or poster_image_url(series.poster_path),
+                media_type="TV Show",
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _REFRESH_INTERVAL,
+                source_id=source.id,
             )
-        return season_file
+            show = self._upsert_show_object(new_show, source, show, show_key)
+
+        self._upsert_series_seasons(show, show_key, tmdb_id, force=force)
+        return show
 
     # TODO: Validate
-    def _upsert_movie(self, canonical_show: Show, tmdb_id: int) -> None:
-        """Write a film as a single season holding the film as its only episode."""
-        movie = self.movie_detail_file(tmdb_id).parsed()
-        canonical_season = canonical_season_for(
-            self.session,
-            MediaType.movie,
-            movie.id,
-            canonical_show.id,
-        )
-        canonical_season.url = title_page_url(MediaType.movie, tmdb_id)
-        canonical_season.name = movie.title
-        canonical_season.season_number = MOVIE_SEASON_NUMBER
-        canonical_season.sort_order = MOVIE_SEASON_NUMBER
-        canonical_season.image_url = poster_image_url(movie.poster_path)
+    def _upsert_series_seasons(
+        self,
+        show: Show,
+        show_key: str,
+        tmdb_id: int,
+        *,
+        force: bool = False,
+    ) -> None:
+        for key in self._season_keys_from_file(show_key):
+            season_number = self.season_number(key, show_key)
+            season_file = self.season_detail_file(tmdb_id, season_number)
+            # A season the title lists but TMDB has no detail for is stored
+            # empty, and an empty file has nothing to read a season out of.
+            if not season_file.database_record.content:
+                continue
+            detail = season_file.parsed()
+            season = self._stored_season(show, key)
+            if self._season_is_outdated(season, show_key, force=force):
+                data_timestamp = self.season_data_timestamp(key, show_key)
+                new_season = Season(
+                    key=key,
+                    name=detail.name,
+                    season_number=season_number,
+                    sort_order=season_number,
+                    url=title_page_url(MediaType.tv, tmdb_id),
+                    image_url=poster_image_url(detail.poster_path),
+                    data_timestamp=data_timestamp,
+                    update_at=data_timestamp + _REFRESH_INTERVAL,
+                    show_id=show.id,
+                )
+                season = self._upsert_season_object(
+                    new_season,
+                    show,
+                    season,
+                    show_key,
+                )
+            self._upsert_series_episodes(
+                season,
+                key,
+                show_key,
+                tmdb_id,
+                force=force,
+            )
 
-        release = air_datetime(movie.release_date)
-        canonical_episode = canonical_episode_for(
-            self.session,
-            MediaType.movie,
-            movie.id,
-            canonical_season.id,
-        )
-        self._write_episode(
-            canonical_episode,
-            url=title_page_url(MediaType.movie, tmdb_id),
+    # TODO: Validate
+    def _upsert_series_episodes(
+        self,
+        season: Season,
+        season_key: str,
+        show_key: str,
+        tmdb_id: int,
+        *,
+        force: bool = False,
+    ) -> None:
+        season_number = self.season_number(season_key, show_key)
+        season_file = self.season_detail_file(tmdb_id, season_number)
+        if not season_file.database_record.content:
+            return
+        for sort_order, entry in enumerate(season_file.parsed().episodes):
+            key = episode_key(MediaType.tv, entry.id)
+            episode = self._stored_episode(season, key)
+            if not self._episode_is_outdated(
+                episode,
+                season_key,
+                show_key,
+                force=force,
+            ):
+                continue
+            data_timestamp = self.episode_data_timestamp(key, season_key, show_key)
+            new_episode = Episode(
+                key=key,
+                name=entry.name,
+                description=entry.overview,
+                url=title_page_url(MediaType.tv, tmdb_id),
+                image_url=still_image_url(entry.still_path),
+                duration=duration_seconds(entry.runtime),
+                air_date=air_datetime(entry.air_date),
+                episode_number=entry.episode_number,
+                sort_order=sort_order,
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _REFRESH_INTERVAL,
+                season_id=season.id,
+            )
+            self._upsert_episode_object(new_episode, season, episode, show_key)
+
+    # TODO: Validate
+    def _upsert_movie_show(
+        self,
+        source: Source,
+        show_key: str,
+        tmdb_id: int,
+        *,
+        force: bool = False,
+    ) -> Show:
+        movie = self.movie_detail_file(tmdb_id).parsed()
+        show = self._stored_title(show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
+                key=show_key,
+                name=movie.title,
+                description=movie.overview,
+                url=title_page_url(MediaType.movie, tmdb_id),
+                image_url=backdrop_image_url(movie.backdrop_path)
+                or poster_image_url(movie.poster_path),
+                media_type="Movie",
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _REFRESH_INTERVAL,
+                source_id=source.id,
+            )
+            show = self._upsert_show_object(new_show, source, show, show_key)
+
+        self._upsert_movie_season(show, show_key, tmdb_id, force=force)
+        return show
+
+    # TODO: Validate
+    def _upsert_movie_season(
+        self,
+        show: Show,
+        show_key: str,
+        tmdb_id: int,
+        *,
+        force: bool = False,
+    ) -> None:
+        movie = self.movie_detail_file(tmdb_id).parsed()
+        key = season_key(MediaType.movie, tmdb_id)
+        season = self._stored_season(show, key)
+        if self._season_is_outdated(season, show_key, force=force):
+            data_timestamp = self.season_data_timestamp(key, show_key)
+            new_season = Season(
+                key=key,
+                name=movie.title,
+                season_number=MOVIE_SEASON_NUMBER,
+                sort_order=MOVIE_SEASON_NUMBER,
+                url=title_page_url(MediaType.movie, tmdb_id),
+                image_url=poster_image_url(movie.poster_path),
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + _REFRESH_INTERVAL,
+                show_id=show.id,
+            )
+            season = self._upsert_season_object(new_season, show, season, show_key)
+
+        self._upsert_movie_episode(season, key, show_key, tmdb_id, force=force)
+
+    # TODO: Validate
+    def _upsert_movie_episode(
+        self,
+        season: Season,
+        season_key: str,
+        show_key: str,
+        tmdb_id: int,
+        *,
+        force: bool = False,
+    ) -> None:
+        movie = self.movie_detail_file(tmdb_id).parsed()
+        key = episode_key(MediaType.movie, tmdb_id)
+        episode = self._stored_episode(season, key)
+        if not self._episode_is_outdated(episode, season_key, show_key, force=force):
+            return
+        data_timestamp = self.episode_data_timestamp(key, season_key, show_key)
+        new_episode = Episode(
+            key=key,
             name=movie.title,
             description=movie.overview,
+            url=title_page_url(MediaType.movie, tmdb_id),
             image_url=backdrop_image_url(movie.backdrop_path),
             duration=duration_seconds(movie.runtime),
-            air=release,
+            air_date=air_datetime(movie.release_date),
             episode_number=MOVIE_EPISODE_NUMBER,
             sort_order=MOVIE_EPISODE_NUMBER,
+            data_timestamp=data_timestamp,
+            update_at=data_timestamp + _REFRESH_INTERVAL,
+            season_id=season.id,
         )
-
-    # TODO: Validate
-    def _write_episode(  # noqa: PLR0913 - One argument per field TMDB reports.
-        self,
-        canonical_episode: Episode,
-        *,
-        url: str | None,
-        name: str | None,
-        description: str | None,
-        image_url: str | None,
-        duration: int | None,
-        air,  # noqa: ANN001 - The parsed air date, or None.
-        episode_number: int | None,
-        sort_order: int,
-    ) -> None:
-        """Write what TMDB says about an episode onto the row standing for it."""
-        canonical_episode.url = url
-        canonical_episode.name = name
-        canonical_episode.description = description
-        canonical_episode.image_url = image_url
-        canonical_episode.duration = duration
-        canonical_episode.air_date = air
-        canonical_episode.episode_number = episode_number
-        canonical_episode.sort_order = sort_order
-
-    # TODO: Validate
-    def tmdb_title_url(self, media_type: MediaType, tmdb_id: int) -> str | None:
-        """Return the title's page on themoviedb.org."""
-        return title_page_url(media_type, tmdb_id)
+        self._upsert_episode_object(new_episode, season, episode, show_key)

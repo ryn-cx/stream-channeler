@@ -7,11 +7,8 @@ from urllib.parse import parse_qs, urlsplit
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.url_title_details import models as url_title_details_models
 
-from app.media.media_type import MediaType
-from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
-from plugins.TMDB.link import Media, TMDBLinker
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
@@ -53,60 +50,6 @@ class HelperMixin(FileMixin, register=False):
                 offer_url = self._clean_external_url(offer.standard_web_url)
                 return self._plugin_for_url(offer_url)
         return None
-
-    # TODO: Validate
-    def _resolved_media(self, show_key: str) -> Media | None:
-        """Return the media this listing is, working it out if nothing knows yet.
-
-        Reached from outside an import, where there is no upserted show to read
-        the answer off, so the stored copies are what it is worked out from.
-        """
-        media_type = self.tmdb_media_type(show_key)
-        linker = TMDBLinker(self.session)
-        show = self._preload_show(show_key).first()
-        if show is not None and (known := linker.known_media(show, media_type)):
-            return known
-
-        details_file = self.url_title_details_file(show_key)
-        details_file.download_if_outdated()
-        content = details_file.parsed().data.url_v2.node.content
-        return linker.search_media(
-            content.title,
-            media_type,
-            content.original_release_year,
-        )
-
-    # TODO: Validate
-    def _resolved_tmdb_id(self, show_key: str) -> int | None:
-        """Return the id of the title this listing is, or None."""
-        found = self._resolved_media(show_key)
-        return None if found is None else found.tmdb_id
-
-    # TODO: Validate
-    def _title_to_hand_off(
-        self,
-        show_key: str,
-        canonical_show: Show | None,
-    ) -> Show | None:
-        """Return the title to name when handing an import on to another plugin."""
-        linker = TMDBLinker(self.session)
-        found = linker.supplied_media(
-            self.tmdb_media_type(show_key),
-            canonical_show,
-        ) or self._resolved_media(show_key)
-        if found is None:
-            return canonical_show
-        return linker.title_to_hand_off(
-            found.media_type,
-            found.tmdb_id,
-            canonical_show,
-        )
-
-    # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> MediaType:
-        return (
-            MediaType.movie if self._media_type(show_key) == "Movie" else MediaType.tv
-        )
 
     # TODO: Validate
     @property

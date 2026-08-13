@@ -11,10 +11,6 @@ from freezegun import freeze_time
 from sqlalchemy import inspect as sa_inspect
 from sqlmodel import Session, col, select
 
-from app.episodes.models import CanonicalEpisode
-from app.canonical_media.service import sync_canonical_show
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -28,13 +24,10 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin import BasePlugin
 from tests.old_mess.app.utils.utils import build_random_model
-from tests.old_mess.plugins.plugin_validator.canonical_links import (
-    collect_canonical_links,
-)
 from tests.old_mess.plugins.plugin_validator.context_managers import (
     mock_update,
 )
-from tests.old_mess.plugins.plugin_validator.database import DatabaseMixin, DatabaseState
+from tests.old_mess.plugins.plugin_validator.database import DatabaseMixin
 from tests.old_mess.plugins.plugin_validator.log_stats import log_stats
 from tests.old_mess.plugins.plugin_validator.validator import Validator
 
@@ -68,56 +61,19 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         return self._load_model(Plugin, dumped)
 
     # TODO: Validate
-    def get_detached_canonical_shows(self, session: Session) -> list[CanonicalShow]:
-        """Return detached copies of every canonical row to use with validation."""
-        return [
-            self._load_model(CanonicalShow, self._dump_model(canonical_show))
-            for canonical_show in self.select_canonical_shows_with_children(session)
-        ]
-
-    # TODO: Validate
-    def detached_state(self, session: Session) -> DatabaseState:
+    def detached_state(self, session: Session) -> Plugin:
         """Return a detached copy of everything a test compares."""
-        return DatabaseState(
-            self.get_detached_plugin(session),
-            self.get_detached_canonical_shows(session),
-            collect_canonical_links(self.select_plugins_with_children(session)),
-        )
-
-    # TODO: Validate
-    def settle_canonical_media(self, session: Session, show: Show) -> None:
-        """Give the records built by hand the canonical rows an import would have.
-
-        A fabricated record is handed a row by the flush hook and nothing has
-        claimed it, where a record an import wrote is of the row its key names.
-        Reconciling before the state is captured is what makes the two the same,
-        so the update under test is not also the first thing to settle the link.
-        """
-        sync_canonical_show(session, show, self.plugin_class.plugin_key())
-        session.flush()
+        return self.get_detached_plugin(session)
 
     # TODO: Validate
     def validate_state(
         self,
         validator: Validator,
-        original: DatabaseState,
-        actual: DatabaseState,
+        original: Plugin,
+        actual: Plugin,
     ) -> None:
-        """Validate the plugin's tree, the rows its records are copies of, and the links.
-
-        The links are validated last so that a plugin whose tree or canonical
-        rows are already wrong is reported by what went wrong first rather than
-        by every copy the wrongness moved onto another row.
-        """
-        validator.validate(original.plugin, actual.plugin)
-        validator.validate_canonical_shows(
-            original.canonical_shows,
-            actual.canonical_shows,
-        )
-        validator.validate_canonical_links(
-            original.canonical_links,
-            actual.canonical_links,
-        )
+        """Validate the plugin's tree."""
+        validator.validate(original, actual)
 
     # TODO: Validate
     def import_url_validator(self) -> Validator:
@@ -132,13 +88,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             .changed(Show, "source_id")
             .changed(Season, "show_id")
             .changed(Episode, "season_id")
-            # The row each copy is of is created alongside it, so its id is as
-            # freshly generated as the copy's own.
-            .changed(Show, "canonical_show_id")
-            .changed(Season, "canonical_season_id")
-            .changed(Episode, "canonical_episode_id")
-            .changed(CanonicalSeason, "canonical_show_id")
-            .changed(CanonicalEpisode, "canonical_season_id")
         )
 
     # TODO: Validate
@@ -350,7 +299,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     def _update_and_validate(
         self,
         session: Session,
-        original: DatabaseState,
+        original: Plugin,
         entity: Plugin | Source | Show | Season | Episode,
         validator: Validator | None = None,
         *,
@@ -631,7 +580,6 @@ class DeletedEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                 deleted_at=tz_datetime.now(),
             )
             season.episodes.append(fake_episode)
-            self.settle_canonical_media(session_with_files, season.show)
 
         original = self.detached_state(session_with_files)
         fake_episode.soft_undelete()
@@ -670,7 +618,6 @@ class DeletedSeasonTests[PluginT: BasePlugin](PluginValidator[PluginT]):
                 deleted_at=tz_datetime.now(),
             )
             show.seasons.append(fake_season)
-            self.settle_canonical_media(session_with_files, show)
 
         original = self.detached_state(session_with_files)
         fake_season.soft_undelete()
@@ -710,7 +657,6 @@ class DeletedEpisodeUpdateShowTests[PluginT: BasePlugin](PluginValidator[PluginT
                 deleted_at=tz_datetime.now(),
             )
             season.episodes.append(fake_episode)
-            self.settle_canonical_media(session_with_files, season.show)
 
         original = self.detached_state(session_with_files)
         fake_episode.soft_undelete()
@@ -757,7 +703,6 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
             )
             fake_season.episodes.append(fake_episode)
             show.seasons.append(fake_season)
-            self.settle_canonical_media(session_with_files, show)
 
         original = self.detached_state(session_with_files)
         fake_season.soft_undelete()

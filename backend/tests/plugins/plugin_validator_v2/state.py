@@ -8,15 +8,15 @@ from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from app.episodes.models import CanonicalEpisode, Episode
+from app.episodes.models import Episode
 from app.plugins.models import Plugin
-from app.seasons.models import CanonicalSeason, Season
-from app.shows.models import CanonicalShow, Show
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 
 type MediaRecord = Plugin | Source | Show | Season | Episode
-type CanonicalRecord = CanonicalShow | CanonicalSeason | CanonicalEpisode
+type CanonicalRecord = Show | Season | Episode
 type Record = MediaRecord | CanonicalRecord
 type KeyById = dict[uuid.UUID, str]
 
@@ -25,12 +25,26 @@ CHILDREN: dict[type, str] = {
     Source: "shows",
     Show: "seasons",
     Season: "episodes",
-    CanonicalShow: "canonical_seasons",
-    CanonicalSeason: "canonical_episodes",
 }
 
 _ID_FIELD = "id"
 _ID_SUFFIX = "_id"
+
+
+# TODO: Validate
+def _children(record: Record) -> list[Any]:
+    """The children of `record` that are worth writing down.
+
+    A plugin gives every provider it tracks a source whether or not anything was
+    imported from it, and an empty one says nothing two runs can compare.
+    """
+    child_name = CHILDREN.get(type(record))
+    if child_name is None:
+        return []
+    child_records: list[Any] = getattr(record, child_name)
+    if isinstance(record, Plugin):
+        return [source for source in child_records if source.shows]
+    return child_records
 
 
 # TODO: Validate
@@ -44,7 +58,7 @@ def _dump_value(value: object) -> object:
 # TODO: Validate
 def key_by_id(
     plugins: Sequence[Plugin],
-    canonical_shows: Sequence[CanonicalShow],
+    canonical_shows: Sequence[Show],
     users: Sequence[User],
 ) -> KeyById:
     """Return the key of every record an id in the dump can name.
@@ -70,9 +84,9 @@ def key_by_id(
                         keys[episode.id] = episode.key
     for canonical_show in canonical_shows:
         keys[canonical_show.id] = canonical_show.key
-        for canonical_season in canonical_show.canonical_seasons:
+        for canonical_season in canonical_show.seasons:
             keys[canonical_season.id] = canonical_season.key
-            for canonical_episode in canonical_season.canonical_episodes:
+            for canonical_episode in canonical_season.episodes:
                 keys[canonical_episode.id] = canonical_episode.key
     return keys
 
@@ -105,7 +119,7 @@ def dump_record(record: Record, keys: KeyById) -> dict[str, Any]:
         data["canonical_show_keys"] = _canonical_show_keys(record)
     if child_name := CHILDREN.get(type(record)):
         data[child_name] = _by_key(
-            dump_record(child, keys) for child in getattr(record, child_name)
+            dump_record(child, keys) for child in _children(record)
         )
     return data
 
@@ -141,7 +155,7 @@ def _canonical_show_keys(show: Show) -> list[str]:
 # TODO: Validate
 def state_json(
     plugins: Sequence[Plugin],
-    canonical_shows: Sequence[CanonicalShow],
+    canonical_shows: Sequence[Show],
     users: Sequence[User],
 ) -> str:
     """Return everything a test compares, as the text it is stored as."""

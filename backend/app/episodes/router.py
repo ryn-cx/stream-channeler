@@ -37,15 +37,12 @@ from app.episodes.schemas import (
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
-    EpisodeTmdbLinkInput,
     EpisodeUpdate,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
 )
 from app.episodes.tmdb_matches import (
-    confirm_no_tmdb_match,
-    link_episode,
     list_tmdb_episode_choices,
     list_unlocked_episodes,
     list_unmatched_episodes,
@@ -282,40 +279,6 @@ def admin_get_tmdb_episode_choices(
     linked to, which is what reaches an episode TMDB files under its own title.
     """
     return list_tmdb_episode_choices(session, episode, tmdb_show_id)
-
-
-# TODO: Validate
-@episodes_router.put(
-    "/{episode_id}/tmdb-link",  # noqa: FAST003 - Used by ExistingEpisode.
-    dependencies=[Depends(get_current_active_superuser)],
-)
-def admin_link_episode_to_tmdb(
-    session: SessionDep,
-    episode: ExistingEpisode,
-    link_input: EpisodeTmdbLinkInput,
-) -> EpisodeOutput:
-    """Point an `Episode` at the TMDB episode an admin chose for it."""
-    linked = link_episode(
-        session,
-        episode,
-        link_input.tmdb_episode_id,
-        media_type=link_input.media_type,
-        selected=link_input.selected,
-    )
-    return _episode_output(session, linked)
-
-
-# TODO: Validate
-@episodes_router.put(
-    "/{episode_id}/tmdb-no-match",  # noqa: FAST003 - Used by ExistingEpisode.
-    dependencies=[Depends(get_current_active_superuser)],
-)
-def admin_mark_episode_no_tmdb_match(
-    session: SessionDep,
-    episode: ExistingEpisode,
-) -> EpisodeOutput:
-    """Hold an `Episode` at its own identifier, TMDB having nothing to link it to."""
-    return _episode_output(session, confirm_no_tmdb_match(session, episode))
 
 
 # TODO: Validate

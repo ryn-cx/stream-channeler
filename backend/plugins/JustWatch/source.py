@@ -8,9 +8,7 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import col, select
 
-from app.canonical_media.keys import tmdb_show_key
 from app.files.models import File
-from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -187,28 +185,20 @@ class SourceMixin(UpsertMixin, register=False):
         JustWatch watches the new titles feed of every service a title it
         imported is on, including the services whose own plugin holds the media.
         Only the copy on the service the feed belongs to changed, and it is
-        stored under that plugin's own key, so the TMDB id both copies were
-        matched to is the only thing that ties them together.
+        stored under that plugin's own key, so the titles both copies are of are
+        the only thing that ties them together.
         """
-        tmdb_id = self._resolved_tmdb_id(show_key)
-        if tmdb_id is None:
+        show = self._preload_show(show_key).first()
+        if show is None or not show.canonical_show_ids:
             return
 
-        # A title can be a film or a series, so both canonical rows TMDB could
-        # have issued the id under are matched.
         statement = (
             select(Show)
             .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
-            .join(
-                Show,
-                col(ShowCanonicalShow.canonical_show_id) == Show.id,
-            )
-            .join(Source)
-            .join(Plugin)
+            .join(Source, col(Show.source_id) == col(Source.id))
+            .join(Plugin, col(Source.plugin_id) == col(Plugin.id))
             .where(
-                col(Show.key).in_(
-                    [tmdb_show_key(half, tmdb_id) for half in MediaType],
-                ),
+                col(ShowCanonicalShow.canonical_show_id).in_(show.canonical_show_ids),
                 Plugin.key == plugin_class.plugin_key(),
                 col(Show.deleted_at).is_(None),
             )

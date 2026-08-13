@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import canonical_show_ids_by_key
-from app.channels.service import shows_by_canonical_id
+from sqlmodel import col, select
+
+from app.plugins.models import Plugin
 from app.shows.models import Show
+from app.sources.models import Source
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import JustWatchURLHandler
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
@@ -20,9 +22,9 @@ class ImportURLMixin(
 ):
     # TODO: Validate
     @override
-    def import_url(
+    def _import_handler(
         self,
-        url: str,
+        handler: JustWatchURLHandler,
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
         """Import the title from every source JustWatch has an offer for.
@@ -33,11 +35,8 @@ class ImportURLMixin(
 
         Every source's copy of a title is the same title, so a caller that knows
         which title this is says so once here and every plugin below works from it
-        instead of searching TMDB for the title by its own name.
+        instead of working it out for itself.
         """
-        handler = self.get_url_handler(url)
-        handler.raise_if_invalid()
-
         results: list[URLImportResult] = []
         unhandled_source_keys: list[str] = []
         imported_offer_urls: set[str] = set()
@@ -57,22 +56,24 @@ class ImportURLMixin(
                 continue
             imported_offer_urls.add(offer_url)
 
-            # The title is what ties a feed hit back to the copy the other
-            # plugin stores, and a title can be delegated on every service it is
-            # on, so it is resolved here rather than when a show is upserted.
-            title = self._title_to_hand_off(handler.show_key, canonical_show)
-
-            plugin_results = plugin_class(self.session).import_url(offer_url, title)
+            plugin_results = plugin_class(self.session).import_url(
+                offer_url,
+                canonical_show,
+            )
             results.extend(
                 self._delegated_results(
                     handler,
                     plugin_class,
                     plugin_results,
-                    title,
+                    canonical_show,
                 ),
             )
 
-        shows = self._import_shows(handler.show_key, unhandled_source_keys)
+        shows = self._import_shows(
+            handler.show_key,
+            unhandled_source_keys,
+            canonical_show,
+        )
         results.extend(handler.import_results_for_shows(shows))
         return results
 
@@ -127,20 +128,17 @@ class ImportURLMixin(
             raise ValueError(msg)
 
         result_show_key = plugin_results[0].show_key
-        canonical_show_ids = canonical_show_ids_by_key(
-            self.session,
-            {result_show_key},
-        ).get(result_show_key, set())
-        copies = shows_by_canonical_id(self.session, canonical_show_ids)
-        show = next(
-            (
-                copy
-                for canonical_show_id in canonical_show_ids
-                for copy in copies[canonical_show_id]
-                if copy.source.plugin.key == plugin_class.plugin_key() and copy.url
+        show = self.session.exec(
+            select(Show)
+            .join(Source, col(Show.source_id) == col(Source.id))
+            .join(Plugin, col(Source.plugin_id) == col(Plugin.id))
+            .where(
+                Show.key == result_show_key,
+                Plugin.key == plugin_class.plugin_key(),
+                col(Show.url).is_not(None),
+                col(Show.deleted_at).is_(None),
             ),
-            None,
-        )
+        ).first()
         if show is None or show.url is None:
             msg = f"Crunchyroll {result_show_key} has no URL to import the title from"
             raise ValueError(msg)
@@ -150,7 +148,12 @@ class ImportURLMixin(
         )
 
     # TODO: Validate
-    def _import_shows(self, show_key: str, source_keys: list[str]) -> list[Show]:
+    def _import_shows(
+        self,
+        show_key: str,
+        source_keys: list[str],
+        canonical_show: Show | None,
+    ) -> list[Show]:
         """Import the title from JustWatch's own data for `source_keys`.
 
         A title picks up and loses offers over time, so a title that is already
@@ -178,4 +181,4 @@ class ImportURLMixin(
             # than the lazy loads this avoids.
             self._preload_sources(source_keys, preload_episodes=True).all(),
         )
-        return self._upsert_shows(show_key, source_keys)
+        return self._upsert_shows(show_key, source_keys, canonical_show)

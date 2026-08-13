@@ -20,20 +20,11 @@ from sqlmodel import Session, col, select
 from app.canonical_media.filters import is_canonical, is_copy
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
-    SHOW_LEVEL,
     not_tmdb_key_clause,
-    parse_tmdb_key,
-    record_key,
-    tmdb_episode_key,
     tmdb_id_of,
     tmdb_key_clause,
 )
-from app.canonical_media.service import point_episode_at, standalone_episode
 from app.episodes.models import (
-    MANUAL_NOTES,
-    MANUALLY_CONFIRMED_NOTE,
-    MANUALLY_SELECTED_NOTE,
-    NO_MATCH_NOTE,
     Episode,
 )
 from app.episodes.schemas import (
@@ -43,7 +34,6 @@ from app.episodes.schemas import (
 )
 from app.media.canonical_metadata import tmdb_episode_url
 from app.media.identifiers import TMDB_PLUGIN_KEY
-from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -557,7 +547,7 @@ def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
     """
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    canonical_show = TMDB(session).import_title(MediaType.tv, tmdb_show_id)
+    canonical_show = TMDB(session).import_show(tmdb_show_id)
     if canonical_show is None:
         raise HTTPException(
             status_code=400,
@@ -620,200 +610,3 @@ def list_tmdb_episode_choices(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
     )
-
-
-# TODO: Validate
-def _tmdb_halves(media_type: MediaType | None) -> list[MediaType]:
-    """Return the halves of the catalogue an id could belong to."""
-    return [media_type] if media_type is not None else list(MediaType)
-
-
-# TODO: Validate
-def _tmdb_episode(
-    session: Session,
-    tmdb_episode_id: int,
-    media_type: MediaType | None = None,
-) -> Episode | None:
-    """Return the imported TMDB episode an id names, in one half of the catalogue.
-
-    An id said to be a movie's is only ever looked for as a movie, so a series
-    episode that happens to carry the same number is never taken for it, and the
-    other way about. An id with neither said of it is looked for as both, which
-    is what a choice taken off the list is.
-    """
-    statement = select(Episode).where(
-        is_canonical(Episode),
-        col(Episode.key).in_(
-            [
-                tmdb_episode_key(half, tmdb_episode_id)
-                for half in _tmdb_halves(media_type)
-            ],
-        ),
-    )
-    return session.exec(statement).first()
-
-
-# TODO: Validate
-def link_episode(
-    session: Session,
-    episode: Episode,
-    tmdb_episode_id: int,
-    *,
-    media_type: MediaType | None = None,
-    selected: bool = False,
-) -> Episode:
-    """Point `episode` at a TMDB episode a `User` chose, and hold it there.
-
-    The episode is pointed at the row already read in rather than at one built
-    from the id given, so an id TMDB has nothing imported for is refused instead
-    of stored as a link to a record that will never fill anything in. The link is
-    locked, which is what keeps the next import's own guess from replacing it.
-
-    `selected` says the `User` went and found the episode rather than taking the
-    one they were shown, which is the note the link is left with.
-    """
-    _import_named_media(session, episode, tmdb_episode_id, media_type)
-
-    counterpart = _tmdb_episode(session, tmdb_episode_id, media_type)
-    if counterpart is None:
-        halves = " or ".join(sorted(str(half) for half in _tmdb_halves(media_type)))
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"TMDB has no imported episode with the id {tmdb_episode_id} "
-                f"as a {halves}"
-            ),
-        )
-
-    _unlink_others_sharing(session, episode, counterpart.id)
-
-    episode.canonical_episode_locked = True
-    episode.canonical_episode_note = (
-        MANUALLY_SELECTED_NOTE if selected else MANUALLY_CONFIRMED_NOTE
-    )
-    session.add(episode)
-    point_episode_at(session, episode, counterpart)
-    session.commit()
-    session.refresh(episode)
-    return episode
-
-
-# TODO: Validate
-def _import_named_media(
-    session: Session,
-    episode: Episode,
-    tmdb_episode_id: int,
-    media_type: MediaType | None,
-) -> None:
-    """Read in from TMDB whatever holds the episode an id names.
-
-    A `User` writing an id by hand has no reason to have imported what holds it
-    first, and an episode is only there to be linked to once it has been read in.
-    Whatever is already imported is left as it is, so this costs nothing when the
-    episode was picked off the list.
-
-    A movie is its own record, so an id said to be a movie's is the movie and is
-    read in from that alone, whatever titles the show is linked to. A series
-    numbers its episodes apart from the series itself, so an episode's id names
-    no title to read in and the titles the show is linked to are all there is to
-    go on - every one of them, since a listing that mixes titles could have the
-    episode under any of them.
-
-    Imported here rather than at the top of the module because the TMDB plugin
-    is built on the base every plugin is, which reads this module in turn.
-    """
-    from plugins.TMDB import TMDB  # noqa: PLC0415
-
-    tmdb = TMDB(session)
-    if media_type is MediaType.movie:
-        tmdb.import_title(MediaType.movie, tmdb_episode_id)
-        return
-
-    for canonical_show in episode.season.show.canonical_shows:
-        linked = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
-        if linked is None:
-            continue
-        linked_media_type, linked_tmdb_id = linked
-        tmdb.import_title(linked_media_type, linked_tmdb_id)
-
-
-# TODO: Validate
-def _unlink_others_sharing(
-    session: Session,
-    episode: Episode,
-    canonical_episode_id: uuid.UUID,
-) -> None:
-    """Take the episode off the other copies of the same title.
-
-    Two websites' episodes pointing at one record is what makes them a single
-    episode to watch, so only the title's own other episodes are a clash. A
-    `User` saying which episode the record is has settled which one it is, so
-    whichever was on it by a guess comes off and is left for `reconcile_show` to
-    give a row of its own.
-
-    An episode another `User` decision put there is left where it is, since one
-    decision is no reason to undo another.
-    """
-    statement = (
-        select(Episode)
-        .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .where(
-            Season.show_id == episode.season.show_id,
-            Episode.canonical_episode_id == canonical_episode_id,
-            Episode.id != episode.id,
-            col(Episode.deleted_at).is_(None),
-        )
-    )
-    for other in session.exec(statement).all():
-        if other.canonical_episode_locked and (
-            other.canonical_episode_note in MANUAL_NOTES
-        ):
-            continue
-
-        # A copy is always of a season, so a copy that is of none is a copy that
-        # was never reconciled, and saying so here is what keeps it from being
-        # read as an episode standing for itself further along.
-        canonical_season = other.season.canonical_season
-        if canonical_season is None:
-            msg = f"{other.season} is a season rather than a copy of one"
-            raise ValueError(msg)
-
-        removed = (
-            f"Removed {canonical_episode_id}, which was given to another "
-            "episode by hand"
-        )
-        previous = other.canonical_episode_note
-        other.canonical_episode_note = f"{removed}. {previous}" if previous else removed
-        other.canonical_episode_id = None
-        other.canonical_episode_locked = False
-        session.add(other)
-        # Left pointing at nothing, so it is given a row standing only for
-        # itself rather than left as a copy of nothing at all.
-        session.flush()
-        point_episode_at(
-            session,
-            other,
-            standalone_episode(
-                session,
-                other,
-                canonical_season,
-                record_key(other.season.show.source.plugin.key, other.key),
-            ),
-        )
-
-
-# TODO: Validate
-def confirm_no_tmdb_match(session: Session, episode: Episode) -> Episode:
-    """Hold `episode` as a copy of nothing but itself.
-
-    An episode TMDB has no counterpart for is as settled as one that was linked,
-    so the row it already stands for is locked rather than replaced. That is
-    what keeps the next import from guessing at it again and what takes it off
-    the list of episodes still waiting on somebody.
-    """
-    episode.canonical_episode_locked = True
-    episode.canonical_episode_note = NO_MATCH_NOTE
-    session.add(episode)
-    session.commit()
-    session.refresh(episode)
-    return episode

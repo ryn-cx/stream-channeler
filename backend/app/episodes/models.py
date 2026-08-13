@@ -158,8 +158,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     )
 
     # The episode this is a copy of, and nothing when this is the episode itself.
-    # Never absent on a copy: `canonical_media.hooks` gives one at the flush,
-    # before it can reach the database.
+    # Written by whatever imports the copy rather than filled in at the flush.
     canonical_episode_id: uuid.UUID = Field(
         default=None,
         nullable=True,

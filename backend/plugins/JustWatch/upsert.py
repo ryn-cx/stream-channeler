@@ -4,12 +4,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from app.episodes.models import Episode
-from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.JustWatch.helpers import HelperMixin
-from plugins.TMDB.link import TMDBLinker
 
 if TYPE_CHECKING:
     from just_scrape.url_title_details import models as url_title_details_models
@@ -64,6 +62,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         show_key: str,
         source_keys: list[str] | None = None,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[Show]:
@@ -73,6 +72,7 @@ class UpsertMixin(HelperMixin, register=False):
                 continue
             source = self._upsert_source(source_key)
             shows.append(self.upsert_show(source, show_key, force=force))
+        self._link_supplied_canonical_shows(shows, canonical_show)
         return shows
 
     # TODO: Validate
@@ -126,14 +126,6 @@ class UpsertMixin(HelperMixin, register=False):
         self.soft_delete_missing_seasons(show_key)
 
         self._set_weekly_updates_from_episodes(show)
-
-        TMDBLinker(self.session).link(
-            show,
-            # `media_type` above is what JustWatch calls the title; this is
-            # which half of TMDB's catalogue it belongs in.
-            MediaType.movie if media_type == "Movie" else MediaType.tv,
-            canonical_show,
-        )
 
         return show
 

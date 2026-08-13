@@ -13,12 +13,11 @@ import uuid
 from sqlmodel import Session
 
 from app.channels.episode_selector import EpisodeQueryBuilder
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
+from app.episodes.models import Episode
 from app.models import Visibility
+from app.seasons.models import Season
 from app.shows.models import Show
 from app.users import service as user_service
 from app.users.models import User, UserSourcePreference
@@ -48,13 +47,13 @@ def _build_duplicated_channel(
     # The one episode both sources carry a copy of. Made up front so the two
     # copies can be pointed at it, which is what they would share after an
     # import reconciled them.
-    shared_show = CanonicalShow()
+    shared_show = Show(key=f"Dedup {uuid.uuid4()}")
     session.add(shared_show)
     session.flush()
-    shared_season = CanonicalSeason(canonical_show_id=shared_show.id)
+    shared_season = Season(key=f"Dedup {uuid.uuid4()}", show_id=shared_show.id)
     session.add(shared_season)
     session.flush()
-    shared_episode = CanonicalEpisode(canonical_season_id=shared_season.id)
+    shared_episode = Episode(key=f"Dedup {uuid.uuid4()}", season_id=shared_season.id)
     session.add(shared_episode)
     session.flush()
     shows: dict[str, Show] = {}
