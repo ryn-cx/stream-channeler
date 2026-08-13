@@ -8,7 +8,6 @@ from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.identifiers import TMDB_PLUGIN_KEY
@@ -58,10 +57,10 @@ def _visible_plugin_condition(user_id: uuid.UUID) -> ColumnElement[bool]:
 def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """The canonical episodes the `User` has watched anything of."""
     return (
-        select(col(CanonicalEpisode.id))
+        select(col(Episode.id))
         .join(
             Watch,
-            col(Watch.canonical_episode_key) == col(CanonicalEpisode.key),
+            col(Watch.canonical_episode_key) == col(Episode.key),
         )
         .where(Watch.user_id == user_id)
     )
@@ -138,12 +137,12 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     return (
         select(Watch)
         .join(
-            CanonicalEpisode,
-            col(CanonicalEpisode.key) == col(Watch.canonical_episode_key),
+            Episode,
+            col(Episode.key) == col(Watch.canonical_episode_key),
         )
         .join(
             representative,
-            representative.c.canonical_episode_id == col(CanonicalEpisode.id),
+            representative.c.canonical_episode_id == col(Episode.id),
         )
         .join(
             Episode,
@@ -203,16 +202,16 @@ def _representative_episodes_by_canonical_key(
     """
     if not canonical_keys:
         return {}
-    canonical_ids = select(col(CanonicalEpisode.id)).where(
-        col(CanonicalEpisode.key).in_(canonical_keys),
+    canonical_ids = select(col(Episode.id)).where(
+        col(Episode.key).in_(canonical_keys),
     )
     representative = _representative_episode_subquery(user_id, canonical_ids)
     rows = session.exec(
-        select(col(CanonicalEpisode.key), Episode)  # type: ignore[call-overload]
+        select(col(Episode.key), Episode)  # type: ignore[call-overload]
         .join(representative, col(Episode.id) == representative.c.episode_id)
         .join(
-            CanonicalEpisode,
-            col(CanonicalEpisode.id) == col(Episode.canonical_episode_id),
+            Episode,
+            col(Episode.id) == col(Episode.canonical_episode_id),
         ),
     ).all()
     return dict(rows)
@@ -280,6 +279,7 @@ def _format_watched_episodes_data(
     )
 
 
+# TODO: Validate
 def create_watch(
     session: Session,
     user_id: uuid.UUID,
@@ -290,10 +290,21 @@ def create_watch(
 
     Raises:
         WatchAlreadyExistsError: If the `Episode` already has an unverified watch.
+        ValueError: If the `Episode` is an episode rather than a copy of one.
+
     """
+    # A watch is recorded against the episode rather than against the copy that
+    # played it, so it is the episode's key that is stored. A copy that is of no
+    # episode is one no import has reconciled, and there is nothing to record a
+    # watch against.
+    canonical_episode = episode.canonical_episode
+    if canonical_episode is None:
+        message = f"{episode} is an episode rather than a copy of one"
+        raise ValueError(message)
+
     unverified_watch_query = select(Watch).where(
         Watch.user_id == user_id,
-        col(Watch.canonical_episode_key) == episode.canonical_episode.key,
+        col(Watch.canonical_episode_key) == canonical_episode.key,
         col(Watch.verified) == False,  # noqa: E712 - SQLAlchemy syntax
     )
     if session.exec(unverified_watch_query).first():
@@ -304,7 +315,7 @@ def create_watch(
         watch_input,
         update={
             "episode_id": episode.id,
-            "canonical_episode_key": episode.canonical_episode.key,
+            "canonical_episode_key": canonical_episode.key,
             "user_id": user_id,
         },
     )

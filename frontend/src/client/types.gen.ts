@@ -20,7 +20,7 @@ export type Body_watches_import_watch_history = {
 };
 
 /**
- * Schema for returning a list of `CanonicalEpisode`s, with what holds them.
+ * Schema for returning a list of `Episode`s, with what holds them.
  */
 export type CanonicalEpisodeListOutput = {
     key: string;
@@ -48,7 +48,11 @@ export type CanonicalEpisodeListOutput = {
 };
 
 /**
- * Schema for returning a `CanonicalEpisode`.
+ * Schema for returning a `Episode`.
+ *
+ * An episode hangs off its season by the same column a copy hangs off the
+ * copy's season by, so what is served as the canonical season is read off
+ * `season_id`. The name it is served under does not change.
  */
 export type CanonicalEpisodeOutput = {
     key: string;
@@ -72,7 +76,7 @@ export type CanonicalEpisodeOutput = {
 };
 
 /**
- * Schema for returning a list of `CanonicalEpisode`s.
+ * Schema for returning a list of `Episode`s.
  */
 export type CanonicalEpisodesPublic = {
     data: Array<CanonicalEpisodeListOutput>;
@@ -82,7 +86,7 @@ export type CanonicalEpisodesPublic = {
 };
 
 /**
- * Schema for returning a list of `CanonicalSeason`s, with the title above.
+ * Schema for returning a list of `Season`s, with the title above.
  */
 export type CanonicalSeasonListOutput = {
     key: string;
@@ -105,7 +109,11 @@ export type CanonicalSeasonListOutput = {
 };
 
 /**
- * Schema for returning a `CanonicalSeason`.
+ * Schema for returning a `Season`.
+ *
+ * A season hangs off its title by the same column a copy hangs off the
+ * listing by, so what is served as the canonical title is read off `show_id`.
+ * The name it is served under does not change.
  */
 export type CanonicalSeasonOutput = {
     key: string;
@@ -126,7 +134,7 @@ export type CanonicalSeasonOutput = {
 };
 
 /**
- * Schema for returning a list of `CanonicalSeason`s.
+ * Schema for returning a list of `Season`s.
  */
 export type CanonicalSeasonsPublic = {
     data: Array<CanonicalSeasonListOutput>;
@@ -136,7 +144,7 @@ export type CanonicalSeasonsPublic = {
 };
 
 /**
- * Schema for returning a `CanonicalShow`.
+ * Schema for returning a `Show`.
  *
  * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
  * the key is the whole of what says which TMDB record a title is. They are
@@ -154,6 +162,7 @@ export type CanonicalShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     id: string;
     created_at: string;
     modified_at: string;
@@ -162,7 +171,7 @@ export type CanonicalShowOutput = {
 };
 
 /**
- * Schema for returning a list of `CanonicalShow`s.
+ * Schema for returning a list of `Show`s.
  */
 export type CanonicalShowsPublic = {
     data: Array<CanonicalShowOutput>;
@@ -1208,6 +1217,7 @@ export type ShowCreate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
 };
@@ -1255,6 +1265,7 @@ export type ShowListPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;
@@ -1282,6 +1293,7 @@ export type ShowPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;
@@ -1315,6 +1327,7 @@ export type ShowUpdate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
 };
@@ -1777,6 +1790,7 @@ export type WhitelistShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    year?: (number | null);
     canonical_show_locked?: boolean;
     canonical_show_note?: (string | null);
     source_id: string;

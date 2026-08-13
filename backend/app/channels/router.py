@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import distinct, func
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
 from app.auth.dependencies import (
@@ -16,9 +17,7 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
+from app.canonical_media.filters import is_canonical
 from app.channels import service
 from app.channels.channel_scope import (
     child_channel_ids,
@@ -79,6 +78,7 @@ from app.media.schemas import MediaOwner
 from app.media.service import delete_record
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
+from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show
 from app.shows.schemas import ShowPublic
@@ -463,8 +463,11 @@ def get_channel_episodes(
             output.seasons[episode.season_id] = SeasonOutput.model_validate(season)
         if season.show_id not in output.shows:
             output.shows[season.show_id] = ShowPublic.model_validate(show)
-        if show.source_id not in output.sources:
-            output.sources[show.source_id] = SourcePublic.model_validate(source)
+        # The website is read off the row itself rather than off the id column on
+        # the listing, which a title leaves empty. Only listings are ever here,
+        # so the two say the same thing and only one of them says it in a type.
+        if source.id not in output.sources:
+            output.sources[source.id] = SourcePublic.model_validate(source)
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
@@ -617,25 +620,29 @@ def _channel_show_stats(
     if not canonical_show_ids:
         return {}
 
+    canonical_episode = aliased(Episode)
     rows = session.exec(
         select(
-            CanonicalSeason.canonical_show_id,
-            func.count(distinct(col(CanonicalSeason.id))),
-            func.count(distinct(col(CanonicalEpisode.id))),
+            Season.show_id,
+            func.count(distinct(col(Season.id))),
+            func.count(distinct(col(canonical_episode.id))),
         )
+        .select_from(Season)
         .join(
-            CanonicalEpisode,
-            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+            canonical_episode,
+            col(canonical_episode.season_id) == col(Season.id),
         )
         .join(
             Episode,
-            col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+            col(Episode.canonical_episode_id) == col(canonical_episode.id),
         )
         .where(
-            col(CanonicalSeason.canonical_show_id).in_(canonical_show_ids),
+            is_canonical(Season),
+            is_canonical(canonical_episode),
+            col(Season.show_id).in_(canonical_show_ids),
             col(Episode.deleted_at).is_(None),
         )
-        .group_by(col(CanonicalSeason.canonical_show_id)),
+        .group_by(col(Season.show_id)),
     ).all()
 
     return {
@@ -924,7 +931,7 @@ def delete_channel_show(
     shows = service.shows_for_channel_show(session, channel_show)
     # The title's own name is what is left to say when no website's copy of it
     # carries one, which is the case for a title only TMDB has a record of.
-    canonical_show = session.get(CanonicalShow, channel_show.canonical_show_id)
+    canonical_show = session.get(Show, channel_show.canonical_show_id)
     name = next(
         (show.name for show in shows if show.name),
         canonical_show.name if canonical_show else None,

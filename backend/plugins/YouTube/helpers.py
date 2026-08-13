@@ -3,15 +3,11 @@ from typing import Any, override
 from urllib.parse import quote
 
 from app.media.media_type import MediaType
-from app.shows.models import Show
 from app.sources.models import Source
 from plugins.YouTube.files import (
     FileMixin,
-    get_first_item,
-    is_show_key,
     is_show_season_key,
     is_video_key,
-    split_show_season_key,
 )
 
 
@@ -22,39 +18,10 @@ class HelperMixin(FileMixin, register=False):
         self._importing_album_playlist_key = playlist_key
 
     # TODO: Validate
-    @override
-    def _fetch_tmdb_id(
-        self,
-        show_key: str,
-        existing_show: Show | None = None,
-    ) -> int | None:
-        if existing_show and existing_show.tmdb_id:
-            return existing_show.tmdb_id
-
-        if is_video_key(show_key):
-            video_item = get_first_item(self.videos_file(show_key).parsed().items)
-            return self._tmdb_search_media(video_item.snippet.title, MediaType.movie)
-
-        if is_show_key(show_key):
-            title = self.show_page_file(show_key).title()
-            return self._tmdb_search_media(title) if title else None
-
-        return None
-
-    # TODO: Validate
-    @override
     def tmdb_media_type(self, show_key: str) -> MediaType:
         return MediaType.movie if is_video_key(show_key) else MediaType.tv
 
     # TODO: Validate
-    @override
-    def _get_season_number(self, season_key: str, show_key: str) -> int | None:
-        if is_show_season_key(season_key):
-            return int(split_show_season_key(season_key)[1])
-        return None
-
-    # TODO: Validate
-    @override
     def _get_episode_number(
         self,
         episode_key: str,
@@ -67,12 +34,6 @@ class HelperMixin(FileMixin, register=False):
         if episode_key not in episode_keys:
             return None
         return episode_keys.index(episode_key) + 1
-
-    # TODO: Validate
-    def _highest_episode_number(self, season_key: str) -> int | None:
-        if not is_show_season_key(season_key):
-            return None
-        return len(self._season_episode_keys(season_key)) or None
 
     # TODO: Validate
     def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:

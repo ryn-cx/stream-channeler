@@ -1,7 +1,7 @@
 # TODO: Validate
 import re
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from difflib import SequenceMatcher
 from functools import cache, partial
 from itertools import product
@@ -10,13 +10,16 @@ from typing import NamedTuple, Protocol
 
 from pykakasi import kakasi
 from pykakasi.kanji import Kanwa
+from sqlmodel import Session, col, select
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 
+from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
 from app.canonical_media.service import (
     canonical_episode_for,
     canonical_season_for,
     canonical_show_for,
     link_canonical_show,
+    sync_canonical_show,
 )
 from app.episodes.models import (
     DESCRIPTION_NOTE,
@@ -26,10 +29,34 @@ from app.episodes.models import (
 from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.TMDB.lookup import LookupMixin
+from app.sources.models import Source
+from plugins.TMDB import TMDB
+from plugins.TMDB.unshare import unshare_canonical_episodes
 
 _MAX_READING_COMBINATIONS = 32
 _GENERIC_EPISODE_NAME = re.compile(r"episode\s*\d+")
+
+# What a search across the whole catalogue can turn up that is media rather than
+# a person. TMDB names them on each result, so a search that was not narrowed to
+# one half reads which half it landed in off the match itself.
+_SEARCHED_MEDIA_TYPES = {
+    "movie": MediaType.movie,
+    "tv": MediaType.tv,
+}
+
+
+# TODO: Validate
+class Media(NamedTuple):
+    """One title TMDB holds: which half of the catalogue, and its id."""
+
+    media_type: MediaType
+    tmdb_id: int
+
+
+# TODO: Validate
+def highest_episode_number(numbers: Iterable[int | None]) -> int | None:
+    """Return the last episode number a season runs to, ignoring unnumbered ones."""
+    return max((number for number in numbers if number is not None), default=None)
 
 
 # TODO: Validate
@@ -423,7 +450,7 @@ class _Match:
 
 
 # TODO: Validate
-class LinkMixin(LookupMixin, register=False):
+class TMDBLinker:
     """Points a plugin's own media at the media it is a copy of.
 
     A record TMDB has an entry for is pointed at the one canonical row standing
@@ -435,7 +462,250 @@ class LinkMixin(LookupMixin, register=False):
     A lookup that finds nothing leaves the copy pointing where it already
     pointed, so a TMDB outage cannot quietly unlink a library. Unlinking is an
     explicit act, and `confirm_no_tmdb_match` is what performs it.
+
+    Not a plugin and not a mixin: any plugin builds one for its session and
+    hands it the records it has just written. Downloading TMDB's files and
+    upserting its canonical rows is the TMDB plugin's, reached through `tmdb`,
+    so none of that lives here or in the plugin being linked.
     """
+
+    # TODO: Validate
+    def __init__(self, session: Session) -> None:
+        self.session = session
+        self.tmdb = TMDB(session)
+
+    # TODO: Validate
+    def search_media(
+        self,
+        name: str,
+        media_type: MediaType | None = None,
+        year: int | None = None,
+    ) -> Media | None:
+        """Return the media TMDB lists under a name, or None.
+
+        `media_type` narrows the search to one half of TMDB's catalogue when the
+        caller knows which it wants. Without one both halves are searched and
+        whichever matches the name best is taken, which is also the only way a
+        listing whose plugin cannot say what it holds is ever matched.
+
+        A search across both halves turns up people as well as media. A person
+        is not something to be a copy of, so they are passed over rather than
+        taken as the best match.
+        """
+        if media_type is not None:
+            narrowed = (
+                self.tmdb.auto_updating_search_media(media_type, name, year)
+                .parsed()
+                .results
+            )
+            return Media(media_type, narrowed[0].id) if narrowed else None
+
+        results = (
+            self.tmdb.auto_updating_search_media(None, name, year).parsed().results
+        )
+        return next(
+            (
+                Media(found, result.id)
+                for result in results
+                if (found := _SEARCHED_MEDIA_TYPES.get(result.media_type)) is not None
+            ),
+            None,
+        )
+
+    # TODO: Validate
+    def known_media(
+        self,
+        show: Show,
+        media_type: MediaType | None = None,
+        canonical_show: Show | None = None,
+    ) -> Media | None:
+        """Return the media this listing is already known to be, or None.
+
+        A caller that named it is answered first, then the listing's own stored
+        title, then a title another copy of the same listing resolved. Only when
+        all three come up empty does anything have to go looking, which is a
+        search against TMDB and worth not repeating.
+
+        Which half of the catalogue the media is in is read back off whatever
+        answered rather than taken from the caller, since a stored title says so
+        in its own key.
+        """
+        supplied = self.supplied_media(media_type, canonical_show)
+        if supplied is not None:
+            return supplied
+        own = self._linked_media(show)
+        if own is not None:
+            return own
+        return next(
+            (
+                sibling
+                for sibling in map(self._linked_media, self._siblings(show))
+                if sibling is not None
+            ),
+            None,
+        )
+
+    # TODO: Validate
+    def _siblings(self, show: Show) -> Sequence[Show]:
+        """Return the other copies of the same listing this plugin holds.
+
+        A plugin can hold one listing under more than one `Source` - a title
+        sold on several services - and every copy of it is the same title, so
+        one copy having worked out which title that is answers for all of them.
+        """
+        return self.session.exec(
+            select(Show)
+            .join(Source)
+            .where(
+                Show.key == show.key,
+                Source.plugin_id == show.source.plugin_id,
+                col(Show.id) != show.id,
+            ),
+        ).all()
+
+    # TODO: Validate
+    @staticmethod
+    def _linked_media(show: Show) -> Media | None:
+        """Return the media a stored copy is already pointed at."""
+        canonical_show = show.canonical_show
+        if canonical_show is None:
+            return None
+        parsed = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
+        return None if parsed is None else Media(*parsed)
+
+    # TODO: Validate
+    @staticmethod
+    def supplied_media(
+        media_type: MediaType | None,
+        canonical_show: Show | None,
+    ) -> Media | None:
+        """Return the media a caller named, when it is what this listing is.
+
+        A caller naming a title from the other half of TMDB's catalogue is
+        naming something else the listing is also a copy of - the film a series
+        listing carries alongside its seasons - so the listing still has to find
+        its own title for itself. Only what the listing is chiefly of is
+        answered here; the title itself is linked either way. A caller that said
+        nothing about which half the listing is in is taken at their word.
+        """
+        if canonical_show is None:
+            return None
+        parsed = parse_tmdb_key(canonical_show.key, SHOW_LEVEL)
+        if parsed is None:
+            return None
+        supplied = Media(*parsed)
+        if media_type is not None and supplied.media_type != media_type:
+            return None
+        return supplied
+
+    # TODO: Validate
+    def title_to_hand_off(
+        self,
+        media_type: MediaType,
+        tmdb_id: int | None,
+        canonical_show: Show | None,
+    ) -> Show | None:
+        """Return the title to tell another plugin about when handing an import on.
+
+        The title the import started at when there is one, since that is the one
+        the whole chain is working from and the one a listing further down may
+        turn out to carry alongside its own. Otherwise this listing's own title,
+        read in so that there is a row to name rather than only an id.
+        """
+        if canonical_show is not None:
+            return canonical_show
+        if tmdb_id is None:
+            return None
+        return self.tmdb.import_title(media_type, tmdb_id)
+
+    # TODO: Validate
+    def link(
+        self,
+        show: Show,
+        media_type: MediaType | None = None,
+        canonical_show: Show | None = None,
+    ) -> None:
+        """Leave a whole upserted listing pointing at the media it is a copy of.
+
+        Which media the listing is of is worked out here. A caller that already
+        holds the title says so with `canonical_show` and nothing is searched
+        for; otherwise it is whatever the listing or another copy of it already
+        resolved, and failing that TMDB is searched under the show's own name
+        and year, which imports the title as canonical media.
+
+        `media_type` only narrows that lookup, for a plugin whose own branch
+        already knows whether it is holding a film or a series. Without one both
+        halves of the catalogue are searched and whichever matches best is
+        taken. A listing that is of neither - a channel, an artist - is not
+        searched for at all, and its plugin calls `reconcile` instead.
+
+        Linking waits until every season and episode of the listing has been
+        written, since what an episode is matched to is decided partly by what
+        the rest of the listing turned out to be: the season's last episode
+        number says whether its numbering can be trusted, and that is only known
+        once all of them are there. Doing it in one pass at the end also means a
+        record the import left alone as up to date is still linked, rather than
+        only the ones that happened to be rewritten.
+
+        A `User`'s own choice is left as it is, which the upsert cannot protect
+        because the linking happens after it rather than on the way in.
+        """
+        found = self.known_media(show, media_type, canonical_show)
+        if found is None and show.name is not None:
+            found = self.search_media(show.name, media_type, show.year)
+        if found is not None:
+            self._link_listing(show, found.media_type, found.tmdb_id)
+
+        self.sync_canonical_info(show)
+
+    # TODO: Validate
+    def sync_canonical_info(self, show: Show) -> None:
+        """Sync the Canonical media tables with the information from this Show."""
+        unshare_canonical_episodes(self.session, show)
+        # Whose copy this is decides whether the metadata may be written, and
+        # the show says so itself rather than the caller having to repeat it.
+        sync_canonical_show(self.session, show, show.source.plugin.key)
+
+    # TODO: Validate
+    def _link_listing(
+        self,
+        show: Show,
+        media_type: MediaType,
+        tmdb_id: int | None,
+    ) -> None:
+        """Point every record of the listing at the TMDB media it is.
+
+        Every TMDB file the matching reads is downloaded by the lookup that
+        reads it, so the whole of TMDB's side of this is fetched as it is
+        needed rather than listed among the plugin's own files.
+        """
+        if not show.canonical_show_locked:
+            self.tmdb_link_show(show, tmdb_id, media_type)
+        if show.tmdb_id:
+            self.tmdb.import_title(media_type, show.tmdb_id)
+
+        for season in show.active_children:
+            self.tmdb_link_season(
+                season,
+                show,
+                season.season_number,
+                media_type,
+                tmdb_id,
+            )
+            last_episode_number = highest_episode_number(
+                episode.episode_number for episode in season.active_children
+            )
+            for episode in season.active_children:
+                if episode.canonical_episode_locked:
+                    continue
+                self.tmdb_link_episode(
+                    episode,
+                    season,
+                    episode.episode_number,
+                    media_type,
+                    last_episode_number,
+                    tmdb_id,
+                )
 
     # TODO: Validate
     def tmdb_link_show(
@@ -502,7 +772,7 @@ class LinkMixin(LookupMixin, register=False):
         canonical_show_id = canonical_show.id
 
         if media_type == MediaType.movie:
-            if movie := self._movie_detail(tmdb_id):
+            if movie := self.tmdb.movie_detail(tmdb_id):
                 season.canonical_season = canonical_season_for(
                     self.session,
                     MediaType.movie,
@@ -511,7 +781,7 @@ class LinkMixin(LookupMixin, register=False):
                 )
             return season
 
-        seasons = self._show_seasons(tmdb_id)
+        seasons = self.tmdb.show_seasons(tmdb_id)
         season_detail = next(
             (
                 candidate
@@ -569,7 +839,7 @@ class LinkMixin(LookupMixin, register=False):
             return episode
 
         if media_type == MediaType.movie:
-            if movie := self._movie_detail(tmdb_id):
+            if movie := self.tmdb.movie_detail(tmdb_id):
                 episode.canonical_episode = canonical_episode_for(
                     self.session,
                     MediaType.movie,
@@ -748,7 +1018,7 @@ class LinkMixin(LookupMixin, register=False):
     ) -> frozenset[str]:
         return frozenset(
             form
-            for name in self.translated_episode_names(
+            for name in self.tmdb.translated_episode_names(
                 tmdb_id,
                 episode.season_number,
                 episode.episode_number,
@@ -763,13 +1033,15 @@ class LinkMixin(LookupMixin, register=False):
         """Return every episode of the show the instance is working on.
 
         Every episode of a show looks its name up in the same list, so without
-        caching a show re-reads all of its season files once per episode. The
-        list is dropped by `_reset_show_state` when the instance moves to
-        another show, so it is held for one show rather than kept per id.
+        caching a show re-reads all of its season files once per episode. A
+        linker is built for the show being linked and let go of with it, so the
+        list is held for one show rather than kept per id.
         """
         if self._all_episodes_cache is None:
             episodes: list[TvSeasonEpisode] = []
-            for season in self._show_seasons(tmdb_id):
-                episodes.extend(self._season_episodes(tmdb_id, season.season_number))
+            for season in self.tmdb.show_seasons(tmdb_id):
+                episodes.extend(
+                    self.tmdb.season_episodes(tmdb_id, season.season_number)
+                )
             self._all_episodes_cache = episodes
         return self._all_episodes_cache

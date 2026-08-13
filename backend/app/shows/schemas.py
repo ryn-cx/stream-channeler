@@ -109,7 +109,7 @@ class ShowsPublic(BaseModel):
 
 # TODO: Validate
 class CanonicalShowOutput(BaseCanonicalShow):
-    """Schema for returning a `CanonicalShow`.
+    """Schema for returning a `Show`.
 
     `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
     the key is the whole of what says which TMDB record a title is. They are
@@ -134,7 +134,7 @@ class CanonicalShowOutput(BaseCanonicalShow):
 
 # TODO: Validate
 class CanonicalShowsPublic(BaseModel):
-    """Schema for returning a list of `CanonicalShow`s."""
+    """Schema for returning a list of `Show`s."""
 
     data: list[CanonicalShowOutput]
     total_count: int

@@ -25,7 +25,7 @@ from plugins.utils.manage_plugins import register_plugins
 if TYPE_CHECKING:
     from sqlmodel import Session
 
-    from app.shows.models import CanonicalShow
+    from app.shows.models import Show
     from app.users.models import User
 
 
@@ -98,7 +98,7 @@ class AbstractPlugin(ABC):
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
         """Import `url` into the database.
 

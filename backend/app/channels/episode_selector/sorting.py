@@ -10,17 +10,22 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
+from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
+from app.channels.episode_selector.canonical_entities import (
+    CANONICAL_EPISODE,
+    CANONICAL_SEASON,
+)
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
     LAST_WATCHED_COLUMNS,
 )
 from app.channels.models import ChannelSavedEpisodeOrder, ChannelShow
 from app.channels.schemas import SortKeyInput
-from app.episodes.models import CanonicalEpisode
+from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
-from app.seasons.models import CanonicalSeason
+from app.seasons.models import Season
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
@@ -126,7 +131,7 @@ class SortExpressionBuilder:
             # of one episode is shuffled to the same place and a title stays
             # together however many websites carry it.
             random_ids: dict[str, Any] = {
-                "episode": col(CanonicalEpisode.id),
+                "episode": col(CANONICAL_EPISODE.id),
                 "season": self._fallbacks.episode_season_id(),
                 "show": self._fallbacks.show_id(),
                 "source": Source.id,
@@ -145,7 +150,7 @@ class SortExpressionBuilder:
                 f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
             )
         if field == "episode_count":
-            return func.count(col(CanonicalEpisode.id)).over(
+            return func.count(col(CANONICAL_EPISODE.id)).over(
                 partition_by=self._fallbacks.show_id(),
             )
         if field == "started" and sort_key.model == "show":
@@ -184,12 +189,12 @@ class SortExpressionBuilder:
         elif sort_key.field == "recently_aired":
             episode_field = self._recently_aired_expr(sort_key)
         elif sort_key.field == "episode_count":
-            episode_field = col(CanonicalEpisode.id)
+            episode_field = col(CANONICAL_EPISODE.id)
         else:
             episode_field = self._stored_column(
                 "episode",
                 sort_key.field,
-                CanonicalEpisode,
+                CANONICAL_EPISODE,
             )
 
         agg_funcs: dict[str, Any] = {
@@ -248,7 +253,7 @@ class SortExpressionBuilder:
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    self._fallbacks.column("episode", "sort_order", CanonicalEpisode),
+                    self._fallbacks.column("episode", "sort_order", CANONICAL_EPISODE),
                 ),
             )
         if model == "season":
@@ -258,7 +263,7 @@ class SortExpressionBuilder:
                 order_by=(
                     case((canonical_number.is_(None), 1), else_=0),
                     canonical_number,
-                    self._fallbacks.column("season", "sort_order", CanonicalSeason),
+                    self._fallbacks.column("season", "sort_order", CANONICAL_SEASON),
                 ),
             )
         msg = f"sequential is not supported for model '{model}'"
@@ -269,7 +274,7 @@ class SortExpressionBuilder:
         cutoff = sort_key.recently_aired_date or (
             tz_datetime.now() - timedelta(days=sort_key.days or 7)
         )
-        air_date = self._fallbacks.column("episode", "air_date", CanonicalEpisode)
+        air_date = self._fallbacks.column("episode", "air_date", CANONICAL_EPISODE)
         return case(
             (and_(air_date.is_not(None), air_date >= cutoff), 1),
             else_=0,
@@ -285,8 +290,8 @@ class SortExpressionBuilder:
         """
         if not self._user:
             return literal_column("0")
-        watched_episode = aliased(CanonicalEpisode)
-        watched_season = aliased(CanonicalSeason)
+        watched_episode = aliased(Episode)
+        watched_season = aliased(Season)
         started_query = (
             select(Watch.id)
             .join(
@@ -295,15 +300,17 @@ class SortExpressionBuilder:
             )
             .join(
                 watched_season,
-                col(watched_episode.canonical_season_id) == col(watched_season.id),
+                col(watched_episode.season_id) == col(watched_season.id),
             )
             .where(
                 and_(
-                    col(watched_season.canonical_show_id) == self._fallbacks.show_id(),
+                    is_canonical(watched_episode),
+                    is_canonical(watched_season),
+                    col(watched_season.show_id) == self._fallbacks.show_id(),
                     Watch.user_id == self._user.id,
                 ),
             )
-            .correlate(CanonicalSeason)
+            .correlate(CANONICAL_SEASON)
             .limit(1)
         )
         return case((started_query.exists(), 1), else_=0)

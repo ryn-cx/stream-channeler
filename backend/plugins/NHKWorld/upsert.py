@@ -8,17 +8,19 @@ from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.NHKWorld.helpers import HelperMixin
+from plugins.NHKWorld.files import FileMixin
+from plugins.TMDB.link import TMDBLinker
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     def upsert_show(
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -35,16 +37,24 @@ class UpsertMixin(HelperMixin, register=False):
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
-            show = self._merge_and_upsert_show(
+            show = self._upsert_show_object(
                 new_show,
                 source,
                 show,
                 show_key,
-                MediaType.tv,
             )
 
         self._upsert_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
+
+        TMDBLinker(self.session).link(
+            show,
+            # NHK World carries programmes and nothing else, so every listing is
+            # a series as far as TMDB is concerned. It says nothing about when a
+            # programme came out, so the name is all TMDB is searched on.
+            MediaType.tv,
+            canonical_show,
+        )
 
         return show
 
@@ -65,12 +75,11 @@ class UpsertMixin(HelperMixin, register=False):
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
             )
-            season = self._merge_and_upsert_season(
+            season = self._upsert_season_object(
                 new_season,
                 show,
                 season,
                 show_key,
-                MediaType.tv,
             )
 
         self._upsert_episodes(season, show_key, force=force)
@@ -110,11 +119,9 @@ class UpsertMixin(HelperMixin, register=False):
                 ),
                 season_id=season.id,
             )
-            self._merge_and_upsert_episode(
+            self._upsert_episode_object(
                 new_episode,
                 season,
                 episode,
                 show_key,
-                MediaType.tv,
-                len(items),
             )

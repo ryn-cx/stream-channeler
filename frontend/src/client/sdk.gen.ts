@@ -8,7 +8,7 @@ import type { CanonicalEpisodesGetCanonicalEpisodesData, CanonicalEpisodesGetCan
 export class CanonicalEpisodesService {
     /**
      * Get Canonical Episodes
-     * Get every `CanonicalEpisode`.
+     * Get every `Episode`.
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
@@ -35,7 +35,7 @@ export class CanonicalEpisodesService {
     
     /**
      * Get Canonical Episode By Id
-     * Get a `CanonicalEpisode`.
+     * Get a `Episode`.
      * @param data The data for the request.
      * @param data.canonicalEpisodeId
      * @returns CanonicalEpisodeOutput Successful Response
@@ -56,7 +56,7 @@ export class CanonicalEpisodesService {
     
     /**
      * Get Canonical Season Episodes
-     * Get every `CanonicalEpisode` of one `CanonicalSeason`.
+     * Get every `Episode` of one `Season`.
      * @param data The data for the request.
      * @param data.canonicalSeasonId
      * @param data.sortOptions
@@ -87,7 +87,7 @@ export class CanonicalEpisodesService {
     
     /**
      * Get Canonical Show Episodes
-     * Get every `CanonicalEpisode` under one `CanonicalShow`, across its seasons.
+     * Get every `Episode` under one `Show`, across its seasons.
      * @param data The data for the request.
      * @param data.canonicalShowId
      * @param data.sortOptions
@@ -120,7 +120,7 @@ export class CanonicalEpisodesService {
 export class CanonicalSeasonsService {
     /**
      * Get Canonical Seasons
-     * Get every `CanonicalSeason`.
+     * Get every `Season`.
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
@@ -147,7 +147,7 @@ export class CanonicalSeasonsService {
     
     /**
      * Get Canonical Season By Id
-     * Get a `CanonicalSeason`.
+     * Get a `Season`.
      * @param data The data for the request.
      * @param data.canonicalSeasonId
      * @returns CanonicalSeasonOutput Successful Response
@@ -168,7 +168,7 @@ export class CanonicalSeasonsService {
     
     /**
      * Get Canonical Show Seasons
-     * Get every `CanonicalSeason` of one `CanonicalShow`.
+     * Get every `Season` of one `Show`.
      * @param data The data for the request.
      * @param data.canonicalShowId
      * @param data.sortOptions
@@ -201,7 +201,7 @@ export class CanonicalSeasonsService {
 export class CanonicalShowsService {
     /**
      * Get Canonical Shows
-     * Get every `CanonicalShow`.
+     * Get every `Show`.
      * @param data The data for the request.
      * @param data.sortOptions
      * @param data.filterOptions
@@ -228,7 +228,7 @@ export class CanonicalShowsService {
     
     /**
      * Get Canonical Show By Id
-     * Get a `CanonicalShow`.
+     * Get a `Show`.
      * @param data The data for the request.
      * @param data.canonicalShowId
      * @returns CanonicalShowOutput Successful Response

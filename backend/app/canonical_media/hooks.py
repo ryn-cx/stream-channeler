@@ -23,10 +23,11 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlmodel import col, select
 
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import record_key
-from app.episodes.models import CanonicalEpisode, Episode
-from app.seasons.models import CanonicalSeason, Season
-from app.shows.models import CanonicalShow, Show, ShowCanonicalShow
+from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show, ShowCanonicalShow, index_show
 
 
 # TODO: Validate
@@ -51,30 +52,54 @@ def _plugin_key(show: Show) -> str | None:
 
 
 # TODO: Validate
-def _pending_shows(session: SQLAlchemySession) -> dict[str, CanonicalShow]:
+def _is_title(show: Show) -> bool:
+    """Report whether `show` is a title rather than a website's listing of one.
+
+    Told by the source rather than by the copy pointer, which is the thing this
+    module is here to fill in: until it has run, a listing points at nothing
+    just as a title does. A title is on no website, and that is true of it from
+    the moment it is built.
+    """
+    return show.source is None and show.source_id is None
+
+
+# TODO: Validate
+def _is_canonical_season(season: Season) -> bool:
+    """Report whether `season` is a season rather than a copy of one."""
+    return season.show is not None and _is_title(season.show)
+
+
+# TODO: Validate
+def _is_canonical_episode(episode: Episode) -> bool:
+    """Report whether `episode` is an episode rather than a copy of one."""
+    return episode.season is not None and _is_canonical_season(episode.season)
+
+
+# TODO: Validate
+def _pending_shows(session: SQLAlchemySession) -> dict[str, Show]:
     """Return every title the session is about to write, by its key."""
     return {
         pending.key: pending
         for pending in session.new
-        if isinstance(pending, CanonicalShow)
+        if isinstance(pending, Show) and _is_title(pending)
     }
 
 
 # TODO: Validate
 def _pending_seasons(
     session: SQLAlchemySession,
-) -> dict[tuple[uuid.UUID, str], CanonicalSeason]:
+) -> dict[tuple[uuid.UUID, str], Season]:
     """Return every season the session is about to write, by title and key.
 
     The title is read off the row a pending season was handed rather than its
     id, since the id is only written on it by the flush this runs ahead of.
     """
-    pending_seasons: dict[tuple[uuid.UUID, str], CanonicalSeason] = {}
+    pending_seasons: dict[tuple[uuid.UUID, str], Season] = {}
     for pending in session.new:
-        if not isinstance(pending, CanonicalSeason):
+        if not isinstance(pending, Season) or not _is_canonical_season(pending):
             continue
-        canonical_show = pending.canonical_show
-        parent_id = canonical_show.id if canonical_show else pending.canonical_show_id
+        show = pending.show
+        parent_id = show.id if show else pending.show_id
         if parent_id is not None:
             pending_seasons[(parent_id, pending.key)] = pending
     return pending_seasons
@@ -83,16 +108,14 @@ def _pending_seasons(
 # TODO: Validate
 def _pending_episodes(
     session: SQLAlchemySession,
-) -> dict[tuple[uuid.UUID, str], CanonicalEpisode]:
+) -> dict[tuple[uuid.UUID, str], Episode]:
     """Return every episode the session is about to write, by season and key."""
-    pending_episodes: dict[tuple[uuid.UUID, str], CanonicalEpisode] = {}
+    pending_episodes: dict[tuple[uuid.UUID, str], Episode] = {}
     for pending in session.new:
-        if not isinstance(pending, CanonicalEpisode):
+        if not isinstance(pending, Episode) or not _is_canonical_episode(pending):
             continue
-        canonical_season = pending.canonical_season
-        parent_id = (
-            canonical_season.id if canonical_season else pending.canonical_season_id
-        )
+        season = pending.season
+        parent_id = season.id if season else pending.season_id
         if parent_id is not None:
             pending_episodes[(parent_id, pending.key)] = pending
     return pending_episodes
@@ -122,14 +145,14 @@ def _fill_shows(session: SQLAlchemySession) -> None:
     missing_keys = {key for _show, key in wanted} - set(by_key)
     if missing_keys:
         stored = session.scalars(
-            select(CanonicalShow).where(col(CanonicalShow.key).in_(missing_keys)),
+            select(Show).where(is_canonical(Show), col(Show.key).in_(missing_keys)),
         ).all()
         by_key.update({canonical.key: canonical for canonical in stored})
 
     for show, key in wanted:
         canonical = by_key.get(key)
         if canonical is None:
-            canonical = CanonicalShow(
+            canonical = Show(
                 key=key,
                 name=show.name,
                 media_type=show.media_type,
@@ -184,7 +207,7 @@ def _fill_show_links(session: SQLAlchemySession) -> None:
 # TODO: Validate
 def _fill_seasons(session: SQLAlchemySession) -> None:
     """Give every new season in the session the canonical row it is a copy of."""
-    wanted: list[tuple[Season, str, CanonicalShow]] = []
+    wanted: list[tuple[Season, str, Show]] = []
     for season in session.new:
         if not isinstance(season, Season) or _already_pointed(
             season.canonical_season,
@@ -210,25 +233,26 @@ def _fill_seasons(session: SQLAlchemySession) -> None:
         # Both halves of the key are matched loosely and the pair is picked out
         # of what comes back, so the whole flush costs one query.
         stored = session.scalars(
-            select(CanonicalSeason).where(
-                col(CanonicalSeason.canonical_show_id).in_(
+            select(Season).where(
+                is_canonical(Season),
+                col(Season.show_id).in_(
                     {parent_id for parent_id, _key in missing},
                 ),
-                col(CanonicalSeason.key).in_({key for _parent_id, key in missing}),
+                col(Season.key).in_({key for _parent_id, key in missing}),
             ),
         ).all()
         for stored_canonical in stored:
             by_key.setdefault(
-                (stored_canonical.canonical_show_id, stored_canonical.key),
+                (stored_canonical.show_id, stored_canonical.key),
                 stored_canonical,
             )
 
     for season, key, parent in wanted:
-        canonical: CanonicalSeason | None = by_key.get((parent.id, key))
+        canonical: Season | None = by_key.get((parent.id, key))
         if canonical is None:
-            canonical = CanonicalSeason(
+            canonical = Season(
                 key=key,
-                canonical_show=parent,
+                show=parent,
                 name=season.name,
                 season_number=season.season_number,
                 image_url=season.image_url,
@@ -242,7 +266,7 @@ def _fill_seasons(session: SQLAlchemySession) -> None:
 # TODO: Validate
 def _fill_episodes(session: SQLAlchemySession) -> None:
     """Give every new episode in the session the canonical row it is a copy of."""
-    wanted: list[tuple[Episode, str, CanonicalSeason]] = []
+    wanted: list[tuple[Episode, str, Season]] = []
     for episode in session.new:
         if not isinstance(episode, Episode) or _already_pointed(
             episode.canonical_episode,
@@ -267,25 +291,26 @@ def _fill_episodes(session: SQLAlchemySession) -> None:
     ]
     if missing:
         stored = session.scalars(
-            select(CanonicalEpisode).where(
-                col(CanonicalEpisode.canonical_season_id).in_(
+            select(Episode).where(
+                is_canonical(Episode),
+                col(Episode.season_id).in_(
                     {parent_id for parent_id, _key in missing},
                 ),
-                col(CanonicalEpisode.key).in_({key for _parent_id, key in missing}),
+                col(Episode.key).in_({key for _parent_id, key in missing}),
             ),
         ).all()
         for stored_canonical in stored:
             by_key.setdefault(
-                (stored_canonical.canonical_season_id, stored_canonical.key),
+                (stored_canonical.season_id, stored_canonical.key),
                 stored_canonical,
             )
 
     for episode, key, parent in wanted:
-        canonical: CanonicalEpisode | None = by_key.get((parent.id, key))
+        canonical: Episode | None = by_key.get((parent.id, key))
         if canonical is None:
-            canonical = CanonicalEpisode(
+            canonical = Episode(
                 key=key,
-                canonical_season=parent,
+                season=parent,
                 name=episode.name,
                 description=episode.description,
                 image_url=episode.image_url,
@@ -317,14 +342,27 @@ def _fill_pending(session: SQLAlchemySession) -> None:
 
 # TODO: Validate
 def register_canonical_hooks() -> None:
-    """Attach the flush hook to every session.
+    """Attach the flush hook and the listing index to every session.
 
-    Registered once, from `load_models`, so a session made anywhere gets it
-    without having to know about it.
+    Registered once, from `load_models`, so a session made anywhere gets them
+    without having to know about them.
     """
     if event.contains(SQLAlchemySession, "before_flush", _before_flush):
         return
     event.listen(SQLAlchemySession, "before_flush", _before_flush)
+    # Both ends of how a session comes to hold a listing: one it was handed and
+    # one it read in. A listing is looked up by its source and key on the import
+    # hot path, and that pair stopped naming a row in the identity map when a
+    # title and a listing became one table.
+    event.listen(SQLAlchemySession, "after_attach", _index_attached)
+    event.listen(SQLAlchemySession, "loaded_as_persistent", _index_attached)
+
+
+# TODO: Validate
+def _index_attached(session: SQLAlchemySession, instance: object) -> None:
+    """Put a listing the session has taken hold of into its index."""
+    if isinstance(instance, Show):
+        index_show(session, instance)
 
 
 # TODO: Validate

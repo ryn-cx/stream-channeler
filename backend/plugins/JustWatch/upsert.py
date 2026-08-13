@@ -9,7 +9,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.JustWatch.helpers import HelperMixin
-from plugins.TMDB.mixin import highest_episode_number
+from plugins.TMDB.link import TMDBLinker
 
 if TYPE_CHECKING:
     from just_scrape.url_title_details import models as url_title_details_models
@@ -81,6 +81,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -114,22 +115,25 @@ class UpsertMixin(HelperMixin, register=False):
             url=self._clean_external_url(offer.standard_web_url),
             image_url=self._images_base_url
             + parsed_json.data.url_v2.node.content.full_backdrops[0].backdrop_url,
+            year=parsed_json.data.url_v2.node.content.original_release_year,
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
         )
-        show = self._merge_and_upsert_show(
-            new_show,
-            source,
-            existing_show,
-            show_key,
-            self.tmdb_media_type(show_key),
-        )
+        show = self._upsert_show_object(new_show, source, existing_show, show_key)
 
         self._upsert_seasons(show, show_key, force=force)
 
         self.soft_delete_missing_seasons(show_key)
 
         self._set_weekly_updates_from_episodes(show)
+
+        TMDBLinker(self.session).link(
+            show,
+            # `media_type` above is what JustWatch calls the title; this is
+            # which half of TMDB's catalogue it belongs in.
+            MediaType.movie if media_type == "Movie" else MediaType.tv,
+            canonical_show,
+        )
 
         return show
 
@@ -174,12 +178,11 @@ class UpsertMixin(HelperMixin, register=False):
                 data_timestamp=self.season_data_timestamp(season_data.id, show_key),
                 show_id=show.id,
             )
-            season = self._merge_and_upsert_season(
+            season = self._upsert_season_object(
                 new_season,
                 show,
                 existing_season,
                 show_key,
-                MediaType.tv,
             )
             self._upsert_season_episodes(
                 show,
@@ -209,12 +212,11 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp=self.season_data_timestamp(node_id, show_key),
             show_id=show.id,
         )
-        season = self._merge_and_upsert_season(
+        season = self._upsert_season_object(
             new_season,
             show,
             existing_season,
             show_key,
-            MediaType.movie,
         )
         upserted_key = self._upsert_movie_episode(show, season, show_key, force=force)
         expected_keys = [upserted_key] if upserted_key else []
@@ -238,9 +240,6 @@ class UpsertMixin(HelperMixin, register=False):
             .data.url_v2.node.content.full_backdrops
         )
         parsed_episodes = season_episodes_file.parsed_episodes()
-        last_number = highest_episode_number(
-            season_episode.content.episode_number for season_episode in parsed_episodes
-        )
         for index, season_episode in enumerate(parsed_episodes):
             existing_episode = Episode.get_from_memory(
                 self.session,
@@ -288,13 +287,11 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=self._images_base_url + backdrop_image,
                 season_id=season.id,
             )
-            self._merge_and_upsert_episode(
+            self._upsert_episode_object(
                 new_episode,
                 season,
                 existing_episode,
                 show_key,
-                MediaType.tv,
-                last_number,
             )
 
     # TODO: Validate
@@ -345,11 +342,10 @@ class UpsertMixin(HelperMixin, register=False):
             air_date=self._date_to_datetime(node.content.original_release_date),
             season_id=season.id,
         )
-        self._merge_and_upsert_episode(
+        self._upsert_episode_object(
             new_episode,
             season,
             existing_episode,
             show_key,
-            MediaType.movie,
         )
         return episode_info.id

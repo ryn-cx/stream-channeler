@@ -3,7 +3,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Never, Self, override
+from typing import ClassVar, Never, Self, override
 
 from sqlalchemy.orm import contains_eager
 from sqlmodel import Field, PrimaryKeyConstraint, Relationship, Session, select
@@ -26,6 +26,8 @@ class BaseFile(BaseMediaMixin):
 # TODO: Validate
 class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Model representing a `File`."""
+
+    PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
 
     __table_args__ = (PrimaryKeyConstraint("plugin_id", "key"),)
 

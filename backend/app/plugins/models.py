@@ -45,6 +45,8 @@ class BasePlugin(BaseMediaMixin):
 class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     """Model representing a `Plugin`."""
 
+    PARENT_ID_FIELD: ClassVar[str] = "user_id"
+
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS

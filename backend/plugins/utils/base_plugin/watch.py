@@ -5,7 +5,6 @@ from datetime import datetime
 
 from sqlmodel import Session, col, select
 
-from app.episodes.models import CanonicalEpisode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -32,8 +31,8 @@ class WatchMixin(ABC):
             return {}
         statement = (
             select(Episode)
-            .join(Season)
-            .join(Show)
+            .join(Season, col(Episode.season_id) == col(Season.id))
+            .join(Show, col(Season.show_id) == col(Show.id))
             .join(Source)
             .where(Source.plugin_id == self.plugin.id)
             .where(col(Episode.key).in_(episode_keys))
@@ -55,9 +54,9 @@ class WatchMixin(ABC):
         if not canonical_ids:
             return {}
         canonical_keys = self.session.exec(
-            select(CanonicalEpisode.key).where(
-                col(CanonicalEpisode.id).in_(canonical_ids),
-                col(CanonicalEpisode.key).is_not(None),
+            select(Episode.key).where(
+                col(Episode.id).in_(canonical_ids),
+                col(Episode.key).is_not(None),
             ),
         ).all()
         if not canonical_keys:

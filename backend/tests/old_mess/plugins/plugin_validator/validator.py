@@ -18,6 +18,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
+from tests.old_mess.plugins.plugin_validator.canonical_links import CanonicalLinks
 from tests.old_mess.plugins.plugin_validator.serialization import Record, children
 
 ValidatorRuleType = Literal[
@@ -323,6 +324,38 @@ class Validator:
             AssertionError: If validation fails with details about mismatches.
         """
         if errors := self._validate_records("Canonical shows", original, actual):
+            raise AssertionError("\n\n".join(errors))
+
+    # TODO: Validate
+    def validate_canonical_links(
+        self,
+        original: CanonicalLinks,
+        actual: CanonicalLinks,
+    ) -> None:
+        """Validate which title each copy is a copy of against the recorded one.
+
+        The rules say nothing here because a link is not a value that drifts:
+        the copy and the row at each end of one are named by key, and a key is
+        the same on every run, so the link an import settles is either the one
+        that was settled before or a different link. What the count of the
+        canonical rows cannot say is which copy ended up on which row, and a
+        copy pointing at the wrong one of two rows is what this is for.
+
+        Raises:
+            AssertionError: If validation fails with details about mismatches.
+        """
+        errors: list[str] = []
+        for path in sorted(set(original) | set(actual)):
+            original_keys = original.get(path)
+            actual_keys = actual.get(path)
+            if original_keys != actual_keys:
+                errors.append(
+                    f"{path}\n"
+                    f"Canonical Links Changed\n"
+                    f"Original: {original_keys}\n"
+                    f"Updated : {actual_keys}",
+                )
+        if errors:
             raise AssertionError("\n\n".join(errors))
 
     # TODO: Validate

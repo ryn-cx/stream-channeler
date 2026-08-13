@@ -33,6 +33,8 @@ class BaseSource(BaseMediaMixin):
 
 # TODO: Validate
 class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
+    PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
+
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
         DIRECT_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS

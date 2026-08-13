@@ -5,6 +5,7 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
+from app.canonical_media.filters import is_copy
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -41,16 +42,21 @@ def sources_by_key(session: Session) -> dict[str, Source]:
 # TODO: Validate
 def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     """Return the number of live episodes each `Source` provides, keyed by source id."""
+    # The websites' own listings alone: a title is on no website, so counting the
+    # titles here would be a bucket of media belonging to no source at all.
     rows = session.exec(
-        select(Show.source_id, func.count(col(Episode.id)))
+        select(Source.id, func.count(col(Episode.id)))
+        .select_from(Show)
+        .join(Source, col(Show.source_id) == Source.id)
         .join(Season, col(Season.show_id) == Show.id)
         .join(Episode, col(Episode.season_id) == Season.id)
         .where(
+            is_copy(Show),
             col(Show.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),
         )
-        .group_by(col(Show.source_id)),
+        .group_by(col(Source.id)),
     ).all()
     return dict(rows)
 

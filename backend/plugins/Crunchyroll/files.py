@@ -33,7 +33,7 @@ from plugins.Crunchyroll.music_keys import (
     is_music_show_key,
     music_episode_category,
 )
-from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
@@ -202,7 +202,7 @@ class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
 
 
 # TODO: Validate
-class FileMixin(TMDBMixin, register=False):
+class FileMixin(BasePlugin, register=False):
     """File mixin."""
 
     _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)

@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import re
-import uuid
 from abc import ABC, abstractmethod
-from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
@@ -13,11 +11,8 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.service import link_canonical_show, reconcile_show
-from app.shows.models import CanonicalShow
-from app.episodes.models import MANUAL_NOTES, Episode
-from app.episodes.tmdb_matches import absolute_numbers
-from app.media.canonical_metadata import canonical_episode_of
+from app.canonical_media.service import link_canonical_show
+from app.episodes.models import Episode
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -46,41 +41,6 @@ _ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
     "update_season": ("season", lambda season: season.show.key),
     "update_episode": ("episode", lambda episode: episode.season.show.key),
 }
-
-
-# TODO: Validate
-def _numberings(show: Show) -> list[tuple[uuid.UUID, int | None, int | None]]:
-    """Return how a title numbers each of its episodes, for counting them through."""
-    return [
-        (episode.id, season.season_number, episode.episode_number)
-        for season in show.active_children
-        for episode in season.active_children
-    ]
-
-
-# TODO: Validate
-def _canonical_numberings(
-    canonical_show: CanonicalShow,
-) -> list[tuple[uuid.UUID, int | None, int | None]]:
-    """Return how the title itself numbers its episodes, for counting them through.
-
-    The canonical mirror of `_numberings`. Canonical rows are never soft
-    deleted, so every season and episode under the title counts.
-    """
-    return [
-        (episode.id, season.season_number, episode.episode_number)
-        for season in canonical_show.canonical_seasons
-        for episode in season.canonical_episodes
-    ]
-
-
-# TODO: Validate
-def _is_settled_by_hand(episode: Episode) -> bool:
-    """Report whether a `User` settled which episode this is a copy of."""
-    return (
-        episode.canonical_episode_locked
-        and episode.canonical_episode_note in MANUAL_NOTES
-    )
 
 
 # TODO: Validate
@@ -115,14 +75,6 @@ class BasePlugin(
 
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
-
-    _supplied_canonical_show: CanonicalShow | None = None
-    """The title a caller named the listing being imported as a copy of.
-
-    Set at the top of `import_url`, after the wrapper has recorded the show, so
-    it survives for the rest of the import. Left as `None` by an import nobody
-    named a title for, which leaves the import to work the title out for itself.
-    """
 
     _file_cache: dict[object, Any]
     _reusable_file_cache: dict[object, Any]
@@ -273,13 +225,10 @@ class BasePlugin(
         if hasattr(self, "source") and self.source:
             return
 
-        if existing_source := Source.get(self.session, self.plugin, self.plugin_key()):
-            self.source = existing_source
-        else:
-            # Committed for the same reason the plugin is: a download writes
-            # through a session that cannot see what this one still holds.
-            self.source = self._upsert_source()
-            self.session.commit()
+        self.source = (
+            Source.get(self.session, self.plugin, self.plugin_key())
+            or self._upsert_source()
+        )
 
     # TODO: Validate
     def _upsert_plugin(
@@ -347,9 +296,7 @@ class BasePlugin(
     ) -> None:
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        upserted = self.upsert_show(show.source, show.key, force=force)
-        self._unshare_canonical_episodes(upserted)
-        reconcile_show(self.session, upserted, self.plugin_key())
+        self.upsert_show(show.source, show.key, force=force)
 
     # TODO: Validate
     @override
@@ -401,23 +348,37 @@ class BasePlugin(
         episode.update_at = tz_datetime.max()
 
     # TODO: Validate
-    def _import_show(self, show_key: str) -> Show:
+    def _import_show(
+        self,
+        show_key: str,
+        canonical_show: Show | None = None,
+    ) -> Show:
+        """Import a show into the database if it does not exist.
+
+        If it already exists return the existing Show.
+
+        `canonical_show` is the title a caller named the listing as a copy of,
+        carried down from `import_url` rather than held on the instance, so
+        nothing has to survive between calls for it to be read.
+        """
         if show := self._preload_show(show_key).one_or_none():
-            self._link_supplied_canonical_show(show)
+            self._link_supplied_canonical_show(show, canonical_show)
             return show
 
         _cache = self._download_show_files_and_children(show_key)
-        show = self.upsert_show(self.source, show_key)
-        self._unshare_canonical_episodes(show)
-        reconcile_show(self.session, show, self.plugin_key())
-        # After the reconcile rather than before it, since a title nothing under
-        # the listing points at yet is one the reconcile would take straight back
-        # off again.
-        self._link_supplied_canonical_show(show)
+        show = self.upsert_show(self.source, show_key, canonical_show=canonical_show)
+        # After the reconcile `upsert_show` ends on rather than before it, since a
+        # title nothing under the listing points at yet is one the reconcile would
+        # take straight back off again.
+        self._link_supplied_canonical_show(show, canonical_show)
         return show
 
     # TODO: Validate
-    def _link_supplied_canonical_show(self, show: Show) -> None:
+    def _link_supplied_canonical_show(
+        self,
+        show: Show,
+        canonical_show: Show | None,
+    ) -> None:
         """Record the title a caller named as one this listing is a copy of.
 
         This is where a listing that mixes titles learns about the second of
@@ -426,104 +387,76 @@ class BasePlugin(
         caller names is added to what the listing stands for rather than taken
         as what it is.
         """
-        if self._supplied_canonical_show:
-            link_canonical_show(self.session, show, self._supplied_canonical_show)
+        if canonical_show:
+            link_canonical_show(self.session, show, canonical_show)
 
     # TODO: Validate
-    def _unshare_canonical_episodes(self, show: Show) -> None:
-        """Unlink the episodes of `show` that ended up pointing at the same record.
-
-        One canonical episode is one episode to watch, so two episodes of a
-        single show pointing at it is the matching having put both of them on a
-        record that at most one of them is. Neither is the one to keep, so each
-        is let go of and what they shared is written into the note rather than
-        lost. A copy left pointing at nothing is given a row of its own by
-        `reconcile_show`, which runs straight after this.
-
-        Only what a `User` settled is left alone, which is also what decides a
-        clash between their episode and any other in their favour. A lock the
-        import made itself is no help here: it was made on evidence that has
-        turned out to fit two episodes, so it goes along with the link.
-
-        An episode numbered the way the record numbers it keeps the link, since
-        that tells it apart from the others rather than leaving every one of
-        them a guess, and only the rest are let go of.
-        """
-        episodes = [
-            episode
-            for season in show.active_children
-            for episode in season.active_children
-            if episode.canonical_episode_id is not None
-        ]
-        counts = Counter(episode.canonical_episode_id for episode in episodes)
-        shared = {canonical_id for canonical_id, count in counts.items() if count > 1}
-        if not shared:
-            return
-
-        clashing_by_canonical: dict[uuid.UUID, list[Episode]] = defaultdict(list)
-        for episode in episodes:
-            if episode.canonical_episode_id in shared:
-                clashing_by_canonical[episode.canonical_episode_id].append(episode)
-
-        for canonical_id, clashing in clashing_by_canonical.items():
-            keeper = self._kept_from_clash(canonical_id, clashing)
-            for episode in clashing:
-                if episode is keeper or _is_settled_by_hand(episode):
-                    continue
-                logger.info(f"Unsharing {canonical_id} from episode {episode.key}")
-                removed = f"Removed {canonical_id}, which another episode was given too"
-                # What the episode was matched on is kept behind the removal
-                # rather than written over it, since how it came to be linked is
-                # most of what says whether it should have kept the link.
-                previous = episode.canonical_episode_note
-                episode.canonical_episode_note = (
-                    f"{removed}. {previous}" if previous else removed
-                )
-                episode.canonical_episode_id = None
-                episode.canonical_episode_locked = False
-
-    # TODO: Validate
-    def _kept_from_clash(
+    def _upsert_show_object(
         self,
-        canonical_id: uuid.UUID,
-        clashing: list[Episode],
-    ) -> Episode | None:
-        """Return the one episode of a clash numbered the way TMDB numbers it.
+        show: Show,
+        source: Source,
+        existing_show: Show | None,
+        show_key: str,
+    ) -> Show:
+        """Store the website's own `Show` against the files it was read out of.
 
-        The episodes on one record are all guesses until something tells them
-        apart, and the numbering is that: whatever put the others there was a
-        name or a count that has turned out to fit more than one of them.
-
-        A website filing a special among a season's episodes gives it the same
-        season and episode number as the episode it sits beside, so how far into
-        the title each one is counts as well. That is the number the two of them
-        differ by, and without it neither is told from the other.
-
-        Only ever a single episode, since two the numbering fits are no more
-        told apart than none were. A `User` settling one of them decides the
-        clash by itself, so nothing is kept here while one of them is theirs.
+        A record being written again is built fresh off the website's files, so
+        it knows nothing of the title the stored one is a copy of. That title is
+        carried over rather than written away, since a listing is a copy of the
+        same thing it was a copy of last time unless something works out
+        otherwise, and what works it out runs after this. A title the `User`
+        settled is kept whatever the new record says; otherwise a title the new
+        record does name is the better answer and wins.
         """
-        if any(_is_settled_by_hand(episode) for episode in clashing):
-            return None
+        if existing_show and (
+            existing_show.canonical_show_locked or not show.canonical_show_id
+        ):
+            show.canonical_show_id = existing_show.canonical_show_id
+        show_files = self._show_files(show_key)
+        return show.upsert_and_set_update_at(source, existing_show, show_files)
 
-        counterpart = canonical_episode_of(self.session, canonical_id)
-        if counterpart is None:
-            return None
-        tmdb_episode, tmdb_season, tmdb_show = counterpart
+    # TODO: Validate
+    def _upsert_season_object(
+        self,
+        season: Season,
+        show: Show,
+        existing_season: Season | None,
+        show_key: str,
+    ) -> Season:
+        """Store the website's own `Season` against the files it was read out of.
 
-        tmdb_absolute = absolute_numbers(_canonical_numberings(tmdb_show)).get(
-            tmdb_episode.id,
-        )
-        source_absolute = absolute_numbers(_numberings(clashing[0].season.show))
+        The season the stored record is a copy of is carried over for the same
+        reason the show's title is. No `User` ever settles a season by hand, so
+        a new record naming one always wins.
+        """
+        if existing_season and not season.canonical_season_id:
+            season.canonical_season_id = existing_season.canonical_season_id
+        season_files = self._season_files(season.key, show_key)
+        return season.upsert_and_set_update_at(show, existing_season, season_files)
 
-        numbered = [
-            episode
-            for episode in clashing
-            if episode.episode_number == tmdb_episode.episode_number
-            and episode.season.season_number == tmdb_season.season_number
-            and source_absolute.get(episode.id) == tmdb_absolute
-        ]
-        return numbered[0] if len(numbered) == 1 else None
+    # TODO: Validate
+    def _upsert_episode_object(
+        self,
+        episode: Episode,
+        season: Season,
+        existing_episode: Episode | None,
+        show_key: str,
+    ) -> Episode:
+        """Store the website's own `Episode` against the files it was read out of.
+
+        The episode the stored record is a copy of is carried over for the same
+        reason the show's title is, and the note travels with it: how a link came
+        to be made is most of what says whether it should be kept, so an episode
+        that keeps its link keeps the reason for it too.
+        """
+        if existing_episode and (
+            existing_episode.canonical_episode_locked
+            or not episode.canonical_episode_id
+        ):
+            episode.canonical_episode_id = existing_episode.canonical_episode_id
+            episode.canonical_episode_note = existing_episode.canonical_episode_note
+        episode_files = self._episode_files(episode.key, season.key, show_key)
+        return episode.upsert_and_set_update_at(season, existing_episode, episode_files)
 
     # TODO: Validate
     @abstractmethod
@@ -531,6 +464,7 @@ class BasePlugin(
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show: ...
@@ -655,12 +589,11 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
-        show = self._import_show(handler.show_key)
+        show = self._import_show(handler.show_key, canonical_show)
         return handler.import_results(show)
 
 

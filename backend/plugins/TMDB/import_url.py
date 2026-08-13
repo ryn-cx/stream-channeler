@@ -5,7 +5,7 @@ from typing import override
 
 from bs4 import Tag
 
-from app.shows.models import CanonicalShow
+from app.shows.models import Show
 from plugins.TMDB.files import TMDB_DOMAIN, TitlePage
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
@@ -30,9 +30,8 @@ class ImportURLMixin(
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 

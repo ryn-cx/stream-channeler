@@ -12,7 +12,7 @@ from sqlalchemy import inspect as sa_inspect
 from sqlmodel import Session, col, select
 
 from app.episodes.models import CanonicalEpisode
-from app.canonical_media.service import reconcile_show
+from app.canonical_media.service import sync_canonical_show
 from app.seasons.models import CanonicalSeason
 from app.shows.models import CanonicalShow
 from app.episodes.models import Episode
@@ -28,6 +28,9 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin import BasePlugin
 from tests.old_mess.app.utils.utils import build_random_model
+from tests.old_mess.plugins.plugin_validator.canonical_links import (
+    collect_canonical_links,
+)
 from tests.old_mess.plugins.plugin_validator.context_managers import (
     mock_update,
 )
@@ -78,6 +81,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         return DatabaseState(
             self.get_detached_plugin(session),
             self.get_detached_canonical_shows(session),
+            collect_canonical_links(self.select_plugins_with_children(session)),
         )
 
     # TODO: Validate
@@ -89,7 +93,7 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         Reconciling before the state is captured is what makes the two the same,
         so the update under test is not also the first thing to settle the link.
         """
-        reconcile_show(session, show, self.plugin_class.plugin_key())
+        sync_canonical_show(session, show, self.plugin_class.plugin_key())
         session.flush()
 
     # TODO: Validate
@@ -99,11 +103,20 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
         original: DatabaseState,
         actual: DatabaseState,
     ) -> None:
-        """Validate the plugin's tree and the rows its records are copies of."""
+        """Validate the plugin's tree, the rows its records are copies of, and the links.
+
+        The links are validated last so that a plugin whose tree or canonical
+        rows are already wrong is reported by what went wrong first rather than
+        by every copy the wrongness moved onto another row.
+        """
         validator.validate(original.plugin, actual.plugin)
         validator.validate_canonical_shows(
             original.canonical_shows,
             actual.canonical_shows,
+        )
+        validator.validate_canonical_links(
+            original.canonical_links,
+            actual.canonical_links,
         )
 
     # TODO: Validate

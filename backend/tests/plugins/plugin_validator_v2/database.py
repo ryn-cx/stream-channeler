@@ -1,9 +1,10 @@
 # TODO: Validate
+"""Putting the stored files in place and reading back what they built."""
+
 import json
 from collections.abc import Generator
-from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
 import pytest
 from freezegun import freeze_time
@@ -12,40 +13,30 @@ from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
 from app.constants import TEST_FILES_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
-from app.seasons.models import Season
-from app.shows.models import Show
+from app.seasons.models import CanonicalSeason, Season
+from app.shows.models import CanonicalShow, Show
 from app.sources.models import Source
+from app.users.models import User
 from app.users.service import get_or_create_plugin_user
-from plugins.utils.abstract_plugin import (
-    PluginSearchResults,
-    URLImportResult,
-)
+from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
-from tests.conftest import (
-    init_db,
-    savepoint_session,
-    test_engine,
-)
-from tests.old_mess.plugins.plugin_validator.canonical_links import (
-    CanonicalLinks,
-    collect_canonical_links,
-)
-from tests.old_mess.plugins.plugin_validator.context_managers import (
+from tests.conftest import init_db, savepoint_session, test_engine
+from tests.plugins.plugin_validator_v2.stored_files import (
+    IMPORT_TIME,
+    check_episodes_before_grouped_download,
+    serve_downloads_from_disk,
     stored_file_record,
     stored_path,
 )
-from tests.old_mess.plugins.plugin_validator.serialization import SerializationMixin
 
 
 # TODO: Validate
-def _plugin_class(plugin_key: str) -> type[BasePlugin]:
+def plugin_class_for(plugin_key: str) -> type[BasePlugin]:
     """Return the plugin class for a plugin key.
 
     Unregistered plugins are included because a registered plugin can create
@@ -67,29 +58,11 @@ def _plugin_class(plugin_key: str) -> type[BasePlugin]:
 
 
 # TODO: Validate
-class DatabaseState(NamedTuple):
-    """Everything a test compares: a plugin's tree and the rows it is a copy of.
+class DatabaseMixin[PluginT: BasePlugin]:
+    """Everything a test needs before it can compare anything."""
 
-    The canonical rows are held beside the plugin rather than under it because a
-    row is not owned by any one plugin - the point of one is that every copy of a
-    title, from whichever website, ends up pointing at the same row.
-
-    Which copy is of which row is held beside both, because the ids that carry
-    that in the records themselves are generated afresh on every run and so say
-    nothing about which row a copy ended up on.
-    """
-
-    plugin: Plugin
-    canonical_shows: list[CanonicalShow]
-    canonical_links: CanonicalLinks
-
-
-# TODO: Validate
-class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
-    search_query: str | None = None
-    invalid_url: bool
     imported_plugin: PluginT
 
     # TODO: Validate
@@ -116,9 +89,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     # TODO: Validate
     @property
-    def url(self) -> str | None:
+    def url(self) -> str:
         variants = self._url_variants()
-        return variants[0] if variants else None
+        assert variants, "A URL must be declared for the test class"
+        return variants[0]
 
     # TODO: Validate
     def files_directory_path(self) -> Path:
@@ -137,6 +111,21 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         )
 
     # TODO: Validate
+    def combined_files_path(self) -> Path:
+        """Path to the list of the stored files this test class needs."""
+        return self.files_directory_path() / "all_files.json"
+
+    # TODO: Validate
+    def expected_state_path(self, label: str) -> Path:
+        """Path to the state the test `label` names recorded the first time it ran."""
+        return self.files_directory_path() / "expected_state" / f"{label}.json"
+
+    # TODO: Validate
+    def incorrect_state_path(self, label: str) -> Path:
+        """Path to the state the test `label` names produced when it last failed."""
+        return self.files_directory_path() / "incorrect_state" / f"{label}.json"
+
+    # TODO: Validate
     def stats_directory_path(self, label: str) -> Path:
         """Path to the directory where a specific test's profiling output is stored."""
         return self.files_directory_path() / "stats" / label
@@ -150,21 +139,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     def slow_stats_file_path(self) -> Path:
         """Path to the file holding the stats of every test that got worse."""
         return self.files_directory_path() / "slow.json"
-
-    # TODO: Validate
-    def database_dump_file_path(self) -> Path:
-        """Path to the file that has the expected output for the test class."""
-        return self.files_directory_path() / "database_dump.json"
-
-    # TODO: Validate
-    def import_url_results_file_path(self) -> Path:
-        """Path to the file with the expected import_url result for the test class."""
-        return self.files_directory_path() / "import_url_results.json"
-
-    # TODO: Validate
-    def combined_files_path(self) -> Path:
-        """Path to the list of the stored files this test class needs."""
-        return self.files_directory_path() / "all_files.json"
 
     # TODO: Validate
     def _export_files_manifest(self, session: Session) -> None:
@@ -248,31 +222,27 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         plugin_key = self._owning_plugin_key(entity)
         if plugin_key == self.plugin_class.plugin_key():
             return self.imported_plugin
-        return _plugin_class(plugin_key)(session)
-
-    # TODO: Validate
-    def select_plugin_with_children(self, session: Session) -> Plugin:
-        """Return a plugin with all children selectinloaded."""
-        select_statement = self._plugin_with_children_statement().where(
-            Plugin.key == self.plugin_class.plugin_key(),
-        )
-        return session.exec(select_statement).one()
+        return plugin_class_for(plugin_key)(session)
 
     # TODO: Validate
     def select_plugins_with_children(self, session: Session) -> list[Plugin]:
         """Return every plugin in the database with all children selectinloaded."""
-        statement = self._plugin_with_children_statement().order_by(Plugin.key)  # type: ignore[arg-type]
+        statement = (
+            select(Plugin)
+            .options(
+                selectinload(Plugin.sources)  # type: ignore[arg-type]
+                .selectinload(Source.shows)  # type: ignore[arg-type]
+                .selectinload(Show.seasons)  # type: ignore[arg-type]
+                .selectinload(Season.episodes),  # type: ignore[arg-type]
+            )
+            .order_by(Plugin.key)
+        )
         return list(session.exec(statement).all())
 
     # TODO: Validate
-    @staticmethod
-    def _plugin_with_children_statement() -> Any:
-        return select(Plugin).options(
-            selectinload(Plugin.sources)  # type: ignore[arg-type]
-            .selectinload(Source.shows)  # type: ignore[arg-type]
-            .selectinload(Show.seasons)  # type: ignore[arg-type]
-            .selectinload(Season.episodes),  # type: ignore[arg-type]
-        )
+    def select_users(self, session: Session) -> list[User]:
+        """Return every user, who is what an id on a plugin names."""
+        return list(session.exec(select(User).order_by(User.email)).all())  # type: ignore[arg-type]
 
     # TODO: Validate
     def select_canonical_shows_with_children(
@@ -297,104 +267,14 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         return list(session.exec(statement).all())
 
     # TODO: Validate
-    def _export_database_dump_file(self, session: Session) -> None:
-        """Export the database dump file to disk if it does not already exist.
-
-        A scraper can create records owned by another plugin (e.g. the TMDB
-        metadata fallback), so every plugin is dumped, not only the one under test.
-        """
-        if self.database_dump_file_path().exists():
-            return
-        plugins = self.select_plugins_with_children(session)
-        dump = {
-            "plugins": [self._dump_model(plugin) for plugin in plugins],
-            "canonical_shows": [
-                self._dump_model(canonical_show)
-                for canonical_show in self.select_canonical_shows_with_children(session)
-            ],
-            "canonical_links": collect_canonical_links(plugins),
-        }
-        self.database_dump_file_path().parent.mkdir(parents=True, exist_ok=True)
-        self.database_dump_file_path().write_text(
-            json.dumps(dump, default=str, indent=2),
-            encoding="utf-8",
-        )
-
-    # TODO: Validate
-    def load_database_dump(self) -> dict[str, Any]:
-        """Load the dumped state of every plugin and canonical row."""
-        return json.loads(self.database_dump_file_path().read_text(encoding="utf-8"))
-
-    # TODO: Validate
-    def load_database_dump_plugin(self) -> Plugin:
-        """Load the plugin under test from the database dump file."""
-        plugin_key = self.plugin_class.plugin_key()
-        for plugin_dict in self.load_database_dump()["plugins"]:
-            if plugin_dict["key"] == plugin_key:
-                return self._load_model(Plugin, plugin_dict)
-        msg = f"No dumped plugin for key {plugin_key!r}"
-        raise ValueError(msg)
-
-    # TODO: Validate
-    def load_database_dump_canonical_shows(self) -> list[CanonicalShow]:
-        """Load every canonical title from the database dump file."""
-        return [
-            self._load_model(CanonicalShow, canonical_show_dict)
-            for canonical_show_dict in self.load_database_dump()["canonical_shows"]
-        ]
-
-    # TODO: Validate
-    def load_database_dump_canonical_links(self) -> CanonicalLinks:
-        """Load what each copy was recorded as being a copy of."""
-        return self.load_database_dump()["canonical_links"]
-
-    # TODO: Validate
-    def dumped_state(self) -> DatabaseState:
-        """Return the state the database dump file recorded."""
-        return DatabaseState(
-            self.load_database_dump_plugin(),
-            self.load_database_dump_canonical_shows(),
-            self.load_database_dump_canonical_links(),
-        )
-
-    # TODO: Validate
-    @staticmethod
-    def _simplify_import_url_results(
-        results: list[URLImportResult],
-    ) -> list[dict[str, Any]]:
-        """Reduce import results to the records a channel would take on."""
-        return [
-            {
-                "show_key": result.show_key,
-                "is_whitelist": result.is_whitelist,
-                "whitelist_season_keys": sorted(result.season_keys),
-                "whitelist_episode_keys": sorted(result.episode_keys),
-            }
-            for result in results
-        ]
-
-    # TODO: Validate
-    def _export_import_url_results_file(self, results: list[URLImportResult]) -> None:
-        """Export the expected import result to disk if it does not already exist."""
-        if self.import_url_results_file_path().exists():
-            return
-        self.import_url_results_file_path().parent.mkdir(parents=True, exist_ok=True)
-        self.import_url_results_file_path().write_text(
-            json.dumps(self._simplify_import_url_results(results), indent=2),
-            encoding="utf-8",
-        )
-
-    # TODO: Validate
     def _import_url(
         self,
         session: Session,
         url: str | None = None,
     ) -> list[URLImportResult]:
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
-        url = url or self.url
-        assert url, "URL must be provided for URL import tests"
         self.imported_plugin = self.plugin_class(session)
-        output = self.imported_plugin.import_url(url)
+        output = self.imported_plugin.import_url(url or self.url)
 
         session.flush()
         session.expire_all()
@@ -402,21 +282,23 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         return output
 
     # TODO: Validate
-    def _search(self, session: Session, query: str) -> PluginSearchResults:
-        with freeze_time(self._search_files_freeze_target(session)):
-            return self.plugin_class(session).search(query)
-
-    # TODO: Validate
-    def _search_files_freeze_target(self, session: Session) -> datetime | None:
-        plugin = self.select_plugin_with_children(session)
-        search_timestamps = [
-            file.data_timestamp
-            for file in plugin.files
-            if file.key.startswith("Search")
-        ]
-        if not search_timestamps:
-            return None
-        return max(search_timestamps) + timedelta(seconds=1)
+    @staticmethod
+    def simplify_import_url_results(
+        results: list[URLImportResult],
+    ) -> list[dict[str, Any]]:
+        """Reduce import results to the records a channel would take on."""
+        return sorted(
+            (
+                {
+                    "show_key": result.show_key,
+                    "is_whitelist": result.is_whitelist,
+                    "whitelist_season_keys": sorted(result.season_keys),
+                    "whitelist_episode_keys": sorted(result.episode_keys),
+                }
+                for result in results
+            ),
+            key=lambda result: result["show_key"],
+        )
 
     # TODO: Validate
     def _import_files(self, session: Session) -> None:
@@ -426,6 +308,10 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         downloaded during it. `serve_downloads_from_disk` is what covers a file
         that has not been stored yet, which is only ever the case while a test's
         data is being recorded.
+
+        Held at the frozen import time because this is also where a plugin's
+        sources are initialized, and a source dated by the clock the machine
+        happened to be at is a record that is different on every run.
         """
         logger.info(f"Importing files for {type(self).__name__}")
 
@@ -447,7 +333,7 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         plugin_records: dict[str, Plugin] = {}
         plugin_under_test: BasePlugin | None = None
         for plugin_key in plugin_keys:
-            plugin_class = _plugin_class(plugin_key)
+            plugin_class = plugin_class_for(plugin_key)
             initialize_sources = plugin_class.initialize_sources
             plugin_class.initialize_sources = no_operation  # type: ignore[assignment]
             try:
@@ -487,7 +373,30 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
 
     # TODO: Validate
     @pytest.fixture(scope="class")
-    def _connection_with_files(self) -> Generator[Connection]:
+    def _served_downloads(self) -> Generator[list[str]]:
+        """Answer every download out of the stored test files.
+
+        A plugin downloads whatever it reaches for, and each download is served
+        from the file stored for it, so a test runs against real data without
+        reaching the network. A file that has not been stored yet is downloaded
+        for real, which only the test that records the data is allowed to do.
+
+        Held for the whole class rather than for a test, because a plugin also
+        downloads while the files are being imported, which happens once before
+        any test of the class runs.
+        """
+        with (
+            check_episodes_before_grouped_download(),
+            serve_downloads_from_disk() as downloaded,
+        ):
+            yield downloaded
+
+    # TODO: Validate
+    @pytest.fixture(scope="class")
+    def _connection_with_files(
+        self,
+        _served_downloads: list[str],
+    ) -> Generator[Connection]:
         """One class-scoped connection with files imported once for the whole class.
 
         The files are imported once here and reused by every test in the class via
@@ -503,7 +412,8 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
                 join_transaction_mode="create_savepoint",
             ) as session:
                 init_db(session)
-                self._import_files(session)
+                with freeze_time(IMPORT_TIME):
+                    self._import_files(session)
             yield connection
         finally:
             transaction.rollback()

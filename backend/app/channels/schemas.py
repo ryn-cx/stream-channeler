@@ -16,7 +16,7 @@ from app.channels.models import (
     Channel,
     URLStatus,
 )
-from app.episodes.models import CanonicalEpisode
+from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
@@ -27,9 +27,9 @@ from app.schemas import (
     ScopedReadOptions,
     make_model_with_all_fields_optional,
 )
-from app.seasons.models import CanonicalSeason
+from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
-from app.shows.models import CanonicalShow
+from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
@@ -336,18 +336,18 @@ class SortKeyInput(BaseInput):
         dict[
             str,
             type[
-                CanonicalEpisode
-                | CanonicalSeason
-                | CanonicalShow
+                Episode
+                | Season
+                | Show
                 | Source
                 | Plugin
                 | Channel
             ],
         ]
     ] = {
-        "episode": CanonicalEpisode,
-        "season": CanonicalSeason,
-        "show": CanonicalShow,
+        "episode": Episode,
+        "season": Season,
+        "show": Show,
         "source": Source,
         "plugin": Plugin,
         # An episode reads as coming from the channel it was added through, which
@@ -369,7 +369,7 @@ class SortKeyInput(BaseInput):
     def model_class(
         self,
     ) -> type[
-        CanonicalEpisode | CanonicalSeason | CanonicalShow | Source | Plugin | Channel
+        Episode | Season | Show | Source | Plugin | Channel
     ]:
         return self.MODEL_MAP[self.model]
 

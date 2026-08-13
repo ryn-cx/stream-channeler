@@ -7,8 +7,6 @@ from typing import override
 
 from loguru import logger
 
-from app.canonical_media.service import reconcile_show
-from app.shows.models import CanonicalShow
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -120,12 +118,15 @@ class YouTube(
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
-        show = self._import_show(handler.show_key, handler.playlist_key)
+        show = self._import_show(
+            handler.show_key,
+            handler.playlist_key,
+            canonical_show,
+        )
         return handler.import_results(show)
 
     # TODO: Validate
@@ -150,31 +151,29 @@ class YouTube(
 
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
-    def _import_show(self, show_key: str, playlist_key: str) -> Show:  # type: ignore[override]
+    def _import_show(  # type: ignore[override]
+        self,
+        show_key: str,
+        playlist_key: str,
+        canonical_show: Show | None = None,
+    ) -> Show:
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
-            return self._upsert_and_reconcile_show(show_key)
+            return self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+            )
 
         if self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            return self._upsert_and_reconcile_show(show_key)
+            return self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+            )
 
-        return show
-
-    # TODO: Validate
-    def _upsert_and_reconcile_show(self, show_key: str) -> Show:
-        """Upsert the show and point it at the media it is a copy of.
-
-        What `_import_show` does for every other plugin, kept here because a
-        YouTube show is imported for one playlist at a time. Without it a video
-        that is in the uploads and in a playlist would be two episodes to watch
-        rather than one, and the first update of the show would have to move
-        every copy onto the record it was always of.
-        """
-        show = self.upsert_show(self.source, show_key)
-        self._unshare_canonical_episodes(show)
-        reconcile_show(self.session, show, self.plugin_key())
         return show
 
     # TODO: Validate

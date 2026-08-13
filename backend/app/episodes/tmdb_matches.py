@@ -13,9 +13,11 @@ from collections.abc import Collection, Sequence
 from difflib import SequenceMatcher
 
 from fastapi import HTTPException
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
+from app.canonical_media.filters import is_canonical, is_copy
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
     SHOW_LEVEL,
@@ -32,7 +34,6 @@ from app.episodes.models import (
     MANUALLY_CONFIRMED_NOTE,
     MANUALLY_SELECTED_NOTE,
     NO_MATCH_NOTE,
-    CanonicalEpisode,
     Episode,
 )
 from app.episodes.schemas import (
@@ -44,8 +45,8 @@ from app.media.canonical_metadata import tmdb_episode_url
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
-from app.seasons.models import CanonicalSeason, Season
-from app.shows.models import CanonicalShow, Show, ShowCanonicalShow
+from app.seasons.models import Season
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 
 # An unnumbered season or episode is ordered after every numbered one.
@@ -53,7 +54,7 @@ _UNNUMBERED = float("inf")
 
 # What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
-type _Candidate = tuple[CanonicalEpisode, CanonicalSeason, CanonicalShow]
+type _Candidate = tuple[Episode, Season, Show]
 type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
@@ -204,16 +205,18 @@ def _has_tmdb_title() -> ColumnElement[bool]:
     titles is as much a copy of the second as of the first and an episode of
     either is one there are TMDB episodes to match it against.
     """
+    canonical_show = aliased(Show)
     return (
         select(ShowCanonicalShow.show_id)
         .select_from(ShowCanonicalShow)
         .join(
-            CanonicalShow,
-            onclause=col(ShowCanonicalShow.canonical_show_id) == CanonicalShow.id,
+            canonical_show,
+            onclause=col(ShowCanonicalShow.canonical_show_id) == canonical_show.id,
         )
         .where(
+            is_canonical(canonical_show),
             col(ShowCanonicalShow.show_id) == col(Show.id),
-            tmdb_key_clause(col(CanonicalShow.key)),
+            tmdb_key_clause(col(canonical_show.key)),
         )
         .correlate(Show)
         .exists()
@@ -225,22 +228,25 @@ def _unmatched_rows(
     session: Session,
     limit: int,
 ) -> list[tuple[Episode, Season, Show, Source]]:
+    canonical_episode = aliased(Episode)
     statement = (
         select(Episode, Season, Show, Source)
+        .select_from(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Show, onclause=col(Season.show_id) == Show.id)
         .join(Source, onclause=col(Show.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
         .join(
-            CanonicalEpisode,
-            onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
+            canonical_episode,
+            onclause=col(Episode.canonical_episode_id) == canonical_episode.id,
         )
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
+            is_canonical(canonical_episode),
             # The episode is a copy of something TMDB has no record of, while one
             # of the titles above it is one TMDB does hold: that gap is exactly
             # what is left to match.
-            not_tmdb_key_clause(col(CanonicalEpisode.key)),
+            not_tmdb_key_clause(col(canonical_episode.key)),
             _has_tmdb_title(),
             # A locked link is one a `User` has already settled, whether by
             # pointing the episode at a TMDB record or by saying there is none to
@@ -275,18 +281,21 @@ def _candidates_by_show(
         return {}
 
     statement = (
-        select(CanonicalEpisode, CanonicalSeason, CanonicalShow)
+        select(Episode, Season, Show)
         .join(
-            CanonicalSeason,
-            onclause=col(CanonicalEpisode.canonical_season_id) == CanonicalSeason.id,
+            Season,
+            onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            CanonicalShow,
-            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+            Show,
+            onclause=col(Season.show_id) == Show.id,
         )
         .where(
-            col(CanonicalShow.id).in_(canonical_show_ids),
-            tmdb_key_clause(col(CanonicalEpisode.key)),
+            is_canonical(Episode),
+            is_canonical(Season),
+            is_canonical(Show),
+            col(Show.id).in_(canonical_show_ids),
+            tmdb_key_clause(col(Episode.key)),
         )
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = defaultdict(list)
@@ -513,17 +522,21 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
     episode being linked is left out so the record it already points at is not
     counted as somebody else's.
     """
+    canonical_episode = aliased(Episode)
     statement = (
-        select(CanonicalEpisode.key)
+        select(canonical_episode.key)
+        .select_from(Episode)
         .join(
-            Episode,
-            onclause=col(Episode.canonical_episode_id) == CanonicalEpisode.id,
+            canonical_episode,
+            onclause=col(Episode.canonical_episode_id) == canonical_episode.id,
         )
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
+            is_canonical(canonical_episode),
+            is_copy(Season),
             Season.show_id == episode.season.show_id,
             col(Episode.id) != episode.id,
-            tmdb_key_clause(col(CanonicalEpisode.key)),
+            tmdb_key_clause(col(canonical_episode.key)),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
         )
@@ -620,7 +633,7 @@ def _tmdb_episode(
     session: Session,
     tmdb_episode_id: int,
     media_type: MediaType | None = None,
-) -> CanonicalEpisode | None:
+) -> Episode | None:
     """Return the imported TMDB episode an id names, in one half of the catalogue.
 
     An id said to be a movie's is only ever looked for as a movie, so a series
@@ -628,8 +641,9 @@ def _tmdb_episode(
     other way about. An id with neither said of it is looked for as both, which
     is what a choice taken off the list is.
     """
-    statement = select(CanonicalEpisode).where(
-        col(CanonicalEpisode.key).in_(
+    statement = select(Episode).where(
+        is_canonical(Episode),
+        col(Episode.key).in_(
             [
                 tmdb_episode_key(half, tmdb_episode_id)
                 for half in _tmdb_halves(media_type)
@@ -756,6 +770,14 @@ def _unlink_others_sharing(
         ):
             continue
 
+        # A copy is always of a season, so a copy that is of none is a copy that
+        # was never reconciled, and saying so here is what keeps it from being
+        # read as an episode standing for itself further along.
+        canonical_season = other.season.canonical_season
+        if canonical_season is None:
+            msg = f"{other.season} is a season rather than a copy of one"
+            raise ValueError(msg)
+
         removed = (
             f"Removed {canonical_episode_id}, which was given to another "
             "episode by hand"
@@ -774,7 +796,7 @@ def _unlink_others_sharing(
             standalone_episode(
                 session,
                 other,
-                other.season.canonical_season,
+                canonical_season,
                 record_key(other.season.show.source.plugin.key, other.key),
             ),
         )

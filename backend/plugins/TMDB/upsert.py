@@ -4,7 +4,7 @@
 TMDB is not a website anything can be watched on, so it has no `Source`, no
 `Show` and no episodes of its own. What it has is the record of what a title
 *is*, which is exactly what a canonical row holds, so a title is imported
-straight into `CanonicalShow` / `CanonicalSeason` / `CanonicalEpisode`.
+straight into `Show` / `Season` / `Episode`.
 
 The `Plugin` row survives, because it still owns the `File` response cache that
 every download here reads through.
@@ -18,14 +18,13 @@ from typing import Any, override
 
 from sqlmodel import col, select
 
-from app.episodes.models import CanonicalEpisode
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key, tmdb_key_clause
 from app.canonical_media.service import (
     canonical_episode_for,
     canonical_season_for,
     canonical_show_for,
 )
-from app.shows.models import CanonicalShow
+from app.episodes.models import Episode
 from app.media.media_type import MediaType
 from app.models import Visibility
 from app.plugins.models import Plugin
@@ -101,6 +100,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -143,7 +143,7 @@ class UpsertMixin(HelperMixin, register=False):
             plugin.update_at = None
 
     # TODO: Validate
-    def _imported_titles(self) -> Sequence[CanonicalShow]:
+    def _imported_titles(self) -> Sequence[Show]:
         """Return every canonical title TMDB is the record behind.
 
         A title only one website knows about is keyed by that website rather
@@ -151,9 +151,9 @@ class UpsertMixin(HelperMixin, register=False):
         refresh are the ones its own key names.
         """
         return self.session.exec(
-            select(CanonicalShow)
-            .where(tmdb_key_clause(col(CanonicalShow.key)))
-            .order_by(col(CanonicalShow.key)),
+            select(Show)
+            .where(tmdb_key_clause(col(Show.key)))
+            .order_by(col(Show.key)),
         ).all()
 
     # TODO: Validate
@@ -162,7 +162,7 @@ class UpsertMixin(HelperMixin, register=False):
         media_type: MediaType,
         tmdb_id: int,
         update_at: datetime | None = None,
-    ) -> CanonicalShow | None:
+    ) -> Show | None:
         """Store a title and everything under it as canonical media.
 
         A copy of the title on any website reads these rows for whatever its own
@@ -227,7 +227,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         media_type: MediaType,
         tmdb_id: int,
-    ) -> CanonicalShow:
+    ) -> Show:
         """Write what TMDB says about a title onto the row standing for it."""
         if media_type == MediaType.movie:
             movie = self.movie_detail_file(tmdb_id).parsed()
@@ -263,7 +263,7 @@ class UpsertMixin(HelperMixin, register=False):
     # TODO: Validate
     def _upsert_series_season(
         self,
-        canonical_show: CanonicalShow,
+        canonical_show: Show,
         tmdb_id: int,
         season_number: int,
         update_at: datetime | None = None,
@@ -317,7 +317,7 @@ class UpsertMixin(HelperMixin, register=False):
         return season_file
 
     # TODO: Validate
-    def _upsert_movie(self, canonical_show: CanonicalShow, tmdb_id: int) -> None:
+    def _upsert_movie(self, canonical_show: Show, tmdb_id: int) -> None:
         """Write a film as a single season holding the film as its only episode."""
         movie = self.movie_detail_file(tmdb_id).parsed()
         canonical_season = canonical_season_for(
@@ -354,7 +354,7 @@ class UpsertMixin(HelperMixin, register=False):
     # TODO: Validate
     def _write_episode(  # noqa: PLR0913 - One argument per field TMDB reports.
         self,
-        canonical_episode: CanonicalEpisode,
+        canonical_episode: Episode,
         *,
         url: str | None,
         name: str | None,

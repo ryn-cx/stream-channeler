@@ -19,13 +19,14 @@ from app.canonical_media.dependencies import (
     AdminCanonicalSeason,
     AdminCanonicalShow,
 )
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
 from app.episodes.dependencies import (
     EditableEpisode,
     ExistingEpisode,
     ReadableEpisode,
 )
-from app.episodes.models import CanonicalEpisode, Episode
+from app.episodes.models import Episode
 from app.episodes.schemas import (
     CanonicalEpisodeListOutput,
     CanonicalEpisodeOutput,
@@ -62,10 +63,10 @@ from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
-from app.seasons.models import CanonicalSeason, Season
+from app.seasons.models import Season
 from app.service import list_response
 from app.shows.dependencies import ReadableShow
-from app.shows.models import CanonicalShow, Show
+from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -89,11 +90,16 @@ canonical_episodes_router = APIRouter(
     tags=["canonical-episodes"],
 )
 
+# Every column the canonical list is sorted and filtered by that an `Episode`
+# does not answer to under the name it is served as. `canonical_season_id` is
+# among them now that an episode hangs off its season by `season_id` like any
+# copy: without it here the column is silently unsortable.
 CANONICAL_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
-    "canonical_season_name": CanonicalSeason.name,
-    "canonical_show_id": CanonicalSeason.canonical_show_id,
-    "canonical_show_name": CanonicalShow.name,
-    "canonical_show_key": CanonicalShow.key,
+    "canonical_season_id": Episode.season_id,
+    "canonical_season_name": Season.name,
+    "canonical_show_id": Season.show_id,
+    "canonical_show_name": Show.name,
+    "canonical_show_key": Show.key,
 }
 
 EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
@@ -418,22 +424,23 @@ def delete_episode(session: SessionDep, episode: EditableEpisode) -> Message:
 
 # The admin-only mirror of the episode endpoints.
 # TODO: Validate
-def _select_with_canonical_season_and_show() -> SelectOfScalar[CanonicalEpisode]:
+def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
     """Select episodes with the season and title above each one already loaded."""
     return (
-        select(CanonicalEpisode)
+        select(Episode)
         .join(
-            CanonicalSeason,
-            onclause=col(CanonicalEpisode.canonical_season_id) == CanonicalSeason.id,
+            Season,
+            onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            CanonicalShow,
-            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+            Show,
+            onclause=col(Season.show_id) == Show.id,
         )
+        .where(is_canonical(Episode), is_canonical(Season), is_canonical(Show))
         .options(
-            contains_eager(CanonicalEpisode.canonical_season).contains_eager(  # type: ignore[arg-type]
-                CanonicalSeason.canonical_show,
-            ),  # type: ignore[arg-type]
+            contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
+                Season.show,  # type: ignore[arg-type]
+            ),
         )
     )
 
@@ -445,7 +452,7 @@ def get_canonical_episodes(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalEpisodesPublic:
-    """Get every `CanonicalEpisode`."""
+    """Get every `Episode`."""
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_season_and_show(),
@@ -465,11 +472,11 @@ def get_canonical_season_episodes(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalEpisodesPublic:
-    """Get every `CanonicalEpisode` of one `CanonicalSeason`."""
+    """Get every `Episode` of one `Season`."""
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_season_and_show().where(
-            CanonicalEpisode.canonical_season_id == canonical_season.id,
+            Episode.season_id == canonical_season.id,
         ),
         response_model=CanonicalEpisodesPublic,
         schema=CanonicalEpisodeListOutput,
@@ -487,11 +494,11 @@ def get_canonical_show_episodes(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalEpisodesPublic:
-    """Get every `CanonicalEpisode` under one `CanonicalShow`, across its seasons."""
+    """Get every `Episode` under one `Show`, across its seasons."""
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_season_and_show().where(
-            CanonicalSeason.canonical_show_id == canonical_show.id,
+            Season.show_id == canonical_show.id,
         ),
         response_model=CanonicalEpisodesPublic,
         schema=CanonicalEpisodeListOutput,
@@ -506,7 +513,7 @@ def get_canonical_show_episodes(
 def get_canonical_episode_by_id(
     canonical_episode: AdminCanonicalEpisode,
 ) -> CanonicalEpisodeOutput:
-    """Get a `CanonicalEpisode`."""
+    """Get a `Episode`."""
     return CanonicalEpisodeOutput.model_validate(canonical_episode)
 
 

@@ -25,7 +25,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
     BaseFile,
@@ -217,7 +217,7 @@ class SearchTitles(GAPIJSON[search_models.SearchResponse]):
 
 
 # TODO: Validate
-class FileMixin(TMDBMixin, register=False):
+class FileMixin(BasePlugin, register=False):
     _cached_media_type: str | None = None
 
     # The provider list and the new titles feeds belong to the plugin and its
@@ -301,8 +301,7 @@ class FileMixin(TMDBMixin, register=False):
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Movies - Required to detect changes to the show (there are no new seasons).
         # TV Show - Required to detect changes to the show and new seasons.
-        base_files = [self.url_title_details_file(show_key)]
-        return self._append_tmdb_show_file(base_files, show_key)
+        return [self.url_title_details_file(show_key)]
 
     # TODO: Validate
     @override
@@ -322,7 +321,7 @@ class FileMixin(TMDBMixin, register=False):
                 # Required to detect changes to the season.
                 self.url_title_details_file(show_key),
             ]
-        return self._append_tmdb_season_file(base_files, season_key, show_key)
+        return base_files
 
     # TODO: Validate
     @override
@@ -346,12 +345,7 @@ class FileMixin(TMDBMixin, register=False):
             # An episode with nowhere to watch it is not stored, so its offers
             # are never read and are left undownloaded.
             base_files = [self.season_episodes_file(season_key)]
-        return self._append_tmdb_episode_file(
-            base_files,
-            episode_key,
-            season_key,
-            show_key,
-        )
+        return base_files
 
     # TODO: Validate
     @override

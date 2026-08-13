@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.seasons.models import CanonicalSeason
+from app.canonical_media.filters import is_canonical, is_copy
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
@@ -54,13 +54,13 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
     # A channel holds a title rather than one website's copy of it, and which title
     # a season belongs to is the canonical season's answer rather than the
     # listing's, since a listing that mixes titles holds seasons of each of them.
-    canonical_season = aliased(CanonicalSeason)
+    canonical_season = aliased(Season)
     return (
         select(ChannelShow.id)
         .select_from(ChannelShow)
         .join(
             canonical_season,
-            col(canonical_season.canonical_show_id)
+            col(canonical_season.show_id)
             == col(ChannelShow.canonical_show_id),
         )
         .outerjoin(
@@ -72,6 +72,7 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
             ),
         )
         .where(
+            is_canonical(canonical_season),
             col(canonical_season.id) == col(Season.canonical_season_id),
             _channel_inclusion_clause(),
         )
@@ -82,7 +83,7 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
 # TODO: Validate
 def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Show to have a Season included in a channel."""
-    canonical_season = aliased(CanonicalSeason)
+    canonical_season = aliased(Season)
     return (
         select(Season.id)
         .select_from(Season)
@@ -93,7 +94,7 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(
             ChannelShow,
             col(ChannelShow.canonical_show_id)
-            == col(canonical_season.canonical_show_id),
+            == col(canonical_season.show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
@@ -104,6 +105,8 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
             ),
         )
         .where(
+            is_canonical(canonical_season),
+            is_copy(Season),
             col(Season.show_id) == col(Show.id),
             _channel_inclusion_clause(),
         )
@@ -114,7 +117,7 @@ def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
 # TODO: Validate
 def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Source to have a Season included in a channel."""
-    canonical_season = aliased(CanonicalSeason)
+    canonical_season = aliased(Season)
     return (
         select(Season.id)
         .join(Show, col(Show.id) == col(Season.show_id))
@@ -125,7 +128,7 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(
             ChannelShow,
             col(ChannelShow.canonical_show_id)
-            == col(canonical_season.canonical_show_id),
+            == col(canonical_season.show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
@@ -136,6 +139,8 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
             ),
         )
         .where(
+            is_canonical(canonical_season),
+            is_copy(Season),
             col(Show.source_id) == col(Source.id),
             _channel_inclusion_clause(),
         )
@@ -146,7 +151,7 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
 # TODO: Validate
 def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
     """EXISTS clause requiring the outer Plugin to have a Season included in a channel."""
-    canonical_season = aliased(CanonicalSeason)
+    canonical_season = aliased(Season)
     return (
         select(Season.id)
         .join(Show, col(Show.id) == col(Season.show_id))
@@ -158,7 +163,7 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
         .join(
             ChannelShow,
             col(ChannelShow.canonical_show_id)
-            == col(canonical_season.canonical_show_id),
+            == col(canonical_season.show_id),
         )
         .outerjoin(
             ChannelSeasonFilter,
@@ -169,6 +174,8 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
             ),
         )
         .where(
+            is_canonical(canonical_season),
+            is_copy(Season),
             col(Source.plugin_id) == col(Plugin.id),
             _channel_inclusion_clause(),
         )

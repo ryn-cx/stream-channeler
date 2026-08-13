@@ -113,9 +113,16 @@ class SeasonsPublic(BaseModel):
 
 # TODO: Validate
 class CanonicalSeasonOutput(BaseCanonicalSeason):
-    """Schema for returning a `CanonicalSeason`."""
+    """Schema for returning a `Season`.
 
-    canonical_show_id: uuid.UUID
+    A season hangs off its title by the same column a copy hangs off the
+    listing by, so what is served as the canonical title is read off `show_id`.
+    The name it is served under does not change.
+    """
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
+    canonical_show_id: uuid.UUID = Field(validation_alias=AliasPath("show_id"))
     id: uuid.UUID
     created_at: datetime
     modified_at: datetime
@@ -131,21 +138,21 @@ class CanonicalSeasonOutput(BaseCanonicalSeason):
 
 # TODO: Validate
 class CanonicalSeasonListOutput(CanonicalSeasonOutput):
-    """Schema for returning a list of `CanonicalSeason`s, with the title above."""
+    """Schema for returning a list of `Season`s, with the title above."""
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     canonical_show_name: str | None = Field(
-        validation_alias=AliasPath("canonical_show", "name"),
+        validation_alias=AliasPath("show", "name"),
     )
     canonical_show_key: str | None = Field(
-        validation_alias=AliasPath("canonical_show", "key"),
+        validation_alias=AliasPath("show", "key"),
     )
 
 
 # TODO: Validate
 class CanonicalSeasonsPublic(BaseModel):
-    """Schema for returning a list of `CanonicalSeason`s."""
+    """Schema for returning a list of `Season`s."""
 
     data: list[CanonicalSeasonListOutput]
     total_count: int

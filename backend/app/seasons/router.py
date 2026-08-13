@@ -14,6 +14,7 @@ from app.auth.dependencies import (
     SuperUser,
 )
 from app.canonical_media.dependencies import AdminCanonicalSeason, AdminCanonicalShow
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_season_issue_reports
 from app.media.canonical_metadata import (
@@ -31,7 +32,7 @@ from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
-from app.seasons.models import CanonicalSeason, Season
+from app.seasons.models import Season
 from app.seasons.schemas import (
     CanonicalSeasonListOutput,
     CanonicalSeasonOutput,
@@ -46,7 +47,7 @@ from app.seasons.schemas import (
 )
 from app.service import list_response
 from app.shows.dependencies import EditableShow, ReadableShow
-from app.shows.models import CanonicalShow, Show
+from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -74,9 +75,13 @@ SEASON_EXTRA_COLUMNS: dict[str, Any] = {
     "plugin_name": Plugin.name,
 }
 
+# Every column the canonical list is sorted and filtered by that a `Season` does
+# not answer to under the name it is served as. `canonical_show_id` is among
+# them now that a season hangs off its title by `show_id` like any copy.
 CANONICAL_SEASON_EXTRA_COLUMNS: dict[str, Any] = {
-    "canonical_show_name": CanonicalShow.name,
-    "canonical_show_key": CanonicalShow.key,
+    "canonical_show_id": Season.show_id,
+    "canonical_show_name": Show.name,
+    "canonical_show_key": Show.key,
 }
 
 
@@ -273,19 +278,20 @@ def delete_season(session: SessionDep, season: EditableSeason) -> Message:
 
 # The admin-only mirror of the season endpoints.
 # TODO: Validate
-def _select_with_canonical_show() -> SelectOfScalar[CanonicalSeason]:
+def _select_with_canonical_show() -> SelectOfScalar[Season]:
     """Select seasons with the title above each one already loaded.
 
     Joined rather than left to load itself, since the title's name is a column
     of the list and a row at a time would be a query at a time.
     """
     return (
-        select(CanonicalSeason)
+        select(Season)
         .join(
-            CanonicalShow,
-            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+            Show,
+            onclause=col(Season.show_id) == Show.id,
         )
-        .options(contains_eager(CanonicalSeason.canonical_show))  # type: ignore[arg-type]
+        .where(is_canonical(Season), is_canonical(Show))
+        .options(contains_eager(Season.show))  # type: ignore[arg-type]
     )
 
 
@@ -296,7 +302,7 @@ def get_canonical_seasons(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalSeasonsPublic:
-    """Get every `CanonicalSeason`."""
+    """Get every `Season`."""
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_show(),
@@ -316,11 +322,11 @@ def get_canonical_show_seasons(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalSeasonsPublic:
-    """Get every `CanonicalSeason` of one `CanonicalShow`."""
+    """Get every `Season` of one `Show`."""
     return canonical_list_response(
         session=session,
         base=_select_with_canonical_show().where(
-            CanonicalSeason.canonical_show_id == canonical_show.id,
+            Season.show_id == canonical_show.id,
         ),
         response_model=CanonicalSeasonsPublic,
         schema=CanonicalSeasonListOutput,
@@ -335,7 +341,7 @@ def get_canonical_show_seasons(
 def get_canonical_season_by_id(
     canonical_season: AdminCanonicalSeason,
 ) -> CanonicalSeasonOutput:
-    """Get a `CanonicalSeason`."""
+    """Get a `Season`."""
     return CanonicalSeasonOutput.model_validate(canonical_season)
 
 

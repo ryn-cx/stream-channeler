@@ -30,7 +30,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     GAPIJSON,
     BaseFile,
@@ -107,16 +107,6 @@ def split_show_season_key(season_key: str) -> tuple[str, str]:
     """Split a season key back into its show key and season number."""
     show_key, _, season_number = season_key.partition("/")
     return show_key, season_number
-
-
-# TODO: Validate
-def has_tmdb_entry(show_key: str) -> bool:
-    """Report whether a show is the sort of title TMDB lists.
-
-    A movie or a show is licensed content TMDB knows about, where a channel is the
-    uploads of a creator and has nothing to cross reference against.
-    """
-    return is_video_key(show_key) or is_show_key(show_key)
 
 
 # The reasons YouTube gives when the API key has spent its daily quota. The quota
@@ -477,7 +467,7 @@ class ShowPage(HTMLFile):
 
 
 # TODO: Validate
-class FileMixin(TMDBMixin, register=False):
+class FileMixin(BasePlugin, register=False):
     _importing_album_playlist_key: str | None = None
 
     # TODO: Validate
@@ -540,17 +530,12 @@ class FileMixin(TMDBMixin, register=False):
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # A movie and a show are cross referenced against TMDB, where a channel is
-        # a creator's uploads and has nothing to cross reference against.
         # A show that is a single video is described by the video itself.
         if is_video_key(show_key):
-            return self._append_tmdb_show_file([self.videos_file(show_key)], show_key)
+            return [self.videos_file(show_key)]
         # A show has no API of its own, so its page lists its seasons.
         if is_show_key(show_key):
-            return self._append_tmdb_show_file(
-                [self.show_page_file(show_key)],
-                show_key,
-            )
+            return [self.show_page_file(show_key)]
         return [
             # Required to detect new seasons (playlists).
             self.channel_playlists_file(show_key),
@@ -568,18 +553,10 @@ class FileMixin(TMDBMixin, register=False):
     ) -> Sequence[BaseFile[Any]]:
         # A season that is a single video is described by the video itself.
         if is_video_key(season_key):
-            return self._append_tmdb_season_file(
-                [self.videos_file(season_key)],
-                season_key,
-                show_key,
-            )
+            return [self.videos_file(season_key)]
         # A season of a show is described by the page for that season.
         if is_show_season_key(season_key):
-            return self._append_tmdb_season_file(
-                [self.show_page_file(*split_show_season_key(season_key))],
-                season_key,
-                show_key,
-            )
+            return [self.show_page_file(*split_show_season_key(season_key))]
         files: list[ChannelPlaylists | PlaylistItems | PlaylistInfo] = [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
@@ -602,15 +579,7 @@ class FileMixin(TMDBMixin, register=False):
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode (video).
-        files = [self.videos_file(episode_key)]
-        if not has_tmdb_entry(show_key):
-            return files
-        return self._append_tmdb_episode_file(
-            files,
-            episode_key,
-            season_key,
-            show_key,
-        )
+        return [self.videos_file(episode_key)]
 
     # TODO: Validate
     def _video_is_valid(self, video_title: str) -> bool:

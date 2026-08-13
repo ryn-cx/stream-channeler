@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from app.files.models import File
 from app.plugins.models import Plugin
-from plugins.TMDB.mixin import TMDBMixin
+from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
@@ -116,7 +116,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class FileMixin(TMDBMixin, register=False):
+class FileMixin(BasePlugin, register=False):
     # The new episodes feed belongs to the source, so every show reads the same one.
     _PLUGIN_WIDE_FILES = (NewVideoEpisodes,)
 
@@ -168,10 +168,7 @@ class FileMixin(TMDBMixin, register=False):
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the show.
-        return self._append_tmdb_show_file(
-            [self.video_program_file(show_key)],
-            show_key,
-        )
+        return [self.video_program_file(show_key)]
 
     # TODO: Validate
     @override
@@ -180,16 +177,12 @@ class FileMixin(TMDBMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return self._append_tmdb_season_file(
-            [
-                # Required to detect changes to the season.
-                self.video_program_file(show_key),
-                # Required to detect new episodes.
-                self.video_episodes_file(show_key),
-            ],
-            season_key,
-            show_key,
-        )
+        return [
+            # Required to detect changes to the season.
+            self.video_program_file(show_key),
+            # Required to detect new episodes.
+            self.video_episodes_file(show_key),
+        ]
 
     # TODO: Validate
     @override
@@ -200,12 +193,7 @@ class FileMixin(TMDBMixin, register=False):
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode.
-        return self._append_tmdb_episode_file(
-            [self.video_episodes_file(show_key)],
-            episode_key,
-            season_key,
-            show_key,
-        )
+        return [self.video_episodes_file(show_key)]
 
     # TODO: Validate
     @override

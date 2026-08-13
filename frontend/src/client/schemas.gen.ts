@@ -318,7 +318,7 @@ export const CanonicalEpisodeListOutputSchema = {
     type: 'object',
     required: ['key', 'canonical_season_id', 'id', 'created_at', 'modified_at', 'canonical_season_name', 'canonical_show_id', 'canonical_show_name', 'canonical_show_key'],
     title: 'CanonicalEpisodeListOutput',
-    description: 'Schema for returning a list of `CanonicalEpisode`s, with what holds them.'
+    description: 'Schema for returning a list of `Episode`s, with what holds them.'
 } as const;
 
 export const CanonicalEpisodeOutputSchema = {
@@ -500,7 +500,11 @@ export const CanonicalEpisodeOutputSchema = {
     type: 'object',
     required: ['key', 'canonical_season_id', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalEpisodeOutput',
-    description: 'Schema for returning a `CanonicalEpisode`.'
+    description: `Schema for returning a \`Episode\`.
+
+An episode hangs off its season by the same column a copy hangs off the
+copy's season by, so what is served as the canonical season is read off
+\`season_id\`. The name it is served under does not change.`
 } as const;
 
 export const CanonicalEpisodesPublicSchema = {
@@ -528,7 +532,7 @@ export const CanonicalEpisodesPublicSchema = {
     type: 'object',
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'CanonicalEpisodesPublic',
-    description: 'Schema for returning a list of `CanonicalEpisode`s.'
+    description: 'Schema for returning a list of `Episode`s.'
 } as const;
 
 export const CanonicalSeasonListOutputSchema = {
@@ -697,7 +701,7 @@ export const CanonicalSeasonListOutputSchema = {
     type: 'object',
     required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at', 'canonical_show_name', 'canonical_show_key'],
     title: 'CanonicalSeasonListOutput',
-    description: 'Schema for returning a list of `CanonicalSeason`s, with the title above.'
+    description: 'Schema for returning a list of `Season`s, with the title above.'
 } as const;
 
 export const CanonicalSeasonOutputSchema = {
@@ -844,7 +848,11 @@ export const CanonicalSeasonOutputSchema = {
     type: 'object',
     required: ['key', 'canonical_show_id', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalSeasonOutput',
-    description: 'Schema for returning a `CanonicalSeason`.'
+    description: `Schema for returning a \`Season\`.
+
+A season hangs off its title by the same column a copy hangs off the
+listing by, so what is served as the canonical title is read off \`show_id\`.
+The name it is served under does not change.`
 } as const;
 
 export const CanonicalSeasonsPublicSchema = {
@@ -872,7 +880,7 @@ export const CanonicalSeasonsPublicSchema = {
     type: 'object',
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'CanonicalSeasonsPublic',
-    description: 'Schema for returning a list of `CanonicalSeason`s.'
+    description: 'Schema for returning a list of `Season`s.'
 } as const;
 
 export const CanonicalShowOutputSchema = {
@@ -984,6 +992,17 @@ export const CanonicalShowOutputSchema = {
             ],
             title: 'Image Url'
         },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -1025,7 +1044,7 @@ export const CanonicalShowOutputSchema = {
     type: 'object',
     required: ['key', 'id', 'created_at', 'modified_at'],
     title: 'CanonicalShowOutput',
-    description: `Schema for returning a \`CanonicalShow\`.
+    description: `Schema for returning a \`Show\`.
 
 \`tmdb_id\` and \`tmdb_url\` are read back out of \`key\` rather than stored, since
 the key is the whole of what says which TMDB record a title is. They are
@@ -1058,7 +1077,7 @@ export const CanonicalShowsPublicSchema = {
     type: 'object',
     required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
     title: 'CanonicalShowsPublic',
-    description: 'Schema for returning a list of `CanonicalShow`s.'
+    description: 'Schema for returning a list of `Show`s.'
 } as const;
 
 export const ChannelAdminCreateSchema = {
@@ -6499,6 +6518,17 @@ export const ShowCreateSchema = {
             ],
             title: 'Image Url'
         },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
         canonical_show_locked: {
             type: 'boolean',
             title: 'Canonical Show Locked',
@@ -6750,6 +6780,17 @@ export const ShowListPublicSchema = {
             ],
             title: 'Image Url'
         },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
         canonical_show_locked: {
             type: 'boolean',
             title: 'Canonical Show Locked',
@@ -6957,6 +6998,17 @@ export const ShowPublicSchema = {
             ],
             title: 'Image Url'
         },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
         canonical_show_locked: {
             type: 'boolean',
             title: 'Canonical Show Locked',
@@ -7132,6 +7184,17 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
         },
         canonical_show_locked: {
             type: 'boolean',
@@ -9666,6 +9729,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
         },
         canonical_show_locked: {
             type: 'boolean',

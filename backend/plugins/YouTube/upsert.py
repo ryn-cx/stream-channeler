@@ -10,9 +10,9 @@ from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.TMDB.link import TMDBLinker
 from plugins.YouTube.files import (
     get_first_item,
-    has_tmdb_entry,
     is_show_key,
     is_show_season_key,
     is_video_key,
@@ -34,14 +34,27 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
+        # YouTube says nothing about when a title came out, so the name is all
+        # TMDB is searched on.
+        linker = TMDBLinker(self.session)
         if is_video_key(show_key):
-            return self._upsert_movie_show(show_key, force=force)
-        if is_show_key(show_key):
-            return self._upsert_series_show(show_key, force=force)
-        return self._upsert_channel_show(source, show_key, force=force)
+            show = self._upsert_movie_show(show_key, force=force)
+            linker.link(show, MediaType.movie, canonical_show)
+        elif is_show_key(show_key):
+            show = self._upsert_series_show(show_key, force=force)
+            linker.link(show, MediaType.tv, canonical_show)
+        else:
+            show = self._upsert_channel_show(source, show_key, force=force)
+            # A channel is a creator's uploads rather than licensed content, so
+            # there is nothing to look for and nothing to be a copy of but
+            # itself.
+            linker.sync_canonical_info(show)
+
+        return show
 
     # TODO: Validate
     def _upsert_series_show(
@@ -73,9 +86,7 @@ class UpsertMixin(HelperMixin, register=False):
                 update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
                 source_id=source.id,
             )
-            show = self._merge_and_upsert_show(
-                new_show, source, show, show_key, MediaType.tv
-            )
+            show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_series_seasons(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -104,12 +115,11 @@ class UpsertMixin(HelperMixin, register=False):
                     update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
                     show_id=show.id,
                 )
-                season = self._merge_and_upsert_season(
+                season = self._upsert_season_object(
                     new_season,
                     show,
                     season,
                     show_key,
-                    MediaType.tv,
                 )
             self._upsert_episodes(season, show_key, force=force)
 
@@ -175,12 +185,11 @@ class UpsertMixin(HelperMixin, register=False):
                 update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             )
-            show = self._merge_and_upsert_show(
+            show = self._upsert_show_object(
                 new_show,
                 source,
                 show,
                 show_key,
-                MediaType.movie,
             )
 
         self._upsert_movie_season(show, show_key, force=force)
@@ -209,12 +218,11 @@ class UpsertMixin(HelperMixin, register=False):
                 update_at=data_timestamp,
                 show_id=show.id,
             )
-            season = self._merge_and_upsert_season(
+            season = self._upsert_season_object(
                 new_season,
                 show,
                 season,
                 show_key,
-                MediaType.movie,
             )
         self._upsert_episodes(season, show_key, force=force)
 
@@ -410,17 +418,9 @@ class UpsertMixin(HelperMixin, register=False):
             season_id=season.id,
         )
 
-        # Only a movie or a show has a TMDB entry to cross reference against.
-        if not has_tmdb_entry(show_key):
-            episode_files = self._episode_files(episode_key, season.key, show_key)
-            new_episode.upsert_and_set_update_at(season, episode, episode_files)
-            return
-
-        self._merge_and_upsert_episode(
+        self._upsert_episode_object(
             new_episode,
             season,
             episode,
             show_key,
-            self.tmdb_media_type(show_key),
-            self._highest_episode_number(season.key),
         )

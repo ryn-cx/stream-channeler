@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
 from sqlalchemy import text
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import contains_eager, relationship
 from sqlmodel import (
     Field,
     Index,
@@ -14,20 +14,21 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
+    col,
     select,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.canonical_media.filters import is_copy
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     DateTimeField,
     MediaMixin,
-    TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
-from app.seasons.models import CanonicalSeason, Season
+from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
@@ -77,7 +78,7 @@ CANONICAL_SORTABLE_FIELDS = [
 
 # TODO: Validate
 class BaseCanonicalEpisode(BaseMediaMixin):
-    """Base model for `CanonicalEpisode` and `BaseEpisode` models."""
+    """The columns an episode carries, and so a copy of one carries too."""
 
     url: str | None = Field(default=None)
     name: str | None = Field(default=None)
@@ -98,8 +99,17 @@ class BaseEpisode(BaseCanonicalEpisode):
 
 
 # TODO: Validate
-class CanonicalEpisode(TimestampIdAndHashMixin, BaseCanonicalEpisode, table=True):
-    """Model representing a canonical episode."""
+class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
+    """Model representing an episode, and a website's copy of one.
+
+    A row is the episode itself when it points at no other, and one website's
+    copy of an episode when it does. The episode itself hangs off the season
+    itself the way a copy hangs off the season's copy, by the same `season_id`,
+    so one primary key covers both.
+    """
+
+    PARENT_ID_FIELD: ClassVar[str] = "season_id"
+    CANONICAL_ID_FIELD: ClassVar[str] = "canonical_episode_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_number_zero_last",
@@ -116,66 +126,61 @@ class CanonicalEpisode(TimestampIdAndHashMixin, BaseCanonicalEpisode, table=True
     )
 
     __table_args__ = (
-        PrimaryKeyConstraint("id"),
-        UniqueConstraint(
-            "canonical_season_id",
-            "key",
-            name="CanonicalEpisode-canonical_season_id-key-key",
-        ),
-        *sortable_field_indexes("CanonicalEpisode", CANONICAL_SORTABLE_FIELDS),
-        Index("CanonicalEpisode-canonical_season_id-index", "canonical_season_id"),
-        # An episode is looked up by key alone where a `User` names a TMDB id
-        # by hand, which is across every season rather than within one.
-        Index("CanonicalEpisode-key-index", "key"),
-    )
-
-    canonical_season_id: uuid.UUID = Field(
-        foreign_key="canonicalseason.id",
-        ondelete="CASCADE",
-    )
-    canonical_season: CanonicalSeason = Relationship(
-        back_populates="canonical_episodes",
-    )
-
-    # TODO: Validate
-    def __str__(self) -> str:
-        """Return a string representation of the `CanonicalEpisode`."""
-        return stringify_episode(self, self.canonical_season)
-
-
-# TODO: Validate
-class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
-    """Model representing an episode."""
-
-    __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
         Index("Episode-deleted_at-index", "deleted_at"),
         Index("Episode-canonical_episode_id-index", "canonical_episode_id"),
         # A copy names one episode at most, within the season holding it. The
         # show-wide rule this stands in for is still Python's to keep, since an
-        # `Episode` has no `show_id` to constrain on.
+        # `Episode` has no `show_id` to constrain on. The episodes themselves are
+        # no part of it: they are what the copies are counted against.
         Index(
             "Episode-live-season_id-canonical_episode_id-key",
             "season_id",
             "canonical_episode_id",
             unique=True,
-            postgresql_where=text("deleted_at IS NULL"),
+            postgresql_where=text(
+                "deleted_at IS NULL AND canonical_episode_id IS NOT NULL",
+            ),
+        ),
+        # An episode is looked up by key alone where a `User` names a TMDB id
+        # by hand, which is across every season rather than within one.
+        Index(
+            "Episode-canonical-key-index",
+            "key",
+            postgresql_where=text("canonical_episode_id IS NULL"),
+        ),
+        *sortable_field_indexes(
+            "Episode",
+            CANONICAL_SORTABLE_FIELDS,
+            where=text("canonical_episode_id IS NULL"),
         ),
     )
 
-    # The episode this is a copy of. Never absent: `canonical_media.hooks`
-    # gives a record one at the flush, before it can reach the database.
+    # The episode this is a copy of, and nothing when this is the episode itself.
+    # Never absent on a copy: `canonical_media.hooks` gives one at the flush,
+    # before it can reach the database.
     canonical_episode_id: uuid.UUID = Field(
-        foreign_key="canonicalepisode.id",
-        ondelete="RESTRICT",
+        default=None,
+        nullable=True,
+        foreign_key="episode.id",
     )
-    canonical_episode: CanonicalEpisode = Relationship()
+    # `remote_side` is what says which end of the join is the episode itself,
+    # since both ends are the same table.
+    canonical_episode: Episode | None = Relationship(
+        sa_relationship=relationship(
+            "Episode",
+            remote_side="Episode.id",
+            foreign_keys="Episode.canonical_episode_id",
+        ),
+    )
 
     # TODO: Validate
     @property
     def tmdb_id(self) -> int | None:
         """The TMDB episode this is a copy of, if TMDB has a record of it."""
+        if self.canonical_episode is None:
+            return None
         return tmdb_id_of(self.canonical_episode.key, EPISODE_LEVEL)
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
@@ -200,7 +205,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         return session.exec(
             select(Plugin)
             .select_from(Season)
-            .join(Show)
+            .join(Show, col(Season.show_id) == col(Show.id))
             .join(Source)
             .join(Plugin)
             .where(Season.id == self.season_id),
@@ -210,7 +215,14 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        return select(cls).join(Season).join(Show).join(Source).join(Plugin)
+        return (
+            select(cls)
+            .where(is_copy(cls))
+            .join(Season, col(cls.season_id) == col(Season.id))
+            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(Source)
+            .join(Plugin)
+        )
 
     # TODO: Validate
     @classmethod
@@ -267,8 +279,8 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
 
 # TODO: Validate
 def stringify_episode(
-    episode: Episode | CanonicalEpisode,
-    parent: Season | CanonicalSeason,
+    episode: Episode,
+    parent: Season,
 ) -> str:
     """Return a string representation."""
     base_episode = f"{type(episode).__name__}:"

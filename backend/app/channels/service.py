@@ -8,8 +8,6 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlmodel import Session, col, delete, select
 
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
@@ -429,12 +427,12 @@ def _canonical_show_id_of_episode(
     if canonical_episode_id is None:
         return None
     return session.exec(
-        select(CanonicalSeason.canonical_show_id)  # type: ignore[call-overload]
+        select(Season.show_id)  # type: ignore[call-overload]
         .join(
-            CanonicalEpisode,
-            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+            Episode,
+            col(Episode.season_id) == col(Season.id),
         )
-        .where(CanonicalEpisode.id == canonical_episode_id),
+        .where(Episode.id == canonical_episode_id),
     ).one_or_none()
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import override
 
 from app.canonical_media.service import canonical_show_ids_by_key
-from app.shows.models import CanonicalShow
 from app.channels.service import shows_by_canonical_id
 from app.shows.models import Show
 from plugins.JustWatch.upsert import UpsertMixin
@@ -24,7 +23,7 @@ class ImportURLMixin(
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,
+        canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
         """Import the title from every source JustWatch has an offer for.
 
@@ -36,7 +35,6 @@ class ImportURLMixin(
         which title this is says so once here and every plugin below works from it
         instead of searching TMDB for the title by its own name.
         """
-        self._supplied_canonical_show = canonical_show
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
 
@@ -62,7 +60,7 @@ class ImportURLMixin(
             # The title is what ties a feed hit back to the copy the other
             # plugin stores, and a title can be delegated on every service it is
             # on, so it is resolved here rather than when a show is upserted.
-            title = self._canonical_show_to_hand_off(handler.show_key)
+            title = self._title_to_hand_off(handler.show_key, canonical_show)
 
             plugin_results = plugin_class(self.session).import_url(offer_url, title)
             results.extend(
@@ -84,7 +82,7 @@ class ImportURLMixin(
         handler: JustWatchURLHandler,
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
-        canonical_show: CanonicalShow | None,
+        canonical_show: Show | None,
     ) -> list[URLImportResult]:
         """Return what another plugin imported, scoped to this plugin's URL.
 
@@ -107,7 +105,7 @@ class ImportURLMixin(
         handler: JustWatchURLHandler,
         plugin_class: type[AbstractPlugin],
         plugin_results: list[URLImportResult],
-        canonical_show: CanonicalShow | None,
+        canonical_show: Show | None,
     ) -> list[URLImportResult]:
         """Return the whole title the Crunchyroll offer's episode belongs to.
 

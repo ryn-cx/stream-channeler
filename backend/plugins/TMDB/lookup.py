@@ -1,6 +1,7 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import timedelta
+from typing import overload
 
 from tminidb.movie_details.models import MovieDetailsModel
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
@@ -27,6 +28,22 @@ _MEDIA_INFO_MAX_AGE = timedelta(days=7)
 
 # TODO: Validate
 class LookupMixin(FileMixin, register=False):
+    # TODO: Validate
+    @overload
+    def auto_updating_search_media(
+        self,
+        media_type: None,
+        query: str,
+        year: int | None = None,
+    ) -> MultiSearch: ...
+    # TODO: Validate
+    @overload
+    def auto_updating_search_media(
+        self,
+        media_type: MediaType,
+        query: str,
+        year: int | None = None,
+    ) -> MovieSearch | TvSearch: ...
     # TODO: Validate
     def auto_updating_search_media(
         self,
@@ -71,8 +88,18 @@ class LookupMixin(FileMixin, register=False):
         return detail_file
 
     # TODO: Validate
-    def _movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
-        return self.media_detail_file(MediaType.movie, tmdb_id).parsed()
+    def movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
+        """Return a film's details, downloading them if needed.
+
+        A film is reached by whatever is linked to it as much as by this
+        plugin's own media, and nothing else fetches the file on its behalf, so
+        it cannot be assumed to be stored already.
+        """
+        detail_file = self.media_detail_file(MediaType.movie, tmdb_id)
+        detail_file.download_if_outdated()
+        if not detail_file.database_record.content:
+            return None
+        return detail_file.parsed()
 
     # TODO: Validate
     def translated_episode_names(
@@ -103,7 +130,7 @@ class LookupMixin(FileMixin, register=False):
         ]
 
     # TODO: Validate
-    def _show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
+    def show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
         """Return the seasons of a title, downloading the title if needed.
 
         A title is read by whatever is linked to it as well as by this plugin's
@@ -117,7 +144,7 @@ class LookupMixin(FileMixin, register=False):
         return show_file.parsed().seasons
 
     # TODO: Validate
-    def _season_episodes(
+    def season_episodes(
         self,
         tmdb_id: int,
         season_number: int,
@@ -140,7 +167,7 @@ class LookupMixin(FileMixin, register=False):
     def has_season(self, tmdb_id: int, season_number: int) -> bool:
         return any(
             season.season_number == season_number
-            for season in self._show_seasons(tmdb_id)
+            for season in self.show_seasons(tmdb_id)
         )
 
     # TODO: Validate
@@ -158,9 +185,7 @@ class LookupMixin(FileMixin, register=False):
         """
         if media_type == MediaType.movie:
             return season_tmdb_id == tmdb_id
-        return any(
-            season.id == season_tmdb_id for season in self._show_seasons(tmdb_id)
-        )
+        return any(season.id == season_tmdb_id for season in self.show_seasons(tmdb_id))
 
     # TODO: Validate
     def has_episode_id(
@@ -179,8 +204,8 @@ class LookupMixin(FileMixin, register=False):
             return episode_tmdb_id == tmdb_id
         return any(
             episode.id == episode_tmdb_id
-            for season in self._show_seasons(tmdb_id)
-            for episode in self._season_episodes(tmdb_id, season.season_number)
+            for season in self.show_seasons(tmdb_id)
+            for episode in self.season_episodes(tmdb_id, season.season_number)
         )
 
     # TODO: Validate
@@ -194,5 +219,5 @@ class LookupMixin(FileMixin, register=False):
             return False
         return any(
             episode.episode_number == episode_number
-            for episode in self._season_episodes(tmdb_id, season_number)
+            for episode in self.season_episodes(tmdb_id, season_number)
         )

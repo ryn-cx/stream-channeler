@@ -4,7 +4,8 @@
 import uuid
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
-from sqlalchemy.orm import contains_eager
+from sqlalchemy import text
+from sqlalchemy.orm import contains_eager, relationship
 from sqlmodel import (
     Field,
     Index,
@@ -12,24 +13,25 @@ from sqlmodel import (
     Relationship,
     Session,
     UniqueConstraint,
+    col,
     select,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.canonical_media.filters import is_copy
 from app.canonical_media.keys import SEASON_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
-    TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
-from app.shows.models import CanonicalShow, Show
+from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 
 if TYPE_CHECKING:
-    from app.episodes.models import CanonicalEpisode, Episode
+    from app.episodes.models import Episode
     from app.issue_reports.models import SeasonIssueReport
 
 # The canonical row is the one a channel sorts on, so these name its columns and
@@ -44,7 +46,7 @@ CANONICAL_SORTABLE_FIELDS = [
 
 # TODO: Validate
 class BaseCanonicalSeason(BaseMediaMixin):
-    """Base model for `CanonicalSeason` and `Season` models."""
+    """The columns a season carries, and so a copy of one carries too."""
 
     name: str | None = Field(default=None)
     # The season's own page, as against a copy's `url`, which is where that
@@ -57,14 +59,26 @@ class BaseCanonicalSeason(BaseMediaMixin):
 
 
 # TODO: Validate
-class CanonicalSeason(TimestampIdAndHashMixin, BaseCanonicalSeason, table=True):
-    """Model representing a season, separate from where it can be watched.
+class BaseSeason(BaseCanonicalSeason):
+    """Base model for an `Season`."""
 
-    A `CanonicalSeason` is the season itself, as opposed to a `Season`, which is
-    one website's copy of it. TMDB gives its seasons their own ids, and a film is
-    filed as a season carrying the film's own number, so the key says the level
-    as well as the id to keep the two apart.
+
+# TODO: Validate
+class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
+    """Model representing a season, and a website's copy of one.
+
+    A row is the season itself when it points at no other, and one website's
+    copy of a season when it does. TMDB gives its seasons their own ids, and a
+    film is filed as a season carrying the film's own number, so the key says
+    the level as well as the id to keep the two apart.
+
+    The season itself hangs off the title the way a copy hangs off the listing,
+    by the same `show_id`, so one primary key covers both: a `show_id` names
+    either a title or a listing and never both at once.
     """
+
+    PARENT_ID_FIELD: ClassVar[str] = "show_id"
+    CANONICAL_ID_FIELD: ClassVar[str] = "canonical_season_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "random",
@@ -77,57 +91,34 @@ class CanonicalSeason(TimestampIdAndHashMixin, BaseCanonicalSeason, table=True):
     )
 
     __table_args__ = (
-        PrimaryKeyConstraint("id"),
-        UniqueConstraint(
-            "canonical_show_id",
-            "key",
-            name="CanonicalSeason-canonical_show_id-key-key",
-        ),
-        *sortable_field_indexes("CanonicalSeason", CANONICAL_SORTABLE_FIELDS),
-        Index("CanonicalSeason-canonical_show_id-index", "canonical_show_id"),
-    )
-
-    canonical_show_id: uuid.UUID = Field(
-        foreign_key="canonicalshow.id",
-        ondelete="CASCADE",
-    )
-    canonical_show: CanonicalShow = Relationship(back_populates="canonical_seasons")
-
-    canonical_episodes: list[CanonicalEpisode] = Relationship(
-        back_populates="canonical_season",
-        cascade_delete=True,
-    )
-
-    # TODO: Validate
-    def __str__(self) -> str:
-        """Return a string representation of the `CanonicalSeason`."""
-        return stringify_season(self, self.canonical_show)
-
-
-# TODO: Validate
-class BaseSeason(BaseCanonicalSeason):
-    """Base model for an `Season`."""
-
-
-# TODO: Validate
-# TODO: Validate
-class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
-    """Model representing a `Season`."""
-
-    __table_args__ = (
         PrimaryKeyConstraint("show_id", "key"),
         UniqueConstraint("id"),
         Index("Season-deleted_at-index", "deleted_at"),
         Index("Season-canonical_season_id-index", "canonical_season_id"),
+        *sortable_field_indexes(
+            "Season",
+            CANONICAL_SORTABLE_FIELDS,
+            where=text("canonical_season_id IS NULL"),
+        ),
     )
 
-    # The season this is a copy of. Never absent: `canonical_media.hooks`
-    # gives a record one at the flush, before it can reach the database.
+    # The season this is a copy of, and nothing when this is the season itself.
+    # Never absent on a copy: `canonical_media.hooks` gives one at the flush,
+    # before it can reach the database.
     canonical_season_id: uuid.UUID = Field(
-        foreign_key="canonicalseason.id",
-        ondelete="RESTRICT",
+        default=None,
+        nullable=True,
+        foreign_key="season.id",
     )
-    canonical_season: CanonicalSeason = Relationship()
+    # `remote_side` is what says which end of the join is the season itself,
+    # since both ends are the same table.
+    canonical_season: Season | None = Relationship(
+        sa_relationship=relationship(
+            "Season",
+            remote_side="Season.id",
+            foreign_keys="Season.canonical_season_id",
+        ),
+    )
 
     # TODO: Validate
     @property
@@ -174,7 +165,13 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        return select(cls).join(Show).join(Source).join(Plugin)
+        return (
+            select(cls)
+            .where(is_copy(cls))
+            .join(Show, col(cls.show_id) == col(Show.id))
+            .join(Source)
+            .join(Plugin)
+        )
 
     # TODO: Validate
     @classmethod
@@ -199,8 +196,8 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
 
 # TODO: Validate
 def stringify_season(
-    season: Season | CanonicalSeason,
-    parent: Show | CanonicalShow,
+    season: Season,
+    parent: Show,
 ) -> str:
     """Return a string representation."""
     base_season = f"{type(season).__name__}:"

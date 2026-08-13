@@ -12,13 +12,14 @@ titles its episodes belong to.
 
 from uuid import UUID
 
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
+from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
+from app.seasons.models import Season
 from app.users.models import User
 
 
@@ -80,14 +81,20 @@ def _titles_by_canonical_episode(
     it, since a listing that mixes titles holds episodes of each of them.
     """
     canonical_episode_ids = {episode.canonical_episode_id for episode in episodes}
+    counted_episode = aliased(Episode)
+    counted_season = aliased(Season)
     return dict(
         session.exec(
-            select(CanonicalEpisode.id, CanonicalSeason.canonical_show_id)
+            select(counted_episode.id, counted_season.show_id)
             .join(
-                CanonicalSeason,
-                col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+                counted_season,
+                col(counted_episode.season_id) == col(counted_season.id),
             )
-            .where(col(CanonicalEpisode.id).in_(canonical_episode_ids)),
+            .where(
+                is_canonical(counted_episode),
+                is_canonical(counted_season),
+                col(counted_episode.id).in_(canonical_episode_ids),
+            ),
         ).all(),
     )
 

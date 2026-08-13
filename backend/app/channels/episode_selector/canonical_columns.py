@@ -17,21 +17,17 @@ only joined when something asks for one of its columns.
 from typing import Any, ClassVar, cast
 from uuid import UUID
 
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import col
+from sqlmodel import and_, col
 from sqlmodel.sql.expression import Select
 
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
+from app.canonical_media.filters import is_canonical
+from app.channels.episode_selector.canonical_entities import (
+    CANONICAL_EPISODE,
+    CANONICAL_SEASON,
+    CANONICAL_SHOW,
+)
 from app.episodes.models import Episode
-
-# The title is aliased so that a query which already reaches `CanonicalShow` for
-# its own reasons is never confused with the one joined here. The episode and the
-# season are the very rows the query is built around, so they are read as they
-# are.
-_CanonicalShow = aliased(CanonicalShow)
 
 
 # TODO: Validate
@@ -39,9 +35,9 @@ class CanonicalColumns:
     """The canonical row of each media level, joined in so SQL can read it."""
 
     _MODELS: ClassVar = {
-        "episode": CanonicalEpisode,
-        "season": CanonicalSeason,
-        "show": _CanonicalShow,
+        "episode": CANONICAL_EPISODE,
+        "season": CANONICAL_SEASON,
+        "show": CANONICAL_SHOW,
     }
 
     # What the canonical row of each level holds. Anything else is the copy's
@@ -120,13 +116,13 @@ class CanonicalColumns:
         another site's specials.
         """
         canonical = self._require("episode")
-        return col(canonical.canonical_season_id)
+        return col(canonical.season_id)
 
     # TODO: Validate
     def show_id(self) -> ColumnElement[Any]:
         """Return the canonical title the episode belongs to."""
         canonical = self._require("season")
-        return col(canonical.canonical_show_id)
+        return col(canonical.show_id)
 
     # TODO: Validate
     def join(
@@ -141,7 +137,10 @@ class CanonicalColumns:
         """
         if self._joins_title:
             query = query.join(
-                _CanonicalShow,
-                col(CanonicalSeason.canonical_show_id) == col(_CanonicalShow.id),
+                CANONICAL_SHOW,
+                and_(
+                    col(CANONICAL_SEASON.show_id) == col(CANONICAL_SHOW.id),
+                    is_canonical(CANONICAL_SHOW),
+                ),
             )
         return query

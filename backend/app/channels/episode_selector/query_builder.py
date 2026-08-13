@@ -13,8 +13,7 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
+from app.canonical_media.filters import is_canonical, is_copy
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,
@@ -22,6 +21,10 @@ from app.channels.channel_scope import (
     resolve_channel_ids,
 )
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
+from app.channels.episode_selector.canonical_entities import (
+    CANONICAL_EPISODE,
+    CANONICAL_SEASON,
+)
 from app.channels.episode_selector.show_counts import limit_shows
 from app.channels.episode_selector.sorting import SortExpressionBuilder
 from app.channels.episode_selector.source_dedup import source_dedup_config
@@ -173,7 +176,7 @@ class EpisodeQueryBuilder:
             .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
-            .where(col(Show.deleted_at).is_(None))
+            .where(is_copy(Show), col(Show.deleted_at).is_(None))
         )
         sources, shows, titles = self._session.exec(totals).one()  # type: ignore[misc]
         return sources > 1 or shows > titles
@@ -251,24 +254,34 @@ class EpisodeQueryBuilder:
         # off the listing holding it, because a listing can hold more than one:
         # a channel that was told to hold one of the titles a listing mixes gets
         # that title's episodes and not the listing's other ones.
+        #
+        # Every join here is now the same table reached again, so each side says
+        # which of the two it means. What the query returns is the listings, and
+        # what it walks up through is the media they are listings of.
         return (
             select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
             .select_from(Episode)
-            .join(Season)
-            .join(Show)
+            .join(Season, col(Episode.season_id) == col(Season.id))
+            .join(Show, col(Season.show_id) == col(Show.id))
             .join(
-                CanonicalEpisode,
-                col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+                CANONICAL_EPISODE,
+                and_(
+                    col(Episode.canonical_episode_id) == col(CANONICAL_EPISODE.id),
+                    is_canonical(CANONICAL_EPISODE),
+                ),
             )
             .join(
-                CanonicalSeason,
-                col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+                CANONICAL_SEASON,
+                and_(
+                    col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
+                    is_canonical(CANONICAL_SEASON),
+                ),
             )
             .join(
                 ChannelShow,
-                col(ChannelShow.canonical_show_id)
-                == col(CanonicalSeason.canonical_show_id),
+                col(ChannelShow.canonical_show_id) == col(CANONICAL_SEASON.show_id),
             )
+            .where(is_copy(Episode), is_copy(Season), is_copy(Show))
         )
 
     # TODO: Validate
@@ -541,7 +554,7 @@ class EpisodeQueryBuilder:
         return (
             func.rank()
             .over(
-                partition_by=col(CanonicalEpisode.id),
+                partition_by=col(CANONICAL_EPISODE.id),
                 order_by=[priority, col(Episode.id)],
             )
             .label("source_rank")
@@ -604,7 +617,7 @@ class EpisodeQueryBuilder:
         # The title rather than the website's listing of it, so the last tie-break
         # keeps a title together however many websites and listings carry it.
         labeled_values.append(
-            col(CanonicalSeason.canonical_show_id).label("show_id"),
+            col(CANONICAL_SEASON.show_id).label("show_id"),
         )
         labeled_values.extend(self._source_rank_columns())
         # Every filter and sort has now asked for its columns, so the levels they

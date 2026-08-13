@@ -9,12 +9,10 @@ from uuid import UUID
 from loguru import logger
 from sqlmodel import Session, col, or_, select
 
-from app.episodes.models import CanonicalEpisode
 from app.canonical_media.service import (
     canonical_ids_by_key,
     canonical_show_ids_by_key,
 )
-from app.seasons.models import CanonicalSeason
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
@@ -273,9 +271,9 @@ def _titles_by_season(
         return {}
     rows = session.exec(
         select(  # type: ignore[call-overload]
-            CanonicalSeason.id,
-            CanonicalSeason.canonical_show_id,
-        ).where(col(CanonicalSeason.id).in_(canonical_season_ids)),
+            Season.id,
+            Season.show_id,
+        ).where(col(Season.id).in_(canonical_season_ids)),
     ).all()
     return dict(rows)
 
@@ -290,14 +288,14 @@ def _titles_by_episode(
         return {}
     rows = session.exec(
         select(  # type: ignore[call-overload]
-            CanonicalEpisode.id,
-            CanonicalSeason.canonical_show_id,
+            Episode.id,
+            Season.show_id,
         )
         .join(
-            CanonicalSeason,
-            col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+            Season,
+            col(Episode.season_id) == col(Season.id),
         )
-        .where(col(CanonicalEpisode.id).in_(canonical_episode_ids)),
+        .where(col(Episode.id).in_(canonical_episode_ids)),
     ).all()
     return dict(rows)
 
@@ -379,9 +377,9 @@ def _seasons_for_episodes(
         return {}
     rows = session.exec(
         select(  # type: ignore[call-overload]
-            CanonicalEpisode.id,
-            CanonicalEpisode.canonical_season_id,
-        ).where(col(CanonicalEpisode.id).in_(canonical_episode_ids)),
+            Episode.id,
+            Episode.season_id,
+        ).where(col(Episode.id).in_(canonical_episode_ids)),
     ).all()
     return dict(rows)
 

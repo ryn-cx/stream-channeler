@@ -23,11 +23,17 @@ from uuid import UUID
 
 from sqlmodel import Session, col, select
 
-from app.episodes.models import CanonicalEpisode
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
+from app.episodes.models import Episode
 from app.media.media_type import MediaType
+from app.models import MediaMixin
+from app.seasons.models import Season
+from app.shows.models import Show
+
+# The three merged media models, named by the base they share so a level is
+# something to pass rather than something to branch on.
+type MediaModel = type[MediaMixin[Any, Any]]
 
 # What each level's canonical row answers for. Anything else belongs to the copy
 # alone — `url` above all, which says where rather than what.
@@ -61,7 +67,7 @@ def _canonical_rows(
     session: Session,
     rows: Sequence[Any],
     id_field: str,
-    model: type[CanonicalShow | CanonicalSeason | CanonicalEpisode],
+    model: MediaModel,
 ) -> dict[UUID, Any]:
     """Load the canonical row each of `rows` points at, keyed by its id."""
     ids = {
@@ -73,7 +79,9 @@ def _canonical_rows(
         return {}
     return {
         record.id: record
-        for record in session.exec(select(model).where(col(model.id).in_(ids))).all()
+        for record in session.exec(
+            select(model).where(is_canonical(model), col(model.id).in_(ids)),
+        ).all()
     }
 
 
@@ -82,7 +90,7 @@ def _fill[RowT](
     session: Session,
     rows: Sequence[RowT],
     id_field: str,
-    model: type[CanonicalShow | CanonicalSeason | CanonicalEpisode],
+    model: MediaModel,
     fields: tuple[str, ...],
 ) -> Sequence[RowT]:
     """Fill every unset `fields` value on `rows` from their canonical row.
@@ -110,7 +118,7 @@ def _prefer[RowT](
     session: Session,
     rows: Sequence[RowT],
     id_field: str,
-    model: type[CanonicalShow | CanonicalSeason | CanonicalEpisode],
+    model: MediaModel,
     fields: tuple[str, ...],
 ) -> Sequence[RowT]:
     """Replace every `fields` value on `rows` with their canonical row's.
@@ -143,31 +151,31 @@ def _label(row: Any, canonical: Any) -> None:  # noqa: ANN401 - Any output row.
 # TODO: Validate
 def fill_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Fill what the website left out of each `Show` row from the title itself."""
-    return _fill(session, rows, SHOW_ID_FIELD, CanonicalShow, SHOW_FIELDS)
+    return _fill(session, rows, SHOW_ID_FIELD, Show, SHOW_FIELDS)
 
 
 # TODO: Validate
 def fill_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Fill what the website left out of each `Season` row from the season itself."""
-    return _fill(session, rows, SEASON_ID_FIELD, CanonicalSeason, SEASON_FIELDS)
+    return _fill(session, rows, SEASON_ID_FIELD, Season, SEASON_FIELDS)
 
 
 # TODO: Validate
 def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each `Show` row as the title is, falling back on the site."""
-    return _prefer(session, rows, SHOW_ID_FIELD, CanonicalShow, SHOW_FIELDS)
+    return _prefer(session, rows, SHOW_ID_FIELD, Show, SHOW_FIELDS)
 
 
 # TODO: Validate
 def prefer_seasons[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each `Season` row as the season is, falling back on the site."""
-    return _prefer(session, rows, SEASON_ID_FIELD, CanonicalSeason, SEASON_FIELDS)
+    return _prefer(session, rows, SEASON_ID_FIELD, Season, SEASON_FIELDS)
 
 
 # TODO: Validate
 def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Serve each `Episode` row as the episode is, falling back on the site."""
-    return _prefer(session, rows, EPISODE_ID_FIELD, CanonicalEpisode, EPISODE_FIELDS)
+    return _prefer(session, rows, EPISODE_ID_FIELD, Episode, EPISODE_FIELDS)
 
 
 # TODO: Validate
@@ -181,7 +189,7 @@ def prefer_canonical_seasons[RowT](
     named and numbered as a season. A row whose copy is not yet of anything keeps
     what the website said.
     """
-    canonical_rows = _canonical_rows(session, rows, SEASON_ID_FIELD, CanonicalSeason)
+    canonical_rows = _canonical_rows(session, rows, SEASON_ID_FIELD, Season)
     for row in rows:
         canonical = canonical_rows.get(getattr(row, SEASON_ID_FIELD, None))
         if canonical is None:
@@ -205,13 +213,13 @@ def prefer_canonical_episodes[RowT](
     episode under a season the canonical hierarchy does not, which is what puts
     one site's finale in another's specials.
     """
-    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, CanonicalEpisode)
+    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
     seasons = _seasons_of(session, canonical_rows.values())
     for row in rows:
         canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
         if canonical is None:
             continue
-        season = seasons.get(canonical.canonical_season_id)
+        season = seasons.get(canonical.season_id)
         setattr(row, TMDB_EPISODE_NUMBER_FIELD, canonical.episode_number)
         if season is not None:
             setattr(row, TMDB_SEASON_NUMBER_FIELD, season.season_number)
@@ -224,16 +232,16 @@ def prefer_canonical_episodes[RowT](
 # TODO: Validate
 def _seasons_of(
     session: Session,
-    canonical_episodes: Any,  # noqa: ANN401 - Any iterable of `CanonicalEpisode`.
-) -> dict[UUID, CanonicalSeason]:
+    canonical_episodes: Any,  # noqa: ANN401 - Any iterable of `Episode`.
+) -> dict[UUID, Season]:
     """Load the canonical season holding each of `canonical_episodes`."""
-    ids = {episode.canonical_season_id for episode in canonical_episodes}
+    ids = {episode.season_id for episode in canonical_episodes}
     if not ids:
         return {}
     return {
         season.id: season
         for season in session.exec(
-            select(CanonicalSeason).where(col(CanonicalSeason.id).in_(ids)),
+            select(Season).where(is_canonical(Season), col(Season.id).in_(ids)),
         ).all()
     }
 
@@ -247,15 +255,15 @@ def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
     is not always the numbering the website gave its own copy. Media TMDB has no
     record of has no page, and is left with none rather than a broken one.
     """
-    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, CanonicalEpisode)
+    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
     seasons = _seasons_of(session, canonical_rows.values())
     shows = _shows_of(session, seasons.values())
     for row in rows:
         canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
         if canonical is None:
             continue
-        season = seasons.get(canonical.canonical_season_id)
-        show = shows.get(season.canonical_show_id) if season else None
+        season = seasons.get(canonical.season_id)
+        show = shows.get(season.show_id) if season else None
         if show is None:
             continue
         url = tmdb_episode_url(
@@ -271,16 +279,16 @@ def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[Row
 # TODO: Validate
 def _shows_of(
     session: Session,
-    canonical_seasons: Any,  # noqa: ANN401 - Any iterable of `CanonicalSeason`.
-) -> dict[UUID, CanonicalShow]:
+    canonical_seasons: Any,  # noqa: ANN401 - Any iterable of `Season`.
+) -> dict[UUID, Show]:
     """Load the canonical title holding each of `canonical_seasons`."""
-    ids = {season.canonical_show_id for season in canonical_seasons}
+    ids = {season.show_id for season in canonical_seasons}
     if not ids:
         return {}
     return {
         show.id: show
         for show in session.exec(
-            select(CanonicalShow).where(col(CanonicalShow.id).in_(ids)),
+            select(Show).where(is_canonical(Show), col(Show.id).in_(ids)),
         ).all()
     }
 
@@ -342,7 +350,7 @@ def tmdb_show_url(show_key: str | None) -> str | None:
 def canonical_episode_of(
     session: Session,
     canonical_episode_id: UUID | None,
-) -> tuple[CanonicalEpisode, CanonicalSeason, CanonicalShow] | None:
+) -> tuple[Episode, Season, Show] | None:
     """Return the episode a copy is of, with the season and title above it.
 
     A copy that is not of anything yet has nothing to return, which is the one
@@ -352,16 +360,21 @@ def canonical_episode_of(
     if canonical_episode_id is None:
         return None
     return session.exec(
-        select(CanonicalEpisode, CanonicalSeason, CanonicalShow)
+        select(Episode, Season, Show)
         .join(
-            CanonicalSeason,
-            onclause=col(CanonicalEpisode.canonical_season_id) == CanonicalSeason.id,
+            Season,
+            onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            CanonicalShow,
-            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+            Show,
+            onclause=col(Season.show_id) == Show.id,
         )
-        .where(CanonicalEpisode.id == canonical_episode_id),
+        .where(
+            is_canonical(Episode),
+            is_canonical(Season),
+            is_canonical(Show),
+            Episode.id == canonical_episode_id,
+        ),
     ).first()
 
 
@@ -369,17 +382,21 @@ def canonical_episode_of(
 def canonical_season_of(
     session: Session,
     canonical_season_id: UUID | None,
-) -> tuple[CanonicalSeason, CanonicalShow] | None:
+) -> tuple[Season, Show] | None:
     """Return the season a copy is of, with the title above it."""
     if canonical_season_id is None:
         return None
     return session.exec(
-        select(CanonicalSeason, CanonicalShow)
+        select(Season, Show)
         .join(
-            CanonicalShow,
-            onclause=col(CanonicalSeason.canonical_show_id) == CanonicalShow.id,
+            Show,
+            onclause=col(Season.show_id) == Show.id,
         )
-        .where(CanonicalSeason.id == canonical_season_id),
+        .where(
+            is_canonical(Season),
+            is_canonical(Show),
+            Season.id == canonical_season_id,
+        ),
     ).first()
 
 
@@ -387,16 +404,18 @@ def canonical_season_of(
 def canonical_show_of(
     session: Session,
     canonical_show_id: UUID | None,
-) -> CanonicalShow | None:
+) -> Show | None:
     """Return the title a copy is of."""
     if canonical_show_id is None:
         return None
-    return session.get(CanonicalShow, canonical_show_id)
+    return session.exec(
+        select(Show).where(is_canonical(Show), Show.id == canonical_show_id),
+    ).first()
 
 
 # TODO: Validate
 def canonical_numberings(
-    canonical_show: CanonicalShow,
+    canonical_show: Show,
 ) -> list[tuple[UUID, int | None, int | None]]:
     """Return how a title numbers each of its episodes, for counting them through.
 
@@ -405,6 +424,6 @@ def canonical_numberings(
     """
     return [
         (episode.id, season.season_number, episode.episode_number)
-        for season in canonical_show.canonical_seasons
-        for episode in season.canonical_episodes
+        for season in canonical_show.seasons
+        for episode in season.episodes
     ]

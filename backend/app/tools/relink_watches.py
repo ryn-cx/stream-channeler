@@ -13,9 +13,10 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.episodes.models import CanonicalEpisode
+from app.canonical_media.filters import is_canonical, is_copy
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -50,17 +51,21 @@ def _candidates_by_canonical_key(
     if not canonical_keys:
         return {}
 
+    watched_episode = aliased(Episode)
     rows = session.exec(
-        select(CanonicalEpisode.key, Episode, Source.key)  # type: ignore[call-overload]
+        select(watched_episode.key, Episode, Source.key)  # type: ignore[call-overload]
+        .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(
-            CanonicalEpisode,
-            col(CanonicalEpisode.id) == col(Episode.canonical_episode_id),
+            watched_episode,
+            col(watched_episode.id) == col(Episode.canonical_episode_id),
         )
         .where(
-            col(CanonicalEpisode.key).in_(canonical_keys),
+            is_copy(Episode),
+            is_canonical(watched_episode),
+            col(watched_episode.key).in_(canonical_keys),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
@@ -114,14 +119,20 @@ def _report_unresolvable(session: Session, canonical_keys: set[str]) -> None:
     if not canonical_keys:
         return
 
+    watched_episode = aliased(Episode)
     soft_deleted = set(
         session.exec(
-            select(CanonicalEpisode.key)
+            select(watched_episode.key)
+            .select_from(Episode)
             .join(
-                Episode,
-                col(Episode.canonical_episode_id) == col(CanonicalEpisode.id),
+                watched_episode,
+                col(Episode.canonical_episode_id) == col(watched_episode.id),
             )
-            .where(col(CanonicalEpisode.key).in_(canonical_keys)),
+            .where(
+                is_copy(Episode),
+                is_canonical(watched_episode),
+                col(watched_episode.key).in_(canonical_keys),
+            ),
         ).all(),
     )
     unknown = canonical_keys - soft_deleted

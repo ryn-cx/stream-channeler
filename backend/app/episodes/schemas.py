@@ -234,9 +234,16 @@ class EpisodesPublic(BaseModel):
 
 # TODO: Validate
 class CanonicalEpisodeOutput(BaseCanonicalEpisode):
-    """Schema for returning a `CanonicalEpisode`."""
+    """Schema for returning a `Episode`.
 
-    canonical_season_id: uuid.UUID
+    An episode hangs off its season by the same column a copy hangs off the
+    copy's season by, so what is served as the canonical season is read off
+    `season_id`. The name it is served under does not change.
+    """
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
+    canonical_season_id: uuid.UUID = Field(validation_alias=AliasPath("season_id"))
     id: uuid.UUID
     created_at: datetime
     modified_at: datetime
@@ -252,27 +259,27 @@ class CanonicalEpisodeOutput(BaseCanonicalEpisode):
 
 # TODO: Validate
 class CanonicalEpisodeListOutput(CanonicalEpisodeOutput):
-    """Schema for returning a list of `CanonicalEpisode`s, with what holds them."""
+    """Schema for returning a list of `Episode`s, with what holds them."""
 
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     canonical_season_name: str | None = Field(
-        validation_alias=AliasPath("canonical_season", "name"),
+        validation_alias=AliasPath("season", "name"),
     )
     canonical_show_id: uuid.UUID = Field(
-        validation_alias=AliasPath("canonical_season", "canonical_show_id"),
+        validation_alias=AliasPath("season", "show_id"),
     )
     canonical_show_name: str | None = Field(
-        validation_alias=AliasPath("canonical_season", "canonical_show", "name"),
+        validation_alias=AliasPath("season", "show", "name"),
     )
     canonical_show_key: str | None = Field(
-        validation_alias=AliasPath("canonical_season", "canonical_show", "key"),
+        validation_alias=AliasPath("season", "show", "key"),
     )
 
 
 # TODO: Validate
 class CanonicalEpisodesPublic(BaseModel):
-    """Schema for returning a list of `CanonicalEpisode`s."""
+    """Schema for returning a list of `Episode`s."""
 
     data: list[CanonicalEpisodeListOutput]
     total_count: int

@@ -6,7 +6,6 @@ import uuid
 from collections.abc import Sequence
 from typing import Any, override
 
-from app.shows.models import CanonicalShow
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.StreamChanneler.handlers import (
@@ -80,6 +79,7 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -110,7 +110,7 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
     def import_url(
         self,
         url: str,
-        canonical_show: CanonicalShow | None = None,  # noqa: ARG002 - Copies media that already carries its own link.
+        canonical_show: Show | None = None,  # noqa: ARG002 - Copies media that already carries its own link.
     ) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()
 

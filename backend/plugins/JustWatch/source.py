@@ -9,7 +9,6 @@ from sqlalchemy import func
 from sqlmodel import col, select
 
 from app.canonical_media.keys import tmdb_show_key
-from app.shows.models import CanonicalShow
 from app.files.models import File
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
@@ -191,7 +190,7 @@ class SourceMixin(UpsertMixin, register=False):
         stored under that plugin's own key, so the TMDB id both copies were
         matched to is the only thing that ties them together.
         """
-        tmdb_id = self._cached_tmdb_id(show_key)
+        tmdb_id = self._resolved_tmdb_id(show_key)
         if tmdb_id is None:
             return
 
@@ -201,13 +200,13 @@ class SourceMixin(UpsertMixin, register=False):
             select(Show)
             .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
             .join(
-                CanonicalShow,
-                col(ShowCanonicalShow.canonical_show_id) == CanonicalShow.id,
+                Show,
+                col(ShowCanonicalShow.canonical_show_id) == Show.id,
             )
             .join(Source)
             .join(Plugin)
             .where(
-                col(CanonicalShow.key).in_(
+                col(Show.key).in_(
                     [tmdb_show_key(half, tmdb_id) for half in MediaType],
                 ),
                 Plugin.key == plugin_class.plugin_key(),

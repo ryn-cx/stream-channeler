@@ -69,13 +69,13 @@ class Crunchyroll(
 
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
-        if not hasattr(self, "video_source"):
+        if not hasattr(self, "video_source") or not self.video_source:
             self.video_source = (
                 Source.get(self.session, self.plugin, VIDEO_SOURCE)
                 or self._upsert_anime_source()
             )
 
-        if not hasattr(self, "music_source"):
+        if not hasattr(self, "music_source") or not self.music_source:
             self.music_source = (
                 Source.get(self.session, self.plugin, MUSIC_SOURCE)
                 or self._upsert_music_source()
@@ -83,13 +83,17 @@ class Crunchyroll(
 
     # TODO: Validate
     @override  # Determines which source to use based on the show key.
-    def _import_show(self, show_key: str) -> Show:
+    def _import_show(
+        self,
+        show_key: str,
+        canonical_show: Show | None = None,
+    ) -> Show:
         self.source = self._source_from_show_key(show_key)
         if not is_music_show_key(show_key):
-            return super()._import_show(show_key)
+            return super()._import_show(show_key, canonical_show)
 
         if show := self._preload_show(show_key).one_or_none():
             return show
 
         _cache = self._download_show_files_and_children(show_key)
-        return self.upsert_show(self.source, show_key)
+        return self.upsert_show(self.source, show_key, canonical_show)

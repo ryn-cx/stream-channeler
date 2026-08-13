@@ -12,6 +12,7 @@ from app.auth.dependencies import (
     SuperUser,
 )
 from app.canonical_media.dependencies import AdminCanonicalShow
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_show_issue_reports
 from app.media.canonical_metadata import (
@@ -30,7 +31,7 @@ from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
 from app.shows.dependencies import EditableShow, ReadableShow
-from app.shows.models import CanonicalShow, Show
+from app.shows.models import Show
 from app.shows.schemas import (
     CanonicalShowOutput,
     CanonicalShowsPublic,
@@ -232,7 +233,7 @@ def delete_show(session: SessionDep, show: EditableShow) -> Message:
 
 # The admin-only mirror of the show endpoints. A `Show` is one website's copy of
 # a title and is served to whoever may see that website's media; a
-# `CanonicalShow` is the title itself, which every copy of it resolves to, and is
+# `Show` is the title itself, which every copy of it resolves to, and is
 # served to admins alone.
 # TODO: Validate
 @canonical_shows_router.get("")
@@ -241,10 +242,10 @@ def get_canonical_shows(
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> CanonicalShowsPublic:
-    """Get every `CanonicalShow`."""
+    """Get every `Show`."""
     return canonical_list_response(
         session=session,
-        base=select(CanonicalShow),
+        base=select(Show).where(is_canonical(Show)),
         response_model=CanonicalShowsPublic,
         schema=CanonicalShowOutput,
         read_options=read_options,
@@ -257,7 +258,7 @@ def get_canonical_shows(
 def get_canonical_show_by_id(
     canonical_show: AdminCanonicalShow,
 ) -> CanonicalShowOutput:
-    """Get a `CanonicalShow`."""
+    """Get a `Show`."""
     return CanonicalShowOutput.model_validate(canonical_show)
 
 

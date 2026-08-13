@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, override
 
+from sqlalchemy.orm import aliased
 from sqlmodel import col, select
 
-from app.episodes.models import CanonicalEpisode
-from app.seasons.models import CanonicalSeason
-from app.shows.models import CanonicalShow
+from app.canonical_media.filters import is_canonical, is_copy
 from app.episodes.models import Episode
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult
 from plugins.utils.base_plugin.watch_history import (
@@ -98,16 +99,27 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         """
         if not episode_keys:
             return {}
+        # The episode a copy is of is the same table reached again, so which of
+        # the two each side means is said outright rather than left to the join.
+        canonical_episode = aliased(Episode)
         statement = (
             select(Episode)
-            .join(CanonicalEpisode)
-            .where(col(CanonicalEpisode.key).in_(episode_keys))
-            .where(col(Episode.deleted_at).is_(None))
+            .select_from(Episode)
+            .join(
+                canonical_episode,
+                col(Episode.canonical_episode_id) == col(canonical_episode.id),
+            )
+            .where(
+                is_copy(Episode),
+                is_canonical(canonical_episode),
+                col(canonical_episode.key).in_(episode_keys),
+                col(Episode.deleted_at).is_(None),
+            )
         )
         return {
             episode.canonical_episode.key: episode
             for episode in self.session.exec(statement)
-            if episode.canonical_episode.key is not None
+            if episode.canonical_episode is not None
         }
 
     # TODO: Validate
@@ -123,17 +135,22 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         if not episode_keys:
             return {}
         statement = (
-            select(CanonicalEpisode, CanonicalShow)
-            .select_from(CanonicalEpisode)
+            select(Episode, Show)
+            .select_from(Episode)
             .join(
-                CanonicalSeason,
-                col(CanonicalEpisode.canonical_season_id) == col(CanonicalSeason.id),
+                Season,
+                col(Episode.season_id) == col(Season.id),
             )
             .join(
-                CanonicalShow,
-                col(CanonicalSeason.canonical_show_id) == col(CanonicalShow.id),
+                Show,
+                col(Season.show_id) == col(Show.id),
             )
-            .where(col(CanonicalEpisode.key).in_(episode_keys))
+            .where(
+                is_canonical(Episode),
+                is_canonical(Season),
+                is_canonical(Show),
+                col(Episode.key).in_(episode_keys),
+            )
         )
         return {
             canonical_episode.key: WatchImportResult(

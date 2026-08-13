@@ -125,7 +125,7 @@ class BaseChannelShow(SQLModel):
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     canonical_show_id: uuid.UUID = Field(
-        foreign_key="canonicalshow.id",
+        foreign_key="show.id",
         ondelete="RESTRICT",
     )
     """The title this row is about, rather than one website's copy of it. Every
@@ -311,7 +311,7 @@ class BaseChannelSeasonFilter(SQLModel):
     """Base model representing the seasons that are filtered for a `ChannelShow`."""
 
     canonical_season_id: uuid.UUID = Field(
-        foreign_key="canonicalseason.id",
+        foreign_key="season.id",
         ondelete="RESTRICT",
     )
     """The season this row is about, rather than one website's copy of it, so the
@@ -377,7 +377,7 @@ class BaseChannelEpisodeFilter(SQLModel):
     """Base model representing the episodes that are filtered for a `ChannelShow`."""
 
     canonical_episode_id: uuid.UUID = Field(
-        foreign_key="canonicalepisode.id",
+        foreign_key="episode.id",
         ondelete="RESTRICT",
     )
     """The episode this row is about, rather than one website's copy of it, so the
@@ -514,7 +514,7 @@ class ChannelSavedEpisodeOrder(
     # The episode itself, so a saved position survives the copy it was saved
     # against being deleted and covers every copy of that episode.
     canonical_episode_id: uuid.UUID = Field(
-        foreign_key="canonicalepisode.id",
+        foreign_key="episode.id",
         ondelete="RESTRICT",
     )
 
