@@ -24,7 +24,7 @@ def get_canonical_show(
 ) -> Show:
     """Return the `Show` an id names.
 
-    A title is what every website's copy of it resolves to, so it is the same for
+    A canonical show is what every website's row resolves to, so it is the same for
     everybody and belongs to nobody. There is no owner to check and no visibility
     to honour, which leaves one rule: only an admin may look at it at all.
     """

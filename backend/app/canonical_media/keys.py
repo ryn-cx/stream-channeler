@@ -12,9 +12,9 @@ series seasons and series episodes - so a number means nothing until which of th
 four it came from is said, and saying it is the whole of what the word is for:
 "TMDB movie 27205", "TMDB tv 1399", "TMDB season 3624", "TMDB episode 63056".
 
-A film is numbered once and stands as a title, a season and an episode all at
+A film is numbered once and stands as a show, a season and an episode all at
 that one number, so all three of its rows are named "TMDB movie 27205". Nothing
-is lost by that: a season is named within the title above it and an episode
+is lost by that: a season is named within the show above it and an episode
 within its season, so the three never have to be told apart from one another.
 
 Everything that used to read a `tmdb_id` column reads it back out of here, so
@@ -58,7 +58,7 @@ def _tmdb_key(media_type: MediaType, level: str, tmdb_id: int) -> str:
 
 # TODO: Validate
 def tmdb_show_key(media_type: MediaType, tmdb_id: int) -> str:
-    """Return the key naming the title TMDB holds under `tmdb_id`."""
+    """Return the key naming the canonical show TMDB holds under `tmdb_id`."""
     return _tmdb_key(media_type, SHOW_LEVEL, tmdb_id)
 
 
@@ -76,12 +76,12 @@ def tmdb_episode_key(media_type: MediaType, tmdb_id: int) -> str:
 
 # TODO: Validate
 def record_key(plugin_key: str, key: str) -> str:
-    """Return the key naming what a website's own record is a copy of.
+    """Return the key naming the canonical row a website's own record stands for.
 
     A plugin's own key for a record already names the thing itself rather than
-    one listing of it — a YouTube episode is keyed by its video id, which is the
+    one row for it — a YouTube episode is keyed by its video id, which is the
     same id wherever that video turns up — so namespacing it by the plugin is
-    enough to make two copies of one work agree on a single row.
+    enough to make two rows for one work agree on a single canonical row.
     """
     return f"{plugin_key} {key}"
 
@@ -162,12 +162,12 @@ def same_issuer_clause(
 ) -> ColumnElement[bool]:
     """Return the filter matching two keys that were issued by the same source.
 
-    A title's own catalogue is the run of records whoever issued the title
-    issued, so a row a website minted under a title TMDB issued is a record of
-    the website's rather than one of the title's own. A website carries an
-    episode the title has no record of - an extra it filed under the season, a
+    A canonical show's own catalogue is the run of records whoever issued the
+    show issued, so a row a website minted under a show TMDB issued is a record
+    of the website's rather than one of the show's own. A website carries an
+    episode the show has no record of - an extra it filed under the season, a
     film it sells as part of the series - and a canonical row is minted for it
-    so the copy has something to hang off, but the title it was filed under
+    so the row has something to hang off, but the show it was filed under
     still does not hold it.
     """
     return key_issuer(first) == key_issuer(second)

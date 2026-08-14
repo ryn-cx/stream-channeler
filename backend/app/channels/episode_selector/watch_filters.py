@@ -23,14 +23,13 @@ from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.canonical_media.filters import (
-    canonical_id_column,
     canonical_id_of,
     is_canonical,
 )
 from app.channels.episode_selector.canonical_entities import episode_id
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -125,19 +124,29 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     watch is of the episode rather than of the copy that played it and a title
     started on one website is started wherever else it is carried. An episode
     nothing was minted for it to be a copy of hangs off a website's own listing,
-    so the title it counts towards is the one that listing is a copy of.
+    so the titles it counts towards are the ones that listing is a copy of - all
+    of them, since a listing is no more a copy of one title than of another.
     """
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
     watched_show = aliased(Show)
+    watched_link = aliased(ShowCanonicalShow)
     return (
-        select(canonical_id_column(watched_show))
+        select(
+            func.coalesce(
+                col(watched_link.canonical_show_id),
+                col(watched_show.id),
+            ),
+        )
         .select_from(watched_season)
         .join(
             watched_episode,
             col(watched_episode.season_id) == col(watched_season.id),
         )
         .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
+        # A title has no links and stands for itself; a listing has one row per
+        # title it is a copy of and stands for each.
+        .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
         .join(Watch, col(Watch.canonical_episode_key) == col(watched_episode.key))
         .where(
             is_canonical(watched_episode),

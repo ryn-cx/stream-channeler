@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from sqlalchemy.orm import aliased
 from sqlmodel import col, select
 
-from app.canonical_media.filters import is_canonical, is_copy
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -110,7 +110,7 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                 col(Episode.canonical_episode_id) == col(canonical_episode.id),
             )
             .where(
-                is_copy(Episode),
+                is_non_canonical(Episode),
                 is_canonical(canonical_episode),
                 col(canonical_episode.key).in_(episode_keys),
                 col(Episode.deleted_at).is_(None),

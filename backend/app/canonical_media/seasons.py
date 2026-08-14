@@ -1,9 +1,9 @@
 # TODO: Validate
 """The season an episode belongs to.
 
-An episode that is a copy of a canonical episode belongs to the season that
-canonical episode is under; one that is a copy of nothing belongs to the season
-its own website filed it under.
+An episode that stands for a canonical episode belongs to the season that
+canonical episode is under; one that stands for nothing belongs to the season its
+own website filed it under.
 """
 
 import uuid

@@ -1,9 +1,12 @@
 # TODO: Validate
-"""Telling a canonical row apart from a copy of one.
+"""Telling a canonical row apart from a non-canonical one.
 
-A canonical row and the copies of it share a table, and which of the two a row is
-is said by the pointer a copy carries to the row it is a copy of: a row that
-points at nothing is the canonical one. Every query naming one of these tables
+Canonical and non-canonical rows share a table, and which of the two a row is is
+said by a column of its own. A non-canonical `Episode` stands for one canonical
+episode at most, so the pointer naming that episode answers it: a row that points
+at nothing is canonical. A non-canonical `Show` stands for however many canonical
+shows the website mixed into it and names none of them in a column, so it says
+which it is outright in `is_canonical`. Every query naming one of these tables
 means one of the two and never both, so it says which here rather than leaving it
 to the reader.
 
@@ -26,24 +29,38 @@ def _canonical_id(entity: Any) -> Any:  # noqa: ANN401 - The canonical pointer o
 
 
 # TODO: Validate
+def _canonical_flag(entity: Any) -> Any:  # noqa: ANN401 - The canonical flag of whichever entity was given, where it carries one.
+    field = getattr(inspect(entity).mapper.class_, "CANONICAL_FLAG_FIELD", None)
+    if field is None:
+        return None
+    return getattr(entity, field)
+
+
+# TODO: Validate
 def is_canonical(entity: Any) -> ColumnElement[bool]:  # noqa: ANN401 - A model class or an alias of one.
     """Return the filter matching the canonical rows of `entity`."""
+    flag = _canonical_flag(entity)
+    if flag is not None:
+        return cast("ColumnElement[bool]", flag.is_(True))
     return cast("ColumnElement[bool]", _canonical_id(entity).is_(None))
 
 
 # TODO: Validate
-def is_copy(entity: Any) -> ColumnElement[bool]:  # noqa: ANN401 - A model class or an alias of one.
-    """Return the filter matching the copy rows of `entity`."""
+def is_non_canonical(entity: Any) -> ColumnElement[bool]:  # noqa: ANN401 - A model class or an alias of one.
+    """Return the filter matching the non-canonical rows of `entity`."""
+    flag = _canonical_flag(entity)
+    if flag is not None:
+        return cast("ColumnElement[bool]", flag.is_(False))
     return cast("ColumnElement[bool]", _canonical_id(entity).is_not(None))
 
 
 # TODO: Validate
 def canonical_id_column(entity: Any) -> ColumnElement[UUID]:  # noqa: ANN401 - A model class or an alias of one.
-    """Return the row `entity` is a copy of, or `entity` itself where it is one.
+    """Return the canonical row `entity` stands for, or `entity` where it is one.
 
-    A row that points at nothing is the canonical row, so the media it stands for
-    is itself. Reading the pointer alone leaves those rows as `NULL` and drops
-    them out of every comparison the pointer is used in.
+    A row that points at nothing is canonical, so the row it stands for is
+    itself. Reading the pointer alone leaves those rows as `NULL` and drops them
+    out of every comparison the pointer is used in.
     """
     return cast(
         "ColumnElement[UUID]",
@@ -53,5 +70,5 @@ def canonical_id_column(entity: Any) -> ColumnElement[UUID]:  # noqa: ANN401 - A
 
 # TODO: Validate
 def canonical_id_of(row: Any) -> UUID:  # noqa: ANN401 - A model instance.
-    """Return the media `row` stands for, which is `row` itself where it is canonical."""
+    """Return the canonical row `row` stands for, which is `row` where it is one."""
     return getattr(row, row.CANONICAL_ID_FIELD) or row.id

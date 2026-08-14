@@ -101,7 +101,7 @@ class UpsertMixin(HelperMixin, register=False):
         return show
 
     # TODO: Validate
-    def _stored_title(self, show_key: str) -> Show:
+    def _stored_title(self, source: Source, show_key: str) -> Show:
         """Return the row standing for this title, whatever wrote it.
 
         Asked of the canonical service rather than looked up here, because that
@@ -110,7 +110,7 @@ class UpsertMixin(HelperMixin, register=False):
         the same row. It remembers what it answered with, so a lookup that went
         around it would be answered again with a row of its own.
         """
-        return canonical_show_by_key(self.session, show_key)
+        return canonical_show_by_key(self.session, show_key, source)
 
     # TODO: Validate
     def _stored_season(self, show: Show, season_key: str) -> Season:
@@ -131,7 +131,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        show = self._stored_title(show_key)
+        show = self._stored_title(source, show_key)
         if self._show_is_outdated(show, force=force):
             series = self.show_detail_file(tmdb_id).parsed()
             data_timestamp = self.show_data_timestamp(show_key)
@@ -248,7 +248,7 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> Show:
         movie = self.movie_detail_file(tmdb_id).parsed()
-        show = self._stored_title(show_key)
+        show = self._stored_title(source, show_key)
         if self._show_is_outdated(show, force=force):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(

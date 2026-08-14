@@ -63,11 +63,13 @@ class Crunchyroll(
         "music_source",
     }
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "crunchyroll.com"
 
+    # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
         if not hasattr(self, "video_source") or not self.video_source:

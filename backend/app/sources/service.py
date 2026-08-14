@@ -5,7 +5,7 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.filters import is_copy
+from app.canonical_media.filters import is_non_canonical
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -51,7 +51,7 @@ def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
         .join(Season, col(Season.show_id) == Show.id)
         .join(Episode, col(Episode.season_id) == Season.id)
         .where(
-            is_copy(Show),
+            is_non_canonical(Show),
             col(Show.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),

@@ -10,7 +10,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.canonical_media.filters import canonical_id_column, is_canonical
+from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
@@ -28,7 +28,7 @@ from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
@@ -290,14 +290,16 @@ class SortExpressionBuilder:
         A watch is recorded against the episode itself rather than against the
         copy that played it, so a title counts as started whichever website it was
         started on. An episode nothing was minted for it to be a copy of hangs off
-        a website's own listing, so the title it counts towards is the one that
-        listing is a copy of.
+        a website's own listing, so the titles it counts towards are the ones that
+        listing is a copy of - all of them, since a listing is no more a copy of
+        one title than of another.
         """
         if not self._user:
             return literal_column("0")
         watched_episode = aliased(Episode)
         watched_season = aliased(Season)
         watched_show = aliased(Show)
+        watched_link = aliased(ShowCanonicalShow)
         started_query = (
             select(Watch.id)
             .join(
@@ -309,10 +311,17 @@ class SortExpressionBuilder:
                 col(watched_episode.season_id) == col(watched_season.id),
             )
             .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
+            # A title has no links and stands for itself; a listing has one row
+            # per title it is a copy of and stands for each.
+            .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
             .where(
                 and_(
                     is_canonical(watched_episode),
-                    canonical_id_column(watched_show) == self._fallbacks.show_id(),
+                    func.coalesce(
+                        col(watched_link.canonical_show_id),
+                        col(watched_show.id),
+                    )
+                    == self._fallbacks.show_id(),
                     Watch.user_id == self._user.id,
                 ),
             )

@@ -1,9 +1,9 @@
 # TODO: Validate
-"""Whether a channel takes a given copy of an episode.
+"""Whether a channel takes a given row for an episode.
 
-A `ChannelShow` stands for a title rather than one website's copy of it, and the
+A `ChannelShow` stands for a canonical show rather than one website's row, and the
 source, season and episode filters hanging off it are what narrow that down to
-the copies and episodes the channel actually offers. These read the filter rows
+the rows and episodes the channel actually offers. These read the filter rows
 the query already outer-joined, so they only make sense against a query built by
 `EpisodeQueryBuilder`.
 """
@@ -20,6 +20,7 @@ from sqlmodel import and_, col, or_, select
 from app.channels.episode_selector.canonical_entities import episode_id
 from app.channels.models import (
     ChannelEpisodeFilter,
+    ChannelEpisodeSourceFilter,
     ChannelSeasonFilter,
     ChannelShow,
     ChannelSourceFilter,
@@ -28,11 +29,11 @@ from app.channels.models import (
 
 # TODO: Validate
 def source_access_condition() -> ColumnElement[bool]:
-    """Whether this website's copy of the title is one the channel takes.
+    """Whether this website's row for the show is one the channel takes.
 
-    A `ChannelShow` covers every website the title is on, so a `User` who
+    A `ChannelShow` covers every website the show is on, so a `User` who
     wants only some of them says so with `ChannelSourceFilter` entries. Saying
-    nothing means every copy, which is what a channel that was never told
+    nothing means every website, which is what a channel that was never told
     about websites at all wants.
     """
     # Aliased so the outer join to `ChannelSourceFilter` is not what this reads;
@@ -56,39 +57,41 @@ def source_access_condition() -> ColumnElement[bool]:
 
 
 # TODO: Validate
+def _either_but_not_both(
+    first: ColumnElement[bool],
+    second: ColumnElement[bool],
+) -> ColumnElement[bool]:
+    """Whether exactly one of the two holds."""
+    return or_(and_(first, ~second), and_(~first, second))
+
+
+# TODO: Validate
+def marked_by_filters_condition() -> ColumnElement[bool]:
+    """Whether the filters name this website's link to this episode.
+
+    An episode entry inverts what the season entry decided, which is what makes
+    one episode an exception to a whitelisted or blacklisted season, and an
+    episode source entry inverts that again for the one website it names, which
+    is what leaves an episode taken from one site and left on another.
+    """
+    return _either_but_not_both(
+        _either_but_not_both(
+            col(ChannelSeasonFilter.season_id).is_not(None),
+            col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
+        ),
+        col(ChannelEpisodeSourceFilter.canonical_episode_id).is_not(None),
+    )
+
+
+# TODO: Validate
 def channel_access_condition() -> ColumnElement[bool]:
     """Whether the channel offers this episode, after every filter on it."""
-    # An episode entry inverts what the season entry decided, which is what
-    # makes one episode an exception to a whitelisted or blacklisted season.
+    marked = marked_by_filters_condition()
     return and_(
         source_access_condition(),
         or_(
-            and_(
-                col(ChannelShow.is_whitelist).is_(True),
-                or_(
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_not(None),
-                        col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
-                    ),
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_(None),
-                        col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
-                    ),
-                ),
-            ),
-            and_(
-                col(ChannelShow.is_whitelist).is_(False),
-                or_(
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_(None),
-                        col(ChannelEpisodeFilter.canonical_episode_id).is_(None),
-                    ),
-                    and_(
-                        col(ChannelSeasonFilter.season_id).is_not(None),
-                        col(ChannelEpisodeFilter.canonical_episode_id).is_not(None),
-                    ),
-                ),
-            ),
+            and_(col(ChannelShow.is_whitelist).is_(True), marked),
+            and_(col(ChannelShow.is_whitelist).is_(False), ~marked),
         ),
     )
 

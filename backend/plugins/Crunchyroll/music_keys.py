@@ -36,7 +36,7 @@ CATEGORY_ID_PREFIX_LENGTH = 2
 # catalogue coming with it, and so the two can be scheduled apart. Each source is
 # keyed by the name it is shown under, and the plugin owned channel every artist
 # is queued into is named after the music source it collects.
-VIDEO_SOURCE = "Crunchyroll Videos"
+VIDEO_SOURCE = "Crunchyroll"
 MUSIC_SOURCE = "Crunchyroll Music"
 MUSIC_CATEGORY_TO_NAME = {
     MusicCategory.CONCERT: "Concerts",

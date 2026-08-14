@@ -13,7 +13,7 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.canonical_media.filters import canonical_id_of, is_canonical, is_copy
+from app.canonical_media.filters import canonical_id_of, is_canonical, is_non_canonical
 from app.canonical_media.keys import same_issuer_clause
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
@@ -47,6 +47,7 @@ from app.channels.episode_selector.watch_filters import (
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
+    ChannelEpisodeSourceFilter,
     ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
     ChannelShow,
@@ -180,7 +181,7 @@ class EpisodeQueryBuilder:
             .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
-            .where(is_copy(Show), col(Show.deleted_at).is_(None))
+            .where(is_non_canonical(Show), col(Show.deleted_at).is_(None))
         )
         sources, shows, titles = self._session.exec(totals).one()  # type: ignore[misc]
         return sources > 1 or shows > titles
@@ -305,7 +306,7 @@ class EpisodeQueryBuilder:
                     is_canonical(CANONICAL_SHOW),
                 ),
             )
-            .where(is_copy(Show))
+            .where(is_non_canonical(Show))
             # A website files under a title seasons the title has no record of -
             # a film it sells as part of the series, a run of extras - and a
             # canonical season is minted for each so its episodes have somewhere
@@ -354,6 +355,22 @@ class EpisodeQueryBuilder:
                     or_(
                         col(ChannelEpisodeFilter.expires_at).is_(None),
                         col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
+                    ),
+                ),
+            )
+            # A row of this one is about the linked episode being read rather than
+            # the episode itself, so the website's linked show has to match too.
+            .outerjoin(
+                ChannelEpisodeSourceFilter,
+                and_(
+                    ChannelEpisodeSourceFilter.channel_show_id == ChannelShow.id,
+                    col(ChannelEpisodeSourceFilter.canonical_episode_id)
+                    == episode_id(),
+                    ChannelEpisodeSourceFilter.show_id == Show.id,
+                    or_(
+                        col(ChannelEpisodeSourceFilter.expires_at).is_(None),
+                        col(ChannelEpisodeSourceFilter.expires_at)
+                        > tz_datetime.now(),
                     ),
                 ),
             )

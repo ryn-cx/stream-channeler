@@ -47,7 +47,13 @@ def _build_duplicated_channel(
     # The one episode both sources carry a copy of. Made up front so the two
     # copies can be pointed at it, which is what they would share after an
     # import reconciled them.
-    shared_show = Show(key=f"Dedup {uuid.uuid4()}")
+    shared_plugin = create_random_plugin(
+        session,
+        plugin_user,
+        visibility=Visibility.public,
+    )
+    shared_source = create_random_source(session, shared_plugin)
+    shared_show = Show(key=f"Dedup {uuid.uuid4()}", source_id=shared_source.id)
     session.add(shared_show)
     session.flush()
     shared_season = Season(key=f"Dedup {uuid.uuid4()}", show_id=shared_show.id)

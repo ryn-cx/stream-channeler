@@ -2847,7 +2847,7 @@ export class ShowsService {
      * Update Show
      * Update and return a `Show` if it's editable by the `User`.
      *
-     * Which title this is a copy of is not something an update writes: it is the
+     * Which canonical show this stands for is not something an update writes: it is
      * linker's to work out during an import, or a `User`'s to settle through the
      * TMDB matching screens, so there is nothing to repoint here.
      * @param data The data for the request.

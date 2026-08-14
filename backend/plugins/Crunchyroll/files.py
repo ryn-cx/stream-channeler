@@ -38,48 +38,57 @@ from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def chirashi() -> Chirashi:
     """Returns a cached Chirashi client."""
     return Chirashi(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class Series(GAPIJSON[series_models.SeriesModel]):
     """Series file."""
 
     API_ENDPOINT = chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid series_id {self.unique_identifier}"
 
 
+# TODO: Validate
 class Objects(GAPIJSON[objects_models.ObjectsModel]):
     """Objects file."""
 
     API_ENDPOINT = chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EpisodeNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid episode_id {self.unique_identifier}"
 
 
+# TODO: Validate
 class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
     """Seasons file."""
 
     API_ENDPOINT = chirashi().seasons
 
 
+# TODO: Validate
 class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
     """Season episodes file."""
 
@@ -103,6 +112,7 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
         )
 
 
+# TODO: Validate
 class Search(GAPIJSON[search_models.SearchModel]):
     """Search file."""
 
@@ -127,43 +137,51 @@ class Artist(GAPIJSON[artist_models.ArtistModel]):
         return f"Invalid artist_id {self.unique_identifier}"
 
 
+# TODO: Validate
 class ArtistMusicVideos(GAPIJSON[artist_music_videos_models.ArtistMusicVideosModel]):
     """Artist music videos file."""
 
     API_ENDPOINT = chirashi().artist_music_videos
 
 
+# TODO: Validate
 class ArtistConcerts(GAPIJSON[artist_concerts_models.ArtistConcertsModel]):
     """Artist concerts file."""
 
     API_ENDPOINT = chirashi().artist_concerts
 
 
+# TODO: Validate
 class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
     """Music video file."""
 
     API_ENDPOINT = chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MusicVideoNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid music_video_id {self.unique_identifier}"
 
 
+# TODO: Validate
 class Concert(GAPIJSON[concert_models.ConcertModel]):
     """Concert file."""
 
     API_ENDPOINT = chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ConcertNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid concert_id {self.unique_identifier}"
@@ -189,18 +207,22 @@ class FileMixin(BasePlugin, register=False):
 
     _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)
 
+    # TODO: Validate
     def series_file(self, show_key: str) -> Series:
         """Returns `Series` file."""
         return self._file(Series, show_key)
 
+    # TODO: Validate
     def objects_file(self, episode_key: str) -> Objects:
         """Returns `Objects` file."""
         return self._file(Objects, episode_key)
 
+    # TODO: Validate
     def seasons_file(self, show_key: str) -> Seasons:
         """Returns `Seasons` file."""
         return self._file(Seasons, show_key)
 
+    # TODO: Validate
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
         """Returns `SeasonEpisodes` file."""
         return self._file(SeasonEpisodes, season_key)
@@ -215,18 +237,22 @@ class FileMixin(BasePlugin, register=False):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
 
+    # TODO: Validate
     def search_file(self, query: str) -> Search:
         """Returns `Search` file."""
         return self._file(Search, query)
 
+    # TODO: Validate
     def artist_file(self, artist_id: str) -> Artist:
         """Returns `Artist` file."""
         return self._file(Artist, artist_id)
 
+    # TODO: Validate
     def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
         """Returns `ArtistMusicVideos` file."""
         return self._file(ArtistMusicVideos, artist_id)
 
+    # TODO: Validate
     def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
         """Returns `ArtistConcerts` file."""
         return self._file(ArtistConcerts, artist_id)

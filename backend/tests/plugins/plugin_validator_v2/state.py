@@ -142,14 +142,10 @@ def _canonical_show_keys(show: Show) -> list[str]:
 
     A website that files two titles under one listing - a channel whose uploads
     are two series, a service that sells a sequel as another season - is a copy
-    of each of them, and the rest of them are held nowhere else in the dump:
-    `canonical_show_id` is only ever the one the listing is chiefly a copy of,
-    and it says which that is without this list having to lead with it.
+    of each of them and no more a copy of one than of another, so they are dumped
+    as a set with nothing leading it.
     """
-    return sorted(
-        {show.canonical_show.key}
-        | {link.canonical_show.key for link in show.canonical_show_links},
-    )
+    return sorted({link.canonical_show.key for link in show.canonical_show_links})
 
 
 # TODO: Validate

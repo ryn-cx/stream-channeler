@@ -81,6 +81,9 @@ class BasePlugin(
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
 
+    _canonical_source_record: Source | None = None
+    """The source the canonical rows this plugin mints belong to, once looked up."""
+
     _file_cache: dict[object, Any]
     _reusable_file_cache: dict[object, Any]
 
@@ -96,6 +99,7 @@ class BasePlugin(
             "session",
             "plugin",
             "_source",
+            "_canonical_source_record",
             "_current_show",
             "_reusable_file_cache",
         },
@@ -165,10 +169,33 @@ class BasePlugin(
         self._file_cache = {}
 
     # TODO: Validate
+    def _canonical_source(self) -> Source:
+        """Return the `Source` the canonical rows this plugin mints belong to.
+
+        Keyed by the plugin rather than by any of the websites it reads, because
+        the canonical rows it mints are keyed the same way and one of them is
+        stood for by listings from every provider the plugin tracks. Picking one
+        of those providers would be picking whichever was imported first.
+        """
+        if self._canonical_source_record is not None:
+            return self._canonical_source_record
+
+        source = Source.get(self.session, self.plugin, self.plugin_key())
+        if source is None:
+            source = Source(
+                key=self.plugin_key(),
+                name=self.plugin_name(),
+                plugin_id=self.plugin.id,
+            ).upsert(self.plugin, None)
+        self._canonical_source_record = source
+        return source
+
+    # TODO: Validate
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
         self._source: Source | None = None
+        self._canonical_source_record = None
         self._reusable_file_cache = {}
         # Creates the show file cache, which `initialize_database` needs below.
         self._reset_show_state()
@@ -341,22 +368,27 @@ class BasePlugin(
         self._download_episode_files(episode, update_at=episode.update_at)
         self._preload_and_upsert_show(episode.season.show)
 
+    # TODO: Validate
     @override
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:
         plugin.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_source_failure(self, source: Source, error: Exception) -> None:
         source.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
         show.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
         season.update_at = tz_datetime.max()
 
+    # TODO: Validate
     @override
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
         episode.update_at = tz_datetime.max()
@@ -368,18 +400,16 @@ class BasePlugin(
         canonical_show: Show | None,
     ) -> None:
         if canonical_show is not None:
-            if not show.canonical_show_id:
-                show.canonical_show = canonical_show
             link_canonical_show(self.session, show, canonical_show)
-        elif not show.canonical_show_id:
-            # Every copy points at a title, so that a row pointing at nothing is
-            # only ever a title itself. Two websites carrying one listing agree
-            # on the key, so they converge on the one row.
+        elif not show.canonical_show_links:
+            # Every listing is a copy of at least one title, so that a row that is
+            # a copy of nothing is only ever a title itself. Two websites carrying
+            # one listing agree on the key, so they converge on the one row.
             standalone = canonical_show_by_key(
                 self.session,
                 record_key(self.plugin_key(), show.key),
+                self._canonical_source(),
             )
-            show.canonical_show = standalone
             link_canonical_show(self.session, show, standalone)
         match_canonical_episodes(self.session, show)
 
@@ -403,17 +433,11 @@ class BasePlugin(
         """Store the website's own `Show` against the files it was read out of.
 
         A record being written again is built fresh off the website's files, so
-        it knows nothing of the title the stored one is a copy of. That title is
-        carried over rather than written away, since a listing is a copy of the
-        same thing it was a copy of last time unless something works out
-        otherwise, and what works it out runs after this. A title the `User`
-        settled is kept whatever the new record says; otherwise a title the new
-        record does name is the better answer and wins.
+        it knows nothing of the titles the stored one is a copy of. Those are
+        rows of `ShowCanonicalShow` rather than a column of the listing, so there
+        is nothing here to write them away and nothing to carry over: what links
+        them runs after this.
         """
-        if existing_show and (
-            existing_show.canonical_show_locked or not show.canonical_show_id
-        ):
-            show.canonical_show_id = existing_show.canonical_show_id
         show_files = self._show_files(show_key)
         return show.upsert_and_set_update_at(source, existing_show, show_files)
 

@@ -209,7 +209,7 @@ def _best_match(
 def _has_tmdb_title() -> ColumnElement[bool]:
     """Whether TMDB holds any of the titles the outer `Show` is a copy of.
 
-    Any of them rather than the one it is chiefly of, since a listing that mixes
+    Any of them rather than one picked out of them, since a listing that mixes
     titles is as much a copy of the second as of the first and an episode of
     either is one there are TMDB episodes to match it against.
     """

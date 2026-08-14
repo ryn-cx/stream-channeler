@@ -20,7 +20,7 @@ from app.log import configure_logging
 from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
@@ -68,6 +68,7 @@ def _channel_season_exists(
     canonical_episode = aliased(Episode)
     canonical_season = aliased(Season)
     copy_show = aliased(Show)
+    copy_show_link = aliased(ShowCanonicalShow)
     season_id = func.coalesce(
         col(canonical_episode.season_id),
         col(copy_episode.season_id),
@@ -85,12 +86,19 @@ def _channel_season_exists(
             col(canonical_episode.season_id) == col(canonical_season.id),
         )
         .join(copy_show, col(copy_show.id) == col(season.show_id))
+        # An episode with no canonical row of its own belongs to every title its
+        # listing is a copy of, since a listing is no more a copy of one than of
+        # another, so the clause holds where any of them is on a channel.
+        .outerjoin(
+            copy_show_link,
+            col(copy_show_link.show_id) == col(copy_show.id),
+        )
         .join(
             ChannelShow,
             col(ChannelShow.canonical_show_id)
             == func.coalesce(
                 col(canonical_season.show_id),
-                col(copy_show.canonical_show_id),
+                col(copy_show_link.canonical_show_id),
             ),
         )
         .outerjoin(
@@ -157,8 +165,8 @@ def _plugin_holds_no_media_exists() -> ColumnElement[bool]:
     """EXISTS clause matching a Plugin with no Source of its own.
 
     Every other clause here asks whether anything below a row is in a channel,
-    which a plugin holding no media of its own can never answer: what it holds
-    is the canonical rows themselves, and those hang off no `Source`.
+    which a plugin holding no media of its own can never answer: it has no
+    `Source` for the question to be asked through.
     """
     return ~(select(Source.id).where(col(Source.plugin_id) == col(Plugin.id)).exists())
 

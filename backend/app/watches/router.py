@@ -29,6 +29,7 @@ episode_watches_router = APIRouter(prefix="/episodes/{episode_id}", tags=["watch
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
 
+# TODO: Validate
 @episode_watches_router.post("/watches", response_model=WatchOutput)
 def create_watch(
     session: SessionDep,

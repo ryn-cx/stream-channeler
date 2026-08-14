@@ -37,12 +37,6 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-def _canonical_show_id(show: Show | uuid.UUID) -> uuid.UUID | None:
-    """Return the id of the title `show` is a copy of."""
-    return show.canonical_show_id if isinstance(show, Show) else show
-
-
-# TODO: Validate
 class BaseChannel(SQLModel):
     """Base model representing a Channel."""
 
@@ -128,9 +122,9 @@ class BaseChannelShow(SQLModel):
         foreign_key="show.id",
         ondelete="CASCADE",
     )
-    """The title this row is about, rather than one website's copy of it. Every
-    `Show` that is a copy of it belongs to the `Channel`, which is what lets a
-    filter set on one website's copy cover the same media everywhere."""
+    """The canonical show this row is about, rather than one website's row. Every
+    `Show` standing for it belongs to the `Channel`, which is what lets a filter
+    set on one website's row cover the same media everywhere."""
     is_whitelist: bool = Field()
     """If true any entries in the `ChannelSourceFilter`, `ChannelEpisodeFilter` and
     `ChannelSeasonFilter` tables are treated as a whitelist entries so shows, episodes
@@ -147,10 +141,10 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     """Model representing the media that belongs to a `Channel`."""
 
     __table_args__ = (
-        # Used to ensure each title is unique within a channel.
+        # Used to ensure each canonical show is unique within a channel.
         # Used by cascade deletions when a channel is deleted.
         PrimaryKeyConstraint("channel_id", "canonical_show_id"),
-        # Used to find every channel a title belongs to.
+        # Used to find every channel a canonical show belongs to.
         Index("ChannelShow-canonical_show_id-index", "canonical_show_id"),
     )
 
@@ -168,6 +162,10 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         back_populates="channel_show",
         cascade_delete=True,
     )
+    episode_source_filters: list[ChannelEpisodeSourceFilter] = Relationship(
+        back_populates="channel_show",
+        cascade_delete=True,
+    )
 
     # TODO: Validate
     @classmethod
@@ -175,7 +173,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        show: Show | uuid.UUID,
+        canonical_show_id: uuid.UUID,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -186,8 +184,10 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     ) -> ChannelShow | None:
         """Get the `ChannelShow` if it exists.
 
-        This is a wrapper around `db.get`. `show` is either a `Show`, whose
-        canonical title is read off it, or that title's id itself.
+        This is a wrapper around `db.get`. A `ChannelShow` is about a canonical
+        show, and a non-canonical row stands for however many of them a website
+        mixed into it, so the canonical show is named outright rather than read
+        off a row.
 
         Returns:
             The matching `ChannelShow` if found, else `None`.
@@ -195,7 +195,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         """
         return session.get(
             cls,
-            (channel.id, _canonical_show_id(show)),
+            (channel.id, canonical_show_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -210,7 +210,7 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        show: Show | uuid.UUID,
+        canonical_show_id: uuid.UUID,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -221,19 +221,21 @@ class ChannelShow(BaseChannelShow, TimestampIdAndHashMixin, table=True):
     ) -> ChannelShow:
         """Get the `ChannelShow`, raising if not found.
 
-        This is a wrapper around `db.get_one`. `show` is either a `Show`, whose
-        canonical title is read off it, or that title's id itself.
+        This is a wrapper around `db.get_one`. A `ChannelShow` is about a
+        canonical show, and a non-canonical row stands for however many of them a
+        website mixed into it, so the canonical show is named outright rather
+        than read off a row.
 
         Returns:
             The matching `ChannelShow`.
 
         Raises:
-            NoResultFound: If no `ChannelShow` links the given channel and title.
+            NoResultFound: If no `ChannelShow` links the channel and the show.
 
         """
         return session.get_one(
             cls,
-            (channel.id, _canonical_show_id(show)),
+            (channel.id, canonical_show_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -254,8 +256,8 @@ class BaseChannelSourceFilter(SQLModel):
 class ChannelSourceFilter(BaseChannelSourceFilter, TimestampIdAndHashMixin, table=True):
     """Model representing the `Show`s that are filtered for a `ChannelShow`.
 
-    A `ChannelShow` is a title rather than one website's copy of it, so this is
-    where a `User` says which websites' copies of it they want.
+    A `ChannelShow` is a canonical show rather than one website's row, so this is
+    where a `User` says which websites' rows they want.
     """
 
     __table_args__ = (
@@ -315,7 +317,7 @@ class BaseChannelSeasonFilter(SQLModel):
         ondelete="CASCADE",
     )
     """The season this row is about, which is the season the episodes under it
-    belong to rather than any one website's copy of it."""
+    belong to rather than any one website's row."""
 
 
 # TODO: Validate
@@ -377,8 +379,8 @@ class BaseChannelEpisodeFilter(SQLModel):
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
-    """The episode this row is about, rather than one website's copy of it, so the
-    filter covers the same episode on every website the title is on."""
+    """The canonical episode this row is about, rather than one website's row, so
+    the filter covers the same episode on every website the show is on."""
     # When the filter stops applying. `None` means it never expires. Once `expires_at`
     # is in the past the entry is ignored (a blacklist stops hiding the episode, a
     # whitelist stops including it).
@@ -437,6 +439,95 @@ class ChannelEpisodeFilter(
         return session.get(
             cls,
             (channel_show.id, canonical_id),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+
+# TODO: Validate
+class BaseChannelEpisodeSourceFilter(SQLModel):
+    """Base model representing a filtered episode on one website only."""
+
+    canonical_episode_id: uuid.UUID = Field(
+        foreign_key="episode.id",
+        ondelete="CASCADE",
+    )
+    """The canonical episode this row is about, so the filter survives a website's
+    own linked episode being replaced by a later import."""
+    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
+    """The website's linked show the filter is about, so only that site's link to
+    the episode is covered rather than every site carrying it."""
+    # When the filter stops applying, read the same way `ChannelEpisodeFilter`
+    # reads it. `None` means it never expires.
+    expires_at: datetime | None = DateTimeField(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeSourceFilter(
+    BaseChannelEpisodeSourceFilter,
+    TimestampIdAndHashMixin,
+    table=True,
+):
+    """Model representing an episode filtered on one website only.
+
+    A `ChannelEpisodeFilter` is about the episode on every website the show is on.
+    This is the exception to that: it names one website's link to the episode, so
+    an episode can be taken from one site and left on another.
+    """
+
+    __table_args__ = (
+        # Used to ensure each episode and linked show pair is unique within a
+        # ChannelShow.
+        # Used to cascade deletions when a channel show is deleted.
+        PrimaryKeyConstraint("channel_show_id", "canonical_episode_id", "show_id"),
+        # Used to find every channel show filtering an episode.
+        Index(
+            "ChannelEpisodeSourceFilter-canonical_episode_id-index",
+            "canonical_episode_id",
+        ),
+        # Used to cascade deletions when a show is deleted.
+        Index("ChannelEpisodeSourceFilter-show_id-index", "show_id"),
+    )
+
+    channel_show_id: uuid.UUID = Field(foreign_key="channelshow.id", ondelete="CASCADE")
+    channel_show: ChannelShow = Relationship(back_populates="episode_source_filters")
+
+    # TODO: Validate
+    @classmethod
+    def get(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        session: Session,
+        channel_show: ChannelShow,
+        episode: Episode | uuid.UUID,
+        show: Show | uuid.UUID,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> ChannelEpisodeSourceFilter | None:
+        """Get the `ChannelEpisodeSourceFilter` if it exists.
+
+        This is a wrapper around `db.get`. `episode` is either an `Episode`, whose
+        canonical episode is read off it, or that episode's id itself.
+
+        Returns:
+            The matching `ChannelEpisodeSourceFilter` if found, else `None`.
+
+        """
+        canonical_id = (
+            episode.canonical_episode_id if isinstance(episode, Episode) else episode
+        )
+        show_id = show.id if isinstance(show, Show) else show
+        return session.get(
+            cls,
+            (channel_show.id, canonical_id, show_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -508,8 +599,8 @@ class ChannelSavedEpisodeOrder(
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
     channel: Channel = Relationship(back_populates="episode_orders")
 
-    # The episode itself, so a saved position survives the copy it was saved
-    # against being deleted and covers every copy of that episode.
+    # The canonical episode, so a saved position survives the row it was saved
+    # against being deleted and covers every row standing for that episode.
     canonical_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",

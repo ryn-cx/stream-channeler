@@ -2,7 +2,7 @@
 import time
 import uuid
 from collections import defaultdict
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,8 +17,8 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.filters import canonical_id_of, is_canonical, is_copy
-from app.canonical_media.keys import same_issuer_clause
+from app.canonical_media.filters import canonical_id_of, is_canonical, is_non_canonical
+from app.canonical_media.keys import same_issuer_clause, tmdb_key_clause
 from app.canonical_media.seasons import season_ids_by_episode
 from app.channels import service
 from app.channels.channel_scope import (
@@ -33,7 +33,13 @@ from app.channels.dependencies import (
     ReadableChannel,
 )
 from app.channels.episode_selector import EpisodeQueryBuilder
-from app.channels.models import Channel, ChannelFavorite, ChannelQueue, ChannelShow
+from app.channels.models import (
+    Channel,
+    ChannelEpisodeSourceFilter,
+    ChannelFavorite,
+    ChannelQueue,
+    ChannelShow,
+)
 from app.channels.schemas import (
     BlacklistEpisodeInput,
     ChannelAdminCreate,
@@ -58,7 +64,7 @@ from app.channels.schemas import (
     CombinedChannelOutput,
     EpisodeWithDetails,
     SortOptionOutput,
-    WhitelistEpisodeCopyOutput,
+    WhitelistEpisodeLinkOutput,
     WhitelistEpisodeOutput,
     WhitelistSeasonOutput,
     WhitelistShowInput,
@@ -68,10 +74,8 @@ from app.channels.schemas import (
 from app.episodes.models import Episode
 from app.media.canonical_metadata import (
     fill_episodes,
-    fill_shows,
     fill_tmdb_urls,
     prefer_canonical_episodes,
-    prefer_shows,
 )
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.schemas import MediaOwner
@@ -475,13 +479,14 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
-    # A card is about the media rather than one website's copy of it, so every row
+    # An episode is the media rather than one website's copy of it, so every row
     # reads as TMDB has it, with the website standing in only where TMDB has
-    # nothing of its own to say.
+    # nothing of its own to say. A listing is a copy of however many titles a
+    # website mixed into it and has no one title to read as, so it is served as
+    # the website stored it.
     fill_episodes(session, output.episodes)
     fill_tmdb_urls(session, output.episodes)
     prefer_canonical_episodes(session, output.episodes)
-    prefer_shows(session, list(output.shows.values()))
 
     logger.info("get_channel_episodes completed in {:.3f} seconds", time.time() - start)
     return output
@@ -552,9 +557,9 @@ def get_channel_shows(
             ):
                 continue
 
-            # A copy is read as the title the channel holds rather than the title
-            # it is chiefly of, since a listing that mixes titles is on a channel
-            # under whichever of them was added. That is what gathers the copies
+            # A copy is read as the title the channel holds rather than as any
+            # other title it is of, since a listing that mixes titles is on a
+            # channel under whichever of them was added. That is what gathers the copies
             # of one title into the one row, and what the row's own totals and
             # missing fields are then filled in from.
             key = (canonical_show_id, show.id)
@@ -611,21 +616,8 @@ def get_channel_shows(
         for group_channel_id in sorted(shows_by_channel, key=group_sort_key)
     ]
 
-    # A row is read as the title the channel holds rather than as the listing it
-    # came from, since a listing that mixes titles carries the name and artwork of
-    # whichever of them it is chiefly of and would name the other one by it. A
-    # grouped show is its own row, so the groups are read alongside the lists.
-    prefer_shows(
-        session,
-        [
-            *output.shows,
-            *output.filter_only_shows,
-            *(show for group in output.groups for show in group.shows),
-        ],
-    )
-
-    # Every title the channel holds rather than the titles its copies are chiefly
-    # of, since a copy that mixes titles is listed under whichever of them the
+    # Every title the channel holds rather than every title its copies are of,
+    # since a copy that mixes titles is listed under whichever of them the
     # channel was told to hold.
     output.stats = _channel_show_stats(session, canonical_show_ids)
     output.canonical_sources = _canonical_sources(session, canonical_show_ids)
@@ -642,7 +634,8 @@ def _canonical_sources(
 
     Which is TMDB wherever TMDB has a record of the title, and nothing where a
     website's listing is a copy of a row minted for it to point at rather than of
-    a title anything catalogued.
+    a title anything catalogued. Every row has a source now, including the minted
+    ones, so what tells the two apart is who issued the key.
     """
     if not canonical_show_ids:
         return {}
@@ -650,7 +643,7 @@ def _canonical_sources(
     canonical_shows = session.exec(
         select(Show).where(
             col(Show.id).in_(canonical_show_ids),
-            col(Show.source_id).is_not(None),
+            tmdb_key_clause(col(Show.key)),
         ),
     ).all()
     return {
@@ -749,7 +742,7 @@ def _linked_show_stats(
         .where(
             col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
             is_canonical(Episode),
-            is_copy(linked_show),
+            is_non_canonical(linked_show),
             col(Episode.deleted_at).is_(None),
             col(linked_season.deleted_at).is_(None),
             col(linked_show.deleted_at).is_(None),
@@ -787,21 +780,23 @@ def get_channel_sources(
 
 
 # TODO: Validate
-def _copies_by_canonical_id(
+def _links_by_canonical_id(
     shows: Sequence[Show],
     season_ids: dict[uuid.UUID, uuid.UUID],
     listed_episode_ids: Collection[uuid.UUID],
+    episode_source_filters: Mapping[
+        tuple[uuid.UUID, uuid.UUID],
+        ChannelEpisodeSourceFilter,
+    ],
 ) -> tuple[
     dict[uuid.UUID, list[uuid.UUID]],
     dict[uuid.UUID, list[uuid.UUID]],
-    dict[uuid.UUID, list[WhitelistEpisodeCopyOutput]],
+    dict[uuid.UUID, list[WhitelistEpisodeLinkOutput]],
 ]:
-    """Map each season and canonical episode to the copies carrying it."""
+    """Map each season and canonical episode to the websites' rows carrying it."""
     season_show_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
     episode_show_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
-    episode_copies: dict[uuid.UUID, list[WhitelistEpisodeCopyOutput]] = defaultdict(
-        list,
-    )
+    episode_links: dict[uuid.UUID, list[WhitelistEpisodeLinkOutput]] = defaultdict(list)
     for show in shows:
         for season in show.active_children:
             if not season.active_children and show.id not in season_show_ids[season.id]:
@@ -815,10 +810,22 @@ def _copies_by_canonical_id(
                 episode_id = canonical_id_of(episode)
                 if show.id not in episode_show_ids[episode_id]:
                     episode_show_ids[episode_id].append(show.id)
-                episode_copies[episode_id].append(
-                    WhitelistEpisodeCopyOutput(show_id=show.id, episode_id=episode.id),
+                episode_source_filter = episode_source_filters.get(
+                    (episode_id, show.id),
                 )
-    return season_show_ids, episode_show_ids, episode_copies
+                episode_links[episode_id].append(
+                    WhitelistEpisodeLinkOutput(
+                        show_id=show.id,
+                        episode_id=episode.id,
+                        filtered=episode_source_filter is not None,
+                        expires_at=(
+                            episode_source_filter.expires_at
+                            if episode_source_filter
+                            else None
+                        ),
+                    ),
+                )
+    return season_show_ids, episode_show_ids, episode_links
 
 
 # TODO: Validate
@@ -889,6 +896,15 @@ def get_channel_whitelist(
         episode_filter.canonical_episode_id: episode_filter.expires_at
         for episode_filter in channel_show.episode_filters
     }
+    # An entry naming an episode on one website alone, read by the episode and the
+    # website together since that pair is what it is about.
+    episode_source_filters = {
+        (
+            episode_source_filter.canonical_episode_id,
+            episode_source_filter.show_id,
+        ): episode_source_filter
+        for episode_source_filter in channel_show.episode_source_filters
+    }
 
     seasons: list[WhitelistSeasonOutput] = []
     episodes: list[WhitelistEpisodeOutput] = []
@@ -937,12 +953,13 @@ def get_channel_whitelist(
         )
     }
 
-    # The websites' copies carrying each season and episode, so a row can name the
+    # The websites' rows carrying each season and episode, so a row can name the
     # sites it came from.
-    season_show_ids, episode_show_ids, episode_copies = _copies_by_canonical_id(
+    season_show_ids, episode_show_ids, episode_links = _links_by_canonical_id(
         [*shows, *tmdb_shows],
         episode_seasons,
         listed_episode_ids,
+        episode_source_filters,
     )
 
     sources = [
@@ -1007,7 +1024,7 @@ def get_channel_whitelist(
                         "filtered": canonical_episode_id in enabled_episodes,
                         "expires_at": episode_expiries.get(canonical_episode_id),
                         "show_ids": episode_show_ids[canonical_episode_id],
-                        "copies": episode_copies[canonical_episode_id],
+                        "links": episode_links[canonical_episode_id],
                     },
                 ),
             )
@@ -1018,20 +1035,15 @@ def get_channel_whitelist(
     # TMDB has no record of.
     prefer_canonical_episodes(session, episodes)
 
-    return fill_shows(
-        session,
-        [
-            WhitelistShowOutput.model_validate(
-                (shows or tmdb_shows)[0],
-                update={
-                    "is_whitelist": channel_show.is_whitelist,
-                    "sources": sources,
-                    "seasons": seasons,
-                    "episodes": episodes,
-                },
-            ),
-        ],
-    )[0]
+    return WhitelistShowOutput.model_validate(
+        (shows or tmdb_shows)[0],
+        update={
+            "is_whitelist": channel_show.is_whitelist,
+            "sources": sources,
+            "seasons": seasons,
+            "episodes": episodes,
+        },
+    )
 
 
 # FAST003 - Parameter is used by UserChannelShow.

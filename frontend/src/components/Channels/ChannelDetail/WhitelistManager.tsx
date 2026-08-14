@@ -24,7 +24,7 @@ import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
 
 // TODO: Validate
-/** The favicons of the websites' copies a season or episode was found on. */
+/** The favicons of the websites' links a season or episode was found on. */
 function SourceFavicons({
   showIds,
   sourcesByShowId,
@@ -120,7 +120,7 @@ export function WhitelistManager({
   onClose,
 }: WhitelistManagerProps) {
   const [isWhitelist, setIsWhitelist] = useState(false)
-  // The `Show` ids of the websites' copies that carry a filter entry.
+  // The `Show` ids of the websites' links that carry a filter entry.
   const [enabledSourceIds, setEnabledSourceIds] = useState<Set<string>>(
     new Set(),
   )
@@ -150,8 +150,8 @@ export function WhitelistManager({
   const [informationShowId, setInformationShowId] = useState<string | null>(
     null,
   )
-  // The website's copy of an episode whose information is open, if any.
-  const [informationCopyEpisodeId, setInformationCopyEpisodeId] = useState<
+  // The website's link to an episode whose information is open, if any.
+  const [informationLinkEpisodeId, setInformationLinkEpisodeId] = useState<
     string | null
   >(null)
 
@@ -246,9 +246,9 @@ export function WhitelistManager({
   }
 
   // TODO: Validate
-  const toggleCopyInformation = (copyEpisodeId: string) => {
-    setInformationCopyEpisodeId(
-      informationCopyEpisodeId === copyEpisodeId ? null : copyEpisodeId,
+  const toggleLinkInformation = (linkEpisodeId: string) => {
+    setInformationLinkEpisodeId(
+      informationLinkEpisodeId === linkEpisodeId ? null : linkEpisodeId,
     )
   }
 
@@ -417,7 +417,7 @@ export function WhitelistManager({
   const watchableShowIds = (showIds: string[]) =>
     showIds.filter((showId) => !tmdbShowIds.has(showId))
   // TMDB leads a row the way it leads a season's, since what a row stands for is
-  // the media rather than any one site's copy of it, and the sites it can be
+  // the media rather than any one site's link to it, and the sites it can be
   // watched on follow the name rather than lead it.
   // TODO: Validate
   const catalogueShowIds = (showIds: string[]) =>
@@ -770,34 +770,34 @@ export function WhitelistManager({
                                         {informationEpisodeId ===
                                           episode.id && (
                                           <div className="ml-16 space-y-1">
-                                            {episode.copies.map((copy) => {
-                                              const copySource =
+                                            {episode.links.map((link) => {
+                                              const linkSource =
                                                 sourcesByShowId.get(
-                                                  copy.show_id,
+                                                  link.show_id,
                                                 )
                                               return (
-                                                <div key={copy.episode_id}>
+                                                <div key={link.episode_id}>
                                                   <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
                                                     <Button
                                                       variant="ghost"
                                                       size="icon-sm"
                                                       onClick={() =>
-                                                        toggleCopyInformation(
-                                                          copy.episode_id,
+                                                        toggleLinkInformation(
+                                                          link.episode_id,
                                                         )
                                                       }
                                                     >
-                                                      {informationCopyEpisodeId ===
-                                                      copy.episode_id ? (
+                                                      {informationLinkEpisodeId ===
+                                                      link.episode_id ? (
                                                         <ChevronDown className="h-4 w-4" />
                                                       ) : (
                                                         <ChevronRight className="h-4 w-4" />
                                                       )}
                                                     </Button>
-                                                    {copySource?.favicon_url && (
+                                                    {linkSource?.favicon_url && (
                                                       <img
                                                         src={
-                                                          copySource.favicon_url
+                                                          linkSource.favicon_url
                                                         }
                                                         alt=""
                                                         className="size-6 shrink-0"
@@ -807,21 +807,21 @@ export function WhitelistManager({
                                                       type="button"
                                                       className="flex-1 text-left text-sm hover:underline"
                                                       onClick={() =>
-                                                        toggleCopyInformation(
-                                                          copy.episode_id,
+                                                        toggleLinkInformation(
+                                                          link.episode_id,
                                                         )
                                                       }
                                                     >
-                                                      {copySource?.source_name ??
+                                                      {linkSource?.source_name ??
                                                         "Unknown source"}
                                                     </button>
                                                   </div>
-                                                  {informationCopyEpisodeId ===
-                                                    copy.episode_id && (
+                                                  {informationLinkEpisodeId ===
+                                                    link.episode_id && (
                                                     <div className="ml-8 rounded border bg-muted/30 p-4">
                                                       <EpisodeInformationPanel
                                                         episodeId={
-                                                          copy.episode_id
+                                                          link.episode_id
                                                         }
                                                       />
                                                     </div>

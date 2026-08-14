@@ -222,9 +222,9 @@ class ChannelShowGroup(BaseModel):
 
 # TODO: Validate
 class ChannelShowStats(BaseModel):
-    """What a channel's copies of one title add up to.
+    """What a channel's rows for one canonical show add up to.
 
-    A title is counted by what its seasons and episodes are rather than by the
+    A canonical show is counted by what its seasons and episodes are rather than by the
     records holding them, so the same season on three websites is one season.
     """
 
@@ -239,15 +239,15 @@ class ChannelShowsOutput(BaseModel):
     # episodes pulled in from other channels.
     filter_only_shows: list[ShowPublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
-    # The source each title itself was written by, keyed by `canonical_show_id`.
-    # Kept apart from `sources` because that is where a title can be watched and
+    # The source each canonical show was written by, keyed by `canonical_show_id`.
+    # Kept apart from `sources` because that is where a show can be watched and
     # this is who wrote it down, which is never a website carrying it.
     canonical_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
     # The regular shows grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelShowGroup] = Field(default_factory=list)
-    # What each title adds up to, keyed by `canonical_show_id` because the stats
-    # are about the title rather than one website's copy of it.
+    # What each canonical show adds up to, keyed by `canonical_show_id` because
+    # the stats are about the show rather than one website's row.
     stats: dict[uuid.UUID, ChannelShowStats] = Field(default_factory=dict)
 
 
@@ -267,17 +267,34 @@ class BlacklistEpisodeInput(BaseInput):
 
 
 # TODO: Validate
+class WhitelistEpisodeSourceEntryInput(BaseInput):
+    """An entry naming an episode on one website rather than on all of them."""
+
+    # The website's own row for the episode, whose canonical episode is what the
+    # entry ends up naming.
+    episode_id: uuid.UUID
+    # The website's row for the show, which is what narrows the entry to one site.
+    show_id: uuid.UUID
+    marked: bool
+    # `None` = never expires.
+    expires_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
 class WhitelistShowInput(BaseInput):
     is_whitelist: bool | None = Field(default=None)
-    # Each entry's `id` is the `Show` id of one website's copy of the title.
+    # Each entry's `id` is the `Show` id of one website's row for the show.
     sources: list[WhitelistEntryInput] = Field(default_factory=list)
     seasons: list[WhitelistEntryInput] = Field(default_factory=list)
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
+    episode_sources: list[WhitelistEpisodeSourceEntryInput] = Field(
+        default_factory=list,
+    )
 
 
 # TODO: Validate
 class WhitelistSourceOutput(BaseModel):
-    """One website's copy of the title, and whether it is filtered."""
+    """One website's row for the show, and whether it is filtered."""
 
     show_id: uuid.UUID
     source_id: uuid.UUID
@@ -293,27 +310,31 @@ class WhitelistSourceOutput(BaseModel):
 # TODO: Validate
 class WhitelistSeasonOutput(SeasonOutput):
     filtered: bool
-    # The `Show` ids of the websites' copies that carry this season.
+    # The `Show` ids of the websites' rows that carry this season.
     show_ids: list[uuid.UUID]
 
 
 # TODO: Validate
-class WhitelistEpisodeCopyOutput(BaseModel):
-    """One website's copy of an episode, and the episode row standing for it."""
+class WhitelistEpisodeLinkOutput(BaseModel):
+    """One website's row for an episode, and whether it is filtered on its own."""
 
     show_id: uuid.UUID
     episode_id: uuid.UUID
+    # Whether an entry names this episode on this website alone, which is the
+    # exception to whatever the season and episode entries decided.
+    filtered: bool
+    expires_at: datetime | None = Field(default=None)
 
 
 # TODO: Validate
 class WhitelistEpisodeOutput(EpisodeOutput):
     filtered: bool
     expires_at: datetime | None = Field(default=None)
-    # The `Show` ids of the websites' copies that carry this episode.
+    # The `Show` ids of the websites' rows that carry this episode.
     show_ids: list[uuid.UUID]
-    # Each copy on its own, so one website's account of the episode can be read
-    # rather than only the row the copies were folded into.
-    copies: list[WhitelistEpisodeCopyOutput]
+    # Each website's row on its own, so one website's account of the episode can
+    # be read, and filtered, rather than only the row they were folded into.
+    links: list[WhitelistEpisodeLinkOutput]
     # How TMDB numbers and names the episode and the season it is in, which is not
     # always how the website does. `None` when it is not linked to TMDB.
     tmdb_season_number: int | None = Field(default=None)

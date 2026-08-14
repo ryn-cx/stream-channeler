@@ -1,5 +1,5 @@
 # TODO: Validate
-"""Serve a copy of a title as the title itself.
+"""Serve a copy of an episode as the episode itself.
 
 A plugin stores only what its own website reported, so anything that site had no
 value for stays unset on the stored record, and what it did report is one
@@ -7,6 +7,10 @@ website's account of a thing every other website also has an account of. The
 canonical row is the single answer for all of them — TMDB's where TMDB has a
 record, and the one copy's own where it does not — so a record is served by
 reading the row it points at.
+
+Only episodes are served this way. A listing is a copy of however many titles a
+website mixed into one page, and no one of them is the title its name and artwork
+belong to, so a listing is served as the website stored it.
 
 Nothing is written back. A copy follows the canonical row as it is served rather
 than being rewritten whenever that row changes.
@@ -38,7 +42,10 @@ type MediaModel = type[MediaMixin[Any, Any]]
 
 # What each level's canonical row answers for. Anything else belongs to the copy
 # alone — `url` above all, which says where rather than what.
-SHOW_FIELDS = ("name", "description", "image_url")
+#
+# There is no such list for a show. A listing is a copy of however many titles a
+# website mixed into it, so there is no one row to read a listing's name or
+# artwork off, and a listing is served as the website stored it.
 EPISODE_FIELDS = (
     "name",
     "description",
@@ -47,7 +54,6 @@ EPISODE_FIELDS = (
     "air_date",
 )
 
-SHOW_ID_FIELD = "canonical_show_id"
 EPISODE_ID_FIELD = "canonical_episode_id"
 
 CANONICAL_KEY_FIELD = "canonical_key"
@@ -145,18 +151,6 @@ def _label(row: Any, canonical: Any) -> None:  # noqa: ANN401 - Any output row.
     """Hand the row the key saying what it is, where it has somewhere to put it."""
     if hasattr(row, CANONICAL_KEY_FIELD):
         setattr(row, CANONICAL_KEY_FIELD, canonical.key)
-
-
-# TODO: Validate
-def fill_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Fill what the website left out of each `Show` row from the title itself."""
-    return _fill(session, rows, SHOW_ID_FIELD, Show, SHOW_FIELDS)
-
-
-# TODO: Validate
-def prefer_shows[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Serve each `Show` row as the title is, falling back on the site."""
-    return _prefer(session, rows, SHOW_ID_FIELD, Show, SHOW_FIELDS)
 
 
 # TODO: Validate
@@ -373,11 +367,14 @@ def canonical_season_of(
 
 
 # TODO: Validate
-def canonical_show_of(
-    session: Session,
-    canonical_show_id: UUID | None,
-) -> Show | None:
-    """Return the title a copy is of."""
+def canonical_show_of(session: Session, show: Show) -> Show | None:
+    """Return the one title `show` is a copy of, where it is a copy of one.
+
+    A listing that mixes titles is as much a copy of each of them as of any
+    other, so there is no one title to set beside it and it is answered for with
+    none.
+    """
+    canonical_show_id = show.sole_canonical_show_id
     if canonical_show_id is None:
         return None
     return session.exec(

@@ -48,7 +48,7 @@ class TestImportQueue:
             select(ChannelShow).where(ChannelShow.channel_id == channel.id),
         ).all()
         assert len(channel_shows) == 1
-        assert channel_shows[0].canonical_show_id == show.canonical_show_id
+        assert channel_shows[0].canonical_show_id in show.canonical_show_ids
 
     # TODO: Validate
     def test_uses_the_callers_session_database(
@@ -96,9 +96,7 @@ class TestImportQueue:
         ).all()
         assert {
             channel_show.canonical_show_id for channel_show in channel_shows
-        } == {
-            show.canonical_show_id,
-        }
+        } == set(show.canonical_show_ids)
 
     # TODO: Validate
     def test_marks_unmatched_url_failed(

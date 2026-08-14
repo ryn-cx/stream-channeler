@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import is_canonical, is_copy
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -63,7 +63,7 @@ def _candidates_by_canonical_key(
             col(watched_episode.id) == col(Episode.canonical_episode_id),
         )
         .where(
-            is_copy(Episode),
+            is_non_canonical(Episode),
             is_canonical(watched_episode),
             col(watched_episode.key).in_(canonical_keys),
             col(Episode.deleted_at).is_(None),
@@ -129,7 +129,7 @@ def _report_unresolvable(session: Session, canonical_keys: set[str]) -> None:
                 col(Episode.canonical_episode_id) == col(watched_episode.id),
             )
             .where(
-                is_copy(Episode),
+                is_non_canonical(Episode),
                 is_canonical(watched_episode),
                 col(watched_episode.key).in_(canonical_keys),
             ),

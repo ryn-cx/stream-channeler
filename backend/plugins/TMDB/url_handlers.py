@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from plugins.TMDB import TMDB
 
 
+# TODO: Validate
 def _url_regex(media_type: MediaType) -> str:
     return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
 
@@ -49,12 +50,14 @@ class TMDBURLHandler(URLHandler["TMDB"]):
         )
 
 
+# TODO: Validate
 class MovieURLHandler(TMDBURLHandler):
     """TMDB movie URL handler."""
 
     _URL_REGEX = _url_regex(MediaType.movie)
     media_type = MediaType.movie
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         super().raise_if_invalid()
@@ -62,12 +65,14 @@ class MovieURLHandler(TMDBURLHandler):
         self.plugin.raise_if_invalid_file(movie_detail_file, self.url)
 
 
+# TODO: Validate
 class TvURLHandler(TMDBURLHandler):
     """TMDB TV series URL handler."""
 
     _URL_REGEX = _url_regex(MediaType.tv)
     media_type = MediaType.tv
 
+    # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         super().raise_if_invalid()

@@ -7,7 +7,7 @@ fallbacks - so they all have to name the same entity or the query would join a
 level twice and read one of the two at random.
 
 They are aliased rather than named directly so that reaching a level twice is
-always something the query says out loud. A canonical row and a copy of one are
+always something the query says out loud. A canonical row and a non-canonical one are
 the same shape, and a query that names both without aliasing either has nothing
 to tell them apart by.
 
@@ -37,9 +37,10 @@ CANONICAL_SHOW = aliased(Show)
 def episode_id() -> ColumnElement[UUID]:
     """Return the episode a row stands for, which is the row where it is canonical.
 
-    A website carries episodes the title has no record of, so nothing was ever
-    minted for them to be copies of and they are the episode themselves. They are
-    still episodes of the title the website's listing is linked to, so everything
+    A website carries episodes the canonical show has no record of, so nothing
+    was ever minted for them to stand for and they are the episode themselves.
+    They are still episodes of the canonical show the website's row is linked to,
+    so everything
     keyed by the canonical episode reads this rather than the pointer.
     """
     return canonical_id_column(Episode)

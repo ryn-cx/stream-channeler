@@ -89,7 +89,7 @@ export type CanonicalEpisodesPublic = {
  * Schema for returning a `Show`.
  *
  * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
- * the key is the whole of what says which TMDB record a title is. They are
+ * the key is the whole of what says which TMDB record a show is. They are
  * served for reading only: nothing can be sorted or filtered by a value the
  * database does not hold a column for.
  */
@@ -446,9 +446,9 @@ export type ChannelShowsOutput = {
 };
 
 /**
- * What a channel's copies of one title add up to.
+ * What a channel's rows for one canonical show add up to.
  *
- * A title is counted by what its seasons and episodes are rather than by the
+ * A canonical show is counted by what its seasons and episodes are rather than by the
  * records holding them, so the same season on three websites is one season.
  */
 export type ChannelShowStats = {
@@ -1160,7 +1160,7 @@ export type ShowCreate = {
 };
 
 /**
- * What the website and TMDB each say about a title, side by side.
+ * What the website and TMDB each say about a show, side by side.
  *
  * The stored record is returned as the website reported it rather than as it is
  * served, so the two accounts can be compared instead of one standing in for
@@ -1176,7 +1176,7 @@ export type ShowInformationOutput = {
 };
 
 /**
- * One record's own account of a title, as the website that holds it has it.
+ * One record's own account of a show, as the website holding it has it.
  */
 export type ShowInformationSide = {
     label: string;
@@ -1207,9 +1207,8 @@ export type ShowListPublic = {
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
-    canonical_show_id: string;
+    canonical_show_id?: (string | null);
     tmdb_id?: (number | null);
-    canonical_key?: (string | null);
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
@@ -1235,9 +1234,8 @@ export type ShowPublic = {
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
-    canonical_show_id: string;
+    canonical_show_id?: (string | null);
     tmdb_id?: (number | null);
-    canonical_key?: (string | null);
 };
 
 /**
@@ -1653,11 +1651,13 @@ export type WhitelistEntryInput = {
 };
 
 /**
- * One website's copy of an episode, and the episode row standing for it.
+ * One website's row for an episode, and whether it is filtered on its own.
  */
-export type WhitelistEpisodeCopyOutput = {
+export type WhitelistEpisodeLinkOutput = {
     show_id: string;
     episode_id: string;
+    filtered: boolean;
+    expires_at?: (string | null);
 };
 
 export type WhitelistEpisodeOutput = {
@@ -1684,10 +1684,20 @@ export type WhitelistEpisodeOutput = {
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
-    copies: Array<WhitelistEpisodeCopyOutput>;
+    links: Array<WhitelistEpisodeLinkOutput>;
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
+};
+
+/**
+ * An entry naming an episode on one website rather than on all of them.
+ */
+export type WhitelistEpisodeSourceEntryInput = {
+    episode_id: string;
+    show_id: string;
+    marked: boolean;
+    expires_at?: (string | null);
 };
 
 export type WhitelistSeasonOutput = {
@@ -1712,6 +1722,7 @@ export type WhitelistShowInput = {
     sources?: Array<WhitelistEntryInput>;
     seasons?: Array<WhitelistEntryInput>;
     episodes?: Array<WhitelistEntryInput>;
+    episode_sources?: Array<WhitelistEpisodeSourceEntryInput>;
 };
 
 export type WhitelistShowOutput = {
@@ -1730,9 +1741,8 @@ export type WhitelistShowOutput = {
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
-    canonical_show_id: string;
+    canonical_show_id?: (string | null);
     tmdb_id?: (number | null);
-    canonical_key?: (string | null);
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
@@ -1740,7 +1750,7 @@ export type WhitelistShowOutput = {
 };
 
 /**
- * One website's copy of the title, and whether it is filtered.
+ * One website's row for the show, and whether it is filtered.
  */
 export type WhitelistSourceOutput = {
     show_id: string;

@@ -5,18 +5,18 @@ A channel that asks for a number of shows keeps every episode of the shows that
 come first in the order already chosen and drops the rest, so the counts thin the
 line-up without disturbing how it is sorted.
 
-A show here is the title rather than one website's listing of it, so a title two
-websites carry counts once, and a listing that mixes titles counts as each of the
-titles its episodes belong to.
+A show here is the canonical show rather than one website's row for it, so a
+show two websites carry counts once, and a row that mixes shows counts as each of
+the canonical shows its episodes belong to.
 """
 
+from collections import defaultdict
 from uuid import UUID
 
 from sqlalchemy.orm import aliased
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.canonical_media.filters import (
-    canonical_id_column,
     canonical_id_of,
     is_canonical,
 )
@@ -24,7 +24,7 @@ from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.users.models import User
 
 
@@ -50,17 +50,17 @@ def limit_shows(
     if not user or not episodes:
         return episodes
 
-    episode_to_show = _titles_by_canonical_episode(session, episodes)
+    episode_to_shows = _titles_by_canonical_episode(session, episodes)
     started: set[UUID] = set(session.exec(started_show_ids(user)).all())
 
     show_order: list[tuple[UUID, bool]] = []
     seen: set[UUID] = set()
     for episode in episodes:
-        show_id = episode_to_show[canonical_id_of(episode)]
-        if show_id in seen:
-            continue
-        seen.add(show_id)
-        show_order.append((show_id, show_id in started))
+        for show_id in episode_to_shows[canonical_id_of(episode)]:
+            if show_id in seen:
+                continue
+            seen.add(show_id)
+            show_order.append((show_id, show_id in started))
 
     selected = _select_show_subset(
         show_order,
@@ -68,10 +68,12 @@ def limit_shows(
         started_count=started_count,
         new_count=new_count,
     )
+    # An episode of a row that mixes shows belongs to each of them alike, so room
+    # left for any one of its canonical shows is room for the episode.
     return [
         episode
         for episode in episodes
-        if episode_to_show[canonical_id_of(episode)] in selected
+        if not selected.isdisjoint(episode_to_shows[canonical_id_of(episode)])
     ]
 
 
@@ -79,33 +81,46 @@ def limit_shows(
 def _titles_by_canonical_episode(
     session: Session,
     episodes: list[Episode],
-) -> dict[UUID, UUID]:
-    """Map each episode in `episodes` to the title it belongs to.
+) -> dict[UUID, set[UUID]]:
+    """Map each episode in `episodes` to the canonical shows it belongs to.
 
-    Read off the episode's own canonical row rather than off the listing holding
-    it, since a listing that mixes titles holds episodes of each of them. An
-    episode nothing was minted for it to be a copy of sits under a website's own
-    listing, so there the title is the one that listing is a copy of.
+    Read off the episode's own canonical row rather than off the row holding it,
+    since a row that mixes shows holds episodes of each of them. An episode
+    nothing was minted for it to stand for sits under a website's own row, so
+    there the canonical shows are the ones that row stands for - all of them,
+    since a row stands for one no more than for another.
     """
     canonical_episode_ids = {canonical_id_of(episode) for episode in episodes}
     counted_episode = aliased(Episode)
     counted_season = aliased(Season)
     counted_show = aliased(Show)
-    return dict(
-        session.exec(
-            select(counted_episode.id, canonical_id_column(counted_show))
-            .select_from(counted_episode)
-            .join(
-                counted_season,
-                col(counted_episode.season_id) == col(counted_season.id),
-            )
-            .join(counted_show, col(counted_season.show_id) == col(counted_show.id))
-            .where(
-                is_canonical(counted_episode),
-                col(counted_episode.id).in_(canonical_episode_ids),
+    counted_link = aliased(ShowCanonicalShow)
+    canonical_show_ids: dict[UUID, set[UUID]] = defaultdict(set)
+    rows = session.exec(
+        select(
+            counted_episode.id,
+            func.coalesce(
+                col(counted_link.canonical_show_id),
+                col(counted_show.id),
             ),
-        ).all(),
-    )
+        )
+        .select_from(counted_episode)
+        .join(
+            counted_season,
+            col(counted_episode.season_id) == col(counted_season.id),
+        )
+        .join(counted_show, col(counted_season.show_id) == col(counted_show.id))
+        # A canonical row has no links and stands for itself; a non-canonical one
+        # has a link per canonical show and stands for each.
+        .outerjoin(counted_link, col(counted_link.show_id) == col(counted_show.id))
+        .where(
+            is_canonical(counted_episode),
+            col(counted_episode.id).in_(canonical_episode_ids),
+        ),
+    ).all()
+    for canonical_episode_id, canonical_show_id in rows:
+        canonical_show_ids[canonical_episode_id].add(canonical_show_id)
+    return canonical_show_ids
 
 
 # TODO: Validate

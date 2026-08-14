@@ -9,11 +9,16 @@ from fastapi import HTTPException
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, delete, select
 
-from app.canonical_media.filters import canonical_id_column, is_canonical, is_copy
+from app.canonical_media.filters import (
+    canonical_id_column,
+    is_canonical,
+    is_non_canonical,
+)
 from app.channels.models import (
     Channel,
     ChannelCombinedChannel,
     ChannelEpisodeFilter,
+    ChannelEpisodeSourceFilter,
     ChannelFavorite,
     ChannelQueue,
     ChannelSavedEpisodeOrder,
@@ -103,22 +108,19 @@ def shows_by_canonical_id(
     session: Session,
     canonical_show_ids: Collection[UUID],
 ) -> dict[UUID, list[Show]]:
-    """Return every website's copy of each title in `canonical_show_ids`.
+    """Return every website's row for each canonical show in `canonical_show_ids`.
 
-    A `ChannelShow` names a title rather than one website's copy of it, so the
-    copies it stands for have to be looked up by the title they are all of. What
-    makes a copy one of them is carrying one of the title's episodes: a listing
-    that mixes titles is linked to each of them, but it is only a place to watch
-    the ones it has episodes of, so a series page linked to the film it spun off
-    is not somewhere that film can be watched. A copy nobody has imported the
-    episodes of yet has only its own word for the title it is of, so the copies
-    naming the title as the one they are chiefly of are counted as well.
+    A `ChannelShow` names a canonical show rather than one website's row, so the
+    rows it stands for have to be looked up by the show they all stand for. A row
+    carrying one of that show's episodes is one of them whatever it is linked to,
+    since the episodes are the canonical show's own and carrying them is what
+    being a place to watch it means.
 
-    A copy also carries episodes nothing was minted for them to be copies of,
-    because the title had no record of them to match them against. They are the
-    episodes themselves, and the only word on what title they belong to is the
-    link their listing carries, so a copy is one of the title's places on the
-    strength of those as well.
+    Every row linked to the canonical show is one of them as well. A row says
+    which canonical shows it stands for before anything of it has been imported,
+    and the episodes it does hold may be ones nothing was minted for them to
+    stand for, so the link is the only word there is on either count. A row that
+    mixes shows is linked to each of them alike and stands for every one.
     """
     grouped: dict[UUID, list[Show]] = defaultdict(list)
     if not canonical_show_ids:
@@ -156,8 +158,8 @@ def shows_by_canonical_id(
             col(Episode.deleted_at).is_(None),
             col(copy_season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
-            # TMDB only supplies the metadata other websites left out, so its copy of
-            # a title is never one of the websites the title can be watched on.
+            # TMDB only supplies the metadata other websites left out, so its row
+            # for a show is never one of the websites it can be watched on.
             Plugin.key != TMDB_PLUGIN_KEY,
         )
         .distinct(),
@@ -165,41 +167,21 @@ def shows_by_canonical_id(
     for canonical_show_id, show in carried:
         add(canonical_show_id, show)
 
-    linked_season = aliased(Season)
     linked = session.exec(
         select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
-        .select_from(Episode)
-        .join(linked_season, col(linked_season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(linked_season.show_id))
+        .select_from(Show)
         .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
             col(ShowCanonicalShow.canonical_show_id).in_(canonical_show_ids),
-            is_canonical(Episode),
-            is_copy(Show),
-            col(Episode.deleted_at).is_(None),
-            col(linked_season.deleted_at).is_(None),
+            is_non_canonical(Show),
             col(Show.deleted_at).is_(None),
             Plugin.key != TMDB_PLUGIN_KEY,
         )
         .distinct(),
     ).all()
     for canonical_show_id, show in linked:
-        add(canonical_show_id, show)
-
-    chiefly = session.exec(
-        select(Show.canonical_show_id, Show)  # type: ignore[call-overload]
-        .select_from(Show)
-        .join(Source, col(Source.id) == col(Show.source_id))
-        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
-        .where(
-            col(Show.canonical_show_id).in_(canonical_show_ids),
-            col(Show.deleted_at).is_(None),
-            Plugin.key != TMDB_PLUGIN_KEY,
-        ),
-    ).all()
-    for canonical_show_id, show in chiefly:
         add(canonical_show_id, show)
 
     return grouped
@@ -210,22 +192,22 @@ def tmdb_shows_by_canonical_id(
     session: Session,
     canonical_show_ids: Iterable[UUID],
 ) -> dict[UUID, list[Show]]:
-    """Return TMDB's own copy of each title, keyed by the title it is of.
+    """Return TMDB's own row for each canonical show, keyed by the show.
 
-    TMDB is not one of the websites a title can be watched on, so its copies are
+    TMDB is not one of the websites a show can be watched on, so its rows are
     gathered apart from theirs rather than alongside them.
 
-    A title TMDB has a record of is the row TMDB wrote, so it is its own copy and
-    there is no link pointing at it to find it by. The links find the other case:
-    a title TMDB wrote that is also a copy of another, which is what a listing
-    mixing titles leaves behind.
+    A canonical show TMDB has a record of is the row TMDB wrote, so it stands for
+    itself and there is no link pointing at it to find it by. The links find the
+    other case: a canonical show TMDB wrote that also stands for another, which is
+    what a row mixing shows leaves behind.
     """
     grouped: dict[UUID, list[Show]] = defaultdict(list)
     canonical_show_ids = set(canonical_show_ids)
     if not canonical_show_ids:
         return grouped
 
-    titles = session.exec(
+    canonical_shows = session.exec(
         select(Show)
         .join(Source)
         .join(Plugin)
@@ -235,8 +217,8 @@ def tmdb_shows_by_canonical_id(
             Plugin.key == TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for title in titles:
-        grouped[title.id].append(title)
+    for canonical_show in canonical_shows:
+        grouped[canonical_show.id].append(canonical_show)
 
     rows = session.exec(
         select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
@@ -262,12 +244,13 @@ def channel_show_for_show(
     channel: Channel,
     show: Show,
 ) -> ChannelShow | None:
-    """Return the row putting one of the titles `show` is a copy of on `channel`.
+    """Return the row putting one of the shows `show` stands for on `channel`.
 
-    A listing that mixes titles is on a channel under whichever of them was added,
-    which need not be the title the listing is chiefly of, so every title it is a
-    copy of is looked for. The chief title wins where the channel holds more than
-    one of them, since it is the one the listing itself is about.
+    A row that mixes shows is on a channel under whichever of them was added, so
+    every canonical show it stands for is looked for. Where the channel holds more
+    than one of them the first linked is returned: no canonical show a row stands
+    for is above another, so there is nothing to prefer and something has to be
+    returned.
     """
     canonical_show_ids = show.canonical_show_ids
     if not canonical_show_ids:
@@ -289,7 +272,7 @@ def channel_show_for_show(
 
 # TODO: Validate
 def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[Show]:
-    """Return every website's copy of the title `channel_show` is about."""
+    """Return every website's row for the show `channel_show` is about."""
     return shows_by_canonical_id(session, [channel_show.canonical_show_id])[
         channel_show.canonical_show_id
     ]
@@ -300,9 +283,9 @@ def tmdb_shows_for_channel_show(
     session: Session,
     channel_show: ChannelShow,
 ) -> list[Show]:
-    """Return TMDB's copies of the title `channel_show` is about.
+    """Return TMDB's rows for the canonical show `channel_show` is about.
 
-    TMDB is not one of the websites a title can be watched on, so its copy is
+    TMDB is not one of the websites a show can be watched on, so its row is
     kept apart from them and only stands for what TMDB has a record of.
     """
     return tmdb_shows_by_canonical_id(session, [channel_show.canonical_show_id])[
@@ -448,6 +431,10 @@ def update_whitelist(
     existing_episodes = {
         episode.canonical_episode_id for episode in channel_show.episode_filters
     }
+    existing_episode_sources = {
+        (episode_source.canonical_episode_id, episode_source.show_id)
+        for episode_source in channel_show.episode_source_filters
+    }
 
     for source in config.sources:
         toggle_source_whitelist(
@@ -474,15 +461,25 @@ def update_whitelist(
             marked=episode.marked,
             expires_at=episode.expires_at,
         )
+    for episode_source in config.episode_sources:
+        toggle_episode_source_whitelist(
+            session,
+            channel_show,
+            _canonical_episode_id(session, episode_source.episode_id),
+            episode_source.show_id,
+            existing_episode_sources,
+            marked=episode_source.marked,
+            expires_at=episode_source.expires_at,
+        )
 
     session.commit()
 
 
 # TODO: Validate
 def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
-    """Return the episode the copy `episode_id` is of, which is what a filter names.
+    """Return the canonical episode `episode_id` stands for, which a filter names.
 
-    A copy of nothing is the episode itself, so it names itself.
+    A row standing for nothing is the episode itself, so it names itself.
     """
     return session.exec(
         select(canonical_id_column(Episode)).where(Episode.id == episode_id),  # type: ignore[call-overload]
@@ -490,24 +487,36 @@ def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
 
 
 # TODO: Validate
-def _canonical_show_id_of_episode(
+def _canonical_show_ids_of_episode(
     session: Session,
     canonical_episode_id: UUID | None,
-) -> UUID | None:
-    """Return the title the episode `canonical_episode_id` names belongs to.
+) -> set[UUID]:
+    """Return the canonical shows `canonical_episode_id` belongs to.
 
-    An episode that is a copy of nothing hangs off a website's own listing rather
-    than off the title, so the title is the one that listing is a copy of.
+    An episode of a canonical show belongs to that show alone. An episode that
+    stands for nothing hangs off a website's own row rather than off a canonical
+    show, and that row stands for each of its canonical shows alike, so it belongs
+    to every one of them.
     """
     if canonical_episode_id is None:
-        return None
-    return session.exec(
-        select(canonical_id_column(Show))
+        return set()
+    own = session.exec(
+        select(Show.id)
         .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(Show, col(Season.show_id) == col(Show.id))
+        .where(Episode.id == canonical_episode_id, is_canonical(Show)),
+    ).all()
+    if own:
+        return set(own)
+    linked = session.exec(
+        select(ShowCanonicalShow.canonical_show_id)
+        .select_from(Episode)
+        .join(Season, col(Episode.season_id) == col(Season.id))
+        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Season.show_id))
         .where(Episode.id == canonical_episode_id),
-    ).one_or_none()
+    ).all()
+    return set(linked)
 
 
 # TODO: Validate
@@ -519,7 +528,7 @@ def toggle_source_whitelist(
     *,
     marked: bool,
 ) -> None:
-    """Mark or unmark one website's copy of the title `channel_show` is about."""
+    """Mark or unmark one website's row for the show `channel_show` is about."""
     if marked and show_id not in existing:
         channel_show.source_filters.append(
             ChannelSourceFilter(
@@ -597,59 +606,108 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
 
 
 # TODO: Validate
+def toggle_episode_source_whitelist(  # noqa: PLR0913 - mirrors toggle_episode_whitelist plus the website
+    session: Session,
+    channel_show: ChannelShow,
+    canonical_episode_id: UUID | None,
+    show_id: UUID,
+    existing: set[tuple[UUID, UUID]],
+    *,
+    marked: bool,
+    expires_at: datetime | None = None,
+) -> None:
+    """Add, re-expire or drop the entry naming `canonical_episode_id` on `show_id`."""
+    if canonical_episode_id is None:
+        return
+    key = (canonical_episode_id, show_id)
+    if marked and key not in existing:
+        channel_show.episode_source_filters.append(
+            ChannelEpisodeSourceFilter(
+                channel_show_id=channel_show.id,
+                canonical_episode_id=canonical_episode_id,
+                show_id=show_id,
+                expires_at=expires_at,
+            ),
+        )
+        return
+    if key not in existing:
+        return
+    existing_entry = ChannelEpisodeSourceFilter.get(
+        session,
+        channel_show,
+        canonical_episode_id,
+        show_id,
+    )
+    if not existing_entry:
+        return
+    if marked:
+        # Re-marking an existing entry updates its expiry.
+        existing_entry.expires_at = expires_at
+    else:
+        session.delete(existing_entry)
+
+
+# TODO: Validate
 def blacklist_episode_on_channel(
     session: Session,
     channel: Channel,
     show: Show,
     episode_id: UUID,
     expires_at: datetime | None = None,
-) -> ChannelShow:
+) -> list[ChannelShow]:
     """Blacklist a single episode for `channel`.
 
-    Gets or creates the `ChannelShow` for the title the episode belongs to, which
-    is the episode's own answer rather than the listing's: a listing that mixes
-    titles holds episodes of each of them, and hiding one of its episodes is about
-    the title that episode is of. A newly created `ChannelShow` is a filter-only
-    show (`is_blacklist_only=True`) in blacklist mode, so the title's other
+    Gets or creates the `ChannelShow` for the canonical show the episode belongs
+    to, which is the episode's own answer rather than its row's: a row that mixes
+    shows holds episodes of each of them, and hiding one of its episodes is about
+    the canonical show that episode belongs to. An episode nothing was minted for
+    it to stand for has no canonical show of its own to answer with, and its row
+    stands for each of its canonical shows alike, so the episode is hidden under
+    every one of them. A newly created `ChannelShow` is a filter-only show
+    (`is_blacklist_only=True`) in blacklist mode, so the canonical show's other
     episodes are not pulled into the channel. Adds (or updates the expiry of) a
     `ChannelEpisodeFilter` for the episode, which covers that episode on every
-    website the title is on.
+    website the canonical show is on.
     """
     canonical_episode_id = _canonical_episode_id(session, episode_id)
-    canonical_show_id = (
-        _canonical_show_id_of_episode(session, canonical_episode_id)
-        or show.canonical_show_id
-    )
-
-    channel_show = ChannelShow.get(session, channel, canonical_show_id)
-    if channel_show is None:
-        channel_show = ChannelShow(
-            channel_id=channel.id,
-            canonical_show_id=canonical_show_id,
-            is_whitelist=False,
-            is_blacklist_only=True,
-        )
-        session.add(channel_show)
-
-    existing_filter = ChannelEpisodeFilter.get(
+    canonical_show_ids = _canonical_show_ids_of_episode(
         session,
-        channel_show,
         canonical_episode_id,
-    )
-    if existing_filter is None:
-        channel_show.episode_filters.append(
-            ChannelEpisodeFilter(
-                channel_show_id=channel_show.id,
-                canonical_episode_id=canonical_episode_id,
-                expires_at=expires_at,
-            ),
+    ) or set(show.canonical_show_ids)
+
+    channel_shows: list[ChannelShow] = []
+    for canonical_show_id in canonical_show_ids:
+        channel_show = ChannelShow.get(session, channel, canonical_show_id)
+        if channel_show is None:
+            channel_show = ChannelShow(
+                channel_id=channel.id,
+                canonical_show_id=canonical_show_id,
+                is_whitelist=False,
+                is_blacklist_only=True,
+            )
+            session.add(channel_show)
+
+        existing_filter = ChannelEpisodeFilter.get(
+            session,
+            channel_show,
+            canonical_episode_id,
         )
-    else:
-        existing_filter.expires_at = expires_at
+        if existing_filter is None:
+            channel_show.episode_filters.append(
+                ChannelEpisodeFilter(
+                    channel_show_id=channel_show.id,
+                    canonical_episode_id=canonical_episode_id,
+                    expires_at=expires_at,
+                ),
+            )
+        else:
+            existing_filter.expires_at = expires_at
+        channel_shows.append(channel_show)
 
     session.commit()
-    session.refresh(channel_show)
-    return channel_show
+    for channel_show in channel_shows:
+        session.refresh(channel_show)
+    return channel_shows
 
 
 # TODO: Validate
@@ -660,9 +718,9 @@ def set_channel_order(
 ) -> None:
     """Save the order `episode_ids` are in, as an order of episodes themselves.
 
-    The ids each name one website's copy, which is what the channel was read as,
+    The ids each name one website's row, which is what the channel was read as,
     but what is saved is an order of the episodes: the same episode arriving from
-    another website next time takes the position already held for it. A copy that
+    another website next time takes the position already held for it. A row that
     is not yet of anything has no position to be given one.
     """
     session.exec(  # type: ignore[call-overload]

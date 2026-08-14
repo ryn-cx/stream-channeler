@@ -11,16 +11,8 @@ SEPARATOR = " > "
 
 # TODO: Validate
 def _show_canonical_keys(show: Show) -> list[str]:
-    """The key of every title `show` is a copy of, the chief one first."""
-    chief_key = show.canonical_show.key
-    linked_keys = sorted(
-        {
-            link.canonical_show.key
-            for link in show.canonical_show_links
-            if link.canonical_show_id != show.canonical_show_id
-        },
-    )
-    return [chief_key, *linked_keys]
+    """The key of every title `show` is a copy of."""
+    return sorted({link.canonical_show.key for link in show.canonical_show_links})
 
 
 # TODO: Validate

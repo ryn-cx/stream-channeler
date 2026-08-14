@@ -1,5 +1,5 @@
 # TODO: Validate
-"""The canonical rows TMDB writes, and which titles a listing is a copy of."""
+"""The canonical rows TMDB writes, and what each website's rows stand for."""
 
 import uuid
 from collections import defaultdict
@@ -8,11 +8,12 @@ from collections.abc import Collection
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import is_canonical, is_copy
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import tmdb_key_clause
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
+from app.sources.models import Source
 
 
 # TODO: Validate
@@ -75,7 +76,7 @@ def _remember_title(session: Session, canonical_show: Show) -> None:
 
 
 # TODO: Validate
-def canonical_show_by_key(session: Session, key: str) -> Show:
+def canonical_show_by_key(session: Session, key: str, source: Source) -> Show:
     cache_key = (key,)
     if remembered := _remembered(session, Show, cache_key):
         return remembered
@@ -92,7 +93,7 @@ def canonical_show_by_key(session: Session, key: str) -> Show:
     if existing:
         _remember_title(session, existing)
         return existing
-    canonical = Show(key=key)
+    canonical = Show(key=key, source_id=source.id)
     session.add(canonical)
     _remember_title(session, canonical)
     return canonical
@@ -160,22 +161,25 @@ def link_canonical_show(
     show: Show,
     canonical_show: Show,
 ) -> ShowCanonicalShow:
-    # Canonical show relationships should only ever be one level deep to properly
-    # support tthe way episode selector works.
+    """Record that `show` stands for the canonical show `canonical_show`.
+
+    A non-canonical row stands for every canonical show linked to it and no more
+    for one than for another, so this adds one to the set and settles nothing
+    about which of them the row is chiefly about.
+    """
+    # If this show is not canonical
     if not canonical_show.is_canonical:
         message = f"{canonical_show} is not a canonical show."
         raise ValueError(message)
-    # The pointer is read before the row it is written from, since a copy linked
-    # this session names its title without the pointer being written yet, and a
-    # row that names neither is a title itself.
-    if show.is_canonical and show.canonical_show is None:
-        message = f"{show} is a canonical show with no canonical show pointer."
+    if show.non_canonical_shows:
+        message = f"{show} has other shows linked to it."
         raise ValueError(message)
 
+    show.is_canonical = False
     for existing_canonical_show in show.canonical_show_links:
         # By the row where the link is already stored, and by the object itself
-        # where it is not: a link made this session names the title it holds
-        # rather than the title's id, which the flush is what writes.
+        # where it is not: a link made this session names the canonical show it
+        # holds rather than its id, which the flush is what writes.
         if (
             existing_canonical_show.canonical_show is canonical_show
             or existing_canonical_show.canonical_show_id == canonical_show.id
@@ -233,11 +237,11 @@ def match_canonical_episodes(session: Session, show: Show) -> None:
 
     Only TMDB rows are ever pointed at. An episode TMDB has no record of is left
     pointing at nothing rather than given a canonical row of its own, so a
-    canonical episode only ever hangs off a title TMDB holds.
+    canonical episode only ever hangs off a canonical show TMDB holds.
 
-    A film is one episode of one season on both sides, so a listing with a single
-    episode against a title with a single episode is matched outright: there is
-    nothing else either of them could be, whatever the two are named.
+    A film is one episode of one season on both sides, so a row with a single
+    episode against a canonical show with a single episode is matched outright:
+    there is nothing else either of them could be, whatever the two are named.
     """
     canonical_show_ids = show.canonical_show_ids
     if not canonical_show_ids:
@@ -264,7 +268,7 @@ def match_canonical_episodes(session: Session, show: Show) -> None:
         return
 
     # One canonical episode is one episode to watch, so a TMDB episode already
-    # taken is not handed to a second episode of the same listing.
+    # taken is not handed to a second episode of the same show.
     taken = {episode.canonical_episode_id for episode in episodes}
     for episode in episodes:
         if episode.canonical_episode_id or episode.name is None:
@@ -282,18 +286,20 @@ def match_canonical_episodes(session: Session, show: Show) -> None:
 def canonical_ids_by_key(
     session: Session,
     keys: Collection[str],
-    level: type[Show | Episode],
 ) -> dict[str, uuid.UUID]:
+    """Map each episode key to the canonical episode that row stands for.
+
+    Only episodes answer this way. A non-canonical show stands for however many
+    canonical shows a website mixed into it and names none of them in a column,
+    so a show key is asked of `canonical_show_ids_by_key` and answered with all
+    of them.
+    """
     if not keys:
         return {}
-    canonical_column = {
-        Show: Show.canonical_show_id,
-        Episode: Episode.canonical_episode_id,
-    }[level]
     rows = session.exec(
-        select(level.key, canonical_column).where(  # type: ignore[call-overload]
-            col(level.key).in_(keys),
-            col(canonical_column).is_not(None),
+        select(Episode.key, Episode.canonical_episode_id).where(
+            col(Episode.key).in_(keys),
+            col(Episode.canonical_episode_id).is_not(None),
         ),
     ).all()
     return dict(rows)
@@ -313,13 +319,14 @@ def canonical_show_ids_by_key(
             ShowCanonicalShow.canonical_show_id,
         )
         .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
-        .where(is_copy(Show), col(Show.key).in_(show_keys)),
+        .where(is_non_canonical(Show), col(Show.key).in_(show_keys)),
     ).all()
     for show_key, canonical_show_id in copy_rows:
         canonical_show_ids[show_key].add(canonical_show_id)
-    # A key naming a title rather than a copy of one is that title, which is
-    # what TMDB's own records are: they are the canonical rows, so importing one
-    # of them straight onto a channel has nothing to resolve through a copy.
+    # A key naming a canonical show rather than a row standing for one is that
+    # show, which is what TMDB's own records are: they are the canonical rows, so
+    # importing one of them straight onto a channel has nothing to resolve
+    # through anything else.
     title_rows = session.exec(
         select(  # type: ignore[call-overload]
             Show.key,

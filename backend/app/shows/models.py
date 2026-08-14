@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Self, cast, override
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session as SQLAlchemySession
-from sqlalchemy.orm import contains_eager, relationship
+from sqlalchemy.orm import contains_eager, selectinload
 from sqlmodel import (
     Field,
     Index,
@@ -14,11 +14,12 @@ from sqlmodel import (
     Relationship,
     Session,
     SQLModel,
+    UniqueConstraint,
     select,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_copy
+from app.canonical_media.filters import is_non_canonical
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
@@ -36,29 +37,29 @@ if TYPE_CHECKING:
     from app.seasons.models import Season
 
 # The canonical row is the one a channel sorts on, so these name its columns and
-# no copy's. A copy's own columns are only ever ordered by the admin tables, which
+# no non-canonical row's. Those are only ever ordered by the admin tables, which
 # order by any column they show and so are no reason to index these two.
 CANONICAL_SORTABLE_FIELDS = ["media_type", "name"]
 
-# Where a session keeps its listings under the source and key naming them. A
-# listing used to be found in the identity map by that pair, which was what
-# named it; now that a title and a listing share a table the identity is `id`
-# alone, and this is what keeps the lookup free of a query.
+# Where a session keeps its non-canonical shows under the source and key naming
+# them. One used to be found in the identity map by that pair, which was what
+# named it; now that canonical and non-canonical rows share a table the identity
+# is `id` alone, and this is what keeps the lookup free of a query.
 SHOW_SESSION_INDEX = "show_by_source_and_key"
 
 
 # TODO: Validate
 class BaseCanonicalShow(BaseMediaMixin):
-    """The columns a title carries, and so a listing of one carries too."""
+    """The columns a canonical show carries, and so a non-canonical one too."""
 
     name: str | None = Field(default=None)
     media_type: str | None = Field(default=None)
     description: str | None = Field(default=None)
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
-    # What TMDB is searched under along with the name, so a title sharing its
+    # What TMDB is searched under along with the name, so a show sharing its
     # name with another is still told apart. A website that does not say when
-    # its titles came out leaves this empty and is matched on the name alone.
+    # its shows came out leaves this empty and is matched on the name alone.
     year: int | None = Field(default=None)
 
 
@@ -72,16 +73,18 @@ class BaseShow(BaseCanonicalShow):
 
 # TODO: Validate
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
-    """Model representing a title, and a website's listing of one.
+    """Model representing a show, canonical or not.
 
-    A row is the title itself when it points at no other, and one website's
-    listing of a title when it does. The two are the same shape and are read the
-    same way, so they are one table, and `canonical_show_id` is the whole of what
-    tells them apart.
+    A row is the canonical show itself, or one website's non-canonical row
+    standing for however many canonical shows that website mixed into it. The two
+    are the same shape and are read the same way, so they are one table, and
+    `is_canonical` is the whole of what tells them apart. Which canonical shows a
+    non-canonical row stands for is stored in `ShowCanonicalShow` alone, where no
+    one of them stands above the rest.
     """
 
     PARENT_ID_FIELD: ClassVar[str] = "source_id"
-    CANONICAL_ID_FIELD: ClassVar[str] = "canonical_show_id"
+    CANONICAL_FLAG_FIELD: ClassVar[str] = "is_canonical"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_count",
@@ -93,95 +96,101 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     __table_args__ = (
-        # A listing shares its key with the listings of other sources, so `id` is
-        # the only thing that names a row of either kind on its own.
+        # A non-canonical row shares its key with the non-canonical rows of
+        # other sources, so `id` is the only thing that names a row of either
+        # kind on its own.
         PrimaryKeyConstraint("id"),
-        # A source names each of its listings once. Written as a partial index
-        # rather than a constraint because a title has no source, and a rule over
-        # a column that is absent is no rule at all.
-        Index(
-            "Show-source_id-key-key",
-            "source_id",
-            "key",
-            unique=True,
-            postgresql_where=text("source_id IS NOT NULL"),
-        ),
-        # Every claimed title is one row, which is what makes the key the whole
-        # of a title's identity. The listings are no part of this: two websites
-        # carrying one title carry the same key as each other.
+        # A source names each of its rows once, of either kind: a canonical show
+        # is written by the plugin that minted it the same way a non-canonical
+        # row is written by the plugin that read it off a website, and the two
+        # never share a key under one source. A canonical show minted for a
+        # listing to point at carries the plugin's key ahead of the listing's,
+        # and TMDB writes canonical shows and nothing else.
+        UniqueConstraint("source_id", "key", name="Show-source_id-key-key"),
+        # Every claimed canonical show is one row, which is what makes the key
+        # the whole of its identity. The non-canonical rows are no part of this:
+        # two websites carrying one show carry the same key as each other.
         Index(
             "Show-canonical-key-key",
             "key",
             unique=True,
-            postgresql_where=text("canonical_show_id IS NULL"),
+            postgresql_where=text("is_canonical IS TRUE"),
         ),
         Index("Show-deleted_at-index", "deleted_at"),
-        Index("Show-canonical_show_id-index", "canonical_show_id"),
+        Index("Show-is_canonical-index", "is_canonical"),
         *sortable_field_indexes(
             "Show",
             CANONICAL_SORTABLE_FIELDS,
-            where=text("canonical_show_id IS NULL"),
+            where=text("is_canonical IS TRUE"),
         ),
     )
 
-    # The title this is chiefly a copy of, and nothing when this is the title
-    # itself. Written by whatever imports the listing rather than filled in at
-    # the flush. A source that mixes several titles
-    # into one listing is a copy of more than one, and the rest are reached
-    # through `canonical_show_links`; this one is the title the copy's own name
-    # and metadata belong to.
-    canonical_show_id: uuid.UUID = Field(
-        default=None,
-        nullable=True,
-        foreign_key="show.id",
-    )
-    # `remote_side` is what says which end of the join is the title, since both
-    # ends are the same table and nothing else could tell SQLAlchemy that. Built
-    # here rather than left to the annotation, which says a `Show` may stand at
-    # either end and so says nothing about which of them this is.
-    canonical_show: Show | None = Relationship(
-        sa_relationship=relationship(
-            "Show",
-            remote_side="Show.id",
-            foreign_keys="Show.canonical_show_id",
-        ),
-    )
+    # Whether this row is the show itself rather than one website's row standing
+    # for it. Which canonical shows a non-canonical row stands for is stored in
+    # `ShowCanonicalShow` and nowhere else, since a website that files two shows
+    # under one page - a YouTube channel whose uploads are two series, a service
+    # that sells a sequel as another season - stands for each of them equally,
+    # and a column could only hold one.
+    is_canonical: bool = Field(default=True)
 
-    # Every title this is a copy of, `canonical_show_id` among them. A website
-    # that files two titles under one listing - a YouTube channel whose uploads
-    # are two series, a service that sells a sequel as another season - is a copy
-    # of each of them, and nothing about it says which of the two a caller means.
+    # Every canonical show this stands for. Nothing about a non-canonical row
+    # says which of them a caller with room for one means, so nothing here puts
+    # one ahead of another.
     canonical_show_links: list[ShowCanonicalShow] = Relationship(
         back_populates="show",
         cascade_delete=True,
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )
 
+    # The other end of the same table: every non-canonical row standing for this
+    # one, which only a canonical show ever has. A row with both stands for
+    # something and is stood for by something, which is the one shape the levels
+    # never take.
+    non_canonical_shows: list[ShowCanonicalShow] = Relationship(
+        back_populates="canonical_show",
+        cascade_delete=True,
+        sa_relationship_kwargs={
+            "foreign_keys": "ShowCanonicalShow.canonical_show_id",
+        },
+    )
+
     # TODO: Validate
     @property
     def canonical_shows(self) -> list[Show]:
-        """Every title this is a copy of, the one it is chiefly a copy of first.
-
-        The chief title leads because it is the one a caller with only one title
-        to work with means, and the rest follow in the order they were linked.
-        """
-        linked = [
-            link.canonical_show
-            for link in self.canonical_show_links
-            if link.canonical_show_id != self.canonical_show_id
-        ]
-        return [self.canonical_show, *linked] if self.canonical_show else linked
+        """Every canonical show this stands for, in the order they were linked."""
+        return [link.canonical_show for link in self.canonical_show_links]
 
     # TODO: Validate
     @property
     def canonical_show_ids(self) -> list[uuid.UUID]:
-        """The id of every title this is a copy of, the chief one first."""
+        """The id of every canonical show this stands for."""
         return [canonical_show.id for canonical_show in self.canonical_shows]
 
     # TODO: Validate
     @property
+    def sole_canonical_show(self) -> Show | None:
+        """The canonical show this stands for, where it stands for exactly one.
+
+        A row that mixes shows stands for each of them as much as for any other,
+        so there is no answer to give a caller with room for one and it is told
+        there is none rather than handed whichever came first.
+        """
+        canonical_shows = self.canonical_shows
+        if len(canonical_shows) != 1:
+            return None
+        return canonical_shows[0]
+
+    # TODO: Validate
+    @property
+    def sole_canonical_show_id(self) -> uuid.UUID | None:
+        """The id of the canonical show this stands for, where there is one."""
+        canonical_show = self.sole_canonical_show
+        return canonical_show.id if canonical_show else None
+
+    # TODO: Validate
+    @property
     def tmdb_ids(self) -> list[int]:
-        """The TMDB title behind each title this is a copy of, where there is one."""
+        """The TMDB id behind each canonical show this stands for, where it has one."""
         return [
             tmdb_id
             for canonical_show in self.canonical_shows
@@ -191,30 +200,28 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def tmdb_id(self) -> int | None:
-        """The TMDB title this is a copy of, if TMDB has a record of it.
+        """The TMDB id of the canonical show this stands for, where there is one.
 
         Read out of the canonical row's key rather than stored beside it, so a
-        copy and the title it is of can never disagree about which TMDB record
-        that is.
+        non-canonical row and the row it stands for can never disagree about
+        which TMDB record that is.
         """
-        if self.canonical_show is None:
+        canonical_show = self.sole_canonical_show
+        if canonical_show is None:
             return None
-        return tmdb_id_of(self.canonical_show.key, SHOW_LEVEL)
+        return tmdb_id_of(canonical_show.key, SHOW_LEVEL)
 
-    # The website this is a listing on, and nothing when this is the title
-    # itself: a title is not carried anywhere, it is what the carrying is of.
-    source_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="source.id",
-        ondelete="CASCADE",
-    )
-    # Typed as always there because every caller that reaches for it holds a
-    # listing. A title has none, and reading it off one is the mistake `parent`
-    # is there to name.
+    # What wrote this row. A non-canonical row has the website it was read off,
+    # and a canonical show has the plugin that minted it, which is TMDB wherever
+    # TMDB has a record of the title and the reading plugin itself where nothing
+    # catalogued it. Either way a row was written by something, so this is never
+    # absent and neither kind of row is told from the other by it.
+    source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
     source: Source = Relationship(back_populates="shows")
 
-    # A listing's own seasons, and a title's own seasons, by the same column: a
-    # canonical season hangs off the title the way a copy hangs off the listing.
+    # The seasons of either kind of row, by the same column: a canonical season
+    # hangs off a canonical show the way a non-canonical season hangs off a
+    # non-canonical one.
     seasons: list[Season] = Relationship(
         back_populates="show",
         cascade_delete=True,
@@ -244,10 +251,9 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        # The join to `Source` already leaves the titles out, since a title has
-        # none. Said out loud anyway: what this returns is the listings, and a
-        # read that means them should not rest on a join to say so.
-        return select(cls).where(is_copy(cls)).join(Source).join(Plugin)
+        # Every row has a source, canonical or not, so the join says nothing
+        # about which kind this returns and the filter is the whole of what does.
+        return select(cls).where(is_non_canonical(cls)).join(Source).join(Plugin)
 
     # TODO: Validate
     @classmethod
@@ -259,7 +265,12 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
             .options(
                 contains_eager(cls.source)  # type: ignore[arg-type]
                 .contains_eager(Source.plugin)  # type: ignore[arg-type]
-                .contains_eager(Plugin.user),  # type: ignore[arg-type]
+                .contains_eager(Plugin.user),
+                # Which canonical shows a row stands for is read off every row
+                # that is served, and it is a table away now rather than a column
+                # of the row, so it is fetched with them rather than one at a
+                # time.
+                selectinload(cls.canonical_show_links),  # type: ignore[arg-type]
             )
         )
 
@@ -272,24 +283,32 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         parent: Source,
         key: str,
     ) -> Self | None:
-        """Return the listing `parent` names under `key`.
+        """Return the non-canonical show `parent` names under `key`.
 
-        The identity map answers to `id` now that a title and a listing share a
-        table, so the pair is looked for in the session's own index of it
-        instead. A row the session has since let go of is not one it holds, and
-        is answered for as though it had never been indexed.
+        The identity map answers to `id` now that canonical and non-canonical
+        rows share a table, so the pair is looked for in the session's own index
+        of it instead. A row the session has since let go of is not one it holds,
+        and is answered for as though it had never been indexed.
 
         Nothing indexes a row on its own account, so a miss is asked of the
-        database rather than taken as an answer: a listing that is stored and
-        not indexed is still a listing that exists, and writing it again is a
-        second row under a key that allows one.
+        database rather than taken as an answer: a row that is stored and not
+        indexed is still a row that exists, and writing it again is a second row
+        under a key that allows one.
+
+        A canonical show is under a source of its own the way a non-canonical row
+        is, so the pair no longer tells the two apart and the kind wanted is
+        asked for outright.
         """
         show = show_session_index(session).get((parent.id, key))
         if show is not None and show in session:
             return cast("Self", show)
 
         stored = session.exec(
-            select(cls).where(cls.source_id == parent.id, cls.key == key),
+            select(cls).where(
+                is_non_canonical(cls),
+                cls.source_id == parent.id,
+                cls.key == key,
+            ),
         ).first()
         if stored is not None:
             index_show(session, stored)
@@ -304,10 +323,10 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         parent: Source,
         key: str,
     ) -> Self:
-        """Return the listing `parent` names under `key`, raising if it holds none.
+        """Return the non-canonical show `parent` names under `key`, or raise.
 
         Raises:
-            KeyError: If the session is holding no such listing.
+            KeyError: If the session is holding no such row.
 
         """
         show = cls.get_from_memory(session, parent, key)
@@ -325,12 +344,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @property
     @override
     def parent(self) -> Source:
-        # A title is on no website, so asking a title what it is carried on is
-        # asking the wrong row, and saying so here is what keeps that from
-        # turning into a missing owner somewhere further along.
-        if self.source_id is None:
-            msg = f"{self} is a title rather than a listing, so it has no source"
-            raise ValueError(msg)
         return self.source
 
     # TODO: Validate
@@ -341,15 +354,21 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         existing_record: Self | None,
         protected_keys: set[str] | None = None,
     ) -> Self:
-        """Upsert the `Show`, keeping a locked the title a `User` chose intact.
+        """Upsert the `Show`, keeping the canonical show a `User` chose intact.
 
         `canonical_show_locked` is only ever set by a `User`, so it is always
-        protected, and while the lock is set the automatically detected
-        an import works out never replaces the one the `User` chose.
+        protected. The canonical shows themselves are rows of `ShowCanonicalShow`
+        rather than a column of this one, so an upsert cannot write them away and
+        what honours the lock is whatever would go on to link them. `is_canonical`
+        is protected with them: a record built fresh off a website's files knows
+        nothing of the links the stored row already carries, and a row that kept
+        its links while being called canonical again would be stood for by other
+        rows and standing for some itself.
         """
-        protected_keys = set(protected_keys or ()) | {"canonical_show_locked"}
-        if existing_record and existing_record.canonical_show_locked:
-            protected_keys.add("canonical_show_id")
+        protected_keys = set(protected_keys or ()) | {
+            "canonical_show_locked",
+            "is_canonical",
+        }
         return super().upsert(parent, existing_record, protected_keys)
 
     # TODO: Validate
@@ -362,7 +381,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
 def show_session_index(
     session: SQLAlchemySession,
 ) -> dict[tuple[uuid.UUID, str], Show]:
-    """Return the session's index of the listings it is holding."""
+    """Return the session's index of the non-canonical shows it is holding."""
     index: dict[tuple[uuid.UUID, str], Show] = session.info.setdefault(
         SHOW_SESSION_INDEX,
         {},
@@ -374,19 +393,13 @@ def show_session_index(
 def index_show(session: SQLAlchemySession, show: Show) -> None:
     """Record `show` under the source and key naming it.
 
-    The source is read off the column first and off the relationship only where
-    the column has yet to be written, so a stored row costs nothing to index.
-    The relationship is read out of what is already loaded rather than through
-    the attribute, which on a title would go and fetch the source it has none
-    of. A title is not indexed at all: it is not on a website and nothing looks
-    one up this way.
+    A canonical show is not indexed: it has a source of its own now, so the pair
+    would name one, but this is what `get_from_memory` reads and that answers for
+    non-canonical rows alone.
     """
-    source_id = show.source_id
-    if source_id is None:
-        source = show.__dict__.get("source")
-        source_id = source.id if source is not None else None
-    if source_id is not None:
-        show_session_index(session)[(source_id, show.key)] = show
+    if show.is_canonical:
+        return
+    show_session_index(session)[(show.source_id, show.key)] = show
 
 
 # TODO: Validate
@@ -406,7 +419,7 @@ def stringify_show(show: Show, parent: Source | None) -> str:
 
 # TODO: Validate
 class BaseShowCanonicalShow(SQLModel):
-    """Base model for one of the titles a `Show` is a copy of."""
+    """Base model for one of the canonical shows a `Show` stands for."""
 
     show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
     canonical_show_id: uuid.UUID = Field(
@@ -417,31 +430,33 @@ class BaseShowCanonicalShow(SQLModel):
 
 # TODO: Validate
 class ShowCanonicalShow(BaseShowCanonicalShow, TimestampIdAndHashMixin, table=True):
-    """Model representing one of the titles a `Show` is a copy of.
+    """Model representing one of the canonical shows a `Show` stands for.
 
-    A website's listing is a copy of one title in the ordinary case and of
-    several where the website mixes them, and there is nothing on the listing
-    that tells the two apart, so which titles it is of is stored rather than
-    inferred. `Show.canonical_show_id` is among them: the chief title has a row
-    here like any other, so a query asking which copies stand for a title can ask
-    one table and get the same answer either way.
+    A website's row stands for one canonical show in the ordinary case and for
+    several where the website mixes them, and there is nothing on the row that
+    tells the two apart, so which ones it stands for is stored rather than
+    inferred. This is the whole of that record: every canonical show a row stands
+    for has a row here and none of them is held anywhere else, so a query asking
+    which rows stand for a canonical show asks one table and no other.
     """
 
     __table_args__ = (
-        # Each title is linked to a copy at most once; the leading column also
-        # serves lookups of a copy's titles and cascade deletion with the copy.
+        # Each canonical show is linked to a non-canonical row at most once; the
+        # leading column also serves lookups of a row's canonical shows and
+        # cascade deletion with it.
         PrimaryKeyConstraint("show_id", "canonical_show_id"),
-        # Used to find every copy standing for a title.
+        # Used to find every non-canonical row standing for a canonical show.
         Index("ShowCanonicalShow-canonical_show_id-index", "canonical_show_id"),
     )
 
     # Both ends are a `Show`, so which foreign key each relationship follows has
-    # to be named; nothing about the columns says which of them is the listing.
+    # to be named; nothing about the columns says which of them is which.
     show: Show = Relationship(
         back_populates="canonical_show_links",
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )
     canonical_show: Show = Relationship(
+        back_populates="non_canonical_shows",
         sa_relationship_kwargs={
             "foreign_keys": "ShowCanonicalShow.canonical_show_id",
         },

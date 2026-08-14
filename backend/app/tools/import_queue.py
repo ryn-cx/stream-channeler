@@ -2,13 +2,15 @@
 
 import threading
 import traceback
+from collections import defaultdict
 from collections.abc import Collection
 from dataclasses import dataclass
 from uuid import UUID
 
 from loguru import logger
-from sqlmodel import Session, col, func, or_, select
+from sqlmodel import Session, col, or_, select
 
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.seasons import season_ids_by_key
 from app.canonical_media.service import (
     canonical_ids_by_key,
@@ -26,7 +28,7 @@ from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.shows.models import Show, ShowCanonicalShow
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -203,7 +205,7 @@ class _CanonicalIds:
     shows: dict[str, set[UUID]]
     seasons: dict[str, UUID]
     episodes: dict[str, UUID]
-    title_by_season: dict[UUID, UUID]
+    title_by_season: dict[UUID, set[UUID]]
     title_by_episode: dict[UUID, UUID]
 
     # TODO: Validate
@@ -217,7 +219,7 @@ class _CanonicalIds:
             canonical_id
             for key in season_keys
             if (canonical_id := self.seasons.get(key)) is not None
-            and self.title_by_season.get(canonical_id) == canonical_show_id
+            and canonical_show_id in self.title_by_season.get(canonical_id, set())
         }
 
     # TODO: Validate
@@ -248,7 +250,6 @@ def _canonical_ids_for_results(
     episodes = canonical_ids_by_key(
         session,
         {key for result in results for key in result.episode_keys},
-        Episode,
     )
     return _CanonicalIds(
         shows=canonical_show_ids_by_key(
@@ -266,19 +267,38 @@ def _canonical_ids_for_results(
 def _titles_by_season(
     session: Session,
     season_ids: set[UUID],
-) -> dict[UUID, UUID]:
-    """Map each season to the title holding it."""
+) -> dict[UUID, set[UUID]]:
+    """Map each season to the titles holding it.
+
+    A season of a title is held by that title alone. A season a website filed
+    under its own listing is held by every title the listing is a copy of, since
+    a listing that mixes titles is as much each of them as any other.
+    """
     if not season_ids:
         return {}
-    rows = session.exec(
+    titles: dict[UUID, set[UUID]] = defaultdict(set)
+    own_rows = session.exec(
         select(  # type: ignore[call-overload]
             Season.id,
-            func.coalesce(Show.canonical_show_id, Show.id),
+            Show.id,
         )
         .join(Show, col(Season.show_id) == col(Show.id))
+        .where(col(Season.id).in_(season_ids), is_canonical(Show)),
+    ).all()
+    for season_id, canonical_show_id in own_rows:
+        titles[season_id].add(canonical_show_id)
+    linked_rows = session.exec(
+        select(  # type: ignore[call-overload]
+            Season.id,
+            ShowCanonicalShow.canonical_show_id,
+        )
+        .join(Show, col(Season.show_id) == col(Show.id))
+        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
         .where(col(Season.id).in_(season_ids)),
     ).all()
-    return dict(rows)
+    for season_id, canonical_show_id in linked_rows:
+        titles[season_id].add(canonical_show_id)
+    return titles
 
 
 # TODO: Validate

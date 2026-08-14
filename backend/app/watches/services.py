@@ -324,6 +324,7 @@ def create_watch(
     return watch
 
 
+# TODO: Validate
 def update_watch(
     session: Session,
     input_watch: Watch,
@@ -333,6 +334,7 @@ def update_watch(
     return watch_input.update(session, input_watch)
 
 
+# TODO: Validate
 def delete_watches(session: Session, input_watch: Watch) -> Message:
     """Delete a `Watch`."""
     delete_record(session, input_watch)

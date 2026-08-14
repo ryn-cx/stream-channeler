@@ -699,7 +699,7 @@ export const CanonicalShowOutputSchema = {
     description: `Schema for returning a \`Show\`.
 
 \`tmdb_id\` and \`tmdb_url\` are read back out of \`key\` rather than stored, since
-the key is the whole of what says which TMDB record a title is. They are
+the key is the whole of what says which TMDB record a show is. They are
 served for reading only: nothing can be sorted or filtered by a value the
 database does not hold a column for.`
 } as const;
@@ -2271,9 +2271,9 @@ export const ChannelShowStatsSchema = {
     type: 'object',
     required: ['season_count', 'episode_count'],
     title: 'ChannelShowStats',
-    description: `What a channel's copies of one title add up to.
+    description: `What a channel's rows for one canonical show add up to.
 
-A title is counted by what its seasons and episodes are rather than by the
+A canonical show is counted by what its seasons and episodes are rather than by the
 records holding them, so the same season on three websites is one season.`
 } as const;
 
@@ -6185,7 +6185,7 @@ export const ShowInformationOutputSchema = {
     type: 'object',
     required: ['show_id', 'canonical_show_locked', 'editable', 'issue_reports', 'source', 'tmdb'],
     title: 'ShowInformationOutput',
-    description: `What the website and TMDB each say about a title, side by side.
+    description: `What the website and TMDB each say about a show, side by side.
 
 The stored record is returned as the website reported it rather than as it is
 served, so the two accounts can be compared instead of one standing in for
@@ -6261,7 +6261,7 @@ export const ShowInformationSideSchema = {
     type: 'object',
     required: ['label', 'name', 'media_type', 'description', 'image_url', 'url', 'key'],
     title: 'ShowInformationSide',
-    description: "One record's own account of a title, as the website that holds it has it."
+    description: "One record's own account of a show, as the website holding it has it."
 } as const;
 
 export const ShowListPublicSchema = {
@@ -6411,8 +6411,15 @@ export const ShowListPublicSchema = {
             title: 'Id'
         },
         canonical_show_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Show Id'
         },
         tmdb_id: {
@@ -6425,17 +6432,6 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         },
         username: {
             anyOf: [
@@ -6477,7 +6473,7 @@ export const ShowListPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'canonical_show_id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -6629,8 +6625,15 @@ export const ShowPublicSchema = {
             title: 'Id'
         },
         canonical_show_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Show Id'
         },
         tmdb_id: {
@@ -6643,21 +6646,10 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'canonical_show_id'],
+    required: ['key', 'source_id', 'id'],
     title: 'ShowPublic',
     description: 'Schema for returning a `Show`.'
 } as const;
@@ -8711,7 +8703,7 @@ export const WhitelistEntryInputSchema = {
     title: 'WhitelistEntryInput'
 } as const;
 
-export const WhitelistEpisodeCopyOutputSchema = {
+export const WhitelistEpisodeLinkOutputSchema = {
     properties: {
         show_id: {
             type: 'string',
@@ -8722,12 +8714,28 @@ export const WhitelistEpisodeCopyOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Episode Id'
+        },
+        filtered: {
+            type: 'boolean',
+            title: 'Filtered'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
         }
     },
     type: 'object',
-    required: ['show_id', 'episode_id'],
-    title: 'WhitelistEpisodeCopyOutput',
-    description: "One website's copy of an episode, and the episode row standing for it."
+    required: ['show_id', 'episode_id', 'filtered'],
+    title: 'WhitelistEpisodeLinkOutput',
+    description: "One website's row for an episode, and whether it is filtered on its own."
 } as const;
 
 export const WhitelistEpisodeOutputSchema = {
@@ -8951,12 +8959,12 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'array',
             title: 'Show Ids'
         },
-        copies: {
+        links: {
             items: {
-                '$ref': '#/components/schemas/WhitelistEpisodeCopyOutput'
+                '$ref': '#/components/schemas/WhitelistEpisodeLinkOutput'
             },
             type: 'array',
-            title: 'Copies'
+            title: 'Links'
         },
         tmdb_season_number: {
             anyOf: [
@@ -8993,8 +9001,44 @@ export const WhitelistEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'filtered', 'show_ids', 'copies'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'filtered', 'show_ids', 'links'],
     title: 'WhitelistEpisodeOutput'
+} as const;
+
+export const WhitelistEpisodeSourceEntryInputSchema = {
+    properties: {
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        marked: {
+            type: 'boolean',
+            title: 'Marked'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['episode_id', 'show_id', 'marked'],
+    title: 'WhitelistEpisodeSourceEntryInput',
+    description: 'An entry naming an episode on one website rather than on all of them.'
 } as const;
 
 export const WhitelistSeasonOutputSchema = {
@@ -9167,6 +9211,13 @@ export const WhitelistShowInputSchema = {
             },
             type: 'array',
             title: 'Episodes'
+        },
+        episode_sources: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEpisodeSourceEntryInput'
+            },
+            type: 'array',
+            title: 'Episode Sources'
         }
     },
     additionalProperties: false,
@@ -9321,8 +9372,15 @@ export const WhitelistShowOutputSchema = {
             title: 'Id'
         },
         canonical_show_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Show Id'
         },
         tmdb_id: {
@@ -9335,17 +9393,6 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         },
         is_whitelist: {
             type: 'boolean',
@@ -9374,7 +9421,7 @@ export const WhitelistShowOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'canonical_show_id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
+    required: ['key', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
     title: 'WhitelistShowOutput'
 } as const;
 
@@ -9425,5 +9472,5 @@ export const WhitelistSourceOutputSchema = {
     type: 'object',
     required: ['show_id', 'source_id', 'source_name', 'favicon_url', 'filtered'],
     title: 'WhitelistSourceOutput',
-    description: "One website's copy of the title, and whether it is filtered."
+    description: "One website's row for the show, and whether it is filtered."
 } as const;

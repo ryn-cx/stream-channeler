@@ -1,16 +1,16 @@
 # TODO: Validate
-"""Reading the media a copy is of from inside the episode query.
+"""Reading the canonical row from inside the episode query.
 
 Two websites disagree about what a thing is called, when it aired and where in a
 season it sits, and sorting or filtering on the stored column alone both goes by
-whichever site happened to supply the copy and drops every episode whose site
+whichever site happened to supply the row and drops every episode whose site
 left that value out. The canonical row is the one answer for all of them, so
-each level is joined through the pointer the copy already carries and read
-straight off, with no stand-in to fall back to.
+each level is joined through the pointer the non-canonical row already carries
+and read straight off, with no stand-in to fall back to.
 
 Every level is already joined by `EpisodeQueryBuilder`, which reaches all three
-to work out which title an episode belongs to and whether the title holds it, so
-they are read from there rather than joined again.
+to work out which canonical show an episode belongs to and whether that show
+holds it, so they are read from there rather than joined again.
 """
 
 from typing import Any, ClassVar, cast
@@ -39,8 +39,8 @@ class CanonicalColumns:
         "show": CANONICAL_SHOW,
     }
 
-    # What the canonical row of each level holds. Anything else is the copy's
-    # own and is read from the copy.
+    # What the canonical row of each level holds. Anything else belongs to the
+    # non-canonical row and is read from there.
     _FIELDS: ClassVar = {
         "episode": frozenset(
             {
@@ -62,9 +62,10 @@ class CanonicalColumns:
         "season": "season_number",
     }
 
-    # The copy standing in for a level whose canonical row is absent. A title is
-    # always reached, so only the two levels below it have one.
-    _COPIES: ClassVar[dict[str, Any]] = {
+    # The non-canonical row standing in for a level whose canonical row is
+    # absent. A canonical show is always reached, so only the two levels below it
+    # have one.
+    _NON_CANONICAL: ClassVar[dict[str, Any]] = {
         "episode": Episode,
         "season": Season,
     }
@@ -76,14 +77,14 @@ class CanonicalColumns:
         field: str,
         model_class: type[Any],
     ) -> ColumnElement[Any]:
-        """Return `field` as the canonical row has it, or as the copy does.
+        """Return `field` as the canonical row has it, or as the other one does.
 
-        The canonical row is what every copy resolves to and is the one answer for
-        all of them, so it is read first. An episode nothing was minted for it to
-        be a copy of has no canonical row at all, and there the copy's own answer
-        is the only one there is rather than one website's among several. A field
-        no canonical row holds - a source's name, a plugin's - is the copy's own
-        and is read from where it is stored.
+        The canonical row is what every row standing for it resolves to and is the
+        one answer for all of them, so it is read first. An episode nothing was
+        minted for it to stand for has no canonical row at all, and there its own
+        answer is the only one there is rather than one website's among several. A
+        field no canonical row holds - a source's name, a plugin's - belongs to
+        the non-canonical row and is read from where it is stored.
         """
         if field not in self._FIELDS.get(model, frozenset()):
             return cast("ColumnElement[Any]", getattr(model_class, field))
@@ -91,21 +92,22 @@ class CanonicalColumns:
 
     # TODO: Validate
     def _preferring_canonical(self, model: str, field: str) -> ColumnElement[Any]:
-        """Return the canonical row's `field`, standing the copy in where it has none.
+        """Return the canonical row's `field`, standing the other one in for it.
 
         Asked of the row rather than of the value: a canonical row that holds
-        nothing under `field` still answers for every copy of it, and only a level
-        with no canonical row at all is one the copy has to answer for.
+        nothing under `field` still answers for everything standing for it, and
+        only a level with no canonical row at all is one the non-canonical row has
+        to answer for.
         """
         canonical_entity = self._MODELS[model]
         canonical = getattr(canonical_entity, field)
-        copy = self._COPIES.get(model)
-        if copy is None:
+        non_canonical = self._NON_CANONICAL.get(model)
+        if non_canonical is None:
             return cast("ColumnElement[Any]", canonical)
         return cast(
             "ColumnElement[Any]",
             case(
-                (col(canonical_entity.id).is_(None), getattr(copy, field)),
+                (col(canonical_entity.id).is_(None), getattr(non_canonical, field)),
                 else_=canonical,
             ),
         )
@@ -116,8 +118,8 @@ class CanonicalColumns:
 
         The canonical row's number where there is one, since an order that goes by
         the canonical numbering has to be able to tell a record with no number
-        from one that has one, and the copy's own only where nothing was minted
-        for it to be a copy of.
+        from one that has one, and the non-canonical row's own only where nothing
+        was minted for it to stand for.
         """
         return self._preferring_canonical(model, self._NUMBER_FIELDS[model])
 
@@ -135,5 +137,5 @@ class CanonicalColumns:
 
     # TODO: Validate
     def show_id(self) -> ColumnElement[Any]:
-        """Return the canonical title the episode belongs to."""
+        """Return the canonical show the episode belongs to."""
         return cast("ColumnElement[Any]", col(CANONICAL_SHOW.id))

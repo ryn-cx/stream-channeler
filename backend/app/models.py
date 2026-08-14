@@ -65,7 +65,7 @@ def sortable_field_indexes(
     fields the table indexes itself, which an index built here would collide with.
 
     `where` narrows every index to the rows that are ordered by these fields,
-    which on a table holding both a copy and the media it is of is the media
+    which on a table holding both canonical and non-canonical rows is the
     alone.
     """
     skipped = {"id", *already_indexed}
@@ -180,27 +180,19 @@ class MediaMixin[
     # the first foreign key, since a model can hold more than one and which of
     # them is the parent is not something the columns say.
     PARENT_ID_FIELD: ClassVar[str]
-    # The column holding the row this is a copy of, for the models that hold
-    # their copies in the same table as the media itself.
+    # The column holding the canonical row this stands for, for the models that
+    # hold both kinds of row in one table.
     CANONICAL_ID_FIELD: ClassVar[str]
+    # The column saying outright whether this row is the media itself, for the
+    # models that stand for more than one row and so name none of them in a
+    # column. Those models carry `is_canonical` as a column of their own.
+    CANONICAL_FLAG_FIELD: ClassVar[str | None] = None
 
     """Mixin for media models.
 
     Subclasses must implement `parent`, `children`, `root_record`, and
     `select_with_plugin`.
     """
-
-    # TODO: Validate
-    @property
-    def is_canonical(self) -> bool:
-        """Whether this row is the media itself rather than one website's copy of it.
-
-        A canonical row and the copies of it share a table, and the pointer a
-        copy carries to what it is a copy of is what tells the two apart: a row
-        that points at nothing is the media itself. `is_canonical` in
-        `app.canonical_media.filters` asks the same question of a query.
-        """
-        return getattr(self, self.CANONICAL_ID_FIELD) is None
 
     # TODO: Validate
     @property

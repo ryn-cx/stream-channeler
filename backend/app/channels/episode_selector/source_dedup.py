@@ -1,10 +1,10 @@
 # TODO: Validate
-"""Which website's copy of an episode a `User` watches.
+"""Which website's row for an episode a `User` watches.
 
-Every website's copy of the same episode points at the same canonical row, so
-a channel that holds a title on several sites would otherwise offer the same
+Every website's row for the same episode points at the same canonical row, so
+a channel that holds a show on several sites would otherwise offer the same
 episode once per site. The `User`'s source preferences rank the sites, and the
-highest-ranked copy is the one that stands for the episode.
+highest-ranked row is the one that stands for the episode.
 """
 
 from dataclasses import dataclass
