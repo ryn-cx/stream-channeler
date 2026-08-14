@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import type {
+  PluginMediaInfo,
   PluginSearchResult,
-  TMDBMediaInfo,
-  TMDBWatchProviderItem,
+  PluginWatchProviderItem,
 } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
@@ -36,10 +36,13 @@ function mediaTypeLabel(mediaType: string): string {
 const DEFAULT_PLUGIN_KEY = "TMDB"
 
 // The title a details modal is open for, built from the plugin result that was
-// clicked and the TMDB id it was matched to.
+// clicked and the id the plugin issued it under.
 export type SelectedTitle = {
-  tmdb_id: number
-  media_type: "movie" | "tv"
+  // Who issued the identifier, and the identifier. A title's detail is asked of
+  // the plugin the result came from, under that plugin's own id for it, rather
+  // than of whatever a search of some other service turns up.
+  plugin_key: string
+  media_identifier: string
   title: string
   // The result's own URL, so the modal queues exactly what its card would.
   url: string
@@ -228,8 +231,8 @@ function PluginResultCard({
           {result.year && ` (${result.year})`}
         </>
       }
-      // A plugin only knows its own service's data, so opening the details
-      // means finding the matching TMDB title first.
+      // A result carries the id its own plugin issued, so opening the details
+      // asks that plugin about it rather than matching it against another.
       onClick={onSelect ? () => onSelect(result) : undefined}
       footer={<AddToQueueButton url={result.url} channelId={channelId} />}
     />
@@ -315,7 +318,7 @@ function SearchPager({
 
 // Builds the "Movie • 2023 • 8.8★" style metadata line for a media detail.
 // TODO: Validate
-function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
+function metaLine(result: SelectedTitle, info: PluginMediaInfo): string[] {
   const parts: string[] = []
 
   const year = info.year ?? result.year
@@ -346,7 +349,11 @@ function metaLine(result: SelectedTitle, info: TMDBMediaInfo): string[] {
 // the app has a plugin for carries a link to that site's search for the title,
 // which is how a user gets to it when the import cannot reach it on its own.
 // TODO: Validate
-function WatchProviders({ providers }: { providers: TMDBWatchProviderItem[] }) {
+function WatchProviders({
+  providers,
+}: {
+  providers: PluginWatchProviderItem[]
+}) {
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-semibold">Where to watch</h3>
@@ -411,11 +418,15 @@ export function MediaInfoModal({
   onOpenChange: (open: boolean) => void
 }) {
   const { data: info, isLoading } = useQuery({
-    queryKey: ["tmdb-media-info", result?.media_type, result?.tmdb_id],
+    queryKey: [
+      "plugin-media-info",
+      result?.plugin_key,
+      result?.media_identifier,
+    ],
     queryFn: () =>
-      PluginsService.tmdbMediaInfo({
-        mediaType: result!.media_type,
-        tmdbId: result!.tmdb_id,
+      PluginsService.mediaInfo({
+        pluginKey: result!.plugin_key,
+        mediaIdentifier: result!.media_identifier,
       }),
     enabled: result != null,
   })
@@ -463,7 +474,9 @@ export function MediaInfoModal({
           ) : info ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                <span>{result && mediaTypeLabel(result.media_type)}</span>
+                <span>
+                  {info.media_type ? mediaTypeLabel(info.media_type) : null}
+                </span>
                 {metaLine(result!, info).map((part) => (
                   <span key={part} className="flex items-center gap-2">
                     <span className="text-muted-foreground/50">•</span>
@@ -575,33 +588,26 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   })
   const pluginResults = activeSearch ? (searchPage?.results ?? null) : null
 
-  // A plugin result carries no TMDB id, so the matching title is looked up when
-  // the card is opened rather than for every result of every search.
-  const tmdbMatchMutation = useMutation({
-    mutationFn: async (result: PluginSearchResult) => {
-      const match = await PluginsService.tmdbMatch({
-        title: result.title,
-        mediaType: result.media_type === "Movie" ? "movie" : "tv",
-        year: result.year,
-      })
-      return { match, result }
-    },
-    onSuccess: ({ match, result }) => {
-      if (!match) {
+  // A result already says which plugin issued it and under what id, so opening a
+  // card names the title outright instead of searching another service for it.
+  // A result the plugin gave no id for is one nothing can be asked about.
+  const openResult = useCallback(
+    (result: PluginSearchResult) => {
+      if (!result.media_identifier || !activeSearch) {
         showErrorToast(`No details found for “${result.title}”`)
         return
       }
       setSelectedResult({
-        tmdb_id: match.tmdb_id,
-        media_type: match.media_type,
+        plugin_key: activeSearch.pluginKey,
+        media_identifier: result.media_identifier,
         title: result.title,
         url: result.url,
         year: result.year,
         image_url: result.image_url,
       })
     },
-    onError: () => showErrorToast("Failed to load details"),
-  })
+    [activeSearch, showErrorToast],
+  )
 
   const { data: searchablePlugins } = useSearchablePlugins()
 
@@ -742,7 +748,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
               key={`${result.url}-${index}`}
               result={result}
               channelId={channelId}
-              onSelect={(selected) => tmdbMatchMutation.mutate(selected)}
+              onSelect={openResult}
             />
           ))}
         </div>

@@ -1,26 +1,17 @@
 // TODO: Validate
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { Sparkles, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import {
   ChannelsService,
   type PluginSearchResult,
   PluginsService,
 } from "@/client"
-import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useSearchablePlugins } from "@/hooks/useEntities"
 import { handleError } from "@/utils"
 import { MediaInfoModal, type SelectedTitle } from "./Search"
 
@@ -34,9 +25,12 @@ interface LuckyOutcome {
   approved: boolean
 }
 
-// TMDB covers every service rather than one, so it is the source a search starts
-// on. Falls back to the first searchable plugin when TMDB is not available.
-const DEFAULT_PLUGIN_KEY = "TMDB"
+// TMDB covers every service rather than one, so a title is looked for there and
+// nowhere else. Feeling lucky is taking the first result of a search on trust,
+// and a catalogue of everything is the only one where the first result standing
+// for the title is a fair bet - one service's search answers only for what that
+// service carries, so its first result is whatever it holds that reads closest.
+const PLUGIN_KEY = "TMDB"
 
 // TODO: Validate
 function parseTitles(text: string): string[] {
@@ -58,7 +52,7 @@ function parseTitles(text: string): string[] {
  * at before it becomes a channel's media, so nothing is queued until the list
  * has been gone through. Every match starts approved, which makes the work
  * unticking the wrong ones rather than ticking every right one, and a title can
- * be opened to see what TMDB has on it before deciding.
+ * be opened to see what its own plugin has on it before deciding.
  */
 export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
   const queryClient = useQueryClient()
@@ -67,60 +61,30 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
   const [outcomes, setOutcomes] = useState<LuckyOutcome[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [pluginKey, setPluginKey] = useState("")
   const [openedTitle, setOpenedTitle] = useState<SelectedTitle | null>(null)
-
-  const { data: searchablePlugins } = useSearchablePlugins()
-  // A plugin with no in-app search returns nothing to take a first result from,
-  // so there is nothing to feel lucky about and it is not offered here.
-  const inAppPlugins = (searchablePlugins ?? []).filter(
-    (plugin) => !plugin.manual_search_only,
-  )
-
-  useEffect(() => {
-    if (!pluginKey && inAppPlugins.length > 0) {
-      const preferred = inAppPlugins.find(
-        (plugin) => plugin.plugin_key === DEFAULT_PLUGIN_KEY,
-      )
-      setPluginKey((preferred ?? inAppPlugins[0]).plugin_key)
-    }
-  }, [pluginKey, inAppPlugins])
 
   const titles = parseTitles(titlesText)
   const matched = outcomes.filter((outcome) => outcome.result !== null)
   const approved = matched.filter((outcome) => outcome.approved)
 
-  // A result carries no TMDB id, so the matching title is looked up when one is
-  // opened rather than for every result of every search.
-  const openMutation = useMutation({
-    mutationFn: async (result: PluginSearchResult) => {
-      const match = await PluginsService.tmdbMatch({
-        title: result.title,
-        mediaType: result.media_type === "Movie" ? "movie" : "tv",
-        year: result.year,
-      })
-      return { match, result }
-    },
-    onSuccess: ({ match, result }) => {
-      if (!match) {
-        showErrorToast(`No details found for “${result.title}”`)
-        return
-      }
-      setOpenedTitle({
-        tmdb_id: match.tmdb_id,
-        media_type: match.media_type,
-        title: result.title,
-        url: result.url,
-        year: result.year,
-        image_url: result.image_url,
-      })
-    },
-    onError: (error) =>
-      handleError.call(
-        showErrorToast,
-        error as Parameters<typeof handleError>[0],
-      ),
-  })
+  // A result already says which plugin issued it and under what id, so opening a
+  // title names it outright instead of searching another service for it. A
+  // result the plugin gave no id for is one nothing can be asked about.
+  // TODO: Validate
+  const openTitle = (result: PluginSearchResult) => {
+    if (!result.media_identifier) {
+      showErrorToast(`No details found for “${result.title}”`)
+      return
+    }
+    setOpenedTitle({
+      plugin_key: PLUGIN_KEY,
+      media_identifier: result.media_identifier,
+      title: result.title,
+      url: result.url,
+      year: result.year,
+      image_url: result.image_url,
+    })
+  }
 
   // TODO: Validate
   const setApproval = (title: string, isApproved: boolean) => {
@@ -151,7 +115,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     for (const title of titles) {
       try {
         const page = await PluginsService.searchPlugin({
-          pluginKey,
+          pluginKey: PLUGIN_KEY,
           query: title,
         })
         const first = page.results[0] ?? null
@@ -199,25 +163,6 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
         One title per line. Each is searched and its first result is offered for
         approval, and the ones left ticked are added to the import queue.
       </p>
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Search:</span>
-        <Select value={pluginKey} onValueChange={setPluginKey}>
-          <SelectTrigger className="w-50">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {inAppPlugins.map((plugin) => (
-              <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                <SourceOptionLabel
-                  name={plugin.name}
-                  faviconUrl={plugin.favicon_url}
-                />
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       <Textarea
         value={titlesText}
@@ -275,9 +220,8 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
                       <button
                         type="button"
                         className="underline"
-                        disabled={openMutation.isPending}
                         onClick={() =>
-                          outcome.result && openMutation.mutate(outcome.result)
+                          outcome.result && openTitle(outcome.result)
                         }
                       >
                         {outcome.result.title}
@@ -298,7 +242,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <Button
           onClick={run}
-          disabled={isRunning || isSaving || titles.length === 0 || !pluginKey}
+          disabled={isRunning || isSaving || titles.length === 0}
         >
           <Sparkles className="mr-2 size-4" />
           {isRunning
