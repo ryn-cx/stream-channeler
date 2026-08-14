@@ -12,7 +12,7 @@ episodes of a title one of them could be, and the writing down of whichever a
 import re
 import uuid
 from collections import defaultdict
-from collections.abc import Collection, Sequence
+from collections.abc import Callable, Collection, Sequence
 from difflib import SequenceMatcher
 
 from fastapi import HTTPException
@@ -23,14 +23,14 @@ from sqlmodel import Session, col, select
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
+    is_tmdb_key,
     not_tmdb_key_clause,
     tmdb_id_of,
     tmdb_key_clause,
 )
 from app.canonical_media.service import link_canonical_show
 from app.episodes.models import (
-    MANUAL_NOTES,
-    MANUALLY_SELECTED_NOTE,
+    MANUAL_NOTE_PREFIX,
     Episode,
 )
 from app.episodes.schemas import (
@@ -749,8 +749,8 @@ def link_episode(
     ).all()
     for other in others:
         if other.canonical_episode_locked and (
-            other.canonical_episode_note in MANUAL_NOTES
-        ):
+            other.canonical_episode_note or ""
+        ).startswith(MANUAL_NOTE_PREFIX):
             continue
 
         removed = (
@@ -769,7 +769,7 @@ def link_episode(
 
     episode.canonical_episode_id = canonical_episode.id
     episode.canonical_episode_locked = True
-    episode.canonical_episode_note = MANUALLY_SELECTED_NOTE
+    episode.canonical_episode_note = "Manual: Selection"
     session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -792,3 +792,198 @@ def unlink_episode(session: Session, episode: Episode) -> Episode:
     session.commit()
     session.refresh(episode)
     return episode
+
+
+# TODO: Validate
+def _tmdb_episodes(canonical_shows: Collection[Show]) -> list[Episode]:
+    return [
+        episode
+        for canonical_show in canonical_shows
+        for season in canonical_show.active_children
+        for episode in season.active_children
+        if is_tmdb_key(episode.key)
+    ]
+
+
+# TODO: Validate
+def _show_episodes(show: Show) -> list[Episode]:
+    return [
+        episode for season in show.active_children for episode in season.active_children
+    ]
+
+
+# TODO: Validate
+def match_episode_to_movie(
+    show: Show,
+    tmdb_episodes: Sequence[Episode],
+) -> bool:
+    """Point a lone episode at a lone TMDB episode, and say whether that settled it.
+
+    A film is one episode of one season on both sides, so a row with a single
+    episode against a canonical show with a single episode is matched outright:
+    there is nothing else either of them could be, whatever the two are named.
+    """
+    episodes = _show_episodes(show)
+    if len(episodes) != 1 or len(tmdb_episodes) != 1:
+        return False
+
+    only_episode = episodes[0]
+    if (
+        only_episode.canonical_episode_id is None
+        and not only_episode.canonical_episode_locked
+    ):
+        only_episode.canonical_episode = tmdb_episodes[0]
+        only_episode.canonical_episode_note = "Automatic: Movie match"
+    return True
+
+
+# TODO: Validate
+def _tmdb_episodes_by_name_and_number(
+    tmdb_episodes: Collection[Episode],
+    name_of: Callable[[Episode], str | None],
+) -> dict[tuple[str, int], Episode]:
+    candidates: dict[tuple[str, int], Episode] = {}
+    ambiguous: set[tuple[str, int]] = set()
+    for tmdb_episode in tmdb_episodes:
+        name = name_of(tmdb_episode)
+        if not name or tmdb_episode.episode_number is None:
+            continue
+        pairing = (name, tmdb_episode.episode_number)
+        if pairing in candidates:
+            ambiguous.add(pairing)
+            continue
+        candidates[pairing] = tmdb_episode
+    # Two TMDB episodes sharing a name and a number say nothing about which of
+    # them an episode is, so neither is offered.
+    for pairing in ambiguous:
+        del candidates[pairing]
+    return candidates
+
+
+# TODO: Validate
+def match_episode_by_name_and_episode_number(
+    show: Show,
+    tmdb_episodes: Collection[Episode],
+) -> None:
+    """Point each episode of `show` at the TMDB episode of the same name and number."""
+    sorted_tmdb_episodes = _tmdb_episodes_by_name_and_number(
+        tmdb_episodes,
+        lambda tmdb_episode: tmdb_episode.name,
+    )
+    episodes = _show_episodes(show)
+    for episode in episodes:
+        if episode.canonical_episode_id:
+            continue
+
+        if match := sorted_tmdb_episodes.get((episode.name, episode.episode_number)):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+            episode.canonical_episode = match
+            episode.canonical_episode_note = "Automatic: Name and number match"
+
+
+# TODO: Validate
+def match_episode_by_plaintext_name_and_episode_number(
+    show: Show,
+    tmdb_episodes: Collection[Episode],
+) -> None:
+    """Point each episode of `show` at the TMDB episode of the same name and number.
+
+    The names are compared with their case, punctuation and spacing taken out, so
+    "The One With the Cat" and "the one with the cat!" are the one name they are
+    both a spelling of and the episode is matched rather than left waiting.
+    """
+    sorted_tmdb_episodes = _tmdb_episodes_by_name_and_number(
+        tmdb_episodes,
+        lambda tmdb_episode: _plaintext(tmdb_episode.name),
+    )
+    episodes = _show_episodes(show)
+    for episode in episodes:
+        if episode.canonical_episode_id:
+            continue
+
+        pairing = (_plaintext(episode.name), episode.episode_number)
+        if match := sorted_tmdb_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+            episode.canonical_episode = match
+            episode.canonical_episode_note = (
+                "Automatic: Plaintext name and number match"
+            )
+
+
+# TODO: Validate
+def _tmdb_episodes_by_name(
+    tmdb_episodes: Collection[Episode],
+    name_of: Callable[[Episode], str | None],
+) -> dict[str, Episode]:
+    candidates: dict[str, Episode] = {}
+    ambiguous: set[str] = set()
+    for tmdb_episode in tmdb_episodes:
+        name = name_of(tmdb_episode)
+        if not name:
+            continue
+        if name in candidates:
+            ambiguous.add(name)
+            continue
+        candidates[name] = tmdb_episode
+    # Two TMDB episodes sharing a name say nothing about which of them an episode
+    # is, so neither is offered.
+    for name in ambiguous:
+        del candidates[name]
+    return candidates
+
+
+# TODO: Validate
+def match_episode_by_name(show: Show, tmdb_episodes: Collection[Episode]) -> None:
+    """Point each episode of `show` at the TMDB episode of the same name.
+
+    The numbering is no part of it, so an episode a website filed under a number
+    of its own is still matched by the one thing the two of them agree on.
+    """
+    sorted_tmdb_episodes = _tmdb_episodes_by_name(
+        tmdb_episodes,
+        lambda tmdb_episode: tmdb_episode.name,
+    )
+    episodes = _show_episodes(show)
+    for episode in episodes:
+        if episode.canonical_episode_id:
+            continue
+
+        if match := sorted_tmdb_episodes.get(episode.name):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+            episode.canonical_episode = match
+            episode.canonical_episode_note = "Automatic: Name match"
+
+
+# TODO: Validate
+def match_episode_by_plaintext_name(
+    show: Show,
+    tmdb_episodes: Collection[Episode],
+) -> None:
+    """Point each episode of `show` at the TMDB episode of the same name.
+
+    Neither the numbering nor the case, punctuation and spacing of the name are
+    any part of it, which is the loosest either of them can be matched on.
+    """
+    sorted_tmdb_episodes = _tmdb_episodes_by_name(
+        tmdb_episodes,
+        lambda tmdb_episode: _plaintext(tmdb_episode.name),
+    )
+    episodes = _show_episodes(show)
+    for episode in episodes:
+        if episode.canonical_episode_id:
+            continue
+
+        if match := sorted_tmdb_episodes.get(_plaintext(episode.name)):
+            episode.canonical_episode = match
+            episode.canonical_episode_note = "Automatic: Plaintext name match"
+
+
+# TODO: Validate
+def link_canonical_episodes(show: Show) -> None:
+    """Link an `Episode` to the canonical `Episode` from TMDB."""
+    tmdb_episodes = _tmdb_episodes(show.canonical_shows)
+
+    if match_episode_to_movie(show, tmdb_episodes):
+        return
+
+    match_episode_by_name_and_episode_number(show, tmdb_episodes)
+    match_episode_by_plaintext_name_and_episode_number(show, tmdb_episodes)
+    match_episode_by_name(show, tmdb_episodes)
+    match_episode_by_plaintext_name(show, tmdb_episodes)

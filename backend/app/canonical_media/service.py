@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
-from app.canonical_media.keys import tmdb_key_clause
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -191,95 +190,6 @@ def link_canonical_show(
     )
     session.add(existing_canonical_show)
     return existing_canonical_show
-
-
-# TODO: Validate
-def _tmdb_episodes(
-    session: Session,
-    canonical_show_ids: Collection[uuid.UUID],
-) -> list[Episode]:
-    statement = (
-        select(Episode)
-        .join(Season, col(Episode.season_id) == col(Season.id))
-        .where(
-            is_canonical(Episode),
-            col(Season.show_id).in_(canonical_show_ids),
-            tmdb_key_clause(col(Episode.key)),
-        )
-    )
-    return list(session.exec(statement).all())
-
-
-# TODO: Validate
-def _tmdb_episodes_by_name_and_number(
-    tmdb_episodes: Collection[Episode],
-) -> dict[tuple[str, int], Episode]:
-    candidates: dict[tuple[str, int], Episode] = {}
-    ambiguous: set[tuple[str, int]] = set()
-    for candidate in tmdb_episodes:
-        if candidate.name is None or candidate.episode_number is None:
-            continue
-        pairing = (candidate.name, candidate.episode_number)
-        if pairing in candidates:
-            ambiguous.add(pairing)
-            continue
-        candidates[pairing] = candidate
-    # Two TMDB episodes sharing a name and a number say nothing about which of
-    # them an episode is, so neither is offered.
-    for pairing in ambiguous:
-        del candidates[pairing]
-    return candidates
-
-
-# TODO: Validate
-def match_canonical_episodes(session: Session, show: Show) -> None:
-    """Point each episode of `show` at the TMDB episode of the same name and number.
-
-    Only TMDB rows are ever pointed at. An episode TMDB has no record of is left
-    pointing at nothing rather than given a canonical row of its own, so a
-    canonical episode only ever hangs off a canonical show TMDB holds.
-
-    A film is one episode of one season on both sides, so a row with a single
-    episode against a canonical show with a single episode is matched outright:
-    there is nothing else either of them could be, whatever the two are named.
-    """
-    canonical_show_ids = show.canonical_show_ids
-    if not canonical_show_ids:
-        return
-
-    tmdb_episodes = _tmdb_episodes(session, canonical_show_ids)
-    if not tmdb_episodes:
-        return
-
-    episodes = [
-        episode for season in show.active_children for episode in season.active_children
-    ]
-    if len(episodes) == 1 and len(tmdb_episodes) == 1:
-        only_episode = episodes[0]
-        if (
-            only_episode.canonical_episode_id is None
-            and not only_episode.canonical_episode_locked
-        ):
-            only_episode.canonical_episode = tmdb_episodes[0]
-        return
-
-    candidates = _tmdb_episodes_by_name_and_number(tmdb_episodes)
-    if not candidates:
-        return
-
-    # One canonical episode is one episode to watch, so a TMDB episode already
-    # taken is not handed to a second episode of the same show.
-    taken = {episode.canonical_episode_id for episode in episodes}
-    for episode in episodes:
-        if episode.canonical_episode_id or episode.name is None:
-            continue
-        if episode.episode_number is None:
-            continue
-        match = candidates.get((episode.name, episode.episode_number))
-        if match is None or match.id in taken:
-            continue
-        episode.canonical_episode = match
-        taken.add(match.id)
 
 
 # TODO: Validate

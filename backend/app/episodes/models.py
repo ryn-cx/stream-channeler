@@ -37,31 +37,14 @@ if TYPE_CHECKING:
     from app.issue_reports.models import EpisodeIssueReport
     from app.watches.models import Watch
 
-# TODO: Validate Constants
-# The notes that stand for a settled link rather than a guess at one. A
-# note is free text so that a new way of recognising an episode needs nothing
-# but its own wording; the rest are written where the matching is done.
-NAME_AND_NUMBER_NOTE = "Automatic: Name and number match"
-DESCRIPTION_NOTE = "Automatic: Description match"
-# The three ways a `User` settles one, kept apart because taking the match that
-# was put in front of them is a smaller thing than going and finding one.
-MANUALLY_CONFIRMED_NOTE = "Manual: Confirmation"
-MANUALLY_SELECTED_NOTE = "Manual: Selection"
-NO_MATCH_NOTE = "Manual: No match found"
-
-MANUAL_NOTES = frozenset(
-    {
-        MANUALLY_CONFIRMED_NOTE,
-        MANUALLY_SELECTED_NOTE,
-        NO_MATCH_NOTE,
-    },
-)
-"""The notes that stand for a `User` having settled the link themselves.
-
-A lock says only that the link is settled, where what settled it is the
-difference between a decision worth keeping and a guess the import was sure
-enough of at the time, so the two are told apart by what was written down.
-"""
+# The prefix on a note that stands for a `User` having settled the link
+# themselves, against the "Automatic: " an import writes. A lock says only that
+# the link is settled, where what settled it is the difference between a
+# decision worth keeping and a guess the import was sure enough of at the time,
+# so the two are told apart by what was written down. What follows the prefix is
+# free text, so a new way of recognising an episode needs nothing but its own
+# wording, written where the matching is done.
+MANUAL_NOTE_PREFIX = "Manual: "
 
 
 # The canonical row is the one a channel sorts on, so these name its columns and

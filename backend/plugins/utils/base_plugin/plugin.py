@@ -15,9 +15,9 @@ from app.canonical_media.keys import record_key
 from app.canonical_media.service import (
     canonical_show_by_key,
     link_canonical_show,
-    match_canonical_episodes,
 )
 from app.episodes.models import Episode
+from app.episodes.service import link_canonical_episodes
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -337,7 +337,7 @@ class BasePlugin(
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
         upserted = self.upsert_show(show.source, show.key, force=force)
-        match_canonical_episodes(self.session, upserted)
+        link_canonical_episodes(upserted)
 
     # TODO: Validate
     @override
@@ -411,7 +411,7 @@ class BasePlugin(
                 self._canonical_source(),
             )
             link_canonical_show(self.session, show, standalone)
-        match_canonical_episodes(self.session, show)
+        link_canonical_episodes(show)
 
     # TODO: Validate
     def _link_supplied_canonical_shows(
