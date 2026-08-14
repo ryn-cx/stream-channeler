@@ -132,6 +132,14 @@ export function EpisodeCard({
     episode.show.image_url ||
     ""
 
+  const episodeNumber = episode.tmdb_episode_number ?? episode.episode_number
+  const altText = [
+    episodeNumber != null ? `Episode ${episodeNumber}` : null,
+    episode.name,
+  ]
+    .filter(Boolean)
+    .join(" - ")
+
   const moveArrowBaseClass =
     "absolute z-20 h-7 w-7 rounded-full bg-background/90 hover:bg-background text-foreground shadow-md flex items-center justify-center transition-colors"
 
@@ -230,7 +238,7 @@ export function EpisodeCard({
         <img
           loading="lazy"
           src={imageUrl}
-          alt={`Episode ${episode.tmdb_episode_number ?? episode.episode_number} - ${episode.name ?? ""}`}
+          alt={altText}
           className="w-full h-full object-cover transition-opacity group-hover:opacity-80"
         />
 
