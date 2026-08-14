@@ -115,6 +115,19 @@ class YouTube(
 
     # TODO: Validate
     @override
+    def import_url(
+        self,
+        url: str,
+        canonical_show: Show | None = None,
+        *,
+        force: bool = False,
+    ) -> list[URLImportResult]:
+        handler = self.get_url_handler(url)
+        handler.raise_if_invalid()
+        return self._import_handler(handler, canonical_show, force=force)
+
+    # TODO: Validate
+    @override
     def on_import_url_failure(
         self,
         queue_item: ChannelQueue,

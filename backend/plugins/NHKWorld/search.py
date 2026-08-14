@@ -28,6 +28,7 @@ class SearchMixin(FileMixin, register=False):
                 url=self.build_url(hit.field_source.url),
                 image_url=self.build_url(hit.field_source.thumbnail),
                 media_type="TV Show",
+                media_identifier=hit.field_source.slug,
             )
             for hit in parsed.hits.hits
         ]

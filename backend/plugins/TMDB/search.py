@@ -6,9 +6,11 @@ from typing import ClassVar, override
 
 from tminidb.search_multi.models import Result
 
+from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.TMDB.files import poster_image_url, release_year, title_page_url
 from plugins.TMDB.lookup import LookupMixin
+from plugins.TMDB.media_info import media_identifier
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
@@ -70,4 +72,5 @@ class SearchMixin(LookupMixin, register=False):
             year=year,
             image_url=poster_image_url(result.poster_path),
             media_type=self._SEARCH_MEDIA_TYPES[result.media_type],
+            media_identifier=media_identifier(MediaType(result.media_type), result.id),
         )

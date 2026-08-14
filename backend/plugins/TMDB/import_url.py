@@ -101,6 +101,8 @@ class ImportURLMixin(
         name: str,
         media_type: MediaType | None = None,
         year: int | None = None,
+        *,
+        force: bool = False,
     ) -> Show | None:
         """Import the first title TMDB returns for `name`.
 
@@ -117,8 +119,8 @@ class ImportURLMixin(
 
         half, tmdb_id = found
         if half == MediaType.movie:
-            return self.import_movie(tmdb_id)
-        return self.import_show(tmdb_id)
+            return self.import_movie(tmdb_id, force=force)
+        return self.import_show(tmdb_id, force=force)
 
     # TODO: Validate
     def _first_search_result(
@@ -145,13 +147,13 @@ class ImportURLMixin(
         return None
 
     # TODO: Validate
-    def import_show(self, tmdb_id: int) -> Show:
+    def import_show(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB tv entry using a tmdb_id."""
-        self.import_url(title_page_url(MediaType.tv, tmdb_id))
+        self.import_url(title_page_url(MediaType.tv, tmdb_id), force=force)
         return self._preload_show(show_key(MediaType.tv, tmdb_id)).one()
 
     # TODO: Validate
-    def import_movie(self, tmdb_id: int) -> Show:
+    def import_movie(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB movie entry using a tmdb_id."""
-        self.import_url(title_page_url(MediaType.movie, tmdb_id))
+        self.import_url(title_page_url(MediaType.movie, tmdb_id), force=force)
         return self._preload_show(show_key(MediaType.movie, tmdb_id)).one()

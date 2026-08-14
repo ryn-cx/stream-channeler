@@ -8,13 +8,11 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
-from app.media.media_type import MediaType
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
-from app.plugins import service
 from app.plugins.dependencies import EditablePlugin, ReadablePlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
@@ -28,12 +26,10 @@ from app.plugins.schemas import (
     PluginsPublic,
     PluginUpdate,
     PluginURLMatch,
-    TMDBMatch,
-    TMDBMediaInfo,
 )
 from app.schemas import Message
 from app.users.models import User
-from plugins.utils.abstract_plugin import PluginSearchResults
+from plugins.utils.abstract_plugin import PluginMediaInfo, PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
@@ -210,28 +206,29 @@ def search_plugin(
 
 
 # TODO: Validate
-@plugins_router.get("/tmdb/match")
-def tmdb_match(
-    title: str,
-    media_type: MediaType,
+@plugins_router.get("/media-info")
+def media_info(
+    plugin_key: str,
+    media_identifier: str,
     session: SessionDep,
     _current_user: CurrentUser,
-    year: int | None = None,
-) -> TMDBMatch | None:
-    """Return the TMDB title that best matches a plugin's search result."""
-    return service.tmdb_match(session, title, media_type, year)
+) -> PluginMediaInfo | None:
+    """Return everything a plugin knows about one of its own search results.
 
+    Answered by the same plugin the result came from, under the identifier that
+    plugin issued, so a title's detail is the source's own rather than whatever
+    a search of some other service turned up.
+    """
+    for plugin_cls in sorted_plugins():
+        if plugin_cls.plugin_key() == plugin_key:
+            if not plugin_cls.implements("media_info"):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Plugin '{plugin_key}' does not support media info.",
+                )
+            return plugin_cls(session).media_info(media_identifier)
 
-# TODO: Validate
-@plugins_router.get("/tmdb/media-info")
-def tmdb_media_info(
-    media_type: MediaType,
-    tmdb_id: int,
-    session: SessionDep,
-    _current_user: CurrentUser,
-) -> TMDBMediaInfo | None:
-    """Return rich detail and US watch providers for one TMDB movie or TV show."""
-    return service.tmdb_media_info(session, media_type, tmdb_id)
+    raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
 # Registered after the literal paths above so that they are matched first.

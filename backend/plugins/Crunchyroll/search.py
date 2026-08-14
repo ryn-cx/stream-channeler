@@ -45,6 +45,7 @@ class SearchMixin(HelperMixin, register=False):
                 else None,
                 image_url=self._search_image_url(item.images),
                 media_type=item.type.replace("_", " ").title(),
+                media_identifier=item.id,
             )
             for item in items
         ]

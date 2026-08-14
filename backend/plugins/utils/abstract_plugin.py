@@ -368,6 +368,18 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
+    def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
+        """Return everything the plugin knows about one title.
+
+        Args:
+            media_identifier: The `media_identifier` of a `PluginSearchResult`
+                this same plugin produced.
+
+        """
+        msg = "media_info is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
     @classmethod
     def search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
         """Return the plugin website's own search-page URL for `query`.
@@ -485,9 +497,10 @@ class URLImportResult(BaseModel):
 class PluginSearchResult(BaseModel):
     """Search result from a plugin.
 
-    Every plugin searches a single source (its own platform), so a result maps
-    directly to an importable URL. TMDB is the only multi-source search and has
-    its own dedicated endpoints instead of implementing this.
+    Every plugin searches its own catalogue, so a result maps directly to an
+    importable URL and carries the identifier that plugin files the title
+    under. Details for the result are read back from the same plugin under that
+    identifier rather than being matched onto some other service's copy.
     """
 
     title: str
@@ -500,6 +513,51 @@ class PluginSearchResult(BaseModel):
     """URL of the image representing the search result."""
     media_type: str | None = None
     """Media type of the search result."""
+    media_identifier: str | None = None
+    """What the plugin that produced the result knows the title by.
+
+    Passed back to that same plugin's `media_info` to open the result. Its
+    format is the plugin's own — TMDB writes `tv 1399` and `movie 27205`, a
+    single-catalogue service writes whatever id it files the title under. None
+    when the plugin has no details to offer beyond the result itself.
+    """
+
+
+# TODO: Validate
+class PluginWatchProviderItem(BaseModel):
+    """A place to watch a title, marked with the plugin that supports it."""
+
+    name: str
+    icon_url: str | None = None
+    plugin_key: str | None = None
+    search_url: str | None = None
+
+
+# TODO: Validate
+class PluginMediaInfo(BaseModel):
+    """Everything a plugin knows about a single title it can be searched for.
+
+    Modelled on what TMDB returns, since it is the richest source, and left
+    optional throughout so a service that only knows a title and a description
+    fills in what it has.
+    """
+
+    title: str | None = None
+    media_type: str | None = None
+    tagline: str | None = None
+    overview: str | None = None
+    poster_url: str | None = None
+    backdrop_url: str | None = None
+    year: int | None = None
+    end_year: int | None = None
+    status: str | None = None
+    rating: float | None = None
+    vote_count: int | None = None
+    number_of_seasons: int | None = None
+    number_of_episodes: int | None = None
+    runtime: int | None = None
+    genres: list[str] = []
+    providers: list[PluginWatchProviderItem] = []
 
 
 # TODO: Validate

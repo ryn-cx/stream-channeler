@@ -6,6 +6,7 @@ from typing import override
 from plugins.TMDB.files import TMDB_DOMAIN, FileMixin
 from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.import_url import ImportURLMixin
+from plugins.TMDB.media_info import MediaInfoMixin
 from plugins.TMDB.search import SearchMixin
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import MovieURLHandler, TMDBURLHandler, TvURLHandler
@@ -17,6 +18,7 @@ class TMDB(
     ImportURLMixin,
     UpsertMixin,
     SearchMixin,
+    MediaInfoMixin,
     HelperMixin,
     FileMixin,
     URLHandlerPlugin[TMDBURLHandler],

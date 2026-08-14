@@ -5,7 +5,6 @@ import uuid
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
-from app.media.media_type import MediaType
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -86,42 +85,3 @@ class PluginURLMatch(BaseModel):
 # TODO: Validate
 class PluginSearchUrl(BaseModel):
     url: str | None = None
-
-
-# TODO: Validate
-class TMDBMatch(BaseModel):
-    """The TMDB title that best matches a plugin's search result."""
-
-    tmdb_id: int
-    media_type: MediaType
-
-
-# TODO: Validate
-class TMDBWatchProviderItem(BaseModel):
-    """A place to watch a title, marked with the plugin that supports it."""
-
-    name: str
-    icon_url: str | None = None
-    plugin_key: str | None = None
-    search_url: str | None = None
-
-
-# TODO: Validate
-class TMDBMediaInfo(BaseModel):
-    """Rich detail for a single movie or TV show plus its US watch providers."""
-
-    title: str | None = None
-    tagline: str | None = None
-    overview: str | None = None
-    poster_url: str | None = None
-    backdrop_url: str | None = None
-    year: int | None = None
-    end_year: int | None = None
-    status: str | None = None
-    rating: float | None = None
-    vote_count: int | None = None
-    number_of_seasons: int | None = None
-    number_of_episodes: int | None = None
-    runtime: int | None = None
-    genres: list[str] = []
-    providers: list[TMDBWatchProviderItem] = []
