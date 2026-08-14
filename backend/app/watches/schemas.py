@@ -2,7 +2,8 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel
+from pydantic import Field as PydanticField
 from sqlmodel import Field, SQLModel
 
 from app.episodes.schemas import EpisodeOutput
@@ -105,9 +106,16 @@ class WatchExportEntry(BaseModel):
 
     `verified` is None in a file exported before it was carried, which leaves
     the import's own setting to say what those watches are.
+
+    A file exported before the identifier was named as such holds it under
+    `canonical_episode_key`, and holds the same string: the old key was the
+    plugin's name in front of its own id, which is what the identifier is. So
+    the old name is still read, and a backup taken then still imports.
     """
 
-    watch_identifier: str
+    watch_identifier: str = PydanticField(
+        validation_alias=AliasChoices("watch_identifier", "canonical_episode_key"),
+    )
     watch_date: datetime
     verified: bool | None = None
 

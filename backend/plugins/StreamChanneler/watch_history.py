@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, override
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy.orm import aliased
-from sqlmodel import col, select
+from sqlalchemy.sql.expression import ColumnElement
+from sqlmodel import col, or_, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.episodes.models import Episode
@@ -107,16 +109,22 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         where it stands, so it answers for its own identifier. A link is
         preferred where both are stored, since the episode a link is of may be a
         row TMDB wrote and nothing is watched there.
+
+        A file exported before the identifier existed names an episode by the
+        key alone, so the key is looked up as well. The two part company only for
+        TMDB, whose keys already begin with its name and so are not the same
+        string once the name is put in front of them again.
         """
         if not episode_keys:
             return {}
+        wanted = set(episode_keys)
         # The episode a link is of is the same table reached again, so which of
         # the two each side means is said outright rather than left to the join.
         canonical_episode = aliased(Episode)
-        links = {
-            episode.canonical_episode.watch_identifier: episode
-            for episode in self.session.exec(
-                select(Episode)
+        links = self._by_named_episode(
+            wanted,
+            self.session.exec(
+                select(Episode, canonical_episode)  # type: ignore[call-overload]
                 .select_from(Episode)
                 .join(
                     canonical_episode,
@@ -125,28 +133,53 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                 .where(
                     is_non_canonical(Episode),
                     is_canonical(canonical_episode),
-                    col(canonical_episode.watch_identifier).in_(episode_keys),
+                    self._names_clause(canonical_episode, wanted),
                     col(Episode.deleted_at).is_(None),
                 ),
-            )
-            if episode.canonical_episode is not None
-        }
-        own = {
-            episode.watch_identifier: episode
-            for episode in self.session.exec(
-                select(Episode)
-                .select_from(Episode)
-                .join(Season, col(Episode.season_id) == col(Season.id))
-                .join(Show, col(Season.show_id) == col(Show.id))
-                .where(
-                    is_canonical(Episode),
-                    is_canonical(Show),
-                    col(Episode.watch_identifier).in_(episode_keys),
-                    col(Episode.deleted_at).is_(None),
-                ),
-            )
-        }
+            ),
+        )
+        own = self._by_named_episode(
+            wanted,
+            (
+                (episode, episode)
+                for episode in self.session.exec(
+                    select(Episode)
+                    .select_from(Episode)
+                    .join(Season, col(Episode.season_id) == col(Season.id))
+                    .join(Show, col(Season.show_id) == col(Show.id))
+                    .where(
+                        is_canonical(Episode),
+                        is_canonical(Show),
+                        self._names_clause(Episode, wanted),
+                        col(Episode.deleted_at).is_(None),
+                    ),
+                )
+            ),
+        )
         return own | links
+
+    # TODO: Validate
+    @staticmethod
+    def _names_clause(entity: Any, wanted: set[str]) -> ColumnElement[bool]:  # noqa: ANN401 - A model class or an alias of one.
+        """Match `entity` against what an export calls it, of either vintage."""
+        return or_(
+            col(entity.watch_identifier).in_(wanted),
+            col(entity.key).in_(wanted),
+        )
+
+    # TODO: Validate
+    @staticmethod
+    def _by_named_episode(
+        wanted: set[str],
+        rows: Iterable[tuple[Episode, Episode]],
+    ) -> dict[str, Episode]:
+        """Key each row by whichever of the episode's names the export used."""
+        found: dict[str, Episode] = {}
+        for episode, named in rows:
+            for name in (named.watch_identifier, named.key):
+                if name in wanted:
+                    found.setdefault(name, episode)
+        return found
 
     # TODO: Validate
     def _import_results_by_identifier(
@@ -174,16 +207,18 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
             .where(
                 is_canonical(Episode),
                 is_canonical(Show),
-                col(Episode.watch_identifier).in_(watch_identifiers),
+                self._names_clause(Episode, set(watch_identifiers)),
             )
         )
+        wanted = set(watch_identifiers)
         return {
-            canonical_episode.watch_identifier: WatchImportResult(
+            name: WatchImportResult(
                 show=canonical_show.name or canonical_episode.key,
                 show_url=canonical_show.url or "",
                 episode=canonical_episode.name or canonical_episode.key,
                 episode_url=canonical_episode.url or "",
             )
             for canonical_episode, canonical_show in self.session.exec(statement)
-            if canonical_episode.key is not None
+            for name in (canonical_episode.watch_identifier, canonical_episode.key)
+            if name in wanted
         }
