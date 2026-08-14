@@ -40,32 +40,29 @@ class WatchMixin(ABC):
         return {episode.key: episode for episode in self.session.exec(statement)}
 
     # TODO: Validate
-    def _get_watched_canonical_dates(
+    def _get_watched_dates_by_identifier(
         self,
         user: User,
         episodes_by_key: dict[str, Episode],
     ) -> dict[str, list[datetime]]:
-        """Load watched dates grouped by the key of the episode they are of."""
-        canonical_ids = {
-            episode.canonical_episode_id
+        """Load watched dates grouped by the identifier of the episode they are of.
+
+        A row that links to nothing is the episode itself rather than a row with
+        no episode behind it, so its own identifier is what a watch of it holds.
+        A plugin nothing has been minted for has only such rows, and reading the
+        link alone would leave every one of its watches unaccounted for.
+        """
+        watch_identifiers = {
+            (episode.canonical_episode or episode).watch_identifier
             for episode in episodes_by_key.values()
-            if episode.canonical_episode_id
         }
-        if not canonical_ids:
+        if not watch_identifiers:
             return {}
-        canonical_keys = self.session.exec(
-            select(Episode.key).where(
-                col(Episode.id).in_(canonical_ids),
-                col(Episode.key).is_not(None),
-            ),
-        ).all()
-        if not canonical_keys:
-            return {}
-        statement = select(Watch.canonical_episode_key, Watch.watch_date).where(
+        statement = select(Watch.watch_identifier, Watch.watch_date).where(
             Watch.user_id == user.id,
-            col(Watch.canonical_episode_key).in_(canonical_keys),
+            col(Watch.watch_identifier).in_(watch_identifiers),
         )
         result: dict[str, list[datetime]] = defaultdict(list)
-        for canonical_episode_key, watch_date in self.session.exec(statement):
-            result[canonical_episode_key].append(watch_date)
+        for watch_identifier, watch_date in self.session.exec(statement):
+            result[watch_identifier].append(watch_date)
         return result

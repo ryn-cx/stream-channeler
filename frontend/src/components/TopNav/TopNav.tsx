@@ -50,11 +50,11 @@ const baseItems: NavItem[] = [
   { icon: Eye, title: "Watches", path: "/watches" },
   { icon: MessageSquare, title: "Comments", path: "/channel-comments" },
   { icon: ListOrdered, title: "Orders", path: "/channel-orders" },
-  { icon: Plug, title: "Custom Media", path: "/plugins" },
 ]
 
 const adminItems: NavItem[] = [
   ...baseItems,
+  { icon: Plug, title: "Custom Media", path: "/plugins" },
   { icon: Users, title: "Admin", path: "/admin" },
 ]
 

@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Tv } from "lucide-react"
 
 import { ShowsService } from "@/client"
@@ -10,16 +10,12 @@ import {
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
 import AddShow from "@/components/Shows/Add"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 import { usePlugin, useSource } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/source/$sourceKey")({
   component: SourceDetailPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   head: () => ({
     meta: [{ title: "Source Shows - Stream Channeler" }],
   }),

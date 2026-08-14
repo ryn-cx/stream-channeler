@@ -4618,13 +4618,6 @@ Mirrors \`RecordScope\`'s \`owned\`, \`public\` and \`all\` so the media tabs ma
 split of everyone else's media. Media has no \`favorites\`.`
 } as const;
 
-export const MediaTypeSchema = {
-    type: 'string',
-    enum: ['movie', 'tv'],
-    title: 'MediaType',
-    description: 'One of the two halves of the TMDB catalogue.'
-} as const;
-
 export const MessageSchema = {
     properties: {
         message: {
@@ -4899,6 +4892,188 @@ export const PluginListOutputSchema = {
     description: 'Schema for returning a list of `Plugin`s, with owner information.'
 } as const;
 
+export const PluginMediaInfoSchema = {
+    properties: {
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        tagline: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tagline'
+        },
+        overview: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Overview'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        backdrop_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Backdrop Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        end_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'End Year'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
+        rating: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rating'
+        },
+        vote_count: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vote Count'
+        },
+        number_of_seasons: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Number Of Seasons'
+        },
+        number_of_episodes: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Number Of Episodes'
+        },
+        runtime: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Runtime'
+        },
+        genres: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Genres',
+            default: []
+        },
+        providers: {
+            items: {
+                '$ref': '#/components/schemas/PluginWatchProviderItem'
+            },
+            type: 'array',
+            title: 'Providers',
+            default: []
+        }
+    },
+    type: 'object',
+    title: 'PluginMediaInfo',
+    description: `Everything a plugin knows about a single title it can be searched for.
+
+Modelled on what TMDB returns, since it is the richest source, and left
+optional throughout so a service that only knows a title and a description
+fills in what it has.`
+} as const;
+
 export const PluginOutputSchema = {
     properties: {
         key: {
@@ -5068,6 +5243,17 @@ export const PluginSearchResultSchema = {
                 }
             ],
             title: 'Media Type'
+        },
+        media_identifier: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Identifier'
         }
     },
     type: 'object',
@@ -5075,9 +5261,10 @@ export const PluginSearchResultSchema = {
     title: 'PluginSearchResult',
     description: `Search result from a plugin.
 
-Every plugin searches a single source (its own platform), so a result maps
-directly to an importable URL. TMDB is the only multi-source search and has
-its own dedicated endpoints instead of implementing this.`
+Every plugin searches its own catalogue, so a result maps directly to an
+importable URL and carries the identifier that plugin files the title
+under. Details for the result are read back from the same plugin under that
+identifier rather than being matched onto some other service's copy.`
 } as const;
 
 export const PluginSearchResultsSchema = {
@@ -5257,6 +5444,52 @@ export const PluginUpdateSchema = {
     type: 'object',
     title: 'PluginUpdate',
     description: 'Schema for updating a `Plugin`.'
+} as const;
+
+export const PluginWatchProviderItemSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        icon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Icon Url'
+        },
+        plugin_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Key'
+        },
+        search_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Search Url'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'PluginWatchProviderItem',
+    description: 'A place to watch a title, marked with the plugin that supports it.'
 } as const;
 
 export const PluginsPublicSchema = {
@@ -7469,235 +7702,6 @@ export const SourcesPublicSchema = {
     description: 'Schema for returning a list of `Source`s.'
 } as const;
 
-export const TMDBMatchSchema = {
-    properties: {
-        tmdb_id: {
-            type: 'integer',
-            title: 'Tmdb Id'
-        },
-        media_type: {
-            '$ref': '#/components/schemas/MediaType'
-        }
-    },
-    type: 'object',
-    required: ['tmdb_id', 'media_type'],
-    title: 'TMDBMatch',
-    description: "The TMDB title that best matches a plugin's search result."
-} as const;
-
-export const TMDBMediaInfoSchema = {
-    properties: {
-        title: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Title'
-        },
-        tagline: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tagline'
-        },
-        overview: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Overview'
-        },
-        poster_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Poster Url'
-        },
-        backdrop_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Backdrop Url'
-        },
-        year: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Year'
-        },
-        end_year: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'End Year'
-        },
-        status: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Status'
-        },
-        rating: {
-            anyOf: [
-                {
-                    type: 'number'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Rating'
-        },
-        vote_count: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Vote Count'
-        },
-        number_of_seasons: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Number Of Seasons'
-        },
-        number_of_episodes: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Number Of Episodes'
-        },
-        runtime: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Runtime'
-        },
-        genres: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Genres',
-            default: []
-        },
-        providers: {
-            items: {
-                '$ref': '#/components/schemas/TMDBWatchProviderItem'
-            },
-            type: 'array',
-            title: 'Providers',
-            default: []
-        }
-    },
-    type: 'object',
-    title: 'TMDBMediaInfo',
-    description: 'Rich detail for a single movie or TV show plus its US watch providers.'
-} as const;
-
-export const TMDBWatchProviderItemSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        icon_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Icon Url'
-        },
-        plugin_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Plugin Key'
-        },
-        search_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Search Url'
-        }
-    },
-    type: 'object',
-    required: ['name'],
-    title: 'TMDBWatchProviderItem',
-    description: 'A place to watch a title, marked with the plugin that supports it.'
-} as const;
-
 export const TmdbEpisodeChoiceSchema = {
     properties: {
         canonical_episode_id: {
@@ -8432,6 +8436,17 @@ export const WatchExportEntrySchema = {
             type: 'string',
             format: 'date-time',
             title: 'Watch Date'
+        },
+        verified: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Verified'
         }
     },
     type: 'object',
@@ -8439,9 +8454,12 @@ export const WatchExportEntrySchema = {
     title: 'WatchExportEntry',
     description: `Schema for a single exported \`Watch\`.
 
-Holds only what re-importing needs: which episode the watch is of, and when
-it happened. Everything else is read back out of the database the file is
-imported into.`
+Holds only what re-importing needs: which episode the watch is of, when it
+happened, and whether it was verified. Everything else is read back out of
+the database the file is imported into.
+
+\`verified\` is None in a file exported before it was carried, which leaves
+the import's own setting to say what those watches are.`
 } as const;
 
 export const WatchImportResultSchema = {

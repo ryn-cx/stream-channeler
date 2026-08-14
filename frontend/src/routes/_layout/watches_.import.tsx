@@ -291,15 +291,21 @@ function ImportWatchHistory() {
                 </label>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="verified"
-                  checked={verified}
-                  onCheckedChange={(checked) => setVerified(checked === true)}
-                />
-                <label htmlFor="verified" className="text-sm font-medium">
-                  Mark as verified
-                </label>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="verified"
+                    checked={verified}
+                    onCheckedChange={(checked) => setVerified(checked === true)}
+                  />
+                  <label htmlFor="verified" className="text-sm font-medium">
+                    Mark as verified
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Only applies to watches the file does not record a verified
+                  status for.
+                </p>
               </div>
 
               <div>

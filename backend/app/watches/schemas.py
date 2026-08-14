@@ -38,7 +38,7 @@ class WatchOutput(BaseWatch):
 
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    canonical_episode_key: str
+    watch_identifier: str
     user_id: uuid.UUID
     # reportGeneralTypeIssues - Fields with default values are marked as optional, but
     # the value will always be present so they need to be overridden.
@@ -50,10 +50,10 @@ class WatchOutput(BaseWatch):
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    # The episode itself, which is what the watch is of. The key is what the
-    # watch holds; the id is the row that key resolved to here, and is what keys
-    # `episodes` on the list output.
-    canonical_episode_key: str
+    # The episode itself, which is what the watch is of. The identifier is what
+    # the watch holds; the id is the row that identifier resolved to here, and is
+    # what keys `episodes` on the list output.
+    watch_identifier: str
     canonical_episode_id: uuid.UUID
 
     # TODO: Validate
@@ -99,13 +99,17 @@ class WatchImportResults(BaseModel):
 class WatchExportEntry(BaseModel):
     """Schema for a single exported `Watch`.
 
-    Holds only what re-importing needs: which episode the watch is of, and when
-    it happened. Everything else is read back out of the database the file is
-    imported into.
+    Holds only what re-importing needs: which episode the watch is of, when it
+    happened, and whether it was verified. Everything else is read back out of
+    the database the file is imported into.
+
+    `verified` is None in a file exported before it was carried, which leaves
+    the import's own setting to say what those watches are.
     """
 
-    canonical_episode_key: str
+    watch_identifier: str
     watch_date: datetime
+    verified: bool | None = None
 
 
 # TODO: Validate

@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Puzzle } from "lucide-react"
 
 import { PluginsService } from "@/client"
@@ -13,15 +13,11 @@ import {
   type PluginTableData,
   pluginColumns,
 } from "@/components/Plugins/columns"
-import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import useAuth, { requireSuperuser } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/plugins")({
   component: PluginPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Plugins - Stream Channeler" }],

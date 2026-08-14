@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
 import { CanonicalEpisodesService, EpisodesService } from "@/client"
@@ -16,15 +16,11 @@ import {
   type EpisodeTableData,
   episodeColumns,
 } from "@/components/Episodes/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/episodes")({
   component: EpisodesPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Episodes - Stream Channeler" }],

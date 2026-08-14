@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { FileText } from "lucide-react"
 
 import { FilesService } from "@/client"
@@ -9,15 +9,11 @@ import {
   validateMediaSearch,
 } from "@/components/Common/DataTable"
 import { type FileTableData, fileColumns } from "@/components/Files/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/files")({
   component: AllFilesPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Files - Stream Channeler" }],

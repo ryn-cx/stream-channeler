@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Database } from "lucide-react"
 
 import { SourcesService } from "@/client"
@@ -13,16 +13,12 @@ import {
   type SourceTableData,
   sourceColumns,
 } from "@/components/Sources/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 import { usePlugin } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/plugin/$pluginId")({
   component: PluginDetailPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   head: () => ({
     meta: [{ title: "Plugin Sources - Stream Channeler" }],
   }),

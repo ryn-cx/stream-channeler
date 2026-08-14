@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Layers } from "lucide-react"
 
 import { SeasonsService } from "@/client"
@@ -13,16 +13,12 @@ import {
   type SeasonTableData,
   seasonColumns,
 } from "@/components/Seasons/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 import { usePlugin, useShow, useSource } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/show/$showKey")({
   component: ShowDetailPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   head: () => ({
     meta: [{ title: "Show Seasons - Stream Channeler" }],
   }),

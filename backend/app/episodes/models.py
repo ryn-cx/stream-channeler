@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
-from sqlalchemy import text
+from sqlalchemy import Column, Computed, Text, text
 from sqlalchemy.orm import contains_eager, relationship
 from sqlmodel import (
     Field,
@@ -132,6 +132,14 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             "key",
             postgresql_where=text("canonical_episode_id IS NULL"),
         ),
+        # What every read of a `Watch` joins on. Not unique: the rows one watch
+        # counts for are all the rows carrying its identifier, which is the
+        # whole of how one watch marks every listing of the same media.
+        Index(
+            "Episode-canonical-watch_identifier-index",
+            "watch_identifier",
+            postgresql_where=text("canonical_episode_id IS NULL"),
+        ),
         *sortable_field_indexes(
             "Episode",
             CANONICAL_SORTABLE_FIELDS,
@@ -163,6 +171,27 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         if self.canonical_episode is None:
             return None
         return tmdb_id_of(self.canonical_episode.key, EPISODE_LEVEL)
+
+    # The plugin whose listing this row is, carried here rather than reached
+    # through `season -> show -> source -> plugin`. A row never moves between
+    # plugins, so the copy cannot go stale, and `watch_identifier` is generated
+    # from it, which a database can only do from columns of the same row.
+    plugin_key: str = Field(min_length=1)
+
+    # What a `Watch` is of. A plugin's own key names the media rather than one
+    # listing of it - a YouTube video is the same video under every playlist
+    # carrying it - so the key paired with whoever issued it is what says two
+    # rows are the same media. Generated rather than written, so the pair and
+    # the identifier can never disagree.
+    watch_identifier: str = Field(
+        default=None,
+        sa_column=Column(
+            "watch_identifier",
+            Text,
+            Computed("plugin_key || ' ' || \"key\"", persisted=True),
+            nullable=False,
+        ),
+    )
 
     season_id: uuid.UUID = Field(foreign_key="season.id", ondelete="CASCADE")
     season: Season = Relationship(back_populates="episodes")
@@ -247,8 +276,18 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         `canonical_episode_locked` says who settled the link, and is
         always protected so that a later import never unsettles it. While it is
         set, the link an import works out never replaces the settled one.
+
+        `plugin_key` is set here rather than by each plugin that builds an
+        `Episode`, since the season being upserted onto is what says which
+        plugin the row belongs to and every import arrives through this.
+        `watch_identifier` is the database's to write, so it is protected from
+        ever being carried over from the record being upserted.
         """
-        protected_keys = set(protected_keys or ()) | {"canonical_episode_locked"}
+        self.plugin_key = parent.show.source.plugin.key
+        protected_keys = set(protected_keys or ()) | {
+            "canonical_episode_locked",
+            "watch_identifier",
+        }
         if existing_record and existing_record.canonical_episode_locked:
             protected_keys.add("canonical_episode_id")
         return super().upsert(parent, existing_record, protected_keys)

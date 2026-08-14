@@ -131,7 +131,14 @@ def canonical_episode_by_key(
     session: Session,
     key: str,
     canonical_season_id: uuid.UUID,
+    plugin_key: str,
 ) -> Episode:
+    """Return the row standing for this episode, minting one where there is none.
+
+    `plugin_key` is who issued `key`, and is asked for rather than reached
+    through the season because it is what a `Watch` is matched on. A row minted
+    without it would be a row no watch could ever name.
+    """
     cache_key = (str(canonical_season_id), key)
     if remembered := _remembered(session, Episode, cache_key):
         return remembered
@@ -148,7 +155,11 @@ def canonical_episode_by_key(
             _remember(session, existing, cache_key)
             return existing
 
-    canonical = Episode(key=key, season_id=canonical_season_id)
+    canonical = Episode(
+        key=key,
+        season_id=canonical_season_id,
+        plugin_key=plugin_key,
+    )
     session.add(canonical)
     _remember(session, canonical, cache_key)
     return canonical

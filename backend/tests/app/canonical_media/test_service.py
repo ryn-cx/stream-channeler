@@ -46,7 +46,7 @@ def _canonical_episode(session: Session, key: str) -> Episode:
     season = Season(key=key, show=_canonical_show(session, key))
     session.add(season)
     session.flush()
-    episode = Episode(key=key, season=season)
+    episode = Episode(key=key, season=season, plugin_key="TestPlugin")
     session.add(episode)
     session.flush()
     return episode

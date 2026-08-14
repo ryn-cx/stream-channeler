@@ -148,9 +148,14 @@ def _prefer[RowT](
 
 # TODO: Validate
 def _label(row: Any, canonical: Any) -> None:  # noqa: ANN401 - Any output row.
-    """Hand the row the key saying what it is, where it has somewhere to put it."""
+    """Hand the row what says what it is, where it has somewhere to put it.
+
+    The identifier rather than the key, since a key is a website's own id and two
+    websites can issue the same one. Collapsing on the key alone would take two
+    rows that merely read alike for one episode listed twice.
+    """
     if hasattr(row, CANONICAL_KEY_FIELD):
-        setattr(row, CANONICAL_KEY_FIELD, canonical.key)
+        setattr(row, CANONICAL_KEY_FIELD, canonical.watch_identifier)
 
 
 # TODO: Validate

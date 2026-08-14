@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Clapperboard } from "lucide-react"
 
 import { CanonicalShowsService, ShowsService } from "@/client"
@@ -13,15 +13,11 @@ import {
   canonicalShowColumns,
 } from "@/components/Shows/canonicalColumns"
 import { type ShowTableData, showColumns } from "@/components/Shows/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/shows")({
   component: ShowsPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   validateSearch: validateMediaSearch,
   head: () => ({
     meta: [{ title: "Shows - Stream Channeler" }],

@@ -1,5 +1,5 @@
 // TODO: Validate
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { FileText } from "lucide-react"
 
 import { FilesService } from "@/client"
@@ -11,16 +11,12 @@ import {
 import { DetailBreadcrumb } from "@/components/Common/DetailBreadcrumb"
 import AddFile from "@/components/Files/Add"
 import { type FileTableData, fileColumns } from "@/components/Files/columns"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { requireSuperuser } from "@/hooks/useAuth"
 import { usePlugin } from "@/hooks/useEntities"
 
 export const Route = createFileRoute("/_layout/plugin/$pluginId_/files")({
   component: PluginFilesPage,
-  beforeLoad: async () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/" })
-    }
-  },
+  beforeLoad: requireSuperuser,
   head: () => ({
     meta: [{ title: "Plugin Files - Stream Channeler" }],
   }),

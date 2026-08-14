@@ -879,11 +879,6 @@ export type MediaOwner = 'official' | 'others';
 export type MediaScope = 'owned' | 'public' | 'all' | 'official' | 'others';
 
 /**
- * One of the two halves of the TMDB catalogue.
- */
-export type MediaType = 'movie' | 'tv';
-
-/**
  * Generic message.
  */
 export type Message = {
@@ -940,6 +935,32 @@ export type PluginListOutput = {
 };
 
 /**
+ * Everything a plugin knows about a single title it can be searched for.
+ *
+ * Modelled on what TMDB returns, since it is the richest source, and left
+ * optional throughout so a service that only knows a title and a description
+ * fills in what it has.
+ */
+export type PluginMediaInfo = {
+    title?: (string | null);
+    media_type?: (string | null);
+    tagline?: (string | null);
+    overview?: (string | null);
+    poster_url?: (string | null);
+    backdrop_url?: (string | null);
+    year?: (number | null);
+    end_year?: (number | null);
+    status?: (string | null);
+    rating?: (number | null);
+    vote_count?: (number | null);
+    number_of_seasons?: (number | null);
+    number_of_episodes?: (number | null);
+    runtime?: (number | null);
+    genres?: Array<(string)>;
+    providers?: Array<PluginWatchProviderItem>;
+};
+
+/**
  * Schema for returning a `Plugin`.
  */
 export type PluginOutput = {
@@ -965,9 +986,10 @@ export type PluginSearchInformation = {
 /**
  * Search result from a plugin.
  *
- * Every plugin searches a single source (its own platform), so a result maps
- * directly to an importable URL. TMDB is the only multi-source search and has
- * its own dedicated endpoints instead of implementing this.
+ * Every plugin searches its own catalogue, so a result maps directly to an
+ * importable URL and carries the identifier that plugin files the title
+ * under. Details for the result are read back from the same plugin under that
+ * identifier rather than being matched onto some other service's copy.
  */
 export type PluginSearchResult = {
     title: string;
@@ -975,6 +997,7 @@ export type PluginSearchResult = {
     year?: (number | null);
     image_url?: (string | null);
     media_type?: (string | null);
+    media_identifier?: (string | null);
 };
 
 /**
@@ -1017,6 +1040,16 @@ export type PluginUpdate = {
 export type PluginURLMatch = {
     matched: boolean;
     plugin_key?: (string | null);
+};
+
+/**
+ * A place to watch a title, marked with the plugin that supports it.
+ */
+export type PluginWatchProviderItem = {
+    name: string;
+    icon_url?: (string | null);
+    plugin_key?: (string | null);
+    search_url?: (string | null);
 };
 
 export type PrivateUserCreate = {
@@ -1402,45 +1435,6 @@ export type TmdbEpisodeChoice = {
     already_used?: boolean;
 };
 
-/**
- * The TMDB title that best matches a plugin's search result.
- */
-export type TMDBMatch = {
-    tmdb_id: number;
-    media_type: MediaType;
-};
-
-/**
- * Rich detail for a single movie or TV show plus its US watch providers.
- */
-export type TMDBMediaInfo = {
-    title?: (string | null);
-    tagline?: (string | null);
-    overview?: (string | null);
-    poster_url?: (string | null);
-    backdrop_url?: (string | null);
-    year?: (number | null);
-    end_year?: (number | null);
-    status?: (string | null);
-    rating?: (number | null);
-    vote_count?: (number | null);
-    number_of_seasons?: (number | null);
-    number_of_episodes?: (number | null);
-    runtime?: (number | null);
-    genres?: Array<(string)>;
-    providers?: Array<TMDBWatchProviderItem>;
-};
-
-/**
- * A place to watch a title, marked with the plugin that supports it.
- */
-export type TMDBWatchProviderItem = {
-    name: string;
-    icon_url?: (string | null);
-    plugin_key?: (string | null);
-    search_url?: (string | null);
-};
-
 export type Token = {
     access_token: string;
     token_type?: string;
@@ -1596,13 +1590,17 @@ export type WatchesListOutput = {
 /**
  * Schema for a single exported `Watch`.
  *
- * Holds only what re-importing needs: which episode the watch is of, and when
- * it happened. Everything else is read back out of the database the file is
- * imported into.
+ * Holds only what re-importing needs: which episode the watch is of, when it
+ * happened, and whether it was verified. Everything else is read back out of
+ * the database the file is imported into.
+ *
+ * `verified` is None in a file exported before it was carried, which leaves
+ * the import's own setting to say what those watches are.
  */
 export type WatchExportEntry = {
     canonical_episode_key: string;
     watch_date: string;
+    verified?: (boolean | null);
 };
 
 export type WatchImportResult = {
@@ -2502,20 +2500,12 @@ export type PluginsSearchPluginData = {
 
 export type PluginsSearchPluginResponse = (PluginSearchResults);
 
-export type PluginsTmdbMatchData = {
-    mediaType: MediaType;
-    title: string;
-    year?: (number | null);
+export type PluginsMediaInfoData = {
+    mediaIdentifier: string;
+    pluginKey: string;
 };
 
-export type PluginsTmdbMatchResponse = ((TMDBMatch | null));
-
-export type PluginsTmdbMediaInfoData = {
-    mediaType: MediaType;
-    tmdbId: number;
-};
-
-export type PluginsTmdbMediaInfoResponse = ((TMDBMediaInfo | null));
+export type PluginsMediaInfoResponse = ((PluginMediaInfo | null));
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

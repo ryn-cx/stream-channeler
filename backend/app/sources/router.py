@@ -3,11 +3,12 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    get_current_active_superuser,
 )
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
@@ -30,8 +31,16 @@ from app.sources.schemas import (
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 
-plugin_sources_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["sources"])
-sources_router = APIRouter(prefix="/sources", tags=["sources"])
+plugin_sources_router = APIRouter(
+    prefix="/plugins/{plugin_id}",
+    tags=["sources"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+sources_router = APIRouter(
+    prefix="/sources",
+    tags=["sources"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 
 SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
     "username": User.username,

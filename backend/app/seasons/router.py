@@ -3,11 +3,12 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    get_current_active_superuser,
 )
 from app.issue_reports.service import list_season_issue_reports
 from app.media.canonical_metadata import (
@@ -42,9 +43,21 @@ from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 
-plugin_seasons_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["seasons"])
-source_seasons_router = APIRouter(prefix="/sources/{source_id}", tags=["seasons"])
-show_seasons_router = APIRouter(prefix="/shows/{show_id}", tags=["seasons"])
+plugin_seasons_router = APIRouter(
+    prefix="/plugins/{plugin_id}",
+    tags=["seasons"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+source_seasons_router = APIRouter(
+    prefix="/sources/{source_id}",
+    tags=["seasons"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+show_seasons_router = APIRouter(
+    prefix="/shows/{show_id}",
+    tags=["seasons"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 seasons_router = APIRouter(prefix="/seasons", tags=["seasons"])
 
 SEASON_EXTRA_COLUMNS: dict[str, Any] = {
@@ -69,7 +82,7 @@ def create_season(
 
 
 # TODO: Validate
-@seasons_router.get("")
+@seasons_router.get("", dependencies=[Depends(get_current_active_superuser)])
 def get_seasons(
     session: SessionDep,
     current_user: CurrentUser,
@@ -210,14 +223,20 @@ def get_season_information(
 
 
 # TODO: Validate
-@seasons_router.get("/{season_id}")  # noqa: FAST003 - Used by ReadableSeason.
+@seasons_router.get(  # noqa: FAST003 - Used by ReadableSeason.
+    "/{season_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def get_season(season: ReadableSeason) -> SeasonOutput:
     """Get a `Season` if it's readable by the `User`."""
     return SeasonOutput.model_validate(season)
 
 
 # TODO: Validate
-@seasons_router.patch("/{season_id}")  # noqa: FAST003 - Used by EditableSeason.
+@seasons_router.patch(  # noqa: FAST003 - Used by EditableSeason.
+    "/{season_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def update_season(
     session: SessionDep,
     season: EditableSeason,
@@ -228,7 +247,10 @@ def update_season(
 
 
 # TODO: Validate
-@seasons_router.delete("/{season_id}")  # noqa: FAST003 - Used by EditableSeason.
+@seasons_router.delete(  # noqa: FAST003 - Used by EditableSeason.
+    "/{season_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def delete_season(session: SessionDep, season: EditableSeason) -> Message:
     """Delete a `Season` if it's editable by the `User`."""
     return delete_record(session, season)

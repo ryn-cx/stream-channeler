@@ -2,11 +2,12 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    get_current_active_superuser,
 )
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
@@ -40,7 +41,11 @@ PLUGIN_EXTRA_COLUMNS: dict[str, Any] = {"username": User.username}
 # A `Plugin`'s parent is the `User` that owns it rather than another media record, so
 # the create route resolves the requester instead of a record they can edit.
 # TODO: Validate
-@plugins_router.post("", response_model=PluginOutput)
+@plugins_router.post(
+    "",
+    response_model=PluginOutput,
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def create_plugin(
     session: SessionDep,
     current_user: CurrentUser,
@@ -51,7 +56,7 @@ def create_plugin(
 
 
 # TODO: Validate
-@plugins_router.get("")
+@plugins_router.get("", dependencies=[Depends(get_current_active_superuser)])
 def get_plugins(
     session: SessionDep,
     current_user: CurrentUser,
@@ -70,7 +75,11 @@ def get_plugins(
 
 
 # TODO: Validate
-@plugins_router.patch("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by EditablePlugin.
+@plugins_router.patch(  # noqa: FAST003 - Used by EditablePlugin.
+    "/{plugin_id}",
+    response_model=PluginOutput,
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def update_plugin(
     session: SessionDep,
     plugin: EditablePlugin,
@@ -81,7 +90,10 @@ def update_plugin(
 
 
 # TODO: Validate
-@plugins_router.delete("/{plugin_id}")  # noqa: FAST003 - Used by EditablePlugin.
+@plugins_router.delete(  # noqa: FAST003 - Used by EditablePlugin.
+    "/{plugin_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def delete_plugin(session: SessionDep, plugin: EditablePlugin) -> Message:
     """Delete a `Plugin` if it's editable by the `User`."""
     return delete_record(session, plugin)
@@ -233,7 +245,11 @@ def media_info(
 
 # Registered after the literal paths above so that they are matched first.
 # TODO: Validate
-@plugins_router.get("/{plugin_id}", response_model=PluginOutput)  # noqa: FAST003 - Used by ReadablePlugin.
+@plugins_router.get(  # noqa: FAST003 - Used by ReadablePlugin.
+    "/{plugin_id}",
+    response_model=PluginOutput,
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def get_plugin(plugin: ReadablePlugin) -> Plugin:
     """Get a `Plugin` if it's readable by the `User`."""
     return plugin

@@ -1,15 +1,17 @@
 # TODO: Validate
 """What a `User` has watched, as the episode query reads it.
 
-A `Watch` is recorded against one website's copy of an episode but is of the
-episode itself, so everything here reads the `canonical_episode_key` the watch
-carries. That makes a watch count for every copy of what was watched, and go on
-counting once the copy it was made against has been deleted.
+A `Watch` is recorded against one website's link to an episode but is of the
+episode itself, so everything here reads the `watch_identifier` the watch
+carries. That makes a watch count for every link to what was watched, and go on
+counting once the link it was made against has been deleted.
 
-The key is what names the episode, so the canonical rows a watch counts for are
-the rows carrying that key. Where the same media is reached two ways and so has
-a row under each, one watch counts for both, which is what carrying the same key
-means.
+The identifier is who issued a key paired with the key itself, so the canonical
+rows a watch counts for are the rows carrying that identifier. Where the same
+media is reached two ways and so has a row under each, one watch counts for
+both, which is what carrying the same identifier means. Pairing the key with its
+issuer is also what keeps two plugins that happen to issue the same key from
+counting for one another.
 """
 
 from collections.abc import Sequence
@@ -52,13 +54,13 @@ LAST_WATCHED_COLUMNS = {
 
 # TODO: Validate
 def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
-    """The canonical episodes carrying a key the `User` has watched."""
+    """The canonical episodes carrying an identifier the `User` has watched."""
     watched_episode = aliased(Episode)
     return (
         select(col(watched_episode.id))
         .join(
             Watch,
-            col(Watch.canonical_episode_key) == col(watched_episode.key),
+            col(Watch.watch_identifier) == col(watched_episode.watch_identifier),
         )
         .where(is_canonical(watched_episode), Watch.user_id == user.id)
     )
@@ -147,7 +149,10 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
         # A title has no links and stands for itself; a listing has one row per
         # title it is a copy of and stands for each.
         .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
-        .join(Watch, col(Watch.canonical_episode_key) == col(watched_episode.key))
+        .join(
+            Watch,
+            col(Watch.watch_identifier) == col(watched_episode.watch_identifier),
+        )
         .where(
             is_canonical(watched_episode),
             Watch.user_id == user.id,
@@ -180,7 +185,7 @@ def join_last_watched(
         .select_from(Watch)
         .join(
             watched_episode,
-            col(watched_episode.key) == col(Watch.canonical_episode_key),
+            col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
         .where(is_canonical(watched_episode), col(Watch.user_id) == user.id)
         .group_by(col(watched_episode.id))
@@ -209,7 +214,7 @@ def latest_watch_by_identifier(
         select(col(watched_episode.id), Watch)  # type: ignore[call-overload]
         .join(
             watched_episode,
-            col(watched_episode.key) == col(Watch.canonical_episode_key),
+            col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
         .where(
             is_canonical(watched_episode),

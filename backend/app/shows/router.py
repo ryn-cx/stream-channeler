@@ -3,13 +3,14 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import select
 
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
     SuperUser,
+    get_current_active_superuser,
 )
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
@@ -46,8 +47,16 @@ from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 
-plugin_shows_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["shows"])
-source_shows_router = APIRouter(prefix="/sources/{source_id}", tags=["shows"])
+plugin_shows_router = APIRouter(
+    prefix="/plugins/{plugin_id}",
+    tags=["shows"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+source_shows_router = APIRouter(
+    prefix="/sources/{source_id}",
+    tags=["shows"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 shows_router = APIRouter(prefix="/shows", tags=["shows"])
 canonical_shows_router = APIRouter(
     prefix="/shows/canonical",
@@ -80,7 +89,7 @@ def create_show(
 
 
 # TODO: Validate
-@shows_router.get("")
+@shows_router.get("", dependencies=[Depends(get_current_active_superuser)])
 def get_shows(
     session: SessionDep,
     current_user: CurrentUser,
@@ -194,14 +203,20 @@ def get_show_information(
 
 
 # TODO: Validate
-@shows_router.get("/{show_id}")  # noqa: FAST003 - Used by ReadableShow.
+@shows_router.get(  # noqa: FAST003 - Used by ReadableShow.
+    "/{show_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def get_show(show: ReadableShow) -> ShowPublic:
     """Get a `Show` if it's readable by the `User`."""
     return _show_output(show)
 
 
 # TODO: Validate
-@shows_router.patch("/{show_id}")  # noqa: FAST003 - Used by EditableShow.
+@shows_router.patch(  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def update_show(
     session: SessionDep,
     show: EditableShow,
@@ -217,7 +232,10 @@ def update_show(
 
 
 # TODO: Validate
-@shows_router.delete("/{show_id}")  # noqa: FAST003 - Used by EditableShow.
+@shows_router.delete(  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def delete_show(session: SessionDep, show: EditableShow) -> Message:
     """Delete a `Show` if it's editable by the `User`."""
     return delete_record(session, show)

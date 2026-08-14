@@ -304,7 +304,7 @@ class SortExpressionBuilder:
             select(Watch.id)
             .join(
                 watched_episode,
-                col(watched_episode.key) == col(Watch.canonical_episode_key),
+                col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
             )
             .join(
                 watched_season,

@@ -120,7 +120,12 @@ class UpsertMixin(HelperMixin, register=False):
     # TODO: Validate
     def _stored_episode(self, season: Season, episode_key: str) -> Episode:
         """Return the row standing for this episode, whatever wrote it."""
-        return canonical_episode_by_key(self.session, episode_key, season.id)
+        return canonical_episode_by_key(
+            self.session,
+            episode_key,
+            season.id,
+            self.plugin.key,
+        )
 
     # TODO: Validate
     def _upsert_series_show(

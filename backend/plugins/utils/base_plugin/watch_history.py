@@ -12,11 +12,17 @@ from plugins.utils.base_plugin.watch import WatchMixin
 # TODO: Validate
 @dataclass
 class ParsedWatchEntry:
-    """A single parsed entry from a plugin's watch history export."""
+    """A single parsed entry from a plugin's watch history export.
+
+    `verified` is what the file itself says the watch is, and is None for a
+    format that does not record it, which leaves the import's own setting to
+    say what the watch is.
+    """
 
     episode_key: str
     watch_date: datetime
     import_result: WatchImportResult
+    verified: bool | None = None
 
 
 # TODO: Validate
@@ -47,7 +53,7 @@ class WatchHistoryMixin(WatchMixin):
 
         episode_keys = [entry.episode_key for entry in parsed_entries]
         episodes_on_database = self._get_episodes_by_key(episode_keys)
-        watched_canonical_dates = self._get_watched_canonical_dates(
+        watched_dates_by_identifier = self._get_watched_dates_by_identifier(
             user,
             episodes_on_database,
         )
@@ -63,14 +69,14 @@ class WatchHistoryMixin(WatchMixin):
                 continue
 
             # A watch is of the episode itself, which every source carrying it
-            # has a copy of, so a single watch is recorded for all of them. A
-            # copy that is not of anything yet is skipped rather than counted as
-            # a watch of nothing.
-            canonical_key = episode.canonical_episode.key
-            if canonical_key is None:
-                skipped_watches.append(entry.import_result)
-                continue
-            watched_dates = watched_canonical_dates.setdefault(canonical_key, [])
+            # links to, so a single watch is recorded for all of them. A row that
+            # links to nothing is the episode itself, so its own identifier is
+            # what the watch is of.
+            watched = episode.canonical_episode or episode
+            watched_dates = watched_dates_by_identifier.setdefault(
+                watched.watch_identifier,
+                [],
+            )
             if (new_only and watched_dates) or entry.watch_date in watched_dates:
                 existing_watches.append(entry.import_result)
                 continue
@@ -79,9 +85,9 @@ class WatchHistoryMixin(WatchMixin):
                 Watch(
                     user_id=user.id,
                     episode_id=episode.id,
-                    canonical_episode_key=canonical_key,
+                    watch_identifier=watched.watch_identifier,
                     watch_date=entry.watch_date,
-                    verified=verified,
+                    verified=verified if entry.verified is None else entry.verified,
                 ),
             )
             watched_dates.append(entry.watch_date)

@@ -2,19 +2,16 @@
 import { Link, useRouterState } from "@tanstack/react-router"
 
 import { validateMediaSearch } from "@/components/Common/DataTable"
-import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
-const baseItems = [
+const items = [
   { title: "Plugins", path: "/plugins" },
   { title: "Sources", path: "/sources" },
   { title: "Shows", path: "/shows" },
   { title: "Seasons", path: "/seasons" },
   { title: "Episodes", path: "/episodes" },
+  { title: "Files", path: "/files" },
 ] as const
-
-// Files are superuser-only, so this item is only shown to admins.
-const adminItem = { title: "Files", path: "/files" } as const
 
 // Secondary navigation shown on every custom-media page so the user can jump
 // between the different media types they own.
@@ -22,8 +19,6 @@ const adminItem = { title: "Files", path: "/files" } as const
 export function MediaSubNav() {
   const router = useRouterState()
   const currentPath = router.location.pathname
-  const { user } = useAuth()
-  const items = user?.is_superuser ? [...baseItems, adminItem] : baseItems
 
   const currentSearch = validateMediaSearch(
     router.location.search as Record<string, unknown>,

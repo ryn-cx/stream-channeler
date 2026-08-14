@@ -209,22 +209,18 @@ class FileMixin(BasePlugin, register=False):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
 
-    # TODO: Validate
     def search_file(self, query: str) -> Search:
         """Returns data for search results."""
         return self._file(Search, query)
 
-    # TODO: Validate
     def artist_file(self, artist_id: str) -> Artist:
         """Returns data for an artist."""
         return self._file(Artist, artist_id)
 
-    # TODO: Validate
     def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
         """Returns data for an artist's music videos."""
         return self._file(ArtistMusicVideos, artist_id)
 
-    # TODO: Validate
     def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
         """Returns data for an artist's concerts."""
         return self._file(ArtistConcerts, artist_id)

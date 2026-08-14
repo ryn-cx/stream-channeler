@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { redirect, useNavigate } from "@tanstack/react-router"
 
 import {
   type Body_login_login_access_token as AccessToken,
@@ -15,6 +15,17 @@ import useCustomToast from "./useCustomToast"
 // TODO: Validate
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
+}
+
+// TODO: Validate
+const requireSuperuser = async () => {
+  if (!isLoggedIn()) {
+    throw redirect({ to: "/" })
+  }
+  const user = await UsersService.readUserMe()
+  if (!user.is_superuser) {
+    throw redirect({ to: "/" })
+  }
 }
 
 // TODO: Validate
@@ -74,5 +85,5 @@ const useAuth = () => {
   }
 }
 
-export { isLoggedIn }
+export { isLoggedIn, requireSuperuser }
 export default useAuth

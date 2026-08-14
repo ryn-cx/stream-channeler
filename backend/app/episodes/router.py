@@ -69,10 +69,26 @@ from app.sources.models import Source
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 
-plugin_episodes_router = APIRouter(prefix="/plugins/{plugin_id}", tags=["episodes"])
-source_episodes_router = APIRouter(prefix="/sources/{source_id}", tags=["episodes"])
-show_episodes_router = APIRouter(prefix="/shows/{show_id}", tags=["episodes"])
-season_episodes_router = APIRouter(prefix="/seasons/{season_id}", tags=["episodes"])
+plugin_episodes_router = APIRouter(
+    prefix="/plugins/{plugin_id}",
+    tags=["episodes"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+source_episodes_router = APIRouter(
+    prefix="/sources/{source_id}",
+    tags=["episodes"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+show_episodes_router = APIRouter(
+    prefix="/shows/{show_id}",
+    tags=["episodes"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+season_episodes_router = APIRouter(
+    prefix="/seasons/{season_id}",
+    tags=["episodes"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
 episodes_router = APIRouter(prefix="/episodes", tags=["episodes"])
 canonical_show_episodes_router = APIRouter(
     prefix="/shows/canonical/{canonical_show_id}",
@@ -125,7 +141,7 @@ def create_episode(
 
 
 # TODO: Validate
-@episodes_router.get("")
+@episodes_router.get("", dependencies=[Depends(get_current_active_superuser)])
 def get_episodes(
     session: SessionDep,
     current_user: CurrentUser,
@@ -417,7 +433,10 @@ def get_episode_information(
 
 
 # TODO: Validate
-@episodes_router.patch("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.
+@episodes_router.patch(  # noqa: FAST003 - Used by EditableEpisode.
+    "/{episode_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def update_episode(
     session: SessionDep,
     episode: EditableEpisode,
@@ -432,7 +451,10 @@ def update_episode(
 
 
 # TODO: Validate
-@episodes_router.delete("/{episode_id}")  # noqa: FAST003 - Used by EditableEpisode.
+@episodes_router.delete(  # noqa: FAST003 - Used by EditableEpisode.
+    "/{episode_id}",
+    dependencies=[Depends(get_current_active_superuser)],
+)
 def delete_episode(session: SessionDep, episode: EditableEpisode) -> Message:
     """Delete an `Episode` if it's editable by the `User`."""
     return delete_record(session, episode)
