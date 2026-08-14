@@ -74,10 +74,14 @@ def _channel_season_exists(
         col(copy_episode.season_id),
     )
     conditions = [condition(copy_show)] if condition else []
+    statement = select(ChannelShow.id).select_from(copy_episode)
+    if season is not outer:
+        statement = statement.join(
+            season,
+            col(copy_episode.season_id) == col(season.id),
+        )
     return (
-        select(ChannelShow.id)
-        .select_from(copy_episode)
-        .outerjoin(
+        statement.outerjoin(
             canonical_episode,
             col(copy_episode.canonical_episode_id) == col(canonical_episode.id),
         )
