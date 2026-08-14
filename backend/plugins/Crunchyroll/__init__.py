@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import link_canonical_show
-from app.episodes.service import EpisodeLinker
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.helpers import HelperMixin
@@ -109,6 +107,7 @@ class Crunchyroll(
         show_key = handler.show_key
         self.source = self._source_from_show_key(show_key)
         if not force and (show := self._preload_show(show_key).one_or_none()):
+            self._link_supplied_canonical_show(show, canonical_show)
             return handler.import_results(show)
 
         # The files come down first because the search is made on the name and
@@ -118,13 +117,11 @@ class Crunchyroll(
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
         show = self.upsert_show(self.source, show_key, canonical_show, force=force)
-        if canonical_show is not None:
-            # Linked after the upsert rather than before it, so that the reconcile
-            # the upsert ends on has nothing to take back off again. A listing the
-            # TMDB lookup handed back to this plugin partway through arrives here
-            # already linked to the same title, and the link is not written twice.
-            link_canonical_show(self.session, show, canonical_show)
-            EpisodeLinker(self.session, show).link()
+        # Linked after the upsert rather than before it, so that the reconcile the
+        # upsert ends on has nothing to take back off again, and run whether or not
+        # a title was named here: the episodes the upsert has just written include
+        # ones the title it is already a copy of has never been read against.
+        self._link_supplied_canonical_show(show, canonical_show)
         return handler.import_results(show)
 
     # TODO: Validate

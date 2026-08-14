@@ -96,31 +96,51 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         The keys are of the episodes themselves rather than of one plugin's
         copies of them, so the lookup runs across every plugin instead of being
         held to this one's sources, which have no episodes of their own.
+
+        An episode nothing else holds a record of is the record, and is watched
+        where it stands, so it answers for its own key. A copy is preferred where
+        both are stored, since the episode a copy is of may be a row TMDB wrote
+        and nothing is watched there.
         """
         if not episode_keys:
             return {}
         # The episode a copy is of is the same table reached again, so which of
         # the two each side means is said outright rather than left to the join.
         canonical_episode = aliased(Episode)
-        statement = (
-            select(Episode)
-            .select_from(Episode)
-            .join(
-                canonical_episode,
-                col(Episode.canonical_episode_id) == col(canonical_episode.id),
-            )
-            .where(
-                is_non_canonical(Episode),
-                is_canonical(canonical_episode),
-                col(canonical_episode.key).in_(episode_keys),
-                col(Episode.deleted_at).is_(None),
-            )
-        )
-        return {
+        copies = {
             episode.canonical_episode.key: episode
-            for episode in self.session.exec(statement)
+            for episode in self.session.exec(
+                select(Episode)
+                .select_from(Episode)
+                .join(
+                    canonical_episode,
+                    col(Episode.canonical_episode_id) == col(canonical_episode.id),
+                )
+                .where(
+                    is_non_canonical(Episode),
+                    is_canonical(canonical_episode),
+                    col(canonical_episode.key).in_(episode_keys),
+                    col(Episode.deleted_at).is_(None),
+                ),
+            )
             if episode.canonical_episode is not None
         }
+        own = {
+            episode.key: episode
+            for episode in self.session.exec(
+                select(Episode)
+                .select_from(Episode)
+                .join(Season, col(Episode.season_id) == col(Season.id))
+                .join(Show, col(Season.show_id) == col(Show.id))
+                .where(
+                    is_canonical(Episode),
+                    is_canonical(Show),
+                    col(Episode.key).in_(episode_keys),
+                    col(Episode.deleted_at).is_(None),
+                ),
+            )
+        }
+        return own | copies
 
     # TODO: Validate
     def _import_results_by_key(

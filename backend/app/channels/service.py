@@ -184,6 +184,24 @@ def shows_by_canonical_id(
     for canonical_show_id, show in linked:
         add(canonical_show_id, show)
 
+    # A title nothing else holds a record of is the row that is the record, and
+    # that row is where it is watched, so it stands for itself and no link points
+    # at it. TMDB's own rows are gathered by `tmdb_shows_by_canonical_id`, since
+    # TMDB is not somewhere anything is watched.
+    standalone = session.exec(
+        select(Show)
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(
+            col(Show.id).in_(canonical_show_ids),
+            is_canonical(Show),
+            col(Show.deleted_at).is_(None),
+            Plugin.key != TMDB_PLUGIN_KEY,
+        ),
+    ).all()
+    for show in standalone:
+        add(show.id, show)
+
     return grouped
 
 

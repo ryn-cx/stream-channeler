@@ -43,16 +43,11 @@ class UpsertMixin(HelperMixin, register=False):
         linker = TMDBLinker(self.session)
         if is_video_key(show_key):
             show = self._upsert_movie_show(show_key, force=force)
-            linker.link(show, MediaType.movie, canonical_show)
         elif is_show_key(show_key):
             show = self._upsert_series_show(show_key, force=force)
-            linker.link(show, MediaType.tv, canonical_show)
         else:
             show = self._upsert_channel_show(source, show_key, force=force)
-            # A channel is a creator's uploads rather than licensed content, so
-            # there is nothing to look for and nothing to be a copy of but
-            # itself.
-            linker.sync_canonical_info(show)
+
 
         return show
 

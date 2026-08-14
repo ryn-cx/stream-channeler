@@ -19,7 +19,6 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_non_canonical
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
@@ -251,9 +250,11 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        # Every row has a source, canonical or not, so the join says nothing
-        # about which kind this returns and the filter is the whole of what does.
-        return select(cls).where(is_non_canonical(cls)).join(Source).join(Plugin)
+        # Every row has a source and is listed under it, whether it is the record
+        # of the media or a copy of one. A row is not hidden for being the record:
+        # that is what a title nothing else catalogued looks like, and it is where
+        # the media is watched.
+        return select(cls).join(Source).join(Plugin)
 
     # TODO: Validate
     @classmethod
@@ -295,9 +296,10 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         indexed is still a row that exists, and writing it again is a second row
         under a key that allows one.
 
-        A canonical show is under a source of its own the way a non-canonical row
-        is, so the pair no longer tells the two apart and the kind wanted is
-        asked for outright.
+        A source holds one row under a key whether that row is the record of the
+        media or a copy of one, so the pair names it either way and the flag is no
+        part of finding it. Asking only for copies would miss a row that is the
+        record, and writing it again is a second row under a key that allows one.
         """
         show = show_session_index(session).get((parent.id, key))
         if show is not None and show in session:
@@ -305,7 +307,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
 
         stored = session.exec(
             select(cls).where(
-                is_non_canonical(cls),
                 cls.source_id == parent.id,
                 cls.key == key,
             ),
@@ -381,7 +382,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
 def show_session_index(
     session: SQLAlchemySession,
 ) -> dict[tuple[uuid.UUID, str], Show]:
-    """Return the session's index of the non-canonical shows it is holding."""
+    """Return the session's index of the shows it is holding, by source and key."""
     index: dict[tuple[uuid.UUID, str], Show] = session.info.setdefault(
         SHOW_SESSION_INDEX,
         {},
@@ -393,12 +394,10 @@ def show_session_index(
 def index_show(session: SQLAlchemySession, show: Show) -> None:
     """Record `show` under the source and key naming it.
 
-    A canonical show is not indexed: it has a source of its own now, so the pair
-    would name one, but this is what `get_from_memory` reads and that answers for
-    non-canonical rows alone.
+    Every row is indexed, whether it is the record of the media or a copy of one:
+    a source holds one row under a key either way, and that pair is what
+    `get_from_memory` reads.
     """
-    if show.is_canonical:
-        return
     show_session_index(session)[(show.source_id, show.key)] = show
 
 

@@ -206,7 +206,7 @@ class _CanonicalIds:
     seasons: dict[str, UUID]
     episodes: dict[str, UUID]
     title_by_season: dict[UUID, set[UUID]]
-    title_by_episode: dict[UUID, UUID]
+    title_by_episode: dict[UUID, set[UUID]]
 
     # TODO: Validate
     def seasons_under(
@@ -233,7 +233,7 @@ class _CanonicalIds:
             canonical_id
             for key in episode_keys
             if (canonical_id := self.episodes.get(key)) is not None
-            and self.title_by_episode.get(canonical_id) == canonical_show_id
+            and canonical_show_id in self.title_by_episode.get(canonical_id, set())
         }
 
 
@@ -305,22 +305,40 @@ def _titles_by_season(
 def _titles_by_episode(
     session: Session,
     canonical_episode_ids: set[UUID],
-) -> dict[UUID, UUID]:
-    """Map each canonical episode to the title holding it."""
+) -> dict[UUID, set[UUID]]:
+    """Map each canonical episode to the titles holding it.
+
+    An episode of a title is held by that title alone. An episode a website filed
+    under its own listing is held by every title the listing is a copy of, since
+    a listing that mixes titles is as much each of them as any other.
+    """
     if not canonical_episode_ids:
         return {}
-    rows = session.exec(
+    titles: dict[UUID, set[UUID]] = defaultdict(set)
+    own_rows = session.exec(
         select(  # type: ignore[call-overload]
             Episode.id,
-            Season.show_id,
+            Show.id,
         )
-        .join(
-            Season,
-            col(Episode.season_id) == col(Season.id),
+        .join(Season, col(Episode.season_id) == col(Season.id))
+        .join(Show, col(Season.show_id) == col(Show.id))
+        .where(col(Episode.id).in_(canonical_episode_ids), is_canonical(Show)),
+    ).all()
+    for canonical_episode_id, canonical_show_id in own_rows:
+        titles[canonical_episode_id].add(canonical_show_id)
+    linked_rows = session.exec(
+        select(  # type: ignore[call-overload]
+            Episode.id,
+            ShowCanonicalShow.canonical_show_id,
         )
+        .join(Season, col(Episode.season_id) == col(Season.id))
+        .join(Show, col(Season.show_id) == col(Show.id))
+        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
         .where(col(Episode.id).in_(canonical_episode_ids)),
     ).all()
-    return dict(rows)
+    for canonical_episode_id, canonical_show_id in linked_rows:
+        titles[canonical_episode_id].add(canonical_show_id)
+    return titles
 
 
 # TODO: Validate

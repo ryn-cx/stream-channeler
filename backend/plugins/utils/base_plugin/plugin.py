@@ -11,11 +11,7 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.keys import record_key
-from app.canonical_media.service import (
-    canonical_show_by_key,
-    link_canonical_show,
-)
+from app.canonical_media.service import link_canonical_show
 from app.episodes.models import Episode
 from app.episodes.service import EpisodeLinker
 from app.models import BaseMediaMixin, Visibility
@@ -399,18 +395,11 @@ class BasePlugin(
         show: Show,
         canonical_show: Show | None,
     ) -> None:
+        # A row nothing else has a record of is the record, so it stays canonical
+        # and is watched where it stands. Only a row something authoritative
+        # already holds is a copy of anything, and only that row is demoted.
         if canonical_show is not None:
             link_canonical_show(self.session, show, canonical_show)
-        elif not show.canonical_show_links:
-            # Every listing is a copy of at least one title, so that a row that is
-            # a copy of nothing is only ever a title itself. Two websites carrying
-            # one listing agree on the key, so they converge on the one row.
-            standalone = canonical_show_by_key(
-                self.session,
-                record_key(self.plugin_key(), show.key),
-                self._canonical_source(),
-            )
-            link_canonical_show(self.session, show, standalone)
         EpisodeLinker(self.session, show).link()
 
     # TODO: Validate

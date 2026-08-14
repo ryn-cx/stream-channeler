@@ -237,7 +237,7 @@ class ImportURLMixin(
         ):
             stored = [existing_shows[source_key] for source_key in source_keys]
             with self.session.no_autoflush:
-                self._link_canonical_shows(stored, canonical_show)
+                self._link_supplied_canonical_shows(stored, canonical_show)
             return stored
 
         _cache = (

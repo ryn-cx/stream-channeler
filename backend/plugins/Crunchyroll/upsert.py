@@ -35,25 +35,23 @@ from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
 
-    # TODO: Validate
     def _upsert_anime_source(self) -> Source:
         return self._upsert_source(
             VIDEO_SOURCE,
-            self.find_newest_browse_file(),
+            self.find_newest_browse_series_file(),
             self.browse_series_file,
-            timedelta(days=1),  # Check daily for new videos.
+            timedelta(days=1),
         )
 
-    # TODO: Validate
     def _upsert_music_source(self) -> Source:
         return self._upsert_source(
             MUSIC_SOURCE,
-            self.find_newest_music_browse_file(),
+            self.find_newest_browse_music_file(),
             self.browse_music_file,
-            timedelta(days=7),  # Check weekly for new music.
+            # Check weekly for new music because updates do not need to be frequent.
+            timedelta(days=7),
         )
 
-    # TODO: Validate
     @override
     def _upsert_source(
         self,
@@ -72,7 +70,9 @@ class UpsertMixin(HelperMixin, register=False):
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, source_key)
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        # TODO: Consider implementing something like _upsert_show_object but for
+        # sources.
         return Source(
             key=source_key,
             name=source_key,
@@ -80,7 +80,7 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp=data_timestamp,
             update_at=data_timestamp + update_interval,
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source, [latest_browse_file])
+        ).upsert_and_set_update_at(self.plugin, existing_source, [latest_browse_file])
 
     # TODO: Validate
     @override
@@ -92,13 +92,10 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        linker = TMDBLinker(self.session)
         if is_music_show_key(show_key):
             show = self._upsert_music_show(source, show_key, force=force)
-            linker.sync_canonical_info(show)
         elif is_anime_show_key(show_key):
             show = self._upsert_anime_show(source, show_key, force=force)
-            linker.link(show, self.tmdb_media_type(show_key), canonical_show)
         else:
             msg = f"Show key {show_key} is neither an artist nor a series"
             raise ValueError(msg)

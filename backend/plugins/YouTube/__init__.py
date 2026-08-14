@@ -160,26 +160,25 @@ class YouTube(
         show_preload = self._preload_show(show_key, preload_episodes=True)
         if not (show := show_preload.one_or_none()):
             _cache = self._download_show_files_and_children(show_key)
-            return handler.import_results(
-                self.upsert_show(
-                    self.source,
-                    show_key,
-                    canonical_show=canonical_show,
-                    force=force,
-                ),
+            show = self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+                force=force,
             )
-
-        if force or self._playlist_is_missing(show, playlist_key):
+        elif force or self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            return handler.import_results(
-                self.upsert_show(
-                    self.source,
-                    show_key,
-                    canonical_show=canonical_show,
-                    force=force,
-                ),
+            show = self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+                force=force,
             )
 
+        # Before `import_results`, which names what the URL brought in by the keys
+        # of the listing's own rows: a channel resolves each of those to the row it
+        # is a copy of, so the copies have to exist before it is asked.
+        self._link_supplied_canonical_show(show, canonical_show)
         return handler.import_results(show)
 
     # TODO: Validate

@@ -47,15 +47,6 @@ class UpsertMixin(FileMixin, register=False):
         self._upsert_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
-        TMDBLinker(self.session).link(
-            show,
-            # NHK World carries programmes and nothing else, so every listing is
-            # a series as far as TMDB is concerned. It says nothing about when a
-            # programme came out, so the name is all TMDB is searched on.
-            MediaType.tv,
-            canonical_show,
-        )
-
         return show
 
     # TODO: Validate

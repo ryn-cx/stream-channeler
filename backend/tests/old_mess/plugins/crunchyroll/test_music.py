@@ -45,7 +45,7 @@ class CrunchyrollMusicUpdateSourceTest(
         source: Source,
         timestamp: datetime,
     ) -> None:
-        existing_browse = plugin_instance.find_newest_music_browse_file()
+        existing_browse = plugin_instance.find_newest_browse_music_file()
         assert existing_browse, "The music source is created with a browse file"
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]

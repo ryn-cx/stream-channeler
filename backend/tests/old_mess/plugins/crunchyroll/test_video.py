@@ -53,7 +53,7 @@ class CrunchyrollVideoUpdateSourceTest(
         source: Source,
         timestamp: datetime,
     ) -> None:
-        existing_browse = plugin_instance.get_newest_browse_file()
+        existing_browse = plugin_instance.get_newest_browse_series_file()
         parsed = existing_browse.parsed()
         first_entry = parsed[0].data[0]
         first_entry.id = source.shows[0].key

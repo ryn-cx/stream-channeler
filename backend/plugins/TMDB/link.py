@@ -39,18 +39,6 @@ class TMDBLinker:
         self.session = session
         self.tmdb = TMDB(session)
 
-    # TODO: Validate
-    def link(
-        self,
-        show: Show,
-        media_type: MediaType | None = None,
-        canonical_show: Show | None = None,
-    ) -> None:
-        """Noop."""
-
-    # TODO: Validate
-    def sync_canonical_info(self, show: Show) -> None:
-        """Noop."""
 
     # TODO: Validate
     def search_media(

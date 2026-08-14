@@ -5,7 +5,6 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.filters import is_non_canonical
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -42,8 +41,8 @@ def sources_by_key(session: Session) -> dict[str, Source]:
 # TODO: Validate
 def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     """Return the number of live episodes each `Source` provides, keyed by source id."""
-    # The websites' own listings alone: a title is on no website, so counting the
-    # titles here would be a bucket of media belonging to no source at all.
+    # Every row belongs to the source that wrote it, whether it is the record of
+    # the media or a copy of one, so both are counted under it.
     rows = session.exec(
         select(Source.id, func.count(col(Episode.id)))
         .select_from(Show)
@@ -51,7 +50,6 @@ def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
         .join(Season, col(Season.show_id) == Show.id)
         .join(Episode, col(Episode.season_id) == Season.id)
         .where(
-            is_non_canonical(Show),
             col(Show.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),

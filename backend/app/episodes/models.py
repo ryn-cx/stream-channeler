@@ -19,7 +19,6 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_non_canonical
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
@@ -197,9 +196,10 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
+        # Listed whether the row is the record of the media or a copy of one: a
+        # row is not hidden for being the record.
         return (
             select(cls)
-            .where(is_non_canonical(cls))
             .join(Season, col(cls.season_id) == col(Season.id))
             .join(Show, col(Season.show_id) == col(Show.id))
             .join(Source)

@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import link_canonical_show
-from app.episodes.service import EpisodeLinker
 from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.NHKWorld.media_info import MediaInfoMixin
@@ -62,6 +60,7 @@ class NHKWorld(
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         if not force and (show := self._preload_show(show_key).one_or_none()):
+            self._link_supplied_canonical_show(show, canonical_show)
             return handler.import_results(show)
 
         # The files come down first because the search is made on the name NHK
@@ -71,9 +70,10 @@ class NHKWorld(
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
         show = self.upsert_show(self.source, show_key, canonical_show, force=force)
-        if canonical_show is not None:
-            link_canonical_show(self.session, show, canonical_show)
-            EpisodeLinker(self.session, show).link()
+        # Run whether or not a title was named here, since the episodes the upsert
+        # has just written include ones the title the listing is already a copy of
+        # has never been read against.
+        self._link_supplied_canonical_show(show, canonical_show)
         return handler.import_results(show)
 
     # TODO: Validate

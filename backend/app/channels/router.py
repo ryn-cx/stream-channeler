@@ -8,7 +8,7 @@ from typing import Annotated, Any, NamedTuple
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import distinct, func
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, selectinload
 from sqlmodel import Session, col, select
 
 from app.auth.dependencies import (
@@ -81,12 +81,14 @@ from app.media.canonical_metadata import (
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.schemas import MediaOwner
 from app.media.service import delete_record
+from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.schemas import ShowPublic
+from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 from app.users.models import User
@@ -737,6 +739,14 @@ def _channel_show_stats(
         totals[0] += season_count
         totals[1] += episode_count
 
+    for canonical_show_id, season_count, episode_count in _standalone_show_stats(
+        session,
+        canonical_show_ids,
+    ):
+        totals = counts.setdefault(canonical_show_id, [0, 0])
+        totals[0] += season_count
+        totals[1] += episode_count
+
     return {
         canonical_show_id: ChannelShowStats(
             season_count=season_count,
@@ -744,6 +754,41 @@ def _channel_show_stats(
         )
         for canonical_show_id, (season_count, episode_count) in counts.items()
     }
+
+
+# TODO: Validate
+def _standalone_show_stats(
+    session: Session,
+    canonical_show_ids: set[uuid.UUID],
+) -> Sequence[tuple[uuid.UUID, int, int]]:
+    """Return what a title that is its own listing holds.
+
+    A title nothing else has a record of is the row that is the record, and that
+    row is where it is watched, so its seasons and episodes are its own rather
+    than copies of anything and no link reaches them. TMDB's rows are left out:
+    a title TMDB wrote is counted by what the websites carrying it hold.
+    """
+    return session.exec(
+        select(
+            Season.show_id,
+            func.count(distinct(col(Season.id))),
+            func.count(distinct(col(Episode.id))),
+        )
+        .select_from(Season)
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .join(Episode, col(Episode.season_id) == col(Season.id))
+        .where(
+            col(Season.show_id).in_(canonical_show_ids),
+            is_canonical(Show),
+            Plugin.key != TMDB_PLUGIN_KEY,
+            col(Show.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Episode.deleted_at).is_(None),
+        )
+        .group_by(col(Season.show_id)),
+    ).all()
 
 
 # TODO: Validate
@@ -958,6 +1003,14 @@ def _whitelist_media(
     if not shows and not tmdb_shows:
         raise HTTPException(status_code=404, detail="Show was not found on channel")
 
+    # Every season and episode under those rows is walked below, which is a query
+    # a season unless they are asked for together up front.
+    session.exec(
+        select(Show)
+        .where(col(Show.id).in_([show.id for show in [*shows, *tmdb_shows]]))
+        .options(selectinload(Show.seasons).selectinload(Season.episodes)),
+    ).all()
+
     site_seasons = [season for show in shows for season in show.active_children]
     tmdb_seasons = [season for show in tmdb_shows for season in show.active_children]
     all_episodes = [
@@ -1015,7 +1068,26 @@ def _episode_source_filters(
 
 
 # TODO: Validate
-def _episode_sort_key(episode: WhitelistEpisodeOutput) -> tuple[float, str]:
+def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -> None:
+    """Read in the episode each of `episodes` is a copy of, in one query.
+
+    `Episode.tmdb_id` walks from a row to the episode it is a copy of, which is a
+    query apiece where the rows are read one at a time. An `Episode` is keyed on
+    its season and its own key rather than on `id`, so the walk cannot be
+    answered out of the session and has to be asked for together up front.
+    """
+    episode_ids = [episode.id for episode in episodes]
+    if not episode_ids:
+        return
+    session.exec(
+        select(Episode)
+        .where(col(Episode.id).in_(episode_ids))
+        .options(selectinload(Episode.canonical_episode)),
+    ).all()
+
+
+# TODO: Validate
+def _episode_sort_key(episode: Episode | WhitelistEpisodeOutput) -> tuple[float, str]:
     """Order an episode by where the website put it, then by its own identifier.
 
     A row the website never ordered sits after the ones it did, and the
@@ -1142,10 +1214,10 @@ def get_channel_whitelist_episodes(
 
     media = _whitelist_media(session, channel_show)
 
-    episodes: list[WhitelistEpisodeOutput] = []
     # An episode is listed once under every season row carrying it, since two
     # seasons sharing an episode each have it to filter on. Only the copies of it
     # under the same row are folded together.
+    rows: list[tuple[Episode, uuid.UUID]] = []
     seen_episodes: set[uuid.UUID] = set()
     for season in [*media.site_seasons, *media.tmdb_seasons]:
         for episode in season.active_children:
@@ -1157,22 +1229,28 @@ def get_channel_whitelist_episodes(
             if canonical_episode_id in seen_episodes:
                 continue
             seen_episodes.add(canonical_episode_id)
-            episodes.append(
-                WhitelistEpisodeOutput.model_validate(
-                    episode,
-                    update={
-                        "season_id": season_id,
-                        "canonical_episode_id": canonical_episode_id,
-                        "filtered": canonical_episode_id in enabled_episodes,
-                        "expires_at": episode_expiries.get(canonical_episode_id),
-                        "show_ids": [],
-                        "links": [],
-                    },
-                ),
-            )
+            rows.append((episode, canonical_episode_id))
 
-    episodes.sort(key=_episode_sort_key)
-    page = episodes[offset : offset + limit]
+    # Ordered and paged as the stored rows, since reading one as the schema is
+    # work per episode and only the page being served is ever read.
+    rows.sort(key=lambda row: _episode_sort_key(row[0]))
+    page_rows = rows[offset : offset + limit]
+    _preload_canonical_episodes(session, [episode for episode, _ in page_rows])
+
+    page = [
+        WhitelistEpisodeOutput.model_validate(
+            episode,
+            update={
+                "season_id": season_id,
+                "canonical_episode_id": canonical_episode_id,
+                "filtered": canonical_episode_id in enabled_episodes,
+                "expires_at": episode_expiries.get(canonical_episode_id),
+                "show_ids": [],
+                "links": [],
+            },
+        )
+        for episode, canonical_episode_id in page_rows
+    ]
 
     # Only the page being served is asked after: the links a row carries and the
     # reading of it as the media are both work per episode, and a season of a
@@ -1193,7 +1271,7 @@ def get_channel_whitelist_episodes(
     # TMDB has no record of.
     prefer_canonical_episodes(session, page)
 
-    return WhitelistEpisodesOutput(episodes=page, total_count=len(episodes))
+    return WhitelistEpisodesOutput(episodes=page, total_count=len(rows))
 
 
 # FAST003 - Parameter is used by EditableChannelCanonicalShow.

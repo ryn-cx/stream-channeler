@@ -14,7 +14,7 @@ from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.canonical_media.filters import canonical_id_of, is_canonical, is_non_canonical
-from app.canonical_media.keys import same_issuer_clause
+from app.canonical_media.keys import not_tmdb_key_clause, same_issuer_clause
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,
@@ -166,6 +166,9 @@ class EpisodeQueryBuilder:
         One website carrying a title twice counts as much as two websites carrying
         it once, since either leaves an episode with a copy to be ranked against.
         """
+        # A title nothing else holds a record of is watched on the row that is the
+        # record, so it is its own copy and there is no link to reach it by.
+        # Outer-joined so those titles are still counted, as the one copy they are.
         totals = (
             select(
                 func.count(distinct(col(Show.source_id))),
@@ -173,15 +176,30 @@ class EpisodeQueryBuilder:
                 func.count(distinct(col(ChannelShow.canonical_show_id))),
             )
             .select_from(ChannelShow)
-            .join(
+            .outerjoin(
                 ShowCanonicalShow,
                 col(ShowCanonicalShow.canonical_show_id)
                 == col(ChannelShow.canonical_show_id),
             )
-            .join(Show, col(Show.id) == col(ShowCanonicalShow.show_id))
+            .join(
+                Show,
+                col(Show.id)
+                == func.coalesce(
+                    col(ShowCanonicalShow.show_id),
+                    col(ChannelShow.canonical_show_id),
+                ),
+            )
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
-            .where(is_non_canonical(Show), col(Show.deleted_at).is_(None))
+            # A title TMDB wrote and no website carries is watched nowhere, so it
+            # is no copy of anything and nothing has to be ranked against it.
+            .where(
+                or_(
+                    is_non_canonical(Show),
+                    not_tmdb_key_clause(col(Show.key)),
+                ),
+            )
+            .where(col(Show.deleted_at).is_(None))
         )
         sources, shows, titles = self._session.exec(totals).one()  # type: ignore[misc]
         return sources > 1 or shows > titles
@@ -291,12 +309,18 @@ class EpisodeQueryBuilder:
                     is_canonical(Episode),
                 ),
             )
+            # A row nothing else holds a record of is the record, and it is also
+            # where the media is watched, so it is its own title and answers for
+            # itself when neither the episode nor a link has an answer. TMDB's own
+            # rows are titles that are watched nowhere and are left out by
+            # `_filter_metadata_plugins` rather than here.
             .join(
                 ChannelShow,
                 col(ChannelShow.canonical_show_id)
                 == func.coalesce(
                     col(CANONICAL_SEASON.show_id),
                     col(ShowCanonicalShow.canonical_show_id),
+                    case((is_canonical(Show), col(Show.id))),
                 ),
             )
             .join(
@@ -306,7 +330,6 @@ class EpisodeQueryBuilder:
                     is_canonical(CANONICAL_SHOW),
                 ),
             )
-            .where(is_non_canonical(Show))
             # A website files under a title seasons the title has no record of -
             # a film it sells as part of the series, a run of extras - and a
             # canonical season is minted for each so its episodes have somewhere

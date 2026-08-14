@@ -90,7 +90,7 @@ class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
 class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     """Data for recently aired shows."""
 
-    IMMUTABLE = True
+    IMMUTABLE = True  # Files are stamped with a datetime
     API_ENDPOINT = chirashi().browse_series
 
     # Use download_and_parse_until_datetime instead of download_and_parse so the new
@@ -103,7 +103,6 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
         )
 
 
-# TODO: Validate
 class Search(GAPIJSON[search_models.SearchModel]):
     """Data for search results."""
 
@@ -185,32 +184,27 @@ class FileMixin(BasePlugin, register=False):
 
     _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)
 
-    # TODO: Validate
     def series_file(self, show_key: str) -> Series:
-        """Returns data for a series."""
+        """Returns data for a show."""
         return self._file(Series, show_key)
 
-    # TODO: Validate
     def objects_file(self, episode_key: str) -> Objects:
-        """Returns data for an episode's objects."""
+        """Returns data for an episode."""
         return self._file(Objects, episode_key)
 
-    # TODO: Validate
     def seasons_file(self, show_key: str) -> Seasons:
-        """Returns data for a show's seasons."""
+        """Returns data for the seasons."""
         return self._file(Seasons, show_key)
 
-    # TODO: Validate
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
-        """Returns data for a season's episodes."""
+        """Returns data for the episodes in a season."""
         return self._file(SeasonEpisodes, season_key)
 
-    # TODO: Validate
     def browse_series_file(
         self,
         browse: datetime | File | Literal["Initial"],
     ) -> BrowseSeries:
-        """Returns data for browsing series."""
+        """Returns data for recently aired shows."""
         if isinstance(browse, File):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
@@ -278,22 +272,22 @@ class FileMixin(BasePlugin, register=False):
         self,
         browse: datetime | File | Literal["Initial"],
     ) -> BrowseMusic:
-        """Returns BrowseMusic file."""
+        """Returns data for all of the music."""
         if isinstance(browse, File):
             browse = BrowseMusic.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseMusic, str(browse))
 
     # TODO: Validate
-    def find_newest_music_browse_file(self) -> BrowseMusic | None:
-        """Returns newest BrowseMusic file, or None when there is none."""
+    def find_newest_browse_music_file(self) -> BrowseMusic | None:
+        """Returns newest data for all of the music, or None when there is none."""
         if file := self.preload_latest_file(BrowseMusic):
             return self.browse_music_file(file)
         return None
 
     # TODO: Validate
     def get_newest_music_browse_file(self) -> BrowseMusic:
-        """Returns newest BrowseMusic file."""
-        if file := self.find_newest_music_browse_file():
+        """Returns newest data for all of the music."""
+        if file := self.find_newest_browse_music_file():
             return file
 
         msg = "No music browse file found."
@@ -307,7 +301,7 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
-        return [self.get_newest_browse_file()]
+        return [self.get_newest_browse_series_file()]
 
     # TODO: Validate
     @override
@@ -404,16 +398,16 @@ class FileMixin(BasePlugin, register=False):
         return [datum.id for datum in listing.data]
 
     # TODO: Validate
-    def find_newest_browse_file(self) -> BrowseSeries | None:
-        """Returns newest BrowseSeries file, or None when there is none."""
+    def find_newest_browse_series_file(self) -> BrowseSeries | None:
+        """Returns newest browse , or None when there is none."""
         if file := self.preload_latest_file(BrowseSeries):
             return self.browse_series_file(file)
         return None
 
     # TODO: Validate
-    def get_newest_browse_file(self) -> BrowseSeries:
-        """Returns newest BrowseSeries file."""
-        if file := self.find_newest_browse_file():
+    def get_newest_browse_series_file(self) -> BrowseSeries:
+        """Returns newest browse series file, or raises if there is none."""
+        if file := self.find_newest_browse_series_file():
             return file
 
         msg = "No browse file found."

@@ -199,6 +199,11 @@ def canonical_ids_by_key(
 ) -> dict[str, uuid.UUID]:
     """Map each episode key to the canonical episode that row stands for.
 
+    An episode nothing else holds a record of is the record, so it stands for
+    itself and answers with its own id. A row that is a copy answers with the
+    episode it is a copy of, and is preferred where both are stored, since the
+    copy is the one the canonical row was minted for.
+
     Only episodes answer this way. A non-canonical show stands for however many
     canonical shows a website mixed into it and names none of them in a column,
     so a show key is asked of `canonical_show_ids_by_key` and answered with all
@@ -206,13 +211,23 @@ def canonical_ids_by_key(
     """
     if not keys:
         return {}
-    rows = session.exec(
-        select(Episode.key, Episode.canonical_episode_id).where(
-            col(Episode.key).in_(keys),
-            col(Episode.canonical_episode_id).is_not(None),
-        ),
-    ).all()
-    return dict(rows)
+    own_rows: dict[str, uuid.UUID] = dict(
+        session.exec(
+            select(Episode.key, Episode.id).where(
+                col(Episode.key).in_(keys),
+                is_canonical(Episode),
+            ),
+        ).all(),
+    )
+    copy_rows: dict[str, uuid.UUID] = dict(
+        session.exec(
+            select(Episode.key, Episode.canonical_episode_id).where(
+                col(Episode.key).in_(keys),
+                col(Episode.canonical_episode_id).is_not(None),
+            ),
+        ).all(),
+    )
+    return own_rows | copy_rows
 
 
 # TODO: Validate
