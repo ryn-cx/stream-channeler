@@ -436,6 +436,9 @@ export type ChannelShowsOutput = {
     sources?: {
         [key: string]: SourcePublic;
     };
+    canonical_shows?: {
+        [key: string]: ShowPublic;
+    };
     canonical_sources?: {
         [key: string]: SourcePublic;
     };
@@ -1984,16 +1987,16 @@ export type ChannelsGetChannelSourcesData = {
 export type ChannelsGetChannelSourcesResponse = (Array<SourcePublic>);
 
 export type ChannelsGetChannelWhitelistData = {
+    canonicalShowId: string;
     channelId: string;
-    showId: string;
 };
 
 export type ChannelsGetChannelWhitelistResponse = (WhitelistShowOutput);
 
 export type ChannelsUpdateChannelWhitelistData = {
+    canonicalShowId: string;
     channelId: string;
     requestBody: WhitelistShowInput;
-    showId: string;
 };
 
 export type ChannelsUpdateChannelWhitelistResponse = (WhitelistShowOutput);
@@ -2020,8 +2023,8 @@ export type ChannelsUpdateChannelOrderData = {
 export type ChannelsUpdateChannelOrderResponse = (ChannelOutput);
 
 export type ChannelsDeleteChannelShowData = {
+    canonicalShowId: string;
     channelId: string;
-    showId: string;
 };
 
 export type ChannelsDeleteChannelShowResponse = (Message);

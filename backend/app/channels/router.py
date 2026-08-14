@@ -28,7 +28,7 @@ from app.channels.channel_scope import (
 )
 from app.channels.dependencies import (
     EditableChannel,
-    EditableChannelReadableShow,
+    EditableChannelCanonicalShow,
     ExistingChannel,
     ReadableChannel,
 )
@@ -621,8 +621,32 @@ def get_channel_shows(
     # channel was told to hold.
     output.stats = _channel_show_stats(session, canonical_show_ids)
     output.canonical_sources = _canonical_sources(session, canonical_show_ids)
+    output.canonical_shows = _canonical_shows(session, canonical_show_ids)
 
     return output
+
+
+# TODO: Validate
+def _canonical_shows(
+    session: Session,
+    canonical_show_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, ShowPublic]:
+    """Return the title itself for each title the channel holds, keyed by it.
+
+    A title is named by whoever catalogued it, which is TMDB wherever TMDB has a
+    record of it, and that is the name it is read under rather than whatever any
+    one website called its own row for it.
+    """
+    if not canonical_show_ids:
+        return {}
+
+    canonical_shows = session.exec(
+        select(Show).where(col(Show.id).in_(canonical_show_ids)),
+    ).all()
+    return {
+        canonical_show.id: ShowPublic.model_validate(canonical_show)
+        for canonical_show in canonical_shows
+    }
 
 
 # TODO: Validate
@@ -876,12 +900,12 @@ def _seasons_by_id(
     return seasons
 
 
-# FAST003 - Parameter is used by UserChannelShow.
+# FAST003 - Parameter is used by EditableChannelCanonicalShow.
 # TODO: Validate
-@channels_router.get("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
+@channels_router.get("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
 def get_channel_whitelist(
     session: SessionDep,
-    channel_show: EditableChannelReadableShow,
+    channel_show: EditableChannelCanonicalShow,
 ) -> WhitelistShowOutput:
     """Read the whitelist for a title in a channel.
 
@@ -1046,13 +1070,13 @@ def get_channel_whitelist(
     )
 
 
-# FAST003 - Parameter is used by UserChannelShow.
+# FAST003 - Parameter is used by EditableChannelCanonicalShow.
 # TODO: Validate
-@channels_router.patch("/{channel_id}/whitelist/{show_id}")  # noqa: FAST003
+@channels_router.patch("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
 def update_channel_whitelist(
     session: SessionDep,
     whitelist_config: WhitelistShowInput,
-    channel_show: EditableChannelReadableShow,
+    channel_show: EditableChannelCanonicalShow,
 ) -> WhitelistShowOutput:
     """Update the whitelist/blacklist for a show in a channel."""
     service.update_whitelist(session, channel_show, whitelist_config)
@@ -1140,12 +1164,12 @@ def update_channel_order(
     return channel
 
 
-# FAST003 - Parameters are used by EditableChannelReadableShow.
+# FAST003 - Parameters are used by EditableChannelCanonicalShow.
 # TODO: Validate
-@channels_router.delete("/{channel_id}/remove-show/{show_id}")  # noqa: FAST003
+@channels_router.delete("/{channel_id}/remove-show/{canonical_show_id}")  # noqa: FAST003
 def delete_channel_show(
     session: SessionDep,
-    channel_show: EditableChannelReadableShow,
+    channel_show: EditableChannelCanonicalShow,
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
     shows = service.shows_for_channel_show(session, channel_show)

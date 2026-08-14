@@ -2303,6 +2303,16 @@ export const ChannelShowsOutputSchema = {
             type: 'object',
             title: 'Sources'
         },
+        canonical_shows: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/ShowPublic'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Canonical Shows'
+        },
         canonical_sources: {
             additionalProperties: {
                 '$ref': '#/components/schemas/SourcePublic'

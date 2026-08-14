@@ -764,18 +764,18 @@ export class ChannelsService {
      * copy's seasons and episodes are listed, with the copies of the same season or
      * episode collapsed into the one row the filter applies to.
      * @param data The data for the request.
+     * @param data.canonicalShowId
      * @param data.channelId
-     * @param data.showId
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
      */
     public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
+            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}',
             path: {
-                channel_id: data.channelId,
-                show_id: data.showId
+                canonical_show_id: data.canonicalShowId,
+                channel_id: data.channelId
             },
             errors: {
                 422: 'Validation Error'
@@ -787,8 +787,8 @@ export class ChannelsService {
      * Update Channel Whitelist
      * Update the whitelist/blacklist for a show in a channel.
      * @param data The data for the request.
+     * @param data.canonicalShowId
      * @param data.channelId
-     * @param data.showId
      * @param data.requestBody
      * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
@@ -796,10 +796,10 @@ export class ChannelsService {
     public static updateChannelWhitelist(data: ChannelsUpdateChannelWhitelistData): CancelablePromise<ChannelsUpdateChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/v1/channels/{channel_id}/whitelist/{show_id}',
+            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}',
             path: {
-                channel_id: data.channelId,
-                show_id: data.showId
+                canonical_show_id: data.canonicalShowId,
+                channel_id: data.channelId
             },
             body: data.requestBody,
             mediaType: 'application/json',
@@ -889,18 +889,18 @@ export class ChannelsService {
      * Delete Channel Show
      * Remove a title, on every website it is on, from a `Channel`.
      * @param data The data for the request.
+     * @param data.canonicalShowId
      * @param data.channelId
-     * @param data.showId
      * @returns Message Successful Response
      * @throws ApiError
      */
     public static deleteChannelShow(data: ChannelsDeleteChannelShowData): CancelablePromise<ChannelsDeleteChannelShowResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/channels/{channel_id}/remove-show/{show_id}',
+            url: '/api/v1/channels/{channel_id}/remove-show/{canonical_show_id}',
             path: {
-                channel_id: data.channelId,
-                show_id: data.showId
+                canonical_show_id: data.canonicalShowId,
+                channel_id: data.channelId
             },
             errors: {
                 422: 'Validation Error'

@@ -39,10 +39,14 @@ export function ChannelShowsButton({
     enabled: isOpen,
   })
 
+  const canonicalShows = data?.canonical_shows ?? {}
   const groups = (data?.groups ?? [])
     .map((group) => ({
       ...group,
-      shows: (group.shows ?? []).filter((show) => !!show.name),
+      shows: (group.shows ?? []).filter(
+        (show) =>
+          !!(show.name ?? canonicalShows[show.canonical_show_id ?? ""]?.name),
+      ),
     }))
     .filter((group) => group.shows.length > 0)
   const hasShows = groups.some((group) => group.shows.length > 0)
@@ -95,6 +99,8 @@ export function ChannelShowsButton({
                   <ShowCards
                     shows={group.shows}
                     sources={data?.sources ?? {}}
+                    canonicalShows={data?.canonical_shows ?? {}}
+                    canonicalSources={data?.canonical_sources ?? {}}
                     stats={data?.stats ?? {}}
                   />
                 </div>

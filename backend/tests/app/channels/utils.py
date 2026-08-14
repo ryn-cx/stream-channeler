@@ -58,17 +58,17 @@ def whitelist_every_season(
         headers=headers,
     )
     assert shows_response.status_code == status.HTTP_200_OK, shows_response.text
-    show_id = shows_response.json()["shows"][0]["id"]
+    canonical_show_id = shows_response.json()["shows"][0]["canonical_show_id"]
 
     whitelist_response = client.get(
-        f"{settings.API_V1_STR}/channels/{channel_id}/whitelist/{show_id}",
+        f"{settings.API_V1_STR}/channels/{channel_id}/whitelist/{canonical_show_id}",
         headers=headers,
     )
     assert whitelist_response.status_code == status.HTTP_200_OK, whitelist_response.text
     seasons = whitelist_response.json()["seasons"]
 
     update_response = client.patch(
-        f"{settings.API_V1_STR}/channels/{channel_id}/whitelist/{show_id}",
+        f"{settings.API_V1_STR}/channels/{channel_id}/whitelist/{canonical_show_id}",
         headers=headers,
         json={
             "is_whitelist": True,

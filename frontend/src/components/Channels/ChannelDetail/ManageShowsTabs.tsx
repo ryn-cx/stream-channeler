@@ -23,6 +23,7 @@ import {
   groupShows,
   type Show,
   ShowCards,
+  type ShowGroup,
   type Source,
 } from "@/components/Channels/ShowCards"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
@@ -111,9 +112,9 @@ export function ManageShowsTabs({
   const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null)
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
-  const [selectedShowId, setSelectedShowId] = useState<string | null>(null)
-  const [blacklistShowId, setBlacklistShowId] = useState<string | null>(null)
-  const [removeShowId, setRemoveShowId] = useState<string | null>(null)
+  const [selectedTitle, setSelectedTitle] = useState<ShowGroup | null>(null)
+  const [blacklistTitle, setBlacklistTitle] = useState<ShowGroup | null>(null)
+  const [removeTitle, setRemoveTitle] = useState<ShowGroup | null>(null)
   const [activeTab, setActiveTabState] = useState<string>("search")
   // TODO: Validate
   const setActiveTab = (tab: string) => {
@@ -142,6 +143,7 @@ export function ManageShowsTabs({
         shows: Show[]
         filter_only_shows: Show[]
         sources: Record<string, Source>
+        canonical_shows: Record<string, Show>
         canonical_sources: Record<string, Source>
         stats: Record<string, ChannelShowStats>
       }>,
@@ -152,28 +154,26 @@ export function ManageShowsTabs({
     (entry: ChannelQueueOutput) =>
       entry.status !== "Imported" && entry.status !== "Failed",
   ).length
-  const showsList = (showsData?.shows ?? []).sort((a, b) =>
-    (a.name ?? "").localeCompare(b.name ?? ""),
-  )
-  const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
-    (a, b) => (a.name ?? "").localeCompare(b.name ?? ""),
-  )
-  const selectedShow =
-    showsList.find((show) => show.id === selectedShowId) ?? null
-  const showCount = groupShows(showsList).length
   const sources: Record<string, Source> = showsData?.sources || {}
+  const canonicalShows: Record<string, Show> = showsData?.canonical_shows || {}
   const canonicalSources: Record<string, Source> =
     showsData?.canonical_sources || {}
-  const shows: Record<string, Show> = {
-    ...(showsData?.shows
-      ? Object.fromEntries(showsData.shows.map((show) => [show.id, show]))
-      : {}),
-    ...(showsData?.filter_only_shows
-      ? Object.fromEntries(
-          showsData.filter_only_shows.map((show) => [show.id, show]),
-        )
-      : {}),
-  }
+  // A card is read under the title's own name, so that is the name the list is
+  // in the order of.
+  // TODO: Validate
+  const byTitleName = (first: Show, second: Show) =>
+    (
+      canonicalShows[first.canonical_show_id ?? ""]?.name ??
+      first.name ??
+      ""
+    ).localeCompare(
+      canonicalShows[second.canonical_show_id ?? ""]?.name ?? second.name ?? "",
+    )
+  const showsList = (showsData?.shows ?? []).sort(byTitleName)
+  const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
+    byTitleName,
+  )
+  const showCount = groupShows(showsList).length
 
   // endregion Queries
 
@@ -287,9 +287,9 @@ export function ManageShowsTabs({
   })
 
   const removeShowMutation = useMutation({
-    mutationFn: (showId: string) =>
-      ChannelsService.deleteChannelShow({ channelId, showId }),
-    onMutate: async (showId) => {
+    mutationFn: (canonicalShowId: string) =>
+      ChannelsService.deleteChannelShow({ channelId, canonicalShowId }),
+    onMutate: async (canonicalShowId) => {
       await queryClient.cancelQueries({
         queryKey: ["channel-shows", channelId],
       })
@@ -304,13 +304,15 @@ export function ManageShowsTabs({
         ["channel-shows", channelId],
         (oldData: any) => ({
           ...oldData,
-          shows: oldData.shows.filter((show: Show) => show.id !== showId),
+          shows: oldData.shows.filter(
+            (show: Show) => show.canonical_show_id !== canonicalShowId,
+          ),
         }),
       )
       showSuccessToast("Show removed successfully")
       return { previousEpisodesEntries, previousShowsData }
     },
-    onError: (error, _showId, context) => {
+    onError: (error, _canonicalShowId, context) => {
       for (const [queryKey, data] of context?.previousEpisodesEntries ?? []) {
         queryClient.setQueryData(queryKey as any, data)
       }
@@ -356,8 +358,8 @@ export function ManageShowsTabs({
   }
 
   // TODO: Validate
-  const handleRemoveShow = (showId: string) => {
-    setRemoveShowId(showId)
+  const handleRemoveShow = (group: ShowGroup) => {
+    setRemoveTitle(group)
   }
 
   return (
@@ -477,17 +479,22 @@ export function ManageShowsTabs({
             <ShowCards
               shows={showsList}
               sources={sources}
+              canonicalShows={canonicalShows}
               canonicalSources={canonicalSources}
               stats={showsData?.stats ?? {}}
-              onSelect={(show) =>
-                setSelectedShowId(selectedShowId === show.id ? null : show.id)
+              onSelect={(group) =>
+                setSelectedTitle(
+                  selectedTitle?.canonicalShowId === group.canonicalShowId
+                    ? null
+                    : group,
+                )
               }
-              renderActions={(show) => (
+              renderActions={(group) => (
                 <div className="flex items-center justify-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => handleRemoveShow(show.id)}
+                    onClick={() => handleRemoveShow(group)}
                     disabled={removeShowMutation.isPending}
                     title="Remove show"
                   >
@@ -504,24 +511,24 @@ export function ManageShowsTabs({
             opened from out to the width the table wants.
           */}
           <Dialog
-            open={selectedShow != null}
+            open={selectedTitle != null}
             onOpenChange={(open) => {
-              if (!open) setSelectedShowId(null)
+              if (!open) setSelectedTitle(null)
             }}
           >
             <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[85vh] flex flex-col overflow-hidden">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedShow?.name || "Unknown Show"}
+                  {selectedTitle?.name || "Unknown Show"}
                 </DialogTitle>
               </DialogHeader>
-              {selectedShow && (
+              {selectedTitle && (
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   <WhitelistManager
                     channelId={channelId}
-                    showId={selectedShow.id}
-                    showName={selectedShow.name || "Unknown Show"}
-                    onClose={() => setSelectedShowId(null)}
+                    canonicalShowId={selectedTitle.canonicalShowId}
+                    showName={selectedTitle.name || "Unknown Show"}
+                    onClose={() => setSelectedTitle(null)}
                   />
                 </div>
               )}
@@ -540,13 +547,14 @@ export function ManageShowsTabs({
               <ShowCards
                 shows={filterOnlyShowsList}
                 sources={sources}
+                canonicalShows={canonicalShows}
                 canonicalSources={canonicalSources}
-                renderActions={(show) => (
+                renderActions={(group) => (
                   <div className="flex items-center justify-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => setBlacklistShowId(show.id)}
+                      onClick={() => setBlacklistTitle(group)}
                       title="View blacklisted episodes"
                     >
                       <ListX className="h-4 w-4" />
@@ -554,7 +562,7 @@ export function ManageShowsTabs({
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleRemoveShow(show.id)}
+                      onClick={() => handleRemoveShow(group)}
                       disabled={removeShowMutation.isPending}
                       title="Remove show"
                     >
@@ -682,27 +690,29 @@ export function ManageShowsTabs({
         </DialogContent>
       </Dialog>
 
-      {removeShowId && (
+      {removeTitle && (
         <ConfirmDialog
-          open={!!removeShowId}
+          open={!!removeTitle}
           onOpenChange={(open) => {
-            if (!open) setRemoveShowId(null)
+            if (!open) setRemoveTitle(null)
           }}
           title="Remove Show"
-          description={`Are you sure you want to remove "${shows[removeShowId]?.name || "this show"}" from the channel? This will remove all episodes from this show.`}
+          description={`Are you sure you want to remove "${removeTitle.name || "this show"}" from the channel? This will remove all episodes from this show.`}
           confirmLabel="Remove"
-          onConfirm={() => removeShowMutation.mutate(removeShowId)}
+          onConfirm={() =>
+            removeShowMutation.mutate(removeTitle.canonicalShowId)
+          }
         />
       )}
 
       {/* Blacklisted episodes for filter-only shows */}
-      {blacklistShowId && (
+      {blacklistTitle && (
         <BlacklistedEpisodesDialog
           channelId={channelId}
-          showId={blacklistShowId}
-          showName={shows[blacklistShowId]?.name || "Unknown Show"}
-          isOpen={!!blacklistShowId}
-          onClose={() => setBlacklistShowId(null)}
+          canonicalShowId={blacklistTitle.canonicalShowId}
+          showName={blacklistTitle.name || "Unknown Show"}
+          isOpen={!!blacklistTitle}
+          onClose={() => setBlacklistTitle(null)}
         />
       )}
     </>

@@ -239,6 +239,10 @@ class ChannelShowsOutput(BaseModel):
     # episodes pulled in from other channels.
     filter_only_shows: list[ShowPublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    # The canonical show behind each row, keyed by `canonical_show_id`. It carries
+    # the title's own name, which is what a show is read under rather than the name
+    # any one website gave its row for it.
+    canonical_shows: dict[uuid.UUID, ShowPublic] = Field(default_factory=dict)
     # The source each canonical show was written by, keyed by `canonical_show_id`.
     # Kept apart from `sources` because that is where a show can be watched and
     # this is who wrote it down, which is never a website carrying it.

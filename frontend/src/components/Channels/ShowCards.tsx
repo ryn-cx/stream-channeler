@@ -29,6 +29,15 @@ export interface Source {
   name?: string | null
 }
 
+// One card: the title, and every website's row standing for it. The title is
+// what a card's actions are about, so it is named by `canonicalShowId` rather
+// than by any of the rows, which a website that files two titles under one page
+// leaves standing for both.
+export interface ShowGroup {
+  canonicalShowId: string
+  name: string
+}
+
 const OTHER_SOURCE_KEY = "Other"
 
 // TODO: Validate
@@ -154,18 +163,19 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
  * What is known about a title from the channel's own listing of it.
  *
  * The listing carries the title's own account of itself, so a card reads that
- * and leaves the rest to the information panel.
+ * and leaves the rest to the information panel. What a title is, is the title's
+ * own to say rather than any one website's, so a title nothing catalogued has
+ * nothing to say here.
  */
 function showFacts(
-  group: Show[],
+  canonicalShow: Show | undefined,
   stats: ChannelShowStats | undefined,
 ): string[] {
-  const [firstShow] = group
-  const facts = [firstShow.media_type ?? "Not linked to TMDB"]
+  const facts = [canonicalShow?.media_type ?? "Not linked to TMDB"]
   // A movie is one episode of one season by construction, so counting them says
   // nothing the "Movie" note has not already said.
   const countsAreImplied =
-    firstShow.media_type === "Movie" &&
+    canonicalShow?.media_type === "Movie" &&
     stats?.season_count === 1 &&
     stats?.episode_count === 1
   if (countsAreImplied) {
@@ -194,6 +204,7 @@ function showFacts(
 export function ShowCards({
   shows,
   sources,
+  canonicalShows = {},
   canonicalSources = {},
   stats = {},
   renderActions,
@@ -202,12 +213,14 @@ export function ShowCards({
 }: {
   shows: Show[]
   sources: Record<string, Source>
+  /** The title itself behind each row, keyed by `canonical_show_id`. */
+  canonicalShows?: Record<string, Show>
   /** The source each title itself was written by, keyed by `canonical_show_id`. */
   canonicalSources?: Record<string, Source>
   stats?: Record<string, ChannelShowStats>
-  renderActions?: (show: Show) => ReactNode
-  renderExpanded?: (show: Show) => ReactNode
-  onSelect?: (show: Show) => void
+  renderActions?: (group: ShowGroup) => ReactNode
+  renderExpanded?: (group: ShowGroup) => ReactNode
+  onSelect?: (group: ShowGroup) => void
 }) {
   const { groups, isShowDisabled } = useShowGroups(shows, sources)
 
@@ -215,10 +228,15 @@ export function ShowCards({
     <div className="grid items-start gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
       {groups.map((group) => {
         const [firstShow] = group
-        const name = firstShow.name ?? ""
+        const canonicalShowId = firstShow.canonical_show_id ?? firstShow.id
+        const canonicalShow = canonicalShows[canonicalShowId]
+        // The title's own name, falling back to a website's for a title nothing
+        // catalogued, which is the only name there is to read it under.
+        const name = canonicalShow?.name ?? firstShow.name ?? ""
+        const showGroup: ShowGroup = { canonicalShowId, name }
         const artwork = group.find((show) => show.image_url)?.image_url
-        const expanded = renderExpanded?.(firstShow)
-        const actions = renderActions?.(firstShow)
+        const expanded = renderExpanded?.(showGroup)
+        const actions = renderActions?.(showGroup)
         // A favicon is how a card names a site, so a listing whose site has none
         // to show reads as nothing at all without a note in its place.
         const streamable = group.filter(
@@ -227,21 +245,19 @@ export function ShowCards({
         // Who wrote the title down, which is not one of the sites carrying it:
         // a card is one title, and the row of sites underneath is where it can
         // be watched.
-        const canonicalSource = firstShow.canonical_show_id
-          ? canonicalSources[firstShow.canonical_show_id]
-          : undefined
+        const canonicalSource = canonicalSources[canonicalShowId]
 
         return (
           // A card is one title, and the same listing can be a card under each of
           // the titles it mixes, so the title names the card rather than the copy.
-          <Fragment key={firstShow.canonical_show_id ?? firstShow.id}>
+          <Fragment key={showGroup.canonicalShowId}>
             <Card className="relative gap-0 overflow-hidden py-0 hover:border-primary">
               {/* The whole card opens the title, since everything on it is about
                   that one title. */}
               <button
                 type="button"
                 className="block w-full text-left"
-                onClick={() => onSelect?.(firstShow)}
+                onClick={() => onSelect?.(showGroup)}
               >
                 <div className="relative aspect-video w-full bg-muted">
                   {artwork && (
@@ -266,16 +282,13 @@ export function ShowCards({
                 </div>
                 <div className="flex flex-col gap-2 p-3">
                   <div className="flex flex-wrap items-center gap-1">
-                    {showFacts(
-                      group,
-                      firstShow.canonical_show_id
-                        ? stats[firstShow.canonical_show_id]
-                        : undefined,
-                    ).map((fact) => (
-                      <Badge key={fact} variant="secondary">
-                        {fact}
-                      </Badge>
-                    ))}
+                    {showFacts(canonicalShow, stats[canonicalShowId]).map(
+                      (fact) => (
+                        <Badge key={fact} variant="secondary">
+                          {fact}
+                        </Badge>
+                      ),
+                    )}
                   </div>
                   <div
                     className={`flex flex-wrap items-center gap-1${actions ? " pr-8" : ""}`}

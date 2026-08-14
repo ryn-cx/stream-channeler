@@ -84,8 +84,21 @@ const ROW_LABELS = [
 ]
 
 // TODO: Validate
-function heroSubtitle(data: EpisodeInformationOutput) {
-  const side = data.tmdb ?? data.source
+/**
+ * The side the episode is shown as, which is TMDB's account of it wherever TMDB
+ * has one, and the website's own where the website's row is what was opened.
+ */
+function primarySide(
+  data: EpisodeInformationOutput,
+  preferSource: boolean,
+): EpisodeInformationSide {
+  if (preferSource) return data.source
+  return data.tmdb ?? data.source
+}
+
+// TODO: Validate
+function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
+  const side = primarySide(data, preferSource)
   const seasonNumber = side.season_number ?? data.source.season_number
   const episodeNumber = side.episode_number ?? data.source.episode_number
   const placement = [
@@ -96,8 +109,8 @@ function heroSubtitle(data: EpisodeInformationOutput) {
 }
 
 // TODO: Validate
-function heroFacts(data: EpisodeInformationOutput) {
-  const side = data.tmdb ?? data.source
+function heroFacts(data: EpisodeInformationOutput, preferSource: boolean) {
+  const side = primarySide(data, preferSource)
   const facts = [
     formatDuration(side.duration ?? data.source.duration),
     formatInformationDate(side.air_date ?? data.source.air_date),
@@ -123,6 +136,11 @@ interface EpisodeInformationPanelProps {
   episodeId: string
   /** Whether the information is wanted yet, so a collapsed panel fetches nothing. */
   enabled?: boolean
+  /**
+   * Whether the website's own row is what was opened, in which case that is what
+   * is shown rather than TMDB's account of the episode it was matched to.
+   */
+  preferSource?: boolean
 }
 
 // TODO: Validate
@@ -133,6 +151,7 @@ interface EpisodeInformationPanelProps {
 export function EpisodeInformationPanel({
   episodeId,
   enabled = true,
+  preferSource = false,
 }: EpisodeInformationPanelProps) {
   const queryKey = ["episode-information", episodeId]
   const { data, isLoading, error } = useQuery({
@@ -157,14 +176,16 @@ export function EpisodeInformationPanel({
     )
   }
 
+  const side = primarySide(data, preferSource)
+
   return (
     <div className="flex flex-col gap-6">
       <InformationHero
-        title={data.tmdb?.name ?? data.source.name ?? "Unnamed episode"}
-        subtitle={heroSubtitle(data)}
-        description={data.tmdb?.description ?? data.source.description}
-        imageUrl={data.tmdb?.image_url ?? data.source.image_url}
-        facts={heroFacts(data)}
+        title={side.name ?? data.source.name ?? "Unnamed episode"}
+        subtitle={heroSubtitle(data, preferSource)}
+        description={side.description ?? data.source.description}
+        imageUrl={side.image_url ?? data.source.image_url}
+        facts={heroFacts(data, preferSource)}
         links={heroLinks(data)}
       />
 

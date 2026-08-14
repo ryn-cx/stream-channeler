@@ -239,38 +239,6 @@ def tmdb_shows_by_canonical_id(
 
 
 # TODO: Validate
-def channel_show_for_show(
-    session: Session,
-    channel: Channel,
-    show: Show,
-) -> ChannelShow | None:
-    """Return the row putting one of the shows `show` stands for on `channel`.
-
-    A row that mixes shows is on a channel under whichever of them was added, so
-    every canonical show it stands for is looked for. Where the channel holds more
-    than one of them the first linked is returned: no canonical show a row stands
-    for is above another, so there is nothing to prefer and something has to be
-    returned.
-    """
-    canonical_show_ids = show.canonical_show_ids
-    if not canonical_show_ids:
-        return None
-    channel_shows = session.exec(
-        select(ChannelShow).where(
-            ChannelShow.channel_id == channel.id,
-            col(ChannelShow.canonical_show_id).in_(canonical_show_ids),
-        ),
-    ).all()
-    by_canonical_show = {
-        channel_show.canonical_show_id: channel_show for channel_show in channel_shows
-    }
-    for canonical_show_id in canonical_show_ids:
-        if channel_show := by_canonical_show.get(canonical_show_id):
-            return channel_show
-    return None
-
-
-# TODO: Validate
 def shows_for_channel_show(session: Session, channel_show: ChannelShow) -> list[Show]:
     """Return every website's row for the show `channel_show` is about."""
     return shows_by_canonical_id(session, [channel_show.canonical_show_id])[

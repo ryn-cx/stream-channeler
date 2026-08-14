@@ -1,31 +1,41 @@
 # TODO: Validate
 """Channel dependencies."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
+from sqlmodel import select
 
 from app.auth.dependencies import SessionDep
 from app.channels.models import Channel, ChannelShow
-from app.channels.service import channel_show_for_show
 from app.media.service import editable_record, existing_record, readable_record
-from app.shows.dependencies import ReadableShow
 
 
+# A channel holds a canonical show rather than any one website's row for it, so
+# the row on the channel is named by the canonical show and nothing else. A row a
+# website filed two shows under stands for each of them, and naming the channel's
+# entry by it would leave the two entries indistinguishable.
 # TODO: Validate
-def _require_owned_channel_readable_show(
+def _require_owned_channel_canonical_show(
     session: SessionDep,
     channel: EditableChannel,
-    show: ReadableShow,
+    canonical_show_id: uuid.UUID,
 ) -> ChannelShow:
-    if channel_show := channel_show_for_show(session, channel, show):
-        return channel_show
-    raise HTTPException(status_code=404, detail="Show was not found on channel")
+    channel_show = session.exec(
+        select(ChannelShow).where(
+            ChannelShow.channel_id == channel.id,
+            ChannelShow.canonical_show_id == canonical_show_id,
+        ),
+    ).first()
+    if channel_show is None:
+        raise HTTPException(status_code=404, detail="Show was not found on channel")
+    return channel_show
 
 
-EditableChannelReadableShow = Annotated[
+EditableChannelCanonicalShow = Annotated[
     ChannelShow,
-    Depends(_require_owned_channel_readable_show),
+    Depends(_require_owned_channel_canonical_show),
 ]
 EditableChannel = Annotated[Channel, Depends(editable_record(Channel, "channel_id"))]
 ReadableChannel = Annotated[Channel, Depends(readable_record(Channel, "channel_id"))]

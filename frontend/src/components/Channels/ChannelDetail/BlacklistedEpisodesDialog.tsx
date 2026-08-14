@@ -15,7 +15,7 @@ import { handleError } from "@/utils"
 
 interface BlacklistedEpisodesDialogProps {
   channelId: string
-  showId: string
+  canonicalShowId: string
   showName: string
   isOpen: boolean
   onClose: () => void
@@ -28,7 +28,7 @@ interface BlacklistedEpisodesDialogProps {
 // TODO: Validate
 export function BlacklistedEpisodesDialog({
   channelId,
-  showId,
+  canonicalShowId,
   showName,
   isOpen,
   onClose,
@@ -37,8 +37,9 @@ export function BlacklistedEpisodesDialog({
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: whitelistData, isLoading } = useQuery({
-    queryKey: ["channelShowWhitelist", channelId, showId],
-    queryFn: () => ChannelsService.getChannelWhitelist({ channelId, showId }),
+    queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+    queryFn: () =>
+      ChannelsService.getChannelWhitelist({ channelId, canonicalShowId }),
     enabled: isOpen,
   })
 
@@ -46,12 +47,12 @@ export function BlacklistedEpisodesDialog({
     mutationFn: (episodeId: string) =>
       ChannelsService.updateChannelWhitelist({
         channelId,
-        showId,
+        canonicalShowId,
         requestBody: { episodes: [{ id: episodeId, marked: false }] },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["channelShowWhitelist", channelId, showId],
+        queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       // The show drops off the filter-only list once its last entry is removed.

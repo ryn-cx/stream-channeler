@@ -107,7 +107,7 @@ function episodesBySeason(
 
 interface WhitelistManagerProps {
   channelId: string
-  showId: string
+  canonicalShowId: string
   showName: string
   onClose: () => void
 }
@@ -115,7 +115,7 @@ interface WhitelistManagerProps {
 // TODO: Validate
 export function WhitelistManager({
   channelId,
-  showId,
+  canonicalShowId,
   showName,
   onClose,
 }: WhitelistManagerProps) {
@@ -159,8 +159,9 @@ export function WhitelistManager({
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: whitelistData, isLoading } = useQuery({
-    queryKey: ["channelShowWhitelist", channelId, showId],
-    queryFn: () => ChannelsService.getChannelWhitelist({ channelId, showId }),
+    queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+    queryFn: () =>
+      ChannelsService.getChannelWhitelist({ channelId, canonicalShowId }),
   })
 
   useEffect(() => {
@@ -208,12 +209,12 @@ export function WhitelistManager({
     mutationFn: (input: WhitelistShowInput) =>
       ChannelsService.updateChannelWhitelist({
         channelId,
-        showId,
+        canonicalShowId,
         requestBody: input,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["channelShowWhitelist", channelId, showId],
+        queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       showSuccessToast("Whitelist settings saved successfully")
@@ -823,6 +824,7 @@ export function WhitelistManager({
                                                         episodeId={
                                                           link.episode_id
                                                         }
+                                                        preferSource
                                                       />
                                                     </div>
                                                   )}
