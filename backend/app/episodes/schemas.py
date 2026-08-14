@@ -10,7 +10,6 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
-from app.media.media_type import MediaType
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
@@ -129,32 +128,18 @@ class EpisodeInformationOutput(BaseModel):
 
 # TODO: Validate
 class TmdbEpisodeChoice(BaseModel):
-    """A TMDB episode of a title, as one of the episodes an `Episode` can be linked to.
+    """A TMDB episode, as one of the episodes an `Episode` can be linked to."""
 
-    `absolute_number` counts the episode from the first of the title rather than
-    from the first of its own season, which is how a website that never restarts
-    its numbering names the same episode. Specials are outside that count and
-    have none.
-
-    `similarity` is how much of its name it shares with the episode being linked,
-    which is what lets the choices be read in the order they are most likely to
-    be the one rather than in the order the title runs.
-    """
-
+    canonical_episode_id: uuid.UUID
     tmdb_episode_id: int
-    name: str | None
-    season_number: int | None
-    episode_number: int | None
+    name: str
+    show_name: str
+    season_number: int
+    episode_number: int
     absolute_number: int | None
-    url: str | None
+    url: str
     similarity: float
     already_used: bool = False
-    """Whether another episode of the same show is already pointed at this one.
-
-    A TMDB episode stands for one episode of the title, so one already spoken
-    for is rarely the answer for a second, and saying so is what lets the ones
-    still going spare be the ones offered first.
-    """
 
 
 # TODO: Validate
@@ -197,29 +182,10 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
 
 
 # TODO: Validate
-class EpisodeTmdbLinkInput(BaseModel):
-    """The TMDB episode a `User` is pointing an `Episode` at by hand."""
+class EpisodeTmdbUrlInput(BaseModel):
+    """The themoviedb.org address a `User` is pointing an `Episode` at."""
 
-    tmdb_episode_id: int
-    media_type: MediaType | None = None
-    """Which half of the TMDB catalogue the id belongs to, where it is known.
-
-    A movie is one record, so the id of the episode standing for it is the id of
-    the movie itself and the movie can be read in from that alone. A series
-    numbers its episodes apart from the series, so an episode's id says nothing
-    about which series holds it and only the title already read in has it.
-
-    Left unsaid by a choice taken off the list, which is an episode of the title
-    the show is already linked to whichever half of the catalogue that is in.
-    """
-
-    selected: bool = False
-    """Whether the `User` went and found this episode rather than taking the offer.
-
-    Confirming the closest match says only that what was suggested looked right,
-    where picking one out of the title is somebody having looked for it, so the
-    two are worth telling apart when the link is read back later.
-    """
+    url: str
 
 
 # TODO: Validate

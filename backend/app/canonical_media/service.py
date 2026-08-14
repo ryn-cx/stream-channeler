@@ -160,15 +160,33 @@ def link_canonical_show(
     show: Show,
     canonical_show: Show,
 ) -> ShowCanonicalShow:
-    for link in show.canonical_show_links:
-        if link.canonical_show is canonical_show or (
-            canonical_show.id is not None
-            and link.canonical_show_id == canonical_show.id
+    # Canonical show relationships should only ever be one level deep to properly
+    # support tthe way episode selector works.
+    if not canonical_show.is_canonical:
+        message = f"{canonical_show} is not a canonical show."
+        raise ValueError(message)
+    # The pointer is read before the row it is written from, since a copy linked
+    # this session names its title without the pointer being written yet, and a
+    # row that names neither is a title itself.
+    if show.is_canonical and show.canonical_show is None:
+        message = f"{show} is a canonical show with no canonical show pointer."
+        raise ValueError(message)
+
+    for existing_canonical_show in show.canonical_show_links:
+        # By the row where the link is already stored, and by the object itself
+        # where it is not: a link made this session names the title it holds
+        # rather than the title's id, which the flush is what writes.
+        if (
+            existing_canonical_show.canonical_show is canonical_show
+            or existing_canonical_show.canonical_show_id == canonical_show.id
         ):
-            return link
-    link = ShowCanonicalShow(show=show, canonical_show=canonical_show)
-    session.add(link)
-    return link
+            return existing_canonical_show
+    existing_canonical_show = ShowCanonicalShow(
+        show=show,
+        canonical_show=canonical_show,
+    )
+    session.add(existing_canonical_show)
+    return existing_canonical_show
 
 
 # TODO: Validate

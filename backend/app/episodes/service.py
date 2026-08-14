@@ -1,12 +1,15 @@
 # TODO: Validate
-"""Episodes no TMDB record was found for, each beside the closest TMDB episode.
+"""Which TMDB episode an `Episode` is a copy of, and the ones it could be.
 
 An import points an episode at TMDB by name, and an episode whose name matched
-nothing is left standing only for itself. Those are what is gathered
-here, each paired with the TMDB episode that came closest, so the link a name
-could not make can be made by hand instead.
+nothing is left standing only for itself. Those are what is gathered here, each
+paired with the TMDB episode that came closest, so the link a name could not
+make can be made by hand instead: the episodes still waiting on somebody, the
+episodes of a title one of them could be, and the writing down of whichever a
+`User` settles on.
 """
 
+import re
 import uuid
 from collections import defaultdict
 from collections.abc import Collection, Sequence
@@ -24,7 +27,10 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
+from app.canonical_media.service import link_canonical_show
 from app.episodes.models import (
+    MANUAL_NOTES,
+    MANUALLY_SELECTED_NOTE,
     Episode,
 )
 from app.episodes.schemas import (
@@ -34,6 +40,7 @@ from app.episodes.schemas import (
 )
 from app.media.canonical_metadata import tmdb_episode_url
 from app.media.identifiers import TMDB_PLUGIN_KEY
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -41,6 +48,15 @@ from app.sources.models import Source
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
+
+# The two themoviedb.org addresses that name one record. On TMDB's own links the
+# title's name follows its id, which is no part of what the page names and is
+# left where it lies.
+_FILM_URL = re.compile(r"themoviedb\.org/movie/(?P<tmdb_id>\d+)")
+_SERIES_EPISODE_URL = re.compile(
+    r"themoviedb\.org/tv/(?P<tmdb_id>\d+)[^/]*"
+    r"/season/(?P<season_number>\d+)/episode/(?P<episode_number>\d+)",
+)
 
 # What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
@@ -146,12 +162,14 @@ def _choice(
         return None
 
     return TmdbEpisodeChoice(
+        canonical_episode_id=episode.id,
         tmdb_episode_id=tmdb_episode_id,
-        name=episode.name,
-        season_number=season.season_number,
-        episode_number=episode.episode_number,
+        name=episode.name,  # type: ignore[arg-type]
+        show_name=show.name,  # type: ignore[arg-type]
+        season_number=season.season_number,  # type: ignore[arg-type]
+        episode_number=episode.episode_number,  # type: ignore[arg-type]
         absolute_number=absolute_numbers.get(episode.id),
-        url=tmdb_episode_url(
+        url=tmdb_episode_url(  # type: ignore[arg-type]
             show.key,
             season.season_number,
             episode.episode_number,
@@ -537,21 +555,50 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
 
 
 # TODO: Validate
-def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
-    """Read a TMDB series in and return the title its episodes are under.
+def _import_tmdb_show(session: Session, media_type: MediaType, tmdb_id: int) -> Show:
+    """Read a TMDB title in and return the row standing for it.
 
     Read in rather than looked for, since a title nothing has imported has no
-    episodes stored to choose from and naming it is the asking for it.
+    episodes stored to choose from and naming it is the asking for it. Whatever
+    is already stored costs nothing to ask for again.
+
+    Imported here rather than at the top of the module because the TMDB plugin
+    is built on the base every plugin is, which reads this module in turn.
     """
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    canonical_show = TMDB(session).import_show(tmdb_show_id)
-    if canonical_show is None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"TMDB has no series with the id {tmdb_show_id}",
-        )
-    return canonical_show.id
+    tmdb = TMDB(session)
+    if media_type is MediaType.movie:
+        return tmdb.import_movie(tmdb_id)
+    return tmdb.import_show(tmdb_id)
+
+
+# TODO: Validate
+def _import_tmdb_url(session: Session, url: str) -> Show:
+    """Read the title a themoviedb.org address is under in, and return its row.
+
+    Which half of the catalogue an address names and which title is the plugin's
+    to read, so the address is handed over whole rather than taken apart first. A
+    season and an episode are under the title rather than beside it, so an
+    address naming one reads the title in exactly as the title's own page would.
+
+    Imported here rather than at the top of the module because the TMDB plugin
+    is built on the base every plugin is, which reads this module in turn.
+    """
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    imported = TMDB(session).import_url(url)
+    statement = select(Show).where(
+        is_canonical(Show),
+        Show.key == imported[0].show_key,
+    )
+    return session.exec(statement).one()
+
+
+# TODO: Validate
+def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
+    """Read a TMDB series in and return the title its episodes are under."""
+    return _import_tmdb_show(session, MediaType.tv, tmdb_show_id).id
 
 
 # TODO: Validate
@@ -608,3 +655,140 @@ def list_tmdb_episode_choices(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
     )
+
+
+# TODO: Validate
+def link_episode_using_tmdb_url(
+    session: Session,
+    episode: Episode,
+    url: str,
+) -> Episode:
+    """Point `episode` at the TMDB record a themoviedb.org address names.
+
+    Only a film's page and a series episode's page are taken, since they are the
+    addresses that name one record: a series page names a title rather than any
+    of its episodes, and a season's names a run of them, so neither says what
+    `episode` is a copy of. Which of the two was given is settled here, and the
+    address is handed on to whichever reads it.
+    """
+    address = url.strip()
+    if found := _SERIES_EPISODE_URL.search(address):
+        return _link_episode_using_tmdb_episode(session, episode, address, found)
+    if _FILM_URL.search(address):
+        return _link_episode_using_tmdb_movie(session, episode, address)
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"{url} is not the address of a TMDB film or series episode",
+    )
+
+
+# TODO: Validate
+def _link_episode_using_tmdb_episode(
+    session: Session,
+    episode: Episode,
+    url: str,
+    found: re.Match[str],
+) -> Episode:
+    canonical_show = _import_tmdb_url(session, url)
+    canonical_episode = session.exec(
+        select(Episode)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(
+            is_canonical(Episode),
+            Season.show_id == canonical_show.id,
+            Season.season_number == int(found["season_number"]),
+            Episode.episode_number == int(found["episode_number"]),
+        ),
+    ).one()
+    return link_episode(session, episode, canonical_episode)
+
+
+# TODO: Validate
+def _link_episode_using_tmdb_movie(
+    session: Session,
+    episode: Episode,
+    url: str,
+) -> Episode:
+    canonical_show = _import_tmdb_url(session, url)
+
+    canonical_episode = session.exec(
+        select(Episode)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(is_canonical(Episode), Season.show_id == canonical_show.id),
+    ).one()
+    return link_episode(session, episode, canonical_episode)
+
+
+# TODO: Validate
+def link_episode(
+    session: Session,
+    episode: Episode,
+    canonical_episode: Episode,
+) -> Episode:
+    """Point `episode` at a TMDB episode, and its show at the title holding it.
+
+    Two websites' episodes pointing at one record is what makes them a single
+    episode to watch, so only the show's own other episodes are a clash. A `User`
+    saying which episode the record is has settled which one it is, so whichever
+    was on it by a guess comes off and is left for the next import to match
+    again. An episode another `User` decision put there is left where it is,
+    since one decision is no reason to undo another.
+    """
+    link_canonical_show(session, episode.season.show, canonical_episode.season.show)
+
+    others = session.exec(
+        select(Episode)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(
+            Season.show_id == episode.season.show_id,
+            Episode.canonical_episode_id == canonical_episode.id,
+            Episode.id != episode.id,
+            col(Episode.deleted_at).is_(None),
+        ),
+    ).all()
+    for other in others:
+        if other.canonical_episode_locked and (
+            other.canonical_episode_note in MANUAL_NOTES
+        ):
+            continue
+
+        removed = (
+            f"Removed {canonical_episode.id}, which was given to another "
+            "episode by hand"
+        )
+        previous = other.canonical_episode_note
+        other.canonical_episode_note = f"{removed}. {previous}" if previous else removed
+        other.canonical_episode = None
+        other.canonical_episode_locked = False
+        session.add(other)
+
+    # Taken off before the episode being linked is put on, since the two hold
+    # the record one after the other and a season may hold both of them.
+    session.flush()
+
+    episode.canonical_episode_id = canonical_episode.id
+    episode.canonical_episode_locked = True
+    episode.canonical_episode_note = MANUALLY_SELECTED_NOTE
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode
+
+
+# TODO: Validate
+def unlink_episode(session: Session, episode: Episode) -> Episode:
+    """Take `episode` off the TMDB episode it was pointed at.
+
+    The lock and the note go with it, so the episode is left as one nothing has
+    settled rather than as one settled at nothing: a link taken back is a link
+    that should not have been made, and the next import is free to work out its
+    own again.
+    """
+    episode.canonical_episode = None
+    episode.canonical_episode_locked = False
+    episode.canonical_episode_note = None
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode

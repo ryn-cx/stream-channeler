@@ -239,6 +239,10 @@ class ChannelShowsOutput(BaseModel):
     # episodes pulled in from other channels.
     filter_only_shows: list[ShowPublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    # The source each title itself was written by, keyed by `canonical_show_id`.
+    # Kept apart from `sources` because that is where a title can be watched and
+    # this is who wrote it down, which is never a website carrying it.
+    canonical_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
     # The regular shows grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelShowGroup] = Field(default_factory=list)
@@ -294,11 +298,22 @@ class WhitelistSeasonOutput(SeasonOutput):
 
 
 # TODO: Validate
+class WhitelistEpisodeCopyOutput(BaseModel):
+    """One website's copy of an episode, and the episode row standing for it."""
+
+    show_id: uuid.UUID
+    episode_id: uuid.UUID
+
+
+# TODO: Validate
 class WhitelistEpisodeOutput(EpisodeOutput):
     filtered: bool
     expires_at: datetime | None = Field(default=None)
     # The `Show` ids of the websites' copies that carry this episode.
     show_ids: list[uuid.UUID]
+    # Each copy on its own, so one website's account of the episode can be read
+    # rather than only the row the copies were folded into.
+    copies: list[WhitelistEpisodeCopyOutput]
     # How TMDB numbers and names the episode and the season it is in, which is not
     # always how the website does. `None` when it is not linked to TMDB.
     tmdb_season_number: int | None = Field(default=None)

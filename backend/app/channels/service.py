@@ -213,13 +213,30 @@ def tmdb_shows_by_canonical_id(
     """Return TMDB's own copy of each title, keyed by the title it is of.
 
     TMDB is not one of the websites a title can be watched on, so its copies are
-    gathered apart from theirs rather than alongside them, and are only worth
-    reading for a title that has no website copy to be read instead.
+    gathered apart from theirs rather than alongside them.
+
+    A title TMDB has a record of is the row TMDB wrote, so it is its own copy and
+    there is no link pointing at it to find it by. The links find the other case:
+    a title TMDB wrote that is also a copy of another, which is what a listing
+    mixing titles leaves behind.
     """
     grouped: dict[UUID, list[Show]] = defaultdict(list)
     canonical_show_ids = set(canonical_show_ids)
     if not canonical_show_ids:
         return grouped
+
+    titles = session.exec(
+        select(Show)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            col(Show.id).in_(canonical_show_ids),
+            col(Show.deleted_at).is_(None),
+            Plugin.key == TMDB_PLUGIN_KEY,
+        ),
+    ).all()
+    for title in titles:
+        grouped[title.id].append(title)
 
     rows = session.exec(
         select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
@@ -234,7 +251,8 @@ def tmdb_shows_by_canonical_id(
         ),
     ).all()
     for canonical_show_id, show in rows:
-        grouped[canonical_show_id].append(show)
+        if show not in grouped[canonical_show_id]:
+            grouped[canonical_show_id].append(show)
     return grouped
 
 
@@ -287,23 +305,9 @@ def tmdb_shows_for_channel_show(
     TMDB is not one of the websites a title can be watched on, so its copy is
     kept apart from them and only stands for what TMDB has a record of.
     """
-    return list(
-        session.exec(
-            select(Show)
-            .join(
-                ShowCanonicalShow,
-                col(ShowCanonicalShow.show_id) == col(Show.id),
-            )
-            .join(Source)
-            .join(Plugin)
-            .where(
-                col(ShowCanonicalShow.canonical_show_id)
-                == channel_show.canonical_show_id,
-                col(Show.deleted_at).is_(None),
-                Plugin.key == TMDB_PLUGIN_KEY,
-            ),
-        ).all(),
-    )
+    return tmdb_shows_by_canonical_id(session, [channel_show.canonical_show_id])[
+        channel_show.canonical_show_id
+    ]
 
 
 # TODO: Validate

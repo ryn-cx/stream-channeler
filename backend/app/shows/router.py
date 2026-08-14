@@ -11,7 +11,6 @@ from app.auth.dependencies import (
     SessionDep,
     SuperUser,
 )
-from app.canonical_media.dependencies import AdminCanonicalShow
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_show_issue_reports
@@ -30,7 +29,7 @@ from app.plugins.dependencies import ReadablePlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
-from app.shows.dependencies import EditableShow, ReadableShow
+from app.shows.dependencies import AdminCanonicalShow, EditableShow, ReadableShow
 from app.shows.models import Show
 from app.shows.schemas import (
     CanonicalShowOutput,

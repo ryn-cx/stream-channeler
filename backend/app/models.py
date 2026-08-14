@@ -180,12 +180,27 @@ class MediaMixin[
     # the first foreign key, since a model can hold more than one and which of
     # them is the parent is not something the columns say.
     PARENT_ID_FIELD: ClassVar[str]
+    # The column holding the row this is a copy of, for the models that hold
+    # their copies in the same table as the media itself.
+    CANONICAL_ID_FIELD: ClassVar[str]
 
     """Mixin for media models.
 
     Subclasses must implement `parent`, `children`, `root_record`, and
     `select_with_plugin`.
     """
+
+    # TODO: Validate
+    @property
+    def is_canonical(self) -> bool:
+        """Whether this row is the media itself rather than one website's copy of it.
+
+        A canonical row and the copies of it share a table, and the pointer a
+        copy carries to what it is a copy of is what tells the two apart: a row
+        that points at nothing is the media itself. `is_canonical` in
+        `app.canonical_media.filters` asks the same question of a query.
+        """
+        return getattr(self, self.CANONICAL_ID_FIELD) is None
 
     # TODO: Validate
     @property

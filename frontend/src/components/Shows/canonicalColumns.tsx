@@ -12,7 +12,8 @@ export const canonicalShowColumns: ColumnDef<CanonicalShowTableData>[] = [
     header: "Name",
     cell: ({ row }) => (
       <span className="font-medium block max-w-48 whitespace-normal wrap-break-word">
-        {row.original.name || `No Name (${row.original.key ?? row.original.id})`}
+        {row.original.name ||
+          `No Name (${row.original.key ?? row.original.id})`}
       </span>
     ),
   },

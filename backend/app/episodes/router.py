@@ -14,13 +14,10 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.dependencies import (
-    AdminCanonicalEpisode,
-    AdminCanonicalShow,
-)
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
 from app.episodes.dependencies import (
+    AdminCanonicalEpisode,
     EditableEpisode,
     ExistingEpisode,
     ReadableEpisode,
@@ -36,15 +33,19 @@ from app.episodes.schemas import (
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
+    EpisodeTmdbUrlInput,
     EpisodeUpdate,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
 )
-from app.episodes.tmdb_matches import (
+from app.episodes.service import (
+    link_episode,
+    link_episode_using_tmdb_url,
     list_tmdb_episode_choices,
     list_unlocked_episodes,
     list_unmatched_episodes,
+    unlink_episode,
 )
 from app.issue_reports.service import list_episode_issue_reports
 from app.media.canonical_metadata import (
@@ -61,7 +62,7 @@ from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
 from app.seasons.models import Season
 from app.service import list_response
-from app.shows.dependencies import ReadableShow
+from app.shows.dependencies import AdminCanonicalShow, ReadableShow
 from app.shows.models import Show
 from app.sources.dependencies import ReadableSource
 from app.sources.models import Source
@@ -274,6 +275,63 @@ def admin_get_tmdb_episode_choices(
     linked to, which is what reaches an episode TMDB files under its own title.
     """
     return list_tmdb_episode_choices(session, episode, tmdb_show_id)
+
+
+# TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/tmdb-url",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_link_episode_by_tmdb_url(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    url_input: EpisodeTmdbUrlInput,
+) -> EpisodeOutput:
+    """Point an `Episode` at the TMDB record a themoviedb.org address names.
+
+    Read here rather than in the browser so that the title is imported on the
+    way, which is what turns the numbering in an episode's address into the
+    record the episode is pointed at, and so that a title the show was not a
+    copy of is linked to it as well.
+    """
+    return _episode_output(
+        session,
+        link_episode_using_tmdb_url(session, episode, url_input.url),
+    )
+
+
+# TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/canonical/{canonical_episode_id}",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_link_episode_to_tmdb(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    canonical_episode: AdminCanonicalEpisode,
+) -> EpisodeOutput:
+    """Point an `Episode` at the episode an admin chose for it.
+
+    The episode chosen is one already stored, since the choices are read off the
+    stored rows, so it is named by its own id and there is nothing to read in.
+    """
+    return _episode_output(
+        session,
+        link_episode(session, episode, canonical_episode),
+    )
+
+
+# TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/tmdb-unlink",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_unlink_episode_from_tmdb(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> EpisodeOutput:
+    """Take an `Episode` off the TMDB episode it was pointed at."""
+    return _episode_output(session, unlink_episode(session, episode))
 
 
 # TODO: Validate

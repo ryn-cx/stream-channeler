@@ -436,6 +436,9 @@ export type ChannelShowsOutput = {
     sources?: {
         [key: string]: SourcePublic;
     };
+    canonical_sources?: {
+        [key: string]: SourcePublic;
+    };
     groups?: Array<ChannelShowGroup>;
     stats?: {
         [key: string]: ChannelShowStats;
@@ -667,6 +670,13 @@ export type EpisodesPublic = {
     total_count: number;
     filtered_count: number;
     is_server_side: boolean;
+};
+
+/**
+ * The themoviedb.org address a `User` is pointing an `Episode` at.
+ */
+export type EpisodeTmdbUrlInput = {
+    url: string;
 };
 
 /**
@@ -1376,24 +1386,17 @@ export type SourceUpdate = {
 };
 
 /**
- * A TMDB episode of a title, as one of the episodes an `Episode` can be linked to.
- *
- * `absolute_number` counts the episode from the first of the title rather than
- * from the first of its own season, which is how a website that never restarts
- * its numbering names the same episode. Specials are outside that count and
- * have none.
- *
- * `similarity` is how much of its name it shares with the episode being linked,
- * which is what lets the choices be read in the order they are most likely to
- * be the one rather than in the order the title runs.
+ * A TMDB episode, as one of the episodes an `Episode` can be linked to.
  */
 export type TmdbEpisodeChoice = {
+    canonical_episode_id: string;
     tmdb_episode_id: number;
-    name: (string | null);
-    season_number: (number | null);
-    episode_number: (number | null);
+    name: string;
+    show_name: string;
+    season_number: number;
+    episode_number: number;
     absolute_number: (number | null);
-    url: (string | null);
+    url: string;
     similarity: number;
     already_used?: boolean;
 };
@@ -1649,6 +1652,14 @@ export type WhitelistEntryInput = {
     expires_at?: (string | null);
 };
 
+/**
+ * One website's copy of an episode, and the episode row standing for it.
+ */
+export type WhitelistEpisodeCopyOutput = {
+    show_id: string;
+    episode_id: string;
+};
+
 export type WhitelistEpisodeOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -1673,6 +1684,7 @@ export type WhitelistEpisodeOutput = {
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
+    copies: Array<WhitelistEpisodeCopyOutput>;
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
@@ -2141,6 +2153,26 @@ export type EpisodesAdminGetTmdbEpisodeChoicesData = {
 };
 
 export type EpisodesAdminGetTmdbEpisodeChoicesResponse = (Array<TmdbEpisodeChoice>);
+
+export type EpisodesAdminLinkEpisodeByTmdbUrlData = {
+    episodeId: string;
+    requestBody: EpisodeTmdbUrlInput;
+};
+
+export type EpisodesAdminLinkEpisodeByTmdbUrlResponse = (EpisodeOutput);
+
+export type EpisodesAdminLinkEpisodeToTmdbData = {
+    canonicalEpisodeId: string;
+    episodeId: string;
+};
+
+export type EpisodesAdminLinkEpisodeToTmdbResponse = (EpisodeOutput);
+
+export type EpisodesAdminUnlinkEpisodeFromTmdbData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminUnlinkEpisodeFromTmdbResponse = (EpisodeOutput);
 
 export type EpisodesGetEpisodeInformationData = {
     episodeId: string;

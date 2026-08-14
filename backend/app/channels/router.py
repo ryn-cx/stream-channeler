@@ -58,6 +58,7 @@ from app.channels.schemas import (
     CombinedChannelOutput,
     EpisodeWithDetails,
     SortOptionOutput,
+    WhitelistEpisodeCopyOutput,
     WhitelistEpisodeOutput,
     WhitelistSeasonOutput,
     WhitelistShowInput,
@@ -627,8 +628,35 @@ def get_channel_shows(
     # of, since a copy that mixes titles is listed under whichever of them the
     # channel was told to hold.
     output.stats = _channel_show_stats(session, canonical_show_ids)
+    output.canonical_sources = _canonical_sources(session, canonical_show_ids)
 
     return output
+
+
+# TODO: Validate
+def _canonical_sources(
+    session: Session,
+    canonical_show_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, SourcePublic]:
+    """Return the source each title itself was written by, keyed by the title.
+
+    Which is TMDB wherever TMDB has a record of the title, and nothing where a
+    website's listing is a copy of a row minted for it to point at rather than of
+    a title anything catalogued.
+    """
+    if not canonical_show_ids:
+        return {}
+
+    canonical_shows = session.exec(
+        select(Show).where(
+            col(Show.id).in_(canonical_show_ids),
+            col(Show.source_id).is_not(None),
+        ),
+    ).all()
+    return {
+        canonical_show.id: SourcePublic.model_validate(canonical_show.source)
+        for canonical_show in canonical_shows
+    }
 
 
 # TODO: Validate
@@ -763,10 +791,17 @@ def _copies_by_canonical_id(
     shows: Sequence[Show],
     season_ids: dict[uuid.UUID, uuid.UUID],
     listed_episode_ids: Collection[uuid.UUID],
-) -> tuple[dict[uuid.UUID, list[uuid.UUID]], dict[uuid.UUID, list[uuid.UUID]]]:
+) -> tuple[
+    dict[uuid.UUID, list[uuid.UUID]],
+    dict[uuid.UUID, list[uuid.UUID]],
+    dict[uuid.UUID, list[WhitelistEpisodeCopyOutput]],
+]:
     """Map each season and canonical episode to the copies carrying it."""
     season_show_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
     episode_show_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    episode_copies: dict[uuid.UUID, list[WhitelistEpisodeCopyOutput]] = defaultdict(
+        list,
+    )
     for show in shows:
         for season in show.active_children:
             if not season.active_children and show.id not in season_show_ids[season.id]:
@@ -780,7 +815,10 @@ def _copies_by_canonical_id(
                 episode_id = canonical_id_of(episode)
                 if show.id not in episode_show_ids[episode_id]:
                     episode_show_ids[episode_id].append(show.id)
-    return season_show_ids, episode_show_ids
+                episode_copies[episode_id].append(
+                    WhitelistEpisodeCopyOutput(show_id=show.id, episode_id=episode.id),
+                )
+    return season_show_ids, episode_show_ids, episode_copies
 
 
 # TODO: Validate
@@ -901,7 +939,7 @@ def get_channel_whitelist(
 
     # The websites' copies carrying each season and episode, so a row can name the
     # sites it came from.
-    season_show_ids, episode_show_ids = _copies_by_canonical_id(
+    season_show_ids, episode_show_ids, episode_copies = _copies_by_canonical_id(
         [*shows, *tmdb_shows],
         episode_seasons,
         listed_episode_ids,
@@ -969,6 +1007,7 @@ def get_channel_whitelist(
                         "filtered": canonical_episode_id in enabled_episodes,
                         "expires_at": episode_expiries.get(canonical_episode_id),
                         "show_ids": episode_show_ids[canonical_episode_id],
+                        "copies": episode_copies[canonical_episode_id],
                     },
                 ),
             )

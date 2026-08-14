@@ -142,6 +142,7 @@ export function ManageShowsTabs({
         shows: Show[]
         filter_only_shows: Show[]
         sources: Record<string, Source>
+        canonical_sources: Record<string, Source>
         stats: Record<string, ChannelShowStats>
       }>,
   })
@@ -161,6 +162,8 @@ export function ManageShowsTabs({
     showsList.find((show) => show.id === selectedShowId) ?? null
   const showCount = groupShows(showsList).length
   const sources: Record<string, Source> = showsData?.sources || {}
+  const canonicalSources: Record<string, Source> =
+    showsData?.canonical_sources || {}
   const shows: Record<string, Show> = {
     ...(showsData?.shows
       ? Object.fromEntries(showsData.shows.map((show) => [show.id, show]))
@@ -474,6 +477,7 @@ export function ManageShowsTabs({
             <ShowCards
               shows={showsList}
               sources={sources}
+              canonicalSources={canonicalSources}
               stats={showsData?.stats ?? {}}
               onSelect={(show) =>
                 setSelectedShowId(selectedShowId === show.id ? null : show.id)
@@ -536,6 +540,7 @@ export function ManageShowsTabs({
               <ShowCards
                 shows={filterOnlyShowsList}
                 sources={sources}
+                canonicalSources={canonicalSources}
                 renderActions={(show) => (
                   <div className="flex items-center justify-center gap-1">
                     <Button

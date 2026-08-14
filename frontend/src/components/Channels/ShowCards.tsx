@@ -194,6 +194,7 @@ function showFacts(
 export function ShowCards({
   shows,
   sources,
+  canonicalSources = {},
   stats = {},
   renderActions,
   renderExpanded,
@@ -201,6 +202,8 @@ export function ShowCards({
 }: {
   shows: Show[]
   sources: Record<string, Source>
+  /** The source each title itself was written by, keyed by `canonical_show_id`. */
+  canonicalSources?: Record<string, Source>
   stats?: Record<string, ChannelShowStats>
   renderActions?: (show: Show) => ReactNode
   renderExpanded?: (show: Show) => ReactNode
@@ -221,6 +224,12 @@ export function ShowCards({
         const streamable = group.filter(
           (show) => sources[show.source_id]?.favicon_url,
         )
+        // Who wrote the title down, which is not one of the sites carrying it:
+        // a card is one title, and the row of sites underneath is where it can
+        // be watched.
+        const canonicalSource = firstShow.canonical_show_id
+          ? canonicalSources[firstShow.canonical_show_id]
+          : undefined
 
         return (
           // A card is one title, and the same listing can be a card under each of
@@ -241,6 +250,13 @@ export function ShowCards({
                       alt={name}
                       className="size-full object-cover"
                     />
+                  )}
+                  {/* Who the title is catalogued by sits over the artwork, apart
+                      from the row of sites it can be watched on. */}
+                  {canonicalSource?.favicon_url && (
+                    <span className="absolute top-1 left-1 rounded bg-background/80 p-0.5">
+                      <SourceFavicon source={canonicalSource} />
+                    </span>
                   )}
                   {/* The name reads over the artwork so the card stays as short
                       as the picture it shows. */}

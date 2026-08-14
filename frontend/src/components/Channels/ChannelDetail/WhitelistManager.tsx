@@ -10,7 +10,6 @@ import type {
 } from "@/client"
 import { ChannelsService } from "@/client"
 import { EpisodeInformationPanel } from "@/components/ChannelCommon/EpisodeInformationDialog"
-import { SeasonInformationPanel } from "@/components/ChannelCommon/SeasonInformationDialog"
 import { ShowInformationPanel } from "@/components/ChannelCommon/ShowInformationDialog"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
@@ -57,41 +56,12 @@ function SourceFavicons({
   )
 }
 
-/**
- * One season row: the stored seasons it stands for, and the episodes under it.
- *
- * A website numbers its own seasons, which is not how TMDB numbers the same
- * ones, so a row stands for a TMDB season rather than a stored one and the
- * stored seasons whose episodes TMDB puts in it are all listed together. A
- * season filter is about a stored season, so a row carries every stored season
- * it covers and marks them together.
- */
-interface SeasonGroup {
-  key: string
-  label: string
-  seasons: WhitelistSeasonOutput[]
-  episodes: WhitelistEpisodeOutput[]
-}
-
 // A name that says nothing the episode's own number does not, whether the site
 // wrote it as "Episode 3", "EP 3", or just "3".
 const NUMBERED_EPISODE_NAME = /^(?:episode|ep\.?)?\s*0*(\d+)$/i
 
 // TODO: Validate
-function tmdbGroupKey(tmdbSeasonNumber: number) {
-  return `tmdb-${tmdbSeasonNumber}`
-}
-
-// A season TMDB has a record of is one row for every site carrying it, so the
-// episodes under it TMDB has no record of would be read as one site's had they
-// only their season to go by. They are told apart by the sites carrying them.
-// TODO: Validate
-function siteGroupKey(seasonId: string, showIds: string[]) {
-  return `season-${seasonId}-${[...showIds].sort().join("-")}`
-}
-
-// TODO: Validate
-function siteSeasonLabel(
+function seasonLabel(
   season: WhitelistSeasonOutput,
   anySeasonHasNumber: boolean,
 ) {
@@ -102,126 +72,37 @@ function siteSeasonLabel(
   return `Season ${season.season_number ?? "?"}${seasonName}`
 }
 
+/**
+ * The episodes of each season, keyed by the season they belong to.
+ *
+ * An episode is under the season its canonical episode is under, which the
+ * server has already answered with: a site that files an episode somewhere the
+ * title does not is read as the title has it, so nothing here has to work out
+ * which season a row belongs to a second time.
+ */
 // TODO: Validate
-function groupSeasons(
-  seasons: WhitelistSeasonOutput[],
+function episodesBySeason(
   episodes: WhitelistEpisodeOutput[],
-): SeasonGroup[] {
-  const anySeasonHasNumber = seasons.some(
-    (season) => season.season_number != null,
-  )
-  const seasonsById = new Map(seasons.map((season) => [season.id, season]))
-  const episodesBySeasonId = new Map<string, WhitelistEpisodeOutput[]>()
+): Map<string, WhitelistEpisodeOutput[]> {
+  const bySeason = new Map<string, WhitelistEpisodeOutput[]>()
   for (const episode of episodes) {
-    const seasonEpisodes = episodesBySeasonId.get(episode.season_id) ?? []
+    const seasonEpisodes = bySeason.get(episode.season_id) ?? []
     seasonEpisodes.push(episode)
-    episodesBySeasonId.set(episode.season_id, seasonEpisodes)
+    bySeason.set(episode.season_id, seasonEpisodes)
   }
-
-  const groups = new Map<string, SeasonGroup>()
-  // TODO: Validate
-  const groupFor = (key: string, label: string) => {
-    const existing = groups.get(key)
-    if (existing) return existing
-    const created: SeasonGroup = { key, label, seasons: [], episodes: [] }
-    groups.set(key, created)
-    return created
-  }
-
-  // A stored season belongs wherever its episodes were put, which is what merges
-  // the site's split of a TMDB season back into the one row. Its episodes TMDB
-  // has no record of are kept out of the rows TMDB numbers, so a season carrying
-  // both is listed in each. A season with no episodes at all has only its own
-  // TMDB number to go by.
-  // TODO: Validate
-  const groupKeysOfSeason = (season: WhitelistSeasonOutput) => {
-    const seasonEpisodes = episodesBySeasonId.get(season.id) ?? []
-    const keys = new Set(
-      seasonEpisodes.map((episode) =>
-        episode.tmdb_season_number != null
-          ? tmdbGroupKey(episode.tmdb_season_number)
-          : siteGroupKey(season.id, episode.show_ids),
-      ),
-    )
-    if (keys.size > 0) return [...keys]
-    return [siteGroupKey(season.id, season.show_ids)]
-  }
-
-  // TODO: Validate
-  const labelForKey = (
-    key: string,
-    season: WhitelistSeasonOutput | undefined,
-  ) => {
-    if (key.startsWith("tmdb-")) {
-      return `Season ${key.replace("tmdb-", "")}`
-    }
-    return season ? siteSeasonLabel(season, anySeasonHasNumber) : ""
-  }
-
-  const keysBySeasonId = new Map(
-    seasons.map((season) => [season.id, groupKeysOfSeason(season)]),
-  )
-  for (const season of seasons) {
-    for (const key of keysBySeasonId.get(season.id) ?? []) {
-      groupFor(key, labelForKey(key, season)).seasons.push(season)
-    }
-  }
-
-  for (const episode of episodes) {
-    const season = seasonsById.get(episode.season_id)
-    // An episode TMDB has no record of is listed apart from the ones it does, so
-    // a row TMDB numbers holds only what TMDB put there.
-    const ownKey =
-      episode.tmdb_season_number != null
-        ? tmdbGroupKey(episode.tmdb_season_number)
-        : siteGroupKey(episode.season_id, episode.show_ids)
-    // An episode several seasons carry is listed once under each of them, which
-    // is one entry per season row and one row per season the sites split it into.
-    const rowKeys = (keysBySeasonId.get(episode.season_id) ?? []).filter(
-      (key) => !key.startsWith("tmdb-"),
-    )
-    for (const key of new Set(
-      episode.tmdb_season_number != null ? [ownKey] : [ownKey, ...rowKeys],
-    )) {
-      const group = groupFor(key, labelForKey(key, season))
-      // The same episode reaches a row from every site carrying it, and it is one
-      // entry there naming them all.
-      const listed = group.episodes.find(
-        (listedEpisode) =>
-          listedEpisode.canonical_episode_id === episode.canonical_episode_id,
-      )
-      if (listed) {
-        listed.show_ids = [
-          ...new Set([...listed.show_ids, ...episode.show_ids]),
-        ]
-        continue
-      }
-      group.episodes.push({ ...episode })
-    }
-  }
-
-  // The site's split of a TMDB season leaves the episodes of one row numbered by
-  // more than one website, so a row TMDB numbers is read in TMDB's order.
-  for (const group of groups.values()) {
+  // A season the sites number between them is read in the title's order, which
+  // is the only order every episode of it is in.
+  for (const seasonEpisodes of bySeason.values()) {
     if (
-      group.episodes.every((episode) => episode.tmdb_episode_number != null)
+      seasonEpisodes.every((episode) => episode.tmdb_episode_number != null)
     ) {
-      group.episodes.sort(
+      seasonEpisodes.sort(
         (first, second) =>
           (first.tmdb_episode_number ?? 0) - (second.tmdb_episode_number ?? 0),
       )
     }
-    if (!group.key.startsWith("tmdb-")) continue
-    // Only a season TMDB has a record of can name a row TMDB numbers. A website
-    // that split the season carries its own number in the name of its copy, which
-    // is the very number the row is there to replace.
-    const name = group.seasons.find((season) => season.name)?.name
-    if (name && name !== group.label) {
-      group.label = `${group.label} - ${name}`
-    }
   }
-
-  return [...groups.values()]
+  return bySeason
 }
 
 interface WhitelistManagerProps {
@@ -266,12 +147,13 @@ export function WhitelistManager({
   const [informationEpisodeId, setInformationEpisodeId] = useState<
     string | null
   >(null)
-  const [informationSeasonKey, setInformationSeasonKey] = useState<
-    string | null
-  >(null)
   const [informationShowId, setInformationShowId] = useState<string | null>(
     null,
   )
+  // The website's copy of an episode whose information is open, if any.
+  const [informationCopyEpisodeId, setInformationCopyEpisodeId] = useState<
+    string | null
+  >(null)
 
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -346,14 +228,35 @@ export function WhitelistManager({
   }
 
   // TODO: Validate
-  const toggleGroupExpanded = (groupKey: string) => {
+  const toggleSeasonExpanded = (seasonId: string) => {
     const newExpanded = new Set(expandedSeasons)
-    if (newExpanded.has(groupKey)) {
-      newExpanded.delete(groupKey)
+    if (newExpanded.has(seasonId)) {
+      newExpanded.delete(seasonId)
     } else {
-      newExpanded.add(groupKey)
+      newExpanded.add(seasonId)
     }
     setExpandedSeasons(newExpanded)
+  }
+
+  // TODO: Validate
+  const toggleEpisodeInformation = (episodeId: string) => {
+    setInformationEpisodeId(
+      informationEpisodeId === episodeId ? null : episodeId,
+    )
+  }
+
+  // TODO: Validate
+  const toggleCopyInformation = (copyEpisodeId: string) => {
+    setInformationCopyEpisodeId(
+      informationCopyEpisodeId === copyEpisodeId ? null : copyEpisodeId,
+    )
+  }
+
+  // TODO: Validate
+  const toggleShowInformation = (sourceShowId: string) => {
+    setInformationShowId(
+      informationShowId === sourceShowId ? null : sourceShowId,
+    )
   }
 
   // TODO: Validate
@@ -367,16 +270,13 @@ export function WhitelistManager({
     setEnabledSourceIds(newEnabled)
   }
 
-  // A row can stand for more than one stored season, and they are marked together.
   // TODO: Validate
-  const toggleSeasonsEnabled = (seasonIds: string[], enabled: boolean) => {
+  const toggleSeasonEnabled = (seasonId: string, enabled: boolean) => {
     const newEnabled = new Set(enabledSeasonIds)
-    for (const seasonId of seasonIds) {
-      if (enabled) {
-        newEnabled.delete(seasonId)
-      } else {
-        newEnabled.add(seasonId)
-      }
+    if (enabled) {
+      newEnabled.delete(seasonId)
+    } else {
+      newEnabled.add(seasonId)
     }
     setEnabledSeasonIds(newEnabled)
   }
@@ -525,38 +425,29 @@ export function WhitelistManager({
   const watchableSources = whitelistData.sources.filter(
     (source) => !source.is_tmdb,
   )
-  // A row's sites are the ones carrying the episodes it lists, since a stored
-  // season can be a shell a site announced and never filled. TMDB is among them
-  // wherever an episode has a TMDB id, and stands on its own season record when
-  // the row has no episodes at all.
-  // TODO: Validate
-  const seasonShowIds = (group: SeasonGroup) => {
-    if (group.episodes.length > 0) {
-      return [...new Set(group.episodes.flatMap((episode) => episode.show_ids))]
-    }
-    return [
-      ...new Set(
-        group.seasons
-          .flatMap((season) => season.show_ids)
-          .filter((showId) => tmdbShowIds.has(showId)),
-      ),
-    ]
-  }
-  const seasonGroups = groupSeasons(
-    whitelistData.seasons,
-    whitelistData.episodes,
+  const seasonEpisodes = episodesBySeason(whitelistData.episodes)
+  const anySeasonHasNumber = whitelistData.seasons.some(
+    (season) => season.season_number != null,
   )
+  // A season's sites are the ones carrying the episodes under it, since a season
+  // can be a shell a site announced and never filled. Who catalogued the season
+  // is read off the season itself rather than off its episodes, so a season TMDB
+  // has a record of says so whether or not the episodes under it were ever
+  // matched to TMDB's.
   // TODO: Validate
-  const isGroupEnabled = (group: SeasonGroup) =>
-    group.seasons.length > 0 &&
-    group.seasons.every((season) => enabledSeasonIds.has(season.id))
-  // The row an episode is listed under decides how its own entry reads, so its
-  // row's state is looked up rather than the season it was imported under.
-  const groupEnabledByEpisodeId = new Map(
-    seasonGroups.flatMap((group) =>
-      group.episodes.map(
-        (episode) => [episode.id, isGroupEnabled(group)] as const,
+  const seasonShowIds = (season: WhitelistSeasonOutput) => [
+    ...new Set([
+      ...catalogueShowIds(season.show_ids),
+      ...(seasonEpisodes.get(season.id) ?? []).flatMap(
+        (episode) => episode.show_ids,
       ),
+    ]),
+  ]
+  // The season an episode is under decides how its own entry reads.
+  const seasonEnabledByEpisodeId = new Map(
+    whitelistData.episodes.map(
+      (episode) =>
+        [episode.id, enabledSeasonIds.has(episode.season_id)] as const,
     ),
   )
 
@@ -639,6 +530,19 @@ export function WhitelistManager({
                         return (
                           <div key={source.show_id}>
                             <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() =>
+                                  toggleShowInformation(source.show_id)
+                                }
+                              >
+                                {informationShowId === source.show_id ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
                               {source.favicon_url && (
                                 <img
                                   src={source.favicon_url}
@@ -650,11 +554,7 @@ export function WhitelistManager({
                                 type="button"
                                 className="flex-1 text-left text-sm hover:underline"
                                 onClick={() =>
-                                  setInformationShowId(
-                                    informationShowId === source.show_id
-                                      ? null
-                                      : source.show_id,
-                                  )
+                                  toggleShowInformation(source.show_id)
                                 }
                               >
                                 {source.source_name ?? "Unknown source"}
@@ -706,14 +606,15 @@ export function WhitelistManager({
                 </div>
                 {seasonsExpanded && (
                   <div className="p-2 space-y-1 border-t">
-                    {seasonGroups.length === 0 ? (
+                    {whitelistData.seasons.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No seasons found for this show
                       </p>
                     ) : (
-                      seasonGroups.map((group) => {
-                        const seasonEnabled = isGroupEnabled(group)
-                        const rowShowIds = seasonShowIds(group)
+                      whitelistData.seasons.map((season) => {
+                        const episodes = seasonEpisodes.get(season.id) ?? []
+                        const seasonEnabled = enabledSeasonIds.has(season.id)
+                        const rowShowIds = seasonShowIds(season)
                         const tmdbRowShowIds = rowShowIds.filter((showId) =>
                           tmdbShowIds.has(showId),
                         )
@@ -730,14 +631,14 @@ export function WhitelistManager({
                               )
                             : []
                         return (
-                          <div key={group.key}>
+                          <div key={season.id}>
                             <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => toggleGroupExpanded(group.key)}
+                                onClick={() => toggleSeasonExpanded(season.id)}
                               >
-                                {expandedSeasons.has(group.key) ? (
+                                {expandedSeasons.has(season.id) ? (
                                   <ChevronDown className="h-4 w-4" />
                                 ) : (
                                   <ChevronRight className="h-4 w-4" />
@@ -752,15 +653,9 @@ export function WhitelistManager({
                               <button
                                 type="button"
                                 className="flex-1 text-left text-sm hover:underline"
-                                onClick={() =>
-                                  setInformationSeasonKey(
-                                    informationSeasonKey === group.key
-                                      ? null
-                                      : group.key,
-                                  )
-                                }
+                                onClick={() => toggleSeasonExpanded(season.id)}
                               >
-                                {group.label}
+                                {seasonLabel(season, anySeasonHasNumber)}
                               </button>
                               {trailingShowIds.length > 0 && (
                                 <SourceFavicons
@@ -772,34 +667,21 @@ export function WhitelistManager({
                                 variant={seasonEnabled ? "default" : "outline"}
                                 size="sm"
                                 onClick={() =>
-                                  toggleSeasonsEnabled(
-                                    group.seasons.map((season) => season.id),
-                                    seasonEnabled,
-                                  )
+                                  toggleSeasonEnabled(season.id, seasonEnabled)
                                 }
                               >
                                 {getSeasonActionLabel(seasonEnabled)}
                               </Button>
                             </div>
 
-                            {informationSeasonKey === group.key && (
-                              <div className="ml-8 rounded border bg-muted/30 p-4">
-                                <SeasonInformationPanel
-                                  seasonIds={group.seasons.map(
-                                    (season) => season.id,
-                                  )}
-                                />
-                              </div>
-                            )}
-
-                            {expandedSeasons.has(group.key) && (
+                            {expandedSeasons.has(season.id) && (
                               <div className="p-2 space-y-1">
-                                {group.episodes.length === 0 ? (
+                                {episodes.length === 0 ? (
                                   <p className="text-sm text-muted-foreground text-center py-2">
                                     No episodes found
                                   </p>
                                 ) : (
-                                  group.episodes.map((episode) => {
+                                  episodes.map((episode) => {
                                     const episodeEnabled =
                                       enabledEpisodeIdentifiers.has(
                                         episode.canonical_episode_id,
@@ -810,7 +692,24 @@ export function WhitelistManager({
                                     return (
                                       <div key={episode.id}>
                                         <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
-                                          <span className="ml-8 flex items-center">
+                                          <Button
+                                            className="ml-8"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            onClick={() =>
+                                              toggleEpisodeInformation(
+                                                episode.id,
+                                              )
+                                            }
+                                          >
+                                            {informationEpisodeId ===
+                                            episode.id ? (
+                                              <ChevronDown className="h-4 w-4" />
+                                            ) : (
+                                              <ChevronRight className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                          <span className="flex items-center">
                                             {episodeTmdbShowIds.length > 0 && (
                                               <SourceFavicons
                                                 showIds={episodeTmdbShowIds}
@@ -824,11 +723,8 @@ export function WhitelistManager({
                                             type="button"
                                             className="flex-1 text-left text-sm hover:underline"
                                             onClick={() =>
-                                              setInformationEpisodeId(
-                                                informationEpisodeId ===
-                                                  episode.id
-                                                  ? null
-                                                  : episode.id,
+                                              toggleEpisodeInformation(
+                                                episode.id,
                                               )
                                             }
                                           >
@@ -873,10 +769,66 @@ export function WhitelistManager({
                                         </div>
                                         {informationEpisodeId ===
                                           episode.id && (
-                                          <div className="ml-8 rounded border bg-muted/30 p-4">
-                                            <EpisodeInformationPanel
-                                              episodeId={episode.id}
-                                            />
+                                          <div className="ml-16 space-y-1">
+                                            {episode.copies.map((copy) => {
+                                              const copySource =
+                                                sourcesByShowId.get(
+                                                  copy.show_id,
+                                                )
+                                              return (
+                                                <div key={copy.episode_id}>
+                                                  <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="icon-sm"
+                                                      onClick={() =>
+                                                        toggleCopyInformation(
+                                                          copy.episode_id,
+                                                        )
+                                                      }
+                                                    >
+                                                      {informationCopyEpisodeId ===
+                                                      copy.episode_id ? (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                      ) : (
+                                                        <ChevronRight className="h-4 w-4" />
+                                                      )}
+                                                    </Button>
+                                                    {copySource?.favicon_url && (
+                                                      <img
+                                                        src={
+                                                          copySource.favicon_url
+                                                        }
+                                                        alt=""
+                                                        className="size-6 shrink-0"
+                                                      />
+                                                    )}
+                                                    <button
+                                                      type="button"
+                                                      className="flex-1 text-left text-sm hover:underline"
+                                                      onClick={() =>
+                                                        toggleCopyInformation(
+                                                          copy.episode_id,
+                                                        )
+                                                      }
+                                                    >
+                                                      {copySource?.source_name ??
+                                                        "Unknown source"}
+                                                    </button>
+                                                  </div>
+                                                  {informationCopyEpisodeId ===
+                                                    copy.episode_id && (
+                                                    <div className="ml-8 rounded border bg-muted/30 p-4">
+                                                      <EpisodeInformationPanel
+                                                        episodeId={
+                                                          copy.episode_id
+                                                        }
+                                                      />
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )
+                                            })}
                                           </div>
                                         )}
                                       </div>
@@ -920,13 +872,13 @@ export function WhitelistManager({
           // matches the not-yet-enabled label (which already accounts for the season).
           title={getEpisodeActionLabel(
             false,
-            groupEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
+            seasonEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
           )}
           description={getEpisodeLabel(pendingEpisode)}
           dateLabel="Expires at (optional)"
           confirmLabel={getEpisodeActionLabel(
             false,
-            groupEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
+            seasonEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
           )}
           initialExpiry={
             episodeExpiry.get(pendingEpisode.canonical_episode_id) ?? ""

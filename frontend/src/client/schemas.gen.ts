@@ -2303,6 +2303,16 @@ export const ChannelShowsOutputSchema = {
             type: 'object',
             title: 'Sources'
         },
+        canonical_sources: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/SourcePublic'
+            },
+            propertyNames: {
+                format: 'uuid'
+            },
+            type: 'object',
+            title: 'Canonical Sources'
+        },
         groups: {
             items: {
                 '$ref': '#/components/schemas/ChannelShowGroup'
@@ -3498,6 +3508,19 @@ export const EpisodeOutputSchema = {
     required: ['key', 'id', 'season_id', 'canonical_episode_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
+} as const;
+
+export const EpisodeTmdbUrlInputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['url'],
+    title: 'EpisodeTmdbUrlInput',
+    description: 'The themoviedb.org address a `User` is pointing an `Episode` at.'
 } as const;
 
 export const EpisodeUpdateSchema = {
@@ -7675,41 +7698,29 @@ export const TMDBWatchProviderItemSchema = {
 
 export const TmdbEpisodeChoiceSchema = {
     properties: {
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
         tmdb_episode_id: {
             type: 'integer',
             title: 'Tmdb Episode Id'
         },
         name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Name'
         },
+        show_name: {
+            type: 'string',
+            title: 'Show Name'
+        },
         season_number: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Season Number'
         },
         episode_number: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Episode Number'
         },
         absolute_number: {
@@ -7724,14 +7735,7 @@ export const TmdbEpisodeChoiceSchema = {
             title: 'Absolute Number'
         },
         url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
             title: 'Url'
         },
         similarity: {
@@ -7745,18 +7749,9 @@ export const TmdbEpisodeChoiceSchema = {
         }
     },
     type: 'object',
-    required: ['tmdb_episode_id', 'name', 'season_number', 'episode_number', 'absolute_number', 'url', 'similarity'],
+    required: ['canonical_episode_id', 'tmdb_episode_id', 'name', 'show_name', 'season_number', 'episode_number', 'absolute_number', 'url', 'similarity'],
     title: 'TmdbEpisodeChoice',
-    description: `A TMDB episode of a title, as one of the episodes an \`Episode\` can be linked to.
-
-\`absolute_number\` counts the episode from the first of the title rather than
-from the first of its own season, which is how a website that never restarts
-its numbering names the same episode. Specials are outside that count and
-have none.
-
-\`similarity\` is how much of its name it shares with the episode being linked,
-which is what lets the choices be read in the order they are most likely to
-be the one rather than in the order the title runs.`
+    description: 'A TMDB episode, as one of the episodes an `Episode` can be linked to.'
 } as const;
 
 export const TokenSchema = {
@@ -8716,6 +8711,25 @@ export const WhitelistEntryInputSchema = {
     title: 'WhitelistEntryInput'
 } as const;
 
+export const WhitelistEpisodeCopyOutputSchema = {
+    properties: {
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        }
+    },
+    type: 'object',
+    required: ['show_id', 'episode_id'],
+    title: 'WhitelistEpisodeCopyOutput',
+    description: "One website's copy of an episode, and the episode row standing for it."
+} as const;
+
 export const WhitelistEpisodeOutputSchema = {
     properties: {
         key: {
@@ -8937,6 +8951,13 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'array',
             title: 'Show Ids'
         },
+        copies: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEpisodeCopyOutput'
+            },
+            type: 'array',
+            title: 'Copies'
+        },
         tmdb_season_number: {
             anyOf: [
                 {
@@ -8972,7 +8993,7 @@ export const WhitelistEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'filtered', 'show_ids'],
+    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'filtered', 'show_ids', 'copies'],
     title: 'WhitelistEpisodeOutput'
 } as const;
 

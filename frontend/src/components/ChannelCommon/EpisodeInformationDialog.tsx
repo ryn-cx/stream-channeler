@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { EpisodeInformationOutput, EpisodeInformationSide } from "@/client"
 import { EpisodesService } from "@/client"
+import { EpisodeTmdbLinkMenu } from "@/components/Admin/EpisodeTmdbLinkMenu"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
 import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import {
@@ -183,6 +184,14 @@ export function EpisodeInformationPanel({
         target="episode"
         mediaId={episodeId}
         reports={data.issue_reports}
+        informationQueryKey={queryKey}
+      />
+
+      <EpisodeTmdbLinkMenu
+        episodeId={episodeId}
+        name={data.source.name}
+        seasonNumber={data.source.season_number}
+        episodeNumber={data.source.episode_number}
         informationQueryKey={queryKey}
       />
     </div>
