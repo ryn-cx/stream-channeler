@@ -875,17 +875,25 @@ class EpisodeLinker:
         """Gather the show's episodes and the canonical ones they are read against."""
         self.session = session
         self.show = show
+        self.episodes = [
+            episode
+            for season in show.active_children
+            for episode in season.active_children
+        ]
+        # A canonical episode one of the show's episodes already names is spoken
+        # for, and handing it to a second episode is the one thing the database
+        # will not hold, so it is no part of what is offered.
+        claimed_canonical_ids = {
+            episode.canonical_episode_id
+            for episode in self.episodes
+            if episode.canonical_episode_id
+        }
         self.canonical_episodes = [
             episode
             for canonical_show in show.canonical_shows
             for season in canonical_show.active_children
             for episode in season.active_children
-            if is_tmdb_key(episode.key)
-        ]
-        self.episodes = [
-            episode
-            for season in show.active_children
-            for episode in season.active_children
+            if is_tmdb_key(episode.key) and episode.id not in claimed_canonical_ids
         ]
         # Read off the TMDB plugin the first time a matcher asks for them, since
         # two of them want the same translations and neither always runs.
@@ -908,6 +916,22 @@ class EpisodeLinker:
         self.episodes = [
             episode for episode in self.episodes if not episode.canonical_episode_id
         ]
+
+    # TODO: Validate
+    def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
+        """Point the episode at the canonical episode and take it off the table.
+
+        Two episodes of a show naming the one canonical episode is the one thing
+        the database will not hold, so the first of them to be read takes it and
+        the rest are left waiting for a matcher that can tell them apart. A
+        matcher reading a snapshot of its own is handed one taken since, which is
+        no longer there to be given.
+        """
+        if tmdb_episode not in self.canonical_episodes:
+            return
+        self.canonical_episodes.remove(tmdb_episode)
+        episode.canonical_episode = tmdb_episode
+        episode.canonical_episode_note = note
 
     # TODO: Validate
     def _translated_name_forms(self) -> dict[uuid.UUID, frozenset[str]]:
@@ -968,8 +992,11 @@ class EpisodeLinker:
             only_episode.canonical_episode_id is None
             and not only_episode.canonical_episode_locked
         ):
-            only_episode.canonical_episode = self.canonical_episodes[0]
-            only_episode.canonical_episode_note = "Automatic: Movie match"
+            self._claim(
+                only_episode,
+                self.canonical_episodes[0],
+                "Automatic: Movie match",
+            )
         self.episodes = []
 
     # TODO: Validate
@@ -982,8 +1009,7 @@ class EpisodeLinker:
         for episode in self.episodes:
             pairing = (episode.name, episode.episode_number)
             if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-                episode.canonical_episode = match
-                episode.canonical_episode_note = "Automatic: Name and number match"
+                self._claim(episode, match, "Automatic: Name and number match")
         self._drop_linked()
 
     # TODO: Validate
@@ -1002,9 +1028,10 @@ class EpisodeLinker:
         for episode in self.episodes:
             pairing = (_plaintext(episode.name), episode.episode_number)
             if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-                episode.canonical_episode = match
-                episode.canonical_episode_note = (
-                    "Automatic: Plaintext name and number match"
+                self._claim(
+                    episode,
+                    match,
+                    "Automatic: Plaintext name and number match",
                 )
         self._drop_linked()
 
@@ -1022,8 +1049,7 @@ class EpisodeLinker:
         )
         for episode in self.episodes:
             if match := sorted_canonical_episodes.get(episode.name):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-                episode.canonical_episode = match
-                episode.canonical_episode_note = "Automatic: Name match"
+                self._claim(episode, match, "Automatic: Name match")
         self._drop_linked()
 
     # TODO: Validate
@@ -1040,8 +1066,7 @@ class EpisodeLinker:
         )
         for episode in self.episodes:
             if match := sorted_canonical_episodes.get(_plaintext(episode.name)):
-                episode.canonical_episode = match
-                episode.canonical_episode_note = "Automatic: Plaintext name match"
+                self._claim(episode, match, "Automatic: Plaintext name match")
         self._drop_linked()
 
     # TODO: Validate
@@ -1075,8 +1100,7 @@ class EpisodeLinker:
             ]
             if len(matches) != 1:
                 continue
-            episode.canonical_episode = matches[0]
-            episode.canonical_episode_note = "Automatic: Translated name match"
+            self._claim(episode, matches[0], "Automatic: Translated name match")
         self._drop_linked()
 
     # TODO: Validate
@@ -1123,6 +1147,9 @@ class EpisodeLinker:
             if len(scored) > 1 and scored[0][0] - scored[1][0] < _SIMILAR_NAME_LEAD:
                 continue
 
-            episode.canonical_episode = scored[0][1]
-            episode.canonical_episode_note = "Automatic: Similar name and number match"
+            self._claim(
+                episode,
+                scored[0][1],
+                "Automatic: Similar name and number match",
+            )
         self._drop_linked()

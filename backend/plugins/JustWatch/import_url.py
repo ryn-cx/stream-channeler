@@ -5,6 +5,7 @@ from typing import override
 
 from sqlmodel import col, select
 
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
@@ -12,6 +13,12 @@ from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import JustWatchURLHandler
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+
+# The keys whose TMDB title is being looked up further up the stack. A title is
+# normally reached through TMDB, which hands it back here, so an import can
+# arrive again partway through its own lookup. A key already in flight is left
+# to the caller that is already resolving it.
+_TMDB_LOOKUPS_IN_FLIGHT = "justwatch_tmdb_lookups_in_flight"
 
 
 # TODO: Validate
@@ -37,8 +44,13 @@ class ImportURLMixin(
 
         Every source's copy of a title is the same title, so a caller that knows
         which title this is says so once here and every plugin below works from it
-        instead of working it out for itself.
+        instead of working it out for itself. A caller that named none is asked
+        of TMDB before any of this is written, so the title is stored and every
+        plugin below is told which one it is.
         """
+        if canonical_show is None:
+            canonical_show = self._tmdb_show(handler.show_key, force=force)
+
         results: list[URLImportResult] = []
         unhandled_source_keys: list[str] = []
         imported_offer_urls: set[str] = set()
@@ -81,6 +93,38 @@ class ImportURLMixin(
         )
         results.extend(handler.import_results_for_shows(shows))
         return results
+
+    # TODO: Validate
+    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
+        in_flight: set[str] = self.session.info.setdefault(
+            _TMDB_LOOKUPS_IN_FLIGHT,
+            set(),
+        )
+        if show_key in in_flight:
+            return None
+
+        in_flight.add(show_key)
+        try:
+            # Imported here rather than at the top of the module because TMDB
+            # hands its titles to this plugin, so importing it up there would be
+            # circular.
+            from plugins.TMDB import TMDB  # noqa: PLC0415
+
+            parsed = self.url_title_details_file(show_key).parsed()
+            content = parsed.data.url_v2.node.content
+            media_type = (
+                MediaType.movie
+                if self._media_type(show_key) == "Movie"
+                else MediaType.tv
+            )
+            return TMDB(self.session).import_search(
+                content.title,
+                media_type,
+                content.original_release_year,
+                force=force,
+            )
+        finally:
+            in_flight.discard(show_key)
 
     # TODO: Validate
     def _delegated_results(
@@ -193,7 +237,7 @@ class ImportURLMixin(
         ):
             stored = [existing_shows[source_key] for source_key in source_keys]
             with self.session.no_autoflush:
-                self._link_supplied_canonical_shows(stored, canonical_show)
+                self._link_canonical_shows(stored, canonical_show)
             return stored
 
         _cache = (

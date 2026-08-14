@@ -76,7 +76,7 @@ class UpsertMixin(HelperMixin, register=False):
                     continue
                 source = self._upsert_source(source_key)
                 shows.append(self.upsert_show(source, show_key, force=force))
-            self._link_supplied_canonical_shows(shows, canonical_show)
+            self._link_canonical_shows(shows, canonical_show)
         return shows
 
     # TODO: Validate

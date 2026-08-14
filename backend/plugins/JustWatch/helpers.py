@@ -7,6 +7,9 @@ from urllib.parse import parse_qs, urlsplit
 from just_scrape.buy_box_offers import models as buy_box_offers_models
 from just_scrape.url_title_details import models as url_title_details_models
 
+from app.canonical_media.service import link_canonical_show
+from app.episodes.service import EpisodeLinker
+from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
@@ -24,6 +27,22 @@ class HelperMixin(FileMixin, register=False):
     @override
     def _domain(cls) -> str:
         return "justwatch.com"
+
+    # TODO: Validate
+    def _link_canonical_shows(
+        self,
+        shows: list[Show],
+        canonical_show: Show | None,
+    ) -> None:
+        # A listing TMDB has nothing for is a title in its own right rather than
+        # a copy of one, so there is nothing to point it at and no row minted for
+        # it to point at either.
+        if canonical_show is None:
+            return
+
+        for show in shows:
+            link_canonical_show(self.session, show, canonical_show)
+            EpisodeLinker(self.session, show).link()
 
     # TODO: Validate
     @classmethod

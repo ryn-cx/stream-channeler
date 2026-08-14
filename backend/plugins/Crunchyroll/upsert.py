@@ -10,6 +10,7 @@ from chirashi.artist_concerts import models as artist_concerts_models
 from chirashi.artist_music_videos import models as artist_music_videos_models
 from chirashi.concert import models as concert_models
 from chirashi.music_video import models as music_video_models
+from chirashi.season_episodes import models as season_episodes_models
 
 from app.episodes.models import Episode
 from app.files.models import File
@@ -246,7 +247,7 @@ class UpsertMixin(HelperMixin, register=False):
                 episode_number=episode_data.episode_number,
                 url=self._episode_url(episode_data.id),
                 description=episode_data.description,
-                image_url=episode_data.images.thumbnail[0][-1].source,
+                image_url=self._episode_thumbnail(episode_data.images),
                 duration=episode_data.duration_ms // 1000,
                 sort_order=index,
                 air_date=episode_data.episode_air_date,
@@ -315,6 +316,19 @@ class UpsertMixin(HelperMixin, register=False):
                 episode,
                 self._episode_files(episode_key, season.key, show_key),
             )
+
+    # TODO: Validate
+    @staticmethod
+    def _episode_thumbnail(images: season_episodes_models.Images) -> str | None:
+        """Return the largest thumbnail an episode has, where it has one at all.
+
+        An episode Crunchyroll has no thumbnail for carries no sizes to pick
+        from, and older ones carry none of the field at all.
+        """
+        thumbnails = images.thumbnail
+        if not thumbnails or not thumbnails[0]:
+            return None
+        return thumbnails[0][-1].source
 
     # TODO: Validate
     @staticmethod
