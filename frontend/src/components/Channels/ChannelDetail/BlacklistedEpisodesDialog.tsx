@@ -43,6 +43,18 @@ export function BlacklistedEpisodesDialog({
     enabled: isOpen,
   })
 
+  // Only the episodes an entry names, rather than the title's whole catalogue,
+  // since a blacklist is read by its entries and nothing else here is shown.
+  const { data: filteredEpisodes, isLoading: isLoadingEpisodes } = useQuery({
+    queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
+    queryFn: () =>
+      ChannelsService.getChannelWhitelistFilteredEpisodes({
+        channelId,
+        canonicalShowId,
+      }),
+    enabled: isOpen,
+  })
+
   const removeMutation = useMutation({
     mutationFn: (episodeId: string) =>
       ChannelsService.updateChannelWhitelist({
@@ -53,6 +65,9 @@ export function BlacklistedEpisodesDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       // The show drops off the filter-only list once its last entry is removed.
@@ -65,9 +80,7 @@ export function BlacklistedEpisodesDialog({
   const seasonsById = new Map(
     (whitelistData?.seasons ?? []).map((season) => [season.id, season]),
   )
-  const blacklistedEpisodes = (whitelistData?.episodes ?? []).filter(
-    (episode) => episode.filtered,
-  )
+  const blacklistedEpisodes = filteredEpisodes ?? []
 
   // TODO: Validate
   const handleRemove = (episodeId: string) => {
@@ -82,9 +95,7 @@ export function BlacklistedEpisodesDialog({
   }
 
   // TODO: Validate
-  const episodeLabel = (
-    episode: NonNullable<typeof whitelistData>["episodes"][number],
-  ) => {
+  const episodeLabel = (episode: (typeof blacklistedEpisodes)[number]) => {
     const season = seasonsById.get(episode.season_id)
     const seasonPart =
       season?.season_number != null ? `S${season.season_number} ` : ""
@@ -106,7 +117,7 @@ export function BlacklistedEpisodesDialog({
         </DialogHeader>
 
         <DialogBody>
-          {isLoading ? (
+          {isLoading || isLoadingEpisodes ? (
             <p className="text-sm text-muted-foreground py-4">Loading…</p>
           ) : blacklistedEpisodes.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">

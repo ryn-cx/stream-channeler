@@ -6,59 +6,41 @@ import type {
   WhitelistEpisodeOutput,
   WhitelistSeasonOutput,
   WhitelistShowInput,
-  WhitelistSourceOutput,
 } from "@/client"
 import { ChannelsService } from "@/client"
-import { EpisodeInformationPanel } from "@/components/ChannelCommon/EpisodeInformationDialog"
 import { ShowInformationPanel } from "@/components/ChannelCommon/ShowInformationDialog"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
+import { episodeLabel, SeasonEpisodes } from "./SeasonEpisodes"
+import { SourceFavicons } from "./SourceFavicons"
 
-// TODO: Validate
-/** The favicons of the websites' links a season or episode was found on. */
-function SourceFavicons({
-  showIds,
-  sourcesByShowId,
-}: {
-  showIds: string[]
-  sourcesByShowId: Map<string, WhitelistSourceOutput>
-}) {
-  return (
-    <span className="flex items-center gap-1 shrink-0">
-      {showIds.map((showId) => {
-        const source = sourcesByShowId.get(showId)
-        if (!source?.favicon_url) return null
-        return (
-          <Tooltip key={showId}>
-            <TooltipTrigger asChild>
-              <img
-                src={source.favicon_url}
-                alt={`${source.source_name} favicon`}
-                className="size-6 shrink-0"
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              {source.source_name ?? "Unknown source"}
-            </TooltipContent>
-          </Tooltip>
-        )
-      })}
-    </span>
-  )
+/**
+ * A change the user has made to one episode's entry, before it is saved.
+ *
+ * The episodes are read a season at a time, so the entries cannot be held as
+ * the whole set of marked episodes the way the sources and seasons are. What is
+ * held is what the user has altered, which is read against whatever the server
+ * said about each episode as its season arrives, and is all that has to be sent
+ * back: the server takes each entry on its own and leaves the rest alone.
+ */
+interface EpisodeChange {
+  // The website's own row for the episode, which is what an entry is sent as.
+  episodeId: string
+  marked: boolean
+  // A datetime-local input value, or "" for an entry that never expires.
+  expiry: string
 }
 
-// A name that says nothing the episode's own number does not, whether the site
-// wrote it as "Episode 3", "EP 3", or just "3".
-const NUMBERED_EPISODE_NAME = /^(?:episode|ep\.?)?\s*0*(\d+)$/i
+interface WhitelistManagerProps {
+  channelId: string
+  canonicalShowId: string
+  showName: string
+  onClose: () => void
+}
 
 // TODO: Validate
 function seasonLabel(
@@ -70,46 +52,6 @@ function seasonLabel(
   }
   const seasonName = season.name ? ` - ${season.name}` : ""
   return `Season ${season.season_number ?? "?"}${seasonName}`
-}
-
-/**
- * The episodes of each season, keyed by the season they belong to.
- *
- * An episode is under the season its canonical episode is under, which the
- * server has already answered with: a site that files an episode somewhere the
- * title does not is read as the title has it, so nothing here has to work out
- * which season a row belongs to a second time.
- */
-// TODO: Validate
-function episodesBySeason(
-  episodes: WhitelistEpisodeOutput[],
-): Map<string, WhitelistEpisodeOutput[]> {
-  const bySeason = new Map<string, WhitelistEpisodeOutput[]>()
-  for (const episode of episodes) {
-    const seasonEpisodes = bySeason.get(episode.season_id) ?? []
-    seasonEpisodes.push(episode)
-    bySeason.set(episode.season_id, seasonEpisodes)
-  }
-  // A season the sites number between them is read in the title's order, which
-  // is the only order every episode of it is in.
-  for (const seasonEpisodes of bySeason.values()) {
-    if (
-      seasonEpisodes.every((episode) => episode.tmdb_episode_number != null)
-    ) {
-      seasonEpisodes.sort(
-        (first, second) =>
-          (first.tmdb_episode_number ?? 0) - (second.tmdb_episode_number ?? 0),
-      )
-    }
-  }
-  return bySeason
-}
-
-interface WhitelistManagerProps {
-  channelId: string
-  canonicalShowId: string
-  showName: string
-  onClose: () => void
 }
 
 // TODO: Validate
@@ -127,33 +69,23 @@ export function WhitelistManager({
   const [enabledSeasonIds, setEnabledSeasonIds] = useState<Set<string>>(
     new Set(),
   )
-  // A filter is about the episode rather than one season's listing of it, so the
-  // episodes two seasons share are marked by identifier and move together.
-  const [enabledEpisodeIdentifiers, setEnabledEpisodeIdentifiers] = useState<
-    Set<string>
-  >(new Set())
-  // Maps an episode identifier to its expiry as a datetime-local input value.
-  // Absent = no expiry.
-  const [episodeExpiry, setEpisodeExpiry] = useState<Map<string, string>>(
-    new Map(),
-  )
+  // A filter is about the episode rather than one season's listing of it, so a
+  // change is held by the identifier the entry names and moves with it.
+  const [episodeChanges, setEpisodeChanges] = useState<
+    Map<string, EpisodeChange>
+  >(new Map())
   const [expandedSeasons, setExpandedSeasons] = useState<Set<string>>(new Set())
   const [sourcesExpanded, setSourcesExpanded] = useState(true)
   const [seasonsExpanded, setSeasonsExpanded] = useState(true)
-  // Episode awaiting the expiry popup before being added to the filter.
-  const [pendingEpisode, setPendingEpisode] =
-    useState<WhitelistEpisodeOutput | null>(null)
-  // The record whose information popup is open, if any.
-  const [informationEpisodeId, setInformationEpisodeId] = useState<
-    string | null
-  >(null)
+  // Episode awaiting the expiry popup before being added to the filter, with
+  // whether its own season carries an entry, which the popup's wording reads.
+  const [pendingEpisode, setPendingEpisode] = useState<{
+    episode: WhitelistEpisodeOutput
+    seasonEnabled: boolean
+  } | null>(null)
   const [informationShowId, setInformationShowId] = useState<string | null>(
     null,
   )
-  // The website's link to an episode whose information is open, if any.
-  const [informationLinkEpisodeId, setInformationLinkEpisodeId] = useState<
-    string | null
-  >(null)
 
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -181,27 +113,7 @@ export function WhitelistManager({
             .map((season) => season.id),
         ),
       )
-      setEnabledEpisodeIdentifiers(
-        new Set(
-          whitelistData.episodes
-            .filter(
-              (episode) => episode.filtered && !isExpired(episode.expires_at),
-            )
-            .map((episode) => episode.canonical_episode_id),
-        ),
-      )
-      setEpisodeExpiry(
-        new Map(
-          whitelistData.episodes
-            .filter(
-              (episode) => episode.expires_at && !isExpired(episode.expires_at),
-            )
-            .map((episode) => [
-              episode.canonical_episode_id,
-              isoToLocalInput(episode.expires_at),
-            ]),
-        ),
-      )
+      setEpisodeChanges(new Map())
     }
   }, [whitelistData])
 
@@ -215,6 +127,12 @@ export function WhitelistManager({
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["channelShowSeasonEpisodes", channelId, canonicalShowId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       showSuccessToast("Whitelist settings saved successfully")
@@ -237,20 +155,6 @@ export function WhitelistManager({
       newExpanded.add(seasonId)
     }
     setExpandedSeasons(newExpanded)
-  }
-
-  // TODO: Validate
-  const toggleEpisodeInformation = (episodeId: string) => {
-    setInformationEpisodeId(
-      informationEpisodeId === episodeId ? null : episodeId,
-    )
-  }
-
-  // TODO: Validate
-  const toggleLinkInformation = (linkEpisodeId: string) => {
-    setInformationLinkEpisodeId(
-      informationLinkEpisodeId === linkEpisodeId ? null : linkEpisodeId,
-    )
   }
 
   // TODO: Validate
@@ -282,26 +186,36 @@ export function WhitelistManager({
     setEnabledSeasonIds(newEnabled)
   }
 
+  // An episode reads as the user left it where they have touched it, and as the
+  // server has it everywhere else.
   // TODO: Validate
-  const toggleEpisodeEnabled = (episodeIdentifier: string) => {
-    const newEnabled = new Set(enabledEpisodeIdentifiers)
-    if (newEnabled.has(episodeIdentifier)) {
-      newEnabled.delete(episodeIdentifier)
-    } else {
-      newEnabled.add(episodeIdentifier)
-    }
-    setEnabledEpisodeIdentifiers(newEnabled)
+  const isEpisodeMarked = (episode: WhitelistEpisodeOutput) => {
+    const change = episodeChanges.get(episode.canonical_episode_id)
+    if (change) return change.marked
+    return episode.filtered && !isExpired(episode.expires_at)
   }
 
   // TODO: Validate
-  const setEpisodeExpiryValue = (episodeIdentifier: string, value: string) => {
-    setEpisodeExpiry((previous) => {
+  const episodeExpiry = (episode: WhitelistEpisodeOutput) => {
+    const change = episodeChanges.get(episode.canonical_episode_id)
+    if (change) return change.expiry
+    if (!episode.expires_at || isExpired(episode.expires_at)) return ""
+    return isoToLocalInput(episode.expires_at)
+  }
+
+  // TODO: Validate
+  const recordEpisodeChange = (
+    episode: WhitelistEpisodeOutput,
+    marked: boolean,
+    expiry: string,
+  ) => {
+    setEpisodeChanges((previous) => {
       const next = new Map(previous)
-      if (value) {
-        next.set(episodeIdentifier, value)
-      } else {
-        next.delete(episodeIdentifier)
-      }
+      next.set(episode.canonical_episode_id, {
+        episodeId: episode.id,
+        marked,
+        expiry,
+      })
       return next
     })
   }
@@ -309,21 +223,21 @@ export function WhitelistManager({
   // Clicking an episode toggles it; removing is immediate, adding first asks for the
   // optional expiry via a popup.
   // TODO: Validate
-  const handleEpisodeClick = (episode: WhitelistEpisodeOutput) => {
-    if (enabledEpisodeIdentifiers.has(episode.canonical_episode_id)) {
-      toggleEpisodeEnabled(episode.canonical_episode_id)
+  const handleEpisodeClick = (
+    episode: WhitelistEpisodeOutput,
+    seasonEnabled: boolean,
+  ) => {
+    if (isEpisodeMarked(episode)) {
+      recordEpisodeChange(episode, false, "")
     } else {
-      setPendingEpisode(episode)
+      setPendingEpisode({ episode, seasonEnabled })
     }
   }
 
   // TODO: Validate
   const confirmEpisodeExpiry = (expiresAtLocal: string) => {
     if (!pendingEpisode) return
-    setEnabledEpisodeIdentifiers((previous) =>
-      new Set(previous).add(pendingEpisode.canonical_episode_id),
-    )
-    setEpisodeExpiryValue(pendingEpisode.canonical_episode_id, expiresAtLocal)
+    recordEpisodeChange(pendingEpisode.episode, true, expiresAtLocal)
     setPendingEpisode(null)
   }
 
@@ -343,31 +257,16 @@ export function WhitelistManager({
         id: season.id,
         marked: enabledSeasonIds.has(season.id),
       })),
-      episodes: whitelistData.episodes.map((episode) => ({
-        id: episode.id,
-        marked: enabledEpisodeIdentifiers.has(episode.canonical_episode_id),
-        expires_at: enabledEpisodeIdentifiers.has(episode.canonical_episode_id)
-          ? localInputToIso(
-              episodeExpiry.get(episode.canonical_episode_id) ?? "",
-            )
-          : null,
+      // Only what the user altered is sent. The server takes each entry on its
+      // own, so the episodes whose seasons were never opened keep whatever they
+      // already had rather than being read as unmarked.
+      episodes: [...episodeChanges.values()].map((change) => ({
+        id: change.episodeId,
+        marked: change.marked,
+        expires_at: change.marked ? localInputToIso(change.expiry) : null,
       })),
     }
     saveMutation.mutate(input)
-  }
-
-  // TODO: Validate
-  const getEpisodeLabel = (episode: WhitelistEpisodeOutput) => {
-    const episodeName = episode.name ?? ""
-    const episodeNumber = episode.tmdb_episode_number ?? episode.sort_order
-    if (episodeNumber == null) {
-      return episodeName
-    }
-    // A website that never named an episode calls it by its number, which the
-    // label already says, so "Episode 3 - Episode 3" is read as "Episode 3".
-    const nameIsNumber = NUMBERED_EPISODE_NAME.exec(episodeName)
-    const named = episodeName && Number(nameIsNumber?.[1]) !== episodeNumber
-    return `Episode ${episodeNumber}${named ? ` - ${episodeName}` : ""}`
   }
 
   // TODO: Validate
@@ -414,42 +313,11 @@ export function WhitelistManager({
       .filter((source) => source.is_tmdb)
       .map((source) => source.show_id),
   )
-  // TODO: Validate
-  const watchableShowIds = (showIds: string[]) =>
-    showIds.filter((showId) => !tmdbShowIds.has(showId))
-  // TMDB leads a row the way it leads a season's, since what a row stands for is
-  // the media rather than any one site's link to it, and the sites it can be
-  // watched on follow the name rather than lead it.
-  // TODO: Validate
-  const catalogueShowIds = (showIds: string[]) =>
-    showIds.filter((showId) => tmdbShowIds.has(showId))
   const watchableSources = whitelistData.sources.filter(
     (source) => !source.is_tmdb,
   )
-  const seasonEpisodes = episodesBySeason(whitelistData.episodes)
   const anySeasonHasNumber = whitelistData.seasons.some(
     (season) => season.season_number != null,
-  )
-  // A season's sites are the ones carrying the episodes under it, since a season
-  // can be a shell a site announced and never filled. Who catalogued the season
-  // is read off the season itself rather than off its episodes, so a season TMDB
-  // has a record of says so whether or not the episodes under it were ever
-  // matched to TMDB's.
-  // TODO: Validate
-  const seasonShowIds = (season: WhitelistSeasonOutput) => [
-    ...new Set([
-      ...catalogueShowIds(season.show_ids),
-      ...(seasonEpisodes.get(season.id) ?? []).flatMap(
-        (episode) => episode.show_ids,
-      ),
-    ]),
-  ]
-  // The season an episode is under decides how its own entry reads.
-  const seasonEnabledByEpisodeId = new Map(
-    whitelistData.episodes.map(
-      (episode) =>
-        [episode.id, enabledSeasonIds.has(episode.season_id)] as const,
-    ),
   )
 
   return (
@@ -613,9 +481,8 @@ export function WhitelistManager({
                       </p>
                     ) : (
                       whitelistData.seasons.map((season) => {
-                        const episodes = seasonEpisodes.get(season.id) ?? []
                         const seasonEnabled = enabledSeasonIds.has(season.id)
-                        const rowShowIds = seasonShowIds(season)
+                        const rowShowIds = season.show_ids
                         const tmdbRowShowIds = rowShowIds.filter((showId) =>
                           tmdbShowIds.has(showId),
                         )
@@ -676,168 +543,20 @@ export function WhitelistManager({
                             </div>
 
                             {expandedSeasons.has(season.id) && (
-                              <div className="p-2 space-y-1">
-                                {episodes.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground text-center py-2">
-                                    No episodes found
-                                  </p>
-                                ) : (
-                                  episodes.map((episode) => {
-                                    const episodeEnabled =
-                                      enabledEpisodeIdentifiers.has(
-                                        episode.canonical_episode_id,
-                                      )
-                                    const episodeTmdbShowIds = catalogueShowIds(
-                                      episode.show_ids,
-                                    )
-                                    return (
-                                      <div key={episode.id}>
-                                        <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
-                                          <Button
-                                            className="ml-8"
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            onClick={() =>
-                                              toggleEpisodeInformation(
-                                                episode.id,
-                                              )
-                                            }
-                                          >
-                                            {informationEpisodeId ===
-                                            episode.id ? (
-                                              <ChevronDown className="h-4 w-4" />
-                                            ) : (
-                                              <ChevronRight className="h-4 w-4" />
-                                            )}
-                                          </Button>
-                                          <span className="flex items-center">
-                                            {episodeTmdbShowIds.length > 0 && (
-                                              <SourceFavicons
-                                                showIds={episodeTmdbShowIds}
-                                                sourcesByShowId={
-                                                  sourcesByShowId
-                                                }
-                                              />
-                                            )}
-                                          </span>
-                                          <button
-                                            type="button"
-                                            className="flex-1 text-left text-sm hover:underline"
-                                            onClick={() =>
-                                              toggleEpisodeInformation(
-                                                episode.id,
-                                              )
-                                            }
-                                          >
-                                            {getEpisodeLabel(episode)}
-                                            {episodeEnabled &&
-                                              episodeExpiry.get(
-                                                episode.canonical_episode_id,
-                                              ) && (
-                                                <span className="ml-2 text-xs text-muted-foreground">
-                                                  (until{" "}
-                                                  {new Date(
-                                                    episodeExpiry.get(
-                                                      episode.canonical_episode_id,
-                                                    )!,
-                                                  ).toLocaleString()}
-                                                  )
-                                                </span>
-                                              )}
-                                          </button>
-                                          <SourceFavicons
-                                            showIds={watchableShowIds(
-                                              episode.show_ids,
-                                            )}
-                                            sourcesByShowId={sourcesByShowId}
-                                          />
-                                          <Button
-                                            variant={
-                                              episodeEnabled !== seasonEnabled
-                                                ? "default"
-                                                : "outline"
-                                            }
-                                            size="sm"
-                                            onClick={() =>
-                                              handleEpisodeClick(episode)
-                                            }
-                                          >
-                                            {getEpisodeActionLabel(
-                                              episodeEnabled,
-                                              seasonEnabled,
-                                            )}
-                                          </Button>
-                                        </div>
-                                        {informationEpisodeId ===
-                                          episode.id && (
-                                          <div className="ml-16 space-y-1">
-                                            {episode.links.map((link) => {
-                                              const linkSource =
-                                                sourcesByShowId.get(
-                                                  link.show_id,
-                                                )
-                                              return (
-                                                <div key={link.episode_id}>
-                                                  <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      onClick={() =>
-                                                        toggleLinkInformation(
-                                                          link.episode_id,
-                                                        )
-                                                      }
-                                                    >
-                                                      {informationLinkEpisodeId ===
-                                                      link.episode_id ? (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                      ) : (
-                                                        <ChevronRight className="h-4 w-4" />
-                                                      )}
-                                                    </Button>
-                                                    {linkSource?.favicon_url && (
-                                                      <img
-                                                        src={
-                                                          linkSource.favicon_url
-                                                        }
-                                                        alt=""
-                                                        className="size-6 shrink-0"
-                                                      />
-                                                    )}
-                                                    <button
-                                                      type="button"
-                                                      className="flex-1 text-left text-sm hover:underline"
-                                                      onClick={() =>
-                                                        toggleLinkInformation(
-                                                          link.episode_id,
-                                                        )
-                                                      }
-                                                    >
-                                                      {linkSource?.source_name ??
-                                                        "Unknown source"}
-                                                    </button>
-                                                  </div>
-                                                  {informationLinkEpisodeId ===
-                                                    link.episode_id && (
-                                                    <div className="ml-8 rounded border bg-muted/30 p-4">
-                                                      <EpisodeInformationPanel
-                                                        episodeId={
-                                                          link.episode_id
-                                                        }
-                                                        preferSource
-                                                      />
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    )
-                                  })
-                                )}
-                              </div>
+                              <SeasonEpisodes
+                                channelId={channelId}
+                                canonicalShowId={canonicalShowId}
+                                seasonId={season.id}
+                                seasonEnabled={seasonEnabled}
+                                sourcesByShowId={sourcesByShowId}
+                                tmdbShowIds={tmdbShowIds}
+                                isEpisodeMarked={isEpisodeMarked}
+                                episodeExpiry={episodeExpiry}
+                                onEpisodeClick={(episode) =>
+                                  handleEpisodeClick(episode, seasonEnabled)
+                                }
+                                episodeActionLabel={getEpisodeActionLabel}
+                              />
                             )}
                           </div>
                         )
@@ -872,19 +591,14 @@ export function WhitelistManager({
           open={!!pendingEpisode}
           // The popup only opens when adding an episode-level entry, so the action
           // matches the not-yet-enabled label (which already accounts for the season).
-          title={getEpisodeActionLabel(
-            false,
-            seasonEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
-          )}
-          description={getEpisodeLabel(pendingEpisode)}
+          title={getEpisodeActionLabel(false, pendingEpisode.seasonEnabled)}
+          description={episodeLabel(pendingEpisode.episode)}
           dateLabel="Expires at (optional)"
           confirmLabel={getEpisodeActionLabel(
             false,
-            seasonEnabledByEpisodeId.get(pendingEpisode.id) ?? false,
+            pendingEpisode.seasonEnabled,
           )}
-          initialExpiry={
-            episodeExpiry.get(pendingEpisode.canonical_episode_id) ?? ""
-          }
+          initialExpiry={episodeExpiry(pendingEpisode.episode)}
           onConfirm={confirmEpisodeExpiry}
           onOpenChange={(open) => {
             if (!open) setPendingEpisode(null)

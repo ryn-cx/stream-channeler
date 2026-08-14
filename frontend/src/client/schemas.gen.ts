@@ -9051,6 +9051,26 @@ export const WhitelistEpisodeSourceEntryInputSchema = {
     description: 'An entry naming an episode on one website rather than on all of them.'
 } as const;
 
+export const WhitelistEpisodesOutputSchema = {
+    properties: {
+        episodes: {
+            items: {
+                '$ref': '#/components/schemas/WhitelistEpisodeOutput'
+            },
+            type: 'array',
+            title: 'Episodes'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        }
+    },
+    type: 'object',
+    required: ['episodes', 'total_count'],
+    title: 'WhitelistEpisodesOutput',
+    description: "One page of a season's episodes, and how many the season holds in all."
+} as const;
+
 export const WhitelistSeasonOutputSchema = {
     properties: {
         key: {
@@ -9421,18 +9441,16 @@ export const WhitelistShowOutputSchema = {
             },
             type: 'array',
             title: 'Seasons'
-        },
-        episodes: {
-            items: {
-                '$ref': '#/components/schemas/WhitelistEpisodeOutput'
-            },
-            type: 'array',
-            title: 'Episodes'
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons', 'episodes'],
-    title: 'WhitelistShowOutput'
+    required: ['key', 'source_id', 'id', 'is_whitelist', 'sources', 'seasons'],
+    title: 'WhitelistShowOutput',
+    description: `The title's sites and seasons, which is what the filter page opens on.
+
+The episodes are read a season at a time as each is expanded rather than all
+at once, since a title of a thousand episodes is a page nobody waits for and
+all but the one season being looked at is read for nothing.`
 } as const;
 
 export const WhitelistSourceOutputSchema = {

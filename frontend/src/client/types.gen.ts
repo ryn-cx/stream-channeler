@@ -1703,6 +1703,14 @@ export type WhitelistEpisodeSourceEntryInput = {
     expires_at?: (string | null);
 };
 
+/**
+ * One page of a season's episodes, and how many the season holds in all.
+ */
+export type WhitelistEpisodesOutput = {
+    episodes: Array<WhitelistEpisodeOutput>;
+    total_count: number;
+};
+
 export type WhitelistSeasonOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -1728,6 +1736,13 @@ export type WhitelistShowInput = {
     episode_sources?: Array<WhitelistEpisodeSourceEntryInput>;
 };
 
+/**
+ * The title's sites and seasons, which is what the filter page opens on.
+ *
+ * The episodes are read a season at a time as each is expanded rather than all
+ * at once, since a title of a thousand episodes is a page nobody waits for and
+ * all but the one season being looked at is read for nothing.
+ */
 export type WhitelistShowOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -1749,7 +1764,6 @@ export type WhitelistShowOutput = {
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
-    episodes: Array<WhitelistEpisodeOutput>;
 };
 
 /**
@@ -2000,6 +2014,23 @@ export type ChannelsUpdateChannelWhitelistData = {
 };
 
 export type ChannelsUpdateChannelWhitelistResponse = (WhitelistShowOutput);
+
+export type ChannelsGetChannelWhitelistEpisodesData = {
+    canonicalShowId: string;
+    channelId: string;
+    limit?: number;
+    offset?: number;
+    seasonId: string;
+};
+
+export type ChannelsGetChannelWhitelistEpisodesResponse = (WhitelistEpisodesOutput);
+
+export type ChannelsGetChannelWhitelistFilteredEpisodesData = {
+    canonicalShowId: string;
+    channelId: string;
+};
+
+export type ChannelsGetChannelWhitelistFilteredEpisodesResponse = (Array<WhitelistEpisodeOutput>);
 
 export type ChannelsBlacklistChannelEpisodeData = {
     channelId: string;

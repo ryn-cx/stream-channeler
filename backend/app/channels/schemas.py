@@ -348,10 +348,24 @@ class WhitelistEpisodeOutput(EpisodeOutput):
 
 # TODO: Validate
 class WhitelistShowOutput(ShowPublic):
+    """The title's sites and seasons, which is what the filter page opens on.
+
+    The episodes are read a season at a time as each is expanded rather than all
+    at once, since a title of a thousand episodes is a page nobody waits for and
+    all but the one season being looked at is read for nothing.
+    """
+
     is_whitelist: bool
     sources: list[WhitelistSourceOutput]
     seasons: list[WhitelistSeasonOutput]
+
+
+# TODO: Validate
+class WhitelistEpisodesOutput(BaseModel):
+    """One page of a season's episodes, and how many the season holds in all."""
+
     episodes: list[WhitelistEpisodeOutput]
+    total_count: int
 
 
 # TODO: Validate
