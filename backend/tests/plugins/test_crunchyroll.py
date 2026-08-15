@@ -1,11 +1,10 @@
 # TODO: Validate
 from plugins.Crunchyroll import Crunchyroll
-from tests.old_mess.plugins.plugin_validator import PluginValidator, StandardTests
-from tests.plugins.plugin_validator_v2 import StandardTestsV2, PluginValidatorV2
+from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
 
 
 # TODO: Validate
-class CrunchyrollValidator(PluginValidator[Crunchyroll]):
+class CrunchyrollValidatorAlt(PluginValidatorAlt[Crunchyroll]):
     plugin_class = Crunchyroll
     urls = (
         "/series/{parse_url_response}",
@@ -23,7 +22,7 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
 # one title: the three seasons are a series, the movie is a film of its own, and
 # the spinoff is a third. Each of them is a title the listing is a copy of.
 # TODO: Validate
-class TestMixedTMDB(StandardTests[Crunchyroll], CrunchyrollValidator):
+class TestMixedTMDB(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
     """Crunchyroll combines the Laid Back camp tv show and movie into a single series."""
 
     parse_url_response = "GRWEW95KR"

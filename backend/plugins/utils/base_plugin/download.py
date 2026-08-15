@@ -1,7 +1,6 @@
 # TODO: Validate
 from abc import ABC
-from collections.abc import Callable, Iterator, Sequence
-from contextlib import contextmanager
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, overload
 
@@ -297,30 +296,6 @@ class DownloadMixin(ABC):
         return self.session.exec(statement).all()
 
     # TODO: Validate
-    @contextmanager
-    def _listing_files(self) -> Iterator[None]:
-        """List a record's files without reading what naming them would need.
-
-        Asking a plugin which files a record has is what a preload has to do to
-        know which rows to read, and a plugin that leans on another one cannot
-        name that one's file until it has read its own. Reading them is what the
-        preload was about to do in a single query, so under this the file lists
-        come back short of whatever a read would be needed to name, and the
-        second pass over them names the rest with the rows already in hand.
-        """
-        yield
-
-    # TODO: Validate
-    def _preload_in_two_passes(
-        self,
-        file_keys: Callable[[], list[str]],
-    ) -> Sequence[File]:
-        """Read the rows for `file_keys`, warming what naming them reads first."""
-        with self._listing_files():
-            own_rows = self._get_files_by_keys(file_keys())
-        return [*own_rows, *self._get_files_by_keys(file_keys())]
-
-    # TODO: Validate
     def _preload_show_files(
         self,
         show_key: str,
@@ -328,8 +303,8 @@ class DownloadMixin(ABC):
     ) -> Sequence[File]:
         if preloaded_files:
             return preloaded_files
-        return self._preload_in_two_passes(
-            lambda: [file.file_key() for file in self._show_files(show_key)],
+        return self._get_files_by_keys(
+            [file.file_key() for file in self._show_files(show_key)],
         )
 
     # TODO: Validate
@@ -341,8 +316,8 @@ class DownloadMixin(ABC):
     ) -> Sequence[File]:
         if preloaded_files:
             return preloaded_files
-        return self._preload_in_two_passes(
-            lambda: [
+        return self._get_files_by_keys(
+            [
                 file.file_key()
                 for season_key in season_keys
                 for file in self._season_files(season_key, show_key)
@@ -358,8 +333,8 @@ class DownloadMixin(ABC):
     ) -> Sequence[File]:
         if preloaded_files:
             return preloaded_files
-        return self._preload_in_two_passes(
-            lambda: [
+        return self._get_files_by_keys(
+            [
                 file.file_key()
                 for season_key in season_keys
                 for episode_key in self._episode_keys_from_file(season_key, show_key)
@@ -377,8 +352,8 @@ class DownloadMixin(ABC):
     ) -> Sequence[File]:
         if preloaded_files:
             return preloaded_files
-        return self._preload_in_two_passes(
-            lambda: [
+        return self._get_files_by_keys(
+            [
                 file.file_key()
                 for episode_key in episode_keys
                 for file in self._episode_files(episode_key, season_key, show_key)

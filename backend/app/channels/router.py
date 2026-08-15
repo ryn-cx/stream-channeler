@@ -1448,7 +1448,9 @@ def delete_channel_show(
     shows = service.shows_for_channel_show(session, channel_show)
     # The title's own name is what is left to say when no website's copy of it
     # carries one, which is the case for a title only TMDB has a record of.
-    canonical_show = session.get(Show, channel_show.canonical_show_id)
+    canonical_show = session.exec(
+        select(Show).where(Show.id == channel_show.canonical_show_id),
+    ).first()
     name = next(
         (show.name for show in shows if show.name),
         canonical_show.name if canonical_show else None,

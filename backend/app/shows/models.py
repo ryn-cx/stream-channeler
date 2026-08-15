@@ -2,10 +2,9 @@
 """Show models."""
 
 import uuid
-from typing import TYPE_CHECKING, ClassVar, Self, cast, override
+from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from sqlalchemy import text
-from sqlalchemy.orm import Session as SQLAlchemySession
 from sqlalchemy.orm import contains_eager, selectinload
 from sqlmodel import (
     Field,
@@ -39,12 +38,6 @@ if TYPE_CHECKING:
 # no non-canonical row's. Those are only ever ordered by the admin tables, which
 # order by any column they show and so are no reason to index these two.
 CANONICAL_SORTABLE_FIELDS = ["media_type", "name"]
-
-# Where a session keeps its non-canonical shows under the source and key naming
-# them. One used to be found in the identity map by that pair, which was what
-# named it; now that canonical and non-canonical rows share a table the identity
-# is `id` alone, and this is what keeps the lookup free of a query.
-SHOW_SESSION_INDEX = "show_by_source_and_key"
 
 
 # TODO: Validate
@@ -95,17 +88,16 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     __table_args__ = (
-        # A non-canonical row shares its key with the non-canonical rows of
-        # other sources, so `id` is the only thing that names a row of either
-        # kind on its own.
-        PrimaryKeyConstraint("id"),
         # A source names each of its rows once, of either kind: a canonical show
         # is written by the plugin that minted it the same way a non-canonical
         # row is written by the plugin that read it off a website, and the two
         # never share a key under one source. A canonical show minted for a
         # listing to point at carries the plugin's key ahead of the listing's,
-        # and TMDB writes canonical shows and nothing else.
-        UniqueConstraint("source_id", "key", name="Show-source_id-key-key"),
+        # and TMDB writes canonical shows and nothing else. That pair is the
+        # identity `Season` and `Episode` carry too, so the identity map answers
+        # to it and `get_from_memory` needs nothing of its own.
+        PrimaryKeyConstraint("source_id", "key"),
+        UniqueConstraint("id"),
         # Every claimed canonical show is one row, which is what makes the key
         # the whole of its identity. The non-canonical rows are no part of this:
         # two websites carrying one show carry the same key as each other.
@@ -276,66 +268,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         )
 
     # TODO: Validate
-    @classmethod
-    @override
-    def get_from_memory(
-        cls,
-        session: Session,
-        parent: Source,
-        key: str,
-    ) -> Self | None:
-        """Return the non-canonical show `parent` names under `key`.
-
-        The identity map answers to `id` now that canonical and non-canonical
-        rows share a table, so the pair is looked for in the session's own index
-        of it instead. A row the session has since let go of is not one it holds,
-        and is answered for as though it had never been indexed.
-
-        Nothing indexes a row on its own account, so a miss is asked of the
-        database rather than taken as an answer: a row that is stored and not
-        indexed is still a row that exists, and writing it again is a second row
-        under a key that allows one.
-
-        A source holds one row under a key whether that row is the record of the
-        media or a copy of one, so the pair names it either way and the flag is no
-        part of finding it. Asking only for copies would miss a row that is the
-        record, and writing it again is a second row under a key that allows one.
-        """
-        show = show_session_index(session).get((parent.id, key))
-        if show is not None and show in session:
-            return cast("Self", show)
-
-        stored = session.exec(
-            select(cls).where(
-                cls.source_id == parent.id,
-                cls.key == key,
-            ),
-        ).first()
-        if stored is not None:
-            index_show(session, stored)
-        return stored
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def get_one_from_memory(
-        cls,
-        session: Session,
-        parent: Source,
-        key: str,
-    ) -> Self:
-        """Return the non-canonical show `parent` names under `key`, or raise.
-
-        Raises:
-            KeyError: If the session is holding no such row.
-
-        """
-        show = cls.get_from_memory(session, parent, key)
-        if show is None:
-            raise KeyError((cls, (parent.id, key)))
-        return show
-
-    # TODO: Validate
     @property
     @override
     def children(self) -> list[Season]:
@@ -376,29 +308,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     def __str__(self) -> str:
         """Return a string representation of the `Show`."""
         return stringify_show(self, self.source)
-
-
-# TODO: Validate
-def show_session_index(
-    session: SQLAlchemySession,
-) -> dict[tuple[uuid.UUID, str], Show]:
-    """Return the session's index of the shows it is holding, by source and key."""
-    index: dict[tuple[uuid.UUID, str], Show] = session.info.setdefault(
-        SHOW_SESSION_INDEX,
-        {},
-    )
-    return index
-
-
-# TODO: Validate
-def index_show(session: SQLAlchemySession, show: Show) -> None:
-    """Record `show` under the source and key naming it.
-
-    Every row is indexed, whether it is the record of the media or a copy of one:
-    a source holds one row under a key either way, and that pair is what
-    `get_from_memory` reads.
-    """
-    show_session_index(session)[(show.source_id, show.key)] = show
 
 
 # TODO: Validate

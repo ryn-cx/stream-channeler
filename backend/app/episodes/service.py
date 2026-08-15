@@ -14,6 +14,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Callable, Collection, Sequence
 from difflib import SequenceMatcher
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlalchemy.orm import aliased
@@ -47,6 +48,12 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+
+if TYPE_CHECKING:
+    # Read only for what it names here. The plugin is built on the base every
+    # plugin is, which reads this module in turn, so importing it outright is a
+    # circle - which is why what reaches for it does so where it is used.
+    from plugins.TMDB import TMDB
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
@@ -861,6 +868,22 @@ def _best_name_similarity(
 
 
 # TODO: Validate
+def _translated_forms_cache(session: Session) -> dict[uuid.UUID, frozenset[str]]:
+    """Every spelling of every language's name for a TMDB episode, by episode.
+
+    Kept on the session rather than on the linker, because a linker is built
+    afresh for every show that is read and each of them wants the translations of
+    the same canonical episodes. Reading them once per session is what keeps a
+    run that reads one show a hundred times from reading them a hundred times.
+    """
+    cache: dict[uuid.UUID, frozenset[str]] = session.info.setdefault(
+        "translated_episode_name_forms",
+        {},
+    )
+    return cache
+
+
+# TODO: Validate
 class EpisodeLinker:
     """Points a show's episodes at the canonical TMDB episodes they answer to.
 
@@ -941,6 +964,11 @@ class EpisodeLinker:
         not stored alongside it, so they are read off the plugin rather than the
         row.
 
+        Read once per session and remembered there, so the plugin is built and
+        the translations are reached for only for the episodes nothing has read
+        yet. A run that reads one show over and over reads them the first time
+        and takes them off the session after that.
+
         Imported here rather than at the top of the module because the TMDB
         plugin is built on the base every plugin is, which reads this module in
         turn.
@@ -948,30 +976,79 @@ class EpisodeLinker:
         if self._translated_forms is not None:
             return self._translated_forms
 
-        from plugins.TMDB import TMDB  # noqa: PLC0415
+        cache = _translated_forms_cache(self.session)
+        unread = [
+            tmdb_episode
+            for tmdb_episode in self.canonical_episodes
+            if tmdb_episode.id not in cache
+        ]
+        if unread:
+            from plugins.TMDB import TMDB  # noqa: PLC0415
 
-        tmdb = TMDB(self.session)
-        forms: dict[uuid.UUID, frozenset[str]] = {}
-        for tmdb_episode in self.canonical_episodes:
-            season = tmdb_episode.season
-            tmdb_show_id = tmdb_id_of(season.show.key, SHOW_LEVEL)
-            if (
-                tmdb_show_id is None
-                or season.season_number is None
-                or tmdb_episode.episode_number is None
-            ):
-                continue
-            forms[tmdb_episode.id] = frozenset(
-                form
-                for name in tmdb.translated_episode_names(
-                    tmdb_show_id,
-                    season.season_number,
-                    tmdb_episode.episode_number,
-                )
-                for form in plaintext_forms(name)
+            tmdb = TMDB(self.session)
+            numberings = {
+                tmdb_episode.id: self._episode_numbering(tmdb_episode)
+                for tmdb_episode in unread
+            }
+            # Held for as long as the names are being read, because the session
+            # keeps its records weakly and a row nothing is holding is dropped
+            # and read again one at a time - which is what this read replaces.
+            _rows = tmdb.preload_episode_translations(
+                [
+                    numbering
+                    for numbering in numberings.values()
+                    if numbering is not None
+                ],
             )
-        self._translated_forms = forms
-        return forms
+            for tmdb_episode in unread:
+                cache[tmdb_episode.id] = self._episode_name_forms(
+                    tmdb,
+                    numberings[tmdb_episode.id],
+                )
+
+        self._translated_forms = {
+            tmdb_episode.id: cache[tmdb_episode.id]
+            for tmdb_episode in self.canonical_episodes
+        }
+        return self._translated_forms
+
+    # TODO: Validate
+    @staticmethod
+    def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
+        """What TMDB is asked about one episode by, where it can be asked at all.
+
+        An episode whose title, season or number is not known is one TMDB has no
+        answer for, and says so by having no numbering rather than a partial one.
+        """
+        season = tmdb_episode.season
+        tmdb_show_id = tmdb_id_of(season.show.key, SHOW_LEVEL)
+        if (
+            tmdb_show_id is None
+            or season.season_number is None
+            or tmdb_episode.episode_number is None
+        ):
+            return None
+        return (tmdb_show_id, season.season_number, tmdb_episode.episode_number)
+
+    # TODO: Validate
+    @staticmethod
+    def _episode_name_forms(
+        tmdb: TMDB,
+        numbering: tuple[int, int, int] | None,
+    ) -> frozenset[str]:
+        """Return every spelling of every language's name for one TMDB episode.
+
+        An episode TMDB cannot be asked about has no names rather than none
+        recorded, which is the same thing to everything that reads them and is
+        what keeps it from being asked about again.
+        """
+        if numbering is None:
+            return frozenset()
+        return frozenset(
+            form
+            for name in tmdb.translated_episode_names(*numbering)
+            for form in plaintext_forms(name)
+        )
 
     # TODO: Validate
     def _link_to_movie(self) -> None:

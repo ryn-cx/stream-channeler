@@ -92,7 +92,11 @@ def canonical_show_by_key(session: Session, key: str, source: Source) -> Show:
     if existing:
         _remember_title(session, existing)
         return existing
+    # The row it hangs off is set as the record and not only as the id, because
+    # a row minted here is read back before anything is written and a pending
+    # row answers for the record it hangs off with nothing at all.
     canonical = Show(key=key, source_id=source.id)
+    canonical.source = source
     session.add(canonical)
     _remember_title(session, canonical)
     return canonical
@@ -102,16 +106,16 @@ def canonical_show_by_key(session: Session, key: str, source: Source) -> Show:
 def canonical_season_by_key(
     session: Session,
     key: str,
-    canonical_show_id: uuid.UUID,
+    canonical_show: Show,
 ) -> Season:
-    cache_key = (str(canonical_show_id), key)
+    cache_key = (str(canonical_show.id), key)
     if remembered := _remembered(session, Season, cache_key):
         return remembered
 
-    if canonical_show_id not in _loaded_parents(session):
+    if canonical_show.id not in _loaded_parents(session):
         existing = session.exec(
             select(Season).where(
-                Season.show_id == canonical_show_id,
+                Season.show_id == canonical_show.id,
                 Season.key == key,
             ),
         ).first()
@@ -119,7 +123,8 @@ def canonical_season_by_key(
             _remember(session, existing, cache_key)
             return existing
 
-    canonical = Season(key=key, show_id=canonical_show_id)
+    canonical = Season(key=key, show_id=canonical_show.id)
+    canonical.show = canonical_show
     session.add(canonical)
     _remember(session, canonical, cache_key)
     _loaded_parents(session).add(canonical.id)
@@ -130,7 +135,7 @@ def canonical_season_by_key(
 def canonical_episode_by_key(
     session: Session,
     key: str,
-    canonical_season_id: uuid.UUID,
+    canonical_season: Season,
     plugin_key: str,
 ) -> Episode:
     """Return the row standing for this episode, minting one where there is none.
@@ -139,15 +144,15 @@ def canonical_episode_by_key(
     through the season because it is what a `Watch` is matched on. A row minted
     without it would be a row no watch could ever name.
     """
-    cache_key = (str(canonical_season_id), key)
+    cache_key = (str(canonical_season.id), key)
     if remembered := _remembered(session, Episode, cache_key):
         return remembered
 
-    if canonical_season_id not in _loaded_parents(session):
+    if canonical_season.id not in _loaded_parents(session):
         existing = session.exec(
             select(Episode).where(
                 is_canonical(Episode),
-                Episode.season_id == canonical_season_id,
+                Episode.season_id == canonical_season.id,
                 Episode.key == key,
             ),
         ).first()
@@ -157,9 +162,10 @@ def canonical_episode_by_key(
 
     canonical = Episode(
         key=key,
-        season_id=canonical_season_id,
+        season_id=canonical_season.id,
         plugin_key=plugin_key,
     )
+    canonical.season = canonical_season
     session.add(canonical)
     _remember(session, canonical, cache_key)
     return canonical

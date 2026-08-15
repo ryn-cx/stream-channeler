@@ -7,6 +7,7 @@ from tminidb.movie_details.models import MovieDetailsModel
 from tminidb.tv_season_details.models import Episode as TvSeasonEpisode
 from tminidb.tv_series_details.models import Season as TvSeriesSeason
 
+from app.files.models import File
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.TMDB.files import (
@@ -100,6 +101,33 @@ class LookupMixin(FileMixin, register=False):
         if not detail_file.database_record.content:
             return None
         return detail_file.parsed()
+
+    # TODO: Validate
+    def preload_episode_translations(
+        self,
+        numberings: Sequence[tuple[int, int, int]],
+    ) -> Sequence[File]:
+        """Read the rows holding every named episode's translations, in one query.
+
+        Whatever matches episodes by name reads the translations of every episode
+        of a title in turn, and a file reached for on its own is a row read on its
+        own. Reading them together leaves each of those reaches finding its row
+        already in the session.
+
+        The rows are returned so that whatever asked for them can hold on to them
+        for as long as it is reading: the session keeps its records weakly, and a
+        row nothing holds is dropped and read again.
+        """
+        return self._get_files_by_keys(
+            [
+                self.episode_translations_file(
+                    tmdb_id,
+                    season_number,
+                    episode_number,
+                ).file_key()
+                for tmdb_id, season_number, episode_number in numberings
+            ],
+        )
 
     # TODO: Validate
     def translated_episode_names(
