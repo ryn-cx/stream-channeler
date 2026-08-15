@@ -75,13 +75,13 @@ def tmdb_episode_key(media_type: MediaType, tmdb_id: int) -> str:
 
 
 # TODO: Validate
-def record_key(plugin_key: str, key: str) -> str:
-    """Return the key naming the canonical row a website's own record stands for.
+def watch_identifier(plugin_key: str, key: str) -> str:
+    """Return what a `Watch` of the episode `plugin_key` keyed as `key` is of.
 
-    A plugin's own key for a record already names the thing itself rather than
-    one row for it — a YouTube episode is keyed by its video id, which is the
-    same id wherever that video turns up — so namespacing it by the plugin is
-    enough to make two rows for one work agree on a single canonical row.
+    A plugin's own key names the media itself rather than one row for it — a
+    YouTube episode is keyed by its video id, which is the same id wherever that
+    video turns up — so namespacing it by the plugin is enough to say that two
+    rows are of the same media.
     """
     return f"{plugin_key} {key}"
 

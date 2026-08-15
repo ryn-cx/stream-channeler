@@ -5,6 +5,7 @@ from typing import override
 
 from sqlmodel import col, select
 
+from app.canonical_media.service import add_canonical_show
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.shows.models import Show
@@ -236,8 +237,9 @@ class ImportURLMixin(
             source_key in existing_shows for source_key in source_keys
         ):
             stored = [existing_shows[source_key] for source_key in source_keys]
-            with self.session.no_autoflush:
-                self._link_supplied_canonical_shows(stored, canonical_show)
+            if canonical_show:
+                for show in stored:
+                    add_canonical_show(self.session, show, canonical_show)
             return stored
 
         _cache = (

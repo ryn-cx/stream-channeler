@@ -392,8 +392,7 @@ class EpisodeQueryBuilder:
                     ChannelEpisodeSourceFilter.show_id == Show.id,
                     or_(
                         col(ChannelEpisodeSourceFilter.expires_at).is_(None),
-                        col(ChannelEpisodeSourceFilter.expires_at)
-                        > tz_datetime.now(),
+                        col(ChannelEpisodeSourceFilter.expires_at) > tz_datetime.now(),
                     ),
                 ),
             )

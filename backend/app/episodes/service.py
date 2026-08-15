@@ -31,7 +31,7 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
-from app.canonical_media.service import link_canonical_show
+from app.canonical_media.service import add_canonical_show
 from app.episodes.models import (
     MANUAL_NOTE_PREFIX,
     Episode,
@@ -750,7 +750,7 @@ def link_episode(
     again. An episode another `User` decision put there is left where it is,
     since one decision is no reason to undo another.
     """
-    link_canonical_show(session, episode.season.show, canonical_episode.season.show)
+    add_canonical_show(session, episode.season.show, canonical_episode.season.show)
 
     others = session.exec(
         select(Episode)

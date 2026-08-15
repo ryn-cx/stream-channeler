@@ -2,7 +2,7 @@
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.service import link_canonical_show
+from app.canonical_media.service import add_canonical_show
 from app.episodes.models import Episode
 from app.episodes.service import link_episode
 from app.models import Visibility
@@ -46,7 +46,11 @@ def _canonical_episode(session: Session, key: str) -> Episode:
     season = Season(key=key, show=_canonical_show(session, key))
     session.add(season)
     session.flush()
-    episode = Episode(key=key, season=season, plugin_key="TestPlugin")
+    episode = Episode(
+        key=key,
+        season=season,
+        watch_identifier=f"TestPlugin {key}",
+    )
     session.add(episode)
     session.flush()
     return episode
@@ -59,7 +63,7 @@ def test_link_canonical_show_makes_the_show_non_canonical(
     show = _canonical_show(function_scoped_session, "tmdb-show-1")
     canonical_show = _canonical_show(function_scoped_session, "tmdb-show-2")
 
-    link_canonical_show(function_scoped_session, show, canonical_show)
+    add_canonical_show(function_scoped_session, show, canonical_show)
 
     assert not show.is_canonical
     assert show.canonical_show_ids == [canonical_show.id]
@@ -73,8 +77,8 @@ def test_link_canonical_show_treats_every_title_alike(
     first = _canonical_show(function_scoped_session, "tmdb-show-2")
     second = _canonical_show(function_scoped_session, "tmdb-show-3")
 
-    link_canonical_show(function_scoped_session, show, first)
-    link_canonical_show(function_scoped_session, show, second)
+    add_canonical_show(function_scoped_session, show, first)
+    add_canonical_show(function_scoped_session, show, second)
 
     assert set(show.canonical_show_ids) == {first.id, second.id}
     assert show.sole_canonical_show_id is None
@@ -87,10 +91,10 @@ def test_link_canonical_show_rejects_a_copy_as_the_title(
     show = _canonical_show(function_scoped_session, "tmdb-show-1")
     copy = _canonical_show(function_scoped_session, "tmdb-show-2")
     canonical_show = _canonical_show(function_scoped_session, "tmdb-show-3")
-    link_canonical_show(function_scoped_session, copy, canonical_show)
+    add_canonical_show(function_scoped_session, copy, canonical_show)
 
     with pytest.raises(ValueError, match="is not a canonical show"):
-        link_canonical_show(function_scoped_session, show, copy)
+        add_canonical_show(function_scoped_session, show, copy)
 
 
 # TODO: Validate
@@ -100,11 +104,11 @@ def test_link_canonical_show_rejects_a_title_copies_hang_off(
     show = _canonical_show(function_scoped_session, "tmdb-show-1")
     copy = _canonical_show(function_scoped_session, "tmdb-show-2")
     canonical_show = _canonical_show(function_scoped_session, "tmdb-show-3")
-    link_canonical_show(function_scoped_session, copy, show)
+    add_canonical_show(function_scoped_session, copy, show)
     function_scoped_session.flush()
 
     with pytest.raises(ValueError, match="has other shows linked to it"):
-        link_canonical_show(function_scoped_session, show, canonical_show)
+        add_canonical_show(function_scoped_session, show, canonical_show)
 
 
 # TODO: Validate

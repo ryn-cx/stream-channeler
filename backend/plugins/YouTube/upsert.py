@@ -6,9 +6,9 @@ from not_yt_dlapi.channel.models import Item as ChannelItem
 from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 
 from app.episodes.models import Episode
-from app.media.media_type import MediaType
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from plugins.TMDB.link import TMDBLinker
 from plugins.YouTube.files import (
@@ -48,7 +48,7 @@ class UpsertMixin(HelperMixin, register=False):
         else:
             show = self._upsert_channel_show(source, show_key, force=force)
 
-
+        find_and_add_canonical_show(self.session, show, canonical_show)
         return show
 
     # TODO: Validate
@@ -130,8 +130,7 @@ class UpsertMixin(HelperMixin, register=False):
         if self._show_is_outdated(show, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
             channel_item = get_first_item(channel_file.parsed().items)
-            show_files = self._show_files(show_key)
-            show = Show(
+            new_show = Show(
                 key=channel_item.id,
                 name=channel_item.snippet.title,
                 url=self.build_url(f"channel/{channel_item.id}"),
@@ -142,7 +141,8 @@ class UpsertMixin(HelperMixin, register=False):
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
-            ).upsert_and_set_update_at(source, show, show_files)
+            )
+            show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_seasons(show, show_key, force=force)
         self._soft_delete_missing(show_key)

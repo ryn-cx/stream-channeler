@@ -97,7 +97,6 @@ class UpsertMixin(HelperMixin, register=False):
         else:
             show = self._upsert_series_show(source, show_key, tmdb_id, force=force)
 
-        self._soft_delete_missing(show_key)
         return show
 
     # TODO: Validate
@@ -155,6 +154,7 @@ class UpsertMixin(HelperMixin, register=False):
             show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_series_seasons(show, show_key, tmdb_id, force=force)
+        self._soft_delete_missing(show_key)
         return show
 
     # TODO: Validate

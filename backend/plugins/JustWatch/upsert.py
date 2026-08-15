@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from plugins.JustWatch.helpers import HelperMixin
 
@@ -67,16 +68,17 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> list[Show]:
         shows: list[Show] = []
-        # A listing carries the same key on every service offering it, and a
-        # copy is only told apart from a title by the title it points at, so
-        # nothing is written until the last of them has been given one.
-        with self.session.no_autoflush:
-            for source_key, _ in self._sources_with_offers(show_key):
-                if source_keys is not None and source_key not in source_keys:
-                    continue
-                source = self._upsert_source(source_key)
-                shows.append(self.upsert_show(source, show_key, force=force))
-            self._link_supplied_canonical_shows(shows, canonical_show)
+        # A listing carries the same key on every service offering it, and only
+        # one row of a key can be the record. Each is given what it stands for as
+        # it is written, so a second row of the key is never the record while the
+        # first still is.
+        for source_key, _ in self._sources_with_offers(show_key):
+            if source_keys is not None and source_key not in source_keys:
+                continue
+            source = self._upsert_source(source_key)
+            shows.append(
+                self.upsert_show(source, show_key, canonical_show, force=force),
+            )
         return shows
 
     # TODO: Validate
@@ -107,6 +109,7 @@ class UpsertMixin(HelperMixin, register=False):
                 msg = f"Source {source.key} has no offer for show {show_key}."
                 raise ValueError(msg)
             existing_show.soft_delete()
+            find_and_add_canonical_show(self.session, existing_show, canonical_show)
             return existing_show
 
         parsed_json = self.url_title_details_file(show_key).parsed()
@@ -123,7 +126,12 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp=self.show_data_timestamp(show_key),
             source_id=source.id,
         )
-        show = self._upsert_show_object(new_show, source, existing_show, show_key)
+        show = self._upsert_show_object(
+            new_show,
+            source,
+            existing_show,
+            show_key,
+        )
 
         self._upsert_seasons(show, show_key, force=force)
 
@@ -131,6 +139,7 @@ class UpsertMixin(HelperMixin, register=False):
 
         self._set_weekly_updates_from_episodes(show)
 
+        find_and_add_canonical_show(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

@@ -39,7 +39,6 @@ class TMDBLinker:
         self.session = session
         self.tmdb = TMDB(session)
 
-
     # TODO: Validate
     def search_media(
         self,

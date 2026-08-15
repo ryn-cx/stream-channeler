@@ -16,6 +16,7 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.helpers import HelperMixin
@@ -24,10 +25,9 @@ from plugins.Crunchyroll.music_keys import (
     MUSIC_SOURCE,
     VIDEO_SOURCE,
     MusicCategory,
-    is_anime_show_key,
+    is_video_show_key,
     is_music_show_key,
 )
-from plugins.TMDB.link import TMDBLinker
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
 
@@ -94,16 +94,17 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         if is_music_show_key(show_key):
             show = self._upsert_music_show(source, show_key, force=force)
-        elif is_anime_show_key(show_key):
-            show = self._upsert_anime_show(source, show_key, force=force)
+        elif is_video_show_key(show_key):
+            show = self._upsert_video_show(source, show_key, force=force)
         else:
-            msg = f"Show key {show_key} is neither an artist nor a series"
+            msg = f"Show key {show_key} is invalid and not supported."
             raise ValueError(msg)
 
+        find_and_add_canonical_show(self.session, show, canonical_show)
         return show
 
     # TODO: Validate
-    def _upsert_anime_show(
+    def _upsert_video_show(
         self,
         source: Source,
         show_key: str,
@@ -142,7 +143,7 @@ class UpsertMixin(HelperMixin, register=False):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             artist_data = self.artist_file(show_key).parsed().data[0]
-            show = Show(
+            new_show = Show(
                 key=show_key,
                 name=artist_data.name,
                 description=artist_data.description,
@@ -151,7 +152,8 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=self._largest_image(artist_data.images.poster_wide),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
-            ).upsert_and_set_update_at(source, show, self._show_files(show_key))
+            )
+            show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_music_seasons(show, show_key, force=force)
         self._soft_delete_missing(show_key)

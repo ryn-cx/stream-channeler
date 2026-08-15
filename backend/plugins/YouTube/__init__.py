@@ -7,6 +7,7 @@ from typing import override
 
 from loguru import logger
 
+from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -177,8 +178,11 @@ class YouTube(
 
         # Before `import_results`, which names what the URL brought in by the keys
         # of the listing's own rows: a channel resolves each of those to the row it
-        # is a copy of, so the copies have to exist before it is asked.
-        self._link_supplied_canonical_show(show, canonical_show)
+        # is a copy of, so the copies have to exist before it is asked. A branch
+        # that wrote the listing settled it as it wrote; this is for the one that
+        # found it already stored and read nothing.
+        if canonical_show:
+            add_canonical_show(self.session, show, canonical_show)
         return handler.import_results(show)
 
     # TODO: Validate

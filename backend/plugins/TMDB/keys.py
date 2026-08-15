@@ -30,6 +30,7 @@ from app.media.media_type import MediaType
 MOVIE_SEASON_NUMBER = 0
 MOVIE_EPISODE_NUMBER = 0
 
+
 # TODO: Validate
 class RecordKey(NamedTuple):
     """The parts of a TMDB record key: which half of the catalogue, and the id."""

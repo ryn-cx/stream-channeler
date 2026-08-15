@@ -393,16 +393,18 @@ class FileMixin(BasePlugin, register=False):
         ).parsed()
         return [datum.id for datum in listing.data]
 
-    # TODO: Validate
     def find_newest_browse_series_file(self) -> BrowseSeries | None:
-        """Returns newest browse , or None when there is none."""
+        """Returns newest browse series file or None if one does not exist."""
         if file := self.preload_latest_file(BrowseSeries):
             return self.browse_series_file(file)
         return None
 
-    # TODO: Validate
     def get_newest_browse_series_file(self) -> BrowseSeries:
-        """Returns newest browse series file, or raises if there is none."""
+        """Returns newest browse series file or raises if one does not exist.
+
+        Raise:
+            FileNotFoundError: If no browse series file exists.
+        """
         if file := self.find_newest_browse_series_file():
             return file
 

@@ -51,7 +51,7 @@ def is_music_show_key(show_key: str) -> bool:
 
 
 # TODO: Validate
-def is_anime_show_key(show_key: str) -> bool:
+def is_video_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to a series rather than an artist."""
     return show_key.startswith(SERIES_ID_PREFIX)
 

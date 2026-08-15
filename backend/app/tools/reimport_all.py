@@ -20,9 +20,7 @@ def reimport_all_shows(session: Session) -> None:
     shows = session.exec(
         Show.select_with_plugin()
         .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
-        .where(
-            User.email == PLUGIN_USER_EMAIL,
-        ),
+        .where(User.email == PLUGIN_USER_EMAIL),
     ).all()
 
     for show in shows:

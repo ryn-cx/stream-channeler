@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -138,10 +139,10 @@ def canonical_episode_by_key(
     canonical_season: Season,
     plugin_key: str,
 ) -> Episode:
-    """Return the row standing for this episode, minting one where there is none.
+    """Return the canonical episode for this key, creating one where there is none.
 
     `plugin_key` is who issued `key`, and is asked for rather than reached
-    through the season because it is what a `Watch` is matched on. A row minted
+    through the season because it is what a `Watch` is matched on. A row created
     without it would be a row no watch could ever name.
     """
     cache_key = (str(canonical_season.id), key)
@@ -163,7 +164,7 @@ def canonical_episode_by_key(
     canonical = Episode(
         key=key,
         season_id=canonical_season.id,
-        plugin_key=plugin_key,
+        watch_identifier=watch_identifier(plugin_key, key),
     )
     canonical.season = canonical_season
     session.add(canonical)
@@ -172,7 +173,7 @@ def canonical_episode_by_key(
 
 
 # TODO: Validate
-def link_canonical_show(
+def add_canonical_show(
     session: Session,
     show: Show,
     canonical_show: Show,
@@ -181,7 +182,9 @@ def link_canonical_show(
 
     A non-canonical row stands for every canonical show linked to it and no more
     for one than for another, so this adds one to the set and settles nothing
-    about which of them the row is chiefly about.
+    about which of them the row is chiefly about. Nothing else is settled either:
+    what a listing stands for as a whole, and the reading of its episodes against
+    it, is `settle_show`.
     """
     # If this show is not canonical
     if not canonical_show.is_canonical:

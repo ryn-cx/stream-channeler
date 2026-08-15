@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, ClassVar, cast, override
@@ -11,9 +11,8 @@ from typing import Any, ClassVar, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.service import link_canonical_show
+from app.canonical_media.service import add_canonical_show
 from app.episodes.models import Episode
-from app.episodes.service import EpisodeLinker
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -332,8 +331,7 @@ class BasePlugin(
         """
         _cache = self._download_show_files_and_children(show, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        upserted = self.upsert_show(show.source, show.key, force=force)
-        EpisodeLinker(self.session, upserted).link()
+        self.upsert_show(show.source, show.key, force=force)
 
     # TODO: Validate
     @override
@@ -390,28 +388,6 @@ class BasePlugin(
         episode.update_at = tz_datetime.max()
 
     # TODO: Validate
-    def _link_supplied_canonical_show(
-        self,
-        show: Show,
-        canonical_show: Show | None,
-    ) -> None:
-        # A row nothing else has a record of is the record, so it stays canonical
-        # and is watched where it stands. Only a row something authoritative
-        # already holds is a copy of anything, and only that row is demoted.
-        if canonical_show is not None:
-            link_canonical_show(self.session, show, canonical_show)
-        EpisodeLinker(self.session, show).link()
-
-    # TODO: Validate
-    def _link_supplied_canonical_shows(
-        self,
-        shows: Iterable[Show],
-        canonical_show: Show | None,
-    ) -> None:
-        for show in shows:
-            self._link_supplied_canonical_show(show, canonical_show)
-
-    # TODO: Validate
     def _upsert_show_object(
         self,
         show: Show,
@@ -419,13 +395,13 @@ class BasePlugin(
         existing_show: Show | None,
         show_key: str,
     ) -> Show:
-        """Store the website's own `Show` against the files it was read out of.
+        """Store the source's own `Show` against the files it was read out of.
 
-        A record being written again is built fresh off the website's files, so
-        it knows nothing of the titles the stored one is a copy of. Those are
-        rows of `ShowCanonicalShow` rather than a column of the listing, so there
-        is nothing here to write them away and nothing to carry over: what links
-        them runs after this.
+        A show built fresh off the source's files knows nothing of the canonical
+        shows the stored one is linked to. Those are rows of `ShowCanonicalShow`
+        rather than columns here, so there is nothing to write away and nothing to
+        carry over: which canonical show it is linked to is settled once its
+        episodes are written, which is where `upsert_show` ends.
         """
         show_files = self._show_files(show_key)
         return show.upsert_and_set_update_at(source, existing_show, show_files)
@@ -475,7 +451,19 @@ class BasePlugin(
         canonical_show: Show | None = None,
         *,
         force: bool = False,
-    ) -> Show: ...
+    ) -> Show:
+        """Store the listing `show_key` names, and settle what it stands for.
+
+        Every plugin ends this by handing what it wrote to `settle_show`, which is
+        what settles the title the listing is a copy of. Done there rather than
+        by whatever called, because it is part of writing a listing, and done at
+        the end rather than as the row is written, since the episodes read
+        against the title are the ones the write has just put there.
+
+        `canonical_show` is the title a caller already knows the listing to be,
+        which is what an import handing a title from one plugin to another knows
+        and nothing else does.
+        """
 
     # TODO: Validate
     def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
@@ -612,7 +600,8 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         """
         show_key = handler.show_key
         if not force and (show := self._preload_show(show_key).one_or_none()):
-            self._link_supplied_canonical_show(show, canonical_show)
+            if canonical_show:
+                add_canonical_show(self.session, show, canonical_show)
             return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
@@ -622,10 +611,6 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
             canonical_show=canonical_show,
             force=force,
         )
-        # After the reconcile `upsert_show` ends on rather than before it, since a
-        # title nothing under the listing points at yet is one the reconcile would
-        # take straight back off again.
-        self._link_supplied_canonical_show(show, canonical_show)
         return handler.import_results(show)
 
     # TODO: Validate
