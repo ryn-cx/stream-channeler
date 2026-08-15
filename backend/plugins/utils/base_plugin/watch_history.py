@@ -3,6 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.canonical_media.filters import canonical_id_of
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
@@ -53,7 +54,7 @@ class WatchHistoryMixin(WatchMixin):
 
         episode_keys = [entry.episode_key for entry in parsed_entries]
         episodes_on_database = self._get_episodes_by_key(episode_keys)
-        watched_dates_by_identifier = self._get_watched_dates_by_identifier(
+        watched_dates_by_episode = self._get_watched_dates_by_canonical_id(
             user,
             episodes_on_database,
         )
@@ -68,13 +69,12 @@ class WatchHistoryMixin(WatchMixin):
                 skipped_watches.append(entry.import_result)
                 continue
 
-            # A watch is of the episode itself, which every source carrying it
-            # links to, so a single watch is recorded for all of them. A row that
-            # links to nothing is the episode itself, so its own identifier is
-            # what the watch is of.
-            watched = episode.canonical_episode or episode
-            watched_dates = watched_dates_by_identifier.setdefault(
-                watched.watch_identifier,
+            # A watch is recorded against the link that played it and carries
+            # that link's own identifier. Whether the episode has already been
+            # watched is asked of every link to it, so importing one website's
+            # history does not re-record what another website already recorded.
+            watched_dates = watched_dates_by_episode.setdefault(
+                canonical_id_of(episode),
                 [],
             )
             if (new_only and watched_dates) or entry.watch_date in watched_dates:
@@ -85,7 +85,7 @@ class WatchHistoryMixin(WatchMixin):
                 Watch(
                     user_id=user.id,
                     episode_id=episode.id,
-                    watch_identifier=watched.watch_identifier,
+                    watch_identifier=episode.watch_identifier,
                     watch_date=entry.watch_date,
                     verified=verified if entry.verified is None else entry.verified,
                 ),

@@ -132,13 +132,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             "key",
             postgresql_where=text("canonical_episode_id IS NULL"),
         ),
-        # What every read of a `Watch` joins on. Not unique: the rows one watch
-        # counts for are all the rows carrying its identifier, which is the
-        # whole of how one watch marks every listing of the same media.
+        # What every read of a `Watch` joins on. Across every row rather than
+        # the episodes alone, since a watch carries the identifier of the link
+        # that played it and is read back to the episode from there. Not unique:
+        # the rows one watch counts for are all the rows carrying its
+        # identifier, which is the whole of how one watch marks every listing of
+        # the same media.
         Index(
-            "Episode-canonical-watch_identifier-index",
+            "Episode-watch_identifier-index",
             "watch_identifier",
-            postgresql_where=text("canonical_episode_id IS NULL"),
         ),
         *sortable_field_indexes(
             "Episode",

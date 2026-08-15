@@ -51,9 +51,10 @@ class WatchOutput(BaseWatch):
 class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
-    # The episode itself, which is what the watch is of. The identifier is what
-    # the watch holds; the id is the row that identifier resolved to here, and is
-    # what keys `episodes` on the list output.
+    # The episode itself, which is what the watch counts for. The identifier is
+    # what the watch holds, which is the link that played it; the id is the
+    # episode that identifier resolved to here, and is what keys `episodes` on
+    # the list output.
     watch_identifier: str
     canonical_episode_id: uuid.UUID
 

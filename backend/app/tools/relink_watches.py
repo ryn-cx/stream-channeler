@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import is_canonical, is_non_canonical
+from app.canonical_media.filters import canonical_id_column, is_non_canonical
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -47,25 +47,29 @@ def _candidates_by_watch_identifier(
     session: Session,
     watch_identifiers: set[str],
 ) -> dict[str, list[tuple[Episode, str]]]:
-    """Return the live links to each watched identifier, with their source key."""
+    """Return the live links to each watched identifier, with their source key.
+
+    An identifier is a link's own, so the rows it can be pointed at are the
+    other links standing for the same episode - which is what the identifier is
+    read back to first.
+    """
     if not watch_identifiers:
         return {}
 
-    watched_episode = aliased(Episode)
+    named_episode = aliased(Episode)
     rows = session.exec(
-        select(watched_episode.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
+        select(named_episode.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(
-            watched_episode,
-            col(watched_episode.id) == col(Episode.canonical_episode_id),
+            named_episode,
+            canonical_id_column(named_episode) == col(Episode.canonical_episode_id),
         )
         .where(
             is_non_canonical(Episode),
-            is_canonical(watched_episode),
-            col(watched_episode.watch_identifier).in_(watch_identifiers),
+            col(named_episode.watch_identifier).in_(watch_identifiers),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
@@ -119,19 +123,18 @@ def _report_unresolvable(session: Session, watch_identifiers: set[str]) -> None:
     if not watch_identifiers:
         return
 
-    watched_episode = aliased(Episode)
+    named_episode = aliased(Episode)
     soft_deleted = set(
         session.exec(
-            select(watched_episode.watch_identifier)
+            select(named_episode.watch_identifier)
             .select_from(Episode)
             .join(
-                watched_episode,
-                col(Episode.canonical_episode_id) == col(watched_episode.id),
+                named_episode,
+                col(Episode.canonical_episode_id) == canonical_id_column(named_episode),
             )
             .where(
                 is_non_canonical(Episode),
-                is_canonical(watched_episode),
-                col(watched_episode.watch_identifier).in_(watch_identifiers),
+                col(named_episode.watch_identifier).in_(watch_identifiers),
             ),
         ).all(),
     )

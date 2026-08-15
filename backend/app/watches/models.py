@@ -67,6 +67,11 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     # plugins that happen to issue the same key apart. Held as a bare string
     # rather than a foreign key so it goes on saying which media after every row
     # carrying it is gone.
+    # The link that played this, named by who issued its key paired with the
+    # key. What the watch counts for is worked out on the way back out: the
+    # identifier is read to whatever row carries it and that row to the episode
+    # it stands for, so a watch made on one website counts on every other. Kept
+    # as a string rather than a foreign key so a watch outlives the link.
     watch_identifier: str
 
     # The episode the watch was recorded against, or None once that episode has

@@ -8,6 +8,7 @@ from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.canonical_media.filters import canonical_id_column, canonical_id_of
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.identifiers import TMDB_PLUGIN_KEY
@@ -26,6 +27,11 @@ from app.sources.schemas import SourcePublic
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from app.watches.exceptions import WatchAlreadyExistsError
+from app.watches.identifiers import (
+    canonical_id_by_identifier,
+    identifiers_of_canonical_ids,
+    watched_canonical_ids,
+)
 from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
@@ -39,10 +45,15 @@ from plugins.utils.manage_plugins import import_plugins, plugins
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
 
-# The episode a watch was recorded against. Reads group watches by the canonical
-# episode the watch itself names, so a watch counts across every source carrying
-# that episode and goes on counting once the copy it was made against is gone.
+# The episode a watch was recorded against, reached through the id the watch
+# holds.
 WatchedEpisode = aliased(Episode)
+
+# The row carrying the identifier a watch holds, which is the copy that played
+# it. Reads read it back to the episode that copy is of, so a watch counts
+# across every source carrying that episode and goes on counting once the copy
+# it was made against is gone.
+IdentifiedEpisode = aliased(Episode)
 
 
 # TODO: Validate
@@ -56,14 +67,7 @@ def _visible_plugin_condition(user_id: uuid.UUID) -> ColumnElement[bool]:
 # TODO: Validate
 def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """The canonical episodes the `User` has watched anything of."""
-    return (
-        select(col(Episode.id))
-        .join(
-            Watch,
-            col(Watch.watch_identifier) == col(Episode.watch_identifier),
-        )
-        .where(Watch.user_id == user_id)
-    )
+    return watched_canonical_ids(user_id)
 
 
 # TODO: Validate
@@ -133,16 +137,19 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     )
     # Joined on the identifier the watch carries rather than through the link it
     # was recorded against, so a watch whose link has since been deleted is still
-    # listed under another website's link to the same episode.
+    # listed under another website's link to the same episode. The identifier is
+    # a link's own, so it is read to the episode that link is of before the copy
+    # to show it as is picked.
     return (
         select(Watch)
         .join(
-            Episode,
-            col(Episode.watch_identifier) == col(Watch.watch_identifier),
+            IdentifiedEpisode,
+            col(IdentifiedEpisode.watch_identifier) == col(Watch.watch_identifier),
         )
         .join(
             representative,
-            representative.c.canonical_episode_id == col(Episode.id),
+            representative.c.canonical_episode_id
+            == canonical_id_column(IdentifiedEpisode),
         )
         .join(
             Episode,
@@ -197,24 +204,34 @@ def _representative_episodes_by_watch_identifier(
 ) -> dict[str, Episode]:
     """Load the representative visible `Episode` for each watched identifier.
 
-    Where the same media is reached two ways and so has a row under each, either
-    stands for the identifier; they are links to one episode either way.
+    An identifier is a link's own, so it is read to the episode that link is of
+    and the copy to show it as is picked from that episode's links. Where the
+    same media is reached two ways and so has a row under each, either stands
+    for the identifier; they are links to one episode either way.
     """
-    if not watch_identifiers:
-        return {}
-    canonical_ids = select(col(Episode.id)).where(
-        col(Episode.watch_identifier).in_(watch_identifiers),
+    canonical_ids_by_identifier = canonical_id_by_identifier(
+        session,
+        watch_identifiers,
     )
-    representative = _representative_episode_subquery(user_id, canonical_ids)
-    rows = session.exec(
-        select(col(Episode.watch_identifier), Episode)  # type: ignore[call-overload]
-        .join(representative, col(Episode.id) == representative.c.episode_id)
-        .join(
-            Episode,
-            col(Episode.id) == col(Episode.canonical_episode_id),
+    if not canonical_ids_by_identifier:
+        return {}
+    representative = _representative_episode_subquery(
+        user_id,
+        select(col(Episode.id)).where(
+            col(Episode.id).in_(set(canonical_ids_by_identifier.values())),
         ),
+    )
+    rows = session.exec(
+        select(representative.c.canonical_episode_id, Episode)
+        .select_from(Episode)
+        .join(representative, col(Episode.id) == representative.c.episode_id),
     ).all()
-    return dict(rows)
+    episode_by_canonical_id = dict(rows)
+    return {
+        watch_identifier: episode_by_canonical_id[canonical_id]
+        for watch_identifier, canonical_id in canonical_ids_by_identifier.items()
+        if canonical_id in episode_by_canonical_id
+    }
 
 
 # TODO: Validate
@@ -292,15 +309,16 @@ def create_watch(
         WatchAlreadyExistsError: If the `Episode` already has an unverified watch.
 
     """
-    # A watch is of the episode rather than of the link that played it, so it is
-    # the episode's identifier that is stored. A row that links to nothing is the
-    # episode itself - which is every row of a plugin nothing has been minted for
-    # it to link to - so it is its own identifier that is recorded.
-    watched = episode.canonical_episode or episode
+    # A watch is recorded against the link that played it, so it is that link's
+    # own identifier that is stored. What it counts for is worked out on the way
+    # back out, where the identifier is read to the episode the link is of and
+    # every other link to that episode counts too.
+    canonical_id = canonical_id_of(episode)
+    group = identifiers_of_canonical_ids(session, [canonical_id])[canonical_id]
 
     unverified_watch_query = select(Watch).where(
         Watch.user_id == user_id,
-        col(Watch.watch_identifier) == watched.watch_identifier,
+        col(Watch.watch_identifier).in_(group),
         col(Watch.verified) == False,  # noqa: E712 - SQLAlchemy syntax
     )
     if session.exec(unverified_watch_query).first():
@@ -311,7 +329,7 @@ def create_watch(
         watch_input,
         update={
             "episode_id": episode.id,
-            "watch_identifier": watched.watch_identifier,
+            "watch_identifier": episode.watch_identifier,
             "user_id": user_id,
         },
     )

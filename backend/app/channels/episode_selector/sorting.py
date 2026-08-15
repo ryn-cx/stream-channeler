@@ -10,7 +10,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.canonical_media.filters import is_canonical
+from app.canonical_media.filters import canonical_id_column
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
@@ -287,8 +287,8 @@ class SortExpressionBuilder:
     def _started_show_expr(self) -> ColumnElement[Any]:
         """Whether the `User` has watched anything of the title this episode is of.
 
-        A watch is recorded against the episode itself rather than against the
-        copy that played it, so a title counts as started whichever website it was
+        A watch names the copy that played it, which is read back to the episode
+        that copy is of, so a title counts as started whichever website it was
         started on. An episode nothing was minted for it to be a copy of hangs off
         a website's own listing, so the titles it counts towards are the ones that
         listing is a copy of - all of them, since a listing is no more a copy of
@@ -296,15 +296,22 @@ class SortExpressionBuilder:
         """
         if not self._user:
             return literal_column("0")
+        named_episode = aliased(Episode)
         watched_episode = aliased(Episode)
         watched_season = aliased(Season)
         watched_show = aliased(Show)
         watched_link = aliased(ShowCanonicalShow)
         started_query = (
             select(Watch.id)
+            # The row the watch names, which is whichever link played it, read
+            # back to the episode that link is of before the title is walked to.
+            .join(
+                named_episode,
+                col(named_episode.watch_identifier) == col(Watch.watch_identifier),
+            )
             .join(
                 watched_episode,
-                col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
+                col(watched_episode.id) == canonical_id_column(named_episode),
             )
             .join(
                 watched_season,
@@ -316,7 +323,6 @@ class SortExpressionBuilder:
             .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
             .where(
                 and_(
-                    is_canonical(watched_episode),
                     func.coalesce(
                         col(watched_link.canonical_show_id),
                         col(watched_show.id),

@@ -1,17 +1,21 @@
 # TODO: Validate
 """What a `User` has watched, as the episode query reads it.
 
-A `Watch` is recorded against one website's link to an episode but is of the
-episode itself, so everything here reads the `watch_identifier` the watch
-carries. That makes a watch count for every link to what was watched, and go on
-counting once the link it was made against has been deleted.
+A `Watch` is recorded against one website's link to an episode and carries that
+link's own `watch_identifier`, so everything here reads the identifier back to
+whatever row carries it and then to the canonical episode that row stands for.
+That makes a watch count for every link to what was watched, and go on counting
+once the link it was made against has been deleted.
 
-The identifier is who issued a key paired with the key itself, so the canonical
-rows a watch counts for are the rows carrying that identifier. Where the same
-media is reached two ways and so has a row under each, one watch counts for
-both, which is what carrying the same identifier means. Pairing the key with its
-issuer is also what keeps two plugins that happen to issue the same key from
-counting for one another.
+The identifier is who issued a key paired with the key itself, so the rows a
+watch counts for are the rows carrying that identifier plus everything they
+stand for. Where the same media is reached two ways and so has a row under each,
+one watch counts for both, which is what carrying the same identifier means.
+Pairing the key with its issuer is also what keeps two plugins that happen to
+issue the same key from counting for one another.
+
+A row that links to nothing is the episode itself, so it stands for itself and a
+watch of it counts where it was made.
 """
 
 from collections.abc import Sequence
@@ -25,8 +29,8 @@ from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from app.canonical_media.filters import (
+    canonical_id_column,
     canonical_id_of,
-    is_canonical,
 )
 from app.channels.episode_selector.canonical_entities import episode_id
 from app.episodes.models import Episode
@@ -54,15 +58,21 @@ LAST_WATCHED_COLUMNS = {
 
 # TODO: Validate
 def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
-    """The canonical episodes carrying an identifier the `User` has watched."""
+    """The canonical episodes the `User` has watched, however they were watched.
+
+    Every row carrying the watched identifier is matched, the canonical episode
+    and its links alike, and each is read as the canonical episode it stands
+    for. So a watch made against one website's link marks the episode for every
+    other website carrying it.
+    """
     watched_episode = aliased(Episode)
     return (
-        select(col(watched_episode.id))
+        select(canonical_id_column(watched_episode))
         .join(
             Watch,
             col(Watch.watch_identifier) == col(watched_episode.watch_identifier),
         )
-        .where(is_canonical(watched_episode), Watch.user_id == user.id)
+        .where(Watch.user_id == user.id)
     )
 
 
@@ -129,6 +139,7 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     so the titles it counts towards are the ones that listing is a copy of - all
     of them, since a listing is no more a copy of one title than of another.
     """
+    named_episode = aliased(Episode)
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
     watched_show = aliased(Show)
@@ -140,23 +151,26 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
                 col(watched_show.id),
             ),
         )
-        .select_from(watched_season)
+        .select_from(Watch)
+        # The row the watch names, which is whichever link played it, read back
+        # to the episode that link is of before the title is walked to.
+        .join(
+            named_episode,
+            col(named_episode.watch_identifier) == col(Watch.watch_identifier),
+        )
         .join(
             watched_episode,
+            col(watched_episode.id) == canonical_id_column(named_episode),
+        )
+        .join(
+            watched_season,
             col(watched_episode.season_id) == col(watched_season.id),
         )
         .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
         # A title has no links and stands for itself; a listing has one row per
         # title it is a copy of and stands for each.
         .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
-        .join(
-            Watch,
-            col(Watch.watch_identifier) == col(watched_episode.watch_identifier),
-        )
-        .where(
-            is_canonical(watched_episode),
-            Watch.user_id == user.id,
-        )
+        .where(Watch.user_id == user.id)
         .distinct()
     )
 
@@ -174,7 +188,7 @@ def join_last_watched(
     watched_episode = aliased(Episode)
     last_watched = (
         select(
-            col(watched_episode.id).label("canonical_episode_id"),
+            canonical_id_column(watched_episode).label("canonical_episode_id"),
             func.max(
                 case((col(Watch.verified).is_(True), Watch.watch_date)),
             ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
@@ -187,8 +201,8 @@ def join_last_watched(
             watched_episode,
             col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
-        .where(is_canonical(watched_episode), col(Watch.user_id) == user.id)
-        .group_by(col(watched_episode.id))
+        .where(col(Watch.user_id) == user.id)
+        .group_by(canonical_id_column(watched_episode))
         .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
     )
 
@@ -210,23 +224,24 @@ def latest_watch_by_identifier(
 
     identifiers = [canonical_id_of(episode) for episode in episodes]
     watched_episode = aliased(Episode)
+    canonical_id = canonical_id_column(watched_episode)
     rows = session.exec(
-        select(col(watched_episode.id), Watch)  # type: ignore[call-overload]
+        select(canonical_id, Watch)  # type: ignore[call-overload]
+        .select_from(Watch)
         .join(
             watched_episode,
             col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
         .where(
-            is_canonical(watched_episode),
-            col(watched_episode.id).in_(identifiers),
+            canonical_id.in_(identifiers),
             Watch.user_id == user.id,
         )
         .order_by(
-            col(watched_episode.id),
+            canonical_id,
             desc(Watch.watch_date),
             desc(Watch.id),
         )
-        .distinct(col(watched_episode.id)),
+        .distinct(canonical_id),
     ).all()
 
     return dict(rows)

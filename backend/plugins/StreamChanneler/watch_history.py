@@ -7,9 +7,13 @@ from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import col, or_, select
+from sqlmodel import col, func, or_, select
 
-from app.canonical_media.filters import is_canonical, is_non_canonical
+from app.canonical_media.filters import (
+    canonical_id_column,
+    is_canonical,
+    is_non_canonical,
+)
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -61,10 +65,36 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         Names, urls and ids are all re-read from whatever database the file is
         imported into, so a watch is nothing more than which episode it is of,
         when it happened, and whether it was verified.
+
+        A watch carries the identifier of the link that played it, which only a
+        database holding that website's listing can make anything of. The file
+        names the episode itself instead, so a history exported from a library
+        built one way imports into a library built another. A watch whose link
+        this database no longer holds has only its own identifier left to be
+        named by, so that is what it is exported as.
         """
+        named_episode = aliased(Episode)
+        watched_episode = aliased(Episode)
         statement = (
-            select(Watch.watch_identifier, Watch.watch_date, Watch.verified)
+            select(
+                func.coalesce(
+                    col(watched_episode.watch_identifier),
+                    col(Watch.watch_identifier),
+                ),
+                Watch.watch_date,
+                Watch.verified,
+            )
+            .select_from(Watch)
+            .outerjoin(
+                named_episode,
+                col(named_episode.watch_identifier) == col(Watch.watch_identifier),
+            )
+            .outerjoin(
+                watched_episode,
+                col(watched_episode.id) == canonical_id_column(named_episode),
+            )
             .where(Watch.user_id == user.id)
+            .distinct()
             .order_by(col(Watch.watch_date))
         )
         return [
@@ -109,6 +139,12 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         where it stands, so it answers for its own identifier. A link is
         preferred where both are stored, since the episode a link is of may be a
         row TMDB wrote and nothing is watched there.
+
+        A watch whose link this database has since lost was exported under that
+        link's own identifier rather than the episode's, so links are looked up
+        by their own identifier too. By their identifier alone: a link's key is
+        a website's own id and matching a file's older key-only entries against
+        it would take two websites that happen to number alike for one episode.
 
         A file exported before the identifier existed names an episode by the
         key alone, so the key is looked up as well. The two part company only for
@@ -156,7 +192,23 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                 )
             ),
         )
-        return own | links
+        named_links = self._by_named_episode(
+            wanted,
+            (
+                (episode, episode)
+                for episode in self.session.exec(
+                    select(Episode).where(
+                        is_non_canonical(Episode),
+                        col(Episode.watch_identifier).in_(wanted),
+                        col(Episode.deleted_at).is_(None),
+                    ),
+                )
+            ),
+        )
+        # A link named outright is the most exact of the three, and the episode
+        # a link is of is more use than a row TMDB wrote, so each overrides what
+        # came before it.
+        return own | links | named_links
 
     # TODO: Validate
     @staticmethod
