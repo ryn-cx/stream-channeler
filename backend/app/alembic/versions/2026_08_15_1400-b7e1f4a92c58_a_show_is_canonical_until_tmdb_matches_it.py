@@ -26,6 +26,26 @@ down_revision = "f2c6a9d41b87"
 branch_labels = None
 depends_on = None
 
+# `f2c6a9d41b87` writes these rows and nothing under them, so one with a season
+# is not one of them. Checked rather than assumed, since what picks them out is a
+# key that reads a certain way, and deleting a row that only looks the part would
+# take a whole show's seasons and episodes with it.
+_CHILDLESS_CHECK = """
+DO $$
+DECLARE
+    wrong bigint;
+BEGIN
+    SELECT count(*) INTO wrong
+    FROM plugin_keyed
+    WHERE EXISTS (
+        SELECT 1 FROM season WHERE season.show_id = plugin_keyed.canonical_show_id
+    );
+    IF wrong > 0 THEN
+        RAISE EXCEPTION '% of the shows to drop have seasons under them', wrong;
+    END IF;
+END $$;
+"""
+
 # `Show-canonical-key-key` held one canonical show per key across every source.
 # That was what the plugin-keyed row satisfied: a plugin offering one show
 # through several sources writes a row per source under the same key, and they
@@ -44,6 +64,12 @@ ON show (key) WHERE is_canonical IS TRUE
 
 # The canonical shows written for want of a TMDB match, which carry the key of
 # the plugin that wrote them ahead of the show's own.
+#
+# TMDB's are held back by name. Its own rows are written by the plugin keyed
+# `TMDB` and keyed `TMDB <run> <id>`, so they match the plugin's key ahead of the
+# show's as surely as the rows this is after, and nothing in the shape of a key
+# tells the two apart. They are the rows everything here is for the want of, so
+# taking them would unlink every show that has a match and delete the match.
 _PLUGIN_KEYED = """
 CREATE TEMP TABLE plugin_keyed ON COMMIT DROP AS
 SELECT canonical.id AS canonical_show_id
@@ -52,6 +78,7 @@ JOIN source ON source.id = canonical.source_id
 JOIN plugin ON plugin.id = source.plugin_id
 WHERE canonical.is_canonical
   AND canonical.key LIKE plugin.key || ' %'
+  AND canonical.key NOT LIKE 'TMDB %'
 """
 
 # The shows linked to one, which are canonical again once the link is gone. A
@@ -111,6 +138,7 @@ END $$;
 
 def upgrade() -> None:
     op.execute(_PLUGIN_KEYED)
+    op.execute(_CHILDLESS_CHECK)
     op.execute(_DROP_UNIQUE_KEY)
     op.execute(_KEY_INDEX)
     op.execute(_RESTORE)
