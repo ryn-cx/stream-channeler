@@ -98,13 +98,12 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         # to it and `get_from_memory` needs nothing of its own.
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
-        # Every claimed canonical show is one row, which is what makes the key
-        # the whole of its identity. The non-canonical rows are no part of this:
-        # two websites carrying one show carry the same key as each other.
+        # Looking a canonical show up by its key. Not unique: a plugin that
+        # offers one show through several sources writes a row per source under
+        # the same key, and every one of them is canonical until TMDB matches it.
         Index(
-            "Show-canonical-key-key",
+            "Show-canonical-key-index",
             "key",
-            unique=True,
             postgresql_where=text("is_canonical IS TRUE"),
         ),
         Index("Show-deleted_at-index", "deleted_at"),

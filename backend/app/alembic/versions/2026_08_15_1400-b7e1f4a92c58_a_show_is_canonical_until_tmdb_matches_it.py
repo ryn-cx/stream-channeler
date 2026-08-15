@@ -26,6 +26,22 @@ down_revision = "f2c6a9d41b87"
 branch_labels = None
 depends_on = None
 
+# `Show-canonical-key-key` held one canonical show per key across every source.
+# That was what the plugin-keyed row satisfied: a plugin offering one show
+# through several sources writes a row per source under the same key, and they
+# all pointed at that one row. Each of them is canonical now, so a key is carried
+# by as many canonical shows as there are sources offering it, and the index is
+# rebuilt without the constraint. It is dropped before anything is made canonical
+# again, since making them canonical is what would breach it.
+_DROP_UNIQUE_KEY = """
+DROP INDEX IF EXISTS "Show-canonical-key-key"
+"""
+
+_KEY_INDEX = """
+CREATE INDEX IF NOT EXISTS "Show-canonical-key-index"
+ON show (key) WHERE is_canonical IS TRUE
+"""
+
 # The canonical shows written for want of a TMDB match, which carry the key of
 # the plugin that wrote them ahead of the show's own.
 _PLUGIN_KEYED = """
@@ -95,6 +111,8 @@ END $$;
 
 def upgrade() -> None:
     op.execute(_PLUGIN_KEYED)
+    op.execute(_DROP_UNIQUE_KEY)
+    op.execute(_KEY_INDEX)
     op.execute(_RESTORE)
     op.execute(_UNLINK)
     op.execute(_DROP)
@@ -102,6 +120,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # `f2c6a9d41b87` writes these rows from the shows under them, so going back is
-    # running it again rather than anything of this migration's own.
-    pass
+    # Only the index is undone here. The rows are `f2c6a9d41b87`'s, written from
+    # the shows under them, so putting them back is running that again rather
+    # than anything of this migration's own - and the unique index cannot come
+    # back until it has, since it is the rows that make one key one show.
+    op.execute('DROP INDEX IF EXISTS "Show-canonical-key-index"')
