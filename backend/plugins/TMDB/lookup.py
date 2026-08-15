@@ -28,6 +28,18 @@ _MEDIA_INFO_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
+def _found_something(search_file: MovieSearch | TvSearch | MultiSearch) -> bool:
+    """Report whether a search came back with anything at all.
+
+    A search TMDB has no answer for is stored empty, and an empty file has no
+    results to read out of it.
+    """
+    if not search_file.database_record.content:
+        return False
+    return bool(search_file.parsed().results)
+
+
+# TODO: Validate
 class LookupMixin(FileMixin, register=False):
     # TODO: Validate
     @overload
@@ -52,6 +64,28 @@ class LookupMixin(FileMixin, register=False):
         query: str,
         year: int | None = None,
     ) -> MovieSearch | TvSearch | MultiSearch:
+        """Return what TMDB answers a name with, downloading it when it is stale.
+
+        A search narrowed to a year that comes back with nothing is asked again
+        without one. The year a website carries is the year the title turned up
+        there, which for anything licensed from somewhere else is not the year
+        TMDB files it under, and a title TMDB is holding is better found under no
+        year than not found at all. The year is asked with first all the same,
+        since it is what tells two titles of the same name apart.
+        """
+        search_file = self._searched(media_type, query, year)
+        if year is None or _found_something(search_file):
+            return search_file
+        return self._searched(media_type, query, None)
+
+    # TODO: Validate
+    def _searched(
+        self,
+        media_type: MediaType | None,
+        query: str,
+        year: int | None,
+    ) -> MovieSearch | TvSearch | MultiSearch:
+        """Return the search file for one name, downloading it when it is stale."""
         search_file: MovieSearch | TvSearch | MultiSearch
         if media_type == MediaType.movie:
             search_file = self.movie_search_file(query, year)

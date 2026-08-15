@@ -27,3 +27,14 @@ class TestMixedTMDB(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
 
     parse_url_response = "GRWEW95KR"
     show_slug = "laid-back-camp"
+
+
+# A series TMDB has nothing to answer with, which leaves every episode standing
+# only for itself. What the linker does when it finds a title is covered by the
+# tests above; this is what it does when it finds none.
+# TODO: Validate
+class TestNoTMDBMatchFound(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+    """Crunchyroll has a series that TMDB is not holding a title for."""
+
+    parse_url_response = "G6DQNPE1R"
+    show_slug = "ah-my-buddha"

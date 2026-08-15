@@ -66,7 +66,18 @@ class PreloadMixin(ABC):
         if preload_source:
             options.append(joinedload(Show.source))  # type: ignore[arg-type]
         if preload_episodes:
-            options.append(selectinload(Show.seasons).selectinload(Season.episodes))  # type: ignore[arg-type]
+            # What each episode already stands for is read with it, because
+            # pointing an episode at another one reads the link it is replacing,
+            # and that read is a query of its own however many rows the session
+            # is already holding: `Episode.id` is unique rather than the primary
+            # key, so nothing can be answered out of the session by it. Read here
+            # it is one query for every episode of the listing instead of one
+            # each.
+            options.append(
+                selectinload(Show.seasons)  # type: ignore[arg-type]
+                .selectinload(Season.episodes)  # type: ignore[arg-type]
+                .selectinload(Episode.canonical_episode),  # type: ignore[arg-type]
+            )
         elif preload_seasons:
             options.append(selectinload(Show.seasons))  # type: ignore[arg-type]
         if isinstance(show, uuid.UUID):

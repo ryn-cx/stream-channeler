@@ -17,7 +17,8 @@ from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
@@ -918,9 +919,48 @@ class EpisodeLinker:
             for episode in season.active_children
             if is_tmdb_key(episode.key) and episode.id not in claimed_canonical_ids
         ]
+        self._load_existing_links([*self.episodes, *self.canonical_episodes])
         # Read off the TMDB plugin the first time a matcher asks for them, since
         # two of them want the same translations and neither always runs.
         self._translated_forms: dict[uuid.UUID, frozenset[str]] | None = None
+
+    # TODO: Validate
+    def _load_existing_links(self, episodes: Sequence[Episode]) -> None:
+        """Settle what each episode already stands for without reading one at a time.
+
+        Writing a link is a write the database works out the whole of only once
+        it knows what the episode stood for before, so an episode whose link has
+        not been read is one it goes and reads while writing - a query each, in
+        the middle of the flush.
+
+        An episode standing for nothing is settled here rather than read at all.
+        `Episode.id` is unique rather than the primary key, which is what leaves
+        the database unable to answer a link out of what it is already holding -
+        and unable even to skip the reading of a link that is empty, which is a
+        query that can only ever come back with nothing. Every canonical row has
+        an empty link, so that is most of them.
+
+        The rest are read together, which is one query rather than one apiece.
+        """
+        unread = [
+            episode
+            for episode in episodes
+            if "canonical_episode" in instance_state(episode).unloaded
+        ]
+        for episode in unread:
+            if episode.canonical_episode_id is None:
+                set_committed_value(episode, "canonical_episode", None)
+
+        linked = [
+            episode.id for episode in unread if episode.canonical_episode_id is not None
+        ]
+        if not linked:
+            return
+        self.session.exec(
+            select(Episode)
+            .where(col(Episode.id).in_(linked))
+            .options(selectinload(Episode.canonical_episode)),  # type: ignore[arg-type]
+        ).all()
 
     # TODO: Validate
     def link(self) -> None:

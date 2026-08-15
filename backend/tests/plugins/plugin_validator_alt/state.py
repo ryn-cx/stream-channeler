@@ -4,6 +4,7 @@
 import difflib
 import json
 import uuid
+from collections import defaultdict
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -31,6 +32,27 @@ and a great deal of it.
 """
 
 _ID_COLUMN = "id"
+
+_PLUGIN_TABLE = "plugin"
+_SOURCE_TABLE = "source"
+_PLUGIN_ID_COLUMN = "plugin_id"
+_SOURCES_FIELD = "sources"
+_SHOWS_FIELD = "shows"
+
+_MEDIA_TREE = (
+    ("season", "episode", "season_id", "episodes"),
+    ("show", "season", "show_id", "seasons"),
+    ("source", "show", "source_id", _SHOWS_FIELD),
+)
+"""What holds what, from the bottom up, and the column that says which one.
+
+Read in this order so that a row is written inside its parent with its own
+children already inside it. The sources are left until after the empty ones have
+been dropped, which cannot be told until the shows are in place.
+"""
+
+_NESTED_TABLES = frozenset({"source", "show", "season", "episode"})
+"""The tables written inside their parent rather than as a list of their own."""
 
 _KEY_COLUMNS = ("key", "email", "name")
 """What a row is named by, in the order they are looked for.
@@ -153,24 +175,81 @@ def _sort_key(row: Mapping[str, Any]) -> str:
 
 
 # TODO: Validate
+def _nest(
+    dumped: dict[str, list[tuple[RowValues, RowValues]]],
+    parent_table: str,
+    child_table: str,
+    parent_id_column: str,
+    child_field: str,
+) -> None:
+    """Write each row of `child_table` inside the row it hangs off.
+
+    Read from the bottom up, so a season is written inside its show with its
+    episodes already inside it.
+    """
+    by_parent: dict[uuid.UUID, list[RowValues]] = defaultdict(list)
+    for row, dumped_row in dumped.get(child_table, []):
+        by_parent[row[parent_id_column]].append(dumped_row)
+    for row, dumped_row in dumped.get(parent_table, []):
+        dumped_row[child_field] = sorted(
+            by_parent.get(row[_ID_COLUMN], []),
+            key=_sort_key,
+        )
+
+
+# TODO: Validate
+def _has_shows(dumped_source: RowValues) -> bool:
+    """Report whether anything was imported into the source.
+
+    A plugin gives every provider it tracks a source whether or not anything was
+    imported from it - JustWatch alone tracks hundreds - and a source nothing was
+    imported into is the same empty row on every run. What it says about the run
+    is nothing, and what it does to the dump is bury the rows that do say
+    something.
+    """
+    return bool(dumped_source[_SHOWS_FIELD])
+
+
+# TODO: Validate
 def database_json(session: Session) -> str:
-    """Return the whole database, bar the excluded tables, as its stored text."""
+    """Return the whole database, bar the excluded tables, as its stored text.
+
+    The media is written as the tree it is - a plugin holding its sources, each
+    holding its shows, and so on down to the episodes - rather than as one list
+    per table, so what a run produced is read where it belongs rather than looked
+    up by the key it points at.
+    """
     tables = _read_tables(session)
     rows_by_id = _rows_by_id(tables)
     keys: KeyById = {}
-    dump: TableRows = {
-        table.name: sorted(
+    dumped: dict[str, list[tuple[RowValues, RowValues]]] = {
+        table.name: [
             (
+                row,
                 {
                     name: _dump_value(value, rows_by_id, keys)
                     for name, value in row.items()
-                }
-                for row in rows
-            ),
-            key=_sort_key,
-        )
+                },
+            )
+            for row in rows
+        ]
         for table, rows in tables
         if table.name not in EXCLUDED_TABLES
+    }
+
+    for parent_table, child_table, parent_id_column, child_field in _MEDIA_TREE:
+        _nest(dumped, parent_table, child_table, parent_id_column, child_field)
+    dumped[_SOURCE_TABLE] = [
+        (row, dumped_row)
+        for row, dumped_row in dumped[_SOURCE_TABLE]
+        if _has_shows(dumped_row)
+    ]
+    _nest(dumped, _PLUGIN_TABLE, _SOURCE_TABLE, _PLUGIN_ID_COLUMN, _SOURCES_FIELD)
+
+    dump: TableRows = {
+        name: sorted((dumped_row for _row, dumped_row in rows), key=_sort_key)
+        for name, rows in dumped.items()
+        if name not in _NESTED_TABLES
     }
     return json.dumps(dump, indent=2)
 

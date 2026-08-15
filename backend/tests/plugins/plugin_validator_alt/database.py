@@ -184,27 +184,27 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
     # TODO: Validate
     def expected_state_path(self, label: str) -> Path:
         """Path to the dump the test `label` names recorded the first time it ran."""
-        return self.files_directory_path() / "alt_state" / f"{label}.json"
+        return self.files_directory_path() / "state" / f"{label}.json"
 
     # TODO: Validate
     def incorrect_state_path(self, label: str) -> Path:
         """Path to the dump the test `label` names produced when it last failed."""
-        return self.files_directory_path() / "alt_incorrect_state" / f"{label}.json"
+        return self.files_directory_path() / "incorrect_state" / f"{label}.json"
 
     # TODO: Validate
     def stats_directory_path(self, label: str) -> Path:
         """Path to the directory where a specific test's profiling output is stored."""
-        return self.files_directory_path() / "alt_stats" / label
+        return self.files_directory_path() / "stats" / label
 
     # TODO: Validate
     def stats_file_path(self) -> Path:
         """Path to the file holding the stats of every test of the test class."""
-        return self.files_directory_path() / "alt_stats.json"
+        return self.files_directory_path() / "stats.json"
 
     # TODO: Validate
     def slow_stats_file_path(self) -> Path:
         """Path to the file holding the stats of every test that got worse."""
-        return self.files_directory_path() / "alt_slow.json"
+        return self.files_directory_path() / "slow.json"
 
     # TODO: Validate
     def _export_files_manifest(self, session: Session) -> None:
