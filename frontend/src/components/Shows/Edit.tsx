@@ -187,7 +187,7 @@ const EditShow = ({ show, size }: EditShowProps) => {
         <AdminZone>
           <CanonicalShowField
             showId={show.id}
-            canonicalShowId={show.canonical_show_id}
+            canonicalShowIds={show.canonical_show_ids ?? []}
             enabled={isOpen}
           />
         </AdminZone>

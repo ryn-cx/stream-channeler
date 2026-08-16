@@ -46,6 +46,7 @@ from app.shows.schemas import (
 from app.shows.service import (
     list_tmdb_episode_groups,
     set_canonical_show,
+    unset_canonical_show,
     update_show_extra,
 )
 from app.sources.dependencies import EditableSource, ReadableSource
@@ -257,13 +258,31 @@ def admin_link_show_to_canonical(
     show: EditableShow,
     canonical_show: AdminCanonicalShow,
 ) -> ShowPublic:
-    """Point a `Show` at the canonical show an admin chose for it.
+    """Add the canonical show an admin chose to what a `Show` stands for.
 
     Its own endpoint rather than part of the update, because the link is a row of
     its own and what it drags along - the episodes being read again against the
     title chosen - is not something a write of the show's own columns does.
+
+    Added to whatever the row already stands for rather than put in its place,
+    since one page holding two titles is a thing websites do. Taking one off is
+    `admin_unlink_show_from_canonical`.
     """
     return _show_output(set_canonical_show(session, show, canonical_show))
+
+
+# TODO: Validate
+@shows_router.delete(
+    "/{show_id}/canonical/{canonical_show_id}",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_unlink_show_from_canonical(
+    session: SessionDep,
+    show: EditableShow,
+    canonical_show: AdminCanonicalShow,
+) -> ShowPublic:
+    """Take one canonical show off what a `Show` stands for."""
+    return _show_output(unset_canonical_show(session, show, canonical_show))
 
 
 # TODO: Validate

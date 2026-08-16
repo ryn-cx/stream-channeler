@@ -15,6 +15,7 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity"
@@ -166,6 +167,7 @@ export function TmdbLinkPicker({
 }: EpisodeTmdbLinkMenuProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
+  const { settle, restore, reread } = useSettleTmdbMatch()
   const [order, setOrder] = useState<ChoiceOrder>("similarity")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
@@ -179,13 +181,17 @@ export function TmdbLinkPicker({
   const linkMutation = useMutation({
     mutationFn: (canonicalEpisodeId: string) =>
       EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
+    onMutate: () => settle(episodeId),
     onSuccess: () => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
       onLinked?.()
     },
-    onError: (error: unknown) => handleError.call(showErrorToast, error as any),
+    onError: (error: unknown, _variables, previous) => {
+      restore(previous)
+      handleError.call(showErrorToast, error as any)
+    },
+    onSettled: reread,
   })
 
   const unlinkMutation = useMutation({
@@ -204,14 +210,18 @@ export function TmdbLinkPicker({
         episodeId,
         requestBody: { url: urlDraft },
       }),
+    onMutate: () => settle(episodeId),
     onSuccess: () => {
       showSuccessToast("Episode linked to TMDB")
       setUrlDraft("")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
       onLinked?.()
     },
-    onError: (error: unknown) => handleError.call(showErrorToast, error as any),
+    onError: (error: unknown, _variables, previous) => {
+      restore(previous)
+      handleError.call(showErrorToast, error as any)
+    },
+    onSettled: reread,
   })
 
   const episodeNumbering: Numbered = {

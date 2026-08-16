@@ -65,34 +65,57 @@ def set_canonical_show(
     show: Show,
     canonical_show: Show,
 ) -> Show:
-    """Point `show` at the canonical show a `User` chose for it.
+    """Add the canonical show a `User` chose to what `show` already stands for.
 
-    A row stands for one title as far as this is concerned, so the links it
-    already carries come off and the chosen one goes on alone. The choice is
-    locked, which is what stops the next import searching for a title of its own
-    and overruling it.
+    A website files two shows under one page often enough - a YouTube channel
+    whose uploads are two series, a service selling a sequel as another season -
+    that a title chosen by hand goes on beside whatever is already there rather
+    than over it. Taking one off is `unset_canonical_show`, which is a thing to
+    ask for rather than something choosing does quietly.
 
-    Every episode that stood for an episode of a title no longer linked is left
-    standing for nothing, hand-settled or not: it was settled against a title
-    this row has been said not to be of. What the episodes are of now is worked
-    out afresh against the chosen title.
+    The choice is locked, which is what stops the next import searching for a
+    title of its own and overruling it. The episodes are read again afterwards,
+    since the title just added holds episodes none of them has been read against.
     """
     if show.non_canonical_shows:
         message = "A show other shows are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
 
+    add_canonical_show(session, show, canonical_show)
+    show.canonical_show_locked = True
+    session.add(show)
+
+    EpisodeLinker(session, show).link()
+    session.commit()
+    session.refresh(show)
+    return show
+
+
+# TODO: Validate
+def unset_canonical_show(
+    session: Session,
+    show: Show,
+    canonical_show: Show,
+) -> Show:
+    """Take `canonical_show` off what `show` stands for.
+
+    Every episode that stood for an episode of the title being taken off is left
+    standing for nothing, hand-settled or not: it was settled against a title
+    this row has now been said not to be of. What the rest of the episodes are of
+    is worked out afresh against the titles that are left.
+
+    The lock stays as it was. An admin saying this row is not that title has
+    settled something whether or not another title is named in its place, and an
+    import searching for one afresh would only put the same guess back.
+    """
     for link in list(show.canonical_show_links):
-        if link.canonical_show_id != canonical_show.id:
+        if link.canonical_show_id == canonical_show.id:
             session.delete(link)
     session.flush()
     # Read again rather than left as it is, since a link deleted is still in the
     # collection it was read out of and what the row stands for now is what the
     # episodes below are settled against.
     session.expire(show, ["canonical_show_links"])
-
-    add_canonical_show(session, show, canonical_show)
-    show.canonical_show_locked = True
-    session.add(show)
 
     _unlink_unlisted_episodes(session, show)
     EpisodeLinker(session, show).link()

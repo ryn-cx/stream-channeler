@@ -6612,6 +6612,14 @@ export const ShowListPublicSchema = {
             ],
             title: 'Canonical Show Id'
         },
+        canonical_show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Show Ids'
+        },
         tmdb_id: {
             anyOf: [
                 {
@@ -6819,6 +6827,14 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Canonical Show Id'
+        },
+        canonical_show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Show Ids'
         },
         tmdb_id: {
             anyOf: [
@@ -9581,6 +9597,14 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Canonical Show Id'
+        },
+        canonical_show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Show Ids'
         },
         tmdb_id: {
             anyOf: [

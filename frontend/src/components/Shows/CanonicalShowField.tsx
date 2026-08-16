@@ -1,5 +1,11 @@
 // TODO: Validate
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
+import { X } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -21,7 +27,7 @@ const SEARCH_MINIMUM_LENGTH = 2
 
 interface CanonicalShowFieldProps {
   showId: string
-  canonicalShowId: string | null | undefined
+  canonicalShowIds: string[]
   /** Only asked for while the form is open, since each is a query of its own. */
   enabled: boolean
 }
@@ -52,34 +58,40 @@ function CanonicalShowName({ show }: { show: CanonicalShowOutput }) {
 
 // TODO: Validate
 /**
- * Which canonical show this row stands for, and the choosing of another.
+ * Which canonical shows this row stands for, and the choosing of another.
  *
- * A row is linked to the title it is a copy of by the import that read it, which
- * is a guess made off the name and the year and is wrong often enough to be
- * worth settling by hand. Choosing here takes the row off whatever it was linked
- * to, so a row stands for the one title chosen rather than for both.
+ * A row is linked to the titles it is a copy of by the import that read it,
+ * which is a guess made off the name and the year and is wrong often enough to
+ * be worth settling by hand. Choosing here adds to what the row already stands
+ * for rather than replacing it, since one page holding two titles - a channel
+ * whose uploads are two series, a sequel sold as another season - is a thing
+ * websites do. Taking one off is the X beside it.
  *
- * The link is written as soon as it is chosen rather than with the rest of the
- * form: it is a row of its own, and what it drags along - every episode read
- * again against the title chosen - is not something the show's own columns do.
+ * The links are written as soon as they are chosen rather than with the rest of
+ * the form: they are rows of their own, and what they drag along - every episode
+ * read again against the titles left - is not something the show's own columns
+ * do.
  */
 export function CanonicalShowField({
   showId,
-  canonicalShowId,
+  canonicalShowIds,
   enabled,
 }: CanonicalShowFieldProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
 
-  const { data: linked } = useQuery({
-    queryKey: ["canonical-show", canonicalShowId],
-    queryFn: () =>
-      CanonicalShowsService.getCanonicalShowById({
-        canonicalShowId: canonicalShowId as string,
-      }),
-    enabled: enabled && Boolean(canonicalShowId),
+  const linkedQueries = useQueries({
+    queries: canonicalShowIds.map((canonicalShowId) => ({
+      queryKey: ["canonical-show", canonicalShowId],
+      queryFn: () =>
+        CanonicalShowsService.getCanonicalShowById({ canonicalShowId }),
+      enabled,
+    })),
   })
+  const linked = linkedQueries
+    .map((query) => query.data)
+    .filter((show) => show !== undefined)
 
   const { data: results, isFetching } = useQuery({
     queryKey: ["canonical-shows", "search", search],
@@ -91,6 +103,13 @@ export function CanonicalShowField({
     enabled: enabled && search.trim().length > SEARCH_MINIMUM_LENGTH,
   })
 
+  // TODO: Validate
+  const rereadShow = () => {
+    queryClient.invalidateQueries({ queryKey: ["shows"] })
+    queryClient.invalidateQueries({ queryKey: ["show-information", showId] })
+    queryClient.invalidateQueries({ queryKey: ["canonical-show"] })
+  }
+
   const linkMutation = useMutation({
     mutationFn: (chosenId: string) =>
       ShowsService.adminLinkShowToCanonical({
@@ -100,9 +119,7 @@ export function CanonicalShowField({
     onSuccess: () => {
       showSuccessToast("Show linked to canonical show")
       setSearch("")
-      queryClient.invalidateQueries({ queryKey: ["shows"] })
-      queryClient.invalidateQueries({ queryKey: ["show-information", showId] })
-      queryClient.invalidateQueries({ queryKey: ["canonical-show"] })
+      rereadShow()
     },
     onError: (error: unknown) =>
       handleError.call(
@@ -111,6 +128,24 @@ export function CanonicalShowField({
       ),
   })
 
+  const unlinkMutation = useMutation({
+    mutationFn: (droppedId: string) =>
+      ShowsService.adminUnlinkShowFromCanonical({
+        showId,
+        canonicalShowId: droppedId,
+      }),
+    onSuccess: () => {
+      showSuccessToast("Show unlinked from canonical show")
+      rereadShow()
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+  })
+
+  const linkedIds = new Set(canonicalShowIds)
   // A listing short enough to be sent whole comes back unfiltered and unpaged,
   // so the name is matched here as well as asked for above, and only then cut
   // down to what the box holds.
@@ -118,27 +153,50 @@ export function CanonicalShowField({
   const offered = (results?.data ?? [])
     .filter(
       (show) =>
-        show.id !== linked?.id &&
+        !linkedIds.has(show.id) &&
         (show.name ?? "").toLowerCase().includes(wanted),
     )
     .slice(0, SEARCH_RESULT_COUNT)
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="canonical-show-search">Canonical Show</Label>
-      <p className="text-sm">
-        {canonicalShowId ? (
-          linked ? (
-            <CanonicalShowName show={linked} />
-          ) : (
-            "Reading the linked title…"
-          )
-        ) : (
-          <span className="text-muted-foreground">
-            Linked to no canonical show.
-          </span>
-        )}
-      </p>
+      <Label htmlFor="canonical-show-search">Canonical Shows</Label>
+      {canonicalShowIds.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Linked to no canonical show.
+        </p>
+      ) : (
+        <div className="rounded-lg border">
+          {canonicalShowIds.map((canonicalShowId) => {
+            const show = linked.find((each) => each.id === canonicalShowId)
+            return (
+              <div
+                key={canonicalShowId}
+                className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
+              >
+                {show ? (
+                  <CanonicalShowName show={show} />
+                ) : (
+                  <span className="flex-1 text-muted-foreground">
+                    Reading the linked title…
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  title="Unlink from this canonical show"
+                  disabled={unlinkMutation.isPending}
+                  onClick={() => unlinkMutation.mutate(canonicalShowId)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      )}
       <Input
         id="canonical-show-search"
         value={search}

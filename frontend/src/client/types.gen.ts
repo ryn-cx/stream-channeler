@@ -1299,6 +1299,7 @@ export type ShowListPublic = {
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
+    canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     username: (string | null);
     source_name: (string | null);
@@ -1328,6 +1329,7 @@ export type ShowPublic = {
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
+    canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
 };
 
@@ -1880,6 +1882,7 @@ export type WhitelistShowOutput = {
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
+    canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
@@ -2758,6 +2761,13 @@ export type ShowsAdminLinkShowToCanonicalData = {
 };
 
 export type ShowsAdminLinkShowToCanonicalResponse = (ShowPublic);
+
+export type ShowsAdminUnlinkShowFromCanonicalData = {
+    canonicalShowId: string;
+    showId: string;
+};
+
+export type ShowsAdminUnlinkShowFromCanonicalResponse = (ShowPublic);
 
 export type ShowsGetShowTmdbEpisodeGroupsData = {
     showId: string;

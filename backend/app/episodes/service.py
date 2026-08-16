@@ -1289,18 +1289,6 @@ class EpisodeLinker:
             for season in show.active_children
             for episode in season.active_children
         ]
-        # A canonical episode one of the show's episodes already names is spoken
-        # for, and handing it to a second episode is the one thing the database
-        # will not hold. It is still read against, though: which episode a row is
-        # closest to is the whole of what a matcher decides, and an episode that
-        # cannot see the record it is really of reads as the best match for
-        # whichever record is left, which is how a row nothing had recognised
-        # ends up wearing another episode's name.
-        self.claimed_canonical_ids = {
-            episode.canonical_episode_id
-            for episode in self.episodes
-            if episode.canonical_episode_id
-        }
         self.canonical_episodes = [
             episode
             for canonical_show in show.canonical_shows
@@ -1400,15 +1388,12 @@ class EpisodeLinker:
     def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
         """Point the episode at the canonical episode and take it off the table.
 
-        Two episodes of a show naming the one canonical episode is the one thing
-        the database will not hold, so the first of them to be read takes it and
-        the rest are left waiting for a matcher that can tell them apart.
-
-        A canonical episode already spoken for is noted rather than taken out of
-        what is read against, so an episode whose own record has gone is left
-        waiting instead of being handed the nearest record still going: what a
-        matcher was asked was which episode this is, and the answer to that does
-        not change because somebody else got there first.
+        A canonical episode another of the show's episodes already names is
+        handed to this one too. A listing carries the same episode twice often
+        enough - Hulu's dubbed row and subtitled row of every episode of a title
+        are both that episode - that the second row to answer to a record is
+        another copy of it rather than a clash, and saying so is the answer a
+        matcher worked out.
 
         The pointer is written as well as the record it points at, since what an
         episode has been given is read back off the pointer before any of this is
@@ -1417,9 +1402,6 @@ class EpisodeLinker:
         matchers after, each of which gave it another canonical episode and left
         the one before it taken by nothing.
         """
-        if tmdb_episode.id in self.claimed_canonical_ids:
-            return
-        self.claimed_canonical_ids.add(tmdb_episode.id)
         episode.canonical_episode = tmdb_episode
         episode.canonical_episode_id = tmdb_episode.id
         episode.canonical_episode_note = note

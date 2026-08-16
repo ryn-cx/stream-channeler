@@ -76,6 +76,10 @@ class ShowPublic(BaseShow):
             "sole_canonical_show_id",
         ),
     )
+    # Every canonical show it stands for, which is what the screens that settle
+    # the links by hand work on: one of them is what the field above reads as,
+    # and a row standing for two has none to read there at all.
+    canonical_show_ids: list[uuid.UUID] = Field(default_factory=list)
     # The TMDB id behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
 

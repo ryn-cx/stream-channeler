@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Check, CircleSlash, Hash, ListTree } from "lucide-react"
 import { useState } from "react"
 
@@ -15,7 +15,7 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { TmdbLinkPicker } from "./EpisodeTmdbLinkMenu"
-import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
+import { TMDB_MATCHES_QUERY_KEY, useSettleTmdbMatch } from "./tmdbMatchesQuery"
 
 // TODO: Validate
 /**
@@ -37,7 +37,7 @@ export function TmdbMatchConfirmButton({
   kind: "name" | "number"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryClient = useQueryClient()
+  const { settle, restore, reread } = useSettleTmdbMatch()
 
   const confirmMutation = useMutation({
     mutationFn: () =>
@@ -45,16 +45,17 @@ export function TmdbMatchConfirmButton({
         episodeId,
         canonicalEpisodeId: match.canonical_episode_id,
       }),
-    onSuccess: () => {
-      showSuccessToast(`Linked to ${match.name ?? "the suggested episode"}`)
-      queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
-    },
-    onError: (error: unknown) =>
+    onMutate: () => settle(episodeId),
+    onSuccess: () =>
+      showSuccessToast(`Linked to ${match.name ?? "the suggested episode"}`),
+    onError: (error: unknown, _variables, previous) => {
+      restore(previous)
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
-      ),
+      )
+    },
+    onSettled: reread,
   })
 
   const Icon = kind === "name" ? Check : Hash
@@ -93,22 +94,22 @@ export function TmdbMatchActions({
   episode: UnmatchedEpisodeOutput
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryClient = useQueryClient()
+  const { settle, restore, reread } = useSettleTmdbMatch()
   const [isPicking, setIsPicking] = useState(false)
 
   const absentMutation = useMutation({
     mutationFn: () =>
       EpisodesService.adminMarkEpisodeAbsentFromTmdb({ episodeId: episode.id }),
-    onSuccess: () => {
-      showSuccessToast("Marked as not on TMDB")
-      queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
-    },
-    onError: (error: unknown) =>
+    onMutate: () => settle(episode.id),
+    onSuccess: () => showSuccessToast("Marked as not on TMDB"),
+    onError: (error: unknown, _variables, previous) => {
+      restore(previous)
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
-      ),
+      )
+    },
+    onSettled: reread,
   })
 
   return (

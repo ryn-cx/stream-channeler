@@ -153,8 +153,13 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def canonical_show_ids(self) -> list[uuid.UUID]:
-        """The id of every canonical show this stands for."""
-        return [canonical_show.id for canonical_show in self.canonical_shows]
+        """The id of every canonical show this stands for.
+
+        Read off the links rather than off the shows they point at, since the id
+        is a column of the link itself and reading the shows to ask them their
+        own ids is a query per link for something already in hand.
+        """
+        return [link.canonical_show_id for link in self.canonical_show_links]
 
     # TODO: Validate
     @property
