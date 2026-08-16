@@ -65,6 +65,19 @@ class ImportURLMixin(
         return handler.import_results(show)
 
     # TODO: Validate
+    @override
+    def update_show(self, show: Show, *, force: bool = False) -> None:
+        """Read the title again, and import whatever now lists it.
+
+        An update is the only way a title stored before a lookup was added hears
+        about it, since the import that would have asked is long done. What is
+        already stored is left alone unless the update was forced, an import of a
+        stored listing being what returns straight back.
+        """
+        super().update_show(show, force=force)
+        self._import_listed_sources(show.key, show, force=force)
+
+    # TODO: Validate
     def _import_listed_sources(
         self,
         show_key: str,
@@ -103,9 +116,18 @@ class ImportURLMixin(
 
     # TODO: Validate
     def _justwatch_page_url(self, media_type: MediaType, tmdb_id: int) -> str | None:
-        """Return the JustWatch address TMDB's page for the title links to."""
-        page = self.title_page_file(media_type, tmdb_id).parsed()
-        link = page.select_one('a[href*="justwatch.com"]')
+        """Return the JustWatch address TMDB's page for the title links to.
+
+        The page comes down with an import rather than with an update, so it is
+        asked for here: a title stored before this was read is reached by an
+        update and has no page of its own yet.
+        """
+        page_file = self.title_page_file(media_type, tmdb_id)
+        page_file.download_if_outdated()
+        if not page_file.database_record.content:
+            return None
+
+        link = page_file.parsed().select_one('a[href*="justwatch.com"]')
         return None if link is None else str(link["href"])
 
     # TODO: Validate
