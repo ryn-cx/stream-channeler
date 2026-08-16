@@ -6,7 +6,6 @@ VENV_PATH = BACKEND_FOLDER / ".venv"
 PACKAGES_PATH = VENV_PATH / "Lib" / "site-packages"
 
 GAPI_PLUGINS = [
-    "just-scrape",
     "yt-dlapi",
     "not-yt-dlapi",
     "chirashi",

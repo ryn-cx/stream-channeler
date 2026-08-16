@@ -16,8 +16,8 @@ from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 # The keys whose TMDB title is being looked up further up the stack. TMDB hands
-# a title it has just imported to JustWatch, which hands it back to whichever
-# plugin carries it, so an import can arrive here again partway through its own
+# a title it has just imported to whichever plugin carries it, taking the
+# addresses from Watchmode, so an import can arrive here again partway through its own
 # lookup. A key already in flight is left to the caller resolving it.
 _TMDB_LOOKUPS_IN_FLIGHT = "nhkworld_tmdb_lookups_in_flight"
 

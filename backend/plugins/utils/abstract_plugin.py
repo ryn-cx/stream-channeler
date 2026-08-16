@@ -50,6 +50,14 @@ class AbstractPlugin(ABC):
     # pastes still imports, it is just not advertised as a way in.
     LISTED_FOR_IMPORT_URL: ClassVar[bool] = True
 
+    # Whether a `User` may search this plugin to find media to add. Off unless a
+    # plugin says otherwise, because every other plugin's search exists to cross
+    # reference a title against what a service carries, not to be searched
+    # through directly. Turning it off closes the search endpoints to the plugin
+    # as well as hiding it, so `search` and `search_url` stay available to the
+    # cross referencing that calls them in process.
+    USER_SEARCHABLE: ClassVar[bool] = False
+
     # TODO: Validate
     @classmethod
     @abstractmethod
@@ -357,6 +365,10 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
         """Search for media.
+
+        Called to cross reference a title against what this plugin's service
+        carries, rather than to be searched through by a `User`. Only a plugin
+        setting `USER_SEARCHABLE` is offered to one.
 
         Args:
             query: The text to search for.

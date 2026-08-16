@@ -1087,14 +1087,48 @@ def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -
 
 
 # TODO: Validate
-def _episode_sort_key(episode: Episode | WhitelistEpisodeOutput) -> tuple[float, str]:
-    """Order an episode by where the website put it, then by its own identifier.
+def _canonical_orders(
+    session: Session,
+    canonical_episode_ids: Collection[uuid.UUID],
+) -> dict[uuid.UUID, float]:
+    """Read where each canonical episode sits, keyed by its id.
 
-    A row the website never ordered sits after the ones it did, and the
-    identifier settles the rest, so a page boundary falls in the same place on
-    every request rather than wherever the database happened to answer in.
+    A row is listed under the number the episode itself carries rather than the
+    number the website gave its copy, so it is ordered on that same number. Two
+    websites number an episode differently, and one of them numbering a recap or
+    a double-length episode its own way is what puts a copy's own order out of
+    step with the episode being listed.
     """
-    order = _UNORDERED if episode.sort_order is None else float(episode.sort_order)
+    if not canonical_episode_ids:
+        return {}
+    rows = session.exec(
+        select(Episode.id, Episode.episode_number, Episode.sort_order).where(
+            col(Episode.id).in_(set(canonical_episode_ids)),
+        ),
+    ).all()
+    orders: dict[uuid.UUID, float] = {}
+    for episode_id, episode_number, sort_order in rows:
+        order = episode_number if episode_number is not None else sort_order
+        if order is not None:
+            orders[episode_id] = float(order)
+    return orders
+
+
+# TODO: Validate
+def _episode_sort_key(
+    episode: Episode | WhitelistEpisodeOutput,
+    order: float | None = None,
+) -> tuple[float, str]:
+    """Order an episode by where the episode sits, then by its own identifier.
+
+    `order` is where the canonical row puts it, which is what the row is labelled
+    with; where there is none, the website's own order stands in. A row nothing
+    ordered sits after the ones something did, and the identifier settles the
+    rest, so a page boundary falls in the same place on every request rather than
+    wherever the database happened to answer in.
+    """
+    if order is None:
+        order = _UNORDERED if episode.sort_order is None else float(episode.sort_order)
     return order, str(episode.id)
 
 
@@ -1234,7 +1268,13 @@ def get_channel_whitelist_episodes(
 
     # Ordered and paged as the stored rows, since reading one as the schema is
     # work per episode and only the page being served is ever read.
-    rows.sort(key=lambda row: _episode_sort_key(row[0]))
+    canonical_orders = _canonical_orders(
+        session,
+        [canonical_episode_id for _, canonical_episode_id in rows],
+    )
+    rows.sort(
+        key=lambda row: _episode_sort_key(row[0], canonical_orders.get(row[1])),
+    )
     page_rows = rows[offset : offset + limit]
     _preload_canonical_episodes(session, [episode for episode, _ in page_rows])
 
@@ -1328,7 +1368,13 @@ def get_channel_whitelist_filtered_episodes(
                 ),
             )
 
-    episodes.sort(key=_episode_sort_key)
+    canonical_orders = _canonical_orders(session, enabled_episodes)
+    episodes.sort(
+        key=lambda episode: _episode_sort_key(
+            episode,
+            canonical_orders.get(episode.canonical_episode_id),
+        ),
+    )
     episode_show_ids, episode_links = _episode_links_by_canonical_id(
         [*media.shows, *media.tmdb_shows],
         media.listed_episode_ids,

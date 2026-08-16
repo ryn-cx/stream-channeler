@@ -1,0 +1,85 @@
+# TODO: Validate
+"""Pluto TV URL handlers."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, override
+
+from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
+
+if TYPE_CHECKING:
+    from plugins.Pluto import Pluto
+
+_ITEM_ID_REGEX = r"[0-9a-f]{24}"
+# Optional locale segment, e.g. /en, /us or /en-gb.
+_LOCALE_REGEX = r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
+# Optional suffix the website adds to the canonical URL of a title.
+_DETAILS_REGEX = r"(?:\/details)?"
+# Optional segments of a link that points at a season or an episode of a series.
+_SEASON_REGEX = rf"(?:\/season\/\d+(?:\/episode\/{_ITEM_ID_REGEX})?)?"
+
+
+# TODO: Validate
+class PlutoURLHandler(MediaTypeURLHandler["Pluto"]):
+    """What every Pluto TV URL has in common."""
+
+    # TODO: Validate
+    def __init__(self, plugin: Pluto, url: str, key: str) -> None:
+        """Initialize the URL handler."""
+        self._key = key
+        super().__init__(plugin, url)
+
+    # TODO: Validate
+    @property
+    @override
+    def show_key(self) -> str:
+        return self._key
+
+
+# TODO: Validate
+class MovieURLHandler(PlutoURLHandler):
+    """Pluto TV movie URL handler.
+
+    Example URL https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
+    """
+
+    media_type = "movie"
+    # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
+    # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
+    _URL_REGEX = (
+        rf"{_LOCALE_REGEX}\/on-demand\/movies\/(?P<movie_id>{_ITEM_ID_REGEX})"
+        rf"{_DETAILS_REGEX}(?:\/|$)"
+    )
+
+    # TODO: Validate
+    @override
+    def raise_if_invalid(self) -> None:
+        self.plugin.raise_if_invalid_file(
+            self.plugin.items_file(self._key),
+            self.url,
+        )
+
+
+# TODO: Validate
+class SeriesURLHandler(PlutoURLHandler):
+    """Pluto TV series URL handler.
+
+    Example URL https://pluto.tv/en/on-demand/series/5ef05c6acdce3c001a779a79/details
+    """
+
+    media_type = "series"
+    # https://pluto.tv/en/on-demand/series/5ef05c6acdce3c001a779a79/details
+    # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1
+    # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1/episode/5ef05c6ecdce3c001a779a95
+    _URL_REGEX = (
+        rf"{_LOCALE_REGEX}\/on-demand\/series\/(?P<series_id>{_ITEM_ID_REGEX})"
+        rf"{_SEASON_REGEX}{_DETAILS_REGEX}(?:\/|$)"
+    )
+
+    # TODO: Validate
+    @override
+    def raise_if_invalid(self) -> None:
+        self.plugin.raise_if_invalid_file(
+            self.plugin.seasons_file(self._key),
+            self.url,
+        )

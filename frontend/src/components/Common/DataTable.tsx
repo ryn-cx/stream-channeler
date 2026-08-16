@@ -82,6 +82,11 @@ declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select" | "dateRange"
     filterOptions?: { label: string; value: string }[]
+    // Whether the API can sort and filter on this column. A column worked out
+    // after the rows are read has no column of the database behind it, so a
+    // server-side table offers neither on it rather than asking for a column
+    // the API will answer 422 to.
+    serverBacked?: boolean
     serverFilter?: {
       value: string
       onChange: (value: string) => void
@@ -187,18 +192,23 @@ export function DataTable<TData extends { id: string }, TValue>({
   onColumnVisibilityChange,
   serverSide,
 }: DataTableProps<TData, TValue>) {
+  const isServerSide = !!serverSide
   const processedColumns = useMemo(
     () =>
       columns.map((column) => {
-        if (column.meta?.filterVariant === "dateRange") {
-          return { ...column, filterFn: dateRangeFilter }
+        const processed =
+          isServerSide && column.meta?.serverBacked === false
+            ? { ...column, enableSorting: false, enableColumnFilter: false }
+            : column
+        if (processed.meta?.filterVariant === "dateRange") {
+          return { ...processed, filterFn: dateRangeFilter }
         }
-        if (column.meta?.filterVariant === "range") {
-          return { ...column, filterFn: numberRangeFilter }
+        if (processed.meta?.filterVariant === "range") {
+          return { ...processed, filterFn: numberRangeFilter }
         }
-        return column
+        return processed
       }),
-    [columns],
+    [columns, isServerSide],
   )
 
   const {

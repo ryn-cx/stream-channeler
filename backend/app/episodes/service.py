@@ -71,7 +71,7 @@ _UNNUMBERED = float("inf")
 
 # How alike two names have to read before the closer of them is taken as the same
 # episode, and how far ahead of the runner-up it has to be to be the one answer.
-_SIMILAR_NAME_FLOOR = 0.8
+_SIMILAR_NAME_FLOOR = 0.5
 _SIMILAR_NAME_LEAD = 0.1
 
 # The two themoviedb.org addresses that name one record. On TMDB's own links the
@@ -130,7 +130,38 @@ def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
 def _plaintext(name: str | None) -> str:
     if not name:
         return ""
-    return "".join(character for character in name.casefold() if character.isalnum())
+    return "".join(
+        character
+        for character in _untitled_number(name).casefold()
+        if character.isalnum()
+    )
+
+
+# A website that writes an episode's place into its name - "Session #11 Toys in
+# the Attic", "Episode 3 - Gateway Shuffle" - has said the number twice and the
+# title once, and the number is no part of what the episode is called. Read off
+# both sides, since it is only ever on one of them and taking it off a name that
+# never carried it changes nothing.
+#
+# A word and a number, or a number written as one, rather than a bare number: a
+# title opening on a year or a count is a title and not a place in a run.
+_NUMBERED_NAME_PREFIX = re.compile(
+    r"^\s*(?:(?:episode|ep|session|part)\s*\.?\s*#?\s*\d+|#\s*\d+)"
+    r"\s*[-:.]?\s+",
+    re.IGNORECASE,
+)
+
+
+# TODO: Validate
+def _untitled_number(name: str) -> str:
+    """Return `name` without the number a website wrote into the front of it.
+
+    A name that is nothing but its number is left as it was: "Session #0" is what
+    that episode is called, and taking the number out of it leaves nothing to
+    match on at all.
+    """
+    untitled = _NUMBERED_NAME_PREFIX.sub("", name).strip()
+    return untitled or name
 
 
 # TODO: Validate
@@ -246,6 +277,72 @@ def _best_match(
 
 
 # TODO: Validate
+def _numbers_agree(
+    episode: Episode,
+    season: Season,
+    own_absolute: int | None,
+    candidate: _Candidate,
+    candidate_absolute: int | None,
+) -> bool:
+    """Whether TMDB puts the episode where the website does, by any of its numbers.
+
+    Compared across as well as like for like, since a website that numbers a
+    title straight through calls TMDB's `S2E8` its own episode 57, so its
+    episode number is answered by TMDB's count through the whole title rather
+    than by TMDB's episode number.
+    """
+    candidate_episode, candidate_season, _show = candidate
+    if (
+        season.season_number is not None
+        and episode.episode_number is not None
+        and candidate_season.season_number == season.season_number
+        and candidate_episode.episode_number == episode.episode_number
+    ):
+        return True
+    if (
+        episode.episode_number is not None
+        and episode.episode_number == candidate_absolute
+    ):
+        return True
+    return own_absolute is not None and own_absolute in (
+        candidate_absolute,
+        candidate_episode.episode_number,
+    )
+
+
+# TODO: Validate
+def _number_match(
+    episode: Episode,
+    season: Season,
+    candidates: list[_Candidate],
+    absolute_numbers: dict[uuid.UUID, int],
+    own_absolute: int | None,
+) -> TmdbEpisodeChoice | None:
+    """Return the TMDB episode numbered where `episode` is, or `None`.
+
+    Read alongside the match made on the name rather than instead of it, since
+    the two disagreeing is the whole of what somebody settling a row is being
+    asked about: a name that matches and a number that does not is a title that
+    reuses its episode names, and the other way round is a website numbering the
+    title its own way.
+    """
+    for candidate in candidates:
+        if _numbers_agree(
+            episode,
+            season,
+            own_absolute,
+            candidate,
+            absolute_numbers.get(candidate[0].id),
+        ):
+            return _choice(
+                candidate,
+                absolute_numbers,
+                _similarity(episode.name, candidate[0].name),
+            )
+    return None
+
+
+# TODO: Validate
 def _has_tmdb_title() -> ColumnElement[bool]:
     """Whether TMDB holds any of the titles the outer `Show` is a copy of.
 
@@ -276,6 +373,9 @@ def _has_tmdb_title() -> ColumnElement[bool]:
 # by on its own row - the show it is under, the source that carries it - has no
 # column of `Episode` to be read off.
 _UNMATCHED_COLUMNS: dict[str, Any] = {
+    # The combined column reads as the show it is under first, so that is what
+    # sorting or filtering it is asking about.
+    "summary": Show.name,
     "show_name": Show.name,
     "show_year": Show.year,
     "source_name": Source.name,
@@ -521,6 +621,13 @@ def _unmatched_outputs(
                 candidates.get(show.id, []),
                 candidate_numbers.get(show.id, {}),
             ),
+            number_match=_number_match(
+                episode,
+                season,
+                candidates.get(show.id, []),
+                candidate_numbers.get(show.id, {}),
+                source_numbers.get(episode.id),
+            ),
         )
         for episode, season, show, source in rows
     ]
@@ -611,6 +718,13 @@ def list_unlocked_episodes(
                 plugin_name=source.plugin.name,
                 url=episode.url,
                 best_match=best_match,
+                number_match=_number_match(
+                    episode,
+                    season,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                    source_numbers.get(episode.id),
+                ),
                 name_matches=bool(
                     best_match
                     and _plaintext(episode.name)
@@ -842,7 +956,42 @@ def link_episode(
     episode: Episode,
     canonical_episode: Episode,
 ) -> Episode:
-    """Point `episode` at a TMDB episode, and its show at the title holding it.
+    """Point every listing of `episode`'s media at a TMDB episode.
+
+    A `User` saying which TMDB episode this is has said it of the media rather
+    than of the one row they happened to be looking at, and `watch_identifier`
+    is what says two rows are of the same media. So every row carrying that
+    identifier is pointed at the record together, which is what stops the same
+    decision having to be made again for each website carrying the episode.
+    """
+    for same_media in _episodes_sharing_identifier(session, episode):
+        _link_one_episode(session, same_media, canonical_episode)
+
+    session.commit()
+    session.refresh(episode)
+    return episode
+
+
+# TODO: Validate
+def _episodes_sharing_identifier(session: Session, episode: Episode) -> list[Episode]:
+    """Return every stored listing of the media `episode` is a listing of."""
+    return list(
+        session.exec(
+            select(Episode).where(
+                Episode.watch_identifier == episode.watch_identifier,
+                col(Episode.deleted_at).is_(None),
+            ),
+        ).all(),
+    )
+
+
+# TODO: Validate
+def _link_one_episode(
+    session: Session,
+    episode: Episode,
+    canonical_episode: Episode,
+) -> None:
+    """Point one `Episode` at a TMDB episode, and its show at the title holding it.
 
     Two websites' episodes pointing at one record is what makes them a single
     episode to watch, so only the show's own other episodes are a clash. A `User`
@@ -887,9 +1036,6 @@ def link_episode(
     episode.canonical_episode_locked = True
     episode.canonical_episode_note = "Manual: Selection"
     session.add(episode)
-    session.commit()
-    session.refresh(episode)
-    return episode
 
 
 # TODO: Validate
@@ -1051,8 +1197,12 @@ class EpisodeLinker:
         ]
         # A canonical episode one of the show's episodes already names is spoken
         # for, and handing it to a second episode is the one thing the database
-        # will not hold, so it is no part of what is offered.
-        claimed_canonical_ids = {
+        # will not hold. It is still read against, though: which episode a row is
+        # closest to is the whole of what a matcher decides, and an episode that
+        # cannot see the record it is really of reads as the best match for
+        # whichever record is left, which is how a row nothing had recognised
+        # ends up wearing another episode's name.
+        self.claimed_canonical_ids = {
             episode.canonical_episode_id
             for episode in self.episodes
             if episode.canonical_episode_id
@@ -1062,7 +1212,7 @@ class EpisodeLinker:
             for canonical_show in show.canonical_shows
             for season in canonical_show.active_children
             for episode in season.active_children
-            if is_tmdb_key(episode.key) and episode.id not in claimed_canonical_ids
+            if is_tmdb_key(episode.key)
         ]
         self._load_existing_links([*self.episodes, *self.canonical_episodes])
         # Read off the TMDB plugin the first time a matcher asks for them, since
@@ -1127,11 +1277,11 @@ class EpisodeLinker:
         self._link_by_plaintext_name_and_episode_number()
         self._link_by_name_and_alternate_number()
         self._link_by_plaintext_name_and_alternate_number()
+        self._link_by_similar_name_and_episode_number()
+        self._link_by_similar_name_and_alternate_number()
         self._link_by_name()
         self._link_by_plaintext_name()
         self._link_by_translated_name()
-        self._link_by_similar_name_and_episode_number()
-        self._link_by_similar_name_and_alternate_number()
 
     # TODO: Validate
     def _drop_linked(self) -> None:
@@ -1146,14 +1296,26 @@ class EpisodeLinker:
 
         Two episodes of a show naming the one canonical episode is the one thing
         the database will not hold, so the first of them to be read takes it and
-        the rest are left waiting for a matcher that can tell them apart. A
-        matcher reading a snapshot of its own is handed one taken since, which is
-        no longer there to be given.
+        the rest are left waiting for a matcher that can tell them apart.
+
+        A canonical episode already spoken for is noted rather than taken out of
+        what is read against, so an episode whose own record has gone is left
+        waiting instead of being handed the nearest record still going: what a
+        matcher was asked was which episode this is, and the answer to that does
+        not change because somebody else got there first.
+
+        The pointer is written as well as the record it points at, since what an
+        episode has been given is read back off the pointer before any of this is
+        written down. Leaving it to be filled in at the writing is what had a
+        matched episode read as one still waiting: it was handed on to the
+        matchers after, each of which gave it another canonical episode and left
+        the one before it taken by nothing.
         """
-        if tmdb_episode not in self.canonical_episodes:
+        if tmdb_episode.id in self.claimed_canonical_ids:
             return
-        self.canonical_episodes.remove(tmdb_episode)
+        self.claimed_canonical_ids.add(tmdb_episode.id)
         episode.canonical_episode = tmdb_episode
+        episode.canonical_episode_id = tmdb_episode.id
         episode.canonical_episode_note = note
 
     # TODO: Validate

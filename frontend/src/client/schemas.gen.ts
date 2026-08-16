@@ -7999,13 +7999,23 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ]
         },
+        number_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         name_matches: {
             type: 'boolean',
             title: 'Name Matches'
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'name_matches'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'number_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -8200,10 +8210,20 @@ export const UnmatchedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ]
+        },
+        number_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'number_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;

@@ -1558,6 +1558,7 @@ export type UnlockedEpisodeOutput = {
     plugin_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
+    number_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
 };
 
@@ -1584,6 +1585,7 @@ export type UnmatchedEpisodeOutput = {
     plugin_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
+    number_match: (TmdbEpisodeChoice | null);
 };
 
 /**

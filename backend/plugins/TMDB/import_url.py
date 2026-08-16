@@ -5,8 +5,6 @@ from __future__ import annotations
 
 from typing import Any, override
 
-from bs4 import Tag
-
 from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.TMDB.files import title_page_url
@@ -14,9 +12,14 @@ from plugins.TMDB.keys import parse_show_key, show_key
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
-from plugins.utils.abstract_plugin import URLImportResult
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    URLImportResult,
+)
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 from plugins.utils.base_plugin.url import URLHandler
+from plugins.utils.manage_plugins import sorted_plugins
+from plugins.WatchMode import WatchMode
 
 # Which half of the catalogue a search of both says a result came from. A multi
 # search also returns people, who are no title and cannot be imported.
@@ -55,18 +58,43 @@ class ImportURLMixin(
         self._download_title_files(show_key)
         show = self.upsert_show(self.source, show_key, force=force)
 
-        # Where the title can be watched is JustWatch's to say, and only when a
-        # caller has not already named the title this is of: one that has is a
-        # plugin partway through an import of its own, and handing back to it
-        # would be that same import a second time.
-        if canonical_show is None and (justwatch_url := self._justwatch_url(show_key)):
-            # Imported lazily because JustWatch's files use this plugin to
-            # resolve TMDB ids, so importing it up here would be circular.
-            from plugins.JustWatch import JustWatch  # noqa: PLC0415
-
-            JustWatch(self.session).import_url(justwatch_url, show, force=force)
+        if canonical_show is None:
+            self._import_watchmode_sources(show_key, show, force=force)
 
         return handler.import_results(show)
+
+    # TODO: Validate
+    def _import_watchmode_sources(
+        self,
+        show_key: str,
+        show: Show,
+        *,
+        force: bool = False,
+    ) -> None:
+        """Import the title from every service Watchmode says carries it.
+
+        Watchmode names each service by a link to the title on it, so the
+        listing a website carries is reached by the address of that listing
+        rather than by searching the website for the title's name and taking
+        whichever result looks closest.
+        """
+        media_type, tmdb_id = parse_show_key(show_key)
+        for url in WatchMode(self.session).source_urls(media_type, tmdb_id):
+            plugin_class = self._plugin_for_url(url)
+            if plugin_class is None:
+                continue
+            plugin_class(self.session).import_url(url, show, force=force)
+
+    # TODO: Validate
+    @staticmethod
+    def _plugin_for_url(url: str) -> type[AbstractPlugin] | None:
+        """Return the plugin that imports `url`, where one accepts it."""
+        for plugin_class in sorted_plugins():
+            if not plugin_class.implements("import_url"):
+                continue
+            if plugin_class.is_valid_url_format(url):
+                return plugin_class
+        return None
 
     # TODO: Validate
     def _download_title_files(self, show_key: str) -> None:
@@ -81,19 +109,6 @@ class ImportURLMixin(
         self._download_outdated_files(self._show_files(show_key))
         for season_key in self._season_keys_from_file(show_key):
             self._download_outdated_files(self._season_files(season_key, show_key))
-
-    # TODO: Validate
-    def _justwatch_url(self, show_key: str) -> str | None:
-        """Return the JustWatch link TMDB lists among a title's social links."""
-        media_type, tmdb_id = parse_show_key(show_key)
-        page_file = self.title_page_file(media_type, tmdb_id)
-        for link in page_file.parsed().select("a.social_link[href]"):
-            if not isinstance(link, Tag):
-                continue
-            href = str(link["href"])
-            if "justwatch.com" in href:
-                return href
-        return None
 
     # TODO: Validate
     def import_search(

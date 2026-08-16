@@ -20,7 +20,7 @@ from plugins.TMDB.lookup import LookupMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
 from plugins.utils.manage_plugins import sorted_plugins
 
-_STREAMING_CATEGORIES = ("flatrate", "free", "ads")
+STREAMING_CATEGORIES = ("flatrate", "free", "ads")
 
 _MEDIA_TYPE_LABELS = {MediaType.movie: "Movie", MediaType.tv: "TV Show"}
 
@@ -57,6 +57,9 @@ class MediaInfoMixin(LookupMixin, register=False):
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
         detail: MovieDetailsModel | TvSeriesDetailsModel
+        # A title with no poster of its own can still be shown by a poster one of
+        # its seasons carries.
+        season_poster_path: str | None
         if isinstance(detail_file, MovieDetails):
             detail = detail_file.parsed()
             title = detail.title
@@ -65,6 +68,7 @@ class MediaInfoMixin(LookupMixin, register=False):
             number_of_seasons = None
             number_of_episodes = None
             runtime = detail.runtime
+            season_poster_path = None
         else:
             detail = detail_file.parsed()
             title = detail.name
@@ -73,13 +77,22 @@ class MediaInfoMixin(LookupMixin, register=False):
             number_of_seasons = detail.number_of_seasons
             number_of_episodes = detail.number_of_episodes
             runtime = None
+            season_poster_path = next(
+                (season.poster_path for season in detail.seasons if season.poster_path),
+                None,
+            )
+
+        # Either image stands in for the other when its own path is missing, sized
+        # for the slot it fills rather than the slot it came from.
+        poster_path = detail.poster_path or season_poster_path
+        backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
             media_type=_MEDIA_TYPE_LABELS[media_type],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
-            poster_url=poster_image_url(detail.poster_path),
-            backdrop_url=backdrop_image_url(detail.backdrop_path),
+            poster_url=poster_image_url(poster_path or backdrop_path),
+            backdrop_url=backdrop_image_url(backdrop_path or poster_path),
             year=year,
             end_year=end_year,
             status=detail.status,
@@ -109,7 +122,7 @@ def _watch_provider_items(
         for provider_name in plugin_class.TMDB_PROVIDER_NAMES
     }
     providers_by_id: dict[int, WatchProvider] = {}
-    for category in _STREAMING_CATEGORIES:
+    for category in STREAMING_CATEGORIES:
         providers: list[WatchProvider] = getattr(us, category, None) or []
         for provider in providers:
             providers_by_id.setdefault(provider.provider_id, provider)

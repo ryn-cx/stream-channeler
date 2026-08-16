@@ -144,6 +144,7 @@ class Settings(BaseSettings):
         return self
 
     YOUTUBE_API_KEY: str = ""
+    WATCHMODE_API_KEY: str = ""
     GET_AROUND_SERVER: str = ""
     CF_ACCESS_CLIENT_ID: str = ""
     CF_ACCESS_CLIENT_SECRET: str = ""
@@ -162,6 +163,7 @@ class Settings(BaseSettings):
                 "CF_ACCESS_CLIENT_SECRET",
                 "PROXY",
                 "TMDB_API_READ_TOKEN",
+                "WATCHMODE_API_KEY",
             ):
                 # The committed `.env` sets these to `changethis`, which is a
                 # placeholder rather than a value, so the keyring still applies.

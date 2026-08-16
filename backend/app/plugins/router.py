@@ -156,13 +156,16 @@ def match_url(
 def search_information(
     _current_user: CurrentUser,
 ) -> list[PluginSearchInformation]:
+    searchable = [
+        plugin_cls for plugin_cls in sorted_plugins() if plugin_cls.USER_SEARCHABLE
+    ]
     in_app_search = [
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
             favicon_url=plugin_cls.FAVICON_URL,
         )
-        for plugin_cls in sorted_plugins()
+        for plugin_cls in searchable
         if plugin_cls.implements("search")
     ]
     manual_search = [
@@ -172,7 +175,7 @@ def search_information(
             manual_search_only=True,
             favicon_url=plugin_cls.FAVICON_URL,
         )
-        for plugin_cls in sorted_plugins()
+        for plugin_cls in searchable
         if not plugin_cls.implements("search") and plugin_cls.implements("search_url")
     ]
     return in_app_search + manual_search
@@ -188,6 +191,11 @@ def search_url(
     """Return a plugin website's own search-page URL for `query`."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
+            if not plugin_cls.USER_SEARCHABLE:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Plugin '{plugin_key}' cannot be searched.",
+                )
             return PluginSearchUrl(url=plugin_cls.search_url(query))
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
@@ -207,6 +215,11 @@ def search_plugin(
     """
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
+            if not plugin_cls.USER_SEARCHABLE:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Plugin '{plugin_key}' cannot be searched.",
+                )
             if not plugin_cls.implements("search"):
                 raise HTTPException(
                     status_code=422,

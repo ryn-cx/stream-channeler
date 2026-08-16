@@ -65,6 +65,9 @@ def import_queue(session: Session) -> None:
 # TODO: Validate
 def _get_plugin(url: str) -> type[AbstractPlugin] | None:
     for plugin_class in plugins:
+        # A plugin that imports no URL carries no pattern to match one against.
+        if not plugin_class.implements("import_url"):
+            continue
         if plugin_class.is_valid_url_format(url):
             return plugin_class
     return None

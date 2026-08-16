@@ -186,8 +186,8 @@ def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
     return select(ChannelShow.id).exists()
 
 
-# Media classes are updated in this order per plugin because updating a plugin (e.g.
-# JustWatch) can mark its own sources outdated, which the Source pass then picks up in
+# Media classes are updated in this order per plugin because updating a plugin can mark
+# its own sources outdated, which the Source pass then picks up in
 # the same run; the same cascade applies down the Source -> Show -> Season -> Episode
 # chain.
 MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (

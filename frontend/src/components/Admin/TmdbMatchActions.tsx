@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, CircleSlash, ListTree } from "lucide-react"
+import { Check, CircleSlash, Hash, ListTree } from "lucide-react"
 import { useState } from "react"
 
 import type { UnmatchedEpisodeOutput } from "@/client"
@@ -19,15 +19,20 @@ import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
 
 // TODO: Validate
 /**
- * Settle one row: take the suggestion, or go and choose.
+ * Settle one row: take either suggestion, or go and choose.
  *
- * Confirming writes the guess the table is already showing, which is the whole
- * of what most rows need. Choosing opens the same picker an episode's own page
- * carries, so the one place that knows how to offer TMDB episodes and link one
- * is the place doing it here too.
+ * The two suggestions are the two ways a row can be read - the episode TMDB
+ * names the same, and the one it numbers the same - and each has a button of
+ * its own so the one that is right can be taken without opening anything. They
+ * are the same episode often enough that most rows are settled either way, and
+ * where they differ the columns beside them are what says which to trust.
+ *
+ * Choosing opens the same picker an episode's own page carries, so the one
+ * place that knows how to offer TMDB episodes and link one is the place doing
+ * it here too.
  *
  * A settled episode is no longer waiting on anybody, so the row leaves the table
- * as soon as either way of settling it succeeds.
+ * as soon as any way of settling it succeeds.
  */
 export function TmdbMatchActions({
   episode,
@@ -38,18 +43,21 @@ export function TmdbMatchActions({
   const queryClient = useQueryClient()
   const [isPicking, setIsPicking] = useState(false)
 
-  const bestMatch = episode.best_match
+  const nameMatch = episode.best_match
+  const numberMatch = episode.number_match
 
   const confirmMutation = useMutation({
-    mutationFn: (canonicalEpisodeId: string) =>
+    mutationFn: ({ canonicalEpisodeId }: { canonicalEpisodeId: string }) =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId: episode.id,
         canonicalEpisodeId,
       }),
-    onSuccess: () => {
-      showSuccessToast(
-        `Linked to ${bestMatch?.name ?? "the suggested episode"}`,
-      )
+    onSuccess: (_result, { canonicalEpisodeId }) => {
+      const linked =
+        canonicalEpisodeId === numberMatch?.canonical_episode_id
+          ? numberMatch
+          : nameMatch
+      showSuccessToast(`Linked to ${linked?.name ?? "the suggested episode"}`)
       queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
     },
@@ -80,18 +88,40 @@ export function TmdbMatchActions({
       <Button
         variant="outline"
         size="sm"
-        disabled={!bestMatch || confirmMutation.isPending}
+        disabled={!nameMatch || confirmMutation.isPending}
         title={
-          bestMatch
-            ? `Link to ${bestMatch.name ?? "the suggested episode"}`
-            : "Nothing was suggested for this episode"
+          nameMatch
+            ? `Link to ${nameMatch.name ?? "the episode matched by name"}`
+            : "Nothing was matched by name for this episode"
         }
         onClick={() =>
-          bestMatch && confirmMutation.mutate(bestMatch.canonical_episode_id)
+          nameMatch &&
+          confirmMutation.mutate({
+            canonicalEpisodeId: nameMatch.canonical_episode_id,
+          })
         }
       >
         <Check className="h-4 w-4" />
-        Confirm
+        Name Match
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!numberMatch || confirmMutation.isPending}
+        title={
+          numberMatch
+            ? `Link to ${numberMatch.name ?? "the episode matched by number"}`
+            : "Nothing was matched by number for this episode"
+        }
+        onClick={() =>
+          numberMatch &&
+          confirmMutation.mutate({
+            canonicalEpisodeId: numberMatch.canonical_episode_id,
+          })
+        }
+      >
+        <Hash className="h-4 w-4" />
+        Number Match
       </Button>
       <Button
         variant="outline"

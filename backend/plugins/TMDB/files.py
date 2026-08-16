@@ -331,8 +331,8 @@ class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
 class TitlePage(HTMLFile):
     """The themoviedb.org web page for a single title.
 
-    The API this plugin otherwise uses does not carry a JustWatch link, so the
-    page a user would visit is downloaded to read it off instead.
+    Downloaded to tell a URL naming a title TMDB holds from one naming nothing,
+    which is what a pasted address is checked against.
     """
 
     # TODO: Validate

@@ -50,6 +50,7 @@ class YouTube(
     """YouTube plugin."""
 
     _VERSION = "0.0.1"
+    USER_SEARCHABLE = True
 
     # TODO: Don't hardcode the favicon URL
     FAVICON_URL = (

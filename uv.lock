@@ -63,13 +63,13 @@ dependencies = [
     { name = "alembic" },
     { name = "beautifulsoup4" },
     { name = "chirashi" },
+    { name = "deforestation" },
     { name = "diving-board" },
     { name = "email-validator" },
     { name = "emails" },
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "jinja2" },
-    { name = "just-scrape" },
     { name = "kneeminus" },
     { name = "loguru" },
     { name = "lxml" },
@@ -93,6 +93,7 @@ dependencies = [
     { name = "tenacity" },
     { name = "tminidb" },
     { name = "trivial-minus" },
+    { name = "wampi" },
     { name = "wholoo" },
     { name = "yt-dlapi" },
 ]
@@ -115,13 +116,13 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.12.1,<2.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "chirashi", git = "https://github.com/ryn-cx/chirashi" },
+    { name = "deforestation", git = "https://github.com/ryn-cx/deforestation" },
     { name = "diving-board", git = "https://github.com/ryn-cx/diving-board" },
     { name = "email-validator", specifier = ">=2.1.0.post1,<3.0.0.0" },
     { name = "emails", specifier = ">=0.6,<1.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0,<0.129.0" },
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
-    { name = "just-scrape", git = "https://github.com/ryn-cx/just-scrape" },
     { name = "kneeminus", git = "https://github.com/ryn-cx/knee-minus" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lxml", specifier = ">=5.0.0" },
@@ -145,6 +146,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.2.3,<9.0.0" },
     { name = "tminidb", git = "https://github.com/ryn-cx/tminidb" },
     { name = "trivial-minus", git = "https://github.com/ryn-cx/trivial-minus" },
+    { name = "wampi", git = "https://github.com/ryn-cx/wampi" },
     { name = "wholoo", git = "https://github.com/ryn-cx/wholoo" },
     { name = "yt-dlapi", git = "https://github.com/ryn-cx/yt-dlapi" },
 ]
@@ -524,6 +526,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/be/43/2640cd5293fb5430528166908d6439cf3321bc1c54de5fe58ef100b143a1/datamodel_code_generator-0.54.0.tar.gz", hash = "sha256:2b183598d049e265146a8224c35d1bb96a80a641ea8ecd2a82e6a0e97b56da6b", size = 824327, upload-time = "2026-02-14T16:19:05.347Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/d9/fd646ea4ae48e374817b2750f5e678a5bf6e10d8924f09cf4cce86a81607/datamodel_code_generator-0.54.0-py3-none-any.whl", hash = "sha256:3156df7a7e8fa5a7c9a6d50836e5ba5abe0532f6b71eee6d73a0c8e1fb5b7e47", size = 261838, upload-time = "2026-02-14T16:19:03.298Z" },
+]
+
+[[package]]
+name = "deforestation"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/deforestation#9288bb1e1456639cef874d6745d4ed648b89ddc4" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]
@@ -1007,15 +1018,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
-]
-
-[[package]]
-name = "just-scrape"
-version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/just-scrape#9543b3c6d81ec8abf4fc73f38e08f21982044157" }
-dependencies = [
-    { name = "get-around" },
-    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]
@@ -2146,6 +2148,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/37/945b4ca0ac27e3dc4952642d4c900edd030b3da6c9634875af6e13ae80e5/uvloop-0.22.1-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b91328c72635f6f9e0282e4a57da7470c7350ab1c9f48546c0f2866205349d21", size = 4467065, upload-time = "2025-10-16T22:16:58.206Z" },
     { url = "https://files.pythonhosted.org/packages/97/cc/48d232f33d60e2e2e0b42f4e73455b146b76ebe216487e862700457fbf3c/uvloop-0.22.1-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:daf620c2995d193449393d6c62131b3fbd40a63bf7b307a1527856ace637fe88", size = 4328384, upload-time = "2025-10-16T22:16:59.36Z" },
     { url = "https://files.pythonhosted.org/packages/e4/16/c1fd27e9549f3c4baf1dc9c20c456cd2f822dbf8de9f463824b0c0357e06/uvloop-0.22.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:6cde23eeda1a25c75b2e07d39970f3374105d5eafbaab2a4482be82f272d5a5e", size = 4296730, upload-time = "2025-10-16T22:17:00.744Z" },
+]
+
+[[package]]
+name = "wampi"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/wampi#07fac176976f6ac3f9532798f22b05b3684674db" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
 ]
 
 [[package]]

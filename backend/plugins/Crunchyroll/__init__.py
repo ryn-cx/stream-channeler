@@ -35,8 +35,8 @@ from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 # The keys whose TMDB title is being looked up further up the stack. TMDB hands
-# a title it has just imported to JustWatch, which hands it back to whichever
-# plugin carries it, so an import of a Crunchyroll listing can arrive here again
+# a title it has just imported to whichever plugin carries it, taking the
+# addresses from Watchmode, so an import of a Crunchyroll listing can arrive here again
 # partway through its own TMDB lookup. Looking the title up a second time would
 # be the same round trip a second time, so a key already in flight is left to
 # the caller that is already resolving it.

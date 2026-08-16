@@ -29,6 +29,7 @@ class TMDB(
     _VERSION = "0.0.1"
     FAVICON_URL = "https://www.themoviedb.org/favicon.ico"
     _URL_HANDLERS = (MovieURLHandler, TvURLHandler)
+    USER_SEARCHABLE = True
 
     # TODO: Validate
     @classmethod

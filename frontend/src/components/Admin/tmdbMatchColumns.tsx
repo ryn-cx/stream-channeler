@@ -217,8 +217,9 @@ function MatchSummary({
 
 // TODO: Validate
 /** The TMDB side of a row, in the shape the summary reads. */
-function matchSummarised(row: UnmatchedEpisodeOutput): Summarised | null {
-  const match = row.best_match
+function choiceSummarised(
+  match: UnmatchedEpisodeOutput["best_match"],
+): Summarised | null {
   if (!match) return null
   return {
     source_name: match.source_name,
@@ -253,9 +254,27 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
   {
     id: "match_summary",
     accessorFn: (row) => row.best_match?.show_name ?? "No match",
-    header: "Combined TMDB",
+    header: "TMDB by name",
+    meta: { serverBacked: false },
     cell: ({ row }) => {
-      const match = matchSummarised(row.original)
+      const match = choiceSummarised(row.original.best_match)
+      if (!match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return <MatchSummary record={match} counterpart={row.original} />
+    },
+  },
+  {
+    id: "number_match_summary",
+    accessorFn: (row) => row.number_match?.show_name ?? "No match",
+    header: "TMDB by number",
+    meta: { serverBacked: false },
+    cell: ({ row }) => {
+      const match = choiceSummarised(row.original.number_match)
       if (!match) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
@@ -344,6 +363,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "absolute_number",
     accessorFn: (row) => row.absolute_number ?? "",
     header: "Sequential #",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">{row.original.absolute_number ?? ""}</span>
     ),
@@ -379,6 +399,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_show_name",
     accessorFn: (row) => row.best_match?.show_name ?? "",
     header: "Match show",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <WrappingCell className="max-w-48">
         <SummaryLink href={row.original.best_match?.show_url ?? null}>
@@ -391,6 +412,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_show_year",
     accessorFn: (row) => row.best_match?.show_year ?? "",
     header: "Match year",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">
         {row.original.best_match?.show_year ?? ""}
@@ -401,6 +423,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_season_number",
     accessorFn: (row) => row.best_match?.season_number ?? "",
     header: "Match season #",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">
         {row.original.best_match?.season_number ?? ""}
@@ -411,6 +434,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_episode_number",
     accessorFn: (row) => row.best_match?.episode_number ?? "",
     header: "Match episode #",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">
         {row.original.best_match?.episode_number ?? ""}
@@ -421,6 +445,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_absolute_number",
     accessorFn: (row) => row.best_match?.absolute_number ?? "",
     header: "Match sequential #",
+    meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">
         {row.original.best_match?.absolute_number ?? ""}
@@ -431,6 +456,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "match_name",
     accessorFn: (row) => row.best_match?.name ?? "No match",
     header: "Match episode name",
+    meta: { serverBacked: false },
     cell: ({ row }) => {
       const match = row.original.best_match
       if (!match) {
@@ -455,7 +481,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     id: "similarity",
     accessorFn: (row) => row.best_match?.similarity ?? 0,
     header: "Match %",
-    meta: { filterVariant: "range" },
+    meta: { filterVariant: "range", serverBacked: false },
     cell: ({ row }) => {
       const match = row.original.best_match
       return (

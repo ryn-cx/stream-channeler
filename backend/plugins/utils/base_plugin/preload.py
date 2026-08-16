@@ -15,7 +15,11 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin.files import (
+    COMPLETED_STATUS,
+    EXTRA_STATUS_FIELD,
+    BaseFile,
+)
 
 
 # TODO: Validate
@@ -199,8 +203,13 @@ class PreloadMixin(ABC):
             .where(
                 File.plugin == self.plugin,
                 col(File.key).startswith(f"{file_class.__name__}/{key_prefix}"),
-                # is_distinct_from keeps rows where extra is NULL (not imported).
-                col(File.extra).is_distinct_from("Completed"),
+                # The status is read out of the object rather than compared
+                # against it, since `extra` holds whatever else a plugin keeps
+                # beside the mark. is_distinct_from keeps the rows carrying no
+                # status at all, which are the ones never imported.
+                col(File.extra)[EXTRA_STATUS_FIELD].astext.is_distinct_from(
+                    COMPLETED_STATUS,
+                ),
             )
             .order_by(col(File.data_timestamp).asc())
         )

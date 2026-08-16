@@ -33,17 +33,19 @@ class MediaTypeImportMixin[HandlerT: MediaTypeURLHandler[Any]](
     register=False,
 ):
     # TODO: Validate
-    @override
-    def import_url(
+    @override  # Carries the media type the URL named into the import.
+    def _import_handler(
         self,
-        url: str,
+        handler: HandlerT,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        handler = self.get_url_handler(url)
-        handler.raise_if_invalid()
-        return self._import_handler(handler, canonical_show, force=force)
+        # Only the handler that matched says whether the URL named a film or a
+        # series, and the id alone does not, so the type is taken from it here
+        # rather than left for each plugin to remember to do.
+        self._media_type_value = handler.media_type
+        return super()._import_handler(handler, canonical_show, force=force)
 
     # TODO: Validate
     @override

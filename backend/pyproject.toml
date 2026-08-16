@@ -7,13 +7,13 @@ dependencies = [
   "alembic<2.0.0,>=1.12.1",
   "beautifulsoup4>=4.14.3",
   "chirashi",
+  "deforestation",
   "diving-board",
   "email-validator<3.0.0.0,>=2.1.0.post1",
   "emails<1.0,>=0.6",
   "fastapi[standard]<0.129.0,>=0.128.0",
   "httpx<1.0.0,>=0.25.1",
   "jinja2<4.0.0,>=3.1.4",
-  "just-scrape",
   "kneeminus",
   "loguru>=0.7.3",
   "lxml>=5.0.0",
@@ -37,6 +37,7 @@ dependencies = [
   "tenacity<9.0.0,>=8.2.3",
   "tminidb",
   "trivial-minus",
+  "wampi",
   "wholoo",
   "yt-dlapi",
 ]
@@ -113,6 +114,7 @@ error-on-warning = true
 [tool.uv.sources]
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
+deforestation = { git = "https://github.com/ryn-cx/deforestation" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
@@ -125,4 +127,4 @@ trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }
 nana = { git = "https://github.com/ryn-cx/nana" }
 plugi = { git = "https://github.com/ryn-cx/plugi" }
 notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
-just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
+wampi = { git = "https://github.com/ryn-cx/wampi" }
