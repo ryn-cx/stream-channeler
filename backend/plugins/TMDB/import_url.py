@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import Any, override
 
+from loguru import logger
+
 from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.JustWatch import JustWatch
@@ -15,6 +17,7 @@ from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
+    InvalidURLError,
     URLImportResult,
 )
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -95,12 +98,20 @@ class ImportURLMixin(
         website carries is reached by the address of that listing rather than by
         searching the website for the title's name and taking whichever result
         looks closest.
+
+        An address a plugin turns out not to be able to import is passed over
+        rather than raised on. Both lookups list a service that sells a disc of
+        the title the same way they list one that streams it, and an address
+        like that is a shop page rather than a listing anything watches.
         """
         for url in self._listed_source_urls(show_key):
             plugin_class = self._plugin_for_url(url)
             if plugin_class is None:
                 continue
-            plugin_class(self.session).import_url(url, show, force=force)
+            try:
+                plugin_class(self.session).import_url(url, show, force=force)
+            except InvalidURLError:
+                logger.info("Nothing to import at {}", url)
 
     # TODO: Validate
     def _listed_source_urls(self, show_key: str) -> list[str]:
