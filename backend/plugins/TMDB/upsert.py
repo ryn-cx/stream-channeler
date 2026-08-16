@@ -29,6 +29,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from plugins.TMDB.files import (
+    SeasonSource,
     air_datetime,
     backdrop_image_url,
     duration_seconds,
@@ -37,7 +38,7 @@ from plugins.TMDB.files import (
     still_image_url,
     title_page_url,
 )
-from plugins.TMDB.helpers import HelperMixin, SeasonSource
+from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.keys import (
     MOVIE_EPISODE_NUMBER,
     MOVIE_SEASON_NUMBER,
