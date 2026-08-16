@@ -112,15 +112,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         UniqueConstraint("id"),
         Index("Episode-deleted_at-index", "deleted_at"),
         Index("Episode-canonical_episode_id-index", "canonical_episode_id"),
-        # A copy names one episode at most, within the season holding it. The
-        # show-wide rule this stands in for is still Python's to keep, since an
-        # `Episode` has no `show_id` to constrain on. The episodes themselves are
-        # no part of it: they are what the copies are counted against.
+        # Which copies of a season stand for one episode. A season holds more
+        # than one copy of the same episode often enough for the database to be
+        # no place to forbid it: Hulu lists a dubbed and a subtitled row of every
+        # episode, both of them that episode. The episodes themselves are no part
+        # of this, being what the copies are counted against.
         Index(
             "Episode-live-season_id-canonical_episode_id-key",
             "season_id",
             "canonical_episode_id",
-            unique=True,
             postgresql_where=text(
                 "deleted_at IS NULL AND canonical_episode_id IS NOT NULL",
             ),
