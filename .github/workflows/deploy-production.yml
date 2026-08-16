@@ -29,6 +29,7 @@ jobs:
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      WATCHMODE_API_KEY: ${{ secrets.WATCHMODE_API_KEY }}
       GET_AROUND_SERVER: ${{ secrets.GET_AROUND_SERVER }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
