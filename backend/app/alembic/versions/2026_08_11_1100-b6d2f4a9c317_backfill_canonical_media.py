@@ -34,10 +34,7 @@ TMDB_SHAPE = "^TMDB (movie|tv) [0-9]+$"
 
 
 def _tmdb_media_type(column):
-    return (
-        f"CASE WHEN {column} ~ '{TMDB_SHAPE}' "
-        f"THEN split_part({column}, ' ', 2) END"
-    )
+    return f"CASE WHEN {column} ~ '{TMDB_SHAPE}' THEN split_part({column}, ' ', 2) END"
 
 
 def _tmdb_id(column):

@@ -9,6 +9,10 @@ from loguru import logger
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
+from plugins.utils.base_plugin.files import (
+    COMPLETED_STATUS,
+    EXTRA_STATUS_FIELD,
+)
 
 
 # TODO: Validate
@@ -49,7 +53,7 @@ class SourceMixin(FileMixin, register=False):
                     self._download_show_files_and_children(show_id)
                     self.upsert_show(source, show_id)
 
-            feed_file.database_record.extra = "Completed"
+            feed_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
     # TODO: Validate
     def _upsert_source(self) -> Source:

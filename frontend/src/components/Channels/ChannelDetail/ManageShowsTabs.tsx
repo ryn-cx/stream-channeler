@@ -8,17 +8,14 @@ import {
   Link2,
   List,
   ListX,
-  Plus,
   Search,
   Sparkles,
   Trash2,
+  Upload,
 } from "lucide-react"
 import { useState } from "react"
-import Markdown from "react-markdown"
-import { remarkAlert } from "remark-github-blockquote-alert"
-import "remark-github-blockquote-alert/alert.css"
 import type { ChannelQueueOutput, ChannelShowStats } from "@/client"
-import { ChannelsService, PluginsService } from "@/client"
+import { ChannelsService } from "@/client"
 import {
   groupShows,
   type Show,
@@ -27,9 +24,9 @@ import {
   type Source,
 } from "@/components/Channels/ShowCards"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
-import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import {
   Dialog,
   DialogContent,
@@ -37,13 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -56,6 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import { AddByUrlPanel } from "./AddByUrlPanel"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
 import { FeelingLuckyPanel } from "./FeelingLuckyPanel"
@@ -108,8 +99,6 @@ export function ManageShowsTabs({
 }: ManageShowsTabsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
-  const [urlsInput, setUrlsInput] = useState("")
-  const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null)
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedTitle, setSelectedTitle] = useState<ShowGroup | null>(null)
@@ -122,13 +111,9 @@ export function ManageShowsTabs({
     onActiveTabChange?.(tab)
   }
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
+  const [bulkMode, setBulkMode] = useState<"url" | "name">("url")
 
   // region Queries
-
-  const { data: urlImportPlugins } = useQuery({
-    queryKey: ["url-import-plugins"],
-    queryFn: () => PluginsService.importUrlInformation(),
-  })
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
     queryKey: ["channelQueue", channelId],
@@ -178,52 +163,6 @@ export function ManageShowsTabs({
   // endregion Queries
 
   // region Mutations
-
-  const addUrlsMutation = useMutation({
-    mutationFn: (urls: string[]) =>
-      ChannelsService.createChannelQueueUrls({
-        channelId,
-        requestBody: urls,
-      }),
-    onMutate: async (urls, context) => {
-      await context.client.cancelQueries({
-        queryKey: ["channelQueue", channelId],
-      })
-      const previousQueue = context.client.getQueryData([
-        "channelQueue",
-        channelId,
-      ])
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        (oldData: any) => [
-          ...(oldData ?? []),
-          ...urls.map((url, index) => ({
-            id: `placeholder_${index}`,
-            url,
-            status: "Pending",
-            note: null,
-            created_at: new Date().toISOString(),
-          })),
-        ],
-      )
-      showSuccessToast(
-        `${urls.length} URL${urls.length !== 1 ? "s" : ""} added to import queue`,
-      )
-      setUrlsInput("")
-      return { previousQueue }
-    },
-    onError: (error, _urls, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        onMutateResult?.previousQueue,
-      )
-      handleError.call(showErrorToast, error as any)
-    },
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({
-        queryKey: ["channelQueue", channelId],
-      }),
-  })
 
   const deleteUrlMutation = useMutation({
     mutationFn: (urlId: string) =>
@@ -337,21 +276,6 @@ export function ManageShowsTabs({
   // endregion Mutations
 
   // TODO: Validate
-  const handleSubmit = () => {
-    const urls = urlsInput
-      .split("\n")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
-
-    if (urls.length === 0) {
-      showErrorToast("Please enter at least one URL")
-      return
-    }
-
-    addUrlsMutation.mutate(urls)
-  }
-
-  // TODO: Validate
   const showNote = (note: string | null | undefined) => {
     setSelectedNote(note || null)
     setNoteDialogOpen(true)
@@ -378,11 +302,8 @@ export function ManageShowsTabs({
           <TabsTrigger value="search">
             <Search className="h-4 w-4 mr-1" /> Search
           </TabsTrigger>
-          <TabsTrigger value="lucky">
-            <Sparkles className="h-4 w-4 mr-1" /> I'm Feeling Lucky
-          </TabsTrigger>
-          <TabsTrigger value="url">
-            <Link2 className="h-4 w-4 mr-1" /> Add By URL
+          <TabsTrigger value="bulk">
+            <Upload className="h-4 w-4 mr-1" /> Bulk Import
           </TabsTrigger>
           <TabsTrigger value="shows">
             <List className="h-4 w-4 mr-1" /> Edit Shows
@@ -406,68 +327,31 @@ export function ManageShowsTabs({
           <ShowSearch channelId={channelId} initialQuery={searchQuery} />
         </TabsContent>
 
-        <TabsContent value="lucky" className={contentClassName}>
-          <FeelingLuckyPanel channelId={channelId} />
-        </TabsContent>
-
-        <TabsContent value="url" className={contentClassName}>
-          <div className="border rounded-lg p-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Select a site to see supported URL formats:
-            </p>
-            <Select
-              value={selectedPlugin ?? "__none__"}
-              onValueChange={(value) =>
-                setSelectedPlugin(value === "__none__" ? null : value)
-              }
+        <TabsContent value="bulk" className={`${contentClassName} space-y-3`}>
+          <ButtonGroup>
+            <Button
+              variant={bulkMode === "url" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setBulkMode("url")}
+              aria-pressed={bulkMode === "url"}
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Choose a site...</SelectItem>
-                {(urlImportPlugins ?? []).map((plugin) => (
-                  <SelectItem key={plugin.name} value={plugin.name}>
-                    <SourceOptionLabel
-                      name={plugin.name}
-                      faviconUrl={plugin.favicon_url}
-                    />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedPlugin && (
-              <div className="text-sm text-muted-foreground [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_.markdown-alert-title_svg]:hidden">
-                <Markdown
-                  remarkPlugins={[[remarkAlert, { legacyTitle: true }]]}
-                >
-                  {(urlImportPlugins ?? []).find(
-                    (p) => p.name === selectedPlugin,
-                  )?.instructions ?? ""}
-                </Markdown>
-              </div>
-            )}
-            <textarea
-              value={urlsInput}
-              onChange={(e) => setUrlsInput(e.target.value)}
-              placeholder={
-                "https://example.com/show-1\nhttps://example.com/show-2"
-              }
-              rows={6}
-              className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
-              disabled={addUrlsMutation.isPending}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSubmit}
-                disabled={addUrlsMutation.isPending}
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                {addUrlsMutation.isPending ? "Adding URLs..." : "Add URLs"}
-              </Button>
-            </div>
-          </div>
+              <Link2 className="h-4 w-4 mr-1" /> By URL
+            </Button>
+            <Button
+              variant={bulkMode === "name" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setBulkMode("name")}
+              aria-pressed={bulkMode === "name"}
+            >
+              <Sparkles className="h-4 w-4 mr-1" /> By Name
+            </Button>
+          </ButtonGroup>
+
+          {bulkMode === "url" ? (
+            <AddByUrlPanel channelId={channelId} />
+          ) : (
+            <FeelingLuckyPanel channelId={channelId} />
+          )}
         </TabsContent>
 
         <TabsContent value="shows" className={`${contentClassName} space-y-6`}>

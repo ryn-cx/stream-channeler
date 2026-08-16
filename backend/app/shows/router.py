@@ -41,7 +41,9 @@ from app.shows.schemas import (
     ShowPublic,
     ShowsPublic,
     ShowUpdate,
+    TmdbEpisodeGroupOption,
 )
+from app.shows.service import list_tmdb_episode_groups, validate_extra
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -203,7 +205,7 @@ def get_show_information(
 
 
 # TODO: Validate
-@shows_router.get(  # noqa: FAST003 - Used by ReadableShow.
+@shows_router.get(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -213,7 +215,7 @@ def get_show(show: ReadableShow) -> ShowPublic:
 
 
 # TODO: Validate
-@shows_router.patch(  # noqa: FAST003 - Used by EditableShow.
+@shows_router.patch(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -227,12 +229,31 @@ def update_show(
     Which canonical show this stands for is not something an update writes: it is
     linker's to work out during an import, or a `User`'s to settle through the
     TMDB matching screens, so there is nothing to repoint here.
+
+    `extra` is checked before it is written, since what a TMDB row keeps there is
+    the episode order the title is read in and an order naming nothing would
+    leave the title with no seasons.
     """
+    if "extra" in show_input.model_fields_set:
+        validate_extra(session, show, show_input.extra)
     return _show_output(show_input.update(session, show))
 
 
 # TODO: Validate
-@shows_router.delete(  # noqa: FAST003 - Used by EditableShow.
+@shows_router.get(
+    "/{show_id}/tmdb-episode-groups",  # noqa: FAST003 - Used by ReadableShow.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def get_show_tmdb_episode_groups(
+    session: SessionDep,
+    show: ReadableShow,
+) -> list[TmdbEpisodeGroupOption]:
+    """Get the episode orders TMDB holds for a `Show`, for one to be chosen."""
+    return list_tmdb_episode_groups(session, show)
+
+
+# TODO: Validate
+@shows_router.delete(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )

@@ -9,7 +9,7 @@ import {
   TruncatedCell,
 } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
-
+import { extraText } from "@/lib/extra"
 import { SourceActionsMenu } from "./ActionsMenu"
 
 export type SourceTableData = SourceListPublic & { pending?: boolean }
@@ -102,7 +102,7 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
   {
     accessorKey: "extra",
     header: "Extra",
-    cell: ({ row }) => <TruncatedCell value={row.original.extra} />,
+    cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
   },
   {
     accessorKey: "key",

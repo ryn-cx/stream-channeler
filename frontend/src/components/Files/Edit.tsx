@@ -13,8 +13,8 @@ import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import { Button } from "@/components/ui/button"
+import { extraText, parseExtraText } from "@/lib/extra"
 import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
-
 import type { FileTableData } from "./columns"
 
 const formSchema = z.object({
@@ -46,7 +46,7 @@ const EditFile = ({ file }: EditFileProps) => {
       data_timestamp: file.data_timestamp?.slice(0, 16) ?? "",
       content: "",
       update_at: file.update_at?.slice(0, 16) ?? "",
-      extra: file.extra ?? "",
+      extra: extraText(file.extra),
     },
   })
 
@@ -78,7 +78,11 @@ const EditFile = ({ file }: EditFileProps) => {
     // Clear blanked fields (send null, not omit) so the PATCH actually clears
     // them. content is fetched lazily, so keep it omit-on-blank to avoid a slow
     // load wiping it.
-    mutation.mutate({ ...nullifyBlanks(data), content: data.content })
+    mutation.mutate({
+      ...nullifyBlanks(data),
+      content: data.content,
+      extra: parseExtraText(data.extra ?? ""),
+    })
   }
 
   return (

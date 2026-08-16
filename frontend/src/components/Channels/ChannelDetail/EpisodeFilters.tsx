@@ -24,6 +24,7 @@ import {
 } from "@/client"
 import { PublicOrderPickerDialog } from "@/components/ChannelOrders/PublicOrderPickerDialog"
 import { SaveChannelOrderDialog } from "@/components/ChannelOrders/SaveChannelOrderDialog"
+import { AdminZone } from "@/components/Common/AdminZone"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { EmojiPicker } from "@/components/Common/EmojiPicker"
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
@@ -1533,7 +1534,7 @@ export function EpisodeFilters({
                     </p>
                   </div>
                   {isAdmin && (
-                    <div className="space-y-1.5">
+                    <AdminZone>
                       <Label htmlFor="order-details-score">Score</Label>
                       <Input
                         id="order-details-score"
@@ -1547,7 +1548,7 @@ export function EpisodeFilters({
                         Public orders with a score of 1 or higher are offered
                         during onboarding, highest score first.
                       </p>
-                    </div>
+                    </AdminZone>
                   )}
                   <div className="flex items-start gap-3">
                     <Checkbox

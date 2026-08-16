@@ -6,9 +6,9 @@ import type { PluginListOutput } from "@/client"
 import type { OwnerView } from "@/components/Common/DataTable"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
+import { extraText } from "@/lib/extra"
 import { cn } from "@/lib/utils"
 import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
-
 import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
@@ -110,7 +110,9 @@ export function pluginColumns(
     {
       accessorKey: "extra",
       header: "Extra",
-      cell: ({ row }) => <TruncatedCell value={row.original.extra} />,
+      cell: ({ row }) => (
+        <TruncatedCell value={extraText(row.original.extra)} />
+      ),
     },
     {
       accessorFn: (row) => visibilityLabel(row.visibility),

@@ -93,7 +93,9 @@ def upgrade():
     op.drop_column("watch", "episode_identifier")
     # The partial index the nullable pointer needed becomes a plain unique one,
     # now that every watch names an episode.
-    op.drop_index("Watch-user_id-canonical_episode_id-watch_date-key", table_name="watch")
+    op.drop_index(
+        "Watch-user_id-canonical_episode_id-watch_date-key", table_name="watch"
+    )
     op.create_index(
         "Watch-user_id-canonical_episode_id-watch_date-key",
         "watch",
@@ -103,7 +105,9 @@ def upgrade():
 
     # The lock and the note describe this copy's link decision, which is now a
     # pointer rather than a string, so they are named for what they describe.
-    op.alter_column("show", "show_identifier_locked", new_column_name="canonical_show_locked")
+    op.alter_column(
+        "show", "show_identifier_locked", new_column_name="canonical_show_locked"
+    )
     op.add_column("show", sa.Column("canonical_show_note", sa.String(), nullable=True))
     op.alter_column(
         "episode",

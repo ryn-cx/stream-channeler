@@ -1,16 +1,14 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
+import { SquareArrowOutUpRight } from "lucide-react"
 import type { ReactNode } from "react"
 
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { cn } from "@/lib/utils"
-import {
-  type Numbered,
-  numberingAgreement,
-  seasonAndEpisodeText,
-} from "./tmdbNumbering"
+import { TmdbMatchActions } from "./TmdbMatchActions"
+import { type Numbered, numberingAgreement } from "./tmdbNumbering"
 
 // TODO: Validate
 /**
@@ -53,46 +51,221 @@ const NOTHING_TO_AGREE_WITH: Numbered = {
   absolute_number: null,
 }
 
+/** As much of one side of a row as the summary column reads. */
+interface Summarised extends Numbered {
+  source_name: string | null
+  plugin_name: string | null
+  show_name: string | null
+  show_year: number | null
+  show_url: string | null
+  season_url: string | null
+  name: string | null
+  url: string | null
+  /** The rows themselves, for the pages this site holds them on. */
+  source_id: string | null
+  show_id: string
+  season_id: string
+}
+
+/** A page this site holds a row on, and what names the row on it. */
+type MediaPage =
+  | { to: "/show/$showKey"; params: { showKey: string } }
+  | { to: "/season/$seasonKey"; params: { seasonKey: string } }
+  | { to: "/source/$sourceKey"; params: { sourceKey: string } }
+
 // TODO: Validate
 /**
- * How a record is numbered, marked where the other record puts it in the same place.
+ * The icon that opens a row's own page on this site.
  *
- * A website and TMDB rarely number the same episode the same way, so a number
- * they do share is the strongest thing on the row for telling whether the match
- * is the right one, and it is picked out rather than left to be read off. Each
- * number is marked on its own, since the two sides can agree through one of
- * them without agreeing through the other.
+ * Beside the name rather than on it, because the name already opens the page the
+ * media came from and the two are worth being able to reach separately: one says
+ * what the site holding it says, the other says what is stored here.
  */
-function Numbering({
+function MediaPageLink({ label, ...page }: MediaPage & { label: string }) {
+  return (
+    <Link
+      {...page}
+      title={label}
+      aria-label={label}
+      className="ml-1 inline-flex align-middle text-muted-foreground hover:text-foreground"
+    >
+      <SquareArrowOutUpRight className="size-3" />
+    </Link>
+  )
+}
+
+// TODO: Validate
+/** Text that opens its own page, or plain text where there is no page to open. */
+function SummaryLink({
+  href,
+  className,
+  children,
+}: {
+  href: string | null
+  className?: string
+  children: ReactNode
+}) {
+  if (!href) {
+    return <span className={className}>{children}</span>
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn("hover:underline", className)}
+    >
+      {children}
+    </a>
+  )
+}
+
+// TODO: Validate
+/**
+ * One side of a row, read as the title, the season and the episode within it.
+ *
+ * Everything that says which episode this is, in the order somebody checking a
+ * match reads it: the title first, since a wrong match is most often a match to
+ * another title altogether, then the season, then the episode. Each line opens
+ * the page it names, so a row can be checked against the site it came from
+ * without leaving the table to find it.
+ *
+ * A number the other side agrees with is picked out, since two sides rarely
+ * number an episode the same way and a number they share is the strongest thing
+ * on the row for saying the match is right.
+ */
+function MatchSummary({
   record,
   counterpart,
 }: {
-  record: Numbered
+  record: Summarised
   counterpart: Numbered | null
 }) {
-  const seasonAndEpisode = seasonAndEpisodeText(record)
   const agreement = numberingAgreement(
     record,
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
 
   return (
-    <span className="flex items-center gap-2 tabular-nums">
-      {seasonAndEpisode ? (
-        <span className={agreement.seasonAndEpisode ? "text-destructive" : ""}>
-          {seasonAndEpisode}
-        </span>
-      ) : null}
-      {record.absolute_number === null ? null : (
-        <span className={agreement.absolute ? "text-destructive" : ""}>
-          #{record.absolute_number}
-        </span>
-      )}
-    </span>
+    <WrappingCell className="max-w-72">
+      {/*
+        Named even on the TMDB side, where it says TMDB twice and tells nobody
+        anything, because the two columns are read across rather than down and a
+        line one of them is missing puts everything below it out of step.
+      */}
+      <span className="block text-xs text-muted-foreground">
+        {record.source_name ?? "Unknown source"}
+        {record.plugin_name ? ` · ${record.plugin_name}` : ""}
+        {record.source_id ? (
+          <MediaPageLink
+            to="/source/$sourceKey"
+            params={{ sourceKey: record.source_id }}
+            label="Open this source here"
+          />
+        ) : null}
+      </span>
+      <span className="block font-medium">
+        <SummaryLink href={record.show_url}>
+          {record.show_name ?? "Unnamed"}
+          {record.show_year === null ? "" : ` ${record.show_year}`}
+        </SummaryLink>
+        <MediaPageLink
+          to="/show/$showKey"
+          params={{ showKey: record.show_id }}
+          label="Open this show here"
+        />
+      </span>
+      <span className="block text-xs text-muted-foreground">
+        <SummaryLink href={record.season_url}>
+          Season {record.season_number ?? "?"}
+        </SummaryLink>
+        <MediaPageLink
+          to="/season/$seasonKey"
+          params={{ seasonKey: record.season_id }}
+          label="Open this season here"
+        />
+      </span>
+      <SummaryLink href={record.url} className="block text-xs">
+        <span className="tabular-nums">
+          <span
+            className={
+              agreement.seasonAndEpisode
+                ? "text-destructive"
+                : "text-muted-foreground"
+            }
+          >
+            {record.episode_number ?? "?"}
+          </span>
+          {record.absolute_number === null ? null : (
+            <span
+              className={
+                agreement.absolute
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+              }
+            >
+              {" "}
+              ({record.absolute_number})
+            </span>
+          )}
+        </span>{" "}
+        {record.name ?? "Unnamed"}
+      </SummaryLink>
+    </WrappingCell>
   )
 }
 
+// TODO: Validate
+/** The TMDB side of a row, in the shape the summary reads. */
+function matchSummarised(row: UnmatchedEpisodeOutput): Summarised | null {
+  const match = row.best_match
+  if (!match) return null
+  return {
+    source_name: match.source_name,
+    plugin_name: match.plugin_name,
+    source_id: null,
+    show_id: match.show_id,
+    season_id: match.season_id,
+    show_name: match.show_name,
+    show_year: match.show_year,
+    show_url: match.show_url,
+    season_url: match.season_url,
+    season_number: match.season_number,
+    episode_number: match.episode_number,
+    absolute_number: match.absolute_number,
+    name: match.name,
+    url: match.url,
+  }
+}
+
 export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
+  {
+    id: "summary",
+    accessorFn: (row) => row.show_name ?? "Unnamed",
+    header: "Combined Episode",
+    cell: ({ row }) => (
+      <MatchSummary
+        record={{ ...row.original, source_id: row.original.source_id }}
+        counterpart={row.original.best_match}
+      />
+    ),
+  },
+  {
+    id: "match_summary",
+    accessorFn: (row) => row.best_match?.show_name ?? "No match",
+    header: "Combined TMDB",
+    cell: ({ row }) => {
+      const match = matchSummarised(row.original)
+      if (!match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return <MatchSummary record={match} counterpart={row.original} />
+    },
+  },
   {
     id: "show_name",
     accessorFn: (row) => row.show_name ?? "Unnamed",
@@ -107,6 +280,14 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
           {row.original.show_name ?? "Unnamed"}
         </Link>
       </WrappingCell>
+    ),
+  },
+  {
+    id: "show_year",
+    accessorFn: (row) => row.show_year ?? "",
+    header: "Year",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.show_year ?? ""}</span>
     ),
   },
   {
@@ -144,9 +325,33 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     ),
   },
   {
+    id: "season_number",
+    accessorFn: (row) => row.season_number ?? "",
+    header: "Season #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.season_number ?? ""}</span>
+    ),
+  },
+  {
+    id: "episode_number",
+    accessorFn: (row) => row.episode_number ?? "",
+    header: "Episode #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.episode_number ?? ""}</span>
+    ),
+  },
+  {
+    id: "absolute_number",
+    accessorFn: (row) => row.absolute_number ?? "",
+    header: "Sequential #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.absolute_number ?? ""}</span>
+    ),
+  },
+  {
     id: "episode_name",
     accessorFn: (row) => row.name ?? "Unnamed",
-    header: "Episode",
+    header: "Episode name",
     cell: ({ row }) => (
       <WrappingCell className="max-w-64">
         <span
@@ -157,29 +362,75 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         >
           {row.original.name ?? "Unnamed"}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Numbering
-            record={row.original}
-            counterpart={row.original.best_match}
-          />
-          {row.original.url ? (
-            <a
-              href={row.original.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              Source
-            </a>
-          ) : null}
-        </span>
+        {row.original.url ? (
+          <a
+            href={row.original.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-0.5 block text-xs text-muted-foreground underline"
+          >
+            Source
+          </a>
+        ) : null}
       </WrappingCell>
+    ),
+  },
+  {
+    id: "match_show_name",
+    accessorFn: (row) => row.best_match?.show_name ?? "",
+    header: "Match show",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-48">
+        <SummaryLink href={row.original.best_match?.show_url ?? null}>
+          {row.original.best_match?.show_name ?? ""}
+        </SummaryLink>
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "match_show_year",
+    accessorFn: (row) => row.best_match?.show_year ?? "",
+    header: "Match year",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.best_match?.show_year ?? ""}
+      </span>
+    ),
+  },
+  {
+    id: "match_season_number",
+    accessorFn: (row) => row.best_match?.season_number ?? "",
+    header: "Match season #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.best_match?.season_number ?? ""}
+      </span>
+    ),
+  },
+  {
+    id: "match_episode_number",
+    accessorFn: (row) => row.best_match?.episode_number ?? "",
+    header: "Match episode #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.best_match?.episode_number ?? ""}
+      </span>
+    ),
+  },
+  {
+    id: "match_absolute_number",
+    accessorFn: (row) => row.best_match?.absolute_number ?? "",
+    header: "Match sequential #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.best_match?.absolute_number ?? ""}
+      </span>
     ),
   },
   {
     id: "match_name",
     accessorFn: (row) => row.best_match?.name ?? "No match",
-    header: "TMDB match",
+    header: "Match episode name",
     cell: ({ row }) => {
       const match = row.original.best_match
       if (!match) {
@@ -193,7 +444,6 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <WrappingCell className="max-w-64">
           {match.name ?? "Unnamed"}
           <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Numbering record={match} counterpart={row.original} />
             <span className="tabular-nums">id {match.tmdb_episode_id}</span>
             <TmdbLink url={match.url} />
           </span>
@@ -225,4 +475,35 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
       </WrappingCell>
     ),
   },
+  {
+    id: "actions",
+    header: "Actions",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TmdbMatchActions episode={row.original} />,
+  },
 ]
+
+/**
+ * The split columns start hidden, since the two summaries carry what they say.
+ *
+ * Every value has a column of its own so it can be sorted and filtered on, but
+ * showing all of them at once is a table nobody can read across. The summaries
+ * are what the page opens as, and a column is turned on when there is a reason
+ * to sort by that one value.
+ */
+export const TMDB_MATCH_DEFAULT_VISIBILITY = {
+  show_name: false,
+  show_year: false,
+  season_name: false,
+  season_number: false,
+  episode_number: false,
+  absolute_number: false,
+  episode_name: false,
+  match_show_name: false,
+  match_show_year: false,
+  match_season_number: false,
+  match_episode_number: false,
+  match_absolute_number: false,
+  match_name: false,
+}

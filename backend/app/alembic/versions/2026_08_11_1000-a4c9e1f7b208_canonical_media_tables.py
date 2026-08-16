@@ -167,8 +167,14 @@ def upgrade():
         "canonicalepisode",
         ["canonical_season_id"],
     )
-    for field in ("air_date", "duration", "episode_number", "name", "release_date",
-                  "sort_order"):
+    for field in (
+        "air_date",
+        "duration",
+        "episode_number",
+        "name",
+        "release_date",
+        "sort_order",
+    ):
         op.create_index(
             f"CanonicalEpisode-{field}-index",
             "canonicalepisode",
@@ -193,7 +199,9 @@ def upgrade():
 def downgrade():
     for copy_table, column, _canonical_table, index_prefix in COPY_LINKS:
         op.drop_index(f"{index_prefix}-{column}-index", table_name=copy_table)
-        op.drop_constraint(f"{copy_table}_{column}_fkey", copy_table, type_="foreignkey")
+        op.drop_constraint(
+            f"{copy_table}_{column}_fkey", copy_table, type_="foreignkey"
+        )
         op.drop_column(copy_table, column)
 
     op.drop_table("canonicalepisode")

@@ -6,7 +6,7 @@ import {
   ParentLinkCell,
   TruncatedCell,
 } from "@/components/Common/TableCells"
-
+import { extraText } from "@/lib/extra"
 import { FileActionsMenu } from "./ActionsMenu"
 import { FileContentCell } from "./ContentCell"
 
@@ -76,7 +76,7 @@ export const fileColumns: ColumnDef<FileTableData>[] = [
   {
     accessorKey: "extra",
     header: "Extra",
-    cell: ({ row }) => <TruncatedCell value={row.original.extra} />,
+    cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
   },
   {
     accessorKey: "id",

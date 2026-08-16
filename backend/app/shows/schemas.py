@@ -40,6 +40,23 @@ class ShowUpdate(
 
 
 # TODO: Validate
+class TmdbEpisodeGroupOption(BaseModel):
+    """One of the episode orders TMDB holds for a title.
+
+    What the order is and how big it is, which is all that choosing between them
+    needs. The episodes each order puts where is a file of its own and is only
+    read once an order has been chosen.
+    """
+
+    id: str
+    name: str
+    description: str | None
+    group_count: int
+    episode_count: int
+    type: int
+
+
+# TODO: Validate
 class ShowPublic(BaseShow):
     """Schema for returning a `Show`."""
 

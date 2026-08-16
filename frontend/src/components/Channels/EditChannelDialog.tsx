@@ -8,6 +8,7 @@ import {
   ChannelsService,
   type Visibility,
 } from "@/client"
+import { AdminZone } from "@/components/Common/AdminZone"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -183,7 +184,7 @@ export function EditChannelDialog({
             </div>
           </div>
           {isAdmin && (
-            <div className="space-y-1.5">
+            <AdminZone>
               <Label htmlFor="edit-channel-score">Score</Label>
               <Input
                 id="edit-channel-score"
@@ -197,7 +198,7 @@ export function EditChannelDialog({
                 Ranks the channel in the public list, with higher scores shown
                 first.
               </p>
-            </div>
+            </AdminZone>
           )}
         </DialogBody>
 

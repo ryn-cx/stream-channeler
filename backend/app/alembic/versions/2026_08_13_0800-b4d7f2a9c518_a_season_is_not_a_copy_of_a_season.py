@@ -83,7 +83,9 @@ def downgrade() -> None:
         ["canonical_season_id"],
         ["id"],
     )
-    op.create_index("Season-canonical_season_id-index", "season", ["canonical_season_id"])
+    op.create_index(
+        "Season-canonical_season_id-index", "season", ["canonical_season_id"]
+    )
     for field in _SORT_INDEXES:
         op.execute(
             f'CREATE INDEX "Season-{field}-index" ON season ({field})'

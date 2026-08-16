@@ -17,6 +17,10 @@ from app.utils import tz_datetime
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.upsert import UpsertMixin
+from plugins.utils.base_plugin.files import (
+    COMPLETED_STATUS,
+    EXTRA_STATUS_FIELD,
+)
 
 MUSIC_CHANNEL_DESCRIPTION_PATH = Path(__file__).parent / "music_channel_description.md"
 
@@ -72,7 +76,7 @@ class UpdateMixin(UpsertMixin, register=False):
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
 
-            browse_json.database_record.extra = "Completed"
+            browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
     # TODO: Validate
     def _process_new_music_browse_files(self, source: Source) -> None:
@@ -113,7 +117,7 @@ class UpdateMixin(UpsertMixin, register=False):
                     new_artist_urls,
                 )
 
-            browse_json.database_record.extra = "Completed"
+            browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
     # TODO: Validate
     def _music_channel(self) -> Channel:

@@ -75,7 +75,9 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("Watch-user_id-canonical_episode_id-watch_date-key", table_name="watch")
+    op.drop_index(
+        "Watch-user_id-canonical_episode_id-watch_date-key", table_name="watch"
+    )
     op.drop_index("Watch-canonical_episode_id-index", table_name="watch")
     op.drop_constraint("watch_canonical_episode_id_fkey", "watch", type_="foreignkey")
     op.drop_column("watch", "canonical_episode_id")

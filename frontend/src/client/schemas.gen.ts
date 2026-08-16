@@ -145,14 +145,8 @@ export const CanonicalEpisodeListOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -365,14 +359,8 @@ export const CanonicalEpisodeOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -579,14 +567,8 @@ export const CanonicalShowOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -2675,14 +2657,8 @@ export const EpisodeCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -3086,14 +3062,8 @@ export const EpisodeListOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -3360,14 +3330,8 @@ export const EpisodeOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -3584,14 +3548,8 @@ export const EpisodeUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -3707,6 +3665,64 @@ export const EpisodeUpdateSchema = {
     description: 'Schema for updating an `Episode`.'
 } as const;
 
+export const EpisodeUsingTmdbSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'season_number', 'episode_number', 'url'],
+    title: 'EpisodeUsingTmdb',
+    description: "One of the show's episodes that already points at a TMDB episode."
+} as const;
+
 export const EpisodeWithDetailsSchema = {
     properties: {
         key: {
@@ -3751,14 +3767,8 @@ export const EpisodeWithDetailsSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -4066,14 +4076,8 @@ export const FileCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         content: {
@@ -4132,14 +4136,8 @@ export const FileListPublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         plugin_id: {
@@ -4220,14 +4218,8 @@ export const FilePublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         content: {
@@ -4309,14 +4301,8 @@ export const FileUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         content: {
@@ -4692,14 +4678,8 @@ export const PluginCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         visibility: {
@@ -4830,14 +4810,8 @@ export const PluginListOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         visibility: {
@@ -5118,14 +5092,8 @@ export const PluginOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         visibility: {
@@ -5386,14 +5354,8 @@ export const PluginUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         visibility: {
@@ -5595,14 +5557,8 @@ export const SeasonCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -5833,14 +5789,8 @@ export const SeasonListOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6013,14 +5963,8 @@ export const SeasonOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6146,14 +6090,8 @@ export const SeasonUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6289,14 +6227,8 @@ export const ShowCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6551,14 +6483,8 @@ export const ShowListPublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6765,14 +6691,8 @@ export const ShowPublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -6948,14 +6868,8 @@ export const ShowUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -7232,14 +7146,8 @@ export const SourceCreateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -7327,14 +7235,8 @@ export const SourceListPublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -7513,14 +7415,8 @@ export const SourcePublicSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -7624,14 +7520,8 @@ export const SourceUpdateSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -7709,6 +7599,16 @@ export const TmdbEpisodeChoiceSchema = {
             format: 'uuid',
             title: 'Canonical Episode Id'
         },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
         tmdb_episode_id: {
             type: 'integer',
             title: 'Tmdb Episode Id'
@@ -7720,6 +7620,39 @@ export const TmdbEpisodeChoiceSchema = {
         show_name: {
             type: 'string',
             title: 'Show Name'
+        },
+        show_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Year'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
         },
         season_number: {
             type: 'integer',
@@ -7744,6 +7677,28 @@ export const TmdbEpisodeChoiceSchema = {
             type: 'string',
             title: 'Url'
         },
+        show_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Url'
+        },
+        season_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Url'
+        },
         similarity: {
             type: 'number',
             title: 'Similarity'
@@ -7752,12 +7707,64 @@ export const TmdbEpisodeChoiceSchema = {
             type: 'boolean',
             title: 'Already Used',
             default: false
+        },
+        used_by: {
+            items: {
+                '$ref': '#/components/schemas/EpisodeUsingTmdb'
+            },
+            type: 'array',
+            title: 'Used By',
+            default: []
         }
     },
     type: 'object',
-    required: ['canonical_episode_id', 'tmdb_episode_id', 'name', 'show_name', 'season_number', 'episode_number', 'absolute_number', 'url', 'similarity'],
+    required: ['canonical_episode_id', 'season_id', 'show_id', 'tmdb_episode_id', 'name', 'show_name', 'show_year', 'source_name', 'plugin_name', 'season_number', 'episode_number', 'absolute_number', 'url', 'show_url', 'season_url', 'similarity'],
     title: 'TmdbEpisodeChoice',
     description: 'A TMDB episode, as one of the episodes an `Episode` can be linked to.'
+} as const;
+
+export const TmdbEpisodeGroupOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        group_count: {
+            type: 'integer',
+            title: 'Group Count'
+        },
+        episode_count: {
+            type: 'integer',
+            title: 'Episode Count'
+        },
+        type: {
+            type: 'integer',
+            title: 'Type'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'description', 'group_count', 'episode_count', 'type'],
+    title: 'TmdbEpisodeGroupOption',
+    description: `One of the episode orders TMDB holds for a title.
+
+What the order is and how big it is, which is all that choosing between them
+needs. The episodes each order puts where is a file of its own and is only
+read once an order has been chosen.`
 } as const;
 
 export const TokenSchema = {
@@ -7890,6 +7897,39 @@ export const UnlockedEpisodeOutputSchema = {
             ],
             title: 'Show Name'
         },
+        show_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Year'
+        },
+        show_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Url'
+        },
+        season_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Url'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -7905,6 +7945,17 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ],
             title: 'Source Name'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
         },
         url: {
             anyOf: [
@@ -7933,7 +7984,7 @@ export const UnlockedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match', 'name_matches'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -8048,6 +8099,39 @@ export const UnmatchedEpisodeOutputSchema = {
             ],
             title: 'Show Name'
         },
+        show_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Year'
+        },
+        show_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Url'
+        },
+        season_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Url'
+        },
         source_id: {
             type: 'string',
             format: 'uuid',
@@ -8063,6 +8147,17 @@ export const UnmatchedEpisodeOutputSchema = {
                 }
             ],
             title: 'Source Name'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
         },
         url: {
             anyOf: [
@@ -8087,7 +8182,7 @@ export const UnmatchedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'source_id', 'source_name', 'url', 'best_match'],
+    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;
@@ -8428,9 +8523,9 @@ export const WatchCreateSchema = {
 
 export const WatchExportEntrySchema = {
     properties: {
-        canonical_episode_key: {
+        watch_identifier: {
             type: 'string',
-            title: 'Canonical Episode Key'
+            title: 'Watch Identifier'
         },
         watch_date: {
             type: 'string',
@@ -8450,7 +8545,7 @@ export const WatchExportEntrySchema = {
         }
     },
     type: 'object',
-    required: ['canonical_episode_key', 'watch_date'],
+    required: ['watch_identifier', 'watch_date'],
     title: 'WatchExportEntry',
     description: `Schema for a single exported \`Watch\`.
 
@@ -8459,7 +8554,12 @@ happened, and whether it was verified. Everything else is read back out of
 the database the file is imported into.
 
 \`verified\` is None in a file exported before it was carried, which leaves
-the import's own setting to say what those watches are.`
+the import's own setting to say what those watches are.
+
+A file exported before the identifier was named as such holds it under
+\`canonical_episode_key\`, and holds the same string: the old key was the
+plugin's name in front of its own id, which is what the identifier is. So
+the old name is still read, and a backup taken then still imports.`
 } as const;
 
 export const WatchImportResultSchema = {
@@ -8543,9 +8643,9 @@ export const WatchItemSchema = {
             ],
             title: 'Episode Id'
         },
-        canonical_episode_key: {
+        watch_identifier: {
             type: 'string',
-            title: 'Canonical Episode Key'
+            title: 'Watch Identifier'
         },
         canonical_episode_id: {
             type: 'string',
@@ -8554,7 +8654,7 @@ export const WatchItemSchema = {
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id', 'canonical_episode_key', 'canonical_episode_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'watch_identifier', 'canonical_episode_id'],
     title: 'WatchItem'
 } as const;
 
@@ -8586,9 +8686,9 @@ export const WatchOutputSchema = {
             ],
             title: 'Episode Id'
         },
-        canonical_episode_key: {
+        watch_identifier: {
             type: 'string',
-            title: 'Canonical Episode Key'
+            title: 'Watch Identifier'
         },
         user_id: {
             type: 'string',
@@ -8597,7 +8697,7 @@ export const WatchOutputSchema = {
         }
     },
     type: 'object',
-    required: ['watch_date', 'verified', 'id', 'episode_id', 'canonical_episode_key', 'user_id'],
+    required: ['watch_date', 'verified', 'id', 'episode_id', 'watch_identifier', 'user_id'],
     title: 'WatchOutput',
     description: 'Schema for returning a `Watch`.'
 } as const;
@@ -8810,14 +8910,8 @@ export const WhitelistEpisodeOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         url: {
@@ -9133,14 +9227,8 @@ export const WhitelistSeasonOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {
@@ -9317,14 +9405,8 @@ export const WhitelistShowOutputSchema = {
             title: 'Deleted At'
         },
         extra: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            additionalProperties: true,
+            type: 'object',
             title: 'Extra'
         },
         name: {

@@ -301,7 +301,9 @@ def upgrade() -> None:
 
     # A copy names one episode at most within the season holding it, and the
     # canonical rows are no part of that rule.
-    op.drop_index("Episode-live-season_id-canonical_episode_id-key", table_name="episode")
+    op.drop_index(
+        "Episode-live-season_id-canonical_episode_id-key", table_name="episode"
+    )
     op.execute(
         'CREATE UNIQUE INDEX "Episode-live-season_id-canonical_episode_id-key"'
         " ON episode (season_id, canonical_episode_id)"

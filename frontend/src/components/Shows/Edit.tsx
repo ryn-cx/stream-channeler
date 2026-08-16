@@ -6,13 +6,21 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { ShowsService, type ShowUpdate } from "@/client"
+import { AdminZone } from "@/components/Common/AdminZone"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import useAuth from "@/hooks/useAuth"
 import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 
 import type { ShowTableData } from "./columns"
+import {
+  episodeGroupIdOf,
+  extraForEpisodeGroupId,
+  TMDB_EPISODE_ORDER_PLUGIN,
+  TmdbEpisodeOrderField,
+} from "./TmdbEpisodeOrderField"
 
 const formSchema = z.object({
   key: requiredKey,
@@ -35,6 +43,14 @@ interface EditShowProps {
 // TODO: Validate
 const EditShow = ({ show }: EditShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const { user } = useAuth()
+  // Only TMDB's own rows carry an episode order, and only an admin sets one.
+  const showsEpisodeOrder =
+    Boolean(user?.is_superuser) &&
+    show.plugin_name === TMDB_EPISODE_ORDER_PLUGIN
+  const [episodeGroupId, setEpisodeGroupId] = useState(() =>
+    episodeGroupIdOf(show.extra),
+  )
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -62,7 +78,14 @@ const EditShow = ({ show }: EditShowProps) => {
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(nullifyBlanks(data))
+    // `extra` is only sent where the order is being edited, since another
+    // plugin keeps its own things there and a blank would write them away.
+    const update = nullifyBlanks(data)
+    mutation.mutate(
+      showsEpisodeOrder
+        ? { ...update, extra: extraForEpisodeGroupId(episodeGroupId) }
+        : update,
+    )
   }
 
   return (
@@ -130,6 +153,16 @@ const EditShow = ({ show }: EditShowProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      {showsEpisodeOrder && (
+        <AdminZone>
+          <TmdbEpisodeOrderField
+            showId={show.id}
+            value={episodeGroupId}
+            onChange={setEpisodeGroupId}
+            enabled={isOpen}
+          />
+        </AdminZone>
+      )}
     </FormModal>
   )
 }

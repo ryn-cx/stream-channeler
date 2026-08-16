@@ -14,6 +14,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Callable, Collection, Sequence
 from difflib import SequenceMatcher
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
@@ -27,7 +28,6 @@ from app.canonical_media.keys import (
     EPISODE_LEVEL,
     SHOW_LEVEL,
     is_tmdb_key,
-    not_tmdb_key_clause,
     tmdb_id_of,
     tmdb_key_clause,
 )
@@ -37,12 +37,17 @@ from app.episodes.models import (
     Episode,
 )
 from app.episodes.schemas import (
+    EpisodeUsingTmdb,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
 )
-from app.media.canonical_metadata import tmdb_episode_url
-from app.media.identifiers import TMDB_PLUGIN_KEY
+from app.media.canonical_metadata import (
+    tmdb_episode_url,
+    tmdb_season_url,
+    tmdb_show_url,
+)
+from app.media.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.media.name_forms import plaintext_forms
 from app.plugins.models import Plugin
@@ -113,6 +118,10 @@ def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
 
 
 # TODO: Validate
+# Held onto because a page of matches compares every episode against every
+# candidate of its title, so the same handful of names are stripped down again
+# for each pair - once per candidate per episode rather than once each.
+@lru_cache(maxsize=16384)
 def _plaintext(name: str | None) -> str:
     if not name:
         return ""
@@ -125,6 +134,10 @@ def _similarity(name: str | None, other_name: str | None) -> float:
     other_plaintext = _plaintext(other_name)
     if not plaintext or not other_plaintext:
         return 0.0
+    # The same name written the same way is the answer without the comparing,
+    # which is the case an exact match takes and the costliest one to work out.
+    if plaintext == other_plaintext:
+        return 1.0
 
     ratio = SequenceMatcher(None, plaintext, other_plaintext).ratio()
     if plaintext not in other_plaintext and other_plaintext not in plaintext:
@@ -178,9 +191,14 @@ def _choice(
 
     return TmdbEpisodeChoice(
         canonical_episode_id=episode.id,
+        season_id=season.id,
+        show_id=show.id,
         tmdb_episode_id=tmdb_episode_id,
         name=episode.name,  # type: ignore[arg-type]
         show_name=show.name,  # type: ignore[arg-type]
+        show_year=show.year,
+        source_name=show.source.name,
+        plugin_name=show.source.plugin.name,
         season_number=season.season_number,  # type: ignore[arg-type]
         episode_number=episode.episode_number,  # type: ignore[arg-type]
         absolute_number=absolute_numbers.get(episode.id),
@@ -189,6 +207,8 @@ def _choice(
             season.season_number,
             episode.episode_number,
         ),
+        show_url=tmdb_show_url(show.key),
+        season_url=tmdb_season_url(show.key, season.season_number),
         similarity=similarity,
     )
 
@@ -251,7 +271,6 @@ def _unmatched_rows(
     session: Session,
     limit: int,
 ) -> list[tuple[Episode, Season, Show, Source]]:
-    canonical_episode = aliased(Episode)
     statement = (
         select(Episode, Season, Show, Source)
         .select_from(Episode)
@@ -259,22 +278,12 @@ def _unmatched_rows(
         .join(Show, onclause=col(Season.show_id) == Show.id)
         .join(Source, onclause=col(Show.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
-        .join(
-            canonical_episode,
-            onclause=col(Episode.canonical_episode_id) == canonical_episode.id,
-        )
         .where(
-            Plugin.key != TMDB_PLUGIN_KEY,
-            is_canonical(canonical_episode),
-            # The episode is a copy of something TMDB has no record of, while one
-            # of the titles above it is one TMDB does hold: that gap is exactly
-            # what is left to match.
-            not_tmdb_key_clause(col(canonical_episode.key)),
-            _has_tmdb_title(),
-            # A locked link is one a `User` has already settled, whether by
-            # pointing the episode at a TMDB record or by saying there is none to
-            # point it at, so it is no longer waiting on anybody.
-            col(Episode.canonical_episode_locked).is_(False),
+            # TMDB's own episodes are what everything else is matched against,
+            # and YouTube's are nothing TMDB carries, so neither is waiting on a
+            # match the way the rest are.
+            col(Plugin.key).not_in((TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY)),
+            is_canonical(Episode),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -400,11 +409,12 @@ def list_unmatched_episodes(
     session: Session,
     limit: int,
 ) -> list[UnmatchedEpisodeOutput]:
-    """Return the episodes that are still a copy of nothing but themselves.
+    """Return every canonical episode of a plugin other than TMDB and YouTube.
 
-    Only episodes of a title that is itself linked are listed, since a title with
-    no TMDB counterpart has no episodes to be matched against and nothing to
-    choose from.
+    A canonical episode is one pointing at no other, so these are the episodes
+    nothing has been matched to yet, whatever the reason. The closest TMDB
+    episode is given for each where the show it belongs to is linked to a TMDB
+    show; where it is not there is nothing to choose from and none is given.
     """
     rows = _unmatched_rows(session, limit)
     candidates, candidate_numbers = _candidates_for_shows(
@@ -429,8 +439,12 @@ def list_unmatched_episodes(
             season_number=season.season_number,
             show_id=show.id,
             show_name=show.name,
+            show_year=show.year,
+            show_url=show.url,
+            season_url=season.url,
             source_id=source.id,
             source_name=source.name,
+            plugin_name=source.plugin.name,
             url=episode.url,
             best_match=_best_match(
                 episode,
@@ -520,8 +534,12 @@ def list_unlocked_episodes(
                 season_number=season.season_number,
                 show_id=show.id,
                 show_name=show.name,
+                show_year=show.year,
+                show_url=show.url,
+                season_url=season.url,
                 source_id=source.id,
                 source_name=source.name,
+                plugin_name=source.plugin.name,
                 url=episode.url,
                 best_match=best_match,
                 name_matches=bool(
@@ -535,8 +553,11 @@ def list_unlocked_episodes(
 
 
 # TODO: Validate
-def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
-    """Return the TMDB episodes the rest of `episode`'s show already points at.
+def _tmdb_ids_used_by_show(
+    session: Session,
+    episode: Episode,
+) -> dict[int, list[EpisodeUsingTmdb]]:
+    """Return the episodes of `episode`'s show using each TMDB episode already.
 
     Only the show the episode belongs to is read, since another website's copy
     of the same title has its own episodes pointing at the same TMDB ones and
@@ -546,7 +567,7 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
     """
     canonical_episode = aliased(Episode)
     statement = (
-        select(canonical_episode.key)
+        select(canonical_episode.key, Episode, Season)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(
             canonical_episode,
@@ -562,11 +583,21 @@ def _tmdb_ids_used_by_show(session: Session, episode: Episode) -> set[int]:
             col(Season.deleted_at).is_(None),
         )
     )
-    return {
-        tmdb_id
-        for key in session.exec(statement).all()
-        if (tmdb_id := tmdb_id_of(key, EPISODE_LEVEL)) is not None
-    }
+    using: dict[int, list[EpisodeUsingTmdb]] = defaultdict(list)
+    for key, used_by, season in session.exec(statement).all():
+        tmdb_id = tmdb_id_of(key, EPISODE_LEVEL)
+        if tmdb_id is None:
+            continue
+        using[tmdb_id].append(
+            EpisodeUsingTmdb(
+                id=used_by.id,
+                name=used_by.name,
+                season_number=season.season_number,
+                episode_number=used_by.episode_number,
+                url=used_by.url,
+            ),
+        )
+    return using
 
 
 # TODO: Validate
@@ -665,7 +696,8 @@ def list_tmdb_episode_choices(
         is not None
     ]
     for choice in choices:
-        choice.already_used = choice.tmdb_episode_id in used_tmdb_ids
+        choice.used_by = used_tmdb_ids.get(choice.tmdb_episode_id, [])
+        choice.already_used = bool(choice.used_by)
     return sorted(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
@@ -803,6 +835,25 @@ def unlink_episode(session: Session, episode: Episode) -> Episode:
     episode.canonical_episode = None
     episode.canonical_episode_locked = False
     episode.canonical_episode_note = None
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode
+
+
+# TODO: Validate
+def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode:
+    """Settle `episode` as one TMDB has no record of.
+
+    Pointed at nothing and locked there, which is what says the emptiness was
+    decided rather than not yet worked out: an import leaves an episode it could
+    not place pointing at nothing too, and only the lock tells the two apart. The
+    note says who decided, so it carries the manual prefix the same way a link
+    chosen by hand does.
+    """
+    episode.canonical_episode = None
+    episode.canonical_episode_locked = True
+    episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Not on TMDB"
     session.add(episode)
     session.commit()
     session.refresh(episode)

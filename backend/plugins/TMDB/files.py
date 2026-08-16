@@ -14,9 +14,11 @@ from tminidb.search_movie.models import SearchMovieModel
 from tminidb.search_multi.models import SearchMultiModel
 from tminidb.search_tv.models import SearchTvModel
 from tminidb.tv_episode_details.models import TvEpisodeDetailsModel
+from tminidb.tv_episode_group_details.models import TvEpisodeGroupDetailsModel
 from tminidb.tv_episode_translations.models import TvEpisodeTranslationsModel
 from tminidb.tv_season_details.models import TvSeasonDetailsModel
 from tminidb.tv_series_details.models import TvSeriesDetailsModel
+from tminidb.tv_series_episode_groups.models import TvSeriesEpisodeGroupsModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
 from app.config import settings
@@ -166,6 +168,36 @@ class ShowDetail(_TMDBIdEndpointFile[TvSeriesDetailsModel]):
     """
 
     API_ENDPOINT = tminidb_client().tv_series_details
+
+
+# TODO: Validate
+class EpisodeGroups(_TMDBIdEndpointFile[TvSeriesEpisodeGroupsModel]):
+    """Every episode order TMDB holds for a title, beside the title's own.
+
+    Only what each order is called and how big it is - the episodes an order
+    puts where are `EpisodeGroupDetail`, one file per order, since a title with
+    six orders is six files nobody wants downloaded to read a list of names.
+    """
+
+    API_ENDPOINT = tminidb_client().tv_series_episode_groups
+
+
+# TODO: Validate
+class EpisodeGroupDetail(_TMDBEndpointFile[TvEpisodeGroupDetailsModel]):
+    """One episode order, and the episodes each of its groups holds.
+
+    Keyed by the order's own id rather than by the title's, because that is what
+    TMDB looks it up by and one order belongs to one title anyway. The id is a
+    string of TMDB's own making rather than a number, so it is passed along as
+    it came rather than through `_TMDBIdEndpointFile`.
+    """
+
+    API_ENDPOINT = tminidb_client().tv_episode_group_details
+
+    # TODO: Validate
+    @override
+    def _get(self) -> TvEpisodeGroupDetailsModel:
+        return self.API_ENDPOINT.download_and_parse(self.unique_identifier)
 
 
 # TODO: Validate
@@ -400,6 +432,16 @@ class FileMixin(BasePlugin, register=False):
     def show_detail_file(self, tmdb_id: int) -> ShowDetail:
         """Returns ShowDetail file."""
         return self._file(ShowDetail, tmdb_id)
+
+    # TODO: Validate
+    def episode_groups_file(self, tmdb_id: int) -> EpisodeGroups:
+        """Returns the EpisodeGroups file for a title."""
+        return self._file(EpisodeGroups, tmdb_id)
+
+    # TODO: Validate
+    def episode_group_detail_file(self, group_id: str) -> EpisodeGroupDetail:
+        """Returns the EpisodeGroupDetail file for one episode order."""
+        return self._file(EpisodeGroupDetail, group_id)
 
     # TODO: Validate
     def season_detail_file(

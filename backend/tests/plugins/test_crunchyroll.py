@@ -38,3 +38,15 @@ class TestNoTMDBMatchFound(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAl
 
     parse_url_response = "G6DQNPE1R"
     show_slug = "ah-my-buddha"
+
+
+# A series of several seasons that Crunchyroll and TMDB both file as one, which
+# is neither of the awkward shapes above. The tests around it are for the
+# ordinary case: the seasons line up, so every episode has a TMDB episode to be
+# matched to and the numbering is read straight through.
+# TODO: Validate
+class TestSeries1(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+    """Crunchyroll has a multi-season series TMDB holds as one title."""
+
+    parse_url_response = "GYQWNXPZY"
+    show_slug = "fire-force"

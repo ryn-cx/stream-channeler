@@ -100,7 +100,9 @@ def upgrade():
         ["canonical_show_id"],
     )
 
-    op.drop_constraint("channelseasonfilter_pkey", "channelseasonfilter", type_="primary")
+    op.drop_constraint(
+        "channelseasonfilter_pkey", "channelseasonfilter", type_="primary"
+    )
     op.drop_column("channelseasonfilter", "season_identifier")
     op.create_primary_key(
         "channelseasonfilter_pkey",
@@ -145,7 +147,9 @@ def upgrade():
         WHERE episode.id = channelsavedepisodeorder.episode_id
         """,
     )
-    op.execute("DELETE FROM channelsavedepisodeorder WHERE canonical_episode_id IS NULL")
+    op.execute(
+        "DELETE FROM channelsavedepisodeorder WHERE canonical_episode_id IS NULL"
+    )
     op.execute(
         """
         DELETE FROM channelsavedepisodeorder AS duplicate
@@ -287,7 +291,9 @@ def downgrade():
         "ChannelSeasonFilter-canonical_season_id-index",
         table_name="channelseasonfilter",
     )
-    op.drop_constraint("channelseasonfilter_pkey", "channelseasonfilter", type_="primary")
+    op.drop_constraint(
+        "channelseasonfilter_pkey", "channelseasonfilter", type_="primary"
+    )
     op.drop_column("channelseasonfilter", "canonical_season_id")
     op.create_primary_key(
         "channelseasonfilter_pkey",

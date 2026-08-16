@@ -33,10 +33,11 @@ from plugins.TMDB.files import (
     backdrop_image_url,
     duration_seconds,
     poster_image_url,
+    release_year,
     still_image_url,
     title_page_url,
 )
-from plugins.TMDB.helpers import HelperMixin
+from plugins.TMDB.helpers import HelperMixin, SeasonSource
 from plugins.TMDB.keys import (
     MOVIE_EPISODE_NUMBER,
     MOVIE_SEASON_NUMBER,
@@ -146,6 +147,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=title_page_url(MediaType.tv, tmdb_id),
                 image_url=backdrop_image_url(series.backdrop_path)
                 or poster_image_url(series.poster_path),
+                year=release_year(series.first_air_date),
                 media_type="TV Show",
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + _REFRESH_INTERVAL,
@@ -166,24 +168,19 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        for key in self._season_keys_from_file(show_key):
-            season_number = self.season_number(key, show_key)
-            season_file = self.season_detail_file(tmdb_id, season_number)
-            # A season the title lists but TMDB has no detail for is stored
-            # empty, and an empty file has nothing to read a season out of.
-            if not season_file.database_record.content:
-                continue
-            detail = season_file.parsed()
-            season = self._stored_season(show, key)
+        # Whichever order the title is read in, seasons and episodes come back
+        # the same shape, so nothing below asks which it was.
+        for source in self.series_seasons(show_key):
+            season = self._stored_season(show, source.key)
             if self._season_is_outdated(season, show_key, force=force):
-                data_timestamp = self.season_data_timestamp(key, show_key)
+                data_timestamp = self.season_data_timestamp(source.key, show_key)
                 new_season = Season(
-                    key=key,
-                    name=detail.name,
-                    season_number=season_number,
-                    sort_order=season_number,
+                    key=source.key,
+                    name=source.name,
+                    season_number=source.season_number,
+                    sort_order=source.season_number,
                     url=title_page_url(MediaType.tv, tmdb_id),
-                    image_url=poster_image_url(detail.poster_path),
+                    image_url=poster_image_url(source.poster_path),
                     data_timestamp=data_timestamp,
                     update_at=data_timestamp + _REFRESH_INTERVAL,
                     show_id=show.id,
@@ -196,7 +193,7 @@ class UpsertMixin(HelperMixin, register=False):
                 )
             self._upsert_series_episodes(
                 season,
-                key,
+                source,
                 show_key,
                 tmdb_id,
                 force=force,
@@ -206,17 +203,14 @@ class UpsertMixin(HelperMixin, register=False):
     def _upsert_series_episodes(
         self,
         season: Season,
-        season_key: str,
+        source: SeasonSource,
         show_key: str,
         tmdb_id: int,
         *,
         force: bool = False,
     ) -> None:
-        season_number = self.season_number(season_key, show_key)
-        season_file = self.season_detail_file(tmdb_id, season_number)
-        if not season_file.database_record.content:
-            return
-        for sort_order, entry in enumerate(season_file.parsed().episodes):
+        season_key = source.key
+        for sort_order, (number, entry) in enumerate(source.episodes):
             key = episode_key(MediaType.tv, entry.id)
             episode = self._stored_episode(season, key)
             if not self._episode_is_outdated(
@@ -235,7 +229,7 @@ class UpsertMixin(HelperMixin, register=False):
                 image_url=still_image_url(entry.still_path),
                 duration=duration_seconds(entry.runtime),
                 air_date=air_datetime(entry.air_date),
-                episode_number=entry.episode_number,
+                episode_number=number,
                 sort_order=sort_order,
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + _REFRESH_INTERVAL,
@@ -263,6 +257,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=title_page_url(MediaType.movie, tmdb_id),
                 image_url=backdrop_image_url(movie.backdrop_path)
                 or poster_image_url(movie.poster_path),
+                year=release_year(movie.release_date),
                 media_type="Movie",
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + _REFRESH_INTERVAL,

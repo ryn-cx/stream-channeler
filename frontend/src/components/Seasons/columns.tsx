@@ -7,7 +7,7 @@ import {
   ParentLinkCell,
   TruncatedCell,
 } from "@/components/Common/TableCells"
-
+import { extraText } from "@/lib/extra"
 import { SeasonActionsMenu } from "./ActionsMenu"
 
 export type SeasonTableData = SeasonListOutput & { pending?: boolean }
@@ -120,7 +120,7 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
     accessorKey: "extra",
     header: "Extra",
-    cell: ({ row }) => <TruncatedCell value={row.original.extra} />,
+    cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
   },
   {
     accessorKey: "key",

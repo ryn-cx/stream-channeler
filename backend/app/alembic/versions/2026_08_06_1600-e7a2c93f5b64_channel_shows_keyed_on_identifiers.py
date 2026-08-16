@@ -30,7 +30,9 @@ def upgrade():
         sa.Column("modified_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("channel_show_id", sa.Uuid(), nullable=False),
         sa.Column("show_id", sa.Uuid(), nullable=False),
-        sa.ForeignKeyConstraint(["channel_show_id"], ["channelshow.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["channel_show_id"], ["channelshow.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["show_id"], ["show.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("channel_show_id", "show_id"),
         sa.UniqueConstraint("id"),
@@ -192,7 +194,9 @@ def upgrade():
     op.drop_constraint(
         "channelseasonwhitelist_pkey", "channelseasonfilter", type_="primary"
     )
-    op.drop_index("ChannelSeasonFilter-season_id-index", table_name="channelseasonfilter")
+    op.drop_index(
+        "ChannelSeasonFilter-season_id-index", table_name="channelseasonfilter"
+    )
     op.drop_column("channelseasonfilter", "season_id")
     op.create_primary_key(
         "channelseasonfilter_pkey",
@@ -247,7 +251,9 @@ def downgrade():
         ondelete="CASCADE",
     )
 
-    op.add_column("channelseasonfilter", sa.Column("season_id", sa.Uuid(), nullable=True))
+    op.add_column(
+        "channelseasonfilter", sa.Column("season_id", sa.Uuid(), nullable=True)
+    )
     op.execute(
         """
         UPDATE channelseasonfilter
@@ -265,7 +271,9 @@ def downgrade():
     op.alter_column(
         "channelseasonfilter", "season_id", existing_type=sa.Uuid(), nullable=False
     )
-    op.drop_constraint("channelseasonfilter_pkey", "channelseasonfilter", type_="primary")
+    op.drop_constraint(
+        "channelseasonfilter_pkey", "channelseasonfilter", type_="primary"
+    )
     op.drop_column("channelseasonfilter", "season_identifier")
     op.create_primary_key(
         "channelseasonwhitelist_pkey",

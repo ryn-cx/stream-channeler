@@ -20,6 +20,13 @@ from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 
+# What `File.extra` says about a file that has been read to the end. `extra` is an
+# object now, so the mark is a field of it rather than the whole of it, which
+# leaves room for a second thing to be said about a file later.
+EXTRA_STATUS_FIELD = "status"
+COMPLETED_STATUS = "Completed"
+
+
 _UNLOADED = Sentinel("DATABASE_RECORD")
 
 INITIAL_FILE_IDENTIFIER: Final = "Initial"

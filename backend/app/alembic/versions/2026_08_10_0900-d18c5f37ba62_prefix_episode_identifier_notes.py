@@ -52,9 +52,7 @@ RENAMED_NOTES = (
 
 def _rewrite(renames: tuple[tuple[str, str], ...]) -> None:
     """Point every note written one way at the way it is written now."""
-    values = ", ".join(
-        f"('{old}', '{new}')" for old, new in renames
-    )
+    values = ", ".join(f"('{old}', '{new}')" for old, new in renames)
     op.execute(
         f"""
         UPDATE episode

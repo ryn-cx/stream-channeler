@@ -45,6 +45,7 @@ from app.episodes.service import (
     list_tmdb_episode_choices,
     list_unlocked_episodes,
     list_unmatched_episodes,
+    mark_episode_absent_from_tmdb,
     unlink_episode,
 )
 from app.issue_reports.service import list_episode_issue_reports
@@ -258,7 +259,7 @@ def admin_get_unmatched_episodes(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=1000)] = 200,
 ) -> list[UnmatchedEpisodeOutput]:
-    """Get the `Episode`s no TMDB record was found for, and the closest match to each."""
+    """Get every canonical `Episode` outside TMDB and YouTube, and its closest match."""
     return list_unmatched_episodes(session, limit)
 
 
@@ -351,6 +352,22 @@ def admin_unlink_episode_from_tmdb(
 
 
 # TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/tmdb-absent",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_mark_episode_absent_from_tmdb(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> EpisodeOutput:
+    """Settle an `Episode` as one TMDB has no record of, and lock it there."""
+    return _episode_output(
+        session,
+        mark_episode_absent_from_tmdb(session, episode),
+    )
+
+
+# TODO: Validate
 def _information_side(
     label: str,
     episode: Episode,
@@ -433,7 +450,7 @@ def get_episode_information(
 
 
 # TODO: Validate
-@episodes_router.patch(  # noqa: FAST003 - Used by EditableEpisode.
+@episodes_router.patch(
     "/{episode_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -451,7 +468,7 @@ def update_episode(
 
 
 # TODO: Validate
-@episodes_router.delete(  # noqa: FAST003 - Used by EditableEpisode.
+@episodes_router.delete(
     "/{episode_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )

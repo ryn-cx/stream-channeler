@@ -27,7 +27,9 @@ export type CanonicalEpisodeListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -59,7 +61,9 @@ export type CanonicalEpisodeOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -98,7 +102,9 @@ export type CanonicalShowOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -552,7 +558,9 @@ export type EpisodeCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -613,7 +621,9 @@ export type EpisodeListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -647,7 +657,9 @@ export type EpisodeOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -690,7 +702,9 @@ export type EpisodeUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -703,12 +717,25 @@ export type EpisodeUpdate = {
     canonical_episode_note?: (string | null);
 };
 
+/**
+ * One of the show's episodes that already points at a TMDB episode.
+ */
+export type EpisodeUsingTmdb = {
+    id: string;
+    name: (string | null);
+    season_number: (number | null);
+    episode_number: (number | null);
+    url: (string | null);
+};
+
 export type EpisodeWithDetails = {
     key: string;
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -743,7 +770,9 @@ export type FileCreate = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     content?: (string | null);
 };
 
@@ -757,7 +786,9 @@ export type FileListPublic = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     plugin_id: string;
     id: string;
     plugin_name: (string | null);
@@ -772,7 +803,9 @@ export type FilePublic = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     content?: (string | null);
     plugin_id: string;
     id: string;
@@ -796,7 +829,9 @@ export type FileUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     content?: (string | null);
 };
 
@@ -898,7 +933,9 @@ export type PluginCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     visibility: Visibility;
     anonymous: boolean;
     name?: (string | null);
@@ -925,7 +962,9 @@ export type PluginListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     visibility: Visibility;
     anonymous: boolean;
     name?: (string | null);
@@ -968,7 +1007,9 @@ export type PluginOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     visibility: Visibility;
     anonymous: boolean;
     name?: (string | null);
@@ -1030,7 +1071,9 @@ export type PluginUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     visibility?: (Visibility | null);
     anonymous?: (boolean | null);
     name?: (string | null);
@@ -1072,7 +1115,9 @@ export type SeasonCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -1116,7 +1161,9 @@ export type SeasonListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -1140,7 +1187,9 @@ export type SeasonOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -1168,7 +1217,9 @@ export type SeasonUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -1184,7 +1235,9 @@ export type ShowCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -1232,7 +1285,9 @@ export type ShowListPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -1259,7 +1314,9 @@ export type ShowPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -1292,7 +1349,9 @@ export type ShowUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -1342,7 +1401,9 @@ export type SourceCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
@@ -1356,7 +1417,9 @@ export type SourceListPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
@@ -1387,7 +1450,9 @@ export type SourcePublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
@@ -1413,7 +1478,9 @@ export type SourceUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     favicon_url?: (string | null);
     image_url?: (string | null);
@@ -1424,15 +1491,39 @@ export type SourceUpdate = {
  */
 export type TmdbEpisodeChoice = {
     canonical_episode_id: string;
+    season_id: string;
+    show_id: string;
     tmdb_episode_id: number;
     name: string;
     show_name: string;
+    show_year: (number | null);
+    source_name: (string | null);
+    plugin_name: (string | null);
     season_number: number;
     episode_number: number;
     absolute_number: (number | null);
     url: string;
+    show_url: (string | null);
+    season_url: (string | null);
     similarity: number;
     already_used?: boolean;
+    used_by?: Array<EpisodeUsingTmdb>;
+};
+
+/**
+ * One of the episode orders TMDB holds for a title.
+ *
+ * What the order is and how big it is, which is all that choosing between them
+ * needs. The episodes each order puts where is a file of its own and is only
+ * read once an order has been chosen.
+ */
+export type TmdbEpisodeGroupOption = {
+    id: string;
+    name: string;
+    description: (string | null);
+    group_count: number;
+    episode_count: number;
+    type: number;
 };
 
 export type Token = {
@@ -1459,8 +1550,12 @@ export type UnlockedEpisodeOutput = {
     season_number: (number | null);
     show_id: string;
     show_name: (string | null);
+    show_year: (number | null);
+    show_url: (string | null);
+    season_url: (string | null);
     source_id: string;
     source_name: (string | null);
+    plugin_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
@@ -1481,8 +1576,12 @@ export type UnmatchedEpisodeOutput = {
     season_number: (number | null);
     show_id: string;
     show_name: (string | null);
+    show_year: (number | null);
+    show_url: (string | null);
+    season_url: (string | null);
     source_id: string;
     source_name: (string | null);
+    plugin_name: (string | null);
     url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
 };
@@ -1596,9 +1695,14 @@ export type WatchesListOutput = {
  *
  * `verified` is None in a file exported before it was carried, which leaves
  * the import's own setting to say what those watches are.
+ *
+ * A file exported before the identifier was named as such holds it under
+ * `canonical_episode_key`, and holds the same string: the old key was the
+ * plugin's name in front of its own id, which is what the identifier is. So
+ * the old name is still read, and a backup taken then still imports.
  */
 export type WatchExportEntry = {
-    canonical_episode_key: string;
+    watch_identifier: string;
     watch_date: string;
     verified?: (boolean | null);
 };
@@ -1621,7 +1725,7 @@ export type WatchItem = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
-    canonical_episode_key: string;
+    watch_identifier: string;
     canonical_episode_id: string;
 };
 
@@ -1633,7 +1737,7 @@ export type WatchOutput = {
     verified: boolean;
     id: string;
     episode_id: (string | null);
-    canonical_episode_key: string;
+    watch_identifier: string;
     user_id: string;
 };
 
@@ -1666,7 +1770,9 @@ export type WhitelistEpisodeOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     url?: (string | null);
     name?: (string | null);
     description?: (string | null);
@@ -1714,7 +1820,9 @@ export type WhitelistSeasonOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     url?: (string | null);
     season_number?: (number | null);
@@ -1746,7 +1854,9 @@ export type WhitelistShowOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
-    extra?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
     name?: (string | null);
     media_type?: (string | null);
     description?: (string | null);
@@ -2216,6 +2326,12 @@ export type EpisodesAdminUnlinkEpisodeFromTmdbData = {
 
 export type EpisodesAdminUnlinkEpisodeFromTmdbResponse = (EpisodeOutput);
 
+export type EpisodesAdminMarkEpisodeAbsentFromTmdbData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminMarkEpisodeAbsentFromTmdbResponse = (EpisodeOutput);
+
 export type EpisodesGetEpisodeInformationData = {
     episodeId: string;
 };
@@ -2619,6 +2735,12 @@ export type ShowsDeleteShowData = {
 };
 
 export type ShowsDeleteShowResponse = (Message);
+
+export type ShowsGetShowTmdbEpisodeGroupsData = {
+    showId: string;
+};
+
+export type ShowsGetShowTmdbEpisodeGroupsResponse = (Array<TmdbEpisodeGroupOption>);
 
 export type ShowsCreateShowData = {
     requestBody: ShowCreate;

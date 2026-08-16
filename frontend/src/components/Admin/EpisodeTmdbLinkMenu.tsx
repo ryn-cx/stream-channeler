@@ -1,11 +1,13 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Unlink } from "lucide-react"
+import type { ReactNode } from "react"
 import { useState } from "react"
 
 import type { TmdbEpisodeChoice } from "@/client"
 import { EpisodesService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
+import { AdminZone } from "@/components/Common/AdminZone"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -24,6 +26,10 @@ interface EpisodeTmdbLinkMenuProps {
   episodeNumber: number | null
   /** Query key of the information the episode was read off. */
   informationQueryKey: unknown[]
+  /** Called once the episode has been pointed at a TMDB episode, by either way
+   * of doing it. A caller showing the picker in a window of its own uses this to
+   * close it, since the row it was opened from is gone by then. */
+  onLinked?: () => void
 }
 
 // TODO: Validate
@@ -33,6 +39,76 @@ function numbering(
   episodeNumber: number | null,
 ): string {
   return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
+}
+
+// TODO: Validate
+/**
+ * A name that opens its own page on themoviedb.org, where TMDB has one.
+ *
+ * Which episode a choice is comes down to reading it on TMDB, so the names are
+ * what open it rather than a link beside them: the whole row is already as much
+ * as fits, and a name is what somebody goes to click.
+ */
+function TmdbPageLink({
+  url,
+  children,
+}: {
+  url: string | null
+  children: ReactNode
+}) {
+  if (!url) return <>{children}</>
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="hover:underline"
+    >
+      {children}
+    </a>
+  )
+}
+
+// TODO: Validate
+/**
+ * Which of the show's own episodes are on this TMDB episode already.
+ *
+ * A choice being spoken for is the reason it is worth passing over, so which
+ * episode spoke for it is the next thing anybody asks - most often because that
+ * one is the mistake, not this one. It is asked for rather than shown outright,
+ * since a list under every used choice would bury the ones going spare.
+ */
+function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
+  const [isOpen, setIsOpen] = useState(false)
+  // Carries a default on the server, so the generated type has it as optional.
+  const usedBy = choice.used_by ?? []
+
+  return (
+    <span className="shrink-0 text-xs">
+      <button
+        type="button"
+        className="text-muted-foreground underline"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        Already used ({usedBy.length})
+      </button>
+      {isOpen ? (
+        <span className="mt-1 block space-y-0.5">
+          {usedBy.map((used) => (
+            <span key={used.id} className="block text-muted-foreground">
+              <span className="tabular-nums">
+                {numbering(used.season_number, used.episode_number)}
+              </span>{" "}
+              <TmdbPageLink url={used.url}>
+                {used.name ?? "Unnamed"}
+              </TmdbPageLink>
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
+  )
 }
 
 // TODO: Validate
@@ -64,11 +140,11 @@ export function EpisodeTmdbLinkMenu(props: EpisodeTmdbLinkMenuProps) {
   if (!user?.is_superuser) return null
 
   return (
-    <div className="mt-4">
+    <AdminZone className="mt-4">
       <CollapsibleSection title="TMDB episode link">
         <TmdbLinkPicker {...props} />
       </CollapsibleSection>
-    </div>
+    </AdminZone>
   )
 }
 
@@ -80,12 +156,13 @@ export function EpisodeTmdbLinkMenu(props: EpisodeTmdbLinkMenuProps) {
  * more than an episode's own page is worth costing, so nothing is asked for
  * until somebody goes looking.
  */
-function TmdbLinkPicker({
+export function TmdbLinkPicker({
   episodeId,
   name,
   seasonNumber,
   episodeNumber,
   informationQueryKey,
+  onLinked,
 }: EpisodeTmdbLinkMenuProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -106,6 +183,7 @@ function TmdbLinkPicker({
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+      onLinked?.()
     },
     onError: (error: unknown) => handleError.call(showErrorToast, error as any),
   })
@@ -131,6 +209,7 @@ function TmdbLinkPicker({
       setUrlDraft("")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+      onLinked?.()
     },
     onError: (error: unknown) => handleError.call(showErrorToast, error as any),
   })
@@ -220,16 +299,14 @@ function TmdbLinkPicker({
                 </span>
               </span>
               <span className="flex-1 whitespace-normal wrap-break-word">
-                {choice.name}
+                <TmdbPageLink url={choice.url}>{choice.name}</TmdbPageLink>
                 <span className="block text-xs text-muted-foreground">
-                  {choice.show_name}
+                  <TmdbPageLink url={choice.show_url}>
+                    {choice.show_name}
+                  </TmdbPageLink>
                 </span>
               </span>
-              {choice.already_used ? (
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  Already used
-                </span>
-              ) : null}
+              {choice.already_used ? <UsedByDetails choice={choice} /> : null}
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 {Math.round(choice.similarity * 100)}%
               </span>

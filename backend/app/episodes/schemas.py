@@ -127,19 +127,45 @@ class EpisodeInformationOutput(BaseModel):
 
 
 # TODO: Validate
+class EpisodeUsingTmdb(BaseModel):
+    """One of the show's episodes that already points at a TMDB episode."""
+
+    id: uuid.UUID
+    name: str | None
+    season_number: int | None
+    episode_number: int | None
+    url: str | None
+
+
+# TODO: Validate
 class TmdbEpisodeChoice(BaseModel):
     """A TMDB episode, as one of the episodes an `Episode` can be linked to."""
 
     canonical_episode_id: uuid.UUID
+    # The rows themselves, so the match can be opened on its own page here the
+    # same way the episode beside it can. TMDB's records are canonical rows, so
+    # these are the ids of the very rows, not of copies of them.
+    season_id: uuid.UUID
+    show_id: uuid.UUID
     tmdb_episode_id: int
     name: str
     show_name: str
+    show_year: int | None
+    source_name: str | None
+    plugin_name: str | None
     season_number: int
     episode_number: int
     absolute_number: int | None
     url: str
+    show_url: str | None
+    season_url: str | None
     similarity: float
     already_used: bool = False
+    # Which of the show's episodes are the ones using it. `already_used` is
+    # whether there are any, kept as its own field because that is what the
+    # choices are filtered on and a caller reading only the flag should not have
+    # to count a list to get it.
+    used_by: list[EpisodeUsingTmdb] = []
 
 
 # TODO: Validate
@@ -157,8 +183,12 @@ class UnmatchedEpisodeOutput(BaseModel):
     season_number: int | None
     show_id: uuid.UUID
     show_name: str | None
+    show_year: int | None
+    show_url: str | None
+    season_url: str | None
     source_id: uuid.UUID
     source_name: str | None
+    plugin_name: str | None
     url: str | None
     best_match: TmdbEpisodeChoice | None
 

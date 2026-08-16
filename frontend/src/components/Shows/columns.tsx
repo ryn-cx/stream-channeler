@@ -9,7 +9,7 @@ import {
   TruncatedCell,
 } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
-
+import { extraText } from "@/lib/extra"
 import { ShowActionsMenu } from "./ActionsMenu"
 
 export type ShowTableData = ShowListPublic & { pending?: boolean }
@@ -127,7 +127,7 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
   {
     accessorKey: "extra",
     header: "Extra",
-    cell: ({ row }) => <TruncatedCell value={row.original.extra} />,
+    cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
   },
   {
     accessorKey: "key",

@@ -7,3 +7,4 @@ still worth naming in one place.
 """
 
 TMDB_PLUGIN_KEY = "TMDB"
+YOUTUBE_PLUGIN_KEY = "YouTube"

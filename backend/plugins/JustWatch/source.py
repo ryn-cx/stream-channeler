@@ -16,7 +16,11 @@ from app.sources.models import Source
 from plugins.JustWatch.files import NewTitleBucket, NewTitles
 from plugins.JustWatch.upsert import UpsertMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
+from plugins.utils.base_plugin.files import (
+    COMPLETED_STATUS,
+    EXTRA_STATUS_FIELD,
+    INITIAL_FILE_IDENTIFIER,
+)
 
 
 # TODO: Validate
@@ -98,10 +102,13 @@ class SourceMixin(UpsertMixin, register=False):
                 )
                 new_titles_file = self.new_titles_file(source.key, edge.key.date)
                 new_titles_file.download_if_outdated()
-                if new_titles_file.database_record.extra != "Completed":
+                if (
+                    new_titles_file.database_record.extra.get(EXTRA_STATUS_FIELD)
+                    != COMPLETED_STATUS
+                ):
                     source.set_update_at(source.modified_at)
 
-            bucket.database_record.extra = "Completed"
+            bucket.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
     # TODO: Validate
     @override
@@ -123,7 +130,9 @@ class SourceMixin(UpsertMixin, register=False):
             if minimum_timestamp > new_titles_file.data_timestamp:
                 incomplete_minimum_timestamps.append(minimum_timestamp)
             else:
-                new_titles_file.database_record.extra = "Completed"
+                new_titles_file.database_record.extra = {
+                    EXTRA_STATUS_FIELD: COMPLETED_STATUS
+                }
 
         source.data_timestamp = max(
             new_titles_file.data_timestamp for new_titles_file in new_titles_files

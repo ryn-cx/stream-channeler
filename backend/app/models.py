@@ -10,6 +10,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 from sqlalchemy import util
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import DateTime, Field, Index, Session, SQLModel
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -17,8 +18,8 @@ from app.utils import tz_datetime
 
 if TYPE_CHECKING:
     from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
-    from sqlalchemy.sql.elements import TextClause
     from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.elements import TextClause
     from sqlalchemy.sql.selectable import ForUpdateParameter
 
     from app.channel_orders.models import ChannelOrder
@@ -168,7 +169,16 @@ class BaseMediaMixin(SQLModel):
     deleted_at: datetime | None = DateTimeField(default=None)
 
     # Allows plugins to store custom information beyond the database's structure.
-    extra: str | None = Field(default=None)
+    # Always an object, so a plugin keeping two things here does not have to
+    # decide what the one it stored first now means, and so what is stored can be
+    # read back by the database rather than only by whoever wrote it. `sa_type`
+    # rather than `sa_column` because a mixin's field is built once per model and
+    # a single `Column` cannot belong to six tables.
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_type=JSONB,
+        nullable=False,
+    )
 
 
 # TODO: Validate

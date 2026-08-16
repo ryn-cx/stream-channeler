@@ -13,6 +13,7 @@ import { FormTextField } from "@/components/Common/FormTextField"
 import { DialogTrigger } from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { currentLocalDateTime } from "@/lib/datetime"
+import { parseExtraText } from "@/lib/extra"
 import { optionalString, requiredKey } from "@/lib/formSchemas"
 import { handleError } from "@/utils"
 
@@ -71,7 +72,7 @@ const AddFile = ({ pluginId }: AddFileProps) => {
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()
-    mutation.mutate(data)
+    mutation.mutate({ ...data, extra: parseExtraText(data.extra ?? "") })
   }
 
   return (

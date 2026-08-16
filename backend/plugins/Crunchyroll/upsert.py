@@ -25,8 +25,8 @@ from plugins.Crunchyroll.music_keys import (
     MUSIC_SOURCE,
     VIDEO_SOURCE,
     MusicCategory,
-    is_video_show_key,
     is_music_show_key,
+    is_video_show_key,
 )
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
