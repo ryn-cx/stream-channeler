@@ -325,6 +325,20 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @staticmethod
+    def _show_image(images: series_models.Images) -> str | None:
+        """Return the widest poster a listing carries, where it carries one.
+
+        The wide one first because that is the shape the artwork is shown in,
+        the tall one being what is left for a listing Crunchyroll has only a
+        portrait poster of.
+        """
+        for sizes in (images.poster_wide, images.poster_tall):
+            if sizes and sizes[0]:
+                return max(sizes[0], key=lambda image: image.width).source
+        return None
+
+    # TODO: Validate
+    @staticmethod
     def _episode_thumbnail(images: season_episodes_models.Images) -> str | None:
         """Return the largest thumbnail an episode has, where it has one at all.
 
