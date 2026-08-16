@@ -21,6 +21,7 @@ import {
   requiredKey,
 } from "@/lib/formSchemas"
 
+import { CanonicalShowField } from "./CanonicalShowField"
 import {
   episodeGroupIdOf,
   TMDB_EPISODE_ORDER_PLUGIN,
@@ -158,12 +159,6 @@ const EditShow = ({ show, size }: EditShowProps) => {
       />
       <FormTextField
         control={form.control}
-        label="TMDB ID"
-        placeholder="12345"
-        type="number"
-      />
-      <FormTextField
-        control={form.control}
         label="Data Timestamp"
         type="datetime-local"
       />
@@ -187,19 +182,15 @@ const EditShow = ({ show, size }: EditShowProps) => {
         type="datetime-local"
       />
       <FormTextField control={form.control} label="Extra" type="text" />
-      <FormTextField control={form.control} label="Year" type="number" />
-      <FormTextField
-        control={form.control}
-        label="Canonical Show Note"
-        type="text"
-      />
-      <FormCheckboxField control={form.control} label="Canonical Show Locked" />
-      <FormTextField
-        control={form.control}
-        label="Deleted At"
-        type="datetime-local"
-      />
-      <FormTextField control={form.control} label="Extra" type="text" />
+      {user?.is_superuser && (
+        <AdminZone>
+          <CanonicalShowField
+            showId={show.id}
+            canonicalShowId={show.canonical_show_id}
+            enabled={isOpen}
+          />
+        </AdminZone>
+      )}
       {showsEpisodeOrder && (
         <AdminZone>
           <TmdbEpisodeOrderField

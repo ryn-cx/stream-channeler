@@ -60,6 +60,67 @@ def find_and_add_canonical_show(
 
 
 # TODO: Validate
+def set_canonical_show(
+    session: Session,
+    show: Show,
+    canonical_show: Show,
+) -> Show:
+    """Point `show` at the canonical show a `User` chose for it.
+
+    A row stands for one title as far as this is concerned, so the links it
+    already carries come off and the chosen one goes on alone. The choice is
+    locked, which is what stops the next import searching for a title of its own
+    and overruling it.
+
+    Every episode that stood for an episode of a title no longer linked is left
+    standing for nothing, hand-settled or not: it was settled against a title
+    this row has been said not to be of. What the episodes are of now is worked
+    out afresh against the chosen title.
+    """
+    if show.non_canonical_shows:
+        message = "A show other shows are linked to cannot be linked to one itself."
+        raise HTTPException(status_code=409, detail=message)
+
+    for link in list(show.canonical_show_links):
+        if link.canonical_show_id != canonical_show.id:
+            session.delete(link)
+    session.flush()
+    # Read again rather than left as it is, since a link deleted is still in the
+    # collection it was read out of and what the row stands for now is what the
+    # episodes below are settled against.
+    session.expire(show, ["canonical_show_links"])
+
+    add_canonical_show(session, show, canonical_show)
+    show.canonical_show_locked = True
+    session.add(show)
+
+    _unlink_unlisted_episodes(session, show)
+    EpisodeLinker(session, show).link()
+    session.commit()
+    session.refresh(show)
+    return show
+
+
+# TODO: Validate
+def _unlink_unlisted_episodes(session: Session, show: Show) -> None:
+    """Take every episode of `show` off a record no linked title holds."""
+    canonical_show_ids = {linked.id for linked in show.canonical_shows}
+    for season in show.active_children:
+        for episode in season.active_children:
+            canonical_episode = episode.canonical_episode
+            if canonical_episode is None:
+                continue
+            if canonical_episode.season.show_id in canonical_show_ids:
+                continue
+
+            episode.canonical_episode = None
+            episode.canonical_episode_locked = False
+            episode.canonical_episode_note = None
+            session.add(episode)
+    session.flush()
+
+
+# TODO: Validate
 def list_tmdb_episode_groups(
     session: Session,
     show: Show,

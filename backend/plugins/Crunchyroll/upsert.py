@@ -11,6 +11,7 @@ from chirashi.artist_music_videos import models as artist_music_videos_models
 from chirashi.concert import models as concert_models
 from chirashi.music_video import models as music_video_models
 from chirashi.season_episodes import models as season_episodes_models
+from chirashi.series import models as series_models
 
 from app.episodes.models import Episode
 from app.files.models import File
@@ -120,6 +121,7 @@ class UpsertMixin(HelperMixin, register=False):
                 description=series_data.description,
                 media_type="Movie" if self._is_movie(show_key) else "Series",
                 url=self._series_url(series_data.id),
+                image_url=self._show_image(series_data.images),
                 year=series_data.series_launch_year,
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,

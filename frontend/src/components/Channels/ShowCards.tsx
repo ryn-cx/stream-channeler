@@ -234,7 +234,12 @@ export function ShowCards({
         // catalogued, which is the only name there is to read it under.
         const name = canonicalShow?.name ?? firstShow.name ?? ""
         const showGroup: ShowGroup = { canonicalShowId, name }
-        const artwork = group.find((show) => show.image_url)?.image_url
+        // The title's own artwork, for the same reason as its name: a card is
+        // one title, and a website's listing of it is only what is left when
+        // nothing catalogued the title or the cataloguer held no image.
+        const artwork =
+          canonicalShow?.image_url ??
+          group.find((show) => show.image_url)?.image_url
         const expanded = renderExpanded?.(showGroup)
         const actions = renderActions?.(showGroup)
         // A favicon is how a card names a site, so a listing whose site has none

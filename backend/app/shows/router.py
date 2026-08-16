@@ -43,7 +43,11 @@ from app.shows.schemas import (
     ShowUpdate,
     TmdbEpisodeGroupOption,
 )
-from app.shows.service import list_tmdb_episode_groups, update_show_extra
+from app.shows.service import (
+    list_tmdb_episode_groups,
+    set_canonical_show,
+    update_show_extra,
+)
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -241,6 +245,25 @@ def update_show(
     if "extra" in show_input.model_fields_set:
         update_show_extra(session, show, show_input.extra)
     return _show_output(show_input.update(session, show))
+
+
+# TODO: Validate
+@shows_router.put(
+    "/{show_id}/canonical/{canonical_show_id}",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_link_show_to_canonical(
+    session: SessionDep,
+    show: EditableShow,
+    canonical_show: AdminCanonicalShow,
+) -> ShowPublic:
+    """Point a `Show` at the canonical show an admin chose for it.
+
+    Its own endpoint rather than part of the update, because the link is a row of
+    its own and what it drags along - the episodes being read again against the
+    title chosen - is not something a write of the show's own columns does.
+    """
+    return _show_output(set_canonical_show(session, show, canonical_show))
 
 
 # TODO: Validate

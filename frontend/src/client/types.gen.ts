@@ -2752,6 +2752,13 @@ export type ShowsDeleteShowData = {
 
 export type ShowsDeleteShowResponse = (Message);
 
+export type ShowsAdminLinkShowToCanonicalData = {
+    canonicalShowId: string;
+    showId: string;
+};
+
+export type ShowsAdminLinkShowToCanonicalResponse = (ShowPublic);
+
 export type ShowsGetShowTmdbEpisodeGroupsData = {
     showId: string;
 };
